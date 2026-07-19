@@ -18,7 +18,7 @@ Theme code for `5wn03t-nm.myshopify.com`, pulled from the live "Horizon" theme (
 - **`npm run dev`** — uploads the theme as a temporary development theme and serves it locally with live reload. Preview and editor URLs are printed to the terminal. Changes on disk sync to the store instantly; nothing is published.
 - **`npm run check`** — runs [Theme Check](https://shopify.dev/docs/storefronts/themes/tools/theme-check) (linting) against the theme.
 - **`npm run pull`** — downloads the latest theme files from the store, in case changes were made in the theme editor.
-- **`npm run push`** — pushes local changes to the store. You'll be prompted to pick which theme (never push straight to `[live]` unless you mean to).
+- **`npm run push`** — pushes local changes to the unpublished **CROOKSLDN — Dev** theme (id `202044309847`), never to live. Preview it here: https://5wn03t-nm.myshopify.com?preview_theme_id=202044309847 — publishing to live only happens on George's explicit say-so.
 
 ## Structure
 
