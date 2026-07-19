@@ -255,6 +255,21 @@
                 }
               },
               "block_order": []
+            },
+            "delivery_message_crx": {
+              "type": "delivery-message",
+              "settings": {
+                "in_stock_text": "In stock · Ships within 24 hours",
+                "made_to_order_text": "Made to order · Ships in 9–16 days",
+                "made_to_order_tag": "made-to-order",
+                "show_indicator": true,
+                "type_preset": "paragraph",
+                "padding-block-start": 4,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
             }
           },
           "block_order": [
@@ -263,7 +278,8 @@
             "text_aEtTtq",
             "kiwi_size_chart_recommender_kiwi_sizing_xMjM3G",
             "variant_picker_R3rGDr",
-            "buy_buttons_eYQEYi"
+            "buy_buttons_eYQEYi",
+            "delivery_message_crx"
           ]
         }
       },
