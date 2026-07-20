@@ -138,9 +138,19 @@
         "padding-block-start": 0,
         "padding-block-end": 32
       }
+    },
+    "category_bar": {
+      "type": "category-bar",
+      "settings": {
+        "sticky": true,
+        "handles": "frontpage,tees,denim,sweats,accessories",
+        "labels": "Shop All,Tees,Denim,Sweats,Accessories",
+        "color_scheme": "scheme-1"
+      }
     }
   },
   "order": [
+    "category_bar",
     "main"
   ]
 }
