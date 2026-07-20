@@ -27,6 +27,7 @@
     {%- render 'meta-tags' -%}
     {%- render 'stylesheets' -%}
     {%- render 'fonts' -%}
+    {{ 'crx-mono.css' | asset_url | stylesheet_tag }}
     {%- render 'scripts' -%}
     {%- render 'theme-styles-variables' -%}
     {%- render 'color-schemes' -%}
