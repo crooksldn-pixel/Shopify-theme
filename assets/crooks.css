@@ -11,12 +11,15 @@
 
    No gradients (scanline overlay excepted), no shadows, radius 0.
 
-   FONTS — reconciled with the live theme (Phase 0 decision):
-     --crk-font-mono    body / labels / prices-in-mono. Default CRX Mono
-                        (the store's self-hosted brand face, already loaded
-                        via crx-mono.css), IBM Plex Mono as fallback. This is
-                        the single flip point for the CRX-Mono vs IBM-Plex-Mono
-                        staging comparison — change this one line, nothing else.
+   FONTS — reconciled with the live theme (Phase 0/1 decision, settled):
+     --crk-font-mono    body / labels / prices-in-mono. CRX Mono, the store's
+                        self-hosted face, already loaded globally by
+                        crx-mono.css. NOTE: "CRX Mono" is Space Mono (Google
+                        Fonts, SIL OFL) renamed — not a bespoke commissioned
+                        face. Embedding is permitted (fsType 0). Chosen
+                        deliberately over the prototype's IBM Plex Mono; see
+                        NOTES.md. Changing this one line changes the mono face
+                        everywhere — nothing else references it.
      --crk-font-display VT323 for the big terminal display type.
    ============================================================ */
 
