@@ -1,0 +1,174 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-terminal.js' | asset_url }}" defer></script>
+
+{%- liquid
+  assign crk_products = collections[section.settings.collection].products
+  assign crk_total = crk_products.size
+
+  comment
+    Build the list of categories actually present, from product.type. Never a
+    hardcoded list: a type that disappears from the catalogue must not leave a
+    dead filter behind. Delimiters guard against substring collisions.
+  endcomment
+  assign crk_seen = '|'
+  for product in crk_products
+    assign crk_type = product.type | upcase
+    if crk_type != blank
+      assign crk_probe = '|' | append: crk_type | append: '|'
+      unless crk_seen contains crk_probe
+        assign crk_seen = crk_seen | append: crk_type | append: '|'
+      endunless
+    endif
+  endfor
+
+  comment
+    Order them: preferred order first (only those present), then anything else.
+  endcomment
+  assign crk_ordered = ''
+  assign crk_pref = section.settings.category_order | split: ','
+  for pref in crk_pref
+    assign pref_clean = pref | strip | upcase
+    assign crk_probe = '|' | append: pref_clean | append: '|'
+    if pref_clean != blank and crk_seen contains crk_probe
+      assign crk_ordered = crk_ordered | append: pref_clean | append: '|'
+    endif
+  endfor
+  assign crk_present = crk_seen | split: '|'
+  for cat in crk_present
+    assign crk_probe = '|' | append: cat | append: '|'
+    assign crk_ordered_probe = '|' | append: crk_ordered
+    if cat != blank
+      unless crk_ordered contains crk_probe or crk_ordered_probe contains crk_probe
+        assign crk_ordered = crk_ordered | append: cat | append: '|'
+      endunless
+    endif
+  endfor
+  assign crk_categories = crk_ordered | split: '|'
+-%}
+
+<section class="crk-root crk-section crk-exhibit-log" data-crk-section="exhibit-log" id="{{ section.settings.anchor_id | default: 'exhibits' }}">
+  <div class="crk-inner">
+    <header class="crk-log__head">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="crk-h2">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="crk-eyebrow">{{ section.settings.subheading }}</p>
+      {%- endif -%}
+      <span class="crk-log__count crk-micro">{{ crk_total }} {{ section.settings.count_label }}</span>
+    </header>
+
+    {%- if section.settings.show_filters and crk_categories.size > 0 -%}
+      <div class="crk-filters" role="group" aria-label="{{ section.settings.filters_label | escape }}">
+        <button type="button" class="crk-filter" data-crk-filter="ALL" aria-pressed="true">
+          {{ section.settings.all_label }}
+        </button>
+        {%- for cat in crk_categories -%}
+          {%- if cat != blank -%}
+            <button type="button" class="crk-filter" data-crk-filter="{{ cat | escape }}" aria-pressed="false">
+              {{ cat }}
+            </button>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
+    <ul class="crk-log__grid">
+      {%- for product in crk_products -%}
+        {%- liquid
+          assign crk_cat = product.type | upcase
+          assign crk_main = product.featured_image
+          assign crk_alt = product.images[1]
+        -%}
+        <li class="crk-log__cell" data-crk-category="{{ crk_cat | escape }}">
+          <a
+            class="crk-card{% unless product.available %} crk-card--sold{% endunless %}"
+            href="{{ product.url }}"
+          >
+            <span class="crk-card__top crk-micro">
+              <span>{{ section.settings.exhibit_prefix }} {% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+              <span>{{ crk_cat }}</span>
+            </span>
+            <span class="crk-card__media">
+              {%- if crk_main -%}
+                {{
+                  crk_main
+                  | image_url: width: 800
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '200, 300, 400, 600, 800',
+                    sizes: '(min-width: 1024px) 25vw, 50vw',
+                    class: 'crk-card__img crk-card__img--main',
+                    alt: crk_main.alt
+                }}
+              {%- endif -%}
+              {%- if crk_alt -%}
+                {{
+                  crk_alt
+                  | image_url: width: 800
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '200, 300, 400, 600, 800',
+                    sizes: '(min-width: 1024px) 25vw, 50vw',
+                    class: 'crk-card__img crk-card__img--alt',
+                    alt: ''
+                }}
+              {%- endif -%}
+            </span>
+            <span class="crk-card__name">{% render 'crooks-title', product: product %}</span>
+            <span class="crk-card__row">
+              <span class="crk-price">{{ product.price | money }}</span>
+              <span class="crk-card__status">
+                {%- if product.available -%}
+                  {{ section.settings.available_label }}
+                {%- else -%}
+                  {{ section.settings.sold_out_label }}
+                {%- endif -%}
+              </span>
+            </span>
+          </a>
+        </li>
+      {%- endfor -%}
+    </ul>
+
+    {%- comment -%}
+      Shown by JS when a filter matches nothing. Visible without JS only when the
+      collection itself is empty, which is the honest state in that case.
+    {%- endcomment -%}
+    {%- if section.settings.empty_text != blank -%}
+      <p class="crk-log__empty"{% if crk_total > 0 %} hidden{% endif %}>{{ section.settings.empty_text }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Exhibit Log",
+  "tag": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "EXHIBIT LOG" },
+    { "type": "text", "id": "subheading", "label": "Subheading", "default": "ITEMS RECOVERED AND AVAILABLE FOR RELEASE" },
+    { "type": "text", "id": "count_label", "label": "Count label", "default": "ITEMS" },
+    { "type": "text", "id": "exhibit_prefix", "label": "Exhibit number prefix", "default": "EXH" },
+    { "type": "header", "content": "Filters" },
+    { "type": "checkbox", "id": "show_filters", "label": "Show category filters", "default": true },
+    { "type": "text", "id": "all_label", "label": "\"All\" filter label", "default": "ALL" },
+    {
+      "type": "text",
+      "id": "category_order",
+      "label": "Preferred category order",
+      "info": "Comma-separated. Categories come from each product's type. Any present category not listed here is appended at the end; any listed category with no products is skipped.",
+      "default": "T-SHIRT, DENIM, SWEATS, ACCESSORIES"
+    },
+    { "type": "text", "id": "filters_label", "label": "Filter group label (screen readers)", "default": "Filter exhibits" },
+    { "type": "header", "content": "Status labels" },
+    { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
+    { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "SOLD OUT" },
+    { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO EXHIBITS MATCH THIS CATEGORY." },
+    { "type": "header", "content": "Advanced" },
+    { "type": "text", "id": "anchor_id", "label": "Anchor id", "info": "Used by in-page links such as the hero's primary button.", "default": "exhibits" }
+  ],
+  "presets": [{ "name": "Crooks — Exhibit Log" }]
+}
+{% endschema %}

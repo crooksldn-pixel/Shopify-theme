@@ -1,0 +1,62 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+<section class="crk-root crk-section" data-crk-section="informant-intake">
+  <div class="crk-inner crk-grid">
+    <div class="crk-panel crk-intake__panel">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="crk-h2">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="crk-intake__sub">{{ section.settings.subheading }}</p>
+      {%- endif -%}
+
+      {%- form 'customer', class: 'crk-intake__form', id: 'crk-informant' -%}
+        <input type="hidden" name="contact[tags]" value="{{ section.settings.tag | escape }}">
+        <label class="crk-sr" for="crk-informant-email">{{ section.settings.email_label }}</label>
+        <input
+          class="crk-input"
+          id="crk-informant-email"
+          type="email"
+          name="contact[email]"
+          value="{{ form.email }}"
+          autocomplete="email"
+          placeholder="{{ section.settings.placeholder | escape }}"
+          required
+        >
+        <button class="crk-btn crk-btn--fill" type="submit">{{ section.settings.button_label }}</button>
+
+        {%- if form.posted_successfully? -%}
+          <p class="crk-intake__msg crk-intake__msg--ok" role="status">{{ section.settings.success_text }}</p>
+        {%- elsif form.errors -%}
+          <p class="crk-intake__msg crk-intake__msg--err" role="alert">
+            {{ section.settings.error_text }}
+          </p>
+        {%- endif -%}
+      {%- endform -%}
+
+      {%- if section.settings.small_print != blank -%}
+        <p class="crk-intake__small">{{ section.settings.small_print }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Informant Intake",
+  "tag": "section",
+  "settings": [
+    { "type": "paragraph", "content": "Submissions are added to your Shopify customer list and marked as accepting marketing." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "REGISTER AS INFORMANT" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Drops go to the register before they go public. One message per drop, nothing else." },
+    { "type": "text", "id": "email_label", "label": "Email field label (screen readers)", "default": "Email address" },
+    { "type": "text", "id": "placeholder", "label": "Email placeholder", "default": "EMAIL ADDRESS" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "SUBMIT" },
+    { "type": "text", "id": "tag", "label": "Customer tag", "default": "newsletter" },
+    { "type": "text", "id": "success_text", "label": "Success message", "default": "CLEARANCE ACCEPTED — RECORD SUBMITTED" },
+    { "type": "text", "id": "error_text", "label": "Error message", "default": "SUBMISSION REJECTED — CHECK THE ADDRESS" },
+    { "type": "text", "id": "small_print", "label": "Small print", "default": "Unsubscribe at any time. We do not sell the register." }
+  ],
+  "presets": [{ "name": "Crooks — Informant Intake" }]
+}
+{% endschema %}

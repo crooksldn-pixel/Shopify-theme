@@ -1,0 +1,22 @@
+{%- comment -%}
+  Renders a product title with the U+FE0F variation selector stripped.
+
+  Product titles on this store contain U+2122 (TRADE MARK SIGN) followed by
+  U+FE0F (VARIATION SELECTOR-16), which forces colour-emoji presentation and
+  renders as a grey box in a monospace face. Stripping U+FE0F leaves a normal
+  text-presentation trade mark sign.
+
+  Deliberately does NOT strip U+2605 (BLACK STAR, as in CRXST*RZ) — that is
+  part of the product name and renders correctly.
+
+  Usage:  {%- raw -%}{% render 'crooks-title', product: product %}{%- endraw -%}
+          {%- raw -%}{% render 'crooks-title', title: some_string %}{%- endraw -%}
+{%- endcomment -%}
+{%- liquid
+  assign crk_title = title
+  if crk_title == blank and product != blank
+    assign crk_title = product.title
+  endif
+  assign crk_title = crk_title | replace: '️', ''
+  echo crk_title
+-%}

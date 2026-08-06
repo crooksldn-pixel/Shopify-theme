@@ -1,0 +1,120 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-terminal.js' | asset_url }}" defer></script>
+{%- if section.settings.show_board -%}
+  <script src="{{ 'crooks-board.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+<section class="crk-root crk-section" data-crk-section="hero-intake">
+  {%- if section.settings.show_texture -%}
+    <div class="crk-scan" data-crk-texture="on" aria-hidden="true"></div>
+  {%- endif -%}
+
+  <div class="crk-inner crk-hero__grid">
+    {%- if section.settings.show_board -%}
+      <figure class="crk-hero__board crk-board-panel">
+        {%- if section.settings.board_label_top != blank -%}
+          <p class="crk-micro">{{ section.settings.board_label_top }}</p>
+        {%- endif -%}
+        <div class="crk-board__frame">
+          <canvas class="crk-board" data-crk-board aria-hidden="true"></canvas>
+        </div>
+        {%- if section.settings.board_label_bottom != blank -%}
+          <p class="crk-micro">{{ section.settings.board_label_bottom }}</p>
+        {%- endif -%}
+        {%- if section.settings.board_caption != blank -%}
+          <figcaption class="crk-sr">{{ section.settings.board_caption }}</figcaption>
+        {%- endif -%}
+      </figure>
+    {%- endif -%}
+
+    <div class="crk-hero__type">
+      {%- assign crk_count = collections[section.settings.collection].products_count -%}
+      {%- if section.blocks.size > 0 -%}
+        <div class="crk-boot">
+          {%- for block in section.blocks -%}
+            {%- assign crk_line = block.settings.line | replace: '[count]', crk_count -%}
+            {%- if crk_line != blank -%}
+              <p
+                class="crk-boot__line{% if block.settings.alert %} crk-boot__line--alert{% endif %}"
+                {{ block.shopify_attributes }}
+              >&gt; {{ crk_line }}</p>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      <div class="crk-hero__mark">
+        {%- if section.settings.wordmark != blank -%}
+          <h1 class="crk-h1">{{ section.settings.wordmark }}</h1>
+        {%- endif -%}
+        {%- if section.settings.tagline != blank -%}
+          <p class="crk-hero__tag">{{ section.settings.tagline }}</p>
+        {%- endif -%}
+        {%- if section.settings.status_line != blank -%}
+          <p class="crk-hero__status crk-eyebrow">{{ section.settings.status_line }}</p>
+        {%- endif -%}
+        <div class="crk-hero__ctas">
+          {%- if section.settings.primary_label != blank -%}
+            <a class="crk-btn crk-btn--fill" href="{{ section.settings.primary_url | default: '#' }}">
+              {{ section.settings.primary_label }}
+            </a>
+          {%- endif -%}
+          {%- if section.settings.secondary_label != blank -%}
+            <a
+              class="crk-btn crk-btn--ghost"
+              href="{{ section.settings.secondary_url | default: '#' }}"
+              {% if section.settings.secondary_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}
+            >{{ section.settings.secondary_label }}</a>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Hero Intake",
+  "tag": "section",
+  "settings": [
+    { "type": "header", "content": "Attract board" },
+    { "type": "checkbox", "id": "show_board", "label": "Show CASE 001 attract board", "default": true },
+    { "type": "text", "id": "board_label_top", "label": "Board label (top)", "default": "CASE 001 — ATTRACT MODE" },
+    { "type": "text", "id": "board_label_bottom", "label": "Board label (bottom)", "default": "REF 001 / 13×11 / DECLASSIFIED" },
+    { "type": "text", "id": "board_caption", "label": "Board description (screen readers)", "default": "Animated pixel map from CASE 001: a figure moves through an alley grid collecting three packages." },
+    { "type": "header", "content": "Wordmark" },
+    { "type": "text", "id": "wordmark", "label": "Wordmark", "default": "CROOKSLDN" },
+    { "type": "text", "id": "tagline", "label": "Tagline", "default": "OWN THE STREETS™" },
+    { "type": "text", "id": "status_line", "label": "Status line", "default": "STATUS: OPEN — INTAKE: LONDON, UK" },
+    { "type": "header", "content": "Buttons" },
+    { "type": "text", "id": "primary_label", "label": "Primary button label", "default": "VIEW EXHIBITS" },
+    { "type": "url", "id": "primary_url", "label": "Primary button link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button label", "default": "OPEN CASE 001" },
+    { "type": "url", "id": "secondary_url", "label": "Secondary button link" },
+    { "type": "checkbox", "id": "secondary_new_tab", "label": "Open secondary link in a new tab", "default": true },
+    { "type": "header", "content": "Options" },
+    { "type": "checkbox", "id": "show_texture", "label": "Show scanline texture", "default": true },
+    { "type": "collection", "id": "collection", "label": "Collection for [count]", "info": "Use [count] in any boot line to insert the number of products in this collection." }
+  ],
+  "blocks": [
+    {
+      "type": "boot_line",
+      "name": "Boot line",
+      "settings": [
+        { "type": "text", "id": "line", "label": "Line", "default": "CROOKS PROPERTY STORE" },
+        { "type": "checkbox", "id": "alert", "label": "Alert styling (red)", "default": false }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Crooks — Hero Intake",
+      "blocks": [
+        { "type": "boot_line", "settings": { "line": "CROOKS PROPERTY STORE", "alert": false } },
+        { "type": "boot_line", "settings": { "line": "UNAUTHORISED ACCESS DETECTED", "alert": true } },
+        { "type": "boot_line", "settings": { "line": "[count] EXHIBITS AVAILABLE FOR RELEASE", "alert": false } }
+      ]
+    }
+  ]
+}
+{% endschema %}

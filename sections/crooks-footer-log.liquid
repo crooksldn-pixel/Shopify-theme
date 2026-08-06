@@ -1,0 +1,116 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+<section class="crk-root" data-crk-section="footer-log">
+  <div class="crk-inner crk-footer__cols">
+    {%- for block in section.blocks -%}
+      <div class="crk-footer__col" {{ block.shopify_attributes }}>
+        {%- if block.settings.heading != blank -%}
+          <h2 class="crk-eyebrow">{{ block.settings.heading }}</h2>
+        {%- endif -%}
+        <ul>
+          {%- for i in (1..5) -%}
+            {%- liquid
+              case i
+                when 1
+                  assign lbl = block.settings.label_1
+                  assign url = block.settings.url_1
+                when 2
+                  assign lbl = block.settings.label_2
+                  assign url = block.settings.url_2
+                when 3
+                  assign lbl = block.settings.label_3
+                  assign url = block.settings.url_3
+                when 4
+                  assign lbl = block.settings.label_4
+                  assign url = block.settings.url_4
+                when 5
+                  assign lbl = block.settings.label_5
+                  assign url = block.settings.url_5
+              endcase
+            -%}
+            {%- comment -%} A row with no label does not render. {%- endcomment -%}
+            {%- if lbl != blank -%}
+              <li><a href="{{ url | default: '#' }}">{{ lbl }}</a></li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endfor -%}
+  </div>
+  {%- if section.settings.base_line != blank -%}
+    <p class="crk-footer__base crk-micro">
+      {{ section.settings.base_line | replace: '[year]', 'now' | date: '%Y' }}
+    </p>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Footer Log",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "base_line",
+      "label": "Base line",
+      "info": "Use [year] to insert the current year.",
+      "default": "EVIDENCE TERMINAL v0.2 // CROOKSLDN // OWN THE STREETS™ // © [year]"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "column",
+      "name": "Column",
+      "settings": [
+        { "type": "text", "id": "heading", "label": "Column heading", "default": "SHOP" },
+        { "type": "text", "id": "label_1", "label": "Link 1 label" },
+        { "type": "url", "id": "url_1", "label": "Link 1 URL" },
+        { "type": "text", "id": "label_2", "label": "Link 2 label" },
+        { "type": "url", "id": "url_2", "label": "Link 2 URL" },
+        { "type": "text", "id": "label_3", "label": "Link 3 label" },
+        { "type": "url", "id": "url_3", "label": "Link 3 URL" },
+        { "type": "text", "id": "label_4", "label": "Link 4 label" },
+        { "type": "url", "id": "url_4", "label": "Link 4 URL" },
+        { "type": "text", "id": "label_5", "label": "Link 5 label" },
+        { "type": "url", "id": "url_5", "label": "Link 5 URL" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Crooks — Footer Log",
+      "blocks": [
+        {
+          "type": "column",
+          "settings": {
+            "heading": "SHOP",
+            "label_1": "NEW", "url_1": "shopify://collections/new",
+            "label_2": "TEES", "url_2": "shopify://collections/tees",
+            "label_3": "DENIM", "url_3": "shopify://collections/denim",
+            "label_4": "SWEATS", "url_4": "shopify://collections/sweats",
+            "label_5": "ACCESSORIES", "url_5": "shopify://collections/accessories"
+          }
+        },
+        {
+          "type": "column",
+          "settings": {
+            "heading": "INFORMATION",
+            "label_1": "SHIPPING", "url_1": "shopify://policies/shipping-policy",
+            "label_2": "REFUNDS", "url_2": "shopify://policies/refund-policy",
+            "label_3": "CASE 001", "url_3": "https://crooks-case-break.base44.app"
+          }
+        },
+        {
+          "type": "column",
+          "settings": {
+            "heading": "CONTACT",
+            "label_1": "INSTAGRAM", "url_1": "https://instagram.com/crooksldn",
+            "label_2": "TIKTOK", "url_2": "https://tiktok.com/@crooksldn",
+            "label_3": "EMAIL", "url_3": "mailto:info@crooksldn.com"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

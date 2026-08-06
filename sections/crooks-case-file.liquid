@@ -1,0 +1,76 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+<section class="crk-root crk-section" data-crk-section="case-file">
+  <div class="crk-inner crk-grid">
+    <div class="crk-panel crk-case__panel">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="crk-h2">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.status != blank -%}
+        <p class="crk-eyebrow crk-case__status">{{ section.settings.status }}</p>
+      {%- endif -%}
+      {%- if section.settings.body != blank -%}
+        <p class="crk-case__body">{{ section.settings.body }}</p>
+      {%- endif -%}
+      {%- if section.settings.button_label != blank -%}
+        <a
+          class="crk-btn crk-btn--fill"
+          href="{{ section.settings.button_url | default: '#' }}"
+          {% if section.settings.button_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}
+        >{{ section.settings.button_label }}</a>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%}
+      Leaderboard. There is no Liquid-side source for live scores, so the only
+      honest options are ruled empty rows or nothing at all. Placeholder scores
+      are never rendered.
+    {%- endcomment -%}
+    {%- if section.settings.leaderboard != 'none' -%}
+      <div class="crk-case__board">
+        {%- if section.settings.leaderboard_heading != blank -%}
+          <p class="crk-eyebrow">{{ section.settings.leaderboard_heading }}</p>
+        {%- endif -%}
+        <ol class="crk-lb">
+          {%- for i in (1..section.settings.leaderboard_rows) -%}
+            <li class="crk-lb__skel"></li>
+          {%- endfor -%}
+        </ol>
+        {%- if section.settings.leaderboard_note != blank -%}
+          <p class="crk-micro">{{ section.settings.leaderboard_note }}</p>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Case File",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "CASE 001: THE GETAWAY" },
+    { "type": "text", "id": "status", "label": "Status line", "default": "STATUS: DECLASSIFIED" },
+    { "type": "textarea", "id": "body", "label": "Body", "default": "A turn-based escape simulation recovered from an unsecured terminal. Collect the evidence, avoid the officers, reach the vehicle. Scores are logged publicly." },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "OPEN CASE FILE" },
+    { "type": "url", "id": "button_url", "label": "Button link" },
+    { "type": "checkbox", "id": "button_new_tab", "label": "Open in a new tab", "default": true },
+    { "type": "header", "content": "Leaderboard" },
+    {
+      "type": "select",
+      "id": "leaderboard",
+      "label": "Leaderboard",
+      "info": "Live scores are not available to the theme. Choose ruled empty rows or hide the panel — placeholder scores are never shown.",
+      "options": [
+        { "value": "none", "label": "Hidden" },
+        { "value": "empty", "label": "Ruled empty rows" }
+      ],
+      "default": "none"
+    },
+    { "type": "text", "id": "leaderboard_heading", "label": "Leaderboard heading", "default": "TOP OPERATIVES — THIS WEEK" },
+    { "type": "range", "id": "leaderboard_rows", "label": "Number of rows", "min": 3, "max": 10, "step": 1, "default": 5 },
+    { "type": "text", "id": "leaderboard_note", "label": "Note under the rows", "default": "AWAITING SYNC" }
+  ],
+  "presets": [{ "name": "Crooks — Case File" }]
+}
+{% endschema %}

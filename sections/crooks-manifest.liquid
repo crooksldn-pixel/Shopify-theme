@@ -1,0 +1,36 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+<section class="crk-root crk-section" data-crk-section="manifest">
+  <div class="crk-inner crk-grid">
+    <div class="crk-panel crk-manifest__panel">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="crk-eyebrow crk-manifest__head">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.body != blank -%}
+        <div class="crk-manifest__body crk-prose">{{ section.settings.body }}</div>
+      {%- endif -%}
+      {%- if section.settings.credit != blank -%}
+        <p class="crk-manifest__credit crk-micro">{{ section.settings.credit }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Manifest",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "WITNESS STATEMENT" },
+    {
+      "type": "richtext",
+      "id": "body",
+      "label": "Statement",
+      "info": "Wrap words in italics to render them as redacted (blacked-out) text.",
+      "default": "<p>CROOKSLDN is an independent label operating out of <em>London</em>. Everything is produced in short runs. When a run is gone it does not come back, and we do not restock it <em>to order</em>.</p><p>Garments are cut for wear, not for display. If you need the fit explained, the size guide is on every product page.</p><p>Own the streets.</p>"
+    },
+    { "type": "text", "id": "credit", "label": "Credit line", "default": "— Filed by the proprietor. No further comment offered." }
+  ],
+  "presets": [{ "name": "Crooks — Manifest" }]
+}
+{% endschema %}

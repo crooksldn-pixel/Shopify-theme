@@ -1,0 +1,70 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-terminal.js' | asset_url }}" defer></script>
+
+<section
+  class="crk-root crk-status-bar"
+  data-crk-section="status-bar"
+  data-crk-rotate="{{ section.settings.rotate }}"
+  data-crk-interval="{{ section.settings.interval_ms }}"
+>
+  <div class="crk-status">
+    {%- assign crk_count = collections[section.settings.collection].products_count -%}
+    {%- for block in section.blocks -%}
+      {%- assign crk_msg = block.settings.message | replace: '[count]', crk_count -%}
+      {%- if crk_msg != blank -%}
+        <p class="crk-status__msg" {{ block.shopify_attributes }}>{{ crk_msg }}</p>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Status Bar",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "rotate",
+      "label": "Rotate between messages",
+      "info": "Rotation is always disabled for visitors who prefer reduced motion.",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "interval_ms",
+      "label": "Seconds per message",
+      "min": 3,
+      "max": 20,
+      "step": 1,
+      "unit": "s",
+      "default": 8
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection for [count]",
+      "info": "Use [count] in any message to insert the number of products in this collection."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "message",
+      "name": "Message",
+      "settings": [
+        { "type": "text", "id": "message", "label": "Message", "default": "FREE UK SHIPPING — 24HR DISPATCH AVAILABLE" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Crooks — Status Bar",
+      "blocks": [
+        { "type": "message", "settings": { "message": "FREE UK SHIPPING — 24HR DISPATCH AVAILABLE" } },
+        { "type": "message", "settings": { "message": "PROPERTY STORE — UNIT 7, LONDON" } },
+        { "type": "message", "settings": { "message": "[count] EXHIBITS CURRENTLY LOGGED" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
