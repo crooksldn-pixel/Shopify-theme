@@ -280,3 +280,56 @@
 @media (prefers-reduced-motion: reduce) {
   .crk-hero__mark { transition: none }
 }
+
+/* ============================================================
+   HEADER + MENU DRAWER
+   The prototypes are a single-page app with no site header, so this
+   is new work built from the existing tokens. Same rules: radius 0,
+   1px borders, no shadows, no gradients.
+   ============================================================ */
+.crk-header { position: sticky; top: 0; z-index: 60; background: var(--crk-void); border-bottom: 1px solid var(--crk-line) }
+.crk-header__bar { display: flex; align-items: center; gap: 12px; max-width: 1320px; margin: 0 auto; min-height: 56px; padding: 8px 16px }
+.crk-header__logo { display: inline-flex; align-items: center; min-height: 44px; font-family: var(--crk-font-display); font-size: 26px; line-height: 1; text-transform: uppercase; color: var(--crk-paper) }
+.crk-header__logo img { max-height: 32px; width: auto }
+.crk-header__actions { display: flex; align-items: center; gap: 4px; margin-left: auto }
+.crk-header__link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid transparent; font-weight: 500; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--crk-paper) }
+.crk-header__link:hover { border-color: var(--crk-lav) }
+.crk-header__count { color: var(--crk-lav) }
+@media (min-width: 1024px) { .crk-header__bar { padding: 8px 24px } .crk-header__logo { font-size: 32px } }
+/* Narrow phones: the .3em tracking on three labels overflows 320px. Tighten
+   rather than drop a control — the cart must never leave the bar. Touch
+   targets stay at 44px. */
+@media (max-width: 479px) {
+  .crk-header__bar { gap: 6px; padding: 8px 12px }
+  .crk-header__logo { font-size: 20px }
+  .crk-header__link { padding: 0 6px; font-size: 9px; letter-spacing: .12em }
+}
+/* Structural guard: the wordmark is a merchant-editable setting, so never let
+   its length push the bar wide. The actions keep their intrinsic size and the
+   wordmark absorbs whatever is left. */
+.crk-header__logo { min-width: 0; overflow: hidden; white-space: nowrap }
+.crk-header__actions { flex: none }
+
+/* no-JS fallback: the drawer cannot open, so the menu renders inline instead */
+.crk-header__nofallback { border-top: 1px solid var(--crk-line); padding: 8px 16px }
+.crk-header__nofallback ul { display: flex; flex-wrap: wrap; gap: 4px 16px }
+.crk-header__nofallback a { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--crk-dim) }
+.crk-header__nofallback a:hover { color: var(--crk-lav) }
+
+/* drawer */
+.crk-drawer[hidden] { display: none }
+.crk-drawer { position: fixed; inset: 0; z-index: 90; display: flex }
+.crk-drawer__scrim { position: absolute; inset: 0; background: rgba(11, 10, 14, .88) }
+.crk-drawer__panel { position: relative; display: flex; flex-direction: column; width: 100%; max-width: 420px; height: 100%; margin-left: auto; background: var(--crk-panel); border-left: 1px solid var(--crk-line); overflow-y: auto; overscroll-behavior: contain }
+.crk-drawer__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--crk-line) }
+.crk-drawer__nav { padding: 0 16px 16px }
+.crk-drawer__item { border-bottom: 1px solid var(--crk-line) }
+.crk-drawer__link { display: flex; align-items: center; min-height: 52px; font-weight: 500; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--crk-paper) }
+.crk-drawer__link:hover { color: var(--crk-lav) }
+.crk-drawer__sub { padding: 0 0 8px 16px }
+.crk-drawer__sub .crk-drawer__link { min-height: 44px; font-size: 12px; letter-spacing: .06em; color: var(--crk-dim) }
+.crk-drawer__sub .crk-drawer__link:hover { color: var(--crk-lav) }
+.crk-drawer__foot { margin-top: auto; padding: 16px; border-top: 1px solid var(--crk-line) }
+.crk-drawer__foot .crk-header__link { padding-left: 0 }
+/* body scroll lock while the drawer is open */
+.crk-scroll-locked { overflow: hidden }

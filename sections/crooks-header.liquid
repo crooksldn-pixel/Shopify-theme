@@ -1,0 +1,131 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-drawer.js' | asset_url }}" defer></script>
+
+{%- liquid
+  assign crk_menu = linklists[section.settings.menu]
+  assign crk_cart_count = cart.item_count
+-%}
+
+<header class="crk-root crk-header" data-crk-section="header">
+  <div class="crk-header__bar">
+    <a class="crk-header__logo" href="{{ routes.root_url }}">
+      {%- if section.settings.logo != blank -%}
+        {{
+          section.settings.logo
+          | image_url: width: 400
+          | image_tag: widths: '100, 200, 300, 400', alt: shop.name, loading: 'eager'
+        }}
+      {%- else -%}
+        {{ section.settings.wordmark | default: shop.name }}
+      {%- endif -%}
+    </a>
+
+    <div class="crk-header__actions">
+      {%- if section.settings.show_search -%}
+        <a class="crk-header__link" href="{{ routes.search_url }}">{{ section.settings.search_label }}</a>
+      {%- endif -%}
+
+      {%- comment -%}
+        Cart is never hidden behind the drawer — it is a sale-critical control.
+      {%- endcomment -%}
+      <a class="crk-header__link" href="{{ routes.cart_url }}">
+        {{ section.settings.cart_label }}
+        <span class="crk-header__count">&nbsp;[{{ crk_cart_count }}]</span>
+      </a>
+
+      {%- comment -%}
+        Text trigger, not a hamburger. Hidden until JS upgrades it, so it can
+        never be a dead control; the <noscript> menu below covers that case.
+      {%- endcomment -%}
+      <button
+        class="crk-header__link"
+        type="button"
+        hidden
+        data-crk-drawer-open
+        data-crk-label-open="{{ section.settings.menu_label | escape }}"
+        data-crk-label-close="{{ section.settings.close_label | escape }}"
+        aria-controls="crk-drawer"
+        aria-expanded="false"
+      >{{ section.settings.menu_label }}</button>
+    </div>
+  </div>
+
+  {%- comment -%} Without JS the drawer cannot open, so render the menu inline. {%- endcomment -%}
+  <noscript>
+    <div class="crk-header__nofallback">
+      <ul>
+        {%- for link in crk_menu.links -%}
+          <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  </noscript>
+
+  <div
+    class="crk-drawer"
+    id="crk-drawer"
+    data-crk-drawer
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ section.settings.drawer_label | escape }}"
+    hidden
+  >
+    <div class="crk-drawer__scrim" data-crk-drawer-close></div>
+    <div class="crk-drawer__panel">
+      <div class="crk-drawer__head">
+        <p class="crk-eyebrow">{{ section.settings.drawer_heading }}</p>
+        <button class="crk-header__link" type="button" data-crk-drawer-close>
+          {{ section.settings.close_label }}
+        </button>
+      </div>
+
+      <nav class="crk-drawer__nav" aria-label="{{ section.settings.drawer_label | escape }}">
+        <ul>
+          {%- for link in crk_menu.links -%}
+            <li class="crk-drawer__item">
+              <a class="crk-drawer__link" href="{{ link.url }}">{{ link.title }}</a>
+              {%- if link.links.size > 0 -%}
+                <ul class="crk-drawer__sub">
+                  {%- for child in link.links -%}
+                    <li><a class="crk-drawer__link" href="{{ child.url }}">{{ child.title }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+
+      <div class="crk-drawer__foot">
+        {%- if shop.customer_accounts_enabled -%}
+          <a class="crk-header__link" href="{{ routes.account_url }}">{{ section.settings.account_label }}</a>
+        {%- endif -%}
+        <a class="crk-header__link" href="{{ routes.cart_url }}">
+          {{ section.settings.cart_label }}&nbsp;[{{ crk_cart_count }}]
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "Crooks — Header",
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Logo", "info": "Leave empty to use the wordmark text below." },
+    { "type": "text", "id": "wordmark", "label": "Wordmark", "default": "CROOKSLDN" },
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" },
+    { "type": "header", "content": "Labels" },
+    { "type": "text", "id": "menu_label", "label": "Menu button (closed)", "default": "MENU" },
+    { "type": "text", "id": "close_label", "label": "Menu button (open)", "default": "CLOSE" },
+    { "type": "text", "id": "cart_label", "label": "Cart label", "default": "BAG" },
+    { "type": "text", "id": "search_label", "label": "Search label", "default": "SEARCH" },
+    { "type": "text", "id": "account_label", "label": "Account label", "default": "ACCOUNT" },
+    { "type": "text", "id": "drawer_heading", "label": "Drawer heading", "default": "INDEX" },
+    { "type": "text", "id": "drawer_label", "label": "Drawer label (screen readers)", "default": "Main menu" },
+    { "type": "header", "content": "Options" },
+    { "type": "checkbox", "id": "show_search", "label": "Show search link", "default": true }
+  ],
+  "presets": [{ "name": "Crooks — Header" }]
+}
+{% endschema %}

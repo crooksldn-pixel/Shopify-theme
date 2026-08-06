@@ -205,10 +205,65 @@
         "color_scheme": "",
         "padding-block-start": 20,
         "padding-block-end": 48
+      },
+      "disabled": true
+    },
+    "crooks_footer_log": {
+      "type": "crooks-footer-log",
+      "blocks": {
+        "c1": {
+          "type": "column",
+          "settings": {
+            "heading": "SHOP",
+            "label_1": "NEW",
+            "url_1": "shopify://collections/new",
+            "label_2": "TEES",
+            "url_2": "shopify://collections/tees",
+            "label_3": "DENIM",
+            "url_3": "shopify://collections/denim",
+            "label_4": "SWEATS",
+            "url_4": "shopify://collections/sweats",
+            "label_5": "ACCESSORIES",
+            "url_5": "shopify://collections/accessories"
+          }
+        },
+        "c2": {
+          "type": "column",
+          "settings": {
+            "heading": "INFORMATION",
+            "label_1": "SHIPPING",
+            "url_1": "shopify://policies/shipping-policy",
+            "label_2": "REFUNDS",
+            "url_2": "shopify://policies/refund-policy",
+            "label_3": "CASE 001",
+            "url_3": "https://crooks-case-break.base44.app"
+          }
+        },
+        "c3": {
+          "type": "column",
+          "settings": {
+            "heading": "CONTACT",
+            "label_1": "INSTAGRAM",
+            "url_1": "https://instagram.com/crooksldn",
+            "label_2": "TIKTOK",
+            "url_2": "https://tiktok.com/@crooksldn",
+            "label_3": "EMAIL",
+            "url_3": "mailto:info@crooksldn.com"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3"
+      ],
+      "settings": {
+        "base_line": "EVIDENCE TERMINAL v0.2 // CROOKSLDN // OWN THE STREETS™ // © [year]"
       }
     }
   },
   "order": [
+    "crooks_footer_log",
     "footer_m9NzUG",
     "footer_utilities_jLGE8U"
   ]

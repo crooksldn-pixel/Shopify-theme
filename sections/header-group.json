@@ -39,7 +39,8 @@
         "divider_width": 1,
         "padding-block-start": 15,
         "padding-block-end": 15
-      }
+      },
+      "disabled": true
     },
     "header_section": {
       "type": "header",
@@ -111,7 +112,8 @@
         "product_color_scheme": "default",
         "enable_transparent_header_collection": false,
         "collection_color_scheme": "default"
-      }
+      },
+      "disabled": true
     },
     "177436560177a65f13": {
       "type": "_blocks",
@@ -182,9 +184,59 @@
         "padding-block-start": 0,
         "padding-block-end": 0
       }
+    },
+    "crooks_status_bar": {
+      "type": "crooks-status-bar",
+      "blocks": {
+        "m1": {
+          "type": "message",
+          "settings": {
+            "message": "FREE UK SHIPPING — 24HR DISPATCH AVAILABLE"
+          }
+        },
+        "m2": {
+          "type": "message",
+          "settings": {
+            "message": "PROPERTY STORE — UNIT 7, LONDON"
+          }
+        },
+        "m3": {
+          "type": "message",
+          "settings": {
+            "message": "[count] EXHIBITS CURRENTLY LOGGED"
+          }
+        }
+      },
+      "block_order": [
+        "m1",
+        "m2",
+        "m3"
+      ],
+      "settings": {
+        "rotate": true,
+        "interval_ms": 8,
+        "collection": "frontpage"
+      }
+    },
+    "crooks_header": {
+      "type": "crooks-header",
+      "settings": {
+        "wordmark": "CROOKSLDN",
+        "menu": "main-menu",
+        "menu_label": "MENU",
+        "close_label": "CLOSE",
+        "cart_label": "BAG",
+        "search_label": "SEARCH",
+        "account_label": "ACCOUNT",
+        "drawer_heading": "INDEX",
+        "drawer_label": "Main menu",
+        "show_search": true
+      }
     }
   },
   "order": [
+    "crooks_status_bar",
+    "crooks_header",
     "header_announcements_9jGBFp",
     "header_section",
     "177436560177a65f13"
