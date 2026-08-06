@@ -43,6 +43,35 @@ Display face is **VT323** (unchanged from the prototypes), used only for
 
 ---
 
+### VT323 was never loaded — the display face silently fell back
+
+The brief's §4 called for font links for VT323 and IBM Plex Mono. The mono
+decision was resolved in favour of the store's existing CRX Mono, but **VT323
+itself was never actually loaded**: `--crk-font-display` named it, no
+`@font-face` or link ever existed, so every display element silently fell back
+to `ui-monospace`.
+
+Affected everything set in the display face — the CROOKSLDN wordmark, the
+header logo, section headings (EXHIBIT LOG, CASE 001), every price, exhibit
+numbers, product titles on the record, and the custody step numerals. The CSS
+was correct throughout; only the font was missing, which is why it looked
+generically monospaced rather than like a terminal.
+
+Fixed by self-hosting the Latin subset at `assets/vt323.woff2` with an
+`@font-face` in `crooks.css` using the same relative-URL pattern as
+`crx-mono.css`, plus a `preload` in `theme.liquid`. Licence in `OFL-VT323.txt`
+(SIL OFL 1.1; note VT323 *does* declare a Reserved Font Name, unlike Space
+Mono, so the family must not be renamed).
+
+One known gap: the Latin subset does not include U+2605 BLACK STAR, so the star
+in `CRXST★RZ` falls back to a system glyph inside display-face headings. It
+renders correctly everywhere set in the mono face.
+
+A separate audit confirmed **no other loss**: every selector in the prototype's
+`crooks-terminal.css` is present in `assets/crooks.css`.
+
+---
+
 ### Contrast: one token corrected, one left as a design decision
 
 Measured every token pair in both modes during the Phase 5 verification pass.

@@ -1,4 +1,22 @@
 /* ============================================================
+   VT323 — the terminal display face.
+   Self-hosted to match crx-mono.css (same relative-URL pattern: Shopify serves
+   both from /assets, so url('vt323.woff2') resolves alongside this file).
+   Latin subset from Google Fonts, SIL OFL 1.1 — see OFL-VT323.txt.
+
+   This face was specified in the brief but never actually loaded, so every
+   display element silently fell back to ui-monospace and lost the pixel
+   terminal look. Loading it is what restores it.
+   ============================================================ */
+@font-face {
+  font-family: 'VT323';
+  src: url('vt323.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================================
    CROOKSLDN — PROPERTY STORE TERMINAL
    Single source of truth for the terminal/exhibit visual system.
    Ported from the prototypes: tokens from src/index.css (.crk-root)

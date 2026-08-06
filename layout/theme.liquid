@@ -28,6 +28,13 @@
     {%- render 'stylesheets' -%}
     {%- render 'fonts' -%}
     {{ 'crx-mono.css' | asset_url | stylesheet_tag }}
+    <link
+      rel="preload"
+      as="font"
+      href="{{ 'vt323.woff2' | asset_url }}"
+      type="font/woff2"
+      crossorigin
+    >
 
     {%- comment -%}
       CROOKSLDN light/dark: resolve the theme before first paint so there is no
