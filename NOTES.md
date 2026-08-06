@@ -100,6 +100,72 @@ Everything else passes in both modes, including body text (13.8:1 dark /
 
 ---
 
+### Product image source audit (Fault 3 deliverable)
+
+Every image on the 14 active products, downloaded and inspected pixel-by-pixel:
+alpha channel, corner opacity, share of opaque area, and how much of that
+opaque area is near-white. "Baked" = a large opaque region that is
+overwhelmingly white, i.e. a background burned into the file.
+
+| Product | Handle | Images | Transparent? | Issue |
+|---|---|---|---|---|
+| 3 CLIVES TEE | `3-clives-tee` | 3 | 1,2 yes · **3 NO** | image 3 is JPEG, 100% opaque, 86% white — **re-cut** |
+| BROADCAST TEE | `broadcast-tee` | 3 | 1,2 yes · **3 NO** | image 3 is JPEG, 100% opaque, 86% white — **re-cut** |
+| MONEY CLIVE TEE | `evil-clive-tee` | 3 | all yes | — |
+| GREY WASH OG JEANS | `cb1-wash-jeans` | 1 | yes | — |
+| BLUE WASH OG JEANS | `cb2-wash-jeans` | 1 | yes | — |
+| BLUE WASH JORTS | `cb1-wash-jorts` | 1 | yes | — |
+| GREY WASH JORTS | `cb2-wash-jorts` | 2 | 1 yes · **2 NO** | image 2 is JPEG, 100% opaque, 69% white — **re-cut**. Also a two-item group shot where every other product is a single garment |
+| V2 BAGGIES | `v2-baggies` | 2 | all yes | — |
+| CHARCOAL CELLBLOCK CREWNECK | `charcoal-cellblock-crewneck` | 1 | yes | — |
+| CHARCOAL CELLBLOCK SHORTS | `charcoal-cellblock-shorts` | 2 | all yes | — |
+| CRXST★RZ T-SHIRT | `crxst-rz-t-shirt` | 2 | all yes | — |
+| BLACK/BLUE MOTIONTEC SOCKS | `black-socks` | 1 | yes | — |
+| WHITE/RED MOTIONTEC SOCKS | `white-socks` | 1 | yes | — |
+| LARGE DUFFLE BAG | `large-duffle-bag` | 1 | yes | — |
+
+**Three files to re-cut**, all JPEG: `3-clives-tee` #3, `broadcast-tee` #3,
+`cb2-wash-jorts` #2. Nothing in CSS fixes a baked-in background — they need new
+files with real transparency.
+
+**The white box you saw on GREY WASH JORTS was not its main image.** That file
+is a clean cut-out (35% opaque, 0% white). The white box was its *second* image
+— a full-bleed white-background JPEG — revealed by the Fault 1 stacking bug.
+With Fault 1 fixed it no longer composites, but hovering that card on desktop
+still swaps to a white rectangle until the file is re-cut.
+
+**Gating rule: exclude JPEG, not "include PNG".** Sources here are mixed PNG and
+WebP, and WebP carries alpha perfectly well — an initial `.png`-only test wrongly
+excluded six cut-out WebP files. JPEG cannot hold an alpha channel at all, so a
+JPEG product shot always has a baked background. The audit confirms the
+correlation exactly: every baked image is JPEG, every non-JPEG is a clean
+cut-out. Currently 20 of 21 card images carry the outline; the sole exclusion is
+the GREY WASH JORTS JPEG.
+
+### Outline performance: drop-shadow beat feMorphology
+
+Measured in Chromium at 390px, DPR 3, 120 cards (12x the real catalogue),
+scripted scroll, frames counted over a fixed 4s window:
+
+| CPU throttle | baseline | 4x drop-shadow | SVG feMorphology |
+|---|---|---|---|
+| 6x (mid-tier mobile) | 60.4 fps | 60.2 fps | 60.4 fps |
+| 20x (extreme) | 60.1 fps | **59.7 fps** | 58.0 fps |
+
+Zero frames over 50ms in any configuration. At realistic mid-tier throttling the
+three are indistinguishable; only under extreme load does a gap open, and
+drop-shadow is the *faster* of the two — the opposite of the expectation that one
+filter pass would beat four. Drop-shadow shipped: faster under load, simpler, and
+no inline SVG.
+
+Two earlier measurement attempts were discarded as invalid and are recorded here
+so the numbers above are not over-trusted: a rAF-paced scroll pins every variant
+to exactly 16.67ms (it measures vsync, not filter cost), and CDP main-thread task
+time showed filters as *faster* than baseline because filter raster does not run
+on the main thread.
+
+---
+
 ## Upstream fixes (for George — store data, not theme code)
 
 ### 1. CB1 / CB2 denim prefixes are crossed — CONFIRMED

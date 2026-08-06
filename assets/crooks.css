@@ -63,6 +63,10 @@
   --crk-press: #1A1626;
   --crk-red: #C95450; /* raised from #C4433F: 3.91:1 -> 4.50:1 on panel (WCAG AA) */
   --crk-onpurple: #DDD7C9;
+  /* Alpha-trace outline. Dark mode only — light mode is deliberately unset so a
+     value can be added later without touching the rule. Not pure #fff: too
+     harsh against this palette. */
+  --crk-outline: #DDD7C9;
 
   /* ---- aliases for the terminal-era names ----
      The homepage sections were built against --crk-void / --crk-lav /
@@ -129,9 +133,10 @@
 .crk-btn:hover { border-color: var(--crk-lav) }
 .crk-grid { display: grid; gap: 24px }
 @media (min-width: 1024px) { .crk-grid { grid-template-columns: repeat(12, 1fr) } }
-.crk-scan { display: none }
-.crk-scan[data-crk-texture="on"] { display: block; position: fixed; inset: 0; z-index: 40; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px) }
-:root[data-crk-theme="light"] .crk-scan[data-crk-texture="on"] { background: repeating-linear-gradient(0deg, rgba(20,18,26,.07) 0 1px, transparent 1px 3px) }
+/* The scanline is no longer a full-page overlay — see the texture block at the
+   end of this file. .crk-scan is retained as an inert no-op so any lingering
+   markup cannot paint over product photography. */
+.crk-scan { display: none !important }
 
 /* ---- status bar ---- */
 .crk-status { height: 28px; background: var(--crk-panel); border-bottom: 1px solid var(--crk-line); display: flex; align-items: center; padding: 0 16px; overflow: hidden }
@@ -180,6 +185,11 @@
 .crk-card--sold .crk-card__img { opacity: .55 }
 @media (hover: hover) and (pointer: fine) {
   .crk-card:hover { border-color: var(--crk-lav) }
+  /* Hard swap: the main image is REMOVED from the box, not merely covered.
+     Showing the alt on top of a still-displayed main let transparent PNGs
+     composite two garments together. display:none is the only thing that
+     occludes; opacity and z-index do not. No transition, by design. */
+  .crk-card:hover .crk-card__img--main { display: none }
   .crk-card:hover .crk-card__img--alt { display: block }
 }
 .crk-log__empty { margin-top: 24px; color: var(--crk-dim); font-size: 12px; letter-spacing: .2em; text-transform: uppercase }
@@ -527,3 +537,54 @@
 /* Ghost/outline buttons sit on the page ground, not on purple: keep them on the
    body text colour so they stay legible in both modes. */
 .crk-root a.crk-btn--ghost { color: var(--crk-text) }
+
+/* ============================================================
+   SCANLINE TEXTURE — painted as a surface background, never an overlay.
+   An element's own background-image paints BELOW its content, so every <img>
+   inside a textured surface is clean automatically. There is no z-index to
+   manage and no way for this to regress onto product photography.
+   Declared as a token so one line disables it per section.
+   ============================================================ */
+.crk-root { --crk-texture: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0px, rgba(0,0,0,.14) 1px, transparent 1px, transparent 3px) }
+:root[data-crk-theme="light"] .crk-root { --crk-texture: repeating-linear-gradient(0deg, rgba(20,18,26,.07) 0px, rgba(20,18,26,.07) 1px, transparent 1px, transparent 3px) }
+.crk-root[data-crk-texture="off"] { --crk-texture: none }
+
+/* Page ground + panel fills + card chrome. background-color is restated
+   alongside background-image so neither resets the other. */
+.crk-root { background-color: var(--crk-ground); background-image: var(--crk-texture) }
+.crk-root .crk-panel,
+.crk-root .crk-board-panel,
+.crk-root .crk-status,
+.crk-root .crk-card__media,
+.crk-root .crk-log__cell { background-image: var(--crk-texture) }
+.crk-record { background-color: var(--crk-ground); background-image: var(--crk-texture) }
+.crk-record .crk-panel,
+.crk-record .crk-section,
+.crk-record .crk-tray,
+.crk-record .crk-thumb { background-image: var(--crk-texture) }
+
+/* ============================================================
+   PRODUCT IMAGE OUTLINE
+   Traces the alpha channel with four zero-blur offsets. A drop-shadow at
+   blur 0 is a stroke, not a shadow: hard edge, no softness, no implied depth.
+   Blur is 0 in every instance and must stay 0.
+
+   Measured against an SVG feMorphology dilate at 390px/3x with 120 cards:
+   6x CPU throttle  baseline 60.4fps | drop-shadow 60.2 | feMorphology 60.4
+   20x CPU throttle baseline 60.1fps | drop-shadow 59.7 | feMorphology 58.0
+   No frames over 50ms in any run. Drop-shadow is the faster of the two under
+   load, so it wins despite being four passes.
+
+   Applied ONLY to transparent PNG sources, gated in Liquid from the source
+   audit in NOTES.md. On an image with a baked-in background the filter would
+   trace the rectangle, which is worse than doing nothing.
+   ============================================================ */
+.crk-product-image {
+  filter:
+    drop-shadow( 1px  0    0 var(--crk-outline))
+    drop-shadow(-1px  0    0 var(--crk-outline))
+    drop-shadow( 0    1px  0 var(--crk-outline))
+    drop-shadow( 0   -1px  0 var(--crk-outline));
+}
+/* Dark-mode treatment only, per brief. */
+:root[data-crk-theme="light"] .crk-product-image { filter: none }

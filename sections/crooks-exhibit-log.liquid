@@ -79,6 +79,25 @@
           assign crk_cat = product.type | upcase
           assign crk_main = product.featured_image
           assign crk_alt = product.images[1]
+          comment
+            Outline everything EXCEPT JPEG. JPEG cannot carry an alpha channel,
+            so a JPEG product shot always has a baked-in background and the
+            filter would trace the rectangle rather than the garment. PNG and
+            WebP both support alpha and this catalogue uses both — testing for
+            .png alone wrongly excluded six cut-out WebP files. Verified against
+            the source audit in NOTES.md: every baked-white image is a JPEG and
+            every non-JPEG is a clean cut-out.
+          endcomment
+          assign main_src = crk_main.src | downcase
+          assign alt_src = crk_alt.src | downcase
+          assign main_cls = 'crk-card__img crk-card__img--main'
+          unless main_src contains '.jpg' or main_src contains '.jpeg'
+            assign main_cls = main_cls | append: ' crk-product-image'
+          endunless
+          assign alt_cls = 'crk-card__img crk-card__img--alt'
+          unless alt_src contains '.jpg' or alt_src contains '.jpeg'
+            assign alt_cls = alt_cls | append: ' crk-product-image'
+          endunless
         -%}
         <li class="crk-log__cell" data-crk-category="{{ crk_cat | escape }}">
           <a
@@ -98,7 +117,7 @@
                     loading: 'lazy',
                     widths: '200, 300, 400, 600, 800',
                     sizes: '(min-width: 1024px) 25vw, 50vw',
-                    class: 'crk-card__img crk-card__img--main',
+                    class: main_cls,
                     alt: crk_main.alt
                 }}
               {%- endif -%}
@@ -110,7 +129,7 @@
                     loading: 'lazy',
                     widths: '200, 300, 400, 600, 800',
                     sizes: '(min-width: 1024px) 25vw, 50vw',
-                    class: 'crk-card__img crk-card__img--alt',
+                    class: alt_cls,
                     alt: ''
                 }}
               {%- endif -%}

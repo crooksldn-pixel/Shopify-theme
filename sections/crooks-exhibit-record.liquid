@@ -48,10 +48,8 @@
   data-crk-label-low="{{ section.settings.label_low | escape }}"
   data-crk-label-soldsize="{{ section.settings.label_sold_size | escape }}"
   data-crk-photo-label="{{ section.settings.photo_label | escape }}"
+  {%- unless section.settings.show_texture %} data-crk-texture="off"{% endunless %}
 >
-  {%- if section.settings.show_texture -%}
-    <div data-crk-texture aria-hidden="true"></div>
-  {%- endif -%}
 
   <div class="crk-wrap">
     {%- comment -%} ---------- meta strip ---------- {%- endcomment -%}
@@ -88,6 +86,11 @@
                 assign img_loading = 'lazy'
               endif
               assign img_alt = image.alt | default: product.title
+              assign gal_src = image.src | downcase
+              assign main_img_cls = 'crk-main-img'
+              unless gal_src contains '.jpg' or gal_src contains '.jpeg'
+                assign main_img_cls = main_img_cls | append: ' crk-product-image'
+              endunless
             -%}
             <div data-crk-slide {% unless forloop.first %}hidden{% endunless %}>
               {{
@@ -97,7 +100,7 @@
                   widths: '400, 600, 800, 1000, 1400',
                   sizes: '(min-width: 960px) 55vw, 100vw',
                   loading: img_loading,
-                  class: 'crk-main-img',
+                  class: main_img_cls,
                   alt: img_alt
               }}
             </div>

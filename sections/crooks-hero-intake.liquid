@@ -4,10 +4,7 @@
   <script src="{{ 'crooks-board.js' | asset_url }}" defer></script>
 {%- endif -%}
 
-<section class="crk-root crk-section" data-crk-section="hero-intake">
-  {%- if section.settings.show_texture -%}
-    <div class="crk-scan" data-crk-texture="on" aria-hidden="true"></div>
-  {%- endif -%}
+<section class="crk-root crk-section" data-crk-section="hero-intake"{% unless section.settings.show_texture %} data-crk-texture="off"{% endunless %}>
 
   <div class="crk-inner crk-hero__grid">
     {%- if section.settings.show_board -%}
