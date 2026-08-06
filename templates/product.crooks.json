@@ -1,0 +1,24 @@
+{
+  "sections": {
+    "main": {
+      "type": "crooks-exhibit-record",
+      "blocks": {
+        "s1": { "type": "custody_step", "settings": { "label": "LOGGED", "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday." } },
+        "s2": { "type": "custody_step", "settings": { "label": "DISPATCHED", "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order." } },
+        "s3": { "type": "custody_step", "settings": { "label": "IN TRANSIT", "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days." } },
+        "s4": { "type": "custody_step", "settings": { "label": "RELEASED", "body": "You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: info@crooksldn.com." } }
+      },
+      "block_order": ["s1", "s2", "s3", "s4"],
+      "settings": {
+        "collection": "frontpage",
+        "back_label": "← RETURN TO LOG",
+        "exhibit_word": "EXHIBIT",
+        "photo_label": "PHOTO [i] OF [n]",
+        "gallery_label": "EVIDENCE PHOTOGRAPHY",
+        "low_stock_threshold": 3,
+        "show_wash": true
+      }
+    }
+  },
+  "order": ["main"]
+}

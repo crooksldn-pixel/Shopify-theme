@@ -1,0 +1,473 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-record.js' | asset_url }}" defer></script>
+
+{%- liquid
+  assign crk_var = product.selected_or_first_available_variant
+  assign crk_col = collections[section.settings.collection]
+
+  comment
+    Exhibit number = position within the collection. Derived by scanning, never
+    from a hardcoded map, so it stays correct as the catalogue changes.
+  endcomment
+  assign crk_index = 0
+  assign crk_total = crk_col.products_count
+  for p in crk_col.products
+    if p.id == product.id
+      assign crk_index = forloop.index
+      break
+    endif
+  endfor
+
+  comment
+    Size option = the first option that is not Title.
+  endcomment
+  assign crk_size_opt = null
+  for opt in product.options_with_values
+    assign opt_down = opt.name | downcase
+    if opt_down != 'title' and crk_size_opt == null
+      assign crk_size_opt = opt
+    endif
+  endfor
+  assign crk_single = false
+  if product.variants.size == 1 and product.variants.first.title == 'Default Title'
+    assign crk_single = true
+    assign crk_size_opt = null
+  endif
+
+  comment
+    Wash sibling, resolved by tag. Never by handle: the CB1/CB2 handle prefixes
+    are crossed upstream (see NOTES.md).
+  endcomment
+  assign crk_wash = ''
+  for t in product.tags
+    if t == 'CB1' or t == 'CB2'
+      assign crk_wash = t
+    endif
+  endfor
+  assign crk_sibling = null
+  if crk_wash != blank and section.settings.show_wash
+    if crk_wash == 'CB1'
+      assign crk_other = 'CB2'
+    else
+      assign crk_other = 'CB1'
+    endif
+    for p in crk_col.products
+      if p.id != product.id and p.type == product.type and crk_sibling == null
+        if p.tags contains crk_other
+          assign crk_sibling = p
+        endif
+      endif
+    endfor
+  endif
+-%}
+
+<section
+  class="crk-root"
+  data-crk-section="exhibit-record"
+  data-crk-label-add="{{ section.settings.label_add | escape }}"
+  data-crk-label-select="{{ section.settings.label_select | escape }}"
+  data-crk-label-sold="{{ section.settings.label_sold | escape }}"
+  data-crk-label-instock="{{ section.settings.label_in_stock | escape }}"
+  data-crk-label-low="{{ section.settings.label_low | escape }}"
+  data-crk-label-soldsize="{{ section.settings.label_sold_size | escape }}"
+  data-crk-photo-label="{{ section.settings.photo_label | escape }}"
+>
+  {%- comment -%} ---------- head bar ---------- {%- endcomment -%}
+  <div class="crk-pdp-head">
+    <a class="crk-pdp-head__back" href="{{ crk_col.url | default: routes.root_url }}">
+      {{ section.settings.back_label }}
+    </a>
+    <span class="crk-pdp-head__meta">
+      {%- if crk_index > 0 -%}
+        <span class="crk-micro">
+          {{ section.settings.exhibit_word }} {% if crk_index < 10 %}0{% endif %}{{ crk_index }} / {{ crk_total }}
+        </span>
+      {%- endif -%}
+      {%- assign crk_case_ref = product.metafields.crooks.case_ref.value -%}
+      {%- if crk_case_ref != blank -%}
+        <span class="crk-micro">{{ crk_case_ref }}</span>
+      {%- endif -%}
+    </span>
+  </div>
+
+  <div class="crk-pdp">
+    {%- comment -%} ---------- gallery ---------- {%- endcomment -%}
+    <div class="crk-pdp__gallery">
+      <div class="crk-gal">
+        <div class="crk-gal__label">
+          <span class="crk-micro" data-crk-photo-counter>
+            {{ section.settings.photo_label | replace: '[i]', 1 | replace: '[n]', product.images.size }}
+          </span>
+          <span class="crk-micro">{{ section.settings.gallery_label }}</span>
+        </div>
+        <div class="crk-gal__frame">
+          {%- for image in product.images -%}
+            {%- liquid
+              if forloop.first
+                assign img_loading = 'eager'
+              else
+                assign img_loading = 'lazy'
+              endif
+              assign img_alt = image.alt | default: product.title
+            -%}
+            <div class="crk-gal__slide" data-crk-slide {% unless forloop.first %}hidden{% endunless %}>
+              {{
+                image
+                | image_url: width: 1400
+                | image_tag:
+                  widths: '400, 600, 800, 1000, 1400',
+                  sizes: '(min-width: 1024px) 58vw, 100vw',
+                  loading: img_loading,
+                  alt: img_alt
+              }}
+            </div>
+          {%- else -%}
+            <div class="crk-gal__slide" data-crk-slide></div>
+          {%- endfor -%}
+        </div>
+        <svg class="crk-gal__rule" viewBox="0 0 400 12" height="12" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="0.5" x2="400" y2="0.5" stroke="var(--crk-line)" stroke-width="1"></line>
+          {%- for i in (0..40) -%}
+            {%- assign x = i | times: 10 -%}
+            {%- assign tall = i | modulo: 5 -%}
+            <line x1="{{ x }}" y1="0" x2="{{ x }}" y2="{% if tall == 0 %}10{% else %}6{% endif %}" stroke="var(--crk-line)" stroke-width="1"></line>
+          {%- endfor -%}
+        </svg>
+        {%- if product.images.size > 1 -%}
+          <div class="crk-strip" role="group" aria-label="{{ section.settings.strip_label | escape }}">
+            {%- for image in product.images -%}
+              <button
+                type="button"
+                class="crk-strip__thumb"
+                data-crk-thumb
+                aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-label="{{ section.settings.photo_label | replace: '[i]', forloop.index | replace: '[n]', product.images.size | escape }}"
+              >
+                {{ image | image_url: width: 128 | image_tag: loading: 'lazy', alt: '' }}
+              </button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+
+    {%- comment -%} ---------- record panel ---------- {%- endcomment -%}
+    <div class="crk-pdp__panel">
+      {%- if crk_index > 0 -%}
+        <p class="crk-micro">{{ section.settings.exhibit_word }} {% if crk_index < 10 %}0{% endif %}{{ crk_index }}</p>
+      {%- endif -%}
+      <h1 class="crk-rec__title">{% render 'crooks-title', product: product %}</h1>
+      <p>
+        <span class="crk-rec__price" data-crk-price>{{ crk_var.price | money }}</span>
+        {%- if crk_var.compare_at_price > crk_var.price -%}
+          <s class="crk-rec__compare">{{ crk_var.compare_at_price | money }}</s>
+        {%- endif -%}
+      </p>
+      <hr class="crk-rec__rule">
+
+      {%- if product.available -%}
+        {%- form 'product', product, class: 'crk-rec__form', id: 'crk-product-form' -%}
+          <input type="hidden" name="id" value="{{ crk_var.id }}" data-crk-variant-id>
+
+          {%- if crk_size_opt -%}
+            <div role="group" aria-label="{{ section.settings.size_group_label | escape }}">
+              <p class="crk-eyebrow">{{ crk_size_opt.name | upcase }}</p>
+              <div class="crk-sizes">
+                {%- for value in crk_size_opt.values -%}
+                  {%- liquid
+                    assign v_match = null
+                    for v in product.variants
+                      if v.options contains value and v_match == null
+                        assign v_match = v
+                      endif
+                    endfor
+                    comment
+                      Buyability comes from variant.available, never from the
+                      inventory count: policy differs per variant and oversold
+                      CONTINUE variants are still purchasable (see NOTES.md).
+                    endcomment
+                    assign v_avail = false
+                    if v_match and v_match.available
+                      assign v_avail = true
+                    endif
+                    assign v_qty = 0
+                    if v_match and v_match.inventory_quantity > 0
+                      assign v_qty = v_match.inventory_quantity
+                    endif
+                    assign v_low = false
+                    if v_avail and v_qty > 0 and v_qty <= section.settings.low_stock_threshold
+                      assign v_low = true
+                    endif
+                  -%}
+                  <button
+                    type="button"
+                    class="crk-size{% if v_low %} crk-size--low{% endif %}"
+                    data-size="{{ value | escape }}"
+                    data-variant-id="{{ v_match.id }}"
+                    data-available="{{ v_avail }}"
+                    data-quantity="{{ v_qty }}"
+                    data-price="{{ v_match.price | money }}"
+                    aria-pressed="{% if v_match.id == crk_var.id %}true{% else %}false{% endif %}"
+                    aria-disabled="{% unless v_avail %}true{% endunless %}"
+                    aria-label="{{ crk_size_opt.name }} {{ value }}{% unless v_avail %}, {{ section.settings.sr_sold_out }}{% endunless %}{% if v_low %}, {{ v_qty }} {{ section.settings.sr_left }}{% endif %}"
+                  >{{ value }}</button>
+                {%- endfor -%}
+              </div>
+              <p class="crk-stockline" data-crk-stockline aria-live="polite">&nbsp;</p>
+            </div>
+
+            {%- comment -%} Without JS the buttons cannot select; these links can. {%- endcomment -%}
+            <noscript>
+              <p class="crk-micro crk-sizes__note">{{ section.settings.nojs_note }}</p>
+              <ul class="crk-sizes">
+                {%- for v in product.variants -%}
+                  {%- if v.available -%}
+                    <li><a class="crk-size" href="{{ product.url }}?variant={{ v.id }}">{{ v.title }}</a></li>
+                  {%- endif -%}
+                {%- endfor -%}
+              </ul>
+            </noscript>
+          {%- endif -%}
+
+          <button type="submit" name="add" class="crk-buy" data-crk-buy>
+            {%- if crk_size_opt -%}{{ section.settings.label_select }}{%- else -%}{{ section.settings.label_add }}{%- endif -%}
+          </button>
+        {%- endform -%}
+      {%- else -%}
+        <p class="crk-released">{{ section.settings.released_text }}</p>
+        <div class="crk-rec__notify">
+          <p>{{ section.settings.notify_intro }}</p>
+          {%- form 'contact', class: 'crk-intake__form' -%}
+            <input type="hidden" name="contact[subject]" value="{{ section.settings.notify_subject | escape }}">
+            <input type="hidden" name="contact[product]" value="{{ product.handle }}">
+            <input type="hidden" name="contact[product_url]" value="{{ shop.url }}{{ product.url }}">
+            <label class="crk-sr" for="crk-restock-email">{{ section.settings.notify_label }}</label>
+            <input
+              class="crk-input"
+              id="crk-restock-email"
+              type="email"
+              name="contact[email]"
+              placeholder="{{ section.settings.notify_placeholder | escape }}"
+              autocomplete="email"
+              required
+            >
+            <button class="crk-btn crk-btn--ghost" type="submit">{{ section.settings.notify_button }}</button>
+            {%- if form.posted_successfully? -%}
+              <p class="crk-intake__msg crk-intake__msg--ok" role="status">{{ section.settings.notify_ok }}</p>
+            {%- elsif form.errors -%}
+              <p class="crk-intake__msg crk-intake__msg--err" role="alert">{{ section.settings.notify_err }}</p>
+            {%- endif -%}
+          {%- endform -%}
+        </div>
+      {%- endif -%}
+
+      <hr class="crk-rec__rule">
+
+      {%- comment -%} ---------- specification: a row with no data does not render ---------- {%- endcomment -%}
+      {%- liquid
+        assign mf = product.metafields.crooks
+        assign spec_count = 0
+        if crk_single
+          assign spec_count = 1
+        endif
+        if mf.fabric.value != blank
+          assign spec_count = spec_count | plus: 1
+        endif
+        if mf.cut.value != blank
+          assign spec_count = spec_count | plus: 1
+        endif
+        if mf.wash_code.value != blank
+          assign spec_count = spec_count | plus: 1
+        endif
+        if mf.origin.value != blank
+          assign spec_count = spec_count | plus: 1
+        endif
+        if mf.care.value != blank
+          assign spec_count = spec_count | plus: 1
+        endif
+      -%}
+      {%- if spec_count > 0 -%}
+        <section>
+          <h2 class="crk-eyebrow" style="margin-bottom: 12px;">{{ section.settings.spec_heading }}</h2>
+          <dl class="crk-spec">
+            {%- if crk_single -%}
+              <dt>{{ section.settings.row_size }}</dt><dd>{{ section.settings.one_size_text }}</dd>
+            {%- endif -%}
+            {%- if mf.fabric.value != blank -%}<dt>{{ section.settings.row_fabric }}</dt><dd>{{ mf.fabric.value }}</dd>{%- endif -%}
+            {%- if mf.cut.value != blank -%}<dt>{{ section.settings.row_cut }}</dt><dd>{{ mf.cut.value }}</dd>{%- endif -%}
+            {%- if mf.wash_code.value != blank -%}<dt>{{ section.settings.row_wash }}</dt><dd>{{ mf.wash_code.value }}</dd>{%- endif -%}
+            {%- if mf.origin.value != blank -%}<dt>{{ section.settings.row_origin }}</dt><dd>{{ mf.origin.value }}</dd>{%- endif -%}
+            {%- if mf.care.value != blank -%}<dt>{{ section.settings.row_care }}</dt><dd>{{ mf.care.value }}</dd>{%- endif -%}
+          </dl>
+        </section>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- comment -%} ---------- below the fold ---------- {%- endcomment -%}
+  <div class="crk-pdp__below">
+    {%- if product.description != blank -%}
+      <div class="crk-panel">
+        <h2 class="crk-eyebrow">{{ section.settings.provenance_heading }}</h2>
+        <div class="crk-prose" style="margin-top: 16px;">{{ product.description }}</div>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} measurements from the crooks.measurements JSON metafield {%- endcomment -%}
+    {%- assign rows = product.metafields.crooks.measurements.value -%}
+    {%- if rows and rows.size > 0 -%}
+      <div class="crk-panel">
+        <h2 class="crk-eyebrow" style="margin-bottom: 16px;">{{ section.settings.measure_heading }}</h2>
+        <table class="crk-table">
+          <caption>{{ section.settings.measure_caption }}</caption>
+          <thead>
+            <tr>
+              {%- for pair in rows.first -%}
+                <th scope="col">{{ pair[0] | upcase }}</th>
+              {%- endfor -%}
+            </tr>
+          </thead>
+          <tbody>
+            {%- for row in rows -%}
+              <tr data-crk-measure-row="{{ row.size | escape }}">
+                {%- for pair in row -%}
+                  {%- if forloop.first -%}
+                    <th scope="row">{{ pair[1] }}</th>
+                  {%- else -%}
+                    <td>{{ pair[1] }}</td>
+                  {%- endif -%}
+                {%- endfor -%}
+              </tr>
+            {%- endfor -%}
+          </tbody>
+        </table>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} wash comparison — renders only when a sibling is found by tag {%- endcomment -%}
+    {%- if crk_sibling and product.featured_image and crk_sibling.featured_image -%}
+      <div class="crk-panel">
+        <h2 class="crk-eyebrow">{{ section.settings.wash_heading }}</h2>
+        <div class="crk-wash" style="margin-top: 16px; border: 1px solid var(--crk-line);">
+          <figure class="crk-wash__side">
+            {{ product.featured_image | image_url: width: 640 | image_tag: loading: 'lazy', alt: product.title }}
+            <span class="crk-wash__label crk-eyebrow">{{ crk_wash }}</span>
+            <span class="crk-micro">{% render 'crooks-title', product: product %}</span>
+          </figure>
+          <figure class="crk-wash__side">
+            <a href="{{ crk_sibling.url }}">
+              {{ crk_sibling.featured_image | image_url: width: 640 | image_tag: loading: 'lazy', alt: crk_sibling.title }}
+              <span class="crk-wash__label crk-eyebrow">{{ crk_other }}</span>
+              <span class="crk-micro">{% render 'crooks-title', product: crk_sibling %}</span>
+            </a>
+          </figure>
+        </div>
+        {%- if section.settings.wash_caption != blank -%}
+          <p class="crk-wash__caption">{{ section.settings.wash_caption }}</p>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} chain of custody — real shipping/returns facts, as blocks {%- endcomment -%}
+    {%- if section.blocks.size > 0 -%}
+      <div class="crk-panel">
+        <h2 class="crk-eyebrow" style="margin-bottom: 16px;">{{ section.settings.custody_heading }}</h2>
+        <ol class="crk-custody">
+          {%- for block in section.blocks -%}
+            <li class="crk-custody__step" {{ block.shopify_attributes }}>
+              <span class="crk-custody__num">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+              <span class="crk-eyebrow" style="display: block; margin: 4px 0;">{{ block.settings.label }}</span>
+              <p class="crk-custody__body">{{ block.settings.body }}</p>
+            </li>
+          {%- endfor -%}
+        </ol>
+      </div>
+    {%- endif -%}
+  </div>
+
+  {%- comment -%} ---------- sticky mobile buy bar ---------- {%- endcomment -%}
+  {%- if product.available -%}
+    <div class="crk-buybar" data-crk-buybar data-visible="false">
+      <div class="crk-buybar__info">
+        <span class="crk-buybar__title">{% render 'crooks-title', product: product %}</span>
+        <span class="crk-buybar__meta">{{ crk_var.price | money }}</span>
+      </div>
+      <button type="button" class="crk-buy">{{ section.settings.label_add }}</button>
+    </div>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Exhibit Record",
+  "tag": "section",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Collection for exhibit numbering and the back link" },
+    { "type": "text", "id": "back_label", "label": "Back link label", "default": "← RETURN TO LOG" },
+    { "type": "text", "id": "exhibit_word", "label": "Exhibit word", "default": "EXHIBIT" },
+    { "type": "header", "content": "Gallery" },
+    { "type": "text", "id": "photo_label", "label": "Photo counter", "info": "Use [i] and [n].", "default": "PHOTO [i] OF [n]" },
+    { "type": "text", "id": "gallery_label", "label": "Gallery caption", "default": "EVIDENCE PHOTOGRAPHY" },
+    { "type": "text", "id": "strip_label", "label": "Thumbnail group label", "default": "Exhibit photographs" },
+    { "type": "header", "content": "Buying" },
+    { "type": "text", "id": "size_group_label", "label": "Size group label (screen readers)", "default": "Select a size" },
+    { "type": "text", "id": "label_add", "label": "Add to bag", "default": "ADD TO BAG" },
+    { "type": "text", "id": "label_select", "label": "No size chosen", "default": "SELECT A SIZE" },
+    { "type": "text", "id": "label_sold", "label": "Sold out", "default": "SOLD OUT" },
+    { "type": "text", "id": "label_in_stock", "label": "In stock line", "default": "IN STOCK" },
+    { "type": "text", "id": "label_low", "label": "Low stock line", "info": "Use [n] and [size].", "default": "[n] LEFT IN SIZE [size]" },
+    { "type": "text", "id": "label_sold_size", "label": "Sold out size line", "info": "Use [size].", "default": "SIZE [size] IS SOLD OUT" },
+    { "type": "range", "id": "low_stock_threshold", "label": "Low stock threshold", "min": 1, "max": 10, "step": 1, "default": 3 },
+    { "type": "text", "id": "sr_sold_out", "label": "\"Sold out\" (screen readers)", "default": "sold out" },
+    { "type": "text", "id": "sr_left", "label": "\"left\" (screen readers)", "default": "left" },
+    { "type": "text", "id": "nojs_note", "label": "No-JavaScript note", "default": "CHOOSE A SIZE:" },
+    { "type": "header", "content": "Sold out" },
+    { "type": "text", "id": "released_text", "label": "Released text", "default": "RELEASED — NO LONGER IN CUSTODY" },
+    { "type": "text", "id": "notify_intro", "label": "Notify intro", "default": "Leave an address and we will notify you if this exhibit is logged again." },
+    { "type": "text", "id": "notify_label", "label": "Notify field label (screen readers)", "default": "Email address for restock notice" },
+    { "type": "text", "id": "notify_placeholder", "label": "Notify placeholder", "default": "EMAIL ADDRESS" },
+    { "type": "text", "id": "notify_button", "label": "Notify button", "default": "NOTIFY" },
+    { "type": "text", "id": "notify_subject", "label": "Notify email subject", "default": "Restock request" },
+    { "type": "text", "id": "notify_ok", "label": "Notify success", "default": "CLEARANCE ACCEPTED — RECORD SUBMITTED" },
+    { "type": "text", "id": "notify_err", "label": "Notify error", "default": "SUBMISSION REJECTED — CHECK THE ADDRESS" },
+    { "type": "header", "content": "Specification" },
+    { "type": "text", "id": "spec_heading", "label": "Heading", "default": "SPECIFICATION" },
+    { "type": "text", "id": "row_size", "label": "Size row label", "default": "SIZE" },
+    { "type": "text", "id": "one_size_text", "label": "One size text", "default": "ONE SIZE" },
+    { "type": "text", "id": "row_fabric", "label": "Fabric row label", "default": "FABRIC" },
+    { "type": "text", "id": "row_cut", "label": "Cut row label", "default": "CUT" },
+    { "type": "text", "id": "row_wash", "label": "Wash code row label", "default": "WASH CODE" },
+    { "type": "text", "id": "row_origin", "label": "Origin row label", "default": "ORIGIN" },
+    { "type": "text", "id": "row_care", "label": "Care row label", "default": "CARE" },
+    { "type": "header", "content": "Below the fold" },
+    { "type": "text", "id": "provenance_heading", "label": "Description heading", "default": "STATEMENT OF PROVENANCE" },
+    { "type": "text", "id": "measure_heading", "label": "Measurements heading", "default": "MEASUREMENTS" },
+    { "type": "text", "id": "measure_caption", "label": "Measurements caption", "default": "Garment laid flat. All measurements in centimetres." },
+    { "type": "checkbox", "id": "show_wash", "label": "Show wash comparison when a sibling is found", "default": true },
+    { "type": "text", "id": "wash_heading", "label": "Wash comparison heading", "default": "WASH COMPARISON" },
+    { "type": "text", "id": "wash_caption", "label": "Wash comparison caption", "default": "Photographed under the same light, on the same day." },
+    { "type": "text", "id": "custody_heading", "label": "Chain of custody heading", "default": "CHAIN OF CUSTODY" }
+  ],
+  "blocks": [
+    {
+      "type": "custody_step",
+      "name": "Custody step",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "default": "LOGGED" },
+        { "type": "textarea", "id": "body", "label": "Body", "default": "Orders are logged same day." }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Crooks — Exhibit Record",
+      "blocks": [
+        { "type": "custody_step", "settings": { "label": "LOGGED", "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday." } },
+        { "type": "custody_step", "settings": { "label": "DISPATCHED", "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order." } },
+        { "type": "custody_step", "settings": { "label": "IN TRANSIT", "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days." } },
+        { "type": "custody_step", "settings": { "label": "RELEASED", "body": "You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: info@crooksldn.com." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

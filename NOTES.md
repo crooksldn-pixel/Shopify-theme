@@ -131,6 +131,32 @@ inventory policy is **not uniform across variants of the same product**:
 This is a data-hygiene issue worth correcting at source (the tees are selling
 past zero), but the theme must handle it correctly regardless.
 
+### 6. Wash-comparison tags (CB1 / CB2) do not exist — feature is dormant
+
+The wash comparison resolves siblings **by tag**, per the brief, because the
+handle prefixes are crossed (issue 1). But no denim product carries a wash tag:
+
+| Handle | Title | Tags |
+|---|---|---|
+| `cb1-wash-jeans` | GREY WASH OG JEANS | `new` |
+| `cb2-wash-jeans` | BLUE WASH OG JEANS | `new` |
+| `cb1-wash-jorts` | BLUE WASH JORTS | `new` |
+| `cb2-wash-jorts` | GREY WASH JORTS | `new` |
+
+`sections/crooks-exhibit-record.liquid` looks for a `CB1` or `CB2` tag and a
+matching sibling of the same product type carrying the opposite tag. With no
+such tags the panel simply does not render — which is the correct, non-
+fabricating behaviour, but it means the feature is invisible today.
+
+**To switch it on:** tag each denim product with its true wash — `CB1` for grey,
+`CB2` for blue, or any pair of names, as long as the two siblings carry
+*opposite* tags. Note the tag must describe the actual wash, not repeat the
+handle prefix, since the prefixes are the thing that is wrong.
+
+Deliberately not worked around by hardcoding handles.
+
+---
+
 ### 5. `crooks.*` metafield definitions do not exist — blocks Phase 4
 
 No product metafield definitions exist in the `crooks` namespace. The only
