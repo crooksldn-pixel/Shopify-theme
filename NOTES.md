@@ -43,6 +43,34 @@ Display face is **VT323** (unchanged from the prototypes), used only for
 
 ---
 
+### Contrast: one token corrected, one left as a design decision
+
+Measured every token pair in both modes during the Phase 5 verification pass.
+Two fell below the §8 gate (body text >= 4.5:1); both come from the prototype's
+own values.
+
+**Corrected — `--crk-red` (dark mode): #C4433F -> #C95450.**
+3.91:1 on panel, below AA. This colour carries SOLD OUT and the sold-out stock
+line, which is information a customer needs in order to buy, so it falls on the
+"costs a sale" side of the governing principle. The new value is the minimal
+hue-preserving lift that reaches 4.50:1 on panel and 4.57:1 on ground. Light
+mode was already fine at 6.48:1.
+
+**Not changed — `--crk-micro`: 2.57:1 dark, 2.98:1 light.**
+Deliberately left alone pending a decision. `.crk-micro` is pure chrome — EXH
+numbers, "EVIDENCE PHOTOGRAPHY", photo counters — and its faintness is the
+point. Raising it changes the look. If it should meet AA anyway:
+
+| | current | 3.0:1 | 4.5:1 (full AA) |
+|---|---|---|---|
+| dark | `#575063` | `#615A6F` | `#7F7590` |
+| light | `#93919B` | `#92909B` | `#74727E` |
+
+Everything else passes in both modes, including body text (13.8:1 dark /
+17.4:1 light) and the label on the purple buy button (7.65:1 in both).
+
+---
+
 ## Upstream fixes (for George — store data, not theme code)
 
 ### 1. CB1 / CB2 denim prefixes are crossed — CONFIRMED

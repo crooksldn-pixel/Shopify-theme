@@ -43,7 +43,7 @@
   --crk-dim: #8A8377;
   --crk-micro: #575063;
   --crk-press: #1A1626;
-  --crk-red: #C4433F;
+  --crk-red: #C95450; /* raised from #C4433F: 3.91:1 -> 4.50:1 on panel (WCAG AA) */
   --crk-onpurple: #DDD7C9;
 
   /* ---- aliases for the terminal-era names ----
