@@ -100,6 +100,34 @@ Everything else passes in both modes, including body text (13.8:1 dark /
 
 ---
 
+### Card double-render: `.crk-root img` outranked the hide rule
+
+Two garments composited on every product card with a second image. The cause was
+CSS specificity, not the hover logic:
+
+```
+.crk-root img         (0,1,1)  class + element   <-- won
+.crk-card__img--alt   (0,1,0)  class only
+```
+
+`.crk-root img { display: block }` overrode `.crk-card__img--alt { display: none }`,
+so the second image was painted **at rest, on every device** — no hover involved.
+That is why it was worst on touch: there is no hover state there, so the rest
+state is all you ever see. An earlier fix corrected only the hover case (hiding
+the main image when the alt appears) and left the real fault untouched.
+
+Fixed by prefixing the rules with `.crk-root` so they reach (0,2,1) and (0,3,1)
+and win. Verified with computed styles on live markup + live CSS: exactly one
+image painted per card, at rest and on hover, at 1280px and 390px, across all
+seven multi-image products.
+
+This is the third instance of the same trap in this stylesheet — the others were
+the anchor buttons (`.crk-root a` beating `.crk-btn--fill`) and the same on
+ghost buttons. Any rule competing with a `.crk-root <element>` base rule needs
+the `.crk-root` prefix to win.
+
+---
+
 ### Product image source audit (Fault 3 deliverable)
 
 Every image on the 14 active products, downloaded and inspected pixel-by-pixel:
