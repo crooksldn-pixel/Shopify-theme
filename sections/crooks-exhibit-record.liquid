@@ -216,6 +216,31 @@
               </p>
             {%- endif -%}
 
+            {%- comment -%}
+              Delivery expectation, carried over from the Horizon PDP's
+              delivery-message block. Real shipping information a customer needs
+              before buying, so it survives the redesign rather than being
+              replaced by flavour.
+            {%- endcomment -%}
+            {%- liquid
+              assign crk_mto = false
+              if product.tags contains section.settings.made_to_order_tag
+                assign crk_mto = true
+              endif
+            -%}
+            {%- if crk_mto and section.settings.made_to_order_text != blank -%}
+              <p class="crk-stockline">{{ section.settings.made_to_order_text }}</p>
+            {%- elsif section.settings.in_stock_text != blank -%}
+              <p class="crk-stockline">{{ section.settings.in_stock_text }}</p>
+            {%- endif -%}
+
+            {%- comment -%} App blocks (size charts, reviews) render here. {%- endcomment -%}
+            {%- for block in section.blocks -%}
+              {%- if block.type == '@app' -%}
+                <div {{ block.shopify_attributes }}>{% render block %}</div>
+              {%- endif -%}
+            {%- endfor -%}
+
             <span class="crk-label crk-buylabel">{{ section.settings.buy_label }}</span>
             <button type="submit" name="add" class="crk-btn" data-crk-buy>
               {%- if crk_size_opt -%}{{ section.settings.label_select }}{%- else -%}{{ section.settings.label_add }}{%- endif -%}
@@ -364,6 +389,7 @@
             <div class="crk-section-body" id="crk-custody-body" hidden>
               <ol class="crk-custody">
                 {%- for block in section.blocks -%}
+                  {%- if block.type != 'custody_step' -%}{%- continue -%}{%- endif -%}
                   <li {{ block.shopify_attributes }}>
                     <span class="crk-label">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }} {{ block.settings.label }}</span>
                     <p class="crk-body">{{ block.settings.body }}</p>
@@ -456,6 +482,10 @@
     { "type": "text", "id": "sr_sold_out", "label": "\"Sold out\" (screen readers)", "default": "sold out" },
     { "type": "text", "id": "sr_left", "label": "\"left\" (screen readers)", "default": "left" },
     { "type": "text", "id": "nojs_note", "label": "No-JavaScript note", "default": "CHOOSE A SIZE:" },
+    { "type": "header", "content": "Delivery" },
+    { "type": "text", "id": "in_stock_text", "label": "In-stock delivery line", "default": "In stock · Ships within 24 hours" },
+    { "type": "text", "id": "made_to_order_text", "label": "Made-to-order delivery line", "default": "Made to order · Ships in 9–16 days" },
+    { "type": "text", "id": "made_to_order_tag", "label": "Made-to-order tag", "default": "made-to-order" },
     { "type": "header", "content": "Sold out" },
     { "type": "text", "id": "released_text", "label": "Released text", "default": "RELEASED — NO LONGER IN CUSTODY" },
     { "type": "text", "id": "notify_placeholder", "label": "Notify placeholder", "default": "email address" },
@@ -485,6 +515,7 @@
     { "type": "text", "id": "related_heading", "label": "Related heading", "default": "Filed under the same case" }
   ],
   "blocks": [
+    { "type": "@app" },
     {
       "type": "custody_step",
       "name": "Custody step",
