@@ -28,22 +28,53 @@
   --crk-font-mono: 'CRX Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --crk-font-display: 'VT323', ui-monospace, monospace;
 
-  /* terminal tokens — declared once, referenced everywhere via var(--crk-*) */
-  --crk-void: #0B0A0E;
-  --crk-panel: #0e0c13;
-  --crk-line: #3a2f4a;
+  /* ---- canonical tokens: DARK (the terminal) ----
+     Names and values come from THE EXHIBIT RECORD prototype (src/index.css),
+     which is the newer, re-derived set. --crk-dim / --crk-micro / --crk-red are
+     deliberately lighter here than in the terminal prototype: they were
+     re-derived to hold contrast in BOTH modes. */
+  --crk-ground: #0B0A0E;
+  --crk-panel: #0E0C13;
+  --crk-tray: #1F1C28;
+  --crk-line: #3A2F4A;
   --crk-purple: #542578;
-  --crk-lav: #A77AC7;
-  --crk-paper: #DDD7C9;
-  --crk-dim: #6b6459;
-  --crk-micro: #3a3540;
-  --crk-press: #1a1626;
-  --crk-red: #A83232;
+  --crk-accent: #A77AC7;
+  --crk-text: #DDD7C9;
+  --crk-dim: #8A8377;
+  --crk-micro: #575063;
+  --crk-press: #1A1626;
+  --crk-red: #C4433F;
+  --crk-onpurple: #DDD7C9;
 
-  background: var(--crk-void);
-  color: var(--crk-paper);
+  /* ---- aliases for the terminal-era names ----
+     The homepage sections were built against --crk-void / --crk-lav /
+     --crk-paper. Pointing them at the canonical tokens means those sections
+     follow light/dark automatically, with no change to their rules. */
+  --crk-void: var(--crk-ground);
+  --crk-lav: var(--crk-accent);
+  --crk-paper: var(--crk-text);
+
+  background: var(--crk-ground);
+  color: var(--crk-text);
   font-family: var(--crk-font-mono);
   font-size: 13px; line-height: 1.6; letter-spacing: .02em;
+}
+
+/* ---- canonical tokens: LIGHT (bone). Re-derived, not inverted. ----
+   Set on :root by the theme toggle, so every .crk-root on the page follows. */
+:root[data-crk-theme="light"] .crk-root {
+  --crk-ground: #FAFAFB;
+  --crk-panel: #FFFFFF;
+  --crk-tray: #F1F1F3;
+  --crk-line: #D3D3D8;
+  --crk-purple: #542578;
+  --crk-accent: #5C3480;
+  --crk-text: #16151A;
+  --crk-dim: #62606B;
+  --crk-micro: #93919B;
+  --crk-press: #EDECF0;
+  --crk-red: #B3272A;
+  --crk-onpurple: #DDD7C9;
 }
 .crk-root, .crk-root *, .crk-root *::before, .crk-root *::after { box-sizing: border-box; border-radius: 0 }
 .crk-root h1, .crk-root h2, .crk-root h3, .crk-root p, .crk-root ul, .crk-root ol, .crk-root dl, .crk-root dd, .crk-root figure, .crk-root form, .crk-root table { margin: 0; padding: 0 }
@@ -82,6 +113,7 @@
 @media (min-width: 1024px) { .crk-grid { grid-template-columns: repeat(12, 1fr) } }
 .crk-scan { display: none }
 .crk-scan[data-crk-texture="on"] { display: block; position: fixed; inset: 0; z-index: 40; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px) }
+:root[data-crk-theme="light"] .crk-scan[data-crk-texture="on"] { background: repeating-linear-gradient(0deg, rgba(20,18,26,.07) 0 1px, transparent 1px 3px) }
 
 /* ---- status bar ---- */
 .crk-status { height: 28px; background: var(--crk-panel); border-bottom: 1px solid var(--crk-line); display: flex; align-items: center; padding: 0 16px; overflow: hidden }
@@ -347,3 +379,116 @@
 .crk-rec__notify p { font-size: 12px; margin-bottom: 8px }
 .crk-gal__frame img { width: 100%; height: 100%; object-fit: cover }
 .crk-gal__slide[hidden] { display: none }
+
+/* ============================================================
+   EXHIBIT RECORD (PDP) — ported from THE EXHIBIT RECORD prototype
+   (src/styles/crooks-record.css). This is a SEPARATE, later design from the
+   terminal homepage and it redefines shared primitives (.crk-panel, .crk-btn,
+   .crk-size, .crk-table, .crk-spec) with different values. Every rule is
+   therefore scoped under .crk-record so the homepage system is untouched.
+   Tokens are shared and drive light/dark for both.
+   ============================================================ */
+.crk-record { background: var(--crk-ground); color: var(--crk-text); font-family: var(--crk-font-mono); font-size: 14px; line-height: 1.55; letter-spacing: 0.01em; }
+.crk-record *, .crk-record *::before, .crk-record *::after { border-radius: 0 !important; box-shadow: none !important; }
+.crk-record :focus-visible { outline: 2px solid var(--crk-accent); outline-offset: 2px; }
+.crk-record a { color: var(--crk-accent); text-decoration: none; }
+.crk-record a:hover { text-decoration: underline; }
+.crk-record button { font-family: inherit; }
+.crk-record img { max-width: 100%; }
+.crk-record .crk-display { font-family: var(--crk-font-display); line-height: 1; letter-spacing: 0; font-weight: 400; }
+.crk-record .crk-title { font-size: 32px; text-transform: uppercase; margin: 0; }
+.crk-record .crk-price { font-size: 26px; }
+.crk-record .crk-h { font-size: 22px; text-transform: uppercase; margin: 0; }
+.crk-record .crk-label { font-size: 10px; font-weight: 500; letter-spacing: 0.24em; text-transform: uppercase; color: var(--crk-accent); }
+.crk-record .crk-body { font-size: 14px; letter-spacing: 0.01em; }
+.crk-record .crk-data { font-size: 13px; letter-spacing: 0; }
+.crk-record .crk-micro { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--crk-micro); }
+.crk-record .crk-dim { color: var(--crk-dim); }
+.crk-record .crk-wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 40px; }
+.crk-record .crk-panel { background: var(--crk-panel); border: 1px solid var(--crk-line); padding: 20px; }
+.crk-record .crk-tray { background: var(--crk-ground); border: 1px solid var(--crk-line); position: relative; z-index: 6; }
+.crk-record .crk-panel-record { padding: 16px; }
+.crk-record .crk-rule { border: 0; border-top: 1px solid var(--crk-line); margin: 0; }
+.crk-record .crk-grid { display: flex; flex-direction: column; gap: 32px; margin-top: 20px; }
+.crk-record .crk-stack { display: flex; flex-direction: column; gap: 32px; margin-top: 32px; }
+.crk-record .crk-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid var(--crk-line); }
+.crk-record .crk-meta-exh { font-size: 22px; }
+.crk-record .crk-meta-end { margin-left: auto; }
+.crk-record .crk-btn { display: block; width: 100%; min-height: 52px; padding: 0 16px; background: var(--crk-purple); color: var(--crk-onpurple); border: 1px solid var(--crk-accent); cursor: pointer; font-size: 13px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; }
+.crk-record .crk-btn:disabled { background: var(--crk-panel); color: var(--crk-dim); border-color: var(--crk-line); cursor: not-allowed; }
+.crk-record .crk-btn[data-locked="true"] { background: var(--crk-purple); color: var(--crk-onpurple); border-color: var(--crk-accent); }
+.crk-record .crk-buylabel { display: block; margin: 24px 0 8px; }
+.crk-record .crk-textbtn { background: none; border: 1px solid var(--crk-line); color: var(--crk-accent); min-height: 44px; padding: 0 12px; cursor: pointer; font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; }
+.crk-record .crk-sizes { display: flex; flex-wrap: nowrap; gap: 8px; }
+.crk-record .crk-size { position: relative; flex: 1 1 0; min-width: 0; max-width: 72px; min-height: 52px; padding: 0; background: var(--crk-panel); border: 1px solid var(--crk-line); color: var(--crk-text); font-size: 13px; cursor: pointer; }
+.crk-record .crk-size[data-selected="true"] { background: var(--crk-purple); border-color: var(--crk-accent); color: var(--crk-onpurple); }
+.crk-record .crk-size[data-low="true"]::after { content: ''; position: absolute; top: 4px; right: 4px; width: 4px; height: 4px; background: var(--crk-accent); }
+.crk-record .crk-size[aria-disabled="true"] { color: var(--crk-dim); text-decoration: line-through; border-style: dashed; }
+.crk-record .crk-stockline { margin: 8px 0 0; font-size: 13px; color: var(--crk-dim); min-height: 20px; }
+.crk-record .crk-stockline[data-out="true"] { color: var(--crk-red); }
+.crk-record .crk-section { border: 1px solid var(--crk-line); background: var(--crk-panel); }
+.crk-record .crk-section + .crk-section { border-top: 0; }
+.crk-record .crk-section-head { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; color: var(--crk-text); padding: 14px 20px; cursor: pointer; text-align: left; font: inherit; }
+.crk-record .crk-section-body { padding: 0 20px 20px; }
+.crk-record .crk-section-body > :first-child { margin-top: 0; }
+.crk-record .crk-section-body > :last-child { margin-bottom: 0; }
+.crk-record .crk-spec { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px 12px; margin: 0; }
+.crk-record .crk-spec dt { color: var(--crk-dim); font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; padding-top: 3px; }
+.crk-record .crk-spec dd { margin: 0; font-size: 13px; }
+.crk-record .crk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.crk-record .crk-table caption { caption-side: top; text-align: left; color: var(--crk-dim); font-size: 13px; letter-spacing: 0.01em; padding-bottom: 8px; }
+.crk-record .crk-table th, .crk-record .crk-table td { border: 1px solid var(--crk-line); padding: 8px; text-align: left; }
+.crk-record .crk-table thead th { color: var(--crk-dim); font-weight: 500; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.crk-record .crk-table tbody th { color: var(--crk-text); font-weight: 500; }
+.crk-record .crk-table tr[data-active="true"] th, .crk-record .crk-table tr[data-active="true"] td { background: var(--crk-press); }
+.crk-record .crk-units { display: flex; gap: 8px; margin-bottom: 12px; }
+.crk-record .crk-unit { min-width: 44px; min-height: 44px; padding: 0 8px; background: var(--crk-panel); border: 1px solid var(--crk-line); color: var(--crk-text); font-size: 11px; font-weight: 500; letter-spacing: 0.16em; cursor: pointer; }
+.crk-record .crk-unit[data-selected="true"] { background: var(--crk-purple); border-color: var(--crk-accent); color: var(--crk-onpurple); }
+.crk-record .crk-custody { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.crk-record .crk-custody p { margin: 4px 0 0; }
+.crk-record .crk-tray-main { aspect-ratio: 1 / 1; touch-action: pan-y; }
+.crk-record .crk-main-img { position: absolute; inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); object-fit: contain; }
+.crk-record .crk-gallery-chrome { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; }
+.crk-record .crk-counter { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--crk-dim); }
+.crk-record .crk-thumbs { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; }
+.crk-record .crk-thumb { width: 64px; height: 64px; padding: 4px; background: var(--crk-ground); border: 1px solid var(--crk-line); cursor: pointer; flex: 0 0 auto; }
+.crk-record .crk-thumb[data-active="true"] { border-color: var(--crk-accent); }
+.crk-record .crk-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.crk-record .crk-input { width: 100%; min-height: 44px; padding: 0 12px; background: var(--crk-ground); border: 1px solid var(--crk-line); color: var(--crk-text); font-family: inherit; font-size: 14px; }
+.crk-record .crk-stickybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--crk-panel); border-top: 1px solid var(--crk-line); padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; }
+.crk-record .crk-stickybar .crk-btn { width: auto; flex: 0 0 auto; padding: 0 20px; }
+.crk-record .crk-sticky-spacer { height: 88px; }
+.crk-record .crk-related { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.crk-record .crk-related-item { display: flex; flex-direction: column; gap: 4px; color: var(--crk-text); }
+.crk-record .crk-related-item:hover { text-decoration: none; }
+.crk-record .crk-related-tray { display: block; aspect-ratio: 1 / 1; padding: 8px; }
+.crk-record .crk-related-tray img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.crk-record .crk-related-exh { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--crk-dim); margin-top: 4px; }
+.crk-record .crk-related-soldout { color: var(--crk-red); font-size: 11px; }
+
+@media (min-width: 768px) {
+  .crk-record { font-size: 15px; }
+  .crk-record .crk-title { font-size: 42px; }
+  .crk-record .crk-price { font-size: 32px; }
+  .crk-record .crk-h { font-size: 26px; }
+  .crk-record .crk-label { font-size: 11px; }
+  .crk-record .crk-body { font-size: 15px; }
+  .crk-record .crk-data { font-size: 14px; }
+  .crk-record .crk-wrap { padding: 0 24px 48px; }
+  .crk-record .crk-panel { padding: 28px; }
+  .crk-record .crk-panel-record { padding: 20px; }
+  .crk-record .crk-stack { gap: 40px; margin-top: 40px; }
+  .crk-record .crk-stockline { font-size: 14px; }
+  .crk-record .crk-section-head { padding: 16px 28px; }
+  .crk-record .crk-section-body { padding: 0 28px 24px; }
+  .crk-record .crk-spec { grid-template-columns: 150px minmax(0, 1fr); }
+  .crk-record .crk-spec dt { font-size: 11px; }
+  .crk-record .crk-spec dd { font-size: 14px; }
+  .crk-record .crk-table { font-size: 14px; }
+  .crk-record .crk-related { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .crk-record .crk-stickybar, .crk-record .crk-sticky-spacer { display: none; }
+}
+@media (min-width: 960px) {
+  .crk-record .crk-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 40px; align-items: start; }
+  .crk-record .crk-panel-sticky { position: sticky; top: 16px; }
+}

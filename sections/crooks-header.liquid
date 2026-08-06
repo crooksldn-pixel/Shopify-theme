@@ -1,5 +1,6 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'crooks-drawer.js' | asset_url }}" defer></script>
+<script src="{{ 'crooks-theme.js' | asset_url }}" defer></script>
 
 {%- liquid
   assign crk_menu = linklists[section.settings.menu]
@@ -32,6 +33,22 @@
         {{ section.settings.cart_label }}
         <span class="crk-header__count">&nbsp;[{{ crk_cart_count }}]</span>
       </a>
+
+      {%- if section.settings.show_theme_toggle -%}
+        {%- comment -%}
+          Light/dark switch. Hidden until JS upgrades it so it is never a dead
+          control; the label states what it will do, per the prototype.
+        {%- endcomment -%}
+        <button
+          class="crk-header__link"
+          type="button"
+          hidden
+          data-crk-theme-toggle
+          data-crk-to-light="{{ section.settings.label_to_light | escape }}"
+          data-crk-to-dark="{{ section.settings.label_to_dark | escape }}"
+          aria-pressed="false"
+        >{{ section.settings.label_to_light }}</button>
+      {%- endif -%}
 
       {%- comment -%}
         Text trigger, not a hamburger. Hidden until JS upgrades it, so it can
@@ -124,7 +141,10 @@
     { "type": "text", "id": "drawer_heading", "label": "Drawer heading", "default": "INDEX" },
     { "type": "text", "id": "drawer_label", "label": "Drawer label (screen readers)", "default": "Main menu" },
     { "type": "header", "content": "Options" },
-    { "type": "checkbox", "id": "show_search", "label": "Show search link", "default": true }
+    { "type": "checkbox", "id": "show_search", "label": "Show search link", "default": true },
+    { "type": "checkbox", "id": "show_theme_toggle", "label": "Show light/dark toggle", "default": true },
+    { "type": "text", "id": "label_to_light", "label": "Label when dark (switches to light)", "default": "LIGHT MODE" },
+    { "type": "text", "id": "label_to_dark", "label": "Label when light (switches to dark)", "default": "DARK MODE" }
   ],
   "presets": [{ "name": "Crooks — Header" }]
 }

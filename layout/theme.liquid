@@ -28,6 +28,22 @@
     {%- render 'stylesheets' -%}
     {%- render 'fonts' -%}
     {{ 'crx-mono.css' | asset_url | stylesheet_tag }}
+
+    {%- comment -%}
+      CROOKSLDN light/dark: resolve the theme before first paint so there is no
+      flash of the wrong mode. Deliberately inline and Liquid-free (the rule is
+      no Liquid inside <script>), and deliberately before any Crooks CSS.
+    {%- endcomment -%}
+    <script>
+      (function () {
+        try {
+          var t = sessionStorage.getItem('crk-theme');
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-crk-theme', t);
+          }
+        } catch (e) { /* private mode: falls back to dark */ }
+      })();
+    </script>
     {%- render 'scripts' -%}
     {%- render 'theme-styles-variables' -%}
     {%- render 'color-schemes' -%}
