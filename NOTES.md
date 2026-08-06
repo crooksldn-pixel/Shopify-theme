@@ -131,6 +131,48 @@ inventory policy is **not uniform across variants of the same product**:
 This is a data-hygiene issue worth correcting at source (the tees are selling
 past zero), but the theme must handle it correctly regardless.
 
+### 5. `crooks.*` metafield definitions — CREATED, values still empty
+
+No product metafield definitions exist in the `crooks` namespace. The only
+product definitions on the store are Shopify's standard taxonomy
+(`shopify.color-pattern`, `shopify.size`, `shopify.accessory-size`).
+
+Missing, all required by the exhibit record's spec panel:
+`crooks.fabric`, `crooks.cut`, `crooks.origin`, `crooks.care`,
+`crooks.wash_code`, `crooks.case_ref`, `crooks.measurements` (JSON).
+
+**Status: the seven definitions now exist** (created via the Admin API in
+Phase 4): `fabric`, `cut`, `origin`, `care`, `wash_code`, `case_ref` (text) and
+`measurements` (JSON), all product-scoped with storefront read access.
+
+**What remains is merchandising:** no product has any *value* set yet. Because
+"a row with no data does not render", the spec panel renders
+empty today. Definitions must be created **and populated per product** before
+Phase 4 can be verified against anything real.
+
+---
+
+## Pre-existing exceptions to the house rules
+
+Noted so they are conscious choices rather than surprises:
+
+- `snippets/crack-the-cuffs.liquid` (rendered globally from `theme.liquid`)
+  injects a fixed overlay using `border-radius` and `box-shadow`, and loads an
+  iframe from `crack-cuff-codes.base44.app` — a non-Shopify, non-Google origin.
+  This predates the terminal redesign and conflicts with both the "radius 0 / no
+  shadows" rule and the "requests only to Shopify's CDN and Google Fonts" check.
+- `assets/crx-mono.css` styles `.price`, `.sku`, `.product-inventory__text`,
+  `.delivery-message__text` and `.product-badges` globally with `!important`.
+  It is unscoped, so it reaches inside `.crk-root` wherever those Horizon class
+  names appear. The Crooks sections use `crk-`-prefixed classes throughout and so
+  are unaffected in practice, but this is why the terminal system must not reuse
+  Horizon class names.
+- `locales/*.json` carry 181 pre-existing `MatchingTranslations` offenses from
+  the stock Horizon theme. `shopify theme check` therefore exits non-zero on a
+  clean tree; judge Crooks work by the absence of *new* offenses.
+
+---
+
 ### 6. Wash-comparison tags (CB1 / CB2) do not exist — feature is dormant
 
 The wash comparison resolves siblings **by tag**, per the brief, because the
@@ -156,38 +198,3 @@ handle prefix, since the prefixes are the thing that is wrong.
 Deliberately not worked around by hardcoding handles.
 
 ---
-
-### 5. `crooks.*` metafield definitions do not exist — blocks Phase 4
-
-No product metafield definitions exist in the `crooks` namespace. The only
-product definitions on the store are Shopify's standard taxonomy
-(`shopify.color-pattern`, `shopify.size`, `shopify.accessory-size`).
-
-Missing, all required by the exhibit record's spec panel:
-`crooks.fabric`, `crooks.cut`, `crooks.origin`, `crooks.care`,
-`crooks.wash_code`, `crooks.case_ref`, `crooks.measurements` (JSON).
-
-Because "a row with no data does not render", the entire spec panel would render
-empty today. Definitions must be created **and populated per product** before
-Phase 4 can be verified against anything real.
-
----
-
-## Pre-existing exceptions to the house rules
-
-Noted so they are conscious choices rather than surprises:
-
-- `snippets/crack-the-cuffs.liquid` (rendered globally from `theme.liquid`)
-  injects a fixed overlay using `border-radius` and `box-shadow`, and loads an
-  iframe from `crack-cuff-codes.base44.app` — a non-Shopify, non-Google origin.
-  This predates the terminal redesign and conflicts with both the "radius 0 / no
-  shadows" rule and the "requests only to Shopify's CDN and Google Fonts" check.
-- `assets/crx-mono.css` styles `.price`, `.sku`, `.product-inventory__text`,
-  `.delivery-message__text` and `.product-badges` globally with `!important`.
-  It is unscoped, so it reaches inside `.crk-root` wherever those Horizon class
-  names appear. The Crooks sections use `crk-`-prefixed classes throughout and so
-  are unaffected in practice, but this is why the terminal system must not reuse
-  Horizon class names.
-- `locales/*.json` carry 181 pre-existing `MatchingTranslations` offenses from
-  the stock Horizon theme. `shopify theme check` therefore exits non-zero on a
-  clean tree; judge Crooks work by the absence of *new* offenses.
