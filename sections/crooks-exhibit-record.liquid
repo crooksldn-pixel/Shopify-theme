@@ -457,12 +457,12 @@
 
 {% schema %}
 {
-  "name": "Crooks — Exhibit Record",
+  "name": "Crooks — Product Record",
   "tag": "section",
   "settings": [
-    { "type": "collection", "id": "collection", "label": "Collection for exhibit numbering, related items and the back link" },
-    { "type": "text", "id": "back_label", "label": "Back link label", "default": "← Index" },
-    { "type": "text", "id": "exhibit_word", "label": "Exhibit word", "default": "EXH" },
+    { "type": "collection", "id": "collection", "label": "Collection for product numbering, related items and the back link" },
+    { "type": "text", "id": "back_label", "label": "Back link label", "default": "← Catalogue" },
+    { "type": "text", "id": "exhibit_word", "label": "Product word", "default": "PRODUCT" },
     { "type": "text", "id": "case_word", "label": "Case word", "default": "CASE" },
     { "type": "checkbox", "id": "show_texture", "label": "Show scanline texture", "default": true },
     { "type": "header", "content": "Gallery" },
@@ -527,7 +527,7 @@
   ],
   "presets": [
     {
-      "name": "Crooks — Exhibit Record",
+      "name": "Crooks — Product Record",
       "blocks": [
         { "type": "custody_step", "settings": { "label": "Logged", "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday." } },
         { "type": "custody_step", "settings": { "label": "Dispatched", "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order." } },

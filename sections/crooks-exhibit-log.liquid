@@ -143,14 +143,14 @@
 
 {% schema %}
 {
-  "name": "Crooks — Exhibit Log",
+  "name": "Crooks — Catalogue",
   "tag": "section",
   "settings": [
     { "type": "collection", "id": "collection", "label": "Collection" },
-    { "type": "text", "id": "heading", "label": "Heading", "default": "EXHIBIT LOG" },
-    { "type": "text", "id": "subheading", "label": "Subheading", "default": "ITEMS RECOVERED AND AVAILABLE FOR RELEASE" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "CATALOGUE" },
+    { "type": "text", "id": "subheading", "label": "Subheading" },
     { "type": "text", "id": "count_label", "label": "Count label", "default": "ITEMS" },
-    { "type": "text", "id": "exhibit_prefix", "label": "Exhibit number prefix", "default": "EXH" },
+    { "type": "text", "id": "exhibit_prefix", "label": "Product number prefix", "default": "NO." },
     { "type": "header", "content": "Filters" },
     { "type": "checkbox", "id": "show_filters", "label": "Show category filters", "default": true },
     { "type": "text", "id": "all_label", "label": "\"All\" filter label", "default": "ALL" },
@@ -161,14 +161,14 @@
       "info": "Comma-separated. Categories come from each product's type. Any present category not listed here is appended at the end; any listed category with no products is skipped.",
       "default": "T-SHIRT, DENIM, SWEATS, ACCESSORIES"
     },
-    { "type": "text", "id": "filters_label", "label": "Filter group label (screen readers)", "default": "Filter exhibits" },
+    { "type": "text", "id": "filters_label", "label": "Filter group label (screen readers)", "default": "Filter products" },
     { "type": "header", "content": "Status labels" },
     { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
     { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "SOLD OUT" },
-    { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO EXHIBITS MATCH THIS CATEGORY." },
+    { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO PRODUCTS MATCH THIS CATEGORY." },
     { "type": "header", "content": "Advanced" },
     { "type": "text", "id": "anchor_id", "label": "Anchor id", "info": "Used by in-page links such as the hero's primary button.", "default": "exhibits" }
   ],
-  "presets": [{ "name": "Crooks — Exhibit Log" }]
+  "presets": [{ "name": "Crooks — Catalogue" }]
 }
 {% endschema %}

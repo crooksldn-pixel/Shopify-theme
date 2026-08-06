@@ -3,16 +3,45 @@
     "main": {
       "type": "crooks-exhibit-record",
       "blocks": {
-        "s1": { "type": "custody_step", "settings": { "label": "Logged", "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday." } },
-        "s2": { "type": "custody_step", "settings": { "label": "Dispatched", "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order." } },
-        "s3": { "type": "custody_step", "settings": { "label": "In transit", "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days." } },
-        "s4": { "type": "custody_step", "settings": { "label": "Released", "body": "You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: info@crooksldn.com." } }
+        "s1": {
+          "type": "custody_step",
+          "settings": {
+            "label": "Logged",
+            "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday."
+          }
+        },
+        "s2": {
+          "type": "custody_step",
+          "settings": {
+            "label": "Dispatched",
+            "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order."
+          }
+        },
+        "s3": {
+          "type": "custody_step",
+          "settings": {
+            "label": "In transit",
+            "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days."
+          }
+        },
+        "s4": {
+          "type": "custody_step",
+          "settings": {
+            "label": "Released",
+            "body": "You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: info@crooksldn.com."
+          }
+        }
       },
-      "block_order": ["s1", "s2", "s3", "s4"],
+      "block_order": [
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ],
       "settings": {
         "collection": "frontpage",
-        "back_label": "← Index",
-        "exhibit_word": "EXH",
+        "back_label": "← Catalogue",
+        "exhibit_word": "PRODUCT",
         "case_word": "CASE",
         "show_texture": true,
         "photo_label": "Photo [i] of [n]",
@@ -22,5 +51,7 @@
       }
     }
   },
-  "order": ["main"]
+  "order": [
+    "main"
+  ]
 }

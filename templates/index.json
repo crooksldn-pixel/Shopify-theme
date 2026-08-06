@@ -12,31 +12,15 @@
     "crooks_hero": {
       "type": "crooks-hero-intake",
       "blocks": {
-        "b1": {
-          "type": "boot_line",
-          "settings": {
-            "line": "CROOKS PROPERTY STORE",
-            "alert": false
-          }
-        },
-        "b2": {
-          "type": "boot_line",
-          "settings": {
-            "line": "UNAUTHORISED ACCESS DETECTED",
-            "alert": true
-          }
-        },
         "b3": {
           "type": "boot_line",
           "settings": {
-            "line": "[count] EXHIBITS AVAILABLE FOR RELEASE",
+            "line": "[count] PRODUCTS AVAILABLE TO PURCHASE",
             "alert": false
           }
         }
       },
       "block_order": [
-        "b1",
-        "b2",
         "b3"
       ],
       "settings": {
@@ -46,11 +30,11 @@
         "board_caption": "Animated pixel map from CASE 001: a figure moves through an alley grid collecting three packages.",
         "wordmark": "CROOKSLDN",
         "tagline": "OWN THE STREETS™",
-        "status_line": "STATUS: OPEN — INTAKE: LONDON, UK",
-        "primary_label": "VIEW EXHIBITS",
-        "primary_url": "#exhibits",
-        "secondary_label": "OPEN CASE 001",
-        "secondary_url": "https://crooks-case-break.base44.app",
+        "status_line": "",
+        "primary_label": "Catalogue",
+        "primary_url": "#products",
+        "secondary_label": "",
+        "secondary_url": "",
         "secondary_new_tab": true,
         "show_texture": true,
         "collection": "frontpage"
@@ -60,10 +44,10 @@
       "type": "crooks-exhibit-log",
       "settings": {
         "collection": "frontpage",
-        "heading": "EXHIBIT LOG",
-        "subheading": "ITEMS RECOVERED AND AVAILABLE FOR RELEASE",
+        "heading": "CATALOGUE",
+        "subheading": "",
         "count_label": "ITEMS",
-        "exhibit_prefix": "EXH",
+        "exhibit_prefix": "NO.",
         "show_filters": true,
         "all_label": "ALL",
         "category_order": "T-SHIRT, DENIM, SWEATS, ACCESSORIES",
@@ -71,7 +55,7 @@
         "available_label": "AVAILABLE",
         "sold_out_label": "SOLD OUT",
         "empty_text": "NO EXHIBITS MATCH THIS CATEGORY.",
-        "anchor_id": "exhibits"
+        "anchor_id": "products"
       }
     },
     "crooks_case_file": {

@@ -514,4 +514,16 @@
 /* Text on the purple fill is always --crk-onpurple (bone), in BOTH modes.
    --crk-paper aliases --crk-text, which inverts to near-black in light mode and
    gave 1.65:1 on the purple button. Belt-and-braces so no later rule regresses. */
-.crk-btn--fill, .crk-buy, .crk-filter[aria-pressed="true"], .crk-size[aria-pressed="true"] { color: var(--crk-onpurple) }
+/* NOTE the .crk-root prefix. `.crk-root a { color: inherit }` is (0,1,1) and
+   beats a bare `.crk-btn--fill` (0,1,0), so anchor-based buttons inherited the
+   root text colour — bone in dark (correct by accident), near-black on purple
+   in light (1.65:1). These selectors are (0,2,x) so they win in both modes. */
+.crk-root a.crk-btn--fill,
+.crk-root a.crk-btn,
+.crk-root .crk-btn--fill,
+.crk-root .crk-buy,
+.crk-root .crk-filter[aria-pressed="true"],
+.crk-root .crk-size[aria-pressed="true"] { color: var(--crk-onpurple) }
+/* Ghost/outline buttons sit on the page ground, not on purple: keep them on the
+   body text colour so they stay legible in both modes. */
+.crk-root a.crk-btn--ghost { color: var(--crk-text) }
