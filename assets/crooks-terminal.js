@@ -78,7 +78,11 @@
 
   /* ---------- exhibit log: client-side category filter ---------- */
   function initLog(root) {
-    var buttons = root.querySelectorAll('.crk-filter');
+    // Scoped to [data-crk-filter]: the view-mode buttons share the .crk-filter
+    // class so they look identical, but they are not category filters. A bare
+    // .crk-filter selector picked them up here and a click on PRODUCT/MODEL ran
+    // apply(null), which matched no category and hid every cell.
+    var buttons = root.querySelectorAll('.crk-filter[data-crk-filter]');
     var cells = root.querySelectorAll('.crk-log__cell');
     var empty = root.querySelector('.crk-log__empty');
     if (!buttons.length || !cells.length) return;
@@ -105,23 +109,47 @@
     if (empty) empty.hidden = true;
   }
 
+  /* ---------- catalogue view mode: PRODUCT / MODEL ---------- */
+  function initViews(root) {
+    var btns = root.querySelectorAll('[data-crk-view-btn]');
+    if (!btns.length) return;
+    function apply(view) {
+      root.setAttribute('data-crk-view', view);
+      for (var i = 0; i < btns.length; i++) {
+        var on = btns[i].getAttribute('data-crk-view-btn') === view;
+        btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+    }
+    for (var b = 0; b < btns.length; b++) {
+      btns[b].addEventListener('click', function (e) {
+        apply(e.currentTarget.getAttribute('data-crk-view-btn'));
+      });
+    }
+    apply(root.getAttribute('data-crk-view') || 'product');
+  }
+
   /* ---------- boot ---------- */
   var INIT = [
     ['[data-crk-section="status-bar"]', initStatusBar],
     ['[data-crk-section="hero-intake"]', initBoot],
-    ['[data-crk-section="exhibit-log"]', initLog]
+    ['[data-crk-section="exhibit-log"]', initLog],
+    ['[data-crk-section="exhibit-log"]', initViews]
   ];
 
   function mountAll(scope) {
     var root = scope && scope.querySelectorAll ? scope : document;
     for (var i = 0; i < INIT.length; i++) {
       var sel = INIT[i][0], fn = INIT[i][1];
+      // Flag is per-initialiser, not per-element: two entries can share a
+      // selector (the exhibit log runs both initLog and initViews) and a single
+      // shared flag would silently skip the second one.
+      var key = '_crkInit' + i;
       var nodes = root.querySelectorAll(sel);
       for (var n = 0; n < nodes.length; n++) {
-        if (!nodes[n]._crkInit) { nodes[n]._crkInit = true; fn(nodes[n]); }
+        if (!nodes[n][key]) { nodes[n][key] = true; fn(nodes[n]); }
       }
-      if (root.matches && root.matches(sel) && !root._crkInit) {
-        root._crkInit = true; fn(root);
+      if (root.matches && root.matches(sel) && !root[key]) {
+        root[key] = true; fn(root);
       }
     }
   }

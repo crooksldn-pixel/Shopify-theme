@@ -399,3 +399,36 @@ handle prefix, since the prefixes are the thing that is wrong.
 Deliberately not worked around by hardcoding handles.
 
 ---
+
+## Specificity / selector trap #5 — shared class, shared handler
+
+The Product/Model view buttons reuse `class="crk-filter"` so they match the
+category chips exactly, pixel for pixel, without a second set of style rules.
+That is fine for CSS and was a bug for JS: `initLog` bound its click handler to
+every `.crk-filter` in the section, so clicking PRODUCT or MODEL also ran the
+category filter with `data-crk-filter === null`. Null matches no category, so
+every cell was hidden and the empty state took over — MODEL view rendered
+"NO EXHIBITS MATCH THIS CATEGORY." against blank space.
+
+Fix is one selector: `initLog` now reads `.crk-filter[data-crk-filter]`. The
+class stays shared for presentation; the *data attribute* is what identifies a
+category filter. `initViews` was already scoped to `[data-crk-view-btn]`, so the
+collision only ever ran in one direction.
+
+**Test lesson worth keeping.** The first pass called this feature working
+because it measured `display` on the `<img>` elements inside each cell — and
+those were correct. It never checked whether the *cells* were still visible.
+Measuring the thing you changed will confirm you changed it; measuring what the
+customer sees is a different assertion. The harness now reports cell count,
+visible count and empty-state flag on every transition, and asserts the two axes
+are independent:
+
+    initial          14 visible, all `main`
+    MODEL            14 visible, all `model`
+    PRODUCT          14 visible, all `main`
+    filter T-SHIRT    4 visible, all `main`
+      + MODEL         4 visible, all `model`     <- filter survives view switch
+      ALL            14 visible, all `model`     <- view survives filter reset
+
+Verified against the assets actually deployed to staging (#202053779799), not
+just the working copy.

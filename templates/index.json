@@ -55,7 +55,11 @@
         "available_label": "AVAILABLE",
         "sold_out_label": "SOLD OUT",
         "empty_text": "NO EXHIBITS MATCH THIS CATEGORY.",
-        "anchor_id": "products"
+        "anchor_id": "products",
+        "show_view_toggle": true,
+        "label_view_product": "PRODUCT",
+        "label_view_model": "MODEL",
+        "model_placeholder": "shopify://shop_images/crooksldn-charcoal-cellblock-shorts.png"
       }
     },
     "crooks_case_file": {

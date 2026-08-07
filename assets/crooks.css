@@ -605,3 +605,20 @@
 .crk-record .crk-optgroup + .crk-optgroup { margin-top: 16px }
 .crk-record .crk-sizes--wide { flex-wrap: wrap }
 .crk-record .crk-sizes--wide .crk-size { flex: 0 1 auto; max-width: none; padding: 0 14px }
+
+/* ---- catalogue view mode: PRODUCT / MODEL ----
+   Every rule carries the .crk-root prefix so it outranks `.crk-root img`
+   (0,1,1) — the trap that previously left two card images painted at once. */
+.crk-root .crk-views { display: flex; gap: 8px; margin-bottom: 16px }
+.crk-root .crk-card__img--model { display: none; position: absolute; inset: 0 }
+.crk-root[data-crk-view="model"] .crk-card__img--main,
+.crk-root[data-crk-view="model"] .crk-card__img--alt { display: none }
+.crk-root[data-crk-view="model"] .crk-card__img--model { display: block }
+/* In model view the hover swap is off: there is one model shot, so swapping
+   would reveal the product image and defeat the mode. Higher specificity than
+   the hover rules it overrides. */
+.crk-root[data-crk-view="model"] .crk-card--swap:hover .crk-card__img--alt { display: none }
+.crk-root[data-crk-view="model"] .crk-card--swap:hover .crk-card__img--model { display: block }
+/* A card with no model image at all keeps its product image rather than going
+   blank — the same failure the single-image hover fix addressed. */
+.crk-root[data-crk-view="model"] .crk-log__cell:not([data-crk-has-model]) .crk-card__img--main { display: block }

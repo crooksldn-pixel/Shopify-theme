@@ -46,7 +46,7 @@
   assign crk_categories = crk_ordered | split: '|'
 -%}
 
-<section class="crk-root crk-section crk-exhibit-log" data-crk-section="exhibit-log" id="{{ section.settings.anchor_id | default: 'exhibits' }}">
+<section class="crk-root crk-section crk-exhibit-log" data-crk-section="exhibit-log" data-crk-view="product" id="{{ section.settings.anchor_id | default: 'exhibits' }}">
   <div class="crk-inner">
     <header class="crk-log__head">
       {%- if section.settings.heading != blank -%}
@@ -57,6 +57,21 @@
       {%- endif -%}
       <span class="crk-log__count crk-micro">{{ crk_total }} {{ section.settings.count_label }}</span>
     </header>
+
+    {%- if section.settings.show_view_toggle -%}
+      {%- comment -%}
+        Product / Model view. Client-side over already-rendered cards, exactly
+        like the category filters — no fetch, no reload.
+      {%- endcomment -%}
+      <div class="crk-views" role="group" aria-label="{{ section.settings.view_group_label | escape }}">
+        <button type="button" class="crk-filter" data-crk-view-btn="product" aria-pressed="true">
+          {{ section.settings.label_view_product }}
+        </button>
+        <button type="button" class="crk-filter" data-crk-view-btn="model" aria-pressed="false">
+          {{ section.settings.label_view_model }}
+        </button>
+      </div>
+    {%- endif -%}
 
     {%- if section.settings.show_filters and crk_categories.size > 0 -%}
       <div class="crk-filters" role="group" aria-label="{{ section.settings.filters_label | escape }}">
@@ -98,8 +113,24 @@
           unless alt_src contains '.jpg' or alt_src contains '.jpeg'
             assign alt_cls = alt_cls | append: ' crk-product-image'
           endunless
+          comment
+            Model view. A real per-product shot wins; otherwise the section's
+            placeholder stands in, so the treatment can be judged across the
+            whole grid before every product has been shot.
+          endcomment
+          assign crk_model = product.metafields.crooks.model_image.value
+          assign crk_model_is_real = true
+          unless crk_model
+            assign crk_model = section.settings.model_placeholder
+            assign crk_model_is_real = false
+          endunless
+          assign model_src = crk_model.src | downcase
+          assign model_cls = 'crk-card__img crk-card__img--model'
+          unless model_src contains '.jpg' or model_src contains '.jpeg'
+            assign model_cls = model_cls | append: ' crk-product-image'
+          endunless
         -%}
-        <li class="crk-log__cell" data-crk-category="{{ crk_cat | escape }}">
+        <li class="crk-log__cell" data-crk-category="{{ crk_cat | escape }}"{% if crk_model %} data-crk-has-model="{% if crk_model_is_real %}real{% else %}placeholder{% endif %}"{% endif %}>
           <a
             class="crk-card{% if crk_alt %} crk-card--swap{% endif %}{% unless product.available %} crk-card--sold{% endunless %}"
             href="{{ product.url }}"
@@ -130,6 +161,18 @@
                     widths: '200, 300, 400, 600, 800',
                     sizes: '(min-width: 1024px) 25vw, 50vw',
                     class: alt_cls,
+                    alt: ''
+                }}
+              {%- endif -%}
+              {%- if crk_model -%}
+                {{
+                  crk_model
+                  | image_url: width: 800
+                  | image_tag:
+                    loading: 'lazy',
+                    widths: '200, 300, 400, 600, 800',
+                    sizes: '(min-width: 1024px) 25vw, 50vw',
+                    class: model_cls,
                     alt: ''
                 }}
               {%- endif -%}
@@ -170,6 +213,12 @@
     { "type": "text", "id": "subheading", "label": "Subheading" },
     { "type": "text", "id": "count_label", "label": "Count label", "default": "ITEMS" },
     { "type": "text", "id": "exhibit_prefix", "label": "Product number prefix", "default": "NO." },
+    { "type": "header", "content": "View mode" },
+    { "type": "checkbox", "id": "show_view_toggle", "label": "Show Product / Model view toggle", "default": true },
+    { "type": "text", "id": "label_view_product", "label": "Product view label", "default": "PRODUCT" },
+    { "type": "text", "id": "label_view_model", "label": "Model view label", "default": "MODEL" },
+    { "type": "text", "id": "view_group_label", "label": "View toggle label (screen readers)", "default": "Choose how products are shown" },
+    { "type": "image_picker", "id": "model_placeholder", "label": "Model view placeholder", "info": "Stands in for any product with no Model image metafield set. Leave empty to show the product image instead." },
     { "type": "header", "content": "Filters" },
     { "type": "checkbox", "id": "show_filters", "label": "Show category filters", "default": true },
     { "type": "text", "id": "all_label", "label": "\"All\" filter label", "default": "ALL" },
