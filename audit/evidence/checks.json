@@ -1,0 +1,232 @@
+{
+  "measurements": {
+    "cb2-wash-jeans": {
+      "title": "BLUE WASH OG JEANS",
+      "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm",
+      "spec": "FABRIC 14oz denim CUT OG straight, mid rise ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+    },
+    "cb1-wash-jeans": {
+      "title": "GREY WASH OG JEANS",
+      "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm",
+      "spec": "FABRIC 14oz denim CUT OG straight, mid rise ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+    },
+    "cb1-wash-jorts": {
+      "title": "BLUE WASH JORTS",
+      "table": null,
+      "spec": "FABRIC 14oz denim CUT Baggy, below knee ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+    },
+    "cb2-wash-jorts": {
+      "title": "GREY WASH JORTS",
+      "table": null,
+      "spec": "FABRIC 14oz denim CUT Baggy, below knee ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+    },
+    "v2-baggies": {
+      "title": "V2 BAGGIES",
+      "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm",
+      "spec": "FABRIC 500gsm cotton CUT Wide, full length ORIGIN Made in Portugal CARE Cold wash. Hang dry."
+    },
+    "charcoal-cellblock-crewneck": {
+      "title": "CHARCOAL CELLBLOCK CREWNECK",
+      "table": null,
+      "spec": "FABRIC 450gsm brushed fleece CUT Relaxed ORIGIN Made in Portugal CARE Cold wash. Do not tumble dry."
+    },
+    "charcoal-cellblock-shorts": {
+      "title": "CHARCOAL CELLBLOCK SHORTS",
+      "table": null,
+      "spec": "FABRIC 450gsm brushed fleece CUT Relaxed, above knee ORIGIN Made in Portugal CARE Cold wash. Do not tumble dry."
+    },
+    "3-clives-tee": {
+      "title": "3 CLIVES TEE",
+      "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE CHEST LENGTH SHOULDER XS 51cm 68cm 45cm S 54cm 70cm 47cm M 57cm 72cm 49cm L 60cm 74cm 51cm XL 63cm 76cm 53cm",
+      "spec": "FABRIC 220gsm cotton CUT Boxy, drop shoulder ORIGIN Printed in London CARE Cold wash inside out. Hang dry."
+    },
+    "broadcast-tee": {
+      "title": "BROADCAST TEE",
+      "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE CHEST LENGTH SHOULDER XS 51cm 68cm 45cm S 54cm 70cm 47cm M 57cm 72cm 49cm L 60cm 74cm 51cm XL 63cm 76cm 53cm",
+      "spec": "FABRIC 220gsm cotton CUT Boxy, drop shoulder ORIGIN Printed in London CARE Cold wash inside out. Hang dry."
+    },
+    "large-duffle-bag": {
+      "title": "LARGE DUFFLE BAG",
+      "table": null,
+      "spec": "FABRIC Ballistic nylon ORIGIN Unit 7, London"
+    },
+    "white-socks": {
+      "title": "WHITE/RED MOTIONTEC™ SOCKS",
+      "table": null,
+      "spec": "FABRIC Cotton blend, reinforced heel"
+    }
+  },
+  "soldOutVisual": [
+    {
+      "label": "XS",
+      "classes": "crk-size",
+      "ariaDisabled": null,
+      "disabled": false,
+      "color": "rgb(221, 215, 201)",
+      "bg": "rgb(84, 37, 120)",
+      "border": "rgb(167, 122, 199)",
+      "opacity": "1",
+      "textDecoration": "none",
+      "pointerEvents": "auto"
+    },
+    {
+      "label": "S",
+      "classes": "crk-size",
+      "ariaDisabled": null,
+      "disabled": false,
+      "color": "rgb(221, 215, 201)",
+      "bg": "rgb(14, 12, 19)",
+      "border": "rgb(58, 47, 74)",
+      "opacity": "1",
+      "textDecoration": "none",
+      "pointerEvents": "auto"
+    },
+    {
+      "label": "M",
+      "classes": "crk-size",
+      "ariaDisabled": "true",
+      "disabled": false,
+      "color": "rgb(138, 131, 119)",
+      "bg": "rgb(14, 12, 19)",
+      "border": "rgb(58, 47, 74)",
+      "opacity": "1",
+      "textDecoration": "line-through",
+      "pointerEvents": "auto"
+    },
+    {
+      "label": "L",
+      "classes": "crk-size",
+      "ariaDisabled": "true",
+      "disabled": false,
+      "color": "rgb(138, 131, 119)",
+      "bg": "rgb(14, 12, 19)",
+      "border": "rgb(58, 47, 74)",
+      "opacity": "1",
+      "textDecoration": "line-through",
+      "pointerEvents": "auto"
+    },
+    {
+      "label": "XL",
+      "classes": "crk-size",
+      "ariaDisabled": "true",
+      "disabled": false,
+      "color": "rgb(138, 131, 119)",
+      "bg": "rgb(14, 12, 19)",
+      "border": "rgb(58, 47, 74)",
+      "opacity": "1",
+      "textDecoration": "line-through",
+      "pointerEvents": "auto"
+    }
+  ],
+  "soldOutTapSequence": [
+    {
+      "tapped": "XS",
+      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG",
+      "buyButton": "ADD TO BAG",
+      "buyDisabled": false,
+      "stockLine": [
+        "IN STOCK",
+        "In stock · Ships within 24 hours"
+      ],
+      "selectedVariantId": "53075854197079",
+      "pressed": [
+        "XS:sel",
+        "S:sel",
+        "M:sel",
+        "L:sel",
+        "XL:sel"
+      ]
+    },
+    {
+      "tapped": "M",
+      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG",
+      "buyButton": "ADD TO BAG",
+      "buyDisabled": false,
+      "stockLine": [
+        "IN STOCK",
+        "In stock · Ships within 24 hours"
+      ],
+      "selectedVariantId": "53075854197079",
+      "pressed": [
+        "XS:sel",
+        "S:sel",
+        "M:sel",
+        "L:sel",
+        "XL:sel"
+      ]
+    },
+    {
+      "tapped": "L",
+      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG",
+      "buyButton": "ADD TO BAG",
+      "buyDisabled": false,
+      "stockLine": [
+        "IN STOCK",
+        "In stock · Ships within 24 hours"
+      ],
+      "selectedVariantId": "53075854197079",
+      "pressed": [
+        "XS:sel",
+        "S:sel",
+        "M:sel",
+        "L:sel",
+        "XL:sel"
+      ]
+    }
+  ],
+  "soldOutAddAttempt": {
+    "status": 200,
+    "variantAttempted": "53075854197079",
+    "response": "{\"id\":53075854197079,\"properties\":{},\"quantity\":1,\"variant_id\":53075854197079,\"key\":\"53075854197079:5d2509daf3f6e7225e5c2ba6792b6859\",\"title\":\"V2 BAGGIES - XS\",\"product_title\":\"V2 BAGGIES\",\"variant_title\":\"XS\",\"price\":6000,\"original_price\":6000,\"discounted_price\":6000,\"line_price\":6000,\"original_lin"
+  },
+  "sizeGuideButton": {
+    "before": {
+      "y": 0,
+      "dialogs": 0
+    },
+    "after": {
+      "y": 1230,
+      "dialogs": 0,
+      "measureVisible": {
+        "top": -1230,
+        "inViewport": false
+      }
+    },
+    "behaviour": "scrolls page 1230px"
+  },
+  "releaseRequest": {
+    "tag": "SPAN",
+    "cls": "crk-label crk-buylabel",
+    "size": [
+      324,
+      16
+    ],
+    "parentTag": "DIV",
+    "parentCls": "crk-panel crk-panel-record crk-panel-sticky",
+    "isInteractive": false,
+    "context": "PHOTO 1 OF 1 BLUE WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE In stock · Ships within 24 hours RELEASE REQUEST ADD TO BAG"
+  },
+  "deliveryClaims": {
+    "cb2-wash-jeans": {
+      "announcement": "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+      "stockLine": "In stock ·",
+      "provenance": "9-16 days delivery uk 16-21 days international MEASUREMENTS − CM IN GAR",
+      "chainOfCustody": "UK 1–2 working days. International 7–14 working days.",
+      "returnWindow": "You have 14 days from delivery to return unworn goods with tags attached."
+    },
+    "3-clives-tee": {
+      "announcement": "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+      "stockLine": "In stock ·",
+      "provenance": null,
+      "chainOfCustody": "UK 1–2 working days. International 7–14 working days.",
+      "returnWindow": "You have 14 days from delivery to return unworn goods with tags attached."
+    },
+    "charcoal-cellblock-crewneck": {
+      "announcement": "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+      "stockLine": "In stock ·",
+      "provenance": null,
+      "chainOfCustody": "UK 1–2 working days. International 7–14 working days.",
+      "returnWindow": "You have 14 days from delivery to return unworn goods with tags attached."
+    }
+  }
+}

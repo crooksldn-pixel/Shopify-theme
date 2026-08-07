@@ -1,0 +1,68 @@
+{
+  "refund": {
+    "emails": [
+      "crooksldn@gmail.com"
+    ],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": " HOW TO REQUEST A REFUND Contact us within 14 days of delivery at [crooksldn@gmail.",
+    "postage": null
+  },
+  "shipping": {
+    "emails": [
+      "crooksldn@gmail.com"
+    ],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": " INCORRECT ADDRESS INFORMATION Customers are responsible for providing accurate shipping details."
+  },
+  "pdp": {
+    "emails": [
+      "info@crooksldn.com"
+    ],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": " Start a return by email: info@crooksldn.",
+    "postage": null
+  },
+  "home": {
+    "emails": [],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": null
+  },
+  "contact": {
+    "emails": [],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": "0] LIGHT MODE MENU CONTACT Name Email* Phone Comment Submit SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": null
+  },
+  "tos": {
+    "emails": [
+      "Crooksldn@gmail.com"
+    ],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": "com] [TW200JW] SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": " You are solely responsible for any comments you make and their accuracy."
+  },
+  "privacy": {
+    "emails": [
+      "crooksldn@gmail.com"
+    ],
+    "mailto": [
+      "mailto:info@crooksldn.com"
+    ],
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": " If you choose to use the Services and register an account, you are responsible for keeping your account credentials safe."
+  }
+}

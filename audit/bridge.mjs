@@ -49,7 +49,7 @@ class TunnelAgent extends https.Agent {
     }).catch(cb);
   }
 }
-const agent = new TunnelAgent({ keepAlive: true, maxSockets: 24, timeout: 60000 });
+const agent = new TunnelAgent({ keepAlive: true, maxSockets: 128, maxFreeSockets: 16, timeout: 20000 });
 
 function forward(req, res, scheme) {
   const host = req.headers.host;
@@ -75,7 +75,11 @@ function forward(req, res, scheme) {
     res.writeHead(ur.statusCode, outHeaders);
     ur.pipe(res);
   });
-  up.on('error', (e) => { try { res.writeHead(502); res.end('bridge: ' + e.message); } catch {} });
+  // A hung upstream must never hold a socket: some Shopify analytics endpoints
+  // (web-pixels, monorail-edge) never close, and they starved the pool.
+  up.setTimeout(25000, () => { up.destroy(new Error('upstream timeout')); });
+  up.on('error', (e) => { try { if (!res.headersSent) res.writeHead(504); res.end('bridge: ' + e.message); } catch {} });
+  req.on('error', () => up.destroy());
   req.pipe(up);
 }
 
