@@ -121,6 +121,13 @@ and win. Verified with computed styles on live markup + live CSS: exactly one
 image painted per card, at rest and on hover, at 1280px and 390px, across all
 seven multi-image products.
 
+A follow-up fix gates the swap itself. The hover rule hid the main image
+unconditionally, but Liquid only renders a second `<img>` when the product has
+one — so hovering a single-image product hid its only image and left an empty
+panel. The card now carries `crk-card--swap` only when `product.images[1]`
+exists, and the hover rules require it. Eight of the fourteen products have a
+single image, so this affected most of the grid.
+
 This is the third instance of the same trap in this stylesheet — the others were
 the anchor buttons (`.crk-root a` beating `.crk-btn--fill`) and the same on
 ghost buttons. Any rule competing with a `.crk-root <element>` base rule needs

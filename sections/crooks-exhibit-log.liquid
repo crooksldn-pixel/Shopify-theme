@@ -101,7 +101,7 @@
         -%}
         <li class="crk-log__cell" data-crk-category="{{ crk_cat | escape }}">
           <a
-            class="crk-card{% unless product.available %} crk-card--sold{% endunless %}"
+            class="crk-card{% if crk_alt %} crk-card--swap{% endif %}{% unless product.available %} crk-card--sold{% endunless %}"
             href="{{ product.url }}"
           >
             <span class="crk-card__top crk-micro">

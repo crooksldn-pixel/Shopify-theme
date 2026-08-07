@@ -194,8 +194,11 @@
      Showing the alt on top of a still-displayed main let transparent PNGs
      composite two garments together. display:none is the only thing that
      occludes; opacity and z-index do not. No transition, by design. */
-  .crk-root .crk-card:hover .crk-card__img--main { display: none }
-  .crk-root .crk-card:hover .crk-card__img--alt { display: block }
+  /* Gated on --swap, which Liquid adds only when a second image exists.
+     Without the gate, hovering a single-image product hid its only image and
+     left an empty panel. */
+  .crk-root .crk-card--swap:hover .crk-card__img--main { display: none }
+  .crk-root .crk-card--swap:hover .crk-card__img--alt { display: block }
 }
 .crk-log__empty { margin-top: 24px; color: var(--crk-dim); font-size: 12px; letter-spacing: .2em; text-transform: uppercase }
 .crk-log__more { margin-top: 24px }
