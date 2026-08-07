@@ -1,0 +1,61 @@
+{
+  "checkoutFocus": {
+    "outline": "1px solid rgb(10, 10, 10)",
+    "outlineOffset": "2px",
+    "buttonBg": "rgb(10, 10, 10)",
+    "buttonColor": "rgb(244, 241, 234)",
+    "surroundingBg": "rgb(244, 241, 234)",
+    "boxShadow": "rgb(10, 10, 10) 0px 0px 0px 0px inset",
+    "text": "Check out"
+  },
+  "rails": [
+    {
+      "rail": "div.crk-filters",
+      "scrollWidth": 597,
+      "clientWidth": 358,
+      "items": 5,
+      "hiddenItems": 2,
+      "itemLabels": [
+        "ALL",
+        "T-SHIRT",
+        "DENIM",
+        "SWEATS [OFF-RAIL]",
+        "ACCESSORIES [OFF-RAIL]"
+      ]
+    }
+  ],
+  "railFocusTest": {
+    "rail": "crk-filters",
+    "item": "ACCESSORIES",
+    "scrollLeftBefore": 0,
+    "scrollLeftAfter": 239,
+    "railScrolled": true,
+    "itemNowVisible": true
+  },
+  "cookieBanner": {
+    "viewportH": 844,
+    "banner": {
+      "top": 506,
+      "bottom": 844,
+      "h": 338,
+      "z": "2000000",
+      "pos": "fixed"
+    },
+    "stickyBar": {
+      "top": 767,
+      "bottom": 844,
+      "h": 77,
+      "z": "40",
+      "pos": "fixed"
+    },
+    "bannerCoversPctOfViewport": 40,
+    "overlaps": true,
+    "bannerText": "COOKIE CONSENT We and our partners, including Shopify, use cookies and other technologies to personalize your experience"
+  },
+  "previewBar": {
+    "present": true,
+    "id": "PBarNextFrame",
+    "src": "https://cdn.shopify.com/shopifycloud/preview-bar/index.html",
+    "note": "Shopify theme-preview bar. Injected only by the share-preview session; absent on the published theme."
+  }
+}

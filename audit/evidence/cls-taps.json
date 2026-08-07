@@ -1,0 +1,205 @@
+{
+  "shifts": [
+    {
+      "value": 0.0013,
+      "t": 1807,
+      "sources": [
+        {
+          "node": "DIV.crk-header__actions",
+          "text": "SEARCH BAG [0] LIGHT MODE MENU",
+          "from": [
+            98,
+            36,
+            280,
+            44
+          ],
+          "to": [
+            88,
+            36,
+            290,
+            44
+          ]
+        },
+        {
+          "node": "P.crk-status__msg",
+          "text": "14 PRODUCTS CURRENTLY ONLINE",
+          "from": [
+            334,
+            6,
+            56,
+            14
+          ],
+          "to": [
+            359,
+            6,
+            31,
+            14
+          ]
+        },
+        {
+          "node": "undefined",
+          "text": "",
+          "from": [
+            334,
+            8,
+            56,
+            13
+          ],
+          "to": [
+            359,
+            6,
+            31,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "value": 0.2315,
+      "t": 1840,
+      "sources": [
+        {
+          "node": "DIV.crk-grid",
+          "text": "PHOTO 1 OF 1 BLUE WASH OG JEANS £60.00 S",
+          "from": [
+            16,
+            184,
+            358,
+            660
+          ],
+          "to": [
+            16,
+            156,
+            358,
+            688
+          ]
+        },
+        {
+          "node": "SPAN.crk-data.crk-dim",
+          "text": "DENIM",
+          "from": [
+            16,
+            131,
+            40,
+            20
+          ],
+          "to": [
+            275,
+            102,
+            40,
+            20
+          ]
+        }
+      ]
+    }
+  ],
+  "total": 0.2328,
+  "anatomy": {
+    "grid": {
+      "top": 156,
+      "h": 794,
+      "html": "<div> <div class=\"crk-tray crk-tray-main\" role=\"group\" aria-label=\"Evidence photographs\" tabindex=\"0\" data-crk-gallery=\"\"><div data-crk-slide=\"\"> <img src=\"//ezvw3xrffzdt93es-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans.png?v=1786031478&amp;width=1400\" alt=\"CROOKSLD"
+    },
+    "sizeRow": {
+      "top": 674,
+      "w": 58,
+      "h": 52
+    },
+    "gallery": {
+      "top": 156,
+      "h": 358
+    },
+    "fontStatus": "loaded",
+    "fonts": [
+      "CRX Mono loaded",
+      "CRX Mono unloaded",
+      "Archivo Narrow loaded",
+      "Archivo Narrow unloaded",
+      "Archivo Narrow loaded",
+      "Archivo Narrow unloaded",
+      "Archivo unloaded",
+      "Archivo unloaded",
+      "Archivo unloaded",
+      "Archivo unloaded"
+    ]
+  },
+  "taps": [
+    {
+      "sel": "a",
+      "size": "74x18",
+      "text": "Privacy Policy",
+      "inHeader": false,
+      "inFooter": false
+    },
+    {
+      "sel": "button.shopify-pc__banner__btn-manage-prefs",
+      "size": "267x33",
+      "text": "Manage preferences",
+      "inHeader": false,
+      "inFooter": false
+    },
+    {
+      "sel": "button.shopify-pc__banner__btn-accept",
+      "size": "267x35",
+      "text": "Accept",
+      "inHeader": false,
+      "inFooter": false
+    },
+    {
+      "sel": "button.shopify-pc__banner__btn-decline",
+      "size": "267x35",
+      "text": "Decline",
+      "inHeader": false,
+      "inFooter": false
+    },
+    {
+      "sel": "a.crk-label",
+      "size": "92x16",
+      "text": "← CATALOGUE",
+      "inHeader": true,
+      "inFooter": false
+    },
+    {
+      "sel": "a",
+      "size": "22x44",
+      "text": "NEW",
+      "inHeader": false,
+      "inFooter": true
+    },
+    {
+      "sel": "a",
+      "size": "29x44",
+      "text": "TEES",
+      "inHeader": false,
+      "inFooter": true
+    },
+    {
+      "sel": "a",
+      "size": "36x44",
+      "text": "DENIM",
+      "inHeader": false,
+      "inFooter": true
+    },
+    {
+      "sel": "a",
+      "size": "44x44",
+      "text": "SWEATS",
+      "inHeader": false,
+      "inFooter": true
+    },
+    {
+      "sel": "a",
+      "size": "44x44",
+      "text": "TIKTOK",
+      "inHeader": false,
+      "inFooter": true
+    },
+    {
+      "sel": "a",
+      "size": "36x44",
+      "text": "EMAIL",
+      "inHeader": false,
+      "inFooter": true
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "label": "png-named",
+    "mode": "accept:image/webp",
+    "file": "crooksldn-charcoal-cellblock-shorts.png",
+    "ct": "image/webp",
+    "kb": 78,
+    "magic": "WEBP"
+  },
+  {
+    "label": "png-named",
+    "mode": "accept:*/*",
+    "file": "crooksldn-charcoal-cellblock-shorts.png",
+    "ct": "image/png",
+    "kb": 653,
+    "magic": "PNG"
+  },
+  {
+    "label": "webp-named",
+    "mode": "accept:image/webp",
+    "file": "cellcrew.webp",
+    "ct": "image/png",
+    "kb": 969,
+    "magic": "PNG"
+  },
+  {
+    "label": "webp-named",
+    "mode": "accept:*/*",
+    "file": "cellcrew.webp",
+    "ct": "image/png",
+    "kb": 969,
+    "magic": "PNG"
+  }
+]

@@ -1,0 +1,1030 @@
+{
+  "generated": "2026-08-07T22:47:29.293Z",
+  "pages": {
+    "home": {
+      "label": "Homepage",
+      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/",
+      "popupOnArrival": [
+        {
+          "cls": "ctc-overlay",
+          "tag": "DIV",
+          "coversPctOfViewport": 100,
+          "z": "2147483647",
+          "scrollLocked": "visible"
+        }
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "docHeight": 5086,
+      "docHeightInViewports": 6.03,
+      "scrollDepthViewports": {
+        "firstProductCard": 1.22,
+        "firstProductCardSel": "a.crk-card",
+        "addToCart": null,
+        "addToCartSel": null,
+        "firstPrice": null,
+        "firstPriceText": null,
+        "footer": 5.15,
+        "checkout": null
+      },
+      "tapTargets": {
+        "total": 48,
+        "under44": 11,
+        "under44Unique": [
+          {
+            "sel": "label.crk-sr",
+            "w": 1,
+            "h": 1,
+            "text": "Email address",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 22,
+            "h": 44,
+            "text": "NEW",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 29,
+            "h": 44,
+            "text": "TEES",
+            "count": 1
+          },
+          {
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 74,
+            "h": 18,
+            "text": "Privacy Policy",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 36,
+            "h": 44,
+            "text": "DENIM",
+            "count": 2
+          },
+          {
+            "sel": "a",
+            "w": 44,
+            "h": 44,
+            "text": "SWEATS",
+            "count": 2
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
+            "w": 267,
+            "h": 33,
+            "text": "Manage preferences",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
+            "w": 267,
+            "h": 35,
+            "text": "Accept",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
+            "w": 267,
+            "h": 35,
+            "text": "Decline",
+            "count": 1
+          }
+        ]
+      },
+      "thumbZone": {
+        "sel": "a.crk-card",
+        "inFirstViewport": false,
+        "topOfDocPx": 1027,
+        "band": "top third",
+        "viewportsDown": 1.22
+      },
+      "stickyBar": null
+    },
+    "pdpTee": {
+      "label": "PDP — 3 CLIVES TEE",
+      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/products/3-clives-tee",
+      "popupOnArrival": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "docHeight": 2964,
+      "docHeightInViewports": 3.51,
+      "scrollDepthViewports": {
+        "firstProductCard": 2.27,
+        "firstProductCardSel": "a.crk-related-item",
+        "addToCart": 1.24,
+        "addToCartSel": "button.crk-btn",
+        "firstPrice": null,
+        "firstPriceText": null,
+        "footer": 2.64,
+        "checkout": null
+      },
+      "tapTargets": {
+        "total": 44,
+        "under44": 11,
+        "under44Unique": [
+          {
+            "sel": "a",
+            "w": 22,
+            "h": 44,
+            "text": "NEW",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 29,
+            "h": 44,
+            "text": "TEES",
+            "count": 1
+          },
+          {
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 74,
+            "h": 18,
+            "text": "Privacy Policy",
+            "count": 1
+          },
+          {
+            "sel": "a.crk-label",
+            "w": 92,
+            "h": 16,
+            "text": "← CATALOGUE",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 36,
+            "h": 44,
+            "text": "DENIM",
+            "count": 2
+          },
+          {
+            "sel": "a",
+            "w": 44,
+            "h": 44,
+            "text": "SWEATS",
+            "count": 2
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
+            "w": 267,
+            "h": 33,
+            "text": "Manage preferences",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
+            "w": 267,
+            "h": 35,
+            "text": "Accept",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
+            "w": 267,
+            "h": 35,
+            "text": "Decline",
+            "count": 1
+          }
+        ]
+      },
+      "thumbZone": {
+        "sel": "button.crk-btn",
+        "inFirstViewport": false,
+        "topOfDocPx": 1045,
+        "band": "top third",
+        "viewportsDown": 1.24
+      },
+      "stickyBar": [
+        {
+          "cls": "shopify-pc__banner__dialog",
+          "h": 338,
+          "text": "COOKIE CONSENT We and our partners, including Shopify, use c"
+        },
+        {
+          "cls": "crk-stickybar",
+          "h": 77,
+          "text": "3 CLIVES TEE $35.00 · XS · BLACK ADD TO BAG"
+        },
+        {
+          "cls": "",
+          "h": 68,
+          "text": ""
+        }
+      ]
+    },
+    "pdpDenim": {
+      "label": "PDP — BLUE WASH OG JEANS",
+      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/products/cb2-wash-jeans",
+      "popupOnArrival": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "docHeight": 2800,
+      "docHeightInViewports": 3.32,
+      "scrollDepthViewports": {
+        "firstProductCard": 2.08,
+        "firstProductCardSel": "a.crk-related-item",
+        "addToCart": 1.04,
+        "addToCartSel": "button.crk-btn",
+        "firstPrice": null,
+        "firstPriceText": null,
+        "footer": 2.44,
+        "checkout": null
+      },
+      "tapTargets": {
+        "total": 40,
+        "under44": 11,
+        "under44Unique": [
+          {
+            "sel": "a",
+            "w": 22,
+            "h": 44,
+            "text": "NEW",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 29,
+            "h": 44,
+            "text": "TEES",
+            "count": 1
+          },
+          {
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 74,
+            "h": 18,
+            "text": "Privacy Policy",
+            "count": 1
+          },
+          {
+            "sel": "a.crk-label",
+            "w": 92,
+            "h": 16,
+            "text": "← CATALOGUE",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 36,
+            "h": 44,
+            "text": "DENIM",
+            "count": 2
+          },
+          {
+            "sel": "a",
+            "w": 44,
+            "h": 44,
+            "text": "SWEATS",
+            "count": 2
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
+            "w": 267,
+            "h": 33,
+            "text": "Manage preferences",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
+            "w": 267,
+            "h": 35,
+            "text": "Accept",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
+            "w": 267,
+            "h": 35,
+            "text": "Decline",
+            "count": 1
+          }
+        ]
+      },
+      "thumbZone": {
+        "sel": "button.crk-btn",
+        "inFirstViewport": false,
+        "topOfDocPx": 881,
+        "band": "top third",
+        "viewportsDown": 1.04
+      },
+      "stickyBar": [
+        {
+          "cls": "shopify-pc__banner__dialog",
+          "h": 338,
+          "text": "COOKIE CONSENT We and our partners, including Shopify, use c"
+        },
+        {
+          "cls": "crk-stickybar",
+          "h": 77,
+          "text": "BLUE WASH OG JEANS $83.00 · XS ADD TO BAG"
+        },
+        {
+          "cls": "",
+          "h": 68,
+          "text": ""
+        }
+      ]
+    },
+    "cart": {
+      "label": "Cart",
+      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/cart",
+      "popupOnArrival": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "docHeight": 2079,
+      "docHeightInViewports": 2.46,
+      "scrollDepthViewports": {
+        "firstProductCard": 0.18,
+        "firstProductCardSel": "a.cart-items__media-container",
+        "addToCart": 0,
+        "addToCartSel": "button.button.button",
+        "firstPrice": null,
+        "firstPriceText": null,
+        "footer": 1.59,
+        "checkout": 0.56
+      },
+      "tapTargets": {
+        "total": 37,
+        "under44": 15,
+        "under44Unique": [
+          {
+            "sel": "label.visually-hidden",
+            "w": 1,
+            "h": 1,
+            "text": "",
+            "count": 1
+          },
+          {
+            "sel": "a.size-style.link",
+            "w": 40,
+            "h": 22,
+            "text": "View all",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 22,
+            "h": 44,
+            "text": "NEW",
+            "count": 1
+          },
+          {
+            "sel": "input",
+            "w": 36,
+            "h": 28,
+            "text": "Quantity",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 29,
+            "h": 44,
+            "text": "TEES",
+            "count": 1
+          },
+          {
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 74,
+            "h": 18,
+            "text": "Privacy Policy",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 36,
+            "h": 44,
+            "text": "DENIM",
+            "count": 2
+          },
+          {
+            "sel": "a",
+            "w": 44,
+            "h": 44,
+            "text": "SWEATS",
+            "count": 2
+          },
+          {
+            "sel": "a.cart-items__title",
+            "w": 178,
+            "h": 26,
+            "text": "3 CLIVES TEE",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
+            "w": 267,
+            "h": 33,
+            "text": "Manage preferences",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
+            "w": 267,
+            "h": 35,
+            "text": "Accept",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
+            "w": 267,
+            "h": 35,
+            "text": "Decline",
+            "count": 1
+          },
+          {
+            "sel": "summary.cart-discount__summary",
+            "w": 358,
+            "h": 42,
+            "text": "Discount",
+            "count": 1
+          }
+        ]
+      },
+      "thumbZone": {
+        "sel": "button.button.button",
+        "inFirstViewport": true,
+        "topOfDocPx": 0,
+        "band": "top third",
+        "viewportsDown": 0
+      },
+      "stickyBar": null
+    },
+    "collection": {
+      "label": "Collection — all",
+      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/collections/all",
+      "popupOnArrival": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "docHeight": 3134,
+      "docHeightInViewports": 3.71,
+      "scrollDepthViewports": {
+        "firstProductCard": 0.24,
+        "firstProductCardSel": "a#222803c5bd533f4c2842dee7a088fa7c.product-card__link",
+        "addToCart": 0,
+        "addToCartSel": "button.button.button",
+        "firstPrice": null,
+        "firstPriceText": null,
+        "footer": 2.84,
+        "checkout": null
+      },
+      "tapTargets": {
+        "total": 42,
+        "under44": 11,
+        "under44Unique": [
+          {
+            "sel": "a",
+            "w": 22,
+            "h": 44,
+            "text": "NEW",
+            "count": 1
+          },
+          {
+            "sel": "button.button.facets-toggle__button",
+            "w": 51,
+            "h": 22,
+            "text": "Filter",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 29,
+            "h": 44,
+            "text": "TEES",
+            "count": 1
+          },
+          {
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 74,
+            "h": 18,
+            "text": "Privacy Policy",
+            "count": 1
+          },
+          {
+            "sel": "a",
+            "w": 36,
+            "h": 44,
+            "text": "DENIM",
+            "count": 2
+          },
+          {
+            "sel": "a",
+            "w": 44,
+            "h": 44,
+            "text": "SWEATS",
+            "count": 2
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
+            "w": 267,
+            "h": 33,
+            "text": "Manage preferences",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
+            "w": 267,
+            "h": 35,
+            "text": "Accept",
+            "count": 1
+          },
+          {
+            "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
+            "w": 267,
+            "h": 35,
+            "text": "Decline",
+            "count": 1
+          }
+        ]
+      },
+      "thumbZone": {
+        "sel": "button.button.button",
+        "inFirstViewport": true,
+        "topOfDocPx": 0,
+        "band": "top third",
+        "viewportsDown": 0
+      },
+      "stickyBar": null
+    }
+  },
+  "overflow": {
+    "320": {
+      "home": {
+        "scrollWidth": 334,
+        "clientWidth": 320,
+        "horizontalScroll": true,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "p.crk-status__msg",
+            "left": 16,
+            "right": 359,
+            "w": 343,
+            "overflowPx": 39
+          },
+          {
+            "sel": "li.crk-log__cell",
+            "left": 176,
+            "right": 334,
+            "w": 158,
+            "overflowPx": 14
+          },
+          {
+            "sel": "a.crk-card.crk-card--swap",
+            "left": 176,
+            "right": 334,
+            "w": 158,
+            "overflowPx": 14
+          },
+          {
+            "sel": "a.crk-card",
+            "left": 176,
+            "right": 334,
+            "w": 158,
+            "overflowPx": 14
+          },
+          {
+            "sel": "div",
+            "left": 0,
+            "right": 334,
+            "w": 334,
+            "overflowPx": 14
+          },
+          {
+            "sel": "iframe",
+            "left": 0,
+            "right": 334,
+            "w": 334,
+            "overflowPx": 14
+          },
+          {
+            "sel": "button.crk-filter",
+            "left": 239,
+            "right": 330,
+            "w": 92,
+            "overflowPx": 10
+          },
+          {
+            "sel": "span.crk-card__top.crk-micro",
+            "left": 189,
+            "right": 321,
+            "w": 132,
+            "overflowPx": 1
+          },
+          {
+            "sel": "span",
+            "left": 275,
+            "right": 321,
+            "w": 47,
+            "overflowPx": 1
+          },
+          {
+            "sel": "span.crk-card__media",
+            "left": 189,
+            "right": 321,
+            "w": 132,
+            "overflowPx": 1
+          },
+          {
+            "sel": "img.crk-card__img.crk-card__img--main",
+            "left": 189,
+            "right": 321,
+            "w": 132,
+            "overflowPx": 1
+          }
+        ]
+      },
+      "pdpTee": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "p.crk-status__msg",
+            "left": 16,
+            "right": 359,
+            "w": 343,
+            "overflowPx": 39
+          }
+        ]
+      },
+      "pdpDenim": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "p.crk-status__msg",
+            "left": 16,
+            "right": 359,
+            "w": 343,
+            "overflowPx": 39
+          }
+        ]
+      },
+      "cart": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "p.crk-status__msg",
+            "left": 16,
+            "right": 359,
+            "w": 343,
+            "overflowPx": 39
+          }
+        ]
+      },
+      "collection": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "slideshow-slide.product-media-container.media-fit",
+            "left": 308,
+            "right": 462,
+            "w": 154,
+            "overflowPx": 142
+          },
+          {
+            "sel": "div.product-media",
+            "left": 308,
+            "right": 462,
+            "w": 154,
+            "overflowPx": 142
+          },
+          {
+            "sel": "img.product-media__image",
+            "left": 308,
+            "right": 462,
+            "w": 154,
+            "overflowPx": 142
+          },
+          {
+            "sel": "a.category-chip",
+            "left": 290,
+            "right": 376,
+            "w": 86,
+            "overflowPx": 56
+          },
+          {
+            "sel": "p.crk-status__msg",
+            "left": 16,
+            "right": 359,
+            "w": 343,
+            "overflowPx": 39
+          }
+        ]
+      }
+    },
+    "360": {
+      "home": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "button.crk-filter",
+            "left": 338,
+            "right": 442,
+            "w": 103,
+            "overflowPx": 82
+          }
+        ]
+      },
+      "pdpTee": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          }
+        ]
+      },
+      "pdpDenim": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          }
+        ]
+      },
+      "cart": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          }
+        ]
+      },
+      "collection": {
+        "scrollWidth": 360,
+        "clientWidth": 360,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "slideshow-slide.product-media-container.media-fit",
+            "left": 348,
+            "right": 522,
+            "w": 174,
+            "overflowPx": 162
+          },
+          {
+            "sel": "div.product-media",
+            "left": 348,
+            "right": 522,
+            "w": 174,
+            "overflowPx": 162
+          },
+          {
+            "sel": "img.product-media__image",
+            "left": 348,
+            "right": 522,
+            "w": 174,
+            "overflowPx": 162
+          },
+          {
+            "sel": "a.category-chip",
+            "left": 290,
+            "right": 376,
+            "w": 86,
+            "overflowPx": 16
+          }
+        ]
+      }
+    },
+    "390": {
+      "home": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "button.crk-filter",
+            "left": 338,
+            "right": 442,
+            "w": 103,
+            "overflowPx": 52
+          }
+        ]
+      },
+      "pdpTee": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          }
+        ]
+      },
+      "pdpDenim": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          }
+        ]
+      },
+      "cart": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          }
+        ]
+      },
+      "collection": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "horizontalScroll": false,
+        "offenders": [
+          {
+            "sel": "a.skip-to-content-link.button-secondary",
+            "left": -99999,
+            "right": -99877,
+            "w": 122,
+            "overflowPx": 99999
+          },
+          {
+            "sel": "slideshow-slide.product-media-container.media-fit",
+            "left": 378,
+            "right": 567,
+            "w": 189,
+            "overflowPx": 177
+          },
+          {
+            "sel": "div.product-media",
+            "left": 378,
+            "right": 567,
+            "w": 189,
+            "overflowPx": 177
+          },
+          {
+            "sel": "img.product-media__image",
+            "left": 378,
+            "right": 567,
+            "w": 189,
+            "overflowPx": 177
+          },
+          {
+            "sel": "a.category-chip",
+            "left": 384,
+            "right": 510,
+            "w": 126,
+            "overflowPx": 120
+          }
+        ]
+      }
+    }
+  },
+  "board": {
+    "boardInfo": {
+      "present": true,
+      "cssSize": [
+        356,
+        301
+      ],
+      "bitmap": [
+        1066,
+        902
+      ],
+      "topOfDocPx": 160,
+      "viewportsDown": 0.19
+    },
+    "samples": [
+      {
+        "label": "board in viewport, idle",
+        "frames": 180,
+        "ms": 3000,
+        "fps": 60
+      },
+      {
+        "label": "board OFF-screen",
+        "frames": 0,
+        "ms": 3000,
+        "fps": 0
+      },
+      {
+        "label": "board in viewport (control before blur)",
+        "frames": 121,
+        "ms": 2000,
+        "fps": 60.5
+      },
+      {
+        "label": "tab HIDDEN",
+        "frames": 0,
+        "ms": 2500,
+        "fps": 0
+      }
+    ],
+    "scrollFps": {
+      "frames": 136,
+      "durMs": 2367,
+      "fps": 57.5
+    }
+  }
+}

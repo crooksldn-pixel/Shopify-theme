@@ -1,5 +1,7 @@
-node_modules/
-.shopify/
-.env
-.DS_Store
 *.log
+.DS_Store
+.env
+.shopify/
+audit/*.log
+audit/certs/
+node_modules/

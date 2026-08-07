@@ -1,0 +1,874 @@
+{
+  "generated": "2026-08-07T22:56:33.726Z",
+  "contrast": {
+    "home": {
+      "label": "Homepage",
+      "total": 26,
+      "failing": 3,
+      "fails": [
+        {
+          "sel": "em",
+          "sample": "London",
+          "fg": "rgba(0, 0, 0, 0)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 13,
+          "weight": 400,
+          "large": false,
+          "ratio": 1,
+          "required": 4.5,
+          "pass": false,
+          "overImage": false,
+          "opacity": "1"
+        },
+        {
+          "sel": "p.crk-micro",
+          "sample": "CASE 001 — ATTRACT MODE",
+          "fg": "rgb(87, 80, 99)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 2.53,
+          "required": 4.5,
+          "pass": false,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "p.crk-footer__base.crk-micro",
+          "sample": "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN",
+          "fg": "rgb(87, 80, 99)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 2.57,
+          "required": 4.5,
+          "pass": false,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ],
+      "worstPassing": [
+        {
+          "sel": "p.crk-status__msg",
+          "sample": "FREE UK SHIPPING * — 24HR DISPATCH AVAILAB",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "p.crk-intake__small",
+          "sample": "Unsubscribe at any time. We do not sell th",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 12,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "span.crk-log__count.crk-micro",
+          "sample": "14 ITEMS",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.26,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "a",
+          "sample": "NEW",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 12,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.26,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ]
+    },
+    "pdpTee": {
+      "label": "PDP — 3 CLIVES TEE",
+      "total": 31,
+      "failing": 1,
+      "fails": [
+        {
+          "sel": "p.crk-footer__base.crk-micro",
+          "sample": "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN",
+          "fg": "rgb(87, 80, 99)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 2.57,
+          "required": 4.5,
+          "pass": false,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ],
+      "worstPassing": [
+        {
+          "sel": "p.crk-status__msg",
+          "sample": "FREE UK SHIPPING * — 24HR DISPATCH AVAILAB",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "p.crk-stockline",
+          "sample": "IN STOCK",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 13,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "dt",
+          "sample": "FABRIC",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 10,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "th",
+          "sample": "SIZE",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 11,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ]
+    },
+    "pdpDenim": {
+      "label": "PDP — BLUE WASH OG JEANS",
+      "total": 31,
+      "failing": 1,
+      "fails": [
+        {
+          "sel": "p.crk-footer__base.crk-micro",
+          "sample": "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN",
+          "fg": "rgb(87, 80, 99)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 2.57,
+          "required": 4.5,
+          "pass": false,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ],
+      "worstPassing": [
+        {
+          "sel": "p.crk-status__msg",
+          "sample": "FREE UK SHIPPING * — 24HR DISPATCH AVAILAB",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "p.crk-stockline",
+          "sample": "IN STOCK",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 13,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "dt",
+          "sample": "FABRIC",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 10,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "th",
+          "sample": "SIZE",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 11,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ]
+    },
+    "cart": {
+      "label": "Cart",
+      "total": 19,
+      "failing": 1,
+      "fails": [
+        {
+          "sel": "p.crk-footer__base.crk-micro",
+          "sample": "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN",
+          "fg": "rgb(87, 80, 99)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 2.57,
+          "required": 4.5,
+          "pass": false,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ],
+      "worstPassing": [
+        {
+          "sel": "p.crk-status__msg",
+          "sample": "FREE UK SHIPPING * — 24HR DISPATCH AVAILAB",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "a",
+          "sample": "NEW",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 12,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.26,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "span.crk-header__count",
+          "sample": "[1]",
+          "fg": "rgb(167, 122, 199)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.88,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "h2.crk-eyebrow",
+          "sample": "SHOP",
+          "fg": "rgb(167, 122, 199)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 10,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.88,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ]
+    },
+    "collection": {
+      "label": "Collection",
+      "total": 12,
+      "failing": 1,
+      "fails": [
+        {
+          "sel": "p.crk-footer__base.crk-micro",
+          "sample": "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN",
+          "fg": "rgb(87, 80, 99)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 2.57,
+          "required": 4.5,
+          "pass": false,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ],
+      "worstPassing": [
+        {
+          "sel": "p.crk-status__msg",
+          "sample": "FREE UK SHIPPING * — 24HR DISPATCH AVAILAB",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(14, 12, 19)",
+          "fontPx": 9,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.18,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "a",
+          "sample": "NEW",
+          "fg": "rgb(138, 131, 119)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 12,
+          "weight": 400,
+          "large": false,
+          "ratio": 5.26,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "span.crk-header__count",
+          "sample": "[1]",
+          "fg": "rgb(167, 122, 199)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.88,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        },
+        {
+          "sel": "h2.crk-eyebrow",
+          "sample": "SHOP",
+          "fg": "rgb(167, 122, 199)",
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 10,
+          "weight": 500,
+          "large": false,
+          "ratio": 5.88,
+          "required": 4.5,
+          "pass": true,
+          "overImage": true,
+          "opacity": "1"
+        }
+      ]
+    }
+  },
+  "keyboard": {
+    "home": {
+      "label": "Homepage",
+      "stops": 17,
+      "trapped": true,
+      "order": [
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
+        "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
+        "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
+        "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
+        "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"MENU\"",
+        "a.crk-btn.crk-btn--fill [outline 2px rgb(167, 122, 199)] \"CATALOGUE\"",
+        "button.crk-filter [outline 2px rgb(167, 122, 199)] \"PRODUCT\"",
+        "button.crk-filter [outline 2px rgb(167, 122, 199)] \"MODEL\"",
+        "button.crk-filter [outline 2px rgb(167, 122, 199)] \"ALL\"",
+        "button.crk-filter [outline 2px rgb(167, 122, 199)] \"T-SHIRT\"",
+        "button.crk-filter [outline 2px rgb(167, 122, 199)] \"DENIM\"",
+        "button.crk-filter [outline 2px rgb(167, 122, 199)] \"SWEATS\""
+      ],
+      "noIndicatorCount": 1,
+      "noIndicator": [
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs"
+      ],
+      "focusOnHidden": [
+        "button.crk-filter"
+      ]
+    },
+    "pdpTee": {
+      "label": "PDP — 3 CLIVES TEE",
+      "stops": 20,
+      "trapped": true,
+      "order": [
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
+        "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
+        "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
+        "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
+        "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"MENU\"",
+        "a.crk-label [outline 2px rgb(167, 122, 199)] \"← CATALOGUE\"",
+        "div.crk-tray.crk-tray-main [outline 2px rgb(167, 122, 199)] \"Evidence photographs\"",
+        "button.crk-thumb [outline 2px rgb(167, 122, 199)] \"Photo 1 of 2\"",
+        "button.crk-thumb [outline 2px rgb(167, 122, 199)] \"Photo 2 of 2\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"XS\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"S\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"M\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"L\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"XL\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"BLACK\""
+      ],
+      "noIndicatorCount": 1,
+      "noIndicator": [
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs"
+      ],
+      "focusOnHidden": []
+    },
+    "pdpDenim": {
+      "label": "PDP — BLUE WASH OG JEANS",
+      "stops": 35,
+      "trapped": true,
+      "order": [
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
+        "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
+        "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
+        "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
+        "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"MENU\"",
+        "a.crk-label [outline 2px rgb(167, 122, 199)] \"← CATALOGUE\"",
+        "div.crk-tray.crk-tray-main [outline 2px rgb(167, 122, 199)] \"Evidence photographs\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"XS\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"S\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"M\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"L\"",
+        "button.crk-size [outline 2px rgb(167, 122, 199)] \"XL\"",
+        "button.crk-textbtn [outline 2px rgb(167, 122, 199)] \"SIZE GUIDE\"",
+        "button.crk-btn [outline 2px rgb(167, 122, 199)] \"ADD TO BAG\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"SPECIFICATION −\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"STATEMENT OF PROVENANCE +\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"MEASUREMENTS −\"",
+        "button.crk-unit [outline 2px rgb(167, 122, 199)] \"CM\"",
+        "button.crk-unit [outline 2px rgb(167, 122, 199)] \"IN\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"CHAIN OF CUSTODY +\"",
+        "a.crk-related-item [outline 2px rgb(167, 122, 199)] \"BLUE WASH JORTS £50.00\"",
+        "a.crk-related-item [outline 2px rgb(167, 122, 199)] \"GREY WASH JORTS £50.00\"",
+        "a.crk-related-item [outline 2px rgb(167, 122, 199)] \"GREY WASH OG JEANS £60.00\"",
+        "button.crk-btn [outline 2px rgb(167, 122, 199)] \"ADD TO BAG\"",
+        "a [outline 2px rgb(167, 122, 199)] \"NEW\"",
+        "a [outline 2px rgb(167, 122, 199)] \"TEES\"",
+        "a [outline 2px rgb(167, 122, 199)] \"DENIM\"",
+        "a [outline 2px rgb(167, 122, 199)] \"SWEATS\"",
+        "a [outline 2px rgb(167, 122, 199)] \"ACCESSORIES\"",
+        "a [outline 2px rgb(167, 122, 199)] \"SHIPPING\""
+      ],
+      "noIndicatorCount": 1,
+      "noIndicator": [
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs"
+      ],
+      "focusOnHidden": [
+        "button.crk-btn",
+        "button.crk-section-head",
+        "button.crk-unit",
+        "a.crk-related-item",
+        "a"
+      ]
+    },
+    "cart": {
+      "label": "Cart",
+      "stops": 32,
+      "trapped": true,
+      "order": [
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
+        "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
+        "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
+        "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
+        "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"MENU\"",
+        "a.cart-items__media-container [outline 1px rgb(10, 10, 10)]",
+        "a.cart-items__title [outline 1px rgb(10, 10, 10)] \"3 CLIVES TEE\"",
+        "input [outline 1px rgb(10, 10, 10)] \"Quantity\"",
+        "button.button.quantity-plus [outline 1px rgb(10, 10, 10)] \"Increase quantity\"",
+        "button.button.cart-items__remove [outline 1px rgb(10, 10, 10)] \"Remove\"",
+        "summary.cart-discount__summary [outline 1px rgb(10, 10, 10)] \"Discount\"",
+        "shopify-payment-terms [NONE]",
+        "button#checkout.cart__checkout-button.button [outline 1px rgb(10, 10, 10)] \"Check out\"",
+        "shop-pay-wallet-button [NONE]",
+        "iframe#jsx-iframe-d0c07bdf68.component-frame.visible [NONE]",
+        "shopify-google-pay-button [NONE]",
+        "a.size-style.link [outline 1px rgb(10, 10, 10)] \"View all\"",
+        "a#4574fada4c6174b57c7aae89f10b4256.product-card__link [outline 1px rgb(10, 10, 10)] \"3 CLIVES TEE\"",
+        "a#4530859a038c239052b75e9b7c56ea9c.product-card__link [outline 1px rgb(10, 10, 10)] \"BLACK/BLUE MOTIONTEC™️ SOCKS\"",
+        "a#474b33a168a634e8f1c505155e871dce.product-card__link [outline 1px rgb(10, 10, 10)] \"BLUE WASH JORTS\"",
+        "a#4d6de43be518385152f1784883ad3ad7.product-card__link [outline 1px rgb(10, 10, 10)] \"BLUE WASH OG JEANS\"",
+        "a [outline 2px rgb(167, 122, 199)] \"NEW\"",
+        "a [outline 2px rgb(167, 122, 199)] \"TEES\"",
+        "a [outline 2px rgb(167, 122, 199)] \"DENIM\"",
+        "a [outline 2px rgb(167, 122, 199)] \"SWEATS\"",
+        "a [outline 2px rgb(167, 122, 199)] \"ACCESSORIES\"",
+        "a [outline 2px rgb(167, 122, 199)] \"SHIPPING\""
+      ],
+      "noIndicatorCount": 5,
+      "noIndicator": [
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
+        "shopify-payment-terms",
+        "shop-pay-wallet-button",
+        "iframe#jsx-iframe-d0c07bdf68.component-frame.visible",
+        "shopify-google-pay-button"
+      ],
+      "focusOnHidden": [
+        "a#4574fada4c6174b57c7aae89f10b4256.product-card__link",
+        "a#4530859a038c239052b75e9b7c56ea9c.product-card__link",
+        "a#474b33a168a634e8f1c505155e871dce.product-card__link",
+        "a#4d6de43be518385152f1784883ad3ad7.product-card__link",
+        "a"
+      ]
+    },
+    "collection": {
+      "label": "Collection",
+      "stops": 38,
+      "trapped": true,
+      "order": [
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
+        "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
+        "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
+        "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
+        "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
+        "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
+        "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"MENU\"",
+        "a.category-chip [outline 1px rgb(10, 10, 10)] \"SHOP ALL\"",
+        "a.category-chip [outline 1px rgb(10, 10, 10)] \"TEES\"",
+        "a.category-chip [outline 1px rgb(10, 10, 10)] \"DENIM\"",
+        "a.category-chip [outline 1px rgb(10, 10, 10)] \"SWEATS\"",
+        "a.category-chip [outline 1px rgb(10, 10, 10)] \"ACCESSORIES\"",
+        "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to results list\"",
+        "button.button.facets-toggle__button [outline 1px rgb(10, 10, 10)] \"Filter\"",
+        "input.column-options__option-input [outline 1px rgb(0, 0, 0)] \"Default\"",
+        "a#222803c5bd533f4c2842dee7a088fa7c.product-card__link [outline 1px rgb(10, 10, 10)] \"3 CLIVES TEE\"",
+        "a#d95f0eae3b23dedcde303b74ddc10e14.product-card__link [outline 1px rgb(10, 10, 10)] \"BLACK/BLUE MOTIONTEC™️ SOCKS\"",
+        "a#fc80b3090bdfca01b52d14567384a078.product-card__link [outline 1px rgb(10, 10, 10)] \"BLUE WASH JORTS\"",
+        "a#8f9bb751b7a326c1efa97ba6399aa861.product-card__link [outline 1px rgb(10, 10, 10)] \"BLUE WASH OG JEANS\"",
+        "a#b27d8943b562cf8dff0ad23ebe34cfda.product-card__link [outline 1px rgb(10, 10, 10)] \"BROADCAST TEE\"",
+        "a#fbf07fa6f30be7209ae77a2536983796.product-card__link [outline 1px rgb(10, 10, 10)] \"CHARCOAL CELLBLOCK CREWNECK\"",
+        "a#ee950cf5f0b38e5118034ebb58708242.product-card__link [outline 1px rgb(10, 10, 10)] \"CHARCOAL CELLBLOCK SHORTS\"",
+        "a#70e22194b996758cf58abae1cd192658.product-card__link [outline 1px rgb(10, 10, 10)] \"CRXST★RZ T-SHIRT\"",
+        "a#f44da20f3cfe3d57fab1fee89f7eb67f.product-card__link [outline 1px rgb(10, 10, 10)] \"GREY WASH JORTS\"",
+        "a#ee29e72f57e331606f1d392bf2a81adf.product-card__link [outline 1px rgb(10, 10, 10)] \"GREY WASH OG JEANS\"",
+        "a#cd916e1c0fe7e16bed8c5760047fe75f.product-card__link [outline 1px rgb(10, 10, 10)] \"LARGE DUFFLE BAG\"",
+        "a#f16bbcf36b8cf2bdc8bb1d7a15cb6843.product-card__link [outline 1px rgb(10, 10, 10)] \"MONEY CLIVE TEE\"",
+        "a#df731b88b81b1b43114d0a647066722b.product-card__link [outline 1px rgb(10, 10, 10)] \"V2 BAGGIES\"",
+        "a#8d536d8d771efb8009462b59f6cc8d02.product-card__link [outline 1px rgb(10, 10, 10)] \"WHITE/RED MOTIONTEC™️ SOCKS\"",
+        "a [outline 2px rgb(167, 122, 199)] \"NEW\"",
+        "a [outline 2px rgb(167, 122, 199)] \"TEES\"",
+        "a [outline 2px rgb(167, 122, 199)] \"DENIM\"",
+        "a [outline 2px rgb(167, 122, 199)] \"SWEATS\"",
+        "a [outline 2px rgb(167, 122, 199)] \"ACCESSORIES\"",
+        "a [outline 2px rgb(167, 122, 199)] \"SHIPPING\""
+      ],
+      "noIndicatorCount": 1,
+      "noIndicator": [
+        "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs"
+      ],
+      "focusOnHidden": [
+        "a#ee950cf5f0b38e5118034ebb58708242.product-card__link",
+        "a#70e22194b996758cf58abae1cd192658.product-card__link",
+        "a#f44da20f3cfe3d57fab1fee89f7eb67f.product-card__link",
+        "a#ee29e72f57e331606f1d392bf2a81adf.product-card__link",
+        "a#cd916e1c0fe7e16bed8c5760047fe75f.product-card__link",
+        "a#f16bbcf36b8cf2bdc8bb1d7a15cb6843.product-card__link",
+        "a#df731b88b81b1b43114d0a647066722b.product-card__link",
+        "a#8d536d8d771efb8009462b59f6cc8d02.product-card__link",
+        "a"
+      ]
+    }
+  },
+  "axe": {
+    "home": [
+      {
+        "id": "frame-title",
+        "impact": "serious",
+        "help": "Frames must have an accessible name",
+        "n": 1,
+        "targets": [
+          "#PBarNextFrame"
+        ],
+        "summary": "Fix any of the following: Element has no title attribute aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references el"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "n": 2,
+        "targets": [
+          ".skip-to-content-link",
+          ".crk-status__msg:nth-child(1)"
+        ],
+        "summary": "Fix any of the following: Some page content is not contained by landmarks"
+      }
+    ],
+    "pdpTee": [
+      {
+        "id": "frame-title",
+        "impact": "serious",
+        "help": "Frames must have an accessible name",
+        "n": 1,
+        "targets": [
+          "#PBarNextFrame"
+        ],
+        "summary": "Fix any of the following: Element has no title attribute aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references el"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "n": 2,
+        "targets": [
+          ".skip-to-content-link",
+          ".crk-status__msg:nth-child(1)"
+        ],
+        "summary": "Fix any of the following: Some page content is not contained by landmarks"
+      }
+    ],
+    "pdpDenim": [
+      {
+        "id": "frame-title",
+        "impact": "serious",
+        "help": "Frames must have an accessible name",
+        "n": 1,
+        "targets": [
+          "#PBarNextFrame"
+        ],
+        "summary": "Fix any of the following: Element has no title attribute aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references el"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "n": 2,
+        "targets": [
+          ".skip-to-content-link",
+          ".crk-status__msg:nth-child(1)"
+        ],
+        "summary": "Fix any of the following: Some page content is not contained by landmarks"
+      }
+    ],
+    "cart": [
+      {
+        "id": "aria-allowed-role",
+        "impact": "minor",
+        "help": "ARIA role should be appropriate for the element",
+        "n": 1,
+        "targets": [
+          "caption"
+        ],
+        "summary": "Fix any of the following: ARIA role caption is not allowed for given element"
+      },
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "help": "Certain ARIA roles must contain particular children",
+        "n": 1,
+        "targets": [
+          "table"
+        ],
+        "summary": "Fix any of the following: Element has children which are not allowed: [role=caption]"
+      },
+      {
+        "id": "frame-title",
+        "impact": "serious",
+        "help": "Frames must have an accessible name",
+        "n": 1,
+        "targets": [
+          "#PBarNextFrame"
+        ],
+        "summary": "Fix any of the following: Element has no title attribute aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references el"
+      },
+      {
+        "id": "heading-order",
+        "impact": "moderate",
+        "help": "Heading levels should only increase by one",
+        "n": 1,
+        "targets": [
+          ".text-block--AcHZPOVRIQ1NScDJJU__product_list_text_fifeh4 > h3"
+        ],
+        "summary": "Fix any of the following: Heading order invalid"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "n": 2,
+        "targets": [
+          ".skip-to-content-link",
+          ".crk-status__msg:nth-child(1)"
+        ],
+        "summary": "Fix any of the following: Some page content is not contained by landmarks"
+      }
+    ],
+    "collection": [
+      {
+        "id": "frame-title",
+        "impact": "serious",
+        "help": "Frames must have an accessible name",
+        "n": 1,
+        "targets": [
+          "#PBarNextFrame"
+        ],
+        "summary": "Fix any of the following: Element has no title attribute aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references el"
+      },
+      {
+        "id": "page-has-heading-one",
+        "impact": "moderate",
+        "help": "Page should contain a level-one heading",
+        "n": 1,
+        "targets": [
+          "html"
+        ],
+        "summary": "Fix all of the following: Page must have a level-one heading"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "n": 2,
+        "targets": [
+          "a[href$=\"#MainContent\"]",
+          ".crk-status__msg:nth-child(1)"
+        ],
+        "summary": "Fix any of the following: Some page content is not contained by landmarks"
+      }
+    ]
+  },
+  "reducedMotion": {
+    "prefersReducedMotion": true,
+    "boardFramesIn3s": 0,
+    "boardFps": 0,
+    "stillRunningCssAnimations": [
+      {
+        "sel": "div.resource-card",
+        "name": "fadeIn",
+        "dur": "0.15s",
+        "iter": "1"
+      }
+    ],
+    "matches": true
+  },
+  "noJs": {
+    "home": {
+      "label": "Homepage",
+      "screenshot": "audit/screens/a11y-nojs-home.png",
+      "visibleTextChars": 2093,
+      "visibleTextSample": "Skip to content FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE 14 PRODUCTS CURRENTLY ONLINE SEARCH BAG [0] LIGHT MODE MENU SHOP CONTACT CASE 001 — ATTRACT MODE REF 001 / 13×11 / DECLASSIFIED Animated pixel map from CASE 001: a figure moves through an alley grid collecting three packages. > 14 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREETS™ CATALOGUE CATALOGUE 14 ITEMS PRODUCT MODEL ALL T-S",
+      "productLinks": 18,
+      "hasAddToCartForm": false,
+      "hasPriceInHtml": false,
+      "hasNoscriptFallback": true,
+      "imagesInHtml": 40
+    },
+    "pdpDenim": {
+      "label": "PDP",
+      "screenshot": "audit/screens/a11y-nojs-pdpDenim.png",
+      "visibleTextChars": 1024,
+      "visibleTextSample": "Skip to content FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE 14 PRODUCTS CURRENTLY ONLINE SEARCH BAG [0] LIGHT MODE MENU SHOP CONTACT ← CATALOGUE PRODUCT 04 / 14 DENIM PHOTO 1 OF 1 BLUE WASH OG JEANS $83.00 SIZE XS S M L XL Select a size SIZE GUIDE CHOOSE A SIZE: XS S M L XL In stock · Ships within 24 hours RELEASE REQUEST SELECT A SIZE SPECIFICATION − FABRIC 14oz denim CUT OG straight, mid rise O",
+      "productLinks": 14,
+      "hasAddToCartForm": true,
+      "hasPriceInHtml": false,
+      "hasNoscriptFallback": true,
+      "imagesInHtml": 10
+    }
+  },
+  "zoom": {
+    "note": "390px viewport at 200% browser zoom == 195 CSS px of layout width",
+    "scrollWidth": 308,
+    "clientWidth": 195,
+    "horizontalScroll": true,
+    "clipped": [
+      "section.shopify-pc__banner__dialog",
+      "div.shopify-pc__banner__wrapper",
+      "div.shopify-pc__banner__body",
+      "h2.",
+      "p.",
+      "div.shopify-pc__banner__btns",
+      "button.shopify-pc__banner__btn-manage-prefs",
+      "button.shopify-pc__banner__btn-accept",
+      "button.shopify-pc__banner__btn-decline",
+      "p.crk-status__msg"
+    ],
+    "atcReachable": true
+  }
+}
