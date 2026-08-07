@@ -12,10 +12,21 @@
   CHAIN OF CUSTODY and FOOTER can be lifted wholesale into the shipping
   confirmation and shipping update templates.
 
-  Palette (inline literals only, no CSS variables):
-    Ground   #0B0A0E   Panel  #0E0C13   Hairline #3A2F4A
-    Purple   #542578   Accent #A77AC7   Text     #DDD7C9
-    Dim      #8A8377   Red    #C4433F
+  Palette (inline literals only, no CSS variables).
+
+  LIGHT is the base: every colour is inlined as its light value, so a client
+  that strips the <style> block still gets a complete, correct light email.
+    Ground   #F0EDE4   Panel  #FAF8F2   Hairline  #C7BCD2
+    Purple   #542578   Accent #542578   Text      #1C1A22
+    Dim      #6B6459   Red    #A8302C   Connector #A79CB5
+
+  DARK is applied by the prefers-color-scheme block in <head>, which overrides
+  the inline values via the d-* classes. Clients that ignore it show light.
+    Ground   #0B0A0E   Panel  #0E0C13   Hairline  #3A2F4A
+    Purple   #542578   Accent #A77AC7   Text      #DDD7C9
+    Dim      #8A8377   Red    #C4433F   Connector #3A2F4A
+
+  Button label is #F5F1E8 in both modes — it sits on #542578 either way.
   ============================================================================
 {% endcomment %}
 
@@ -45,52 +56,52 @@
 {% capture email_body %}
   {% if has_pending_payment %}
     {% if buyer_action_required %}
-      <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">You will get a confirmation email after completing your payment.</p>
+      <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">You will get a confirmation email after completing your payment.</p>
     {% else %}
-      <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your payment is being processed. You will get an email when your order is confirmed.</p>
+      <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your payment is being processed. You will get an email when your order is confirmed.</p>
     {% endif %}
   {% elsif payment_charged_on_fulfillment %}
-    <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">{{ customer.first_name }}, your order has been logged. Your payment method will be charged when your order is ready to be fulfilled. We will notify you when it is on its way.</p>
+    <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">{{ customer.first_name }}, your order has been logged. Your payment method will be charged when your order is ready to be fulfilled. We will notify you when it is on its way.</p>
   {% else %}
     {% if requires_shipping %}
       {% if has_split_cart %}
         {% case split_cart_delivery_method %}
           {% when 'pick-up' %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your order has been logged. You will receive an email when your order is ready for pickup.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your order has been logged. You will receive an email when your order is ready for pickup.</p>
           {% when 'local' %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">{{ customer.first_name }}, your order has been logged. We are getting it ready for delivery.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">{{ customer.first_name }}, your order has been logged. We are getting it ready for delivery.</p>
           {% when 'shipping' %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your order has been logged. Dispatch within 24 hours, Monday to Saturday. We will notify you when it has been sent.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your order has been logged. Dispatch within 24 hours, Monday to Saturday. We will notify you when it has been sent.</p>
           {% else %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your order has been logged. Dispatch within 24 hours, Monday to Saturday. We will notify you when it has been sent.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your order has been logged. Dispatch within 24 hours, Monday to Saturday. We will notify you when it has been sent.</p>
         {% endcase %}
       {% else %}
         {% case delivery_method %}
           {% when 'pick-up' %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your order has been logged. You will receive an email when your order is ready for pickup.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your order has been logged. You will receive an email when your order is ready for pickup.</p>
           {% when 'local' %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">{{ customer.first_name }}, your order has been logged. We are getting it ready for delivery.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">{{ customer.first_name }}, your order has been logged. We are getting it ready for delivery.</p>
           {% else %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your order has been logged. Dispatch within 24 hours, Monday to Saturday. We will notify you when it has been sent.</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your order has been logged. Dispatch within 24 hours, Monday to Saturday. We will notify you when it has been sent.</p>
         {% endcase %}
       {% endif %}
 
       {% if delivery_instructions != blank %}
-        <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">
-          <span style="color:#A77AC7;text-transform:uppercase;letter-spacing:0.16em;font-size:11px;">Delivery information</span><br />
-          <span style="color:#DDD7C9;">{{ delivery_instructions }}</span>
+        <p class="d-d" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">
+          <span class="d-a" style="color:#542578;text-transform:uppercase;letter-spacing:0.16em;font-size:11px;">Delivery information</span><br />
+          <span class="d-t" style="color:#1C1A22;">{{ delivery_instructions }}</span>
         </p>
       {% endif %}
 
       {% unless delivery_method_types.size > 1 %}
         {% if consolidated_estimated_delivery_time %}
           {% if non_none_agreements_count > 1 %}
-            <p style="margin:0 0 4px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#A77AC7;">Estimated delivery</p>
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">{{ consolidated_estimated_delivery_time }}</p>
+            <p class="d-a" style="margin:0 0 4px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#542578;">Estimated delivery</p>
+            <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">{{ consolidated_estimated_delivery_time }}</p>
           {% else %}
-            <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">
-              <span style="color:#A77AC7;text-transform:uppercase;letter-spacing:0.16em;font-size:11px;">Estimated delivery</span>
-              <span style="color:#DDD7C9;">{{ consolidated_estimated_delivery_time }}</span>
+            <p class="d-d" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">
+              <span class="d-a" style="color:#542578;text-transform:uppercase;letter-spacing:0.16em;font-size:11px;">Estimated delivery</span>
+              <span class="d-t" style="color:#1C1A22;">{{ consolidated_estimated_delivery_time }}</span>
             </p>
           {% endif %}
         {% endif %}
@@ -107,9 +118,9 @@
     {% endif %}
   {% endfor %}
   {% if found_gift_card_with_recipient_email %}
-    <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">Your gift card recipient will receive an email with their gift card code.</p>
+    <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">Your gift card recipient will receive an email with their gift card code.</p>
   {% elsif gift_card_line_items.first %}
-    <p style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;">You will receive separate emails for any gift cards.</p>
+    <p class="d-t" style="margin:0 0 12px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;">You will receive separate emails for any gift cards.</p>
   {% endif %}
 {% endcapture %}
 
@@ -117,20 +128,31 @@
 {% assign exh = 0 %}
 
 <!DOCTYPE html>
-<html lang="en" style="color-scheme:dark light;supported-color-schemes:dark light;">
+<html lang="en" style="color-scheme:light dark;supported-color-schemes:light dark;">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark light" />
-  <meta name="supported-color-schemes" content="dark light" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
   <meta name="x-apple-disable-message-reformatting" />
   <title>{{ email_title }} — {{ order_name }}</title>
   <link rel="stylesheet" type="text/css" href="/assets/notifications/styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet" type="text/css" />
   <style type="text/css">
+    /* ------------------------------------------------------------------
+       Light is the BASE. Every colour is inlined as its light value, so a
+       client that strips this block still renders a complete light email.
+       The dark palette lives in the prefers-color-scheme block below and
+       overrides the inline values with !important.
+
+       Honoured by: Apple Mail (macOS), Mail (iOS/iPadOS), Outlook for Mac,
+       Thunderbird, Superhuman, HEY.
+       Ignored by: Gmail (all), Outlook.com, Outlook Windows, Yahoo — those
+       either show the light base or apply their own inversion.
+       ------------------------------------------------------------------ */
     :root {
-      color-scheme: dark light;
-      supported-color-schemes: dark light;
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
     }
 
     body,
@@ -153,24 +175,90 @@
     }
 
     a {
-      color: #A77AC7;
+      color: #542578;
     }
 
     a:hover,
     a:active,
     a:visited {
-      color: #A77AC7;
+      color: #542578;
     }
 
+    /* Button label sits on #542578 in both modes, so it never flips. */
     .crx-btn a {
-      color: #DDD7C9 !important;
+      color: #F5F1E8 !important;
       text-decoration: none;
     }
 
-    /* Outlook.com / Gmail sometimes force their own link colour on plain text */
+    /* Outlook.com / Gmail force their own link colour on address blocks */
     .crx-unstyle a {
-      color: #DDD7C9 !important;
+      color: #1C1A22 !important;
       text-decoration: none;
+    }
+
+    /* ------------------------------------------------------------------
+       DARK MODE
+       d-g  ground bg      d-p  panel bg      d-u  filled rule
+       d-t  body text      d-d  dim text      d-a  accent text/link
+       d-r  warning text   d-c  connector     d-gt hidden preheader text
+       d-b  border         d-bt border-top    d-bb border-bottom
+       ------------------------------------------------------------------ */
+    @media (prefers-color-scheme: dark) {
+      body,
+      .d-g {
+        background-color: #0B0A0E !important;
+      }
+
+      .d-p {
+        background-color: #0E0C13 !important;
+      }
+
+      .d-u {
+        background-color: #3A2F4A !important;
+      }
+
+      body,
+      .d-t {
+        color: #DDD7C9 !important;
+      }
+
+      .d-d {
+        color: #8A8377 !important;
+      }
+
+      .d-a,
+      a,
+      a:hover,
+      a:active,
+      a:visited {
+        color: #A77AC7 !important;
+      }
+
+      .d-r {
+        color: #C4433F !important;
+      }
+
+      .d-c {
+        color: #3A2F4A !important;
+      }
+
+      .d-gt {
+        color: #0B0A0E !important;
+      }
+
+      .d-b,
+      .d-bt,
+      .d-bb {
+        border-color: #3A2F4A !important;
+      }
+
+      .crx-btn a {
+        color: #F5F1E8 !important;
+      }
+
+      .crx-unstyle a {
+        color: #DDD7C9 !important;
+      }
     }
 
     @media only screen and (max-width: 620px) {
@@ -200,45 +288,45 @@
   </style>
 </head>
 
-<body style="margin:0;padding:0;width:100%;background-color:#0B0A0E;color:#DDD7C9;font-family:'IBM Plex Mono','Courier New',Courier,monospace;" bgcolor="#0B0A0E">
+<body class="d-t d-g" style="margin:0;padding:0;width:100%;background-color:#F0EDE4;color:#1C1A22;font-family:'IBM Plex Mono','Courier New',Courier,monospace;" bgcolor="#F0EDE4">
 
   {% comment %} ================= BLOCK: PREHEADER ================= {% endcomment %}
-  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#0B0A0E;">
+  <div class="d-gt" style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#F0EDE4;">
     Order {{ order_name }} confirmed. Dispatch within 24 hours.
   </div>
-  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#0B0A0E;">
+  <div class="d-gt" style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#F0EDE4;">
     &#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;&#8199;&#847;&zwnj;&nbsp;
   </div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0B0A0E" style="width:100%;background-color:#0B0A0E;">
+  <table class="d-g" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F0EDE4" style="width:100%;background-color:#F0EDE4;">
     <tr>
-      <td align="center" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:0;">
+      <td class="d-g" align="center" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:0;">
 
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="crx-wrap" style="width:600px;max-width:600px;">
 
           {% comment %} ================= BLOCK: HEADER (reusable) ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:32px 24px 24px 24px;border-bottom:1px solid #3A2F4A;">
+            <td class="crx-pad d-g d-bb" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:32px 24px 24px 24px;border-bottom:1px solid #C7BCD2;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                 <tr>
                   <td align="left" valign="top" style="padding:0;">
                     {%- if shop.email_logo_url %}
                       <img src="{{ shop.email_logo_url }}" alt="{{ shop.name }}" width="{{ shop.email_logo_width }}" style="display:block;border:0;max-width:100%;height:auto;" />
                     {%- else %}
-                      <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:22px;line-height:26px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#DDD7C9;">
-                        <a href="{{ shop.url }}" style="color:#DDD7C9;text-decoration:none;">{{ shop.name }}</a>
+                      <div class="d-t" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:22px;line-height:26px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#1C1A22;">
+                        <a class="d-t" href="{{ shop.url }}" style="color:#1C1A22;text-decoration:none;">{{ shop.name }}</a>
                       </div>
                     {%- endif %}
-                    <div style="padding-top:8px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">
+                    <div class="d-a" style="padding-top:8px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">
                       Property store &mdash; Release notice
                     </div>
                   </td>
                   <td align="right" valign="top" style="padding:0;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">
+                    <div class="d-d" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">
                       Order {{ order_name }}
                     </div>
                     {%- if po_number %}
-                      <div style="padding-top:4px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">
+                      <div class="d-d" style="padding-top:4px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">
                         PO number #{{ po_number }}
                       </div>
                     {%- endif %}
@@ -250,24 +338,24 @@
 
           {% comment %} ================= BLOCK: CONFIRMATION ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:32px 24px 8px 24px;">
-              <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#A77AC7;padding-bottom:16px;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:32px 24px 8px 24px;">
+              <div class="d-a" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#542578;padding-bottom:16px;">
                 {{ email_title }}
               </div>
 
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0E0C13" style="width:100%;background-color:#0E0C13;border:1px solid #3A2F4A;">
+              <table class="d-p d-b" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF8F2" style="width:100%;background-color:#FAF8F2;border:1px solid #C7BCD2;">
                 <tr>
-                  <td bgcolor="#0E0C13" style="background-color:#0E0C13;padding:20px 24px 20px 24px;">
+                  <td class="d-p" bgcolor="#FAF8F2" style="background-color:#FAF8F2;padding:20px 24px 20px 24px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                       <tr>
                         <td align="left" valign="top" style="padding:0;">
-                          <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Order</div>
-                          <div class="crx-order-no" style="padding-top:4px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:32px;line-height:38px;font-weight:600;letter-spacing:0.04em;color:#DDD7C9;">{{ order_name }}</div>
+                          <div class="d-d" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Order</div>
+                          <div class="crx-order-no d-t" style="padding-top:4px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:32px;line-height:38px;font-weight:600;letter-spacing:0.04em;color:#1C1A22;">{{ order_name }}</div>
                         </td>
                         <td align="right" valign="bottom" style="padding:0;">
-                          <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Date</div>
+                          <div class="d-d" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Date</div>
                           {%- assign order_date = order.created_at | default: created_at -%}
-                          <div style="padding-top:4px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ order_date | date: "%d %b %Y" }}</div>
+                          <div class="d-t" style="padding-top:4px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ order_date | date: "%d %b %Y" }}</div>
                         </td>
                       </tr>
                     </table>
@@ -278,7 +366,7 @@
           </tr>
 
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:20px 24px 0 24px;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:20px 24px 0 24px;">
               {{ email_body }}
             </td>
           </tr>
@@ -289,24 +377,24 @@
             {% for transaction in transactions %}
               {% if transaction.show_buyer_pending_payment_instructions? %}
                 <tr>
-                  <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:8px 24px 0 24px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0E0C13" style="width:100%;background-color:#0E0C13;border:1px solid #3A2F4A;">
+                  <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:8px 24px 0 24px;">
+                    <table class="d-p d-b" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF8F2" style="width:100%;background-color:#FAF8F2;border:1px solid #C7BCD2;">
                       <tr>
-                        <td bgcolor="#0E0C13" style="background-color:#0E0C13;padding:20px 24px;">
-                          <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#C4433F;padding-bottom:12px;">Payment required</div>
-                          <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#DDD7C9;padding-bottom:16px;">{{ transaction.buyer_pending_payment_notice }}</div>
+                        <td class="d-p" bgcolor="#FAF8F2" style="background-color:#FAF8F2;padding:20px 24px;">
+                          <div class="d-r" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A8302C;padding-bottom:12px;">Payment required</div>
+                          <div class="d-t" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:22px;color:#1C1A22;padding-bottom:16px;">{{ transaction.buyer_pending_payment_notice }}</div>
                           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                             <tr>
                               {% for instruction in transaction.buyer_pending_payment_instructions %}
-                                <td align="left" valign="top" style="padding:0 12px 6px 0;border-bottom:1px solid #3A2F4A;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">{{ instruction.header }}</td>
+                                <td class="d-d d-bb" align="left" valign="top" style="padding:0 12px 6px 0;border-bottom:1px solid #C7BCD2;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">{{ instruction.header }}</td>
                               {% endfor %}
-                              <td align="right" valign="top" style="padding:0 0 6px 0;border-bottom:1px solid #3A2F4A;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Amount</td>
+                              <td class="d-d d-bb" align="right" valign="top" style="padding:0 0 6px 0;border-bottom:1px solid #C7BCD2;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Amount</td>
                             </tr>
                             <tr>
                               {% for instruction in transaction.buyer_pending_payment_instructions %}
-                                <td align="left" valign="top" style="padding:10px 12px 0 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ instruction.value }}</td>
+                                <td class="d-t" align="left" valign="top" style="padding:10px 12px 0 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ instruction.value }}</td>
                               {% endfor %}
-                              <td align="right" valign="top" style="padding:10px 0 0 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ transaction.amount | money }}</td>
+                              <td class="d-t" align="right" valign="top" style="padding:10px 0 0 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ transaction.amount | money }}</td>
                             </tr>
                           </table>
                         </td>
@@ -320,12 +408,12 @@
 
           {% comment %} ================= BLOCK: PRIMARY ACTION ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:20px 24px 32px 24px;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:20px 24px 32px 24px;">
               {% if order_status_url %}
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
                   <tr>
                     <td class="crx-btn" bgcolor="#542578" align="center" style="background-color:#542578;border:1px solid #542578;padding:14px 28px;">
-                      <a href="{{ order_status_url }}" style="display:inline-block;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#DDD7C9;text-decoration:none;">View order status</a>
+                      <a href="{{ order_status_url }}" style="display:inline-block;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#F5F1E8;text-decoration:none;">View order status</a>
                     </td>
                   </tr>
                 </table>
@@ -333,8 +421,8 @@
                 {% if shop_app_tracking_url and shop_app_tracking_button_variant_key %}
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin-top:12px;">
                     <tr>
-                      <td bgcolor="#0E0C13" align="center" style="background-color:#0E0C13;border:1px solid #3A2F4A;padding:14px 28px;">
-                        <a href="{{ shop_app_tracking_url }}" style="display:inline-block;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#DDD7C9;text-decoration:none;">
+                      <td class="d-p d-b" bgcolor="#FAF8F2" align="center" style="background-color:#FAF8F2;border:1px solid #C7BCD2;padding:14px 28px;">
+                        <a class="d-t" href="{{ shop_app_tracking_url }}" style="display:inline-block;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#1C1A22;text-decoration:none;">
                           {% if shop_app_tracking_button_variant_key == "track_with_shop" %}
                             Track order with Shop
                           {% else %}
@@ -347,8 +435,8 @@
                 {% endif %}
 
                 {% if shop.url %}
-                  <div style="padding-top:16px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">
-                    or <a href="{{ shop.url }}" style="color:#A77AC7;text-decoration:underline;">visit our store</a>
+                  <div class="d-d" style="padding-top:16px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">
+                    or <a class="d-a" href="{{ shop.url }}" style="color:#542578;text-decoration:underline;">visit our store</a>
                   </div>
                 {% endif %}
               {% else %}
@@ -356,7 +444,7 @@
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
                     <tr>
                       <td class="crx-btn" bgcolor="#542578" align="center" style="background-color:#542578;border:1px solid #542578;padding:14px 28px;">
-                        <a href="{{ shop.url }}" style="display:inline-block;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#DDD7C9;text-decoration:none;">Visit our store</a>
+                        <a href="{{ shop.url }}" style="display:inline-block;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#F5F1E8;text-decoration:none;">Visit our store</a>
                       </td>
                     </tr>
                   </table>
@@ -367,15 +455,15 @@
 
           {% comment %} ================= BLOCK: ORDER SUMMARY / EXHIBITS ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:0 24px 0 24px;">
-              <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#A77AC7;padding-bottom:8px;border-top:1px solid #3A2F4A;padding-top:28px;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:0 24px 0 24px;">
+              <div class="d-a d-bt" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#542578;padding-bottom:8px;border-top:1px solid #C7BCD2;padding-top:28px;">
                 Order summary
               </div>
             </td>
           </tr>
 
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:0 24px 0 24px;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:0 24px 0 24px;">
 
             {% if delivery_method_types.size > 1 %}
               {% comment %} ---------- SPLIT CART: items grouped by delivery agreement ---------- {% endcomment %}
@@ -398,68 +486,68 @@
                         {%- assign exh = exh | plus: 1 -%}
                         {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                         <tr>
-                          <td style="padding:0;border-top:1px solid #3A2F4A;">
+                          <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                               <tr>
                                 <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                                   {%- if line.image -%}
-                                    <img src="{{ line | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                    <img class="d-b" src="{{ line | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                   {%- else -%}
-                                    <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                    <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                   {%- endif -%}
                                 </td>
                                 <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                  <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                                  <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_title }}</div>
+                                  <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                                  <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_title }}</div>
                                   {%- if line.variant.title != 'Default Title' -%}
-                                    <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line.variant.title }}</div>
+                                    <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line.variant.title }}</div>
                                   {%- endif -%}
                                   {%- for group in line.groups -%}
                                     {%- if group.deliverable? -%}
-                                      <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">For: {{ group.display_title }}</div>
+                                      <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">For: {{ group.display_title }}</div>
                                     {%- else -%}
-                                      <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">Part of: {{ group.display_title }}</div>
+                                      <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">Part of: {{ group.display_title }}</div>
                                     {%- endif -%}
                                   {%- endfor -%}
                                   {%- if line.gift_card and line.properties["__shopify_send_gift_card_to_recipient"] -%}
                                     {%- for property in line.properties -%}
                                       {%- assign property_first_char = property.first | slice: 0 -%}
                                       {%- if property.last != blank and property_first_char != '_' -%}
-                                        <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">
+                                        <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">
                                           {{ property.first }}:
                                           {%- if property.last contains '/uploads/' -%}
-                                            <a href="{{ property.last }}" target="_blank" style="color:#A77AC7;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
+                                            <a class="d-a" href="{{ property.last }}" target="_blank" style="color:#542578;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
                                           {%- else -%}
-                                            <span style="color:#DDD7C9;">{{ property.last }}</span>
+                                            <span class="d-t" style="color:#1C1A22;">{{ property.last }}</span>
                                           {%- endif -%}
                                         </div>
                                       {%- endif -%}
                                     {%- endfor -%}
                                   {%- endif -%}
                                   {%- if line.selling_plan_allocation -%}
-                                    <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line.selling_plan_allocation.selling_plan.name }}</div>
+                                    <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line.selling_plan_allocation.selling_plan.name }}</div>
                                   {%- endif -%}
                                   {%- if line.refunded_quantity > 0 -%}
-                                    <div style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#C4433F;">Refunded</div>
+                                    <div class="d-r" style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#A8302C;">Refunded</div>
                                   {%- endif -%}
-                                  <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_display }}</div>
+                                  <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_display }}</div>
                                   {%- if line.discount_allocations -%}
                                     {%- for discount_allocation in line.discount_allocations -%}
                                       {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                        <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                        <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                       {%- endif -%}
                                     {%- endfor -%}
                                   {%- endif -%}
                                 </td>
                                 <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                   {%- if line.original_line_price != line.final_line_price -%}
-                                    <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ line.original_line_price | money }}</div>
+                                    <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ line.original_line_price | money }}</div>
                                   {%- endif -%}
-                                  <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                                  <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                                     {%- if line.final_line_price > 0 -%}
                                       {{ line.final_line_price | money }}
                                       {%- if line.unit_price_measurement -%}
-                                        <div style="padding-top:2px;font-size:11px;line-height:16px;color:#8A8377;">{{ line.unit_price | unit_price_with_measurement: line.unit_price_measurement }}</div>
+                                        <div class="d-d" style="padding-top:2px;font-size:11px;line-height:16px;color:#6B6459;">{{ line.unit_price | unit_price_with_measurement: line.unit_price_measurement }}</div>
                                       {%- endif -%}
                                     {%- else -%}
                                       Free
@@ -478,21 +566,21 @@
                                     <td colspan="3" style="padding:0 0 16px 0;">
                                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                         <tr>
-                                          <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                          <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                           <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                             {%- if child_line.image -%}
-                                              <img src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                              <img class="d-b" src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                             {%- else -%}
-                                              <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                              <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                             {%- endif -%}
                                           </td>
                                           <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                            <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ item_title }} &times; {{ child_line.quantity }}</div>
+                                            <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ item_title }} &times; {{ child_line.quantity }}</div>
                                             {%- if child_line.variant.title != 'Default Title' -%}
-                                              <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.variant.title }}</div>
+                                              <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.variant.title }}</div>
                                             {%- endif -%}
                                             {%- if child_line.selling_plan_allocation -%}
-                                              <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
+                                              <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
                                             {%- endif -%}
                                           </td>
                                         </tr>
@@ -537,30 +625,30 @@
                     {%- assign exh = exh | plus: 1 -%}
                     {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                     <tr>
-                      <td style="padding:0;border-top:1px solid #3A2F4A;">
+                      <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                           <tr>
                             <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                               {%- if parent_line_item and parent_line_item.image -%}
-                                <img src="{{ parent_line_item | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                <img class="d-b" src="{{ parent_line_item | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                               {%- elsif line_item_group.image -%}
-                                <img src="{{ line_item_group | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                <img class="d-b" src="{{ line_item_group | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                               {%- else -%}
-                                <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                               {%- endif -%}
                             </td>
                             <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                              <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                              <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_item_group.display_title }}</div>
+                              <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                              <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_item_group.display_title }}</div>
                               {%- if line_item_group.variant and line_item_group.variant.title != 'Default Title' -%}
-                                <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line_item_group.variant.title }}</div>
+                                <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line_item_group.variant.title }}</div>
                               {%- endif -%}
-                              <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_item_group.quantity }}</div>
+                              <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_item_group.quantity }}</div>
                               {%- if line_item_group.deliverable? -%}
                                 {%- if parent_line_item.discount_allocations -%}
                                   {%- for discount_allocation in parent_line_item.discount_allocations -%}
                                     {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                      <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                      <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                     {%- endif -%}
                                   {%- endfor -%}
                                 {%- endif -%}
@@ -576,15 +664,15 @@
                                       {%- endif -%}
                                     {%- endfor -%}
                                   {%- endfor -%}
-                                  <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_title | upcase }} (-{{ discount_amount | money }})</div>
+                                  <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_title | upcase }} (-{{ discount_amount | money }})</div>
                                 {%- endfor -%}
                               {%- endif -%}
                             </td>
                             <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                               {%- if original_line_price != final_line_price -%}
-                                <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ original_line_price | money }}</div>
+                                <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ original_line_price | money }}</div>
                               {%- endif -%}
-                              <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                              <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                                 {%- if final_line_price > 0 -%}
                                   {{ final_line_price | money }}
                                 {%- else -%}
@@ -603,28 +691,28 @@
                               <td colspan="3" style="padding:0 0 16px 0;">
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                   <tr>
-                                    <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                    <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                     <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                       {%- if component.image -%}
-                                        <img src="{{ component | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ component_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                        <img class="d-b" src="{{ component | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ component_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                       {%- else -%}
-                                        <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                        <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                       {%- endif -%}
                                     </td>
                                     <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                       {%- if line_item_group.deliverable? -%}
-                                        <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ component_title }} &times; {{ component.quantity }}</div>
+                                        <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ component_title }} &times; {{ component.quantity }}</div>
                                       {%- else -%}
-                                        <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ component.quantity }} &times; {{ component_title }}</div>
+                                        <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ component.quantity }} &times; {{ component_title }}</div>
                                       {%- endif -%}
                                       {%- if component.variant.title != 'Default Title' -%}
-                                        <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ component.variant.title }}</div>
+                                        <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ component.variant.title }}</div>
                                       {%- endif -%}
                                       {%- if line_item_group.deliverable? -%}
                                         {%- if component.discount_allocations -%}
                                           {%- for discount_allocation in component.discount_allocations -%}
                                             {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                              <div style="padding-top:4px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                              <div class="d-a" style="padding-top:4px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                             {%- endif -%}
                                           {%- endfor -%}
                                         {%- endif -%}
@@ -633,9 +721,9 @@
                                     {%- if line_item_group.deliverable? -%}
                                       <td align="right" valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                         {%- if component.original_line_price != component.final_line_price -%}
-                                          <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
+                                          <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
                                         {%- endif -%}
-                                        <div style="font-size:13px;line-height:18px;color:#DDD7C9;">
+                                        <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">
                                           {%- if component.final_line_price > 0 -%}{{ component.final_line_price | money }}{%- else -%}Free{%- endif -%}
                                         </div>
                                       </td>
@@ -653,28 +741,28 @@
               </table>
 
               {% if legacy_separator %}
-                <div style="height:1px;line-height:1px;font-size:0;background-color:#3A2F4A;">&nbsp;</div>
+                <div class="d-u" style="height:1px;line-height:1px;font-size:0;background-color:#C7BCD2;">&nbsp;</div>
               {% endif %}
 
               {% for delivery_agreement in delivery_agreements %}
                 {% if delivery_agreement.line_items != blank %}
                   {% if delivery_agreements.size > 1 %}
-                    <div style="padding:24px 0 4px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">
+                    <div class="d-a" style="padding:24px 0 4px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">
                       {{ delivery_agreement.delivery_method_name }} items
                     </div>
                     {% if delivery_agreement.delivery_method_type == 'pick-up' %}
                       {% if delivery_agreement.estimated_delivery_date %}
-                        <div style="padding-bottom:2px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">Estimated delivery &middot; <span style="color:#DDD7C9;">{{ delivery_agreement.estimated_delivery_date }}</span></div>
+                        <div class="d-d" style="padding-bottom:2px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">Estimated delivery &middot; <span class="d-t" style="color:#1C1A22;">{{ delivery_agreement.estimated_delivery_date }}</span></div>
                       {% endif %}
-                      <div style="padding-bottom:8px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">You will receive an email when your order is ready for pickup.</div>
+                      <div class="d-d" style="padding-bottom:8px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">You will receive an email when your order is ready for pickup.</div>
                     {% elsif delivery_agreement.delivery_method_type == 'shipping'
                       or delivery_agreement.delivery_method_type == 'local'
                       or delivery_agreement.delivery_method_type == 'pickup-point' %}
                       {% if delivery_agreement.presentment_title %}
                         {% if delivery_agreement.estimated_delivery_date %}
-                          <div style="padding-bottom:2px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Estimated delivery</div>
+                          <div class="d-d" style="padding-bottom:2px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Estimated delivery</div>
                         {% endif %}
-                        <div style="padding-bottom:8px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#DDD7C9;">
+                        <div class="d-t" style="padding-bottom:8px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#1C1A22;">
                           {{ delivery_agreement.presentment_title }}{% if delivery_agreement.estimated_delivery_date %} &middot; {{ delivery_agreement.estimated_delivery_date }}{% endif %}
                         </div>
                       {% endif %}
@@ -696,68 +784,68 @@
                           {%- assign exh = exh | plus: 1 -%}
                           {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                           <tr>
-                            <td style="padding:0;border-top:1px solid #3A2F4A;">
+                            <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                 <tr>
                                   <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                                     {%- if line.image -%}
-                                      <img src="{{ line | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                      <img class="d-b" src="{{ line | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                     {%- else -%}
-                                      <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                      <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                     {%- endif -%}
                                   </td>
                                   <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                    <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                                    <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_title }}</div>
+                                    <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                                    <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_title }}</div>
                                     {%- if line.variant.title != 'Default Title' -%}
-                                      <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line.variant.title }}</div>
+                                      <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line.variant.title }}</div>
                                     {%- endif -%}
                                     {%- for group in line.groups -%}
                                       {%- if group.deliverable? -%}
-                                        <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">For: {{ group.display_title }}</div>
+                                        <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">For: {{ group.display_title }}</div>
                                       {%- else -%}
-                                        <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">Part of: {{ group.display_title }}</div>
+                                        <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">Part of: {{ group.display_title }}</div>
                                       {%- endif -%}
                                     {%- endfor -%}
                                     {%- if line.gift_card and line.properties["__shopify_send_gift_card_to_recipient"] -%}
                                       {%- for property in line.properties -%}
                                         {%- assign property_first_char = property.first | slice: 0 -%}
                                         {%- if property.last != blank and property_first_char != '_' -%}
-                                          <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">
+                                          <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">
                                             {{ property.first }}:
                                             {%- if property.last contains '/uploads/' -%}
-                                              <a href="{{ property.last }}" target="_blank" style="color:#A77AC7;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
+                                              <a class="d-a" href="{{ property.last }}" target="_blank" style="color:#542578;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
                                             {%- else -%}
-                                              <span style="color:#DDD7C9;">{{ property.last }}</span>
+                                              <span class="d-t" style="color:#1C1A22;">{{ property.last }}</span>
                                             {%- endif -%}
                                           </div>
                                         {%- endif -%}
                                       {%- endfor -%}
                                     {%- endif -%}
                                     {%- if line.selling_plan_allocation -%}
-                                      <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line.selling_plan_allocation.selling_plan.name }}</div>
+                                      <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line.selling_plan_allocation.selling_plan.name }}</div>
                                     {%- endif -%}
                                     {%- if line.refunded_quantity > 0 -%}
-                                      <div style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#C4433F;">Refunded</div>
+                                      <div class="d-r" style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#A8302C;">Refunded</div>
                                     {%- endif -%}
-                                    <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_display }}</div>
+                                    <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_display }}</div>
                                     {%- if line.discount_allocations -%}
                                       {%- for discount_allocation in line.discount_allocations -%}
                                         {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                          <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                          <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                         {%- endif -%}
                                       {%- endfor -%}
                                     {%- endif -%}
                                   </td>
                                   <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                     {%- if line.original_line_price != line.final_line_price -%}
-                                      <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ line.original_line_price | money }}</div>
+                                      <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ line.original_line_price | money }}</div>
                                     {%- endif -%}
-                                    <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                                    <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                                       {%- if line.final_line_price > 0 -%}
                                         {{ line.final_line_price | money }}
                                         {%- if line.unit_price_measurement -%}
-                                          <div style="padding-top:2px;font-size:11px;line-height:16px;color:#8A8377;">{{ line.unit_price | unit_price_with_measurement: line.unit_price_measurement }}</div>
+                                          <div class="d-d" style="padding-top:2px;font-size:11px;line-height:16px;color:#6B6459;">{{ line.unit_price | unit_price_with_measurement: line.unit_price_measurement }}</div>
                                         {%- endif -%}
                                       {%- else -%}
                                         Free
@@ -776,21 +864,21 @@
                                       <td colspan="3" style="padding:0 0 16px 0;">
                                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                           <tr>
-                                            <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                            <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                             <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                               {%- if child_line.image -%}
-                                                <img src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                                <img class="d-b" src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                               {%- else -%}
-                                                <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                                <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                               {%- endif -%}
                                             </td>
                                             <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                              <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ item_title }} &times; {{ child_line.quantity }}</div>
+                                              <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ item_title }} &times; {{ child_line.quantity }}</div>
                                               {%- if child_line.variant.title != 'Default Title' -%}
-                                                <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.variant.title }}</div>
+                                                <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.variant.title }}</div>
                                               {%- endif -%}
                                               {%- if child_line.selling_plan_allocation -%}
-                                                <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
+                                                <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
                                               {%- endif -%}
                                             </td>
                                           </tr>
@@ -845,30 +933,30 @@
                         {%- assign exh = exh | plus: 1 -%}
                         {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                         <tr>
-                          <td style="padding:0;border-top:1px solid #3A2F4A;">
+                          <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                               <tr>
                                 <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                                   {%- if parent_line_item and parent_line_item.image -%}
-                                    <img src="{{ parent_line_item | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                    <img class="d-b" src="{{ parent_line_item | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                   {%- elsif line_item_group.image -%}
-                                    <img src="{{ line_item_group | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                    <img class="d-b" src="{{ line_item_group | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                   {%- else -%}
-                                    <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                    <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                   {%- endif -%}
                                 </td>
                                 <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                  <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                                  <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_item_group.display_title }}</div>
+                                  <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                                  <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_item_group.display_title }}</div>
                                   {%- if line_item_group.variant and line_item_group.variant.title != 'Default Title' -%}
-                                    <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line_item_group.variant.title }}</div>
+                                    <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line_item_group.variant.title }}</div>
                                   {%- endif -%}
-                                  <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_item_group.quantity }}</div>
+                                  <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_item_group.quantity }}</div>
                                   {%- if line_item_group.deliverable? -%}
                                     {%- if parent_line_item.discount_allocations -%}
                                       {%- for discount_allocation in parent_line_item.discount_allocations -%}
                                         {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                          <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                          <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                         {%- endif -%}
                                       {%- endfor -%}
                                     {%- endif -%}
@@ -884,15 +972,15 @@
                                           {%- endif -%}
                                         {%- endfor -%}
                                       {%- endfor -%}
-                                      <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_title | upcase }} (-{{ discount_amount | money }})</div>
+                                      <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_title | upcase }} (-{{ discount_amount | money }})</div>
                                     {%- endfor -%}
                                   {%- endif -%}
                                 </td>
                                 <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                   {%- if original_line_price != final_line_price -%}
-                                    <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ original_line_price | money }}</div>
+                                    <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ original_line_price | money }}</div>
                                   {%- endif -%}
-                                  <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                                  <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                                     {%- if final_line_price > 0 -%}
                                       {{ final_line_price | money }}
                                     {%- else -%}
@@ -911,28 +999,28 @@
                                   <td colspan="3" style="padding:0 0 16px 0;">
                                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                       <tr>
-                                        <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                        <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                         <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                           {%- if component.image -%}
-                                            <img src="{{ component | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ component_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                            <img class="d-b" src="{{ component | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ component_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                           {%- else -%}
-                                            <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                            <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                           {%- endif -%}
                                         </td>
                                         <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                           {%- if line_item_group.deliverable? -%}
-                                            <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ component_title }} &times; {{ component.quantity }}</div>
+                                            <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ component_title }} &times; {{ component.quantity }}</div>
                                           {%- else -%}
-                                            <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ component.quantity }} &times; {{ component_title }}</div>
+                                            <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ component.quantity }} &times; {{ component_title }}</div>
                                           {%- endif -%}
                                           {%- if component.variant.title != 'Default Title' -%}
-                                            <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ component.variant.title }}</div>
+                                            <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ component.variant.title }}</div>
                                           {%- endif -%}
                                           {%- if line_item_group.deliverable? -%}
                                             {%- if component.discount_allocations -%}
                                               {%- for discount_allocation in component.discount_allocations -%}
                                                 {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                                  <div style="padding-top:4px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                                  <div class="d-a" style="padding-top:4px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                                 {%- endif -%}
                                               {%- endfor -%}
                                             {%- endif -%}
@@ -941,9 +1029,9 @@
                                         {%- if line_item_group.deliverable? -%}
                                           <td align="right" valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                             {%- if component.original_line_price != component.final_line_price -%}
-                                              <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
+                                              <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
                                             {%- endif -%}
-                                            <div style="font-size:13px;line-height:18px;color:#DDD7C9;">
+                                            <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">
                                               {%- if component.final_line_price > 0 -%}{{ component.final_line_price | money }}{%- else -%}Free{%- endif -%}
                                             </div>
                                           </td>
@@ -970,68 +1058,68 @@
                             {%- assign exh = exh | plus: 1 -%}
                             {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                             <tr>
-                              <td style="padding:0;border-top:1px solid #3A2F4A;">
+                              <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                   <tr>
                                     <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                                       {%- if component.image -%}
-                                        <img src="{{ component | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                        <img class="d-b" src="{{ component | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                       {%- else -%}
-                                        <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                        <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                       {%- endif -%}
                                     </td>
                                     <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                      <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                                      <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_title }}</div>
+                                      <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                                      <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_title }}</div>
                                       {%- if component.variant.title != 'Default Title' -%}
-                                        <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ component.variant.title }}</div>
+                                        <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ component.variant.title }}</div>
                                       {%- endif -%}
                                       {%- for group in component.groups -%}
                                         {%- if group.deliverable? -%}
-                                          <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">For: {{ group.display_title }}</div>
+                                          <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">For: {{ group.display_title }}</div>
                                         {%- else -%}
-                                          <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">Part of: {{ group.display_title }}</div>
+                                          <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">Part of: {{ group.display_title }}</div>
                                         {%- endif -%}
                                       {%- endfor -%}
                                       {%- if component.gift_card and component.properties["__shopify_send_gift_card_to_recipient"] -%}
                                         {%- for property in component.properties -%}
                                           {%- assign property_first_char = property.first | slice: 0 -%}
                                           {%- if property.last != blank and property_first_char != '_' -%}
-                                            <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">
+                                            <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">
                                               {{ property.first }}:
                                               {%- if property.last contains '/uploads/' -%}
-                                                <a href="{{ property.last }}" target="_blank" style="color:#A77AC7;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
+                                                <a class="d-a" href="{{ property.last }}" target="_blank" style="color:#542578;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
                                               {%- else -%}
-                                                <span style="color:#DDD7C9;">{{ property.last }}</span>
+                                                <span class="d-t" style="color:#1C1A22;">{{ property.last }}</span>
                                               {%- endif -%}
                                             </div>
                                           {%- endif -%}
                                         {%- endfor -%}
                                       {%- endif -%}
                                       {%- if component.selling_plan_allocation -%}
-                                        <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ component.selling_plan_allocation.selling_plan.name }}</div>
+                                        <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ component.selling_plan_allocation.selling_plan.name }}</div>
                                       {%- endif -%}
                                       {%- if component.refunded_quantity > 0 -%}
-                                        <div style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#C4433F;">Refunded</div>
+                                        <div class="d-r" style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#A8302C;">Refunded</div>
                                       {%- endif -%}
-                                      <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_display }}</div>
+                                      <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_display }}</div>
                                       {%- if component.discount_allocations -%}
                                         {%- for discount_allocation in component.discount_allocations -%}
                                           {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                            <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                            <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                           {%- endif -%}
                                         {%- endfor -%}
                                       {%- endif -%}
                                     </td>
                                     <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                       {%- if component.original_line_price != component.final_line_price -%}
-                                        <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
+                                        <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
                                       {%- endif -%}
-                                      <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                                      <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                                         {%- if component.final_line_price > 0 -%}
                                           {{ component.final_line_price | money }}
                                           {%- if component.unit_price_measurement -%}
-                                            <div style="padding-top:2px;font-size:11px;line-height:16px;color:#8A8377;">{{ component.unit_price | unit_price_with_measurement: component.unit_price_measurement }}</div>
+                                            <div class="d-d" style="padding-top:2px;font-size:11px;line-height:16px;color:#6B6459;">{{ component.unit_price | unit_price_with_measurement: component.unit_price_measurement }}</div>
                                           {%- endif -%}
                                         {%- else -%}
                                           Free
@@ -1050,21 +1138,21 @@
                                         <td colspan="3" style="padding:0 0 16px 0;">
                                           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                             <tr>
-                                              <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                              <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                               <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                                 {%- if child_line.image -%}
-                                                  <img src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                                  <img class="d-b" src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                                 {%- else -%}
-                                                  <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                                  <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                                 {%- endif -%}
                                               </td>
                                               <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                                <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ item_title }} &times; {{ child_line.quantity }}</div>
+                                                <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ item_title }} &times; {{ child_line.quantity }}</div>
                                                 {%- if child_line.variant.title != 'Default Title' -%}
-                                                  <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.variant.title }}</div>
+                                                  <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.variant.title }}</div>
                                                 {%- endif -%}
                                                 {%- if child_line.selling_plan_allocation -%}
-                                                  <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
+                                                  <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
                                                 {%- endif -%}
                                               </td>
                                             </tr>
@@ -1083,7 +1171,7 @@
                   </table>
 
                   {% unless forloop.last %}
-                    <div style="height:1px;line-height:1px;font-size:0;background-color:#3A2F4A;">&nbsp;</div>
+                    <div class="d-u" style="height:1px;line-height:1px;font-size:0;background-color:#C7BCD2;">&nbsp;</div>
                   {% endunless %}
                 {% endif %}
               {% endfor %}
@@ -1105,68 +1193,68 @@
                       {%- assign exh = exh | plus: 1 -%}
                       {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                       <tr>
-                        <td style="padding:0;border-top:1px solid #3A2F4A;">
+                        <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                             <tr>
                               <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                                 {%- if line.image -%}
-                                  <img src="{{ line | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                  <img class="d-b" src="{{ line | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                 {%- else -%}
-                                  <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                                  <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                                 {%- endif -%}
                               </td>
                               <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                                <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_title }}</div>
+                                <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                                <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_title }}</div>
                                 {%- if line.variant.title != 'Default Title' -%}
-                                  <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line.variant.title }}</div>
+                                  <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line.variant.title }}</div>
                                 {%- endif -%}
                                 {%- for group in line.groups -%}
                                   {%- if group.deliverable? -%}
-                                    <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">For: {{ group.display_title }}</div>
+                                    <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">For: {{ group.display_title }}</div>
                                   {%- else -%}
-                                    <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">Part of: {{ group.display_title }}</div>
+                                    <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">Part of: {{ group.display_title }}</div>
                                   {%- endif -%}
                                 {%- endfor -%}
                                 {%- if line.gift_card and line.properties["__shopify_send_gift_card_to_recipient"] -%}
                                   {%- for property in line.properties -%}
                                     {%- assign property_first_char = property.first | slice: 0 -%}
                                     {%- if property.last != blank and property_first_char != '_' -%}
-                                      <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">
+                                      <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">
                                         {{ property.first }}:
                                         {%- if property.last contains '/uploads/' -%}
-                                          <a href="{{ property.last }}" target="_blank" style="color:#A77AC7;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
+                                          <a class="d-a" href="{{ property.last }}" target="_blank" style="color:#542578;text-decoration:underline;">{{ property.last | split: '/' | last }}</a>
                                         {%- else -%}
-                                          <span style="color:#DDD7C9;">{{ property.last }}</span>
+                                          <span class="d-t" style="color:#1C1A22;">{{ property.last }}</span>
                                         {%- endif -%}
                                       </div>
                                     {%- endif -%}
                                   {%- endfor -%}
                                 {%- endif -%}
                                 {%- if line.selling_plan_allocation -%}
-                                  <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line.selling_plan_allocation.selling_plan.name }}</div>
+                                  <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line.selling_plan_allocation.selling_plan.name }}</div>
                                 {%- endif -%}
                                 {%- if line.refunded_quantity > 0 -%}
-                                  <div style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#C4433F;">Refunded</div>
+                                  <div class="d-r" style="padding-top:4px;font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#A8302C;">Refunded</div>
                                 {%- endif -%}
-                                <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_display }}</div>
+                                <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_display }}</div>
                                 {%- if line.discount_allocations -%}
                                   {%- for discount_allocation in line.discount_allocations -%}
                                     {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                      <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                      <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                     {%- endif -%}
                                   {%- endfor -%}
                                 {%- endif -%}
                               </td>
                               <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                 {%- if line.original_line_price != line.final_line_price -%}
-                                  <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ line.original_line_price | money }}</div>
+                                  <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ line.original_line_price | money }}</div>
                                 {%- endif -%}
-                                <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                                <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                                   {%- if line.final_line_price > 0 -%}
                                     {{ line.final_line_price | money }}
                                     {%- if line.unit_price_measurement -%}
-                                      <div style="padding-top:2px;font-size:11px;line-height:16px;color:#8A8377;">{{ line.unit_price | unit_price_with_measurement: line.unit_price_measurement }}</div>
+                                      <div class="d-d" style="padding-top:2px;font-size:11px;line-height:16px;color:#6B6459;">{{ line.unit_price | unit_price_with_measurement: line.unit_price_measurement }}</div>
                                     {%- endif -%}
                                   {%- else -%}
                                     Free
@@ -1185,21 +1273,21 @@
                                   <td colspan="3" style="padding:0 0 16px 0;">
                                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                       <tr>
-                                        <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                        <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                         <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                           {%- if child_line.image -%}
-                                            <img src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                            <img class="d-b" src="{{ child_line | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ item_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                           {%- else -%}
-                                            <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                            <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                           {%- endif -%}
                                         </td>
                                         <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                                          <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ item_title }} &times; {{ child_line.quantity }}</div>
+                                          <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ item_title }} &times; {{ child_line.quantity }}</div>
                                           {%- if child_line.variant.title != 'Default Title' -%}
-                                            <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.variant.title }}</div>
+                                            <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.variant.title }}</div>
                                           {%- endif -%}
                                           {%- if child_line.selling_plan_allocation -%}
-                                            <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
+                                            <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ child_line.selling_plan_allocation.selling_plan.name }}</div>
                                           {%- endif -%}
                                         </td>
                                       </tr>
@@ -1241,30 +1329,30 @@
                   {%- assign exh = exh | plus: 1 -%}
                   {%- assign exh_num = exh | prepend: '0' | slice: -2, 2 -%}
                   <tr>
-                    <td style="padding:0;border-top:1px solid #3A2F4A;">
+                    <td class="d-bt" style="padding:0;border-top:1px solid #C7BCD2;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                         <tr>
                           <td width="76" valign="top" style="width:76px;padding:20px 16px 20px 0;">
                             {%- if parent_line_item and parent_line_item.image -%}
-                              <img src="{{ parent_line_item | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                              <img class="d-b" src="{{ parent_line_item | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                             {%- elsif line_item_group.image -%}
-                              <img src="{{ line_item_group | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                              <img class="d-b" src="{{ line_item_group | img_url: 'compact_cropped' }}" width="60" height="60" alt="{{ line_item_group.display_title }}" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                             {%- else -%}
-                              <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #3A2F4A;" />
+                              <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="60" height="60" alt="" style="display:block;width:60px;height:60px;border:1px solid #C7BCD2;" />
                             {%- endif -%}
                           </td>
                           <td valign="top" style="padding:20px 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                            <div style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">Exh {{ exh_num }}</div>
-                            <div style="padding-top:4px;font-size:14px;line-height:20px;color:#DDD7C9;">{{ line_item_group.display_title }}</div>
+                            <div class="d-d" style="font-size:10px;line-height:14px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">Exh {{ exh_num }}</div>
+                            <div class="d-t" style="padding-top:4px;font-size:14px;line-height:20px;color:#1C1A22;">{{ line_item_group.display_title }}</div>
                             {%- if line_item_group.variant and line_item_group.variant.title != 'Default Title' -%}
-                              <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ line_item_group.variant.title }}</div>
+                              <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ line_item_group.variant.title }}</div>
                             {%- endif -%}
-                            <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;">Qty {{ line_item_group.quantity }}</div>
+                            <div class="d-d" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;">Qty {{ line_item_group.quantity }}</div>
                             {%- if line_item_group.deliverable? -%}
                               {%- if parent_line_item.discount_allocations -%}
                                 {%- for discount_allocation in parent_line_item.discount_allocations -%}
                                   {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                    <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                    <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                   {%- endif -%}
                                 {%- endfor -%}
                               {%- endif -%}
@@ -1280,15 +1368,15 @@
                                     {%- endif -%}
                                   {%- endfor -%}
                                 {%- endfor -%}
-                                <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_title | upcase }} (-{{ discount_amount | money }})</div>
+                                <div class="d-a" style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_title | upcase }} (-{{ discount_amount | money }})</div>
                               {%- endfor -%}
                             {%- endif -%}
                           </td>
                           <td align="right" valign="top" style="padding:20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                             {%- if original_line_price != final_line_price -%}
-                              <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ original_line_price | money }}</div>
+                              <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ original_line_price | money }}</div>
                             {%- endif -%}
-                            <div style="padding-top:2px;font-size:14px;line-height:20px;color:#DDD7C9;">
+                            <div class="d-t" style="padding-top:2px;font-size:14px;line-height:20px;color:#1C1A22;">
                               {%- if final_line_price > 0 -%}
                                 {{ final_line_price | money }}
                               {%- else -%}
@@ -1307,28 +1395,28 @@
                             <td colspan="3" style="padding:0 0 16px 0;">
                               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                                 <tr>
-                                  <td width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#3A2F4A;">+</td>
+                                  <td class="d-c" width="24" valign="top" style="width:24px;padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A79CB5;">+</td>
                                   <td width="52" valign="top" style="width:52px;padding:0 12px 0 0;">
                                     {%- if component.image -%}
-                                      <img src="{{ component | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ component_title }}" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                      <img class="d-b" src="{{ component | img_url: 'compact_cropped' }}" width="40" height="40" alt="{{ component_title }}" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                     {%- else -%}
-                                      <img src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #3A2F4A;" />
+                                      <img class="d-b" src="{{ 'notifications/no-image.png' | shopify_asset_url }}" width="40" height="40" alt="" style="display:block;width:40px;height:40px;border:1px solid #C7BCD2;" />
                                     {%- endif -%}
                                   </td>
                                   <td valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                     {%- if line_item_group.deliverable? -%}
-                                      <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ component_title }} &times; {{ component.quantity }}</div>
+                                      <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ component_title }} &times; {{ component.quantity }}</div>
                                     {%- else -%}
-                                      <div style="font-size:13px;line-height:18px;color:#DDD7C9;">{{ component.quantity }} &times; {{ component_title }}</div>
+                                      <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">{{ component.quantity }} &times; {{ component_title }}</div>
                                     {%- endif -%}
                                     {%- if component.variant.title != 'Default Title' -%}
-                                      <div style="padding-top:2px;font-size:12px;line-height:18px;color:#8A8377;">{{ component.variant.title }}</div>
+                                      <div class="d-d" style="padding-top:2px;font-size:12px;line-height:18px;color:#6B6459;">{{ component.variant.title }}</div>
                                     {%- endif -%}
                                     {%- if line_item_group.deliverable? -%}
                                       {%- if component.discount_allocations -%}
                                         {%- for discount_allocation in component.discount_allocations -%}
                                           {%- if discount_allocation.discount_application.target_selection != 'all' -%}
-                                            <div style="padding-top:4px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
+                                            <div class="d-a" style="padding-top:4px;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_allocation.discount_application.title | upcase }} (-{{ discount_allocation.amount | money }})</div>
                                           {%- endif -%}
                                         {%- endfor -%}
                                       {%- endif -%}
@@ -1337,9 +1425,9 @@
                                   {%- if line_item_group.deliverable? -%}
                                     <td align="right" valign="top" style="padding:0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
                                       {%- if component.original_line_price != component.final_line_price -%}
-                                        <div style="font-size:12px;line-height:18px;color:#8A8377;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
+                                        <div class="d-d" style="font-size:12px;line-height:18px;color:#6B6459;text-decoration:line-through;">{{ component.original_line_price | money }}</div>
                                       {%- endif -%}
-                                      <div style="font-size:13px;line-height:18px;color:#DDD7C9;">
+                                      <div class="d-t" style="font-size:13px;line-height:18px;color:#1C1A22;">
                                         {%- if component.final_line_price > 0 -%}{{ component.final_line_price | money }}{%- else -%}Free{%- endif -%}
                                       </div>
                                     </td>
@@ -1361,8 +1449,8 @@
 
           {% comment %} ================= BLOCK: TOTALS ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:8px 24px 0 24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-top:1px solid #3A2F4A;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:8px 24px 0 24px;">
+              <table class="d-bt" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-top:1px solid #C7BCD2;">
                 <tr>
                   <td style="padding:20px 0 0 0;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
@@ -1392,27 +1480,27 @@
                       {% endfor %}
 
                       <tr>
-                        <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Subtotal</td>
-                        <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ subtotal_price | plus: total_order_discount_amount | money }}</td>
+                        <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Subtotal</td>
+                        <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ subtotal_price | plus: total_order_discount_amount | money }}</td>
                       </tr>
 
                       {% if order_discount_count > 0 %}
                         {% if order_discount_count == 1 %}
                           <tr>
-                            <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Order discount</td>
-                            <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">-{{ total_order_discount_amount | money }}</td>
+                            <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Order discount</td>
+                            <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">-{{ total_order_discount_amount | money }}</td>
                           </tr>
                         {% endif %}
                         {% if order_discount_count > 1 %}
                           <tr>
-                            <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Order discounts</td>
-                            <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">-{{ total_order_discount_amount | money }}</td>
+                            <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Order discounts</td>
+                            <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">-{{ total_order_discount_amount | money }}</td>
                           </tr>
                         {% endif %}
                         {% for discount_application in discount_applications %}
                           {% if discount_application.target_selection == 'all' and discount_application.target_type != 'shipping_line' %}
                             <tr>
-                              <td colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ discount_application.title | upcase }} (-{{ discount_application.total_allocated_amount | money }})</td>
+                              <td class="d-a" colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ discount_application.title | upcase }} (-{{ discount_application.total_allocated_amount | money }})</td>
                             </tr>
                           {% endif %}
                         {% endfor %}
@@ -1441,36 +1529,36 @@
                           {% if has_shipping_discount %}
                             {% if free_shipping == true or shipping_type_total == 0 %}
                               <tr>
-                                <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Shipping</td>
-                                <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                                  {% if shipping_type_original_total != 0 %}<span style="color:#8A8377;text-decoration:line-through;">{{ shipping_type_original_total | money }}</span>&nbsp;{% endif %}Free
+                                <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Shipping</td>
+                                <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                                  {% if shipping_type_original_total != 0 %}<span class="d-d" style="color:#6B6459;text-decoration:line-through;">{{ shipping_type_original_total | money }}</span>&nbsp;{% endif %}Free
                                 </td>
                               </tr>
                             {% else %}
                               <tr>
-                                <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Shipping</td>
-                                <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ shipping_type_total | money }}</td>
+                                <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Shipping</td>
+                                <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ shipping_type_total | money }}</td>
                               </tr>
                             {% endif %}
                             <tr>
-                              <td colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ shipping_discount_title | upcase }}{% if discount_value_price != 0 %} (-{{ discount_value_price | money }}){% endif %}</td>
+                              <td class="d-a" colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ shipping_discount_title | upcase }}{% if discount_value_price != 0 %} (-{{ discount_value_price | money }}){% endif %}</td>
                             </tr>
                           {% else %}
                             <tr>
-                              <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Shipping</td>
-                              <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ shipping_type_total | money }}</td>
+                              <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Shipping</td>
+                              <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ shipping_type_total | money }}</td>
                             </tr>
                           {% endif %}
                         {% endif %}
 
                         {% if pickup_methods.size > 0 %}
                           <tr>
-                            <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Pickup</td>
-                            <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ pickup_type_total | money }}</td>
+                            <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Pickup</td>
+                            <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ pickup_type_total | money }}</td>
                           </tr>
                           {% if has_shipping_discount and shipping_methods.size == 0 %}
                             <tr>
-                              <td colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ shipping_discount_title | upcase }}{% if discount_value_price != 0 %} (-{{ discount_value_price | money }}){% endif %}</td>
+                              <td class="d-a" colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ shipping_discount_title | upcase }}{% if discount_value_price != 0 %} (-{{ discount_value_price | money }}){% endif %}</td>
                             </tr>
                           {% endif %}
                         {% endif %}
@@ -1486,24 +1574,24 @@
                           {% if has_shipping_discount %}
                             {% if free_shipping == true or shipping_price == 0 %}
                               <tr>
-                                <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">{{ fallback_delivery_title }}</td>
-                                <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                                  {% if shipping_price != 0 %}<span style="color:#8A8377;text-decoration:line-through;">{{ shipping_price | money }}</span>&nbsp;{% endif %}Free
+                                <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">{{ fallback_delivery_title }}</td>
+                                <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                                  {% if shipping_price != 0 %}<span class="d-d" style="color:#6B6459;text-decoration:line-through;">{{ shipping_price | money }}</span>&nbsp;{% endif %}Free
                                 </td>
                               </tr>
                             {% else %}
                               <tr>
-                                <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">{{ fallback_delivery_title }}</td>
-                                <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ discounted_shipping_price | money }}</td>
+                                <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">{{ fallback_delivery_title }}</td>
+                                <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ discounted_shipping_price | money }}</td>
                               </tr>
                             {% endif %}
                             <tr>
-                              <td colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">&ndash; {{ shipping_discount_title | upcase }}{% if discount_value_price != 0 %} (-{{ discount_value_price | money }}){% endif %}</td>
+                              <td class="d-a" colspan="2" align="left" style="padding:2px 0 6px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">&ndash; {{ shipping_discount_title | upcase }}{% if discount_value_price != 0 %} (-{{ discount_value_price | money }}){% endif %}</td>
                             </tr>
                           {% else %}
                             <tr>
-                              <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">{{ fallback_delivery_title }}</td>
-                              <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ shipping_price | money }}</td>
+                              <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">{{ fallback_delivery_title }}</td>
+                              <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ shipping_price | money }}</td>
                             </tr>
                           {% endif %}
                         {% endif %}
@@ -1511,20 +1599,20 @@
 
                       {% if total_duties %}
                         <tr>
-                          <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Duties</td>
-                          <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ total_duties | money }}</td>
+                          <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Duties</td>
+                          <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ total_duties | money }}</td>
                         </tr>
                       {% endif %}
 
                       <tr>
-                        <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Taxes</td>
-                        <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ tax_price | money }}</td>
+                        <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Taxes</td>
+                        <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ tax_price | money }}</td>
                       </tr>
 
                       {% if total_tip and total_tip > 0 %}
                         <tr>
-                          <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Tip</td>
-                          <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">{{ total_tip | money }}</td>
+                          <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Tip</td>
+                          <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">{{ total_tip | money }}</td>
                         </tr>
                       {% endif %}
                     </table>
@@ -1583,33 +1671,33 @@
                       {% endfor %}
                     {% endif %}
 
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:12px;border-top:1px solid #3A2F4A;">
+                    <table class="d-bt" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:12px;border-top:1px solid #C7BCD2;">
                       {% if payment_terms and payment_terms.automatic_capture_at_fulfillment == false or b2b? %}
                         {% assign next_payment = payment_terms.next_payment %}
                         {% assign due_at_date = next_payment.due_at | date: "%b %d, %Y" %}
 
                         {% if net_transaction_amount_rounding != 0 %}
                           <tr>
-                            <td align="left" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">Total</td>
-                            <td align="right" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:18px;line-height:24px;font-weight:600;color:#DDD7C9;">{{ total_price | money_with_currency }}</td>
+                            <td class="d-a" align="left" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">Total</td>
+                            <td class="d-t" align="right" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:18px;line-height:24px;font-weight:600;color:#1C1A22;">{{ total_price | money_with_currency }}</td>
                           </tr>
                           {% if total_discounts > 0 %}
                             <tr>
-                              <td align="left" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">You saved</td>
-                              <td align="right" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A77AC7;">{{ total_discounts | money }}</td>
+                              <td class="d-a" align="left" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">You saved</td>
+                              <td class="d-a" align="right" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#542578;">{{ total_discounts | money }}</td>
                             </tr>
                           {% endif %}
-                          <tr><td colspan="2" style="padding:0;height:1px;line-height:1px;font-size:0;background-color:#3A2F4A;">&nbsp;</td></tr>
+                          <tr><td class="d-u" colspan="2" style="padding:0;height:1px;line-height:1px;font-size:0;background-color:#C7BCD2;">&nbsp;</td></tr>
                           <tr>
-                            <td align="left" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">Cash rounding</td>
-                            <td align="right" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#DDD7C9;">{% if net_transaction_amount_rounding < 0 %}-{% endif %} {{ net_transaction_amount_rounding | abs | money }}</td>
+                            <td class="d-d" align="left" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">Cash rounding</td>
+                            <td class="d-t" align="right" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#1C1A22;">{% if net_transaction_amount_rounding < 0 %}-{% endif %} {{ net_transaction_amount_rounding | abs | money }}</td>
                           </tr>
-                          <tr><td colspan="2" style="padding:0;height:1px;line-height:1px;font-size:0;background-color:#3A2F4A;">&nbsp;</td></tr>
+                          <tr><td class="d-u" colspan="2" style="padding:0;height:1px;line-height:1px;font-size:0;background-color:#C7BCD2;">&nbsp;</td></tr>
                         {% endif %}
 
                         <tr>
-                          <td align="left" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">Total paid today</td>
-                          <td align="right" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:18px;line-height:24px;font-weight:600;color:#DDD7C9;">{{ transaction_amount | plus: net_transaction_amount_rounding | money_with_currency }}</td>
+                          <td class="d-a" align="left" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">Total paid today</td>
+                          <td class="d-t" align="right" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:18px;line-height:24px;font-weight:600;color:#1C1A22;">{{ transaction_amount | plus: net_transaction_amount_rounding | money_with_currency }}</td>
                         </tr>
 
                         {% assign next_amount_due = total_price %}
@@ -1621,51 +1709,51 @@
 
                         {% if payment_terms.type == 'receipt' %}
                           <tr>
-                            <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Total due on receipt</td>
-                            <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#DDD7C9;">{{ next_amount_due | money_with_currency }}</td>
+                            <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Total due on receipt</td>
+                            <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#1C1A22;">{{ next_amount_due | money_with_currency }}</td>
                           </tr>
                         {% elsif payment_terms.type == 'fulfillment' %}
                           <tr>
-                            <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Total due on fulfillment</td>
-                            <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#DDD7C9;">{{ next_amount_due | money_with_currency }}</td>
+                            <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Total due on fulfillment</td>
+                            <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#1C1A22;">{{ next_amount_due | money_with_currency }}</td>
                           </tr>
                         {% else %}
                           <tr>
-                            <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Total due {{ due_at_date }}</td>
-                            <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#DDD7C9;">{{ next_amount_due | money_with_currency }}</td>
+                            <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Total due {{ due_at_date }}</td>
+                            <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#1C1A22;">{{ next_amount_due | money_with_currency }}</td>
                           </tr>
                         {% endif %}
 
                         {% if total_discounts > 0 and net_transaction_amount_rounding == 0 %}
                           <tr>
-                            <td align="left" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">You saved</td>
-                            <td align="right" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A77AC7;">{{ total_discounts | money }}</td>
+                            <td class="d-a" align="left" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">You saved</td>
+                            <td class="d-a" align="right" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#542578;">{{ total_discounts | money }}</td>
                           </tr>
                         {% endif %}
                       {% else %}
                         <tr>
-                          <td align="left" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">Total</td>
-                          <td align="right" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:18px;line-height:24px;font-weight:600;color:#DDD7C9;">{{ total_price | money_with_currency }}</td>
+                          <td class="d-a" align="left" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">Total</td>
+                          <td class="d-t" align="right" style="padding:16px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:18px;line-height:24px;font-weight:600;color:#1C1A22;">{{ total_price | money_with_currency }}</td>
                         </tr>
                         {% if total_discounts > 0 %}
                           <tr>
-                            <td align="left" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#A77AC7;">You saved</td>
-                            <td align="right" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#A77AC7;">{{ total_discounts | money }}</td>
+                            <td class="d-a" align="left" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.12em;text-transform:uppercase;color:#542578;">You saved</td>
+                            <td class="d-a" align="right" style="padding:0 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#542578;">{{ total_discounts | money }}</td>
                           </tr>
                         {% endif %}
                         {% if net_transaction_amount_rounding != 0 %}
-                          <tr><td colspan="2" style="padding:0;height:1px;line-height:1px;font-size:0;background-color:#3A2F4A;">&nbsp;</td></tr>
+                          <tr><td class="d-u" colspan="2" style="padding:0;height:1px;line-height:1px;font-size:0;background-color:#C7BCD2;">&nbsp;</td></tr>
                           <tr>
-                            <td align="left" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">Cash rounding</td>
-                            <td align="right" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#DDD7C9;">{% if net_transaction_amount_rounding < 0 %}-{% endif %} {{ net_transaction_amount_rounding | abs | money }}</td>
+                            <td class="d-d" align="left" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">Cash rounding</td>
+                            <td class="d-t" align="right" style="padding:8px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#1C1A22;">{% if net_transaction_amount_rounding < 0 %}-{% endif %} {{ net_transaction_amount_rounding | abs | money }}</td>
                           </tr>
                           {% if financial_status == 'paid' %}
                             <tr>
-                              <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">
+                              <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">
                                 Paid<br />
-                                <span style="font-size:11px;line-height:16px;color:#8A8377;">{{ order.transactions | map: 'gateway_display_name' | uniq | join: ', ' }}</span>
+                                <span class="d-d" style="font-size:11px;line-height:16px;color:#6B6459;">{{ order.transactions | map: 'gateway_display_name' | uniq | join: ', ' }}</span>
                               </td>
-                              <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#DDD7C9;">{{ transaction_amount | plus: net_transaction_amount_rounding | money_with_currency }}</td>
+                              <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#1C1A22;">{{ transaction_amount | plus: net_transaction_amount_rounding | money_with_currency }}</td>
                             </tr>
                           {% endif %}
                         {% endif %}
@@ -1673,8 +1761,8 @@
                           {% if transaction_amount == 0 and authorized_amount > 0 and has_refunds == false %}
                           {% else %}
                             <tr>
-                              <td align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#8A8377;">Total paid today</td>
-                              <td align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#DDD7C9;">{{ transaction_amount | plus: net_transaction_amount_rounding | money_with_currency }}</td>
+                              <td class="d-d" align="left" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#6B6459;">Total paid today</td>
+                              <td class="d-t" align="right" style="padding:5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:14px;line-height:20px;color:#1C1A22;">{{ transaction_amount | plus: net_transaction_amount_rounding | money_with_currency }}</td>
                             </tr>
                           {% endif %}
                         {% endif %}
@@ -1683,7 +1771,7 @@
 
                     {% unless payment_terms %}
                       {% if transaction_size > 1 or transaction_amount < total_price %}
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:12px;border-top:1px solid #3A2F4A;">
+                        <table class="d-bt" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:12px;border-top:1px solid #C7BCD2;">
                           {% for transaction in transactions %}
                             {% assign amount_rounding = 0 %}
                             {% if transaction.amount_rounding != 0 %}
@@ -1698,14 +1786,14 @@
                                 {% capture transaction_name %}{{ transaction.gateway_display_name }}{% endcapture %}
                               {% endif %}
                               <tr>
-                                <td align="left" style="padding:12px 12px 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">{{ transaction_name }}</td>
-                                <td align="right" style="padding:12px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:18px;color:#DDD7C9;">{{ transaction.amount | plus: amount_rounding | money }}</td>
+                                <td class="d-d" align="left" style="padding:12px 12px 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">{{ transaction_name }}</td>
+                                <td class="d-t" align="right" style="padding:12px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:18px;color:#1C1A22;">{{ transaction.amount | plus: amount_rounding | money }}</td>
                               </tr>
                             {% elsif shopify_pay_captured and shop_cash_offers_captured == false and transaction.kind == "authorization" and transaction.gateway == "shop_cash" or transaction.gateway == "shop_offer" %}
                               {% capture transaction_name %}{{ transaction.gateway_display_name }}{% endcapture %}
                               <tr>
-                                <td align="left" style="padding:12px 12px 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">{{ transaction_name }}</td>
-                                <td align="right" style="padding:12px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:18px;color:#DDD7C9;">{{ transaction.amount | plus: amount_rounding | money }}</td>
+                                <td class="d-d" align="left" style="padding:12px 12px 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">{{ transaction_name }}</td>
+                                <td class="d-t" align="right" style="padding:12px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:18px;color:#1C1A22;">{{ transaction.amount | plus: amount_rounding | money }}</td>
                               </tr>
                             {% endif %}
                             {% if transaction.kind == 'refund' and transaction.gateway != "shop_offer" %}
@@ -1726,12 +1814,12 @@
                                 {% assign link_text = nil %}
                               {% endif %}
                               <tr>
-                                <td align="left" style="padding:12px 12px 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">
+                                <td class="d-d" align="left" style="padding:12px 12px 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">
                                   Refund<br />
-                                  <span style="font-size:11px;line-height:16px;color:#8A8377;">{{ refund_method_title | replace: '_', ' ' | capitalize }}</span>
-                                  {% if link_text %}&nbsp;<a href="{{ link_url }}" style="color:#A77AC7;text-decoration:underline;font-size:11px;">{{ link_text }}</a>{% endif %}
+                                  <span class="d-d" style="font-size:11px;line-height:16px;color:#6B6459;">{{ refund_method_title | replace: '_', ' ' | capitalize }}</span>
+                                  {% if link_text %}&nbsp;<a class="d-a" href="{{ link_url }}" style="color:#542578;text-decoration:underline;font-size:11px;">{{ link_text }}</a>{% endif %}
                                 </td>
-                                <td align="right" style="padding:12px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:18px;color:#DDD7C9;">{{ transaction.amount | plus: amount_rounding | times: -1 | money }}</td>
+                                <td class="d-t" align="right" style="padding:12px 0 5px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:18px;color:#1C1A22;">{{ transaction.amount | plus: amount_rounding | times: -1 | money }}</td>
                               </tr>
                             {% endif %}
                           {% endfor %}
@@ -1744,9 +1832,9 @@
                     {% unless shopped_currency == "CNY" and currency == "CNY" %}
                       {% case wallet_brand %}
                         {% when "wechat_pay" %}
-                          <div style="padding-top:12px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">View the CNY total in WeChat</div>
+                          <div class="d-d" style="padding-top:12px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">View the CNY total in WeChat</div>
                         {% when "alipay" %}
-                          <div style="padding-top:12px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#8A8377;">View the CNY total in Alipay</div>
+                          <div class="d-d" style="padding-top:12px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:18px;color:#6B6459;">View the CNY total in Alipay</div>
                       {% endcase %}
                     {% endunless %}
 
@@ -1758,25 +1846,25 @@
 
           {% comment %} ================= BLOCK: DELIVERING TO / CUSTOMER INFORMATION ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:32px 24px 0 24px;">
-              <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;border-top:1px solid #3A2F4A;padding-top:28px;">Release to</div>
-              <div style="padding-top:2px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#DDD7C9;">Delivering to</div>
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:32px 24px 0 24px;">
+              <div class="d-a d-bt" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;border-top:1px solid #C7BCD2;padding-top:28px;">Release to</div>
+              <div class="d-t" style="padding-top:2px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#1C1A22;">Delivering to</div>
             </td>
           </tr>
 
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:16px 24px 0 24px;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:16px 24px 0 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                 <tr>
                   {% if requires_shipping and shipping_address %}
-                    <td class="crx-stack crx-stack-gap" width="50%" valign="top" style="width:50%;padding:0 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                      <div style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;padding-bottom:6px;">Shipping address</div>
+                    <td class="crx-stack crx-stack-gap d-t" width="50%" valign="top" style="width:50%;padding:0 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                      <div class="d-d" style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;padding-bottom:6px;">Shipping address</div>
                       <div class="crx-unstyle">{{ shipping_address | format_address }}</div>
                     </td>
                   {% endif %}
                   {% if billing_address %}
-                    <td class="crx-stack crx-stack-gap" width="50%" valign="top" style="width:50%;padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                      <div style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;padding-bottom:6px;">Billing address</div>
+                    <td class="crx-stack crx-stack-gap d-t" width="50%" valign="top" style="width:50%;padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                      <div class="d-d" style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;padding-bottom:6px;">Billing address</div>
                       <div class="crx-unstyle">{{ billing_address | format_address }}</div>
                     </td>
                   {% endif %}
@@ -1786,8 +1874,8 @@
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                 <tr>
                   {% if company_location %}
-                    <td class="crx-stack crx-stack-gap" width="50%" valign="top" style="width:50%;padding:0 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                      <div style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;padding-bottom:6px;">Location</div>
+                    <td class="crx-stack crx-stack-gap d-t" width="50%" valign="top" style="width:50%;padding:0 12px 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                      <div class="d-d" style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;padding-bottom:6px;">Location</div>
                       {{ company_location.name }}
                     </td>
                   {% endif %}
@@ -1840,8 +1928,8 @@
                   {% if payment_section_body_stripped != "" %}{% assign show_payment_section = true %}{% endif %}
 
                   {% if show_payment_section %}
-                    <td class="crx-stack crx-stack-gap" width="50%" valign="top" style="width:50%;padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:22px;color:#DDD7C9;">
-                      <div style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;padding-bottom:6px;">Payment</div>
+                    <td class="crx-stack crx-stack-gap d-t" width="50%" valign="top" style="width:50%;padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:22px;color:#1C1A22;">
+                      <div class="d-d" style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;padding-bottom:6px;">Payment</div>
                       {{ payment_section_body }}
                     </td>
                   {% endif %}
@@ -1852,8 +1940,8 @@
                 {% if shipping_methods.size > 0 %}
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                     <tr>
-                      <td valign="top" style="padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                        <div style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;padding-bottom:6px;">Shipping method</div>
+                      <td class="d-t" valign="top" style="padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                        <div class="d-d" style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;padding-bottom:6px;">Shipping method</div>
                         {%- assign unique_shipping_titles = shipping_methods | map: 'title' | uniq -%}
                         {%- if unique_shipping_titles.size == 1 and delivery_promise_branded_shipping_line -%}
                           {{ delivery_promise_branded_shipping_line }}
@@ -1868,8 +1956,8 @@
                 {% elsif shipping_method %}
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                     <tr>
-                      <td valign="top" style="padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#DDD7C9;">
-                        <div style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#8A8377;padding-bottom:6px;">Shipping method</div>
+                      <td class="d-t" valign="top" style="padding:0 0 20px 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:13px;line-height:20px;color:#1C1A22;">
+                        <div class="d-d" style="font-size:11px;line-height:16px;letter-spacing:0.16em;text-transform:uppercase;color:#6B6459;padding-bottom:6px;">Shipping method</div>
                         {% if delivery_promise_branded_shipping_line %}
                           {{ delivery_promise_branded_shipping_line }}
                         {% else %}
@@ -1885,32 +1973,32 @@
 
           {% comment %} ================= BLOCK: CHAIN OF CUSTODY (reusable) ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:12px 24px 0 24px;">
-              <div style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#A77AC7;border-top:1px solid #3A2F4A;padding-top:28px;padding-bottom:16px;">Chain of custody</div>
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:12px 24px 0 24px;">
+              <div class="d-a d-bt" style="font-family:'IBM Plex Mono','Courier New',Courier,monospace;font-size:12px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#542578;border-top:1px solid #C7BCD2;padding-top:28px;padding-bottom:16px;">Chain of custody</div>
 
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0E0C13" style="width:100%;background-color:#0E0C13;border:1px solid #3A2F4A;">
+              <table class="d-p d-b" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FAF8F2" style="width:100%;background-color:#FAF8F2;border:1px solid #C7BCD2;">
                 <tr>
-                  <td bgcolor="#0E0C13" style="background-color:#0E0C13;padding:20px 24px;border-bottom:1px solid #3A2F4A;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                    <div style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">01 Logged</div>
-                    <div style="padding-top:6px;font-size:13px;line-height:20px;color:#DDD7C9;">Orders are logged same day. Dispatch within 24 hours, Monday to Saturday.</div>
+                  <td class="d-p d-bb" bgcolor="#FAF8F2" style="background-color:#FAF8F2;padding:20px 24px;border-bottom:1px solid #C7BCD2;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
+                    <div class="d-a" style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">01 Logged</div>
+                    <div class="d-t" style="padding-top:6px;font-size:13px;line-height:20px;color:#1C1A22;">Orders are logged same day. Dispatch within 24 hours, Monday to Saturday.</div>
                   </td>
                 </tr>
                 <tr>
-                  <td bgcolor="#0E0C13" style="background-color:#0E0C13;padding:20px 24px;border-bottom:1px solid #3A2F4A;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                    <div style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">02 Dispatched</div>
-                    <div style="padding-top:6px;font-size:13px;line-height:20px;color:#DDD7C9;">Shipped with Royal Mail Tracked. Free UK shipping on every order.</div>
+                  <td class="d-p d-bb" bgcolor="#FAF8F2" style="background-color:#FAF8F2;padding:20px 24px;border-bottom:1px solid #C7BCD2;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
+                    <div class="d-a" style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">02 Dispatched</div>
+                    <div class="d-t" style="padding-top:6px;font-size:13px;line-height:20px;color:#1C1A22;">Shipped with Royal Mail Tracked. Free UK shipping on every order.</div>
                   </td>
                 </tr>
                 <tr>
-                  <td bgcolor="#0E0C13" style="background-color:#0E0C13;padding:20px 24px;border-bottom:1px solid #3A2F4A;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                    <div style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">03 In transit</div>
-                    <div style="padding-top:6px;font-size:13px;line-height:20px;color:#DDD7C9;">Tracking issued by email. UK 1&ndash;2 working days. International 7&ndash;14 working days.</div>
+                  <td class="d-p d-bb" bgcolor="#FAF8F2" style="background-color:#FAF8F2;padding:20px 24px;border-bottom:1px solid #C7BCD2;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
+                    <div class="d-a" style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">03 In transit</div>
+                    <div class="d-t" style="padding-top:6px;font-size:13px;line-height:20px;color:#1C1A22;">Tracking issued by email. UK 1&ndash;2 working days. International 7&ndash;14 working days.</div>
                   </td>
                 </tr>
                 <tr>
-                  <td bgcolor="#0E0C13" style="background-color:#0E0C13;padding:20px 24px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                    <div style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#A77AC7;">04 Released</div>
-                    <div style="padding-top:6px;font-size:13px;line-height:20px;color:#DDD7C9;">You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: <a href="mailto:info@crooksldn.com" style="color:#A77AC7;text-decoration:underline;">info@crooksldn.com</a></div>
+                  <td class="d-p" bgcolor="#FAF8F2" style="background-color:#FAF8F2;padding:20px 24px;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
+                    <div class="d-a" style="font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#542578;">04 Released</div>
+                    <div class="d-t" style="padding-top:6px;font-size:13px;line-height:20px;color:#1C1A22;">You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: <a class="d-a" href="mailto:info@crooksldn.com" style="color:#542578;text-decoration:underline;">info@crooksldn.com</a></div>
                   </td>
                 </tr>
               </table>
@@ -1919,23 +2007,23 @@
 
           {% comment %} ================= BLOCK: FOOTER (reusable) ================= {% endcomment %}
           <tr>
-            <td class="crx-pad" bgcolor="#0B0A0E" style="background-color:#0B0A0E;padding:32px 24px 40px 24px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-top:1px solid #3A2F4A;">
+            <td class="crx-pad d-g" bgcolor="#F0EDE4" style="background-color:#F0EDE4;padding:32px 24px 40px 24px;">
+              <table class="d-bt" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-top:1px solid #C7BCD2;">
                 <tr>
                   <td style="padding:24px 0 0 0;font-family:'IBM Plex Mono','Courier New',Courier,monospace;">
-                    <div style="font-size:13px;line-height:20px;color:#8A8377;">
+                    <div class="d-d" style="font-size:13px;line-height:20px;color:#6B6459;">
                       If you have any questions, reply to this email or contact us at
-                      <a href="mailto:{{ shop.email }}" style="color:#A77AC7;text-decoration:underline;">{{ shop.email }}</a>
+                      <a class="d-a" href="mailto:{{ shop.email }}" style="color:#542578;text-decoration:underline;">{{ shop.email }}</a>
                     </div>
 
                     {% if shop.address %}
-                      <div class="crx-unstyle" style="padding-top:16px;font-size:12px;line-height:18px;color:#8A8377;">
+                      <div class="crx-unstyle d-d" style="padding-top:16px;font-size:12px;line-height:18px;color:#6B6459;">
                         {{ shop.address | format_address }}
                       </div>
                     {% endif %}
 
-                    <div style="padding-top:20px;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#8A8377;">
-                      <a href="{{ shop.url }}" style="color:#8A8377;text-decoration:none;">{{ shop.name }}</a>
+                    <div class="d-d" style="padding-top:20px;font-size:11px;line-height:16px;letter-spacing:0.2em;text-transform:uppercase;color:#6B6459;">
+                      <a class="d-d" href="{{ shop.url }}" style="color:#6B6459;text-decoration:none;">{{ shop.name }}</a>
                     </div>
                     <div style="padding-top:6px;font-size:11px;line-height:16px;letter-spacing:0.24em;text-transform:uppercase;color:#542578;">
                       Own the streets&trade;

@@ -253,29 +253,91 @@ on the test send.
 it renders nothing if the object is unavailable in the notification context.
 Check the test send; delete the block if it comes out blank or malformed.
 
+**Light and dark added (second pass).** The first version of this template was
+dark-only, with the dark palette inlined. It now inlines light and applies dark
+through `prefers-color-scheme`. Full detail, palettes and rationale in §3. No
+Liquid changed in that pass — it was a colour and class transform over the
+existing markup, verified by re-checking Liquid tag balance and table nesting
+afterwards.
+
 **Not carried over:** the scanline texture (no `repeating-linear-gradient` in
 Outlook), VT323, all rounded corners, all shadows.
 
 ---
 
-## 3. Clients expected to alter it
+## 3. Light and dark
 
-| Client | What happens |
+The template ships both palettes in one file. **Light is the base**: every
+colour is inlined as its light value, so a client that strips the `<style>`
+block still renders a complete, correct light email. Dark is applied by a
+`@media (prefers-color-scheme: dark)` block that overrides those inline values
+with `!important` on a set of `d-*` classes.
+
+| Role | Light (inline) | Dark (media override) |
+|---|---|---|
+| Ground | `#F0EDE4` | `#0B0A0E` |
+| Panel | `#FAF8F2` | `#0E0C13` |
+| Hairline | `#C7BCD2` | `#3A2F4A` |
+| Text | `#1C1A22` | `#DDD7C9` |
+| Dim | `#6B6459` | `#8A8377` |
+| Accent (labels, links) | `#542578` | `#A77AC7` |
+| Red (warnings) | `#A8302C` | `#C4433F` |
+| Connector glyph | `#A79CB5` | `#3A2F4A` |
+| Button fill | `#542578` | `#542578` |
+| Button label | `#F5F1E8` | `#F5F1E8` |
+
+Neither ground is pure `#FFFFFF` or `#000000`, so the most aggressive inversion
+heuristics stay off. `#A77AC7` is only ~2.6:1 on paper, so light mode promotes
+the accent role to `#542578` (11:1) rather than washing labels out. Everything
+else keeps its relationship. The button never flips: purple fill, light label,
+both modes.
+
+The classes, if you need to hand-edit:
+
+| Class | Overrides |
 |---|---|
-| **Apple Mail (macOS), Mail (iOS)** | Renders as designed. IBM Plex Mono loads. This is the reference rendering. |
-| **Gmail web / Gmail iOS + Android** | Strips the web font → Courier New. Strips the `<style>` block's media queries in some app contexts, so the mobile stacking of the address columns may not fire — the columns stay side by side but still fit at 375px. Colours held by inline styles survive. |
-| **Gmail with a non-Google account (Gmailified)** | Most aggressive dark-mode inversion. Expect it to flip panels toward light and force its own link colours. `#0B0A0E` avoids the worst of it; `.crx-unstyle` forces the address blocks back to `#DDD7C9`. |
-| **Outlook.com / Outlook web** | Rewrites colours in dark mode, sometimes inverting backgrounds while leaving text light — the known failure case. Legible, not ours. Also ignores `max-width`, hence the fixed `width="600"`. |
-| **Outlook 2016–2021 Windows (Word engine)** | No `border-radius` needed (radius 0 anyway), no media queries, no `background-image`. Table layout, `bgcolor` attributes and `width`/`height` on images are all there for this client. Letter-spacing renders but loosely. |
-| **Yahoo / AOL** | Fine. Occasionally drops `letter-spacing` on `<div>` — labels lose their tracking, nothing breaks. |
-| **Samsung Mail / Android default** | Force-inverts dark emails. Expect a light rendering with dark text. Readable. |
+| `d-g` / `d-p` / `d-u` | ground bg / panel bg / filled 1px rule |
+| `d-t` / `d-d` / `d-a` / `d-r` / `d-c` | text / dim / accent / red / connector |
+| `d-b` / `d-bt` / `d-bb` | border / border-top / border-bottom colour |
+| `d-gt` | hidden preheader text (matches ground so it never shows) |
 
-Aim was legible-if-altered. The two that will not look like the design are
-Outlook.com dark mode and Gmailified accounts.
+**Why light is the base and not dark.** Only a minority of clients read
+`prefers-color-scheme`. The rest show whatever is inlined, and the ones that
+don't will apply their own inversion instead. Those inversion algorithms are
+tuned for light emails going dark — that direction produces a decent result.
+Dark-first is the direction that breaks, which is exactly why Outlook.com
+mangled the previous version. Light base plus a dark override is therefore both
+what you asked for and the more robust of the two.
+
+The cost is that the dark brand look is no longer what most recipients see. If
+you would rather have dark as the default and let light-mode Apple Mail users
+be the exception, that is a swap of the two palettes in the file — say the word.
+
+The previous dark-only version is in git history at the first commit on this
+branch if you want to compare them side by side.
 
 ---
 
-## 4. Policy discrepancies (§7)
+## 4. Clients expected to alter it
+
+| Client | What happens |
+|---|---|
+| **Apple Mail (macOS), Mail (iOS)** | Full support. Follows the system setting, light or dark, and loads IBM Plex Mono. This is the reference rendering for both modes. |
+| **Outlook for Mac (new), Thunderbird, HEY, Superhuman** | Also honour `prefers-color-scheme`. Expect correct switching. |
+| **Gmail web / iOS / Android** | Strips `prefers-color-scheme` entirely — **always shows the light base**. In Gmail's own dark mode it applies its own inversion to that light email, which lands close to the dark palette but is not it. Also strips the web font → Courier New. |
+| **Gmail with a non-Google account (Gmailified)** | Most aggressive inverter. Light base gives it the input it handles best, so this is now much better behaved than under the dark-first version. `.crx-unstyle` still pins the address blocks. |
+| **Outlook.com / Outlook web** | Ignores `prefers-color-scheme`. Shows light, and in its dark mode applies partial inversion. This was the known failure case before and is largely fixed by going light-first. |
+| **Outlook 2016–2021 Windows (Word engine)** | No media queries at all, so always light. That is the correct fallback rather than a broken dark. Table layout, `bgcolor` attributes and explicit image dimensions are all there for this client. Letter-spacing renders loosely. |
+| **Yahoo / AOL** | Light only. Occasionally drops `letter-spacing` on `<div>` — labels lose tracking, nothing breaks. |
+| **Samsung Mail / Android default** | Force-inverts. Light base inverts cleanly. |
+
+Summary: dark renders properly in the Apple clients and a few others; everyone
+else gets the light version, or their own approximation of dark built from it.
+No client should now see something illegible.
+
+---
+
+## 5. Policy discrepancies (§7)
 
 The original template contains **no** shipping times, returns window, or contact
 address — Shopify's default says only "We're getting your order ready to be
@@ -300,46 +362,54 @@ same claim in two places saying different things.
 
 ---
 
-## 5. Test checklist — where it is most likely to break
+## 6. Test checklist — where it is most likely to break
 
 Run the test send, then look at these in this order. They are ranked by how
 likely they are to be wrong and how bad it is if they are.
 
-1. **Dark mode inversion, Outlook.com and Gmail app.** Open in each. Is the text
-   still readable, and does anything become dark-on-dark or light-on-light?
-   Specifically check the purple button — if a client inverts the background but
-   not the `#DDD7C9` label, the button goes blank.
-2. **The address blocks.** `format_address` emits its own markup; clients love to
-   colour those lines blue or black. Check the shipping and billing addresses are
-   `#DDD7C9` and not the client's default link colour.
-3. **Images blocked.** Turn images off. Every product row should still show
+1. **Mode switching in Apple Mail.** Open on macOS, then flip System Settings
+   between Light and Dark with the message open. The whole email should switch,
+   including panel backgrounds, hairlines and the `EXH nn` micro-labels. Anything
+   that stays light in dark mode is an element that lost its `d-*` class.
+2. **Gmail and Outlook.com show light — confirm that is what you get.** Neither
+   reads `prefers-color-scheme`, so both should render the light palette even
+   when the client itself is in dark mode (they will tint it themselves). If
+   either shows the dark palette, something is wrong with the inline base.
+3. **The purple button in both modes.** Fill `#542578`, label `#F5F1E8`, in
+   light and dark alike. If a client inverts the fill but not the label, the
+   button goes blank — this is the single most likely visual failure.
+4. **The address blocks.** `format_address` emits its own markup; clients love to
+   colour those lines blue or black. Check the shipping and billing addresses use
+   the body text colour in whichever mode you are looking at — `#1C1A22` on light,
+   `#DDD7C9` on dark — and not the client's default link colour.
+5. **Images blocked.** Turn images off. Every product row should still show
    `EXH nn`, title, variant, quantity and price, with no collapsed columns and no
    large empty gaps where the 60px thumbnails were.
-4. **375px phone.** Address columns should stack (Apple Mail, iOS) or sit
+6. **375px phone.** Address columns should stack (Apple Mail, iOS) or sit
    side-by-side and still fit (Gmail app). Nothing should scroll sideways. Watch
    the totals rows — long money strings with `money_with_currency` are the widest
    things in the email.
-5. **Discount code order.** Place the real test order with a code. You should see:
+7. **Discount code order.** Place the real test order with a code. You should see:
    the per-line discount under the item in accent, the "Order discount" row, the
    named discount line beneath it, and "You saved" under the total. Four places,
    all fed by different Liquid. This is the branch most likely to have been
    damaged in the restyle.
-6. **Order number legibility.** 32px in Courier New is wider than in Plex Mono.
+8. **Order number legibility.** 32px in Courier New is wider than in Plex Mono.
    On a 375px screen with a long order name plus a `#`, confirm it does not wrap
    awkwardly against the date on the right.
-7. **The order date.** New field. If it renders blank, `order.created_at` is not
+9. **The order date.** New field. If it renders blank, `order.created_at` is not
    exposed in this context and I will swap it.
-8. **Footer shop address.** Also new and guarded. Blank is fine and expected on
+10. **Footer shop address.** Also new and guarded. Blank is fine and expected on
    some setups; malformed is not.
-9. **Preheader.** Check the inbox preview line reads "Order #1234 confirmed.
+11. **Preheader.** Check the inbox preview line reads "Order #1234 confirmed.
    Dispatch within 24 hours." and that the padding characters after it are not
    visible in the email body.
-10. **Outlook Windows, if you have access.** Look for gaps between table cells
+12. **Outlook Windows, if you have access.** Look for gaps between table cells
     and any 1px hairline that has vanished or doubled.
 
 ---
 
-## 6. Reuse for shipping confirmation / shipping update
+## 7. Reuse for shipping confirmation / shipping update
 
 Three blocks are self-contained and can be lifted verbatim — they are marked
 with banner comments in the file:
