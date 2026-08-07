@@ -100,6 +100,49 @@ Everything else passes in both modes, including body text (13.8:1 dark /
 
 ---
 
+### Variant picker rendered only one option — colours were unreachable
+
+The exhibit record picked "the first option that is not Title" and rendered that
+alone, so any product with more than one option lost the rest. Live option data
+shows why a hardcoded assumption could never work — names, spelling and ORDER
+all vary per product:
+
+| Handle | Options, in the product's own order |
+|---|---|
+| `3-clives-tee` | `Size`, `Colour` |
+| `crxst-rz-t-shirt` | `Color`, `Size` |
+| `black-socks` | `Quantity` |
+| `large-duffle-bag` | `size` (lowercase) |
+| `v2-baggies` | `Size` |
+
+So the tees rendered Size and never Colour, while CRXST*RZ rendered **Color as
+if it were the size grid** and never showed Size at all. Both colourways were
+unbuyable except via a direct ?variant= link.
+
+Rewritten generically: every entry in `product.options_with_values` renders its
+own labelled group, whatever it is called and in whatever order it appears.
+Nothing in the theme names an option.
+
+The variant matrix reaches JS as one `<span>` per variant carrying
+`data-o1/o2/o3`, availability, quantity and price — DOM data attributes rather
+than a JSON blob, because the house rule forbids Liquid inside `<script>`.
+Selection resolves by matching every chosen option against that matrix, so it
+works for one, two or three options.
+
+Availability is still computed from `variant.available`, never the count: a
+value is offered when some *available* variant carries it given the other
+current selections, which means impossible combinations grey out as you choose.
+A sold-out value stays visible and clickable — it reports its own state — but
+never arms the form.
+
+Verified in a browser against live markup, CSS and JS: options selected in
+reverse order still resolve (proving no order dependence), price updates per
+variant (socks 1pc GBP 6 -> 12pc GBP 45), and on v2-baggies the three
+unavailable sizes each set SOLD OUT with no variant id while the two available
+ones arm the form.
+
+---
+
 ### Card double-render: `.crk-root img` outranked the hide rule
 
 Two garments composited on every product card with a second image. The cause was

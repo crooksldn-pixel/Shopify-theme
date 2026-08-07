@@ -25,8 +25,10 @@
     endif
   endfor
   assign crk_single = false
+  assign crk_has_options = true
   if product.variants.size == 1 and product.variants.first.title == 'Default Title'
     assign crk_single = true
+    assign crk_has_options = false
     assign crk_size_opt = null
   endif
 
@@ -48,6 +50,8 @@
   data-crk-label-low="{{ section.settings.label_low | escape }}"
   data-crk-label-soldsize="{{ section.settings.label_sold_size | escape }}"
   data-crk-photo-label="{{ section.settings.photo_label | escape }}"
+  data-crk-low-threshold="{{ section.settings.low_stock_threshold }}"
+  data-crk-label-select-option="{{ section.settings.label_select_option | escape }}"
   {%- unless section.settings.show_texture %} data-crk-texture="off"{% endunless %}
 >
 
@@ -139,69 +143,92 @@
           {%- form 'product', product, id: 'crk-product-form' -%}
             <input type="hidden" name="id" value="{{ crk_var.id }}" data-crk-variant-id>
 
-            {%- if crk_size_opt -%}
-              <div style="margin-top: 16px;">
-                <div class="crk-label" style="display: block; margin-bottom: 8px;">{{ crk_size_opt.name }}</div>
-                <div class="crk-sizes" role="group" aria-label="{{ section.settings.size_group_label | escape }}">
-                  {%- for value in crk_size_opt.values -%}
-                    {%- liquid
-                      assign v_match = null
-                      for v in product.variants
-                        if v.options contains value and v_match == null
-                          assign v_match = v
-                        endif
-                      endfor
-                      comment
-                        Buyability comes from variant.available, never from the
-                        inventory count: policy differs per variant and oversold
-                        CONTINUE variants remain purchasable (see NOTES.md).
-                      endcomment
-                      assign v_avail = false
-                      if v_match and v_match.available
-                        assign v_avail = true
-                      endif
-                      assign v_qty = 0
-                      if v_match and v_match.inventory_quantity > 0
-                        assign v_qty = v_match.inventory_quantity
-                      endif
-                      assign v_low = false
-                      if v_avail and v_qty > 0 and v_qty <= section.settings.low_stock_threshold
-                        assign v_low = true
-                      endif
-                      assign v_sel = false
-                      if v_match.id == crk_var.id
-                        assign v_sel = true
-                      endif
-                    -%}
-                    <button
-                      type="button"
-                      class="crk-size"
-                      data-size="{{ value | escape }}"
-                      data-variant-id="{{ v_match.id }}"
-                      data-available="{{ v_avail }}"
-                      data-quantity="{{ v_qty }}"
-                      data-price="{{ v_match.price | money }}"
-                      data-selected="{{ v_sel }}"
-                      data-low="{{ v_low }}"
-                      aria-pressed="{{ v_sel }}"
-                      aria-disabled="{% unless v_avail %}true{% endunless %}"
-                      aria-label="{{ value }}{% unless v_avail %}, {{ section.settings.sr_sold_out }}{% endunless %}{% if v_low %}, {{ v_qty }} {{ section.settings.sr_left }}{% endif %}"
-                    >{{ value }}</button>
-                  {%- endfor -%}
-                </div>
-                <p class="crk-stockline" data-crk-stockline data-out="false" aria-live="polite">
-                  {{ section.settings.label_select }}
-                </p>
-                {%- if has_measurements -%}
-                  <button type="button" class="crk-textbtn" style="margin-top: 8px;" data-crk-size-guide>
-                    {{ section.settings.size_guide_label }}
-                  </button>
-                {%- endif -%}
+            {%- if crk_has_options -%}
+              {%- comment -%}
+                Variant matrix as DOM data, not a JSON blob in a <script> — the
+                house rule forbids Liquid inside script tags. One <span> per
+                variant carrying its option values and buy state.
+              {%- endcomment -%}
+              <div data-crk-variants hidden>
+                {%- for v in product.variants -%}
+                  {%- liquid
+                    assign vq = 0
+                    if v.inventory_quantity > 0
+                      assign vq = v.inventory_quantity
+                    endif
+                  -%}
+                  <span
+                    data-id="{{ v.id }}"
+                    data-o1="{{ v.option1 | escape }}"
+                    data-o2="{{ v.option2 | escape }}"
+                    data-o3="{{ v.option3 | escape }}"
+                    data-available="{{ v.available }}"
+                    data-qty="{{ vq }}"
+                    data-price="{{ v.price | money }}"
+                  ></span>
+                {%- endfor -%}
               </div>
+
+              {%- comment -%}
+                Every option renders, whatever it is called and whatever order it
+                comes in. Nothing here assumes "Size" or a single option.
+              {%- endcomment -%}
+              {%- for option in product.options_with_values -%}
+                {%- liquid
+                  assign oi = forloop.index0
+                  case oi
+                    when 0
+                      assign sel_val = crk_var.option1
+                    when 1
+                      assign sel_val = crk_var.option2
+                    when 2
+                      assign sel_val = crk_var.option3
+                  endcase
+                  assign wide = false
+                  for val in option.values
+                    assign vlen = val | size
+                    if vlen > 3
+                      assign wide = true
+                    endif
+                  endfor
+                -%}
+                <div class="crk-optgroup" data-crk-optgroup="{{ oi }}" data-crk-optname="{{ option.name | escape }}">
+                  <div class="crk-label" style="display: block; margin-bottom: 8px;">{{ option.name }}</div>
+                  <div class="crk-sizes{% if wide %} crk-sizes--wide{% endif %}" role="group" aria-label="{{ option.name | escape }}">
+                    {%- for value in option.values -%}
+                      {%- liquid
+                        assign is_sel = false
+                        if value == sel_val
+                          assign is_sel = true
+                        endif
+                      -%}
+                      <button
+                        type="button"
+                        class="crk-size"
+                        data-crk-opt="{{ oi }}"
+                        data-value="{{ value | escape }}"
+                        data-selected="{{ is_sel }}"
+                        data-low="false"
+                        aria-pressed="{{ is_sel }}"
+                        aria-label="{{ option.name | escape }} {{ value | escape }}"
+                      >{{ value }}</button>
+                    {%- endfor -%}
+                  </div>
+                </div>
+              {%- endfor -%}
+
+              <p class="crk-stockline" data-crk-stockline data-out="false" aria-live="polite">
+                {{ section.settings.label_select }}
+              </p>
+              {%- if has_measurements -%}
+                <button type="button" class="crk-textbtn" style="margin-top: 8px;" data-crk-size-guide>
+                  {{ section.settings.size_guide_label }}
+                </button>
+              {%- endif -%}
 
               <noscript>
                 <p class="crk-micro" style="margin-top: 8px;">{{ section.settings.nojs_note }}</p>
-                <ul class="crk-sizes">
+                <ul class="crk-sizes crk-sizes--wide">
                   {%- for v in product.variants -%}
                     {%- if v.available -%}
                       <li><a class="crk-size" href="{{ product.url }}?variant={{ v.id }}">{{ v.title }}</a></li>
@@ -246,7 +273,7 @@
 
             <span class="crk-label crk-buylabel">{{ section.settings.buy_label }}</span>
             <button type="submit" name="add" class="crk-btn" data-crk-buy>
-              {%- if crk_size_opt -%}{{ section.settings.label_select }}{%- else -%}{{ section.settings.label_add }}{%- endif -%}
+              {%- if crk_has_options -%}{{ section.settings.label_select }}{%- else -%}{{ section.settings.label_add }}{%- endif -%}
             </button>
           {%- endform -%}
         {%- else -%}
@@ -475,7 +502,8 @@
     { "type": "text", "id": "buy_label", "label": "Buy section label", "default": "Release request" },
     { "type": "text", "id": "size_group_label", "label": "Size group label (screen readers)", "default": "Select a size" },
     { "type": "text", "id": "label_add", "label": "Add to bag", "default": "Add to bag" },
-    { "type": "text", "id": "label_select", "label": "No size chosen", "default": "Select a size" },
+    { "type": "text", "id": "label_select", "label": "No option chosen", "default": "Select a size" },
+    { "type": "text", "id": "label_select_option", "label": "Prompt naming the missing option", "info": "Use [option].", "default": "Select [option]" },
     { "type": "text", "id": "label_sold", "label": "Sold out", "default": "SOLD OUT" },
     { "type": "text", "id": "label_in_stock", "label": "In stock line", "default": "IN STOCK" },
     { "type": "text", "id": "label_low", "label": "Low stock line", "info": "Use [n] and [size].", "default": "[n] LEFT IN SIZE [size]" },

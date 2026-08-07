@@ -596,3 +596,12 @@
 }
 /* Dark-mode treatment only, per brief. */
 :root[data-crk-theme="light"] .crk-product-image { filter: none }
+
+/* ---- multi-option variant picker ----
+   Products carry any number of options with any names (Size, Colour, Color,
+   Quantity, size...). Groups stack; groups whose values are longer than a size
+   code wrap and size to content instead of being squeezed into the 72px cell
+   that suits XS/S/M/L/XL. */
+.crk-record .crk-optgroup + .crk-optgroup { margin-top: 16px }
+.crk-record .crk-sizes--wide { flex-wrap: wrap }
+.crk-record .crk-sizes--wide .crk-size { flex: 0 1 auto; max-width: none; padding: 0 14px }

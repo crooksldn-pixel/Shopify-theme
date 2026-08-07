@@ -23,11 +23,13 @@
     var L = {
       add: root.getAttribute('data-crk-label-add') || 'Add to bag',
       select: root.getAttribute('data-crk-label-select') || 'Select a size',
+      selectOption: root.getAttribute('data-crk-label-select-option') || 'Select [option]',
       sold: root.getAttribute('data-crk-label-sold') || 'SOLD OUT',
       inStock: root.getAttribute('data-crk-label-instock') || 'IN STOCK',
       low: root.getAttribute('data-crk-label-low') || '[n] LEFT IN SIZE [size]',
       soldSize: root.getAttribute('data-crk-label-soldsize') || 'SIZE [size] IS SOLD OUT'
     };
+    var LOW = parseInt(root.getAttribute('data-crk-low-threshold'), 10) || 3;
 
     function setBuy(label, disabled) {
       if (!buyBtn) return;
@@ -37,74 +39,167 @@
       if (sticky) { sticky.textContent = label; sticky.disabled = !!disabled; }
     }
 
-    function select(cell) {
-      if (!cell) return;
-      var id = cell.getAttribute('data-variant-id');
-      var size = cell.getAttribute('data-size');
-      var qty = parseInt(cell.getAttribute('data-quantity'), 10);
-      var available = cell.getAttribute('data-available') === 'true';
-      var price = cell.getAttribute('data-price');
+    /* ---- variant matrix, read from DOM data (never a Liquid JSON blob) ---- */
+    var variants = [];
+    var vnodes = root.querySelectorAll('[data-crk-variants] span');
+    for (var vi = 0; vi < vnodes.length; vi++) {
+      var vn = vnodes[vi];
+      variants.push({
+        id: vn.getAttribute('data-id'),
+        opts: [vn.getAttribute('data-o1') || '', vn.getAttribute('data-o2') || '', vn.getAttribute('data-o3') || ''],
+        available: vn.getAttribute('data-available') === 'true',
+        qty: parseInt(vn.getAttribute('data-qty'), 10) || 0,
+        price: vn.getAttribute('data-price') || ''
+      });
+    }
 
-      for (var i = 0; i < cells.length; i++) {
-        var on = cells[i] === cell;
-        cells[i].setAttribute('data-selected', on ? 'true' : 'false');
-        cells[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    var groups = root.querySelectorAll('[data-crk-optgroup]');
+    var nOpts = groups.length;
+    var selected = [];
+    for (var gi = 0; gi < nOpts; gi++) {
+      var pre = groups[gi].querySelector('.crk-size[data-selected="true"]');
+      selected.push(pre ? pre.getAttribute('data-value') : null);
+    }
+
+    // A candidate selection matches a variant when every CHOSEN option agrees.
+    function match(sel) {
+      for (var i = 0; i < variants.length; i++) {
+        var ok = true;
+        for (var o = 0; o < nOpts; o++) {
+          if (sel[o] !== null && variants[i].opts[o] !== sel[o]) { ok = false; break; }
+        }
+        if (ok) return variants[i];
+      }
+      return null;
+    }
+    // Is any AVAILABLE variant reachable if this option took this value,
+    // holding the other current selections?
+    function reachable(optIndex, value) {
+      for (var i = 0; i < variants.length; i++) {
+        var v = variants[i];
+        if (!v.available) continue;
+        if (v.opts[optIndex] !== value) continue;
+        var ok = true;
+        for (var o = 0; o < nOpts; o++) {
+          if (o === optIndex) continue;
+          if (selected[o] !== null && v.opts[o] !== selected[o]) { ok = false; break; }
+        }
+        if (ok) return true;
+      }
+      return false;
+    }
+    // The variant this value would resolve to, given the other selections.
+    function resolveFor(optIndex, value) {
+      var probe = selected.slice();
+      probe[optIndex] = value;
+      return match(probe);
+    }
+
+    function firstMissingOptionName() {
+      for (var o = 0; o < nOpts; o++) {
+        if (selected[o] === null) return groups[o].getAttribute('data-crk-optname') || '';
+      }
+      return '';
+    }
+
+    function render() {
+      for (var g = 0; g < nOpts; g++) {
+        var btns = groups[g].querySelectorAll('.crk-size');
+        for (var b = 0; b < btns.length; b++) {
+          var btn = btns[b], val = btn.getAttribute('data-value');
+          var on = selected[g] === val;
+          btn.setAttribute('data-selected', on ? 'true' : 'false');
+          btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+          // Buyability from variant.available, never from the count.
+          if (reachable(g, val)) btn.removeAttribute('aria-disabled');
+          else btn.setAttribute('aria-disabled', 'true');
+          var rv = resolveFor(g, val);
+          var low = !!(rv && rv.available && rv.qty > 0 && rv.qty <= LOW);
+          btn.setAttribute('data-low', low ? 'true' : 'false');
+        }
       }
 
-      // A sold-out size is still selectable — it reveals its state rather than
-      // being inert — but it must never become an addable variant.
-      if (idInput) idInput.value = available && id ? id : '';
-      if (priceEl && price) priceEl.textContent = price;
-      if (stickyMeta && price) stickyMeta.textContent = price + (size ? ' · SIZE ' + size : '');
+      var complete = true;
+      for (var o = 0; o < nOpts; o++) { if (selected[o] === null) { complete = false; break; } }
+      var v = complete ? match(selected) : null;
 
-      try {
-        var u = new URL(window.location.href);
-        if (available && id) u.searchParams.set('variant', id);
-        u.searchParams.set('size', size);
-        window.history.replaceState(null, '', u.pathname + u.search);
-      } catch (e) { /* older browser */ }
+      if (idInput) idInput.value = (v && v.available) ? v.id : '';
+      if (priceEl && v && v.price) priceEl.textContent = v.price;
+      if (stickyMeta && v && v.price) {
+        var chosen = selected.filter(function (x) { return x; }).join(' · ');
+        stickyMeta.textContent = v.price + (chosen ? ' · ' + chosen : '');
+      }
 
       if (stockLine) {
-        if (!available) {
-          stockLine.textContent = L.soldSize.replace('[size]', size);
+        if (!complete) {
+          var nm = firstMissingOptionName();
+          stockLine.textContent = nm ? L.selectOption.replace('[option]', nm) : L.select;
+          stockLine.setAttribute('data-out', 'false');
+        } else if (!v || !v.available) {
+          var label = selected[selected.length - 1] || '';
+          stockLine.textContent = L.soldSize.replace('[size]', label);
           stockLine.setAttribute('data-out', 'true');
-        } else if (!isNaN(qty) && qty > 0 && qty <= 3) {
-          stockLine.textContent = L.low.replace('[n]', qty).replace('[size]', size);
+        } else if (v.qty > 0 && v.qty <= LOW) {
+          stockLine.textContent = L.low.replace('[n]', v.qty).replace('[size]', selected.join(' / '));
           stockLine.setAttribute('data-out', 'false');
         } else {
           stockLine.textContent = L.inStock;
           stockLine.setAttribute('data-out', 'false');
         }
       }
-      setBuy(available ? L.add : L.sold, !available);
 
+      if (!complete) setBuy(L.select, true);
+      else if (v && v.available) setBuy(L.add, false);
+      else setBuy(L.sold, true);
+
+      if (v && v.available) {
+        try {
+          var u = new URL(window.location.href);
+          u.searchParams.set('variant', v.id);
+          window.history.replaceState(null, '', u.pathname + u.search);
+        } catch (e) { /* older browser */ }
+      }
+
+      // highlight the measurements row matching whichever chosen value names a size
       var rows = root.querySelectorAll('[data-crk-measure-row]');
       for (var r = 0; r < rows.length; r++) {
-        var match = rows[r].getAttribute('data-crk-measure-row').toUpperCase() === String(size).toUpperCase();
-        rows[r].setAttribute('data-active', match ? 'true' : 'false');
+        var key = rows[r].getAttribute('data-crk-measure-row').toUpperCase();
+        var hit = false;
+        for (var sIdx = 0; sIdx < selected.length; sIdx++) {
+          if (selected[sIdx] && String(selected[sIdx]).toUpperCase() === key) { hit = true; break; }
+        }
+        rows[r].setAttribute('data-active', hit ? 'true' : 'false');
       }
     }
 
-    for (var i = 0; i < cells.length; i++) {
-      (function (cell, idx) {
-        cell.addEventListener('click', function () { select(cell); });
-        cell.addEventListener('keydown', function (e) {
-          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-          e.preventDefault();
-          var d = e.key === 'ArrowRight' ? 1 : -1;
-          var n = (idx + d + cells.length) % cells.length;
-          if (cells[n]) cells[n].focus();
-        });
-      })(cells[i], i);
+    for (var gg = 0; gg < nOpts; gg++) {
+      (function (group, gIndex) {
+        var btns = group.querySelectorAll('.crk-size');
+        for (var k = 0; k < btns.length; k++) {
+          (function (btn, kIndex) {
+            btn.addEventListener('click', function () {
+              // A sold-out value is still selectable so its state can be read,
+              // but render() will refuse to arm the form for it.
+              selected[gIndex] = btn.getAttribute('data-value');
+              render();
+            });
+            btn.addEventListener('keydown', function (e) {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+              e.preventDefault();
+              var d = e.key === 'ArrowRight' ? 1 : -1;
+              var n = (kIndex + d + btns.length) % btns.length;
+              if (btns[n]) btns[n].focus();
+            });
+          })(btns[k], k);
+        }
+      })(groups[gg], gg);
     }
 
-    var pre = root.querySelector('.crk-size[data-selected="true"]');
-    if (pre) select(pre);
-    else if (cells.length) setBuy(L.select, true);
+    if (nOpts) render();
 
     if (form) {
       form.addEventListener('submit', function (e) {
-        if (!idInput || !idInput.value) { e.preventDefault(); setBuy(L.select, true); }
+        if (!idInput || !idInput.value) { e.preventDefault(); render(); }
       });
     }
 
