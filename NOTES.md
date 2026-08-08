@@ -727,3 +727,35 @@ Reflow re-checked after the change: 195/195 and 320/320, unchanged.
 CRXST★RZ uses the American spelling and the reverse order, so on three tee pages the size row
 renders first and on that one the colour row does. The theme handles both spellings; the
 ordering inconsistency is visible to shoppers and is an admin fix.
+
+## Catalogue source switched from `frontpage` to the ALL collection
+
+`frontpage` (title "PRODUCTS") holds **23** products, of which only 14 are published — the other
+nine are the archived items from BACKLOG #2, invisible to Liquid but sitting in the collection.
+The new `ALL` collection holds exactly the 14. Same output today; a cleaner source.
+
+**Three settings changed, not one.** The collection drives three separate things and they must
+agree:
+
+| Section | What it derives |
+|---|---|
+| `crooks-exhibit-log` | the register itself, and each card's `NO. nn` |
+| `crooks-hero-intake` | the `n PRODUCTS CURRENTLY ONLINE` count |
+| `crooks-exhibit-record` | the PDP's `PRODUCT n / 14` and the back link |
+
+Leaving the PDP on `frontpage` while the register used `ALL` would let a card read `NO. 07`
+while its own product page read `PRODUCT 03 / 14`. Verified after the change: card `NO. 01` and
+`PRODUCT 01 / 14` are the same product.
+
+**Side effect worth knowing:** the register order now follows the ALL collection's sort order,
+not `frontpage`'s. Reordering that collection in the admin is now how the register is ordered —
+which is the useful version of this, but it did change today's order.
+
+**Handle caveat.** The collection's handle is `all`, which collides with Shopify's reserved
+`collections.all` global (all published products in the store). Tested: `/collections/all`
+renders the collection's own title, so the custom collection owns the handle here. But the two
+are indistinguishable today because both contain the same 14 products. If the built-in ever
+takes precedence, curation would silently stop mattering — a product added to the store but not
+to ALL would still appear. A distinct handle (`catalogue`) would remove the ambiguity entirely.
+
+Pulled both templates from the theme before editing, per the rule from the header-group incident.

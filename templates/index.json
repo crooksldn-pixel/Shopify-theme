@@ -37,17 +37,21 @@
         "secondary_url": "",
         "secondary_new_tab": true,
         "show_texture": true,
-        "collection": "frontpage"
+        "collection": "all"
       }
     },
     "crooks_exhibit_log": {
       "type": "crooks-exhibit-log",
       "settings": {
-        "collection": "frontpage",
+        "collection": "all",
         "heading": "CATALOGUE",
         "subheading": "",
         "count_label": "ITEMS",
         "exhibit_prefix": "NO.",
+        "show_view_toggle": true,
+        "label_view_product": "PRODUCT",
+        "label_view_model": "MODEL",
+        "model_placeholder": "shopify://shop_images/crooksldn-charcoal-cellblock-shorts.png",
         "show_filters": true,
         "all_label": "ALL",
         "category_order": "T-SHIRT, DENIM, SWEATS, ACCESSORIES",
@@ -55,11 +59,7 @@
         "available_label": "AVAILABLE",
         "sold_out_label": "SOLD OUT",
         "empty_text": "NO EXHIBITS MATCH THIS CATEGORY.",
-        "anchor_id": "products",
-        "show_view_toggle": true,
-        "label_view_product": "PRODUCT",
-        "label_view_model": "MODEL",
-        "model_placeholder": "shopify://shop_images/crooksldn-charcoal-cellblock-shorts.png"
+        "anchor_id": "products"
       }
     },
     "crooks_case_file": {
@@ -101,11 +101,11 @@
     },
     "lookbook_crx": {
       "type": "media-with-content",
-      "disabled": true,
       "blocks": {
         "media": {
           "type": "_media-without-appearance",
-          "static": true
+          "static": true,
+          "settings": {}
         },
         "content": {
           "type": "_content-without-appearance",
@@ -165,6 +165,7 @@
           ]
         }
       },
+      "disabled": true,
       "settings": {
         "media_position": "right",
         "media_width": "medium",

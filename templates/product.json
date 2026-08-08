@@ -48,7 +48,7 @@
         "s4"
       ],
       "settings": {
-        "collection": "frontpage",
+        "collection": "all",
         "back_label": "← Catalogue",
         "exhibit_word": "PRODUCT",
         "case_word": "CASE",
