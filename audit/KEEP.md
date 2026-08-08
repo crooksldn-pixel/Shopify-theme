@@ -129,3 +129,30 @@ It is not missing. It is gated at `:142` on `{% if product.available %}` — pro
 ## The one-line summary for anyone acting on the backlog
 
 > Fix the inventory, the overlays and the unfilled template text. Replace the placeholder measurements with real ones. Leave the terminal alone.
+
+---
+
+# ROUND 2 ADDENDUM — 2026-08-08 re-audit
+
+Everything above held: the board's guards, the buy spine, the measurement apparatus, the
+accessibility profile, the no-JS fallback (re-verified: 18 links / 40 images), the writing, the
+register, the fake-data refusal, the radius enforcement (now with zero violations — the popup
+was brought into compliance). Three additions are now load-bearing and join the protect list:
+
+1. **The FILED status slot** (`FILED 03.08` style) — it flipped the returning fan from "would
+   leave" to "stays" without breaking the register format. Do not replace it with "NEW", do not
+   let it become a badge.
+2. **The variant-level sold-out + notify pattern** — `SIZE M IS SOLD OUT` in the live region,
+   disarmed form, in-voice capture. This is the honest version of the scarcity fiction and is
+   now proven to work end-to-end. `aria-disabled` + still-selectable is deliberate; do not swap
+   it for the `disabled` property (removes it from the tab order).
+3. **The two-action sticky bar** (`ADD TO BAG` / `CHECKOUT NOW`) — both plain English. The rule
+   from round 1 stands: these buttons are never in-fiction.
+
+Two cautions from the round-2 council:
+
+- **The carriage status bar is NOT on this list.** It corrected a false free-shipping claim
+  (good) but accreted above the register (first card 1.22 → 1.48 viewports). New furniture must
+  earn its viewport the way the board did.
+- **Any change near `.crk-meta` or the display-font stack must re-run the no-JS and 200% zoom
+  checks** — the two things the last sprint proved are easiest to break silently.
