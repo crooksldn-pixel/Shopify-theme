@@ -70,13 +70,19 @@
         class="cart-items spacing-style{% if block_settings.dividers %} cart-items--dividers{% endif %}"
         style="{%  render 'spacing-style', settings: block_settings %} --cart-items-gap:{{ block_settings.gap | append: "px" }};"
       >
+        {%- comment -%}
+          No explicit role="table" / role="caption": both duplicate what <table> and
+          <caption> already expose, and the pair is what produced the cart's only
+          *critical* axe violation. The ARIA `table` role permits only row/rowgroup
+          children, so an explicit caption child is invalid under it, while the native
+          HTML pairing is correct. Dropping the attributes restores the native
+          semantics and clears the violation without changing the markup.
+        {%- endcomment -%}
         <table
           class="cart-items__table"
-          role="table"
         >
           <caption
             class="visually-hidden"
-            role="caption"
           >
             {{ 'content.cart_total' | t }}
             <span>{{ cart.total_price | money_with_currency }}</span>

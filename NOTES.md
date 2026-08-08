@@ -550,3 +550,55 @@ lands the register on the right side of that; 35 falls off a cliff because of th
 Filters chain left to right with no grouping, so `date:` was applied to the *result of the
 replace* — it reformatted the whole `FILED 2026-07-13...` string and swallowed the label. The
 date has to be formatted into its own variable first.
+
+## BACKLOG #9 — the cart, brought into the design language
+
+The cart is Horizon's, assembled from `content_for 'block'`, and its wallet buttons are
+Shopify-owned chrome that cannot be restyled at all. Rewriting it was neither safe nor
+necessary. `assets/crooks-cart.css` instead repoints **Horizon's own design tokens** at the
+terminal's, so the whole cart restyles without one line of its Liquid changing. It loads from
+`theme.liquid` only when `template.name == 'cart'`, which is why it can scope to `:root`.
+
+**Specificity, not load order.** Horizon emits `:root, .color-scheme-1 { --color-background-rgb: … }`
+in an inline `<style>` that lands *after* any stylesheet link, so an equal-specificity override
+loses. `:root:root` and `:root [class*="color-scheme"]` are both (0,2,0) and win wherever the
+inline block sits. Chasing load order would have been fragile — that block is emitted during
+section rendering.
+
+Measured on the deployed cart, 390 and 1280, dark and light:
+
+| | before | after |
+|---|---|---|
+| Typefaces | Archivo Narrow **+** CRX Mono | CRX Mono only |
+| Ground | `rgb(244,241,234)` bone | `rgb(11,10,14)` |
+| Sub-44px tap targets | 4 | **0** |
+| Shadows | 1 | 0 |
+| `aria-required-children` | 1 critical | **0** |
+| Horizontal overflow | none | none |
+
+Checkout still completes: the button is a real `<button name="checkout">`, enabled, 124×54, and
+9th of 18 in the tab order.
+
+### The axe violation
+
+`snippets/cart-products.liquid` set `role="table"` on a `<table>` and `role="caption"` on its
+`<caption>`. The ARIA `table` role permits only `row`/`rowgroup` children, so an explicit
+caption child is invalid under it — while the native HTML pairing is entirely correct. Both
+attributes duplicated what the elements already expose, so removing them restores native
+semantics and clears the violation with no markup change. `sections/quick-order-list.liquid:45`
+has the same pattern but is not on the cart; left alone.
+
+### Found here, not in the audit: the cart thumbnail
+
+A cart line rendered its product shot at **552×552**. This is pre-existing — the pre-audit
+fallback theme measures **563×563** — and the audit missed it because every cart screenshot it
+took was of an *empty* cart. There is no merchant-facing width setting for that block, so the
+cap lives in CSS: 96px mobile, 120px above 750px.
+
+### Harness error worth recording
+
+The first cart audit ran against a page with Horizon's `base.css` and `styles.css` **stripped**,
+because the localiser only kept stylesheets with `crooks` in the filename. Every layout and
+tap-target number from that run was meaningless. Re-run with all six stylesheets present the
+token results happened to hold — but that was luck, not method. A harness must serve the page
+the browser would actually get.

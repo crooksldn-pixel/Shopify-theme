@@ -29,6 +29,15 @@
     {%- render 'fonts' -%}
     {{ 'crx-mono.css' | asset_url | stylesheet_tag }}
     {%- comment -%}
+      Cart skin. The cart is Horizon's and its markup is built from `content_for
+      'block'`, so this repoints Horizon's own design tokens at the terminal's rather
+      than rewriting a file we do not own. Loaded on the cart template only, which is
+      why the file can scope its overrides to `:root`.
+    {%- endcomment -%}
+    {%- if template.name == 'cart' -%}
+      {{ 'crooks-cart.css' | asset_url | stylesheet_tag }}
+    {%- endif -%}
+    {%- comment -%}
       asset_url appends ?v=... but crooks.css requests url('vt323.woff2') with no query, and a
       relative url() resolves against the stylesheet's own directory — same file, different URL.
       The preload was therefore wasted: the real font landed at 1,836 ms against an FCP of

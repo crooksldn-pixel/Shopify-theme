@@ -1,0 +1,219 @@
+/* ============================================================
+   CROOKSLDN — cart skin.
+
+   The cart is Horizon's, built from `content_for 'block'`, so its markup is not
+   ours to rewrite and its wallet buttons (Shop Pay, PayPal, Google Pay) are
+   Shopify-owned chrome that cannot be restyled at all. This file therefore
+   reaches for Horizon's OWN design tokens and points them at the terminal's,
+   which restyles the whole cart without touching a line of its Liquid.
+
+   Loaded only on the cart template, so `:root` here means "the cart page".
+
+   Frame it, don't fake it: the wallet buttons keep their brand colours and are
+   given a quiet frame instead of a disguise.
+   ============================================================ */
+
+/* Horizon emits `:root, .color-scheme-1 { ... }` in an inline <style> that lands
+   AFTER this file in the cascade, so an equal-specificity override loses on order.
+   `:root:root` is (0,2,0) and `:root [class*="color-scheme"]` is (0,2,0), both of
+   which beat it regardless of where the inline block sits. Chasing load order here
+   would be fragile: the inline block is emitted by section rendering. */
+:root:root, :root [class*="color-scheme"] {
+  --color-background: rgb(11 10 14 / 1); --color-background-rgb: 11 10 14;
+  --color-foreground: rgb(221 215 201 / 1); --color-foreground-rgb: 221 215 201;
+  --color-foreground-heading: rgb(221 215 201 / 1); --color-foreground-heading-rgb: 221 215 201;
+  --color-foreground-muted: rgb(138 131 119 / 1);
+  --color-primary: rgb(167 122 199 / 1); --color-primary-rgb: 167 122 199;
+  --color-primary-hover: rgb(167 122 199 / 1); --color-primary-hover-rgb: 167 122 199;
+  --color-border: rgb(58 47 74 / 1); --color-border-rgb: 58 47 74;
+  --color-shadow: rgb(0 0 0 / 0); --color-shadow-rgb: 0 0 0;
+
+  --color-primary-button-text: rgb(221 215 201 / 1);
+  --color-primary-button-background: rgb(84 37 120 / 1);
+  --color-primary-button-border: rgb(167 122 199 / 1);
+  --color-primary-button-hover-text: rgb(221 215 201 / 1);
+  --color-primary-button-hover-background: rgb(167 122 199 / 1);
+  --color-primary-button-hover-border: rgb(167 122 199 / 1);
+
+  --color-secondary-button-text: rgb(221 215 201 / 1);
+  --color-secondary-button-background: rgb(0 0 0 / 0);
+  --color-secondary-button-border: rgb(58 47 74 / 1);
+  --color-secondary-button-hover-text: rgb(221 215 201 / 1);
+  --color-secondary-button-hover-background: rgb(84 37 120 / 1);
+  --color-secondary-button-hover-border: rgb(167 122 199 / 1);
+
+  --color-input-background: rgb(14 12 19 / 1);
+  --color-input-text: rgb(221 215 201 / 1); --color-input-text-rgb: 221 215 201;
+  --color-input-border: rgb(58 47 74 / 1);
+  --color-input-hover-background: rgb(31 28 40 / 1);
+
+  --font-body--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-paragraph--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-subheading--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-accent--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-primary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-secondary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h1--family: 'VT323', ui-monospace, monospace;
+  --font-h2--family: 'VT323', ui-monospace, monospace;
+  --font-h3--family: 'VT323', ui-monospace, monospace;
+  --font-h4--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h5--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h6--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  --style-border-radius-buttons-primary: 0px;
+  --style-border-radius-buttons-secondary: 0px;
+  --style-border-radius-sm: 0px;
+  --style-border-radius-md: 0px;
+  --style-border-radius-lg: 0px;
+}
+
+:root[data-crk-theme="light"]:root, :root[data-crk-theme="light"] [class*="color-scheme"] {
+  --color-background: rgb(250 250 251 / 1); --color-background-rgb: 250 250 251;
+  --color-foreground: rgb(22 21 26 / 1); --color-foreground-rgb: 22 21 26;
+  --color-foreground-heading: rgb(22 21 26 / 1); --color-foreground-heading-rgb: 22 21 26;
+  --color-foreground-muted: rgb(98 96 107 / 1);
+  --color-primary: rgb(92 52 128 / 1); --color-primary-rgb: 92 52 128;
+  --color-primary-hover: rgb(92 52 128 / 1); --color-primary-hover-rgb: 92 52 128;
+  --color-border: rgb(211 211 216 / 1); --color-border-rgb: 211 211 216;
+  --color-shadow: rgb(0 0 0 / 0); --color-shadow-rgb: 0 0 0;
+
+  --color-primary-button-text: rgb(221 215 201 / 1);
+  --color-primary-button-background: rgb(84 37 120 / 1);
+  --color-primary-button-border: rgb(92 52 128 / 1);
+  --color-primary-button-hover-text: rgb(221 215 201 / 1);
+  --color-primary-button-hover-background: rgb(92 52 128 / 1);
+  --color-primary-button-hover-border: rgb(92 52 128 / 1);
+
+  --color-secondary-button-text: rgb(22 21 26 / 1);
+  --color-secondary-button-background: rgb(0 0 0 / 0);
+  --color-secondary-button-border: rgb(211 211 216 / 1);
+  --color-secondary-button-hover-text: rgb(221 215 201 / 1);
+  --color-secondary-button-hover-background: rgb(84 37 120 / 1);
+  --color-secondary-button-hover-border: rgb(92 52 128 / 1);
+
+  --color-input-background: rgb(255 255 255 / 1);
+  --color-input-text: rgb(22 21 26 / 1); --color-input-text-rgb: 22 21 26;
+  --color-input-border: rgb(211 211 216 / 1);
+  --color-input-hover-background: rgb(241 241 243 / 1);
+
+  --font-body--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-paragraph--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-subheading--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-accent--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-primary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-secondary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h1--family: 'VT323', ui-monospace, monospace;
+  --font-h2--family: 'VT323', ui-monospace, monospace;
+  --font-h3--family: 'VT323', ui-monospace, monospace;
+  --font-h4--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h5--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h6--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  --style-border-radius-buttons-primary: 0px;
+  --style-border-radius-buttons-secondary: 0px;
+  --style-border-radius-sm: 0px;
+  --style-border-radius-md: 0px;
+  --style-border-radius-lg: 0px;
+}
+
+/* The section wrappers paint their own ground from a colour scheme, which the
+   token override above does not always reach. Pin them to the terminal ground. */
+body,
+.section-background,
+.shopify-section,
+.cart-page {
+  background-color: rgb(var(--color-background-rgb));
+  color: rgb(var(--color-foreground-rgb));
+}
+
+/* No radius and no shadow, enforced the same way crooks.css enforces it. */
+main *,
+main ::before,
+main ::after {
+  border-radius: 0 !important;
+}
+main *:not([class*="shopify-payment-button"]):not([class*="shopify-cleanslate"]) {
+  box-shadow: none;
+}
+
+/* The site's focus ring: 2px purple, measured at 5.88:1 on the near-black ground. */
+main :focus-visible {
+  outline: 2px solid rgb(167 122 199);
+  outline-offset: 2px;
+}
+:root[data-crk-theme="light"] main :focus-visible { outline-color: rgb(92 52 128); }
+
+/* ---- tap targets ----
+   Measured under 44px on the deployed cart: the line-item title link (65x38),
+   the quantity input (36x28), the discount field (103x32) and the size link
+   (48x22). Raised by box, never by type size. */
+.cart-items__title,
+a.cart-items__title {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.cart-discount__input,
+input[name="discount"] {
+  min-height: 44px;
+}
+quantity-selector input,
+.quantity-selector input,
+input[name="updates[]"],
+.cart-items quantity-selector input[type="number"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+quantity-selector button,
+.quantity-selector button {
+  min-height: 44px;
+  min-width: 44px;
+}
+/* Inline links in the cart's own sections and in the resource list below it are
+   laid out as blocks at ~22px tall. Give them the box, not a bigger type size. */
+main a.link,
+main .size-style.link,
+.section-resource-list__header a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* Wallet buttons are Shopify-owned chrome. Frame them, do not restyle them —
+   and only when there is something to frame: the container renders even when no
+   wallet is enabled, and an unconditional border drew an empty box under
+   Check out. Its list markup also inherits bullets from the reset. */
+.shopify-payment-button:has(button, iframe),
+[class*="dynamic-checkout"]:has(button, iframe) {
+  border: 1px solid rgb(var(--color-border-rgb));
+  padding: 8px;
+}
+[class*="dynamic-checkout"] ul,
+.shopify-payment-button ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- cart line-item thumbnail ----
+   Pre-existing, not introduced here: the media cell is unconstrained, so a cart
+   line renders its product shot at 552-563px square (measured at 563 on the
+   pre-audit theme, so this predates the audit work). The audit never caught it
+   because every cart screenshot it took was of an EMPTY cart. There is no
+   merchant-facing width setting for this block, so the cap belongs in CSS.
+   Portrait ratio preserved; the register's own cards are unaffected. */
+.cart-items__media {
+  width: 96px;
+  max-width: 96px;
+}
+.cart-items__media-container,
+.cart-items__media-image {
+  width: 100%;
+  max-width: 96px;
+  height: auto;
+}
+@media screen and (min-width: 750px) {
+  .cart-items__media { width: 120px; max-width: 120px; }
+  .cart-items__media-container,
+  .cart-items__media-image { max-width: 120px; }
+}
