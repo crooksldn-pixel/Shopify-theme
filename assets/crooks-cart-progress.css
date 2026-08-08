@@ -1,0 +1,47 @@
+/* ============================================================
+   CROOKSLDN — carriage status bar.
+   Stepped segments rather than a smooth fill: the system forbids gradients,
+   and a segmented meter reads as instrumentation rather than a sales device.
+   ============================================================ */
+.crk-carriage { border-bottom: 1px solid var(--crk-line) }
+.crk-carriage__inner { padding: 16px }
+@media (min-width: 1024px) { .crk-carriage__inner { padding: 20px 24px } }
+
+.crk-carriage__msg { color: var(--crk-text) }
+.crk-carriage__msg::before { content: "> "; color: var(--crk-accent) }
+
+.crk-carriage__track {
+  position: relative;
+  height: 10px;
+  margin: 10px 0 8px;
+  border: 1px solid var(--crk-line);
+  background: var(--crk-panel);
+  overflow: hidden;
+}
+.crk-carriage__fill {
+  display: block;
+  height: 100%;
+  background-color: var(--crk-purple);
+  /* Segments, not a bar: 4px of fill, 3px of ground, hard edges only. */
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--crk-accent) 0 4px,
+    transparent 4px 7px
+  );
+  transition: width 200ms steps(8, end);
+}
+@media (prefers-reduced-motion: reduce) { .crk-carriage__fill { transition: none } }
+
+/* Tier 1 marker: where free Tracked 48 begins. */
+.crk-carriage__mark {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 1px;
+  background: var(--crk-text);
+  opacity: .55;
+}
+
+.crk-carriage__tiers { display: flex; justify-content: space-between; gap: 12px; color: var(--crk-micro) }
+.crk-carriage__tiers [data-crk-met="true"] { color: var(--crk-accent) }
+.crk-carriage__tiers [data-crk-met="true"]::before { content: "✓ " }

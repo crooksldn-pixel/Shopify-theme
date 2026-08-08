@@ -1021,3 +1021,73 @@ No horizontal overflow at 390 or 320.
 **Not addressed:** the section renders `crk_col.products` with no `paginate`. At 14 products
 that is fine; past ~50 a collection page would silently truncate. Worth revisiting before the
 catalogue grows.
+
+## Carriage status bar (cart) — grounded in the real rate card
+
+Built from the delivery profile and 42 real orders, not from a guess.
+
+**The shipping rules that already existed and were nowhere on the site:**
+
+| UK method | Price | Free at |
+|---|---|---|
+| Tracked 48 | £3.00 | **£20** |
+| Tracked 24 | £4.99 | **£70** |
+
+EU is a flat £12.99 and International £18.99, both with **no free tier** — which is why the bar
+is UK-only. Showing a threshold to an overseas shopper would be chasing something that does not
+apply to them (~7% of orders).
+
+**Why the £70 tier is the one worth promoting.** From the last 42 paid orders (8 test/£0
+excluded), 39 of them UK:
+
+| | |
+|---|---|
+| UK AOV | £54.51 |
+| Single-item orders | 86% |
+| UK under £20 | 5% |
+| UK £20–£69 | 87% |
+| **UK £45–£69** | **77%** |
+
+A bar aimed at £20 would be invisible to 95% of customers. 77% sit £1–£25 short of free
+Tracked 24, and 28 of 39 are exactly £50 or £60 — one jeans or one crewneck. With 86% of orders
+being a single item, "add a second thing" is the lever, and £6 socks are the obvious add.
+George confirmed Tracked 24 costs **80p** more than Tracked 48, so ~£10 of extra product for 80p
+of absorbed postage. Clearly worth promoting.
+
+**The honesty fix that had to come first.** The announcement bar said `FREE UK SHIPPING *` (with
+an asterisk that pointed at no footnote) and CHAIN OF CUSTODY step 02 said "Free UK shipping on
+every order". Both false below £20 — two orders in the sample paid exactly that £3. Corrected to
+state the threshold. You cannot run a progress bar toward a benefit you claim is unconditional.
+
+**A correction to an earlier claim of mine.** During the dispatch-cutoff work I reported custody
+step 01 updated to the 18:00 wording. It never took effect: the block bodies are **persisted in
+`templates/product.json`**, so changing the schema default did nothing and the PDP still read
+"Dispatch within 24 hours". Fixed properly this time by editing the stored blocks. Schema
+defaults only govern *new* instances — a lesson that applies to every block-based section.
+
+**Design.** A readout, not a widget: `> £10.00 to free Tracked 24`, a segmented meter (hard-edged
+repeating stops, since gradients are banned), a marker at the tier-1 position, and tier labels
+that tick when met. No countdown, no urgency, no red.
+
+**Correctness details:**
+- Basis is `cart.total_price`, i.e. **after discounts** — the same basis Shopify's `TOTAL_PRICE`
+  condition uses. The pre-discount subtotal would promise carriage that checkout withdraws.
+- Fill is measured against the **top** tier so the bar keeps moving after tier 1 clears.
+- Fill floors and holds at 99% until a tier is genuinely met. Rounding showed a full bar next to
+  "£0.01 to go".
+- Hidden entirely when the cart is empty, and outside the configured country.
+- Thresholds are settings, with a note in the schema to keep them in step with the rate card.
+
+**Same Liquid trap, second time.** `label | replace: '[amount]', crk_remaining | money` applies
+`money` to the *result of the replace*, so the message rendered as bare `£10.00` with the label
+gone — exactly the fault the FILED date hit. The amount must be formatted into its own variable
+first. I had already recorded this and still wrote it.
+
+Verified across boundaries on the client path: £5 · £19.99 · £20 · £60 · £69.99 · £70 · £120 all
+produce the right message, fill, aria-valuenow and tier ticks. The £120 and empty-cart states
+were confirmed server-side; the £60 server-render is pending a Shopify `/cart/add.js` rate limit
+(429) from repeated test adds.
+
+**Harness note:** fetching `crooks-cart-progress.js` from the CDN without its `?v=` returned a
+stale build and the boundary test "failed" against code that no longer existed. Test the source
+of truth, or carry the version.

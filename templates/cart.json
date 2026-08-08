@@ -8,6 +8,10 @@
  * ------------------------------------------------------------
  */{
   "sections": {
+    "carriage": {
+      "type": "crooks-cart-progress",
+      "settings": {}
+    },
     "cart-section": {
       "type": "main-cart",
       "blocks": {
@@ -259,6 +263,7 @@
     }
   },
   "order": [
+    "carriage",
     "cart-section",
     "product_list_NNFgcy"
   ]

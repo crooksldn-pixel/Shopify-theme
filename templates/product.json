@@ -16,14 +16,14 @@
           "type": "custody_step",
           "settings": {
             "label": "Logged",
-            "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday."
+            "body": "Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day."
           }
         },
         "s2": {
           "type": "custody_step",
           "settings": {
             "label": "Dispatched",
-            "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order."
+            "body": "Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70."
           }
         },
         "s3": {

@@ -1,0 +1,134 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+{{ 'crooks-cart-progress.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-cart-progress.js' | asset_url }}" defer></script>
+
+{%- comment -%}
+  CROOKSLDN — carriage status.
+
+  A readout, not a marketing widget: it reports how far the cart is from a
+  shipping tier that genuinely exists in Shopify's delivery profile. No
+  countdown, no urgency copy, no colour escalation.
+
+  Grounded in the real rate card, not invented thresholds:
+    Tracked 48  £3.00   free at £20
+    Tracked 24  £4.99   free at £70
+
+  UK ONLY. EU is a flat £12.99 and International £18.99 with no free tier at
+  all, so a threshold bar shown to an overseas shopper would be chasing
+  something that does not apply to them. `localization` decides.
+
+  Basis is cart.total_price, which is after discounts — the same basis
+  Shopify's own TOTAL_PRICE condition uses. Using the pre-discount subtotal
+  would promise free carriage that checkout then withdraws.
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_country = localization.country.iso_code | default: 'GB'
+  assign crk_show = false
+  if crk_country == section.settings.country_code and cart.item_count > 0
+    assign crk_show = true
+  endif
+
+  assign t1 = section.settings.tier_1_threshold | times: 100
+  assign t2 = section.settings.tier_2_threshold | times: 100
+  assign total = cart.total_price
+
+  assign crk_state = 'tier0'
+  assign crk_remaining = t1 | minus: total
+  if total >= t2
+    assign crk_state = 'tier2'
+    assign crk_remaining = 0
+  elsif total >= t1
+    assign crk_state = 'tier1'
+    assign crk_remaining = t2 | minus: total
+  endif
+
+  comment
+    Fill is measured against the top tier so the bar keeps moving after the
+    first one is cleared. A bar that fills up and stops rewards nothing.
+  endcomment
+  assign crk_pct = 0
+  if t2 > 0
+    assign crk_pct = total | times: 100 | divided_by: t2
+  endif
+  comment
+    Integer division already floors. Hold at 99 until the tier is genuinely met,
+    so a full bar never sits next to "£0.01 to go".
+  endcomment
+  if crk_pct >= 100 and total < t2
+    assign crk_pct = 99
+  endif
+  if crk_pct > 100
+    assign crk_pct = 100
+  endif
+
+  comment
+    Format the money FIRST. Filters chain left to right with no grouping, so
+    `label | replace: '[amount]', crk_remaining | money` applies `money` to the
+    whole replaced string and returns just the number — the label disappears.
+    Exactly the fault the FILED date hit in the register.
+  endcomment
+  assign crk_amount = crk_remaining | money
+-%}
+
+{%- if crk_show -%}
+  <section
+    class="crk-root crk-carriage"
+    data-crk-section="cart-progress"
+    data-crk-tier1="{{ t1 }}"
+    data-crk-tier2="{{ t2 }}"
+    data-crk-country="{{ section.settings.country_code }}"
+    data-crk-label-to1="{{ section.settings.label_to_tier_1 | escape }}"
+    data-crk-label-to2="{{ section.settings.label_to_tier_2 | escape }}"
+    data-crk-label-done="{{ section.settings.label_complete | escape }}"
+    data-crk-money-format="{{ shop.money_format | escape }}"
+  >
+    <div class="crk-inner crk-carriage__inner">
+      <p class="crk-carriage__msg crk-data" data-crk-carriage-msg aria-live="polite">
+        {%- case crk_state -%}
+          {%- when 'tier2' -%}{{ section.settings.label_complete }}
+          {%- when 'tier1' -%}{{ section.settings.label_to_tier_2 | replace: '[amount]', crk_amount }}
+          {%- else -%}{{ section.settings.label_to_tier_1 | replace: '[amount]', crk_amount }}
+        {%- endcase -%}
+      </p>
+
+      <div
+        class="crk-carriage__track"
+        data-crk-carriage-track
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="{{ crk_pct }}"
+        aria-label="{{ section.settings.progress_label | escape }}"
+      >
+        <span class="crk-carriage__fill" data-crk-carriage-fill style="width: {{ crk_pct }}%"></span>
+        <span class="crk-carriage__mark" style="left: {{ t1 | times: 100 | divided_by: t2 }}%" aria-hidden="true"></span>
+      </div>
+
+      <p class="crk-carriage__tiers crk-micro">
+        <span data-crk-tier-state="1" data-crk-met="{% if total >= t1 %}true{% else %}false{% endif %}">{{ section.settings.tier_1_label }}</span>
+        <span data-crk-tier-state="2" data-crk-met="{% if total >= t2 %}true{% else %}false{% endif %}">{{ section.settings.tier_2_label }}</span>
+      </p>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Crooks — Carriage status",
+  "tag": "section",
+  "settings": [
+    { "type": "paragraph", "content": "Reports progress toward the free-shipping tiers set in Shopify → Settings → Shipping. Keep these numbers in step with that rate card, or the readout will promise carriage that checkout withdraws." },
+    { "type": "text", "id": "country_code", "label": "Only show in this country", "info": "ISO code. Other markets have no free tier, so the bar is hidden for them.", "default": "GB" },
+    { "type": "number", "id": "tier_1_threshold", "label": "Tier 1 threshold", "default": 20 },
+    { "type": "text", "id": "tier_1_label", "label": "Tier 1 label", "default": "Tracked 48 free" },
+    { "type": "number", "id": "tier_2_threshold", "label": "Tier 2 threshold", "default": 70 },
+    { "type": "text", "id": "tier_2_label", "label": "Tier 2 label", "default": "Tracked 24 free" },
+    { "type": "text", "id": "label_to_tier_1", "label": "Below tier 1", "info": "Use [amount].", "default": "[amount] to free Tracked 48" },
+    { "type": "text", "id": "label_to_tier_2", "label": "Between the tiers", "info": "Use [amount].", "default": "[amount] to free Tracked 24" },
+    { "type": "text", "id": "label_complete", "label": "Both tiers met", "default": "Free Tracked 24 — unlocked" },
+    { "type": "text", "id": "progress_label", "label": "Progress bar label (screen readers)", "default": "Progress toward free carriage" }
+  ],
+  "presets": [{ "name": "Crooks — Carriage status" }]
+}
+{% endschema %}
