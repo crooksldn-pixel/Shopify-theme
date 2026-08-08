@@ -930,3 +930,21 @@ that ignores `clip` will invent collisions.
 live now — and on the live theme `/pages/tracking` still renders a bare titled page until the
 theme is published. Also noted: the menu's SHOP entry still points at `frontpage`, not the ALL
 collection the catalogue now uses.
+
+## A wrong diagnosis, recorded so it isn't repeated
+
+`config/settings_data.json` sets `"cart_type": "drawer"`, and `snippets/header-actions.liquid`
+renders `<cart-drawer-component>`. From that I concluded the reported mobile clash was the cart
+drawer going unstyled, because `crooks-cart.css` is gated to `template.name == 'cart'`. I built
+a drawer stylesheet and deployed it.
+
+**It renders zero times.** The Crooks header replaced Horizon's and never renders
+`header-actions`; its bag link points at `routes.cart_url`. Checked on the homepage, the cart
+and a product page: `cart-drawer-component` appears 0 times on all three. The setting is inert.
+
+The global include was reverted so it is not a request per page for dead rules.
+`assets/crooks-cart-drawer.css` is kept, unreferenced, because the setting would become live
+again if Horizon's header were restored.
+
+**The lesson:** a theme *setting* and a *snippet that exists* are not evidence that anything
+renders. Grep the served HTML, not the repo. Two greps would have saved the whole detour.

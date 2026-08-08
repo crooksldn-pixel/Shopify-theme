@@ -1,0 +1,166 @@
+/* ============================================================
+   CROOKSLDN — cart DRAWER skin.
+
+   The store runs cart_type: "drawer", so tapping the bag opens
+   <cart-drawer-component> from the header — on every template. crooks-cart.css
+   is gated to template.name == 'cart', so the drawer was getting none of it:
+   Horizon's bone ground, Archivo Narrow, and the four-column line-item table
+   crammed into a ~400px panel. That is the clash.
+
+   Same tokens as the cart page, scoped to the drawer instead of :root, so this
+   can load globally without repainting Horizon UI on every page.
+
+   The line-item grid applies at ALL widths here, not just under 600px: the
+   drawer is narrow on desktop too.
+   ============================================================ */
+cart-drawer-component,
+cart-drawer-component [class*="color-scheme"] {
+  --color-background: rgb(11 10 14 / 1); --color-background-rgb: 11 10 14;
+  --color-foreground: rgb(221 215 201 / 1); --color-foreground-rgb: 221 215 201;
+  --color-foreground-heading: rgb(221 215 201 / 1); --color-foreground-heading-rgb: 221 215 201;
+  --color-foreground-muted: rgb(138 131 119 / 1);
+  --color-primary: rgb(167 122 199 / 1); --color-primary-rgb: 167 122 199;
+  --color-primary-hover: rgb(167 122 199 / 1); --color-primary-hover-rgb: 167 122 199;
+  --color-border: rgb(58 47 74 / 1); --color-border-rgb: 58 47 74;
+  --color-shadow: rgb(0 0 0 / 0); --color-shadow-rgb: 0 0 0;
+
+  --color-primary-button-text: rgb(221 215 201 / 1);
+  --color-primary-button-background: rgb(84 37 120 / 1);
+  --color-primary-button-border: rgb(167 122 199 / 1);
+  --color-primary-button-hover-text: rgb(221 215 201 / 1);
+  --color-primary-button-hover-background: rgb(167 122 199 / 1);
+  --color-primary-button-hover-border: rgb(167 122 199 / 1);
+
+  --color-secondary-button-text: rgb(221 215 201 / 1);
+  --color-secondary-button-background: rgb(0 0 0 / 0);
+  --color-secondary-button-border: rgb(58 47 74 / 1);
+  --color-secondary-button-hover-text: rgb(221 215 201 / 1);
+  --color-secondary-button-hover-background: rgb(84 37 120 / 1);
+  --color-secondary-button-hover-border: rgb(167 122 199 / 1);
+
+  --color-input-background: rgb(14 12 19 / 1);
+  --color-input-text: rgb(221 215 201 / 1); --color-input-text-rgb: 221 215 201;
+  --color-input-border: rgb(58 47 74 / 1);
+  --color-input-hover-background: rgb(31 28 40 / 1);
+
+  --font-body--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-paragraph--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-subheading--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-accent--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-primary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-secondary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h1--family: 'VT323', ui-monospace, monospace;
+  --font-h2--family: 'VT323', ui-monospace, monospace;
+  --font-h3--family: 'VT323', ui-monospace, monospace;
+  --font-h4--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h5--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h6--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  --style-border-radius-buttons-primary: 0px;
+  --style-border-radius-buttons-secondary: 0px;
+  --style-border-radius-sm: 0px;
+  --style-border-radius-md: 0px;
+  --style-border-radius-lg: 0px;
+}
+
+:root[data-crk-theme="light"] cart-drawer-component,
+:root[data-crk-theme="light"] cart-drawer-component [class*="color-scheme"] {
+  --color-background: rgb(250 250 251 / 1); --color-background-rgb: 250 250 251;
+  --color-foreground: rgb(22 21 26 / 1); --color-foreground-rgb: 22 21 26;
+  --color-foreground-heading: rgb(22 21 26 / 1); --color-foreground-heading-rgb: 22 21 26;
+  --color-foreground-muted: rgb(98 96 107 / 1);
+  --color-primary: rgb(92 52 128 / 1); --color-primary-rgb: 92 52 128;
+  --color-primary-hover: rgb(92 52 128 / 1); --color-primary-hover-rgb: 92 52 128;
+  --color-border: rgb(211 211 216 / 1); --color-border-rgb: 211 211 216;
+  --color-shadow: rgb(0 0 0 / 0); --color-shadow-rgb: 0 0 0;
+
+  --color-primary-button-text: rgb(221 215 201 / 1);
+  --color-primary-button-background: rgb(84 37 120 / 1);
+  --color-primary-button-border: rgb(92 52 128 / 1);
+  --color-primary-button-hover-text: rgb(221 215 201 / 1);
+  --color-primary-button-hover-background: rgb(92 52 128 / 1);
+  --color-primary-button-hover-border: rgb(92 52 128 / 1);
+
+  --color-secondary-button-text: rgb(22 21 26 / 1);
+  --color-secondary-button-background: rgb(0 0 0 / 0);
+  --color-secondary-button-border: rgb(211 211 216 / 1);
+  --color-secondary-button-hover-text: rgb(221 215 201 / 1);
+  --color-secondary-button-hover-background: rgb(84 37 120 / 1);
+  --color-secondary-button-hover-border: rgb(92 52 128 / 1);
+
+  --color-input-background: rgb(255 255 255 / 1);
+  --color-input-text: rgb(22 21 26 / 1); --color-input-text-rgb: 22 21 26;
+  --color-input-border: rgb(211 211 216 / 1);
+  --color-input-hover-background: rgb(241 241 243 / 1);
+
+  --font-body--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-paragraph--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-subheading--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-accent--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-primary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --button-font-family-secondary: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h1--family: 'VT323', ui-monospace, monospace;
+  --font-h2--family: 'VT323', ui-monospace, monospace;
+  --font-h3--family: 'VT323', ui-monospace, monospace;
+  --font-h4--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h5--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  --font-h6--family: 'CRX Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  --style-border-radius-buttons-primary: 0px;
+  --style-border-radius-buttons-secondary: 0px;
+  --style-border-radius-sm: 0px;
+  --style-border-radius-md: 0px;
+  --style-border-radius-lg: 0px;
+}
+
+cart-drawer-component,
+.cart-drawer__content,
+.cart-drawer__header {
+  background-color: rgb(var(--color-background-rgb));
+  color: rgb(var(--color-foreground-rgb));
+}
+cart-drawer-component *,
+cart-drawer-component ::before,
+cart-drawer-component ::after { border-radius: 0 !important }
+cart-drawer-component *:not([class*="shopify-payment-button"]) { box-shadow: none }
+cart-drawer-component :focus-visible { outline: 2px solid rgb(167 122 199); outline-offset: 2px }
+:root[data-crk-theme="light"] cart-drawer-component :focus-visible { outline-color: rgb(92 52 128) }
+
+/* ---- line items in the drawer ---- */
+cart-drawer-component .cart-items__table,
+cart-drawer-component .cart-items__table > tbody,
+cart-drawer-component .cart-items__table > thead { display: block }
+
+cart-drawer-component .cart-items__table-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas:
+    "media details"
+    "media quantity"
+    "media price";
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: start;
+  padding: 14px 0;
+  border-bottom: 1px solid rgb(var(--color-border-rgb));
+}
+cart-drawer-component .cart-items__table-row > td { display: block; padding-left: 0; padding-right: 0; min-width: 0 }
+cart-drawer-component .cart-items__media    { grid-area: media; width: 72px; max-width: 72px }
+cart-drawer-component .cart-items__details  { grid-area: details }
+cart-drawer-component .cart-items__quantity { grid-area: quantity; justify-self: start }
+cart-drawer-component .cart-items__price    { grid-area: price; justify-self: start; text-align: left }
+cart-drawer-component .cart-items__error    { grid-column: 1 / -1 }
+cart-drawer-component .cart-items__media-container,
+cart-drawer-component .cart-items__media-image { max-width: 72px; height: auto }
+
+/* Same two strays as the cart page: the <dd> UA indent, and a destructive
+   control wearing the primary fill. */
+cart-drawer-component .cart-items__variants dd,
+cart-drawer-component .cart-items__variant dd { margin-left: 0 }
+cart-drawer-component .cart-items__remove {
+  background: none;
+  border: 1px solid rgb(var(--color-border-rgb));
+  color: rgb(var(--color-foreground-rgb));
+  min-width: 44px;
+  min-height: 44px;
+}

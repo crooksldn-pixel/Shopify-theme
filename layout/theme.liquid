@@ -38,6 +38,14 @@
       {{ 'crooks-cart.css' | asset_url | stylesheet_tag }}
     {%- endif -%}
     {%- comment -%}
+      crooks-cart-drawer.css is deliberately NOT loaded. settings say
+      cart_type: "drawer", but the Crooks header replaced Horizon's and does not
+      render header-actions, so <cart-drawer-component> appears zero times on any
+      template and the bag link goes straight to /cart. The stylesheet is kept
+      because the setting could be honoured again if Horizon's header is restored;
+      until then loading it would be a request per page for dead rules.
+    {%- endcomment -%}
+    {%- comment -%}
       asset_url appends ?v=... but crooks.css requests url('vt323.woff2') with no query, and a
       relative url() resolves against the stylesheet's own directory — same file, different URL.
       The preload was therefore wasted: the real font landed at 1,836 ms against an FCP of
