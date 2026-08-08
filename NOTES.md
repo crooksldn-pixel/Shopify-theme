@@ -602,3 +602,22 @@ because the localiser only kept stylesheets with `crooks` in the filename. Every
 tap-target number from that run was meaningless. Re-run with all six stylesheets present the
 token results happened to hold — but that was luck, not method. A harness must serve the page
 the browser would actually get.
+
+## Header logo in dark mode
+
+The uploaded mark (`IMG_3682.png`, 241×161) is a **pure black silhouette on transparency** —
+every opaque pixel samples as `rgb(0,0,0)`. On the `#0B0A0E` ground it was invisible.
+
+Fixed with `filter: invert(1) brightness(0.88)` in dark mode only. The invert lifts the black
+pixels while the alpha channel is preserved, and the brightness pulls pure white back to roughly
+`--crk-text`'s value so the mark does not out-shout the wordmark beside it. Light mode is left
+alone.
+
+Gated on a section setting (`logo_invert_dark`, on by default) rather than hardcoded, because
+inverting a *colour* logo would wreck it — if the mark is ever replaced with one, the switch is
+in the theme editor, not in CSS. Driven by a `data-crk-logo-invert` attribute on the header, so
+no Liquid goes anywhere near a style tag.
+
+A recolour-by-mask would hit `--crk-text` exactly rather than approximately, but the logo URL is
+a merchant setting and CSS `mask-image` would need that URL inlined — which is the thing the
+house rules forbid. Invert is the honest trade.

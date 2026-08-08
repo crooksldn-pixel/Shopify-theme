@@ -7,7 +7,13 @@
   assign crk_cart_count = cart.item_count
 -%}
 
-<header class="crk-root crk-header" data-crk-section="header">
+{%- comment -%}
+  The uploaded mark is a black silhouette on transparency, so on the near-black
+  ground it is invisible. The attribute drives a CSS invert in dark mode only.
+  It is a setting because inverting a COLOUR logo would wreck it — anyone who
+  uploads one turns this off rather than editing CSS.
+{%- endcomment -%}
+<header class="crk-root crk-header" data-crk-section="header"{% if section.settings.logo_invert_dark %} data-crk-logo-invert="true"{% endif %}>
   <div class="crk-header__bar">
     <a class="crk-header__logo" href="{{ routes.root_url }}">
       {%- if section.settings.logo != blank -%}
@@ -130,6 +136,7 @@
   "name": "Crooks — Header",
   "settings": [
     { "type": "image_picker", "id": "logo", "label": "Logo", "info": "Leave empty to use the wordmark text below." },
+    { "type": "checkbox", "id": "logo_invert_dark", "label": "Flip logo to light in dark mode", "info": "For a dark, single-colour logo on a transparent background. Turn off for a colour logo.", "default": true },
     { "type": "text", "id": "wordmark", "label": "Wordmark", "default": "CROOKSLDN" },
     { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" },
     { "type": "header", "content": "Labels" },
