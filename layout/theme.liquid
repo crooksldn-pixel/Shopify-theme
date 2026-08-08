@@ -28,10 +28,16 @@
     {%- render 'stylesheets' -%}
     {%- render 'fonts' -%}
     {{ 'crx-mono.css' | asset_url | stylesheet_tag }}
+    {%- comment -%}
+      asset_url appends ?v=... but crooks.css requests url('vt323.woff2') with no query, and a
+      relative url() resolves against the stylesheet's own directory — same file, different URL.
+      The preload was therefore wasted: the real font landed at 1,836 ms against an FCP of
+      968 ms and reflowed the buy panel 28 px. Strip the query so the two URLs match.
+    {%- endcomment -%}
     <link
       rel="preload"
       as="font"
-      href="{{ 'vt323.woff2' | asset_url }}"
+      href="{{ 'vt323.woff2' | asset_url | split: '?' | first }}"
       type="font/woff2"
       crossorigin
     >
@@ -157,8 +163,15 @@
       {% render 'quick-add-modal' %}
     {% endif %}
 
+    {%- comment -%}
+      Homepage only. Rendered from the layout it fired on every template, so a shopper
+      who arrived on a product page from Instagram met a full-viewport overlay over the
+      buy panel and pulled a 166 KB Base44 bundle onto a PDP and the cart.
+    {%- endcomment -%}
     {%- unless request.design_mode -%}
-      {% render 'crack-the-cuffs' %}
+      {%- if template.name == 'index' -%}
+        {% render 'crack-the-cuffs' %}
+      {%- endif -%}
     {%- endunless -%}
   </body>
 </html>

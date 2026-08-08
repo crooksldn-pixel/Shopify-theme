@@ -432,3 +432,12 @@ are independent:
 
 Verified against the assets actually deployed to staging (#202053779799), not
 just the working copy.
+
+## Audit remediation — theme-check exception
+
+`layout/theme.liquid` trips `AssetPreload` ("prefer the preload_tag filter") on the VT323
+preload. It is left as a hand-written `<link>` on purpose: `preload_tag` emits the URL from
+`asset_url`, which carries the `?v=` cache-buster, and a mismatch between that URL and the
+`url('vt323.woff2')` the stylesheet actually requests is precisely the bug BACKLOG #8 is
+about — the font downloaded twice and reflowed the buy panel 28 px. The warning predates
+this change; the raw `<link>` was already there.

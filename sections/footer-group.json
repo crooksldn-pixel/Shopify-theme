@@ -236,7 +236,9 @@
             "label_2": "REFUNDS",
             "url_2": "shopify://policies/refund-policy",
             "label_3": "CASE 001",
-            "url_3": "https://crooks-case-break.base44.app"
+            "url_3": "https://crooks-case-break.base44.app",
+            "label_4": "TRACK ORDER",
+            "url_4": "/account"
           }
         },
         "c3": {
