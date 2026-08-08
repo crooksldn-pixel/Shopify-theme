@@ -1,0 +1,54 @@
+/* ============================================================
+   CROOKSLDN — order tracking. Ported from the tracking prototype.
+   The prototype hardcodes #0B0A0E / #0E0C13 / #3A2F4A / #A77AC7 / #DDD7C9,
+   which are exactly the terminal's tokens, so this maps onto --crk-* instead
+   and follows light/dark for free.
+   ============================================================ */
+.crk-track__status { background: var(--crk-panel); border-bottom: 1px solid var(--crk-line) }
+.crk-track__statusbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px }
+.crk-track__dot { flex: none; width: 8px; height: 8px; background: var(--crk-accent) }
+.crk-track__msg { min-width: 0; color: var(--crk-dim) }
+
+.crk-track__boot { color: var(--crk-accent); padding: 24px 0 0 }
+.crk-track__picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0 }
+
+.crk-track__record { margin-top: 24px; border: 1px solid var(--crk-line); background: var(--crk-panel) }
+.crk-track__record[hidden] { display: none }
+.crk-track__head { border-bottom: 1px solid var(--crk-line) }
+.crk-track__headrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--crk-line) }
+.crk-track__title { font-size: 24px; text-transform: uppercase; margin: 0 }
+.crk-track__num { color: var(--crk-accent) }
+.crk-track__link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border: 1px solid var(--crk-line); font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: var(--crk-dim) }
+.crk-track__link:hover { border-color: var(--crk-accent); color: var(--crk-accent) }
+
+.crk-track__meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--crk-line) }
+.crk-track__meta > div { background: var(--crk-panel); padding: 14px 20px; min-width: 0 }
+.crk-track__meta dd { margin: 4px 0 0; font-variant-numeric: tabular-nums; letter-spacing: .12em; overflow-wrap: anywhere }
+@media (min-width: 768px) { .crk-track__meta { grid-template-columns: repeat(4, 1fr) } }
+
+/* Timeline. Three cells; the third never claims a status it cannot know. */
+.crk-track__timeline { display: flex; gap: 1px; background: var(--crk-line); border-top: 1px solid var(--crk-line) }
+.crk-track__cell { flex: 1; min-width: 0; background: var(--crk-panel); padding: 12px; display: flex; flex-direction: column; gap: 4px }
+.crk-track__cellnum { font-size: 24px; line-height: 1 }
+.crk-track__cellstate { opacity: .7 }
+.crk-track__cell[data-state="complete"] { color: var(--crk-text) }
+.crk-track__cell[data-state="current"] { color: var(--crk-text); box-shadow: inset 0 0 0 1px var(--crk-accent) }
+.crk-track__cell[data-state="locked"] { color: var(--crk-micro) }
+.crk-track__cell[data-state="courier"] { color: var(--crk-dim) }
+
+.crk-track__courier, .crk-track__log { border-top: 1px solid var(--crk-line); padding: 16px 20px }
+.crk-track__subhead { color: var(--crk-dim); margin-bottom: 12px }
+.crk-track__courier .crk-track__meta { border: 1px solid var(--crk-line) }
+.crk-track__cta { margin-top: 16px }
+.crk-track__events { display: grid; gap: 10px }
+.crk-track__events li { display: grid; gap: 2px; padding-left: 14px; border-left: 1px solid var(--crk-line) }
+
+.crk-track__gate { padding: 48px 0; max-width: 560px }
+.crk-track__gatebody { margin: 12px 0 24px }
+.crk-track__note { margin-top: 16px; color: var(--crk-dim) }
+.crk-track__empty { padding: 48px 0 16px }
+
+@media (prefers-reduced-motion: no-preference) {
+  .crk-track__dot { animation: crk-track-pulse 1.6s steps(1, end) infinite }
+}
+@keyframes crk-track-pulse { 0%, 49% { opacity: 1 } 50%, 100% { opacity: .25 } }

@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "crooks-tracking", "settings": {} }
+  },
+  "order": ["main"]
+}

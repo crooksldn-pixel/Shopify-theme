@@ -1,0 +1,233 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+{{ 'crooks-tracking.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-tracking.js' | asset_url }}" defer></script>
+
+{%- comment -%}
+  CROOKSLDN — PROPERTY TRANSFER NETWORK (order tracking)
+
+  Ported from the crooksldn-tracking-page prototype. Two deliberate departures
+  from that design, both because the data does not exist:
+
+  1. The prototype looks orders up by number + postcode. That cannot be done from
+     a theme — Shopify has no storefront API for it and the Admin token must never
+     reach the browser (the prototype's own lookupOrder.js says exactly this). This
+     renders the signed-in customer's real orders instead.
+
+  2. The prototype has five stages, two of which (MANUFACTURING, INBOUND FREIGHT)
+     Shopify does not model at all. Liquid also exposes no delivery confirmation —
+     `fulfillment` carries tracking details but no shipment status. So the timeline
+     reports only what is known: LOGGED, then IN TRANSIT once tracking is issued,
+     with delivery handed to the courier's own tracking. Nothing is inferred.
+{%- endcomment -%}
+
+<section class="crk-root crk-track" data-crk-section="tracking">
+  <div class="crk-track__status">
+    <div class="crk-inner crk-track__statusbar">
+      <span class="crk-track__dot" aria-hidden="true"></span>
+      <p class="crk-micro crk-track__msg" data-crk-track-msg>{{ section.settings.status_1 }}</p>
+    </div>
+  </div>
+
+  <div class="crk-inner">
+    {%- if customer -%}
+      {%- assign crk_orders = customer.orders -%}
+      {%- if crk_orders.size > 0 -%}
+
+        <p class="crk-micro crk-track__boot" data-crk-boot>{{ section.settings.boot_line }}</p>
+
+        {%- comment -%}
+          Every order renders its own record. Liquid cannot read query parameters,
+          so selection is client-side — which also means that with JavaScript off
+          every record is simply visible, stacked, instead of nothing being usable.
+        {%- endcomment -%}
+        {%- if crk_orders.size > 1 -%}
+          <nav class="crk-track__picker" aria-label="{{ section.settings.picker_label | escape }}">
+            {%- for order in crk_orders limit: section.settings.order_limit -%}
+              <button
+                type="button"
+                class="crk-filter"
+                data-crk-track-pick="{{ order.name | escape }}"
+                aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+              >{{ order.name }}</button>
+            {%- endfor -%}
+          </nav>
+        {%- endif -%}
+
+        {%- for order in crk_orders limit: section.settings.order_limit -%}
+          {%- liquid
+            comment
+              Stage from what Shopify actually knows. `fulfillment_status` is nil,
+              'partial' or 'fulfilled' — there is no delivered state in Liquid.
+            endcomment
+            assign crk_ful = order.fulfillments | first
+            assign crk_stage = 'logged'
+            if order.fulfillment_status == 'fulfilled' or crk_ful
+              assign crk_stage = 'transit'
+            endif
+            assign crk_last = order.created_at
+            if crk_ful
+              assign crk_last = crk_ful.created_at
+            endif
+            assign crk_zip = order.shipping_address.zip | default: '' | split: ' ' | first | upcase
+          -%}
+
+          <article
+            class="crk-track__record"
+            data-crk-track-record="{{ order.name | escape }}"
+            data-crk-stage="{{ crk_stage }}"
+            {% unless forloop.first %}data-crk-track-secondary{% endunless %}
+          >
+            <header class="crk-track__head">
+              <div class="crk-track__headrow">
+                <h2 class="crk-display crk-track__title">
+                  {{ section.settings.record_word }}
+                  <span class="crk-track__num">{{ order.name }}</span>
+                </h2>
+                <a class="crk-track__link" href="{{ order.customer_url }}">{{ section.settings.full_order_label }}</a>
+              </div>
+              <dl class="crk-track__meta">
+                <div><dt class="crk-micro">{{ section.settings.label_status }}</dt>
+                  <dd class="crk-data" data-crk-stage-label>
+                    {%- if crk_stage == 'transit' -%}{{ section.settings.stage_transit }}{%- else -%}{{ section.settings.stage_logged }}{%- endif -%}
+                  </dd></div>
+                <div><dt class="crk-micro">{{ section.settings.label_logged }}</dt>
+                  <dd class="crk-data">{{ crk_last | date: '%d %b %Y — %H:%M' | upcase }}</dd></div>
+                <div><dt class="crk-micro">{{ section.settings.label_items }}</dt>
+                  <dd class="crk-data">{{ order.item_count }}</dd></div>
+                <div><dt class="crk-micro">{{ section.settings.label_sector }}</dt>
+                  <dd class="crk-data">{{ crk_zip | default: '—' }}</dd></div>
+              </dl>
+            </header>
+
+            {%- comment -%} Three cells; the third is never claimed, only handed over. {%- endcomment -%}
+            <nav class="crk-track__timeline" aria-label="{{ section.settings.timeline_label | escape }}">
+              <div class="crk-track__cell" data-state="complete">
+                <span class="crk-display crk-track__cellnum">01</span>
+                <span class="crk-micro">{{ section.settings.stage_logged }}</span>
+                <span class="crk-micro crk-track__cellstate">{{ section.settings.state_complete }}</span>
+              </div>
+              <div class="crk-track__cell" data-state="{% if crk_stage == 'transit' %}current{% else %}locked{% endif %}"
+                {% if crk_stage == 'transit' %}aria-current="step"{% endif %}>
+                <span class="crk-display crk-track__cellnum">02</span>
+                <span class="crk-micro">{{ section.settings.stage_transit }}</span>
+                <span class="crk-micro crk-track__cellstate">{% if crk_stage == 'transit' %}{{ section.settings.state_current }}{% else %}{{ section.settings.state_locked }}{% endif %}</span>
+              </div>
+              <div class="crk-track__cell" data-state="courier">
+                <span class="crk-display crk-track__cellnum">03</span>
+                <span class="crk-micro">{{ section.settings.stage_delivery }}</span>
+                <span class="crk-micro crk-track__cellstate">{{ section.settings.state_courier }}</span>
+              </div>
+            </nav>
+
+            {%- if crk_ful -%}
+              <section class="crk-track__courier">
+                <h3 class="crk-micro crk-track__subhead">{{ section.settings.courier_heading }}</h3>
+                <dl class="crk-track__meta">
+                  {%- if crk_ful.tracking_company != blank -%}
+                    <div><dt class="crk-micro">{{ section.settings.label_carrier }}</dt>
+                      <dd class="crk-data">{{ crk_ful.tracking_company }}</dd></div>
+                  {%- endif -%}
+                  {%- if crk_ful.tracking_number != blank -%}
+                    <div><dt class="crk-micro">{{ section.settings.label_tracking }}</dt>
+                      <dd class="crk-data">{{ crk_ful.tracking_number }}</dd></div>
+                  {%- endif -%}
+                </dl>
+                {%- if crk_ful.tracking_url != blank -%}
+                  <a class="crk-btn crk-btn--fill crk-track__cta" href="{{ crk_ful.tracking_url }}" rel="noopener" target="_blank">
+                    {{ section.settings.track_cta }}
+                  </a>
+                {%- endif -%}
+              </section>
+            {%- endif -%}
+
+            {%- comment -%}
+              Custody log built only from timestamps Shopify holds. No invented
+              events: if there is no fulfillment there is exactly one entry.
+            {%- endcomment -%}
+            <section class="crk-track__log">
+              <h3 class="crk-micro crk-track__subhead">{{ section.settings.log_heading }}</h3>
+              <ol class="crk-track__events">
+                {%- if crk_ful -%}
+                  <li>
+                    <span class="crk-micro">{{ crk_ful.created_at | date: '%d %b %Y — %H:%M' | upcase }}</span>
+                    <span class="crk-data">{{ section.settings.event_dispatched }}</span>
+                  </li>
+                {%- endif -%}
+                <li>
+                  <span class="crk-micro">{{ order.created_at | date: '%d %b %Y — %H:%M' | upcase }}</span>
+                  <span class="crk-data">{{ section.settings.event_logged }}</span>
+                </li>
+              </ol>
+            </section>
+          </article>
+        {%- endfor -%}
+
+      {%- else -%}
+        <p class="crk-track__empty crk-data">{{ section.settings.no_orders }}</p>
+        <a class="crk-btn crk-btn--fill crk-track__cta" href="{{ routes.all_products_collection_url }}">{{ section.settings.shop_cta }}</a>
+      {%- endif -%}
+
+    {%- else -%}
+      {%- comment -%}
+        Signed out. The emailed order-status link is named explicitly because it
+        is the only route that works without an account, and a shopper who cannot
+        sign in needs to be told it exists rather than left at a dead end.
+      {%- endcomment -%}
+      <div class="crk-track__gate">
+        <p class="crk-micro crk-track__boot">{{ section.settings.boot_line }}</p>
+        <h2 class="crk-display crk-track__title">{{ section.settings.gate_heading }}</h2>
+        <p class="crk-body crk-track__gatebody">{{ section.settings.gate_body }}</p>
+        <a class="crk-btn crk-btn--fill crk-track__cta" href="{{ routes.account_login_url }}">{{ section.settings.gate_cta }}</a>
+        <p class="crk-micro crk-track__note">{{ section.settings.gate_note }}</p>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Order Tracking",
+  "tag": "section",
+  "settings": [
+    { "type": "range", "id": "order_limit", "label": "Orders shown", "min": 1, "max": 25, "step": 1, "default": 10 },
+    { "type": "header", "content": "Status bar" },
+    { "type": "text", "id": "status_1", "label": "Status message", "default": "CROOKSLDN PROPERTY TRANSFER NETWORK" },
+    { "type": "text", "id": "boot_line", "label": "Boot line", "default": "> CHAIN OF CUSTODY DATABASE ONLINE" },
+    { "type": "header", "content": "Record" },
+    { "type": "text", "id": "record_word", "label": "Record word", "default": "Property record:" },
+    { "type": "text", "id": "full_order_label", "label": "Full order link", "default": "Full order" },
+    { "type": "text", "id": "picker_label", "label": "Order picker label (screen readers)", "default": "Choose an order" },
+    { "type": "text", "id": "timeline_label", "label": "Timeline label (screen readers)", "default": "Chain of custody" },
+    { "type": "text", "id": "label_status", "label": "Status label", "default": "Current status" },
+    { "type": "text", "id": "label_logged", "label": "Last logged label", "default": "Last logged" },
+    { "type": "text", "id": "label_items", "label": "Item count label", "default": "Item count" },
+    { "type": "text", "id": "label_sector", "label": "Destination label", "default": "Destination sector" },
+    { "type": "header", "content": "Stages" },
+    { "type": "text", "id": "stage_logged", "label": "Stage 01", "default": "Logged" },
+    { "type": "text", "id": "stage_transit", "label": "Stage 02", "default": "In transit" },
+    { "type": "text", "id": "stage_delivery", "label": "Stage 03", "default": "Delivery" },
+    { "type": "text", "id": "state_complete", "label": "State: complete", "default": "Complete" },
+    { "type": "text", "id": "state_current", "label": "State: current", "default": "Current" },
+    { "type": "text", "id": "state_locked", "label": "State: not yet", "default": "Awaiting" },
+    { "type": "text", "id": "state_courier", "label": "State: with courier", "info": "Shopify does not report delivery to the theme, so this stage hands over to the courier rather than claiming a status.", "default": "Tracked by courier" },
+    { "type": "header", "content": "Courier" },
+    { "type": "text", "id": "courier_heading", "label": "Courier heading", "default": "Courier record" },
+    { "type": "text", "id": "label_carrier", "label": "Carrier label", "default": "Carrier" },
+    { "type": "text", "id": "label_tracking", "label": "Tracking number label", "default": "Tracking number" },
+    { "type": "text", "id": "track_cta", "label": "Track button", "default": "Track with courier" },
+    { "type": "header", "content": "Custody log" },
+    { "type": "text", "id": "log_heading", "label": "Log heading", "default": "Custody log" },
+    { "type": "text", "id": "event_logged", "label": "Event: order logged", "default": "Order logged into the transfer network" },
+    { "type": "text", "id": "event_dispatched", "label": "Event: dispatched", "default": "Released from custody — tracking issued" },
+    { "type": "header", "content": "Signed out" },
+    { "type": "text", "id": "gate_heading", "label": "Heading", "default": "Identification required" },
+    { "type": "textarea", "id": "gate_body", "label": "Body", "default": "Order records are released to the account they were filed under. Sign in to view the chain of custody for your orders." },
+    { "type": "text", "id": "gate_cta", "label": "Button", "default": "Sign in" },
+    { "type": "textarea", "id": "gate_note", "label": "Note", "default": "No account? The tracking link in your dispatch email opens your order without one." },
+    { "type": "header", "content": "No orders" },
+    { "type": "textarea", "id": "no_orders", "label": "No orders text", "default": "No orders are filed under this account yet." },
+    { "type": "text", "id": "shop_cta", "label": "No orders button", "default": "View catalogue" }
+  ],
+  "presets": [{ "name": "Crooks — Order Tracking" }]
+}
+{% endschema %}

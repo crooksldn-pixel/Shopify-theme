@@ -841,3 +841,47 @@ and the choice persisting.
 first time. **Use it instead of `mouse.click` on computed coordinates** unless the point is
 specifically to test hit-testing — and when a harness says a feature is broken, suspect the
 harness before the feature.
+
+## Order tracking — ported from crooksldn-tracking-page
+
+Closes BACKLOG #10 properly, replacing the `/account` stopgap.
+
+**The prototype had no data source.** `src/lib/tracking/lookupOrder.js` is a mock over six
+hardcoded orders (`1001`–`1006`, fixed postcodes) and says so in its own header: *"DEVELOPMENT
+MOCK DATA — REMOVE / REPLACE BEFORE PRODUCTION… NEVER place a private Shopify Admin API token in
+browser code."* Ported as-is it would have returned NOT FOUND for every real order.
+
+Two departures from the prototype, both forced by what data actually exists:
+
+**1. Signed-in customer's real orders, not order-number + postcode lookup.** Guest lookup needs
+an Admin API token behind an App Proxy — infrastructure, not a theme file. `customer.orders`
+gives real orders, real carriers, real tracking numbers and URLs, today, with nothing invented.
+
+**2. The five stages collapse to two knowable ones plus a hand-off.** Shopify does not model
+MANUFACTURING or INBOUND FREIGHT at all. Liquid's `fulfillment` drop carries `created_at`,
+`tracking_company`, `tracking_number` and `tracking_url` — **and no shipment status**, so a theme
+cannot know an order was delivered either. The timeline therefore reports:
+
+| Cell | Source |
+|---|---|
+| 01 LOGGED | `order.created_at` — always true |
+| 02 IN TRANSIT | a fulfillment exists / `fulfillment_status == 'fulfilled'` |
+| 03 DELIVERY | never claimed — labelled "tracked by courier" and links to `tracking_url` |
+
+The custody log is built only from timestamps Shopify holds: order placed, and dispatch if a
+fulfillment exists. No invented events, which is why an unfulfilled order shows exactly one line.
+
+The prototype hardcodes `#0B0A0E / #0E0C13 / #3A2F4A / #A77AC7 / #DDD7C9` — exactly the terminal
+tokens — so the port maps onto `--crk-*` and follows light/dark for free.
+
+**Signed-out state names the emailed order-status link**, because that is the only route that
+works without an account and a shopper who cannot sign in otherwise hits a dead end.
+
+No-JS: every record renders stacked; the JS only chooses which one is on screen.
+
+**This store uses new customer accounts** (no `templates/customers/`, account lives on
+`friendsof.crooksldn.com`), so this is a page template — `templates/page.tracking.json` — not an
+account template.
+
+**Not yet verified in a browser:** rendering needs a page in the admin using the `tracking`
+suffix, and creating one touches the live storefront. Left for George to authorise.
