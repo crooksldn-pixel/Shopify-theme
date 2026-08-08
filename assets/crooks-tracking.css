@@ -5,11 +5,14 @@
    and follows light/dark for free.
    ============================================================ */
 .crk-track__status { background: var(--crk-panel); border-bottom: 1px solid var(--crk-line) }
-.crk-track__statusbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px }
+/* .crk-inner carries 48px of section padding and is emitted by crooks.css, which
+   several sections output — so it can land after this file and win on order.
+   Beat it on specificity (0,2,0 vs 0,1,0) instead of hoping about sequence. */
+.crk-track .crk-track__statusbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px }
 .crk-track__dot { flex: none; width: 8px; height: 8px; background: var(--crk-accent) }
 .crk-track__msg { min-width: 0; color: var(--crk-dim) }
 
-.crk-track__boot { color: var(--crk-accent); padding: 24px 0 0 }
+.crk-track .crk-track__boot { color: var(--crk-accent); padding: 0 0 8px }
 .crk-track__picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0 }
 
 .crk-track__record { margin-top: 24px; border: 1px solid var(--crk-line); background: var(--crk-panel) }
@@ -43,7 +46,7 @@
 .crk-track__events { display: grid; gap: 10px }
 .crk-track__events li { display: grid; gap: 2px; padding-left: 14px; border-left: 1px solid var(--crk-line) }
 
-.crk-track__gate { padding: 48px 0; max-width: 560px }
+.crk-track .crk-track__gate { padding: 8px 0 48px; max-width: 560px }
 .crk-track__gatebody { margin: 12px 0 24px }
 .crk-track__note { margin-top: 16px; color: var(--crk-dim) }
 .crk-track__empty { padding: 48px 0 16px }
