@@ -975,3 +975,49 @@ storefront currently sees the left-hand cart; publishing is the fix.
 **The standing lesson:** when the person holding the phone says it is broken and the harness says
 it is fine, establish *which build they are looking at* before measuring anything again. Two
 rounds of re-measuring were spent before checking the most likely explanation.
+
+## Collection pages now render the register
+
+`/collections/all` — and every other collection page — was still Horizon's stock
+`main-collection` + `category-bar`, in stark contrast to the rest of the site. They now render
+`crooks-exhibit-log`, the same section as the homepage catalogue.
+
+**The section had to learn where it is.** It read `collections[section.settings.collection]`,
+a fixed handle — so on a collection template every category page would have shown the same
+products. It now prefers the collection being viewed:
+
+    assign crk_col = collections[section.settings.collection]
+    if collection and collection.handle != blank
+      assign crk_col = collection
+    endif
+
+`collection` is only defined on collection templates, so the homepage is untouched and needs no
+new setting. The heading falls back to `collection.title` when the section's own heading is
+blank, so the homepage keeps "Catalogue" while each collection page carries its own name.
+
+Verified on the deployed build:
+
+| Page | Cards | Heading | Filter chips |
+|---|---|---|---|
+| /collections/all | 14 | ALL | ALL · T-SHIRT · DENIM · SWEATS · ACCESSORIES |
+| /collections/denim | 4 | Denim | *(none — see below)* |
+| /collections/tees | 4 | Tees | none |
+| /collections/accessories | 3 | Accessories | none |
+| /collections/new | 9 | New | ALL · T-SHIRT · DENIM · SWEATS |
+
+**The filter rail now needs more than one category, not more than zero.** On
+`/collections/denim` every product is Denim, so it rendered "ALL | DENIM" — two controls that
+do nothing.
+
+**The outline toggle is off on collection pages.** It is a temporary evaluation control and it
+was taking a third full row of chrome above the first product on a phone. It stays on the
+homepage, which is where the comparison is being made.
+
+Horizon's template is preserved verbatim as `templates/collection.horizon.json`, the same
+treatment `product.horizon.json` got.
+
+No horizontal overflow at 390 or 320.
+
+**Not addressed:** the section renders `crk_col.products` with no `paginate`. At 14 products
+that is fine; past ~50 a collection page would silently truncate. Worth revisiting before the
+catalogue grows.

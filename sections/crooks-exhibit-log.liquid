@@ -2,8 +2,30 @@
 <script src="{{ 'crooks-terminal.js' | asset_url }}" defer></script>
 
 {%- liquid
-  assign crk_products = collections[section.settings.collection].products
+  comment
+    Source: the collection being viewed when this renders on a collection template,
+    otherwise the one chosen in the section settings. `collection` is only defined
+    on collection templates, so the homepage is unaffected and needs no setting.
+
+    Without this, /collections/denim would render whatever fixed collection the
+    section was configured with — every category page showing the same products.
+  endcomment
+  assign crk_col = collections[section.settings.collection]
+  if collection and collection.handle != blank
+    assign crk_col = collection
+  endif
+  assign crk_products = crk_col.products
   assign crk_total = crk_products.size
+
+  comment
+    On a collection page the collection's own title is the honest heading. The
+    section setting still wins when it is filled in, so the homepage keeps
+    "Catalogue" and a merchant can override any single page.
+  endcomment
+  assign crk_heading = section.settings.heading
+  if crk_heading == blank and collection and collection.title != blank
+    assign crk_heading = collection.title
+  endif
 
   comment
     Build the list of categories actually present, from product.type. Never a
@@ -49,8 +71,8 @@
 <section class="crk-root crk-section crk-exhibit-log" data-crk-section="exhibit-log" data-crk-view="product" id="{{ section.settings.anchor_id | default: 'exhibits' }}">
   <div class="crk-inner">
     <header class="crk-log__head">
-      {%- if section.settings.heading != blank -%}
-        <h2 class="crk-h2">{{ section.settings.heading }}</h2>
+      {%- if crk_heading != blank -%}
+        <h2 class="crk-h2">{{ crk_heading }}</h2>
       {%- endif -%}
       {%- if section.settings.subheading != blank -%}
         <p class="crk-eyebrow">{{ section.settings.subheading }}</p>
@@ -95,7 +117,11 @@
       </div>
     {%- endif -%}
 
-    {%- if section.settings.show_filters and crk_categories.size > 0 -%}
+    {%- comment -%}
+      More than one category, not more than zero: on /collections/denim every product
+      is Denim, so the rail would render "ALL | DENIM" — two controls that do nothing.
+    {%- endcomment -%}
+    {%- if section.settings.show_filters and crk_categories.size > 1 -%}
       <div class="crk-filters" role="group" aria-label="{{ section.settings.filters_label | escape }}">
         <button type="button" class="crk-filter" data-crk-filter="ALL" aria-pressed="true">
           {{ section.settings.all_label }}
