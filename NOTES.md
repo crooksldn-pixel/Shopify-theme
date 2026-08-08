@@ -441,3 +441,33 @@ preload. It is left as a hand-written `<link>` on purpose: `preload_tag` emits t
 `url('vt323.woff2')` the stylesheet actually requests is precisely the bug BACKLOG #8 is
 about — the font downloaded twice and reflowed the buy panel 28 px. The warning predates
 this change; the raw `<link>` was already there.
+
+## BACKLOG #15 — the reflow failure was bigger than the audit's diagnosis
+
+The audit attributed the 200% zoom failure (scrollWidth 308 vs clientWidth 195) to three
+offenders: `.crk-status__msg`, `.crk-header__actions` and `.crk-table`. Removing the first
+`white-space: nowrap` and giving the table a scrollport took the PDP from 308 to 298 and the
+homepage from 375 to 375 — i.e. almost nothing. The real cause was structural and appeared
+in five places, all the same bug:
+
+**Grid and flex items default to `min-width: auto`, so the widest unbreakable child sets the
+floor and the container refuses to shrink.**
+
+| Where | Floor set by | Fix |
+|---|---|---|
+| `.crk-log__cell` | longest product name | `min-width: 0` |
+| `.crk-hero__type` | `.crk-boot__line` (nowrap) + the display `h1` | `min-width: 0` |
+| `.crk-grid > *` | case + intake panels | `min-width: 0` |
+| `.crk-input` | `flex: 1 1 220px` basis | `min-width: 0` |
+| `.crk-spec` | `minmax(96px, auto)` term column left the value ~1px | stack below 360px |
+
+Plus wrapping for rows that genuinely cannot fit tracked uppercase on one line at 195 CSS px:
+`.crk-card__top`, `.crk-card__row`, `.crk-views`, and `.crk-header__bar` below 360px.
+
+Measured after: homepage **195/195** and **320/320**, PDP **195/195** and **320/320**. Both
+templates were re-shot at 390 and 1440 to confirm nothing moved at normal widths.
+
+**Method note.** The first verification run reported all of this still broken, because the
+harness fetched `crooks.css` from the bare asset path and Shopify's CDN served a stale build
+for it. The `?v=` cache-buster has to stay on the request *and* in the local cache key. A
+harness that silently tests yesterday's CSS reports confident nonsense.

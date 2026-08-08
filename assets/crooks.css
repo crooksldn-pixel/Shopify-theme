@@ -110,7 +110,7 @@
 .crk-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
 
 /* ---- type scale ---- */
-.crk-h1 { font-family: var(--crk-font-display); font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: 0; text-transform: uppercase }
+.crk-h1 { font-family: var(--crk-font-display); font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: 0; text-transform: uppercase; overflow-wrap: anywhere }
 .crk-h2 { font-family: var(--crk-font-display); font-weight: 400; font-size: 32px; line-height: 1; letter-spacing: 0; text-transform: uppercase }
 .crk-price { font-family: var(--crk-font-display); font-weight: 400; font-size: 22px; line-height: 1; letter-spacing: 0 }
 .crk-eyebrow { font-weight: 500; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--crk-lav) }
@@ -132,6 +132,7 @@
 .crk-btn--ghost:active { background: var(--crk-press) }
 .crk-btn:hover { border-color: var(--crk-lav) }
 .crk-grid { display: grid; gap: 24px }
+.crk-grid > * { min-width: 0 }
 @media (min-width: 1024px) { .crk-grid { grid-template-columns: repeat(12, 1fr) } }
 /* The scanline is no longer a full-page overlay — see the texture block at the
    end of this file. .crk-scan is retained as an inert no-op so any lingering
@@ -144,6 +145,10 @@
 
 /* ---- hero intake ---- */
 .crk-hero__grid { display: grid; gap: 32px }
+/* Same grid-item floor as the register: min-width defaults to auto, so the nowrap
+   boot line and the display h1 set the column's minimum and the hero refused to
+   shrink below ~303px. The boot line already clips itself; the h1 now wraps. */
+.crk-hero__board, .crk-hero__type { min-width: 0 }
 @media (min-width: 1024px) {
   .crk-hero__grid { grid-template-columns: repeat(12, 1fr); gap: 24px; align-items: center }
   .crk-hero__board { grid-column: 1 / 7 }
@@ -180,10 +185,15 @@
 .crk-filter[aria-pressed="true"]::before { content: "> " }
 .crk-log__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--crk-line); border: 1px solid var(--crk-line) }
 @media (min-width: 1024px) { .crk-log__grid { grid-template-columns: repeat(4, 1fr) } }
-.crk-log__cell { background: var(--crk-void) }
+/* min-width:0 — grid items default to min-width:auto, so the longest product name
+   set the column floor and the 2-up register overflowed 320px and 200% zoom. */
+.crk-log__cell { background: var(--crk-void); min-width: 0 }
 .crk-log__cell[hidden] { display: none }
 .crk-card { display: block; height: 100%; padding: 12px; border: 1px solid transparent }
-.crk-card__top { display: flex; justify-content: space-between; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--crk-line); color: var(--crk-dim) }
+/* Both card rows wrap at very narrow widths: NO. 01 / ACCESSORIES and price / status
+   are tracked uppercase and cannot fit one line at 200% zoom. Wrapping keeps every
+   field readable; the row order is unchanged. */
+.crk-card__top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--crk-line); color: var(--crk-dim) }
 .crk-card__media { position: relative; display: block; aspect-ratio: 1 / 1; margin: 12px 0; overflow: hidden; background: var(--crk-panel) }
 .crk-card__img { width: 100%; height: 100%; object-fit: cover }
 .crk-root .crk-card__img--alt { display: none; position: absolute; inset: 0 }
@@ -192,9 +202,9 @@
    REST on every device — not just on hover. That is the actual double-render:
    the transparent PNGs composited two garments with no interaction at all, which
    is why it was worst on touch, where there is no hover state to leave. */
-.crk-card__name { display: block; font-weight: 500; font-size: 12px; line-height: 1.4; text-transform: uppercase; margin-bottom: 8px; min-height: 2.8em }
-.crk-card__row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px }
-.crk-card__status { font-weight: 500; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-lav) }
+.crk-card__name { display: block; font-weight: 500; font-size: 12px; line-height: 1.4; text-transform: uppercase; margin-bottom: 8px; min-height: 2.8em; overflow-wrap: anywhere }
+.crk-card__row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px }
+.crk-card__status { font-weight: 500; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-lav); overflow-wrap: anywhere }
 .crk-card--sold .crk-card__status { color: var(--crk-red) }
 .crk-card--sold .crk-card__img { opacity: .55 }
 @media (hover: hover) and (pointer: fine) {
@@ -238,7 +248,7 @@
 @media (min-width: 1024px) { .crk-intake__panel { grid-column: 1 / 8 } }
 .crk-intake__sub { max-width: 52ch; margin-top: 12px }
 .crk-intake__form { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 12px }
-.crk-input { flex: 1 1 220px; min-height: 48px; background: var(--crk-panel); border: 1px solid var(--crk-line); color: var(--crk-paper); font: inherit; letter-spacing: .02em; padding: 0 16px }
+.crk-input { flex: 1 1 220px; min-width: 0; min-height: 48px; background: var(--crk-panel); border: 1px solid var(--crk-line); color: var(--crk-paper); font: inherit; letter-spacing: .02em; padding: 0 16px }
 .crk-input::placeholder { color: var(--crk-dim) }
 .crk-input:focus { border-color: var(--crk-lav) }
 .crk-intake__msg { width: 100%; font-size: 12px; letter-spacing: .1em; text-transform: uppercase }
@@ -314,6 +324,11 @@
 /* spec + measurements */
 .crk-spec { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 8px 24px }
 .crk-spec dt { font-weight: 500; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--crk-dim); align-self: baseline }
+.crk-spec dd { min-width: 0; overflow-wrap: anywhere }
+/* Below ~360 CSS px (a 390px phone at 200% zoom) the 96px term column leaves the
+   value column ~1px wide and the spec list pushed the page. Stack it there only;
+   ordinary phones keep the two-column reading. */
+@media (max-width: 359px) { .crk-spec { grid-template-columns: 1fr; gap: 4px 0 } }
 /* The table is the widest fixed thing in the record. Left to itself it pushed the
    page to 308px against a 195px viewport at 200% zoom — a WCAG 1.4.10 reflow
    failure. It now scrolls in its own box; focusable so a keyboard can reach it. */
@@ -391,6 +406,13 @@
    wordmark absorbs whatever is left. */
 .crk-header__logo { min-width: 0; overflow: hidden; white-space: nowrap }
 .crk-header__actions { flex: none }
+/* At 200% zoom a 390px phone is 195 CSS px and the tightened bar still cannot fit
+   the wordmark plus three 44px controls on one row. Wrap rather than shrink the
+   targets: the cart stays in the bar, which is the rule that matters. */
+@media (max-width: 359px) {
+  .crk-header__bar { flex-wrap: wrap }
+  .crk-header__actions { flex-wrap: wrap; margin-left: 0; width: 100% }
+}
 
 /* no-JS fallback: the drawer cannot open, so the menu renders inline instead */
 .crk-header__nofallback { border-top: 1px solid var(--crk-line); padding: 8px 16px }
@@ -448,7 +470,7 @@
 .crk-record .crk-display { font-family: var(--crk-font-display); line-height: 1; letter-spacing: 0; font-weight: 400; }
 .crk-record .crk-title { font-size: 32px; text-transform: uppercase; margin: 0; }
 .crk-record .crk-price { font-size: 26px; }
-.crk-record .crk-h { font-size: 22px; text-transform: uppercase; margin: 0; }
+.crk-record .crk-h { font-size: 22px; text-transform: uppercase; margin: 0; overflow-wrap: anywhere; }
 .crk-record .crk-label { font-size: 10px; font-weight: 500; letter-spacing: 0.24em; text-transform: uppercase; color: var(--crk-accent); }
 .crk-record .crk-body { font-size: 14px; letter-spacing: 0.01em; }
 .crk-record .crk-data { font-size: 13px; letter-spacing: 0; }
@@ -629,7 +651,7 @@
 /* ---- catalogue view mode: PRODUCT / MODEL ----
    Every rule carries the .crk-root prefix so it outranks `.crk-root img`
    (0,1,1) — the trap that previously left two card images painted at once. */
-.crk-root .crk-views { display: flex; gap: 8px; margin-bottom: 16px }
+.crk-root .crk-views { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px }
 .crk-root .crk-card__img--model { display: none; position: absolute; inset: 0 }
 .crk-root[data-crk-view="model"] .crk-card__img--main,
 .crk-root[data-crk-view="model"] .crk-card__img--alt { display: none }
