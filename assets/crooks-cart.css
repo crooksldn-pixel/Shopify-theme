@@ -233,7 +233,9 @@ main .size-style.link,
   .cart-items__table > tbody,
   .cart-items__table > thead { display: block }
 
-  .cart-items__table-row {
+  /* tbody only: the <thead> header row carries the same class and is a clipped,
+     visually-hidden row — it should not be laid out as a grid. */
+  tbody > .cart-items__table-row {
     display: grid;
     grid-template-columns: 88px minmax(0, 1fr);
     grid-template-areas:
@@ -246,7 +248,7 @@ main .size-style.link,
     padding: 16px 0;
     border-bottom: 1px solid rgb(var(--color-border-rgb));
   }
-  .cart-items__table-row > td { display: block; padding-left: 0; padding-right: 0; min-width: 0 }
+  tbody > .cart-items__table-row > td { display: block; padding-left: 0; padding-right: 0; min-width: 0 }
   .cart-items__media    { grid-area: media; width: 88px; max-width: 88px }
   .cart-items__details  { grid-area: details }
   .cart-items__quantity { grid-area: quantity; justify-self: start }

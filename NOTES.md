@@ -948,3 +948,30 @@ again if Horizon's header were restored.
 
 **The lesson:** a theme *setting* and a *snippet that exists* are not evidence that anything
 renders. Grep the served HTML, not the repo. Two greps would have saved the whole detour.
+
+## The reported mobile cart clash was the LIVE theme, not a bug
+
+Reproduced by building an identical cart in one session and rendering it twice under iPhone 13
+emulation — once with `?preview_theme_id=202053779799`, once without:
+
+| | details column | title | outcome |
+|---|---|---|---|
+| Live theme | **68px** | wraps to two lines | collides with the quantity stepper |
+| Staging | **256px** | single line | clean |
+
+Live carries neither `crooks-cart.css` nor any `crk-` markup. The preview cookie is per-browser,
+so opening the preview on desktop does not carry to a phone. Every customer on the live
+storefront currently sees the left-hand cart; publishing is the fix.
+
+**Two measurement errors of my own, found on the way:**
+
+1. `.cart-items__table-row` is on the `<thead>` header row as well as the body rows.
+   `querySelector('.cart-items__table-row')` returns the clipped, 1px-wide hidden header — so
+   cells, title and image all measured as null and an earlier screenshot clipped around the
+   wrong element by luck. Row measurements must be scoped `tbody > .cart-items__table-row`.
+   The mobile grid is now scoped the same way, so the hidden header row is not laid out as one.
+2. Diagnosing from the repo instead of the served HTML produced the cart-drawer detour above.
+
+**The standing lesson:** when the person holding the phone says it is broken and the harness says
+it is fine, establish *which build they are looking at* before measuring anything again. Two
+rounds of re-measuring were spent before checking the most likely explanation.
