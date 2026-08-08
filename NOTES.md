@@ -655,3 +655,32 @@ only difference.
 fallback themes existed, so there is no pre-push control to diff against. The homepage renders
 with all of George's requested copy intact, but if he made homepage edits in the theme editor
 between the repo's last sync and that push, they cannot be recovered from here.
+
+## "Statement of provenance" → "Item description"
+
+Provenance means an object's documented ownership and origin history — an art-and-antiques
+term. The accordion it labelled renders `product.description`: fabric, cut, fit. The label
+promised origin history and delivered a product description.
+
+Three reasons it had to go, beyond the plain mismatch:
+
+- **It collided with CHAIN OF CUSTODY.** In both evidence and art usage the two phrases mean
+  nearly the same thing. Two headings on one page, meaning different things, sharing a meaning.
+- **The audience won't have the word.** Traffic is Instagram and TikTok, young, mobile.
+- **It was BACKLOG #13 again on a different accordion.** Good content behind a label that does
+  not say what is inside. Persona 1 went hesitant at step 7 for exactly that reason on the
+  custody panel and only converted at step 8 after opening it.
+
+Now `Item description`, and it opens by default — `SPECIFICATION` and `MEASUREMENTS` were both
+open while the description, the thing most shoppers want first, was the one collapsed.
+
+**Method note, following the header-group incident.** `provenance_open` looked persisted in the
+repo's `templates/product.json`, which would have meant the schema default could not take
+effect. Pulling that file from the theme first showed the opposite: the theme stores *fewer*
+keys than the repo, so those accordions run on schema defaults and changing the default was
+sufficient — no template push, no merchant data touched. The repo copy has been synced to the
+theme's so the stale keys cannot cause a future clobber.
+
+`templates/index.json` was diffed the same way and is clean: the only difference is an empty
+`"settings": {}` object Shopify normalises. The earlier worry that the index push might have
+lost editor changes is retracted — it did not.
