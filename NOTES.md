@@ -621,3 +621,37 @@ no Liquid goes anywhere near a style tag.
 A recolour-by-mask would hit `--crk-text` exactly rather than approximately, but the logo URL is
 a merchant setting and CSS `mask-image` would need that URL inlined — which is the thing the
 house rules forbid. Invert is the honest trade.
+
+## Incident — pushing an editor-owned JSON wiped merchant settings
+
+**What happened.** Changing the announcement-bar copy, I edited `sections/header-group.json`
+in the repo and pushed it. Section-group and template JSON files are written by the **theme
+editor**, so the authoritative copy lives on the theme, not in git. The repo copy was stale, and
+pushing it overwrote four settings George had set in the editor:
+
+| Setting | Was on the theme | After my push |
+|---|---|---|
+| `logo` | `shopify://shop_images/IMG_3682.png` | *gone* — header fell back to the wordmark |
+| `show_theme_toggle` | `true` | *gone* |
+| `label_to_light` / `label_to_dark` | `LIGHT MODE` / `DARK MODE` | *gone* |
+| status message `m3` | `[count] PRODUCTS CURRENTLY ONLINE` | reverted to `[count] EXHIBITS CURRENTLY LOGGED` |
+| status message `m2` | *deleted in the editor* | **re-added** (`PROPERTY STORE — UNIT 7, LONDON`) |
+
+The last two are worse than the first three: they silently reinstated copy George had explicitly
+asked to be removed.
+
+**Fix.** Pulled `header-group.json` from the pre-audit fallback theme (#203044159831), which
+still held the correct editor state, re-applied *only* the announcement copy change on top, and
+pushed that. The repo copy now matches the theme.
+
+**Rule going forward.** Before pushing any `sections/*-group.json` or `templates/*.json`, pull
+that file from the target theme first and edit the pulled version. `.liquid`, `.css` and `.js`
+assets are code and safe to push from the repo; the JSON is merchant data and is not.
+
+`footer-group.json` was checked the same way and was clean — the `TRACK ORDER` addition was the
+only difference.
+
+**Unverified.** `templates/index.json` was pushed earlier in the same session, before the
+fallback themes existed, so there is no pre-push control to diff against. The homepage renders
+with all of George's requested copy intact, but if he made homepage edits in the theme editor
+between the repo's last sync and that push, they cannot be recovered from here.

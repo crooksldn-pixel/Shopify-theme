@@ -281,6 +281,34 @@
               <p class="crk-stockline" data-crk-delivery{% unless crk_var.available %} hidden{% endunless %}>{{ section.settings.made_to_order_text }}</p>
             {%- elsif section.settings.in_stock_text != blank -%}
               <p class="crk-stockline" data-crk-delivery{% unless crk_var.available %} hidden{% endunless %}>{{ section.settings.in_stock_text }}</p>
+
+              {%- comment -%}
+                Dispatch state readout. Deliberately NOT a countdown: a ticking clock is
+                the one urgency pattern the brand rules out, and it is what makes a real
+                shipping promise read as pressure selling. This is a status line in the
+                same voice as "> 14 PRODUCTS AVAILABLE TO PURCHASE" — it reports a fact
+                and stops.
+
+                Computed client-side because Liquid's `now` is server-side and these
+                pages are CDN-cached, so a server-rendered state would go stale and lie.
+                With JS off nothing renders here and the static line above still carries
+                the full, always-true promise.
+
+                Config travels as data-* attributes — no Liquid inside a script tag.
+              {%- endcomment -%}
+              {%- if section.settings.dispatch_show -%}
+                <p
+                  class="crk-stockline crk-dispatch"
+                  data-crk-dispatch
+                  data-crk-cutoff="{{ section.settings.dispatch_cutoff_hour }}"
+                  data-crk-dispatch-days="{{ section.settings.dispatch_days }}"
+                  data-crk-tz="{{ section.settings.dispatch_timezone }}"
+                  data-crk-today="{{ section.settings.dispatch_today | escape }}"
+                  data-crk-tomorrow="{{ section.settings.dispatch_tomorrow | escape }}"
+                  data-crk-nextopen="{{ section.settings.dispatch_next_open | escape }}"
+                  hidden
+                ></p>
+              {%- endif -%}
             {%- endif -%}
 
             {%- comment -%} App blocks (size charts, reviews) render here. {%- endcomment -%}
@@ -590,9 +618,17 @@
     { "type": "text", "id": "sr_left", "label": "\"left\" (screen readers)", "default": "left" },
     { "type": "text", "id": "nojs_note", "label": "No-JavaScript note", "default": "CHOOSE A SIZE:" },
     { "type": "header", "content": "Delivery" },
-    { "type": "text", "id": "in_stock_text", "label": "In-stock delivery line", "default": "In stock · Ships within 24 hours" },
+    { "type": "text", "id": "in_stock_text", "label": "In-stock delivery line", "default": "Order before 18:00 and it ships today (Mon–Sat)" },
     { "type": "text", "id": "made_to_order_text", "label": "Made-to-order delivery line", "default": "Made to order · Ships in 9–16 days" },
     { "type": "text", "id": "made_to_order_tag", "label": "Made-to-order tag", "default": "made-to-order" },
+    { "type": "header", "content": "Dispatch cutoff" },
+    { "type": "checkbox", "id": "dispatch_show", "label": "Show the dispatch state line", "info": "A status line under the delivery line. Never a countdown.", "default": true },
+    { "type": "range", "id": "dispatch_cutoff_hour", "label": "Cutoff hour (24h, shop time)", "min": 0, "max": 23, "step": 1, "unit": "h", "default": 18 },
+    { "type": "text", "id": "dispatch_days", "label": "Dispatch days", "info": "Day numbers, 1 = Monday. Mon-Sat is 1,2,3,4,5,6.", "default": "1,2,3,4,5,6" },
+    { "type": "text", "id": "dispatch_timezone", "label": "Shop timezone", "info": "IANA name. The cutoff is judged in this zone, not the shopper's.", "default": "Europe/London" },
+    { "type": "text", "id": "dispatch_today", "label": "Before cutoff, on a dispatch day", "default": "Ordered now \u2014 leaves today" },
+    { "type": "text", "id": "dispatch_tomorrow", "label": "After cutoff, next day is a dispatch day", "default": "Ordered now \u2014 leaves tomorrow" },
+    { "type": "text", "id": "dispatch_next_open", "label": "Otherwise (closed tomorrow)", "default": "Ordered now \u2014 leaves Monday" },
     { "type": "header", "content": "Sold out" },
     { "type": "text", "id": "released_text", "label": "Released text", "default": "RELEASED — NO LONGER IN CUSTODY" },
     { "type": "text", "id": "notify_variant_label", "label": "Notify label (size sold out)", "default": "Tell me when this size is back" },
@@ -643,7 +679,7 @@
     {
       "name": "Crooks — Product Record",
       "blocks": [
-        { "type": "custody_step", "settings": { "label": "Logged", "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday." } },
+        { "type": "custody_step", "settings": { "label": "Logged", "body": "Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day." } },
         { "type": "custody_step", "settings": { "label": "Dispatched", "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order." } },
         { "type": "custody_step", "settings": { "label": "In transit", "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days." } },
         { "type": "custody_step", "settings": { "label": "Released", "body": "You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: info@crooksldn.com." } }

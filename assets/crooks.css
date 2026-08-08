@@ -541,6 +541,12 @@
 .crk-record .crk-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
 /* Variant-level restock capture. --crk-red is reserved for sold-out states and was
    until now unused; a 1px rule is the whole treatment. No radius, no shadow. */
+/* Dispatch state readout. Same weight as the delivery line above it, marked with
+   the terminal's own "> " prefix so it reads as a status report rather than a
+   sales line. Accent, never red: red is reserved for errors and sold-out. */
+.crk-record .crk-dispatch { color: var(--crk-accent); margin-top: 2px }
+.crk-record .crk-dispatch::before { content: "> " }
+.crk-record .crk-dispatch[hidden] { display: none }
 .crk-record .crk-notifypanel { margin-top: 16px; padding: 16px; border: 1px solid var(--crk-red) }
 .crk-record .crk-notifypanel[hidden] { display: none }
 .crk-record .crk-input { width: 100%; min-height: 44px; padding: 0 12px; background: var(--crk-ground); border: 1px solid var(--crk-line); color: var(--crk-text); font-family: inherit; font-size: 14px; }

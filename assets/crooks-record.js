@@ -22,6 +22,7 @@
     var notifyPanel = root.querySelector('[data-crk-notify-panel]');
     var notifyVariant = root.querySelector('[data-crk-notify-variant]');
     var deliveryLine = root.querySelector('[data-crk-delivery]');
+    var dispatchLine = root.querySelector('[data-crk-dispatch]');
 
     var L = {
       add: root.getAttribute('data-crk-label-add') || 'Add to bag',
@@ -105,6 +106,59 @@
       return '';
     }
 
+    /* ---- dispatch state ----
+     * Reports which day an order placed *now* leaves on. Deliberately not a
+     * countdown: no minutes, no seconds, nothing ticking. It answers the only
+     * question a shopper actually has and then stops.
+     *
+     * Judged in the shop's timezone, never the device's — someone ordering from
+     * Berlin at 18:30 local is 17:30 in London and still makes the cutoff.
+     * If Intl cannot resolve the zone we render nothing and let the static
+     * sentence above carry the promise, rather than guess and be wrong.
+     */
+    function dispatchState() {
+      if (!dispatchLine) return null;
+      var tz = dispatchLine.getAttribute('data-crk-tz') || 'Europe/London';
+      var cutoff = parseInt(dispatchLine.getAttribute('data-crk-cutoff'), 10);
+      if (isNaN(cutoff)) return null;
+      var days = (dispatchLine.getAttribute('data-crk-dispatch-days') || '')
+        .split(',').map(function (d) { return parseInt(d, 10); })
+        .filter(function (d) { return d >= 1 && d <= 7; });
+      if (!days.length) return null;
+
+      var wd, hour;
+      try {
+        var parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: tz, weekday: 'short', hour: '2-digit', hour12: false
+        }).formatToParts(new Date());
+        var map = {};
+        for (var i = 0; i < parts.length; i++) map[parts[i].type] = parts[i].value;
+        var order = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+        wd = order[map.weekday];
+        hour = parseInt(map.hour, 10);
+        // en-GB renders midnight as 24 in some engines.
+        if (hour === 24) hour = 0;
+      } catch (e) { return null; }
+      if (!wd || isNaN(hour)) return null;
+
+      var open = days.indexOf(wd) !== -1;
+      if (open && hour < cutoff) return 'today';
+      var tomorrow = wd === 7 ? 1 : wd + 1;
+      return days.indexOf(tomorrow) !== -1 ? 'tomorrow' : 'nextopen';
+    }
+
+    function renderDispatch(soldChoice) {
+      if (!dispatchLine) return;
+      var state = soldChoice ? null : dispatchState();
+      if (!state) { dispatchLine.hidden = true; return; }
+      var key = { today: 'data-crk-today', tomorrow: 'data-crk-tomorrow', nextopen: 'data-crk-nextopen' }[state];
+      var text = dispatchLine.getAttribute(key);
+      if (!text) { dispatchLine.hidden = true; return; }
+      dispatchLine.textContent = text;
+      dispatchLine.setAttribute('data-crk-dispatch-state', state);
+      dispatchLine.hidden = false;
+    }
+
     function render() {
       for (var g = 0; g < nOpts; g++) {
         var btns = groups[g].querySelectorAll('.crk-size');
@@ -166,6 +220,7 @@
       }
       // A dispatch promise must not sit under a sold-out line.
       if (deliveryLine) deliveryLine.hidden = soldChoice;
+      renderDispatch(soldChoice);
 
       if (v && v.available) {
         try {
@@ -211,6 +266,16 @@
     }
 
     if (nOpts) render();
+    else renderDispatch(false);
+
+    // A tab left open across 18:00 would keep claiming "leaves today". Re-check when
+    // the shopper comes back to it. No interval: a line that rewrites itself while
+    // being read is the countdown behaviour this deliberately avoids.
+    if (dispatchLine) {
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) renderDispatch(dispatchLine.hasAttribute('data-crk-sold'));
+      });
+    }
 
     if (form) {
       form.addEventListener('submit', function (e) {
