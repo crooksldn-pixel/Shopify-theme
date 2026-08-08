@@ -7,7 +7,7 @@
         "n": 1,
         "title": "Homepage on arrival — before any key is pressed",
         "screenshot": "audit/screens/p6-step1.png",
-        "seconds": 7.7,
+        "seconds": 10.4,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -17,7 +17,7 @@
           "Accept",
           "Decline",
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "14 PRODUCTS CURRENTLY ONLINE",
           "SEARCH",
           "BAG",
           "[0]",
@@ -40,7 +40,7 @@
         "n": 2,
         "title": "Tabbing from the top of the homepage to the first product link",
         "screenshot": "audit/screens/p6-step2.png",
-        "seconds": 12.5,
+        "seconds": 13.7,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -53,6 +53,7 @@
           "14 ITEMS",
           "PRODUCT",
           "MODEL",
+          "Outline",
           "ALL",
           "T-SHIRT",
           "DENIM",
@@ -63,12 +64,11 @@
           "£50.00",
           "AVAILABLE",
           "NO. 02",
-          "CHARCOAL CELLBLOCK SHORTS",
-          "£45.00"
+          "CHARCOAL CELLBLOCK SHORTS"
         ],
-        "scrollViewports": 0.89,
+        "scrollViewports": 0.96,
         "url": "/",
-        "tabsToFirstProduct": 19,
+        "tabsToFirstProduct": 20,
         "found": true,
         "firstStops": [
           "a#shopify-pc__banner__ \"Privacy Policy\"",
@@ -86,20 +86,20 @@
         "n": 3,
         "title": "Tabbing to the size buttons on the PDP",
         "screenshot": "audit/screens/p6-step3.png",
-        "seconds": 18.8,
+        "seconds": 20.5,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
           "LIGHT MODE",
           "MENU",
           "← Catalogue",
-          "PRODUCT 04 / 14",
+          "PRODUCT 03 / 14",
           "DENIM",
-          "Photo 1 of 1",
+          "Photo 1 of 2",
           "BLUE WASH OG JEANS",
           "£60.00",
           "Size",
@@ -110,21 +110,20 @@
           "XL",
           "IN STOCK",
           "Size guide",
-          "In stock · Ships within 24 hours"
+          "£60.00 · XS"
         ],
         "scrollViewports": 0,
         "url": "/products/cb2-wash-jeans",
-        "tabsToSize": 9,
+        "tabsToSize": 11,
         "found": true
       },
       {
         "n": 4,
         "title": "Selected a size with Enter, then tabbed to ADD TO BAG",
         "screenshot": "audit/screens/p6-step4.png",
-        "seconds": 20,
+        "seconds": 21.8,
         "tapsSoFar": 1,
         "firstViewportText": [
-          "Photo 1 of 1",
           "BLUE WASH OG JEANS",
           "£60.00",
           "Size",
@@ -135,22 +134,23 @@
           "XL",
           "IN STOCK",
           "Size guide",
-          "In stock · Ships within 24 hours",
+          "Order before 18:00 and it ships today (Mon–Sat)",
+          "Ordered now — leaves Monday",
           "Release request",
           "Add to bag",
+          "More payment options",
           "Specification",
           "−",
           "Fabric",
           "14oz denim",
           "Cut",
           "OG straight, mid rise",
-          "Origin",
-          "Made in Portugal"
+          "Origin"
         ],
-        "scrollViewports": 0.56,
+        "scrollViewports": 0.69,
         "url": "/products/cb2-wash-jeans",
         "afterEnter": {
-          "sticky": "BLUE WASH OG JEANS £60.00 · XS ADD TO BAG",
+          "sticky": "BLUE WASH OG JEANS £60.00 · XS ADD TO BAG CHECKOUT NOW",
           "focused": "XS"
         },
         "extraTabsToATC": 6,
@@ -160,10 +160,9 @@
         "n": 5,
         "title": "Screen-reader surface of the PDP",
         "screenshot": "audit/screens/p6-step5.png",
-        "seconds": 20.2,
+        "seconds": 21.9,
         "tapsSoFar": 1,
         "firstViewportText": [
-          "Photo 1 of 1",
           "BLUE WASH OG JEANS",
           "£60.00",
           "Size",
@@ -174,22 +173,23 @@
           "XL",
           "IN STOCK",
           "Size guide",
-          "In stock · Ships within 24 hours",
+          "Order before 18:00 and it ships today (Mon–Sat)",
+          "Ordered now — leaves Monday",
           "Release request",
           "Add to bag",
+          "More payment options",
           "Specification",
           "−",
           "Fabric",
           "14oz denim",
           "Cut",
           "OG straight, mid rise",
-          "Origin",
-          "Made in Portugal"
+          "Origin"
         ],
-        "scrollViewports": 0.57,
+        "scrollViewports": 0.71,
         "url": "/products/cb2-wash-jeans",
         "sr": {
-          "totalControls": 35,
+          "totalControls": 40,
           "unnamedControls": [],
           "h1": [
             "BLUE WASH OG JEANS"
@@ -198,9 +198,9 @@
             "H2: Cookie consent",
             "H1: BLUE WASH OG JEANS",
             "H2: SPECIFICATION −",
-            "H2: STATEMENT OF PROVENANCE +",
+            "H2: ITEM DESCRIPTION −",
             "H2: MEASUREMENTS −",
-            "H2: CHAIN OF CUSTODY +",
+            "H2: CHAIN OF CUSTODY — SHIPPING & RETURNS +",
             "H2: FILED UNDER THE SAME CASE",
             "H2: SHOP",
             "H2: INFORMATION",
@@ -214,7 +214,7 @@
             "header",
             "footer"
           ],
-          "imagesMissingAlt": 1,
+          "imagesMissingAlt": 2,
           "sizeButtonSemantics": [
             {
               "text": "XS",
@@ -246,19 +246,19 @@
         "n": 6,
         "title": "At 200% browser zoom",
         "screenshot": "audit/screens/p6-zoom200.png",
-        "seconds": 32.1,
+        "seconds": 33.6,
         "tapsSoFar": 1,
         "zoom": {
-          "scrollWidth": 308,
+          "scrollWidth": 195,
           "clientWidth": 195,
-          "horizontalScroll": true,
+          "horizontalScroll": false,
           "overflowing": [
-            "p.crk-status__msg (+164px)",
-            "div.crk-header__actions (+113px)",
-            "button.crk-header__link (+59px)",
-            "button.crk-header__link (+113px)",
             "table.crk-table (+111px)",
-            "caption. (+111px)"
+            "caption. (+111px)",
+            "thead. (+111px)",
+            "tr. (+111px)",
+            "th. (+12px)",
+            "th. (+61px)"
           ],
           "atcVisible": true
         }
@@ -267,7 +267,7 @@
         "n": 7,
         "title": "With prefers-reduced-motion: reduce",
         "screenshot": "audit/screens/p6-reducedmotion.png",
-        "seconds": 47.4,
+        "seconds": 48.5,
         "tapsSoFar": 1,
         "reducedMotion": {
           "boardFps": 0,
@@ -276,7 +276,7 @@
       }
     ],
     "taps": 1,
-    "t0": 1786146285693
+    "t0": 1786210256176
   },
   "p6desktop": {
     "id": "6d",
@@ -286,7 +286,7 @@
         "n": 1,
         "title": "Homepage on arrival — before any key is pressed",
         "screenshot": "audit/screens/p6d-step1.png",
-        "seconds": 9,
+        "seconds": 7.6,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -296,7 +296,7 @@
           "Accept",
           "Decline",
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
@@ -319,7 +319,7 @@
         "n": 2,
         "title": "Tabbing from the top of the homepage to the first product link",
         "screenshot": "audit/screens/p6d-step2.png",
-        "seconds": 10.8,
+        "seconds": 9.9,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -332,6 +332,7 @@
           "14 ITEMS",
           "PRODUCT",
           "MODEL",
+          "Outline",
           "ALL",
           "T-SHIRT",
           "DENIM",
@@ -342,12 +343,11 @@
           "£50.00",
           "AVAILABLE",
           "NO. 02",
-          "CHARCOAL CELLBLOCK SHORTS",
-          "£45.00"
+          "CHARCOAL CELLBLOCK SHORTS"
         ],
-        "scrollViewports": 0.92,
+        "scrollViewports": 0.98,
         "url": "/",
-        "tabsToFirstProduct": 19,
+        "tabsToFirstProduct": 20,
         "found": true,
         "firstStops": [
           "a#shopify-pc__banner__ \"Privacy Policy\"",
@@ -365,20 +365,20 @@
         "n": 3,
         "title": "Tabbing to the size buttons on the PDP",
         "screenshot": "audit/screens/p6d-step3.png",
-        "seconds": 17.3,
+        "seconds": 16.8,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
           "LIGHT MODE",
           "MENU",
           "← Catalogue",
-          "PRODUCT 04 / 14",
+          "PRODUCT 03 / 14",
           "DENIM",
-          "Photo 1 of 1",
+          "Photo 1 of 2",
           "BLUE WASH OG JEANS",
           "£60.00",
           "Size",
@@ -389,31 +389,31 @@
           "XL",
           "IN STOCK",
           "Size guide",
-          "In stock · Ships within 24 hours"
+          "Order before 18:00 and it ships today (Mon–Sat)"
         ],
         "scrollViewports": 0,
         "url": "/products/cb2-wash-jeans",
-        "tabsToSize": 9,
+        "tabsToSize": 11,
         "found": true
       },
       {
         "n": 4,
         "title": "Selected a size with Enter, then tabbed to ADD TO BAG",
         "screenshot": "audit/screens/p6d-step4.png",
-        "seconds": 18.7,
+        "seconds": 18.2,
         "tapsSoFar": 1,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
           "LIGHT MODE",
           "MENU",
           "← Catalogue",
-          "PRODUCT 04 / 14",
+          "PRODUCT 03 / 14",
           "DENIM",
-          "Photo 1 of 1",
+          "Photo 1 of 2",
           "BLUE WASH OG JEANS",
           "£60.00",
           "Size",
@@ -424,12 +424,12 @@
           "XL",
           "IN STOCK",
           "Size guide",
-          "In stock · Ships within 24 hours"
+          "Order before 18:00 and it ships today (Mon–Sat)"
         ],
         "scrollViewports": 0,
         "url": "/products/cb2-wash-jeans",
         "afterEnter": {
-          "sticky": "BLUE WASH OG JEANS £60.00 · XS Add to bag",
+          "sticky": "BLUE WASH OG JEANS £60.00 · XS Add to bag Checkout now",
           "focused": "XS"
         },
         "extraTabsToATC": 6,
@@ -439,20 +439,20 @@
         "n": 5,
         "title": "Screen-reader surface of the PDP",
         "screenshot": "audit/screens/p6d-step5.png",
-        "seconds": 19.1,
+        "seconds": 18.6,
         "tapsSoFar": 1,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
           "LIGHT MODE",
           "MENU",
           "← Catalogue",
-          "PRODUCT 04 / 14",
+          "PRODUCT 03 / 14",
           "DENIM",
-          "Photo 1 of 1",
+          "Photo 1 of 2",
           "BLUE WASH OG JEANS",
           "£60.00",
           "Size",
@@ -463,12 +463,12 @@
           "XL",
           "IN STOCK",
           "Size guide",
-          "In stock · Ships within 24 hours"
+          "Order before 18:00 and it ships today (Mon–Sat)"
         ],
         "scrollViewports": 0,
         "url": "/products/cb2-wash-jeans",
         "sr": {
-          "totalControls": 34,
+          "totalControls": 38,
           "unnamedControls": [],
           "h1": [
             "BLUE WASH OG JEANS"
@@ -477,9 +477,9 @@
             "H2: Cookie consent",
             "H1: BLUE WASH OG JEANS",
             "H2: SPECIFICATION −",
-            "H2: STATEMENT OF PROVENANCE +",
+            "H2: ITEM DESCRIPTION −",
             "H2: MEASUREMENTS −",
-            "H2: CHAIN OF CUSTODY +",
+            "H2: CHAIN OF CUSTODY — SHIPPING & RETURNS +",
             "H2: FILED UNDER THE SAME CASE",
             "H2: SHOP",
             "H2: INFORMATION",
@@ -493,7 +493,7 @@
             "header",
             "footer"
           ],
-          "imagesMissingAlt": 1,
+          "imagesMissingAlt": 2,
           "sizeButtonSemantics": [
             {
               "text": "XS",
@@ -525,7 +525,7 @@
         "n": 6,
         "title": "At 200% browser zoom",
         "screenshot": "audit/screens/p6d-zoom200.png",
-        "seconds": 31,
+        "seconds": 30.5,
         "tapsSoFar": 1,
         "zoom": {
           "scrollWidth": 720,
@@ -539,7 +539,7 @@
         "n": 7,
         "title": "With prefers-reduced-motion: reduce",
         "screenshot": "audit/screens/p6d-reducedmotion.png",
-        "seconds": 46,
+        "seconds": 45.1,
         "tapsSoFar": 1,
         "reducedMotion": {
           "boardFps": 0,
@@ -548,7 +548,7 @@
       }
     ],
     "taps": 1,
-    "t0": 1786146337786
+    "t0": 1786210309337
   },
   "p7": {
     "id": 7,
@@ -558,11 +558,11 @@
         "n": 1,
         "title": "At 3s",
         "screenshot": "audit/screens/p7-step1.png",
-        "seconds": 3.2,
+        "seconds": 3.5,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "14 PRODUCTS CURRENTLY ONLINE",
           "SEARCH",
           "BAG",
@@ -579,7 +579,7 @@
         ],
         "scrollViewports": 0,
         "url": "/",
-        "textChars": 2080,
+        "textChars": 2228,
         "imagesLoaded": 1,
         "imagesLoadedInViewport": 1,
         "canvasPresent": true,
@@ -592,7 +592,7 @@
         "n": 2,
         "title": "At 5s",
         "screenshot": "audit/screens/p7-step2.png",
-        "seconds": 5.9,
+        "seconds": 6.1,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -602,7 +602,7 @@
           "Accept",
           "Decline",
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
@@ -611,19 +611,19 @@
           "CASE 001 — ATTRACT MODE",
           "REF 001 / 13×11 / DECLASSIFIED",
           "Animated pixel map from CASE 001: a figure moves through an alley grid collectin",
-          "> 14 PRODUCTS",
+          "> 14 PRODUCT",
           "CROOKSLDN",
           "OWN THE STREETS™",
           "Catalogue"
         ],
         "scrollViewports": 0,
         "url": "/",
-        "textChars": 2338,
+        "textChars": 2487,
         "imagesLoaded": 1,
         "imagesLoadedInViewport": 1,
         "canvasPresent": true,
         "canvasPainted": true,
-        "cls": 0,
+        "cls": 0.0003,
         "overlays": [],
         "fontsLoaded": "loading"
       },
@@ -641,7 +641,7 @@
           "Accept",
           "Decline",
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
@@ -658,12 +658,12 @@
         ],
         "scrollViewports": 0,
         "url": "/",
-        "textChars": 2372,
+        "textChars": 2520,
         "imagesLoaded": 15,
         "imagesLoadedInViewport": 1,
         "canvasPresent": true,
         "canvasPainted": true,
-        "cls": 0,
+        "cls": 0.0003,
         "overlays": [
           "ctc-overlay"
         ],
@@ -673,7 +673,7 @@
         "n": 4,
         "title": "Fully loaded",
         "screenshot": "audit/screens/p7-step4.png",
-        "seconds": 17.1,
+        "seconds": 17,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -705,18 +705,18 @@
         "n": 5,
         "title": "Product page",
         "screenshot": "audit/screens/p7-step5.png",
-        "seconds": 22.3,
+        "seconds": 23.6,
         "tapsSoFar": 1,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
           "LIGHT MODE",
           "MENU",
           "← Catalogue",
-          "PRODUCT 09 / 14",
+          "PRODUCT 08 / 14",
           "T-SHIRT",
           "Photo 1 of 2",
           "3 CLIVES TEE",
@@ -733,13 +733,13 @@
         ],
         "scrollViewports": 0,
         "url": "/products/3-clives-tee",
-        "navMs": 4151
+        "navMs": 5224
       },
       {
         "n": 6,
         "title": "Cart",
         "screenshot": "audit/screens/p7-step6.png",
-        "seconds": 37.7,
+        "seconds": 38,
         "tapsSoFar": 3,
         "firstViewportText": [
           "Skip to content",
@@ -749,6 +749,9 @@
           "[1]",
           "LIGHT MODE",
           "MENU",
+          "£45.00 to free Tracked 24",
+          "Tracked 48 free",
+          "Tracked 24 free",
           "Cart",
           "1",
           "Cart total",
@@ -760,33 +763,30 @@
           "3 CLIVES TEE",
           "Size:",
           "XS,",
-          "Colour:",
-          "BLACK",
-          "Price",
-          "£25.00"
+          "Colour:"
         ],
         "scrollViewports": 0,
         "url": "/cart",
-        "navMs": 13265
+        "navMs": 13276
       }
     ],
     "taps": 3,
-    "t0": 1786146388270,
+    "t0": 1786210359687,
     "homepageVitals": {
-      "lcp": 5028,
+      "lcp": 4996,
       "lcpElement": "P",
-      "cls": 0,
+      "cls": 0.0003,
       "clsShifts": [],
-      "inp": 944,
-      "ttfb": 825,
-      "domContentLoaded": 4844,
-      "loadEvent": 13078,
-      "fcp": 1944,
+      "inp": 672,
+      "ttfb": 411,
+      "domContentLoaded": 4722,
+      "loadEvent": 13003,
+      "fcp": 1140,
       "firstProductImage": null,
-      "longTasksOver50ms": 19,
-      "longTaskTotalMs": 3033
+      "longTasksOver50ms": 27,
+      "longTaskTotalMs": 4261
     },
-    "totalBytesAcrossJourney": "4798 KB"
+    "totalBytesAcrossJourney": "4640 KB"
   },
   "p8": {
     "id": 8,
@@ -796,7 +796,7 @@
         "n": 1,
         "title": "Homepage — looking for \"track my order\"",
         "screenshot": "audit/screens/p8-step1.png",
-        "seconds": 7,
+        "seconds": 8.1,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Cookie consent",
@@ -806,7 +806,7 @@
           "Accept",
           "Decline",
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
@@ -829,11 +829,11 @@
         "n": 2,
         "title": "Scanning every link on the homepage for order tracking",
         "screenshot": "audit/screens/p8-step2.png",
-        "seconds": 7.8,
+        "seconds": 9,
         "tapsSoFar": 0,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
@@ -851,23 +851,23 @@
         "scrollViewports": 0,
         "url": "/",
         "hunt": {
-          "trackWordPresent": false,
+          "trackWordPresent": true,
           "accountLinkInFooter": false,
           "footerLinks": [
-            "TEES -> /collections/tees",
             "DENIM -> /collections/denim",
             "SWEATS -> /collections/sweats",
             "ACCESSORIES -> /collections/accessories",
             "SHIPPING -> /policies/shipping-policy",
             "REFUNDS -> /policies/refund-policy",
             "CASE 001 -> https://crooks-case-break.base44.app",
+            "TRACK ORDER -> /pages/tracking",
             "INSTAGRAM -> https://instagram.com/crooksldn",
             "TIKTOK -> https://tiktok.com/@crooksldn",
             "EMAIL -> mailto:info@crooksldn.com",
-            "3 CLIVES TEE -> /products/3-clives-tee",
-            "BLACK/BLUE MOTIONTEC™️ SOCKS -> /products/black-socks",
-            "BLUE WASH JORTS -> /products/cb1-wash-jorts",
-            "BLUE WASH OG JEANS -> /products/cb2-wash-jeans"
+            "CHARCOAL CELLBLOCK CREWNECK -> /products/charcoal-cellblock-crewneck",
+            "CHARCOAL CELLBLOCK SHORTS -> /products/charcoal-cellblock-shorts",
+            "BLUE WASH OG JEANS -> /products/cb2-wash-jeans",
+            "BLUE WASH JORTS -> /products/cb1-wash-jorts"
           ],
           "returnsLinkText": [
             "REFUNDS -> /policies/refund-policy"
@@ -878,11 +878,11 @@
         "n": 3,
         "title": "Opened MENU",
         "screenshot": "audit/screens/p8-step3.png",
-        "seconds": 9.2,
+        "seconds": 10.5,
         "tapsSoFar": 1,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "14 PRODUCTS CURRENTLY ONLINE",
           "SEARCH",
           "BAG",
           "[0]",
@@ -890,43 +890,36 @@
           "CLOSE",
           "INDEX",
           "SHOP",
-          "New",
-          "Tees",
-          "Denim",
-          "Sweats",
-          "Accessories",
-          "Shop All",
+          "TRACKING",
           "Contact",
           "ACCOUNT",
-          "BAG [0]",
           "CASE 001 — ATTRACT MODE",
           "REF 001 / 13×11 / DECLASSIFIED",
           "Animated pixel map from CASE 001: a figure moves through an alley grid collectin",
-          "> 14 PRODUCTS AVAILABLE TO PURCHASE"
+          "> 14 PRODUCTS AVAILABLE TO PURCHASE",
+          "CROOKSLDN",
+          "OWN THE STREETS™",
+          "Catalogue",
+          "CATALOGUE"
         ],
         "scrollViewports": 0,
         "url": "/",
         "menu": {
           "links": [
             "SHOP -> /collections/frontpage",
-            "NEW -> /collections/new",
-            "TEES -> /collections/tees",
-            "DENIM -> /collections/denim",
-            "SWEATS -> /collections/sweats",
-            "ACCESSORIES -> /collections/accessories",
-            "SHOP ALL -> /collections/frontpage",
+            "TRACKING -> /pages/tracking",
             "CONTACT -> /pages/contact",
             "ACCOUNT -> /account",
             "BAG [0] -> /cart"
           ],
-          "hasTracking": false
+          "hasTracking": true
         }
       },
       {
         "n": 4,
         "title": "Account / sign-in",
         "screenshot": "audit/screens/p8-step4.png",
-        "seconds": 14.5,
+        "seconds": 15.3,
         "tapsSoFar": 2,
         "firstViewportText": [
           "CROOKSLDN",
@@ -954,11 +947,11 @@
         "n": 5,
         "title": "Refund policy — how do I actually return something?",
         "screenshot": "audit/screens/p8-step5.png",
-        "seconds": 19.1,
+        "seconds": 19.7,
         "tapsSoFar": 3,
         "firstViewportText": [
           "Skip to content",
-          "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
+          "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
           "SEARCH",
           "BAG",
           "[0]",
@@ -988,12 +981,12 @@
           "window": "within 14 days",
           "returnsPortal": false,
           "whoPaysPostage": null,
-          "words": 339,
+          "words": 345,
           "typeface": "\"Archivo Narrow\", sans-serif"
         }
       }
     ],
     "taps": 3,
-    "t0": 1786146430478
+    "t0": 1786210402499
   }
 }

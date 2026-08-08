@@ -1,0 +1,74 @@
+{
+  "note": "banner dismissed via Accept, then real taps",
+  "errors": [
+    "TypeError: Failed to fetch"
+  ],
+  "bannerShown": true,
+  "hitTestAfterAccept": [
+    {
+      "size": "XS",
+      "hits": true
+    },
+    {
+      "size": "S",
+      "hits": true
+    },
+    {
+      "size": "M",
+      "hits": true
+    },
+    {
+      "size": "L",
+      "hits": true
+    },
+    {
+      "size": "XL",
+      "hits": true
+    }
+  ],
+  "tapSequenceAfterAccept": [
+    {
+      "tapped": "XS",
+      "selectedVariantId": "53075854197079",
+      "stockLine": [
+        "IN STOCK"
+      ],
+      "buy": {
+        "text": "ADD TO BAG",
+        "disabled": false
+      },
+      "sticky": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
+      "notifyHidden": true
+    },
+    {
+      "tapped": "M",
+      "selectedVariantId": "",
+      "stockLine": [
+        "SIZE M IS SOLD OUT"
+      ],
+      "buy": {
+        "text": "SOLD OUT",
+        "disabled": true
+      },
+      "sticky": "V2 BAGGIES £60.00 · M SOLD OUT CHECKOUT NOW",
+      "notifyHidden": false
+    },
+    {
+      "tapped": "L",
+      "selectedVariantId": "",
+      "stockLine": [
+        "SIZE L IS SOLD OUT"
+      ],
+      "buy": {
+        "text": "SOLD OUT",
+        "disabled": true
+      },
+      "sticky": "V2 BAGGIES £60.00 · L SOLD OUT CHECKOUT NOW",
+      "notifyHidden": false
+    }
+  ],
+  "addAttemptOnSoldChoice": {
+    "note": "variant id empty — form disarmed, nothing to attempt",
+    "id": ""
+  }
+}

@@ -8,7 +8,7 @@
       "L 44cm 82cm 30cm 22cm",
       "XL 46cm 84cm 31cm 23cm"
     ],
-    "raw": "SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm CHAIN OF CUSTODY + FILED UNDER THE SAME CASE BLUE WASH JORTS £50.00 GREY WASH JORTS £50.00 GREY WASH OG JEA",
+    "raw": "SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm CHAIN OF CUSTODY — SHIPPING & RETURNS + FILED UNDER THE SAME CASE BLUE WASH JORTS £50.00 GREY WASH OG JEANS",
     "active": [
       "CM*",
       "IN"
@@ -23,17 +23,17 @@
       "L 17.3in 32.3in 11.8in 8.7in",
       "XL 18.1in 33.1in 12.2in 9.1in"
     ],
-    "raw": "SIZE WAIST INSEAM RISE HEM XS 15in 29.9in 10.6in 7.5in S 15.7in 30.7in 11in 7.9in M 16.5in 31.5in 11.4in 8.3in L 17.3in 32.3in 11.8in 8.7in XL 18.1in 33.1in 12.2in 9.1in CHAIN OF CUSTODY + FILED UNDER THE SAME CASE BLUE WASH JORTS £50.00 GREY WAS",
+    "raw": "SIZE WAIST INSEAM RISE HEM XS 15in 29.9in 10.6in 7.5in S 15.7in 30.7in 11in 7.9in M 16.5in 31.5in 11.4in 8.3in L 17.3in 32.3in 11.8in 8.7in XL 18.1in 33.1in 12.2in 9.1in CHAIN OF CUSTODY — SHIPPING & RETURNS + FILED UNDER THE SAME CASE BLUE WASH ",
     "active": [
       "CM",
       "IN*"
     ]
   },
   "sizeGuideLanding": {
-    "scrollY": 1230,
+    "scrollY": 1604,
     "visible": [
       "MEASUREMENTS − @0",
-      "CHAIN OF CUSTODY + @404"
+      "CHAIN OF CUSTODY — SHIPPING & RETURNS + @404"
     ]
   },
   "socialProof": {

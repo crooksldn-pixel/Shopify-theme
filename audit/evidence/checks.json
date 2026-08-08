@@ -3,57 +3,57 @@
     "cb2-wash-jeans": {
       "title": "BLUE WASH OG JEANS",
       "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm",
-      "spec": "FABRIC 14oz denim CUT OG straight, mid rise ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+      "spec": null
     },
     "cb1-wash-jeans": {
       "title": "GREY WASH OG JEANS",
       "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm",
-      "spec": "FABRIC 14oz denim CUT OG straight, mid rise ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+      "spec": null
     },
     "cb1-wash-jorts": {
       "title": "BLUE WASH JORTS",
       "table": null,
-      "spec": "FABRIC 14oz denim CUT Baggy, below knee ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+      "spec": null
     },
     "cb2-wash-jorts": {
       "title": "GREY WASH JORTS",
       "table": null,
-      "spec": "FABRIC 14oz denim CUT Baggy, below knee ORIGIN Made in Portugal CARE Cold wash inside out. Hang dry."
+      "spec": null
     },
     "v2-baggies": {
       "title": "V2 BAGGIES",
       "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE WAIST INSEAM RISE HEM XS 38cm 76cm 27cm 19cm S 40cm 78cm 28cm 20cm M 42cm 80cm 29cm 21cm L 44cm 82cm 30cm 22cm XL 46cm 84cm 31cm 23cm",
-      "spec": "FABRIC 500gsm cotton CUT Wide, full length ORIGIN Made in Portugal CARE Cold wash. Hang dry."
+      "spec": null
     },
     "charcoal-cellblock-crewneck": {
       "title": "CHARCOAL CELLBLOCK CREWNECK",
       "table": null,
-      "spec": "FABRIC 450gsm brushed fleece CUT Relaxed ORIGIN Made in Portugal CARE Cold wash. Do not tumble dry."
+      "spec": null
     },
     "charcoal-cellblock-shorts": {
       "title": "CHARCOAL CELLBLOCK SHORTS",
       "table": null,
-      "spec": "FABRIC 450gsm brushed fleece CUT Relaxed, above knee ORIGIN Made in Portugal CARE Cold wash. Do not tumble dry."
+      "spec": null
     },
     "3-clives-tee": {
       "title": "3 CLIVES TEE",
       "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE CHEST LENGTH SHOULDER XS 51cm 68cm 45cm S 54cm 70cm 47cm M 57cm 72cm 49cm L 60cm 74cm 51cm XL 63cm 76cm 53cm",
-      "spec": "FABRIC 220gsm cotton CUT Boxy, drop shoulder ORIGIN Printed in London CARE Cold wash inside out. Hang dry."
+      "spec": null
     },
     "broadcast-tee": {
       "title": "BROADCAST TEE",
       "table": "GARMENT LAID FLAT. ALL MEASUREMENTS IN CENTIMETRES. SIZE CHEST LENGTH SHOULDER XS 51cm 68cm 45cm S 54cm 70cm 47cm M 57cm 72cm 49cm L 60cm 74cm 51cm XL 63cm 76cm 53cm",
-      "spec": "FABRIC 220gsm cotton CUT Boxy, drop shoulder ORIGIN Printed in London CARE Cold wash inside out. Hang dry."
+      "spec": null
     },
     "large-duffle-bag": {
       "title": "LARGE DUFFLE BAG",
       "table": null,
-      "spec": "FABRIC Ballistic nylon ORIGIN Unit 7, London"
+      "spec": null
     },
     "white-socks": {
       "title": "WHITE/RED MOTIONTEC™ SOCKS",
       "table": null,
-      "spec": "FABRIC Cotton blend, reinforced heel"
+      "spec": null
     }
   },
   "soldOutVisual": [
@@ -121,12 +121,11 @@
   "soldOutTapSequence": [
     {
       "tapped": "XS",
-      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG",
+      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
       "buyButton": "ADD TO BAG",
       "buyDisabled": false,
       "stockLine": [
-        "IN STOCK",
-        "In stock · Ships within 24 hours"
+        "IN STOCK"
       ],
       "selectedVariantId": "53075854197079",
       "pressed": [
@@ -139,12 +138,11 @@
     },
     {
       "tapped": "M",
-      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG",
+      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
       "buyButton": "ADD TO BAG",
       "buyDisabled": false,
       "stockLine": [
-        "IN STOCK",
-        "In stock · Ships within 24 hours"
+        "IN STOCK"
       ],
       "selectedVariantId": "53075854197079",
       "pressed": [
@@ -157,12 +155,11 @@
     },
     {
       "tapped": "L",
-      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG",
+      "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
       "buyButton": "ADD TO BAG",
       "buyDisabled": false,
       "stockLine": [
-        "IN STOCK",
-        "In stock · Ships within 24 hours"
+        "IN STOCK"
       ],
       "selectedVariantId": "53075854197079",
       "pressed": [
@@ -185,14 +182,14 @@
       "dialogs": 0
     },
     "after": {
-      "y": 1230,
+      "y": 1764,
       "dialogs": 0,
       "measureVisible": {
-        "top": -1230,
+        "top": -1764,
         "inViewport": false
       }
     },
-    "behaviour": "scrolls page 1230px"
+    "behaviour": "scrolls page 1764px"
   },
   "releaseRequest": {
     "tag": "SPAN",
@@ -204,26 +201,26 @@
     "parentTag": "DIV",
     "parentCls": "crk-panel crk-panel-record crk-panel-sticky",
     "isInteractive": false,
-    "context": "PHOTO 1 OF 1 BLUE WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE In stock · Ships within 24 hours RELEASE REQUEST ADD TO BAG"
+    "context": "PHOTO 1 OF 2 BLUE WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves Monday RELEASE "
   },
   "deliveryClaims": {
     "cb2-wash-jeans": {
-      "announcement": "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
-      "stockLine": "In stock ·",
+      "announcement": null,
+      "stockLine": null,
       "provenance": "9-16 days delivery uk 16-21 days international MEASUREMENTS − CM IN GAR",
       "chainOfCustody": "UK 1–2 working days. International 7–14 working days.",
       "returnWindow": "You have 14 days from delivery to return unworn goods with tags attached."
     },
     "3-clives-tee": {
-      "announcement": "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
-      "stockLine": "In stock ·",
+      "announcement": null,
+      "stockLine": null,
       "provenance": null,
       "chainOfCustody": "UK 1–2 working days. International 7–14 working days.",
       "returnWindow": "You have 14 days from delivery to return unworn goods with tags attached."
     },
     "charcoal-cellblock-crewneck": {
-      "announcement": "FREE UK SHIPPING * — 24HR DISPATCH AVAILABLE",
-      "stockLine": "In stock ·",
+      "announcement": null,
+      "stockLine": null,
       "provenance": null,
       "chainOfCustody": "UK 1–2 working days. International 7–14 working days.",
       "returnWindow": "You have 14 days from delivery to return unworn goods with tags attached."

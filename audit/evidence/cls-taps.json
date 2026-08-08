@@ -1,8 +1,8 @@
 {
   "shifts": [
     {
-      "value": 0.0013,
-      "t": 1807,
+      "value": 0.0007,
+      "t": 1930,
       "sources": [
         {
           "node": "DIV.crk-header__actions",
@@ -22,45 +22,51 @@
         },
         {
           "node": "P.crk-status__msg",
-          "text": "14 PRODUCTS CURRENTLY ONLINE",
+          "text": "FREE UK SHIPPING OVER £20 — ORDER BY 18:",
           "from": [
-            334,
-            6,
-            56,
-            14
+            16,
+            0,
+            249,
+            27
           ],
           "to": [
-            359,
-            6,
-            31,
-            14
+            16,
+            0,
+            249,
+            27
           ]
-        },
+        }
+      ]
+    },
+    {
+      "value": 0.0003,
+      "t": 5198,
+      "sources": [
         {
-          "node": "undefined",
-          "text": "",
+          "node": "P.crk-status__msg",
+          "text": "FREE UK SHIPPING OVER £20 — ORDER BY 18:",
           "from": [
-            334,
-            8,
-            56,
-            13
+            16,
+            0,
+            249,
+            27
           ],
           "to": [
-            359,
-            6,
-            31,
-            13
+            16,
+            0,
+            358,
+            27
           ]
         }
       ]
     },
     {
       "value": 0.2315,
-      "t": 1840,
+      "t": 5488,
       "sources": [
         {
           "node": "DIV.crk-grid",
-          "text": "PHOTO 1 OF 1 BLUE WASH OG JEANS £60.00 S",
+          "text": "PHOTO 1 OF 2 BLUE WASH OG JEANS £60.00 S",
           "from": [
             16,
             184,
@@ -89,19 +95,35 @@
             40,
             20
           ]
+        },
+        {
+          "node": "BUTTON.crk-textbtn",
+          "text": "SIZE GUIDE",
+          "from": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "to": [
+            33,
+            834,
+            114,
+            10
+          ]
         }
       ]
     }
   ],
-  "total": 0.2328,
+  "total": 0.2325,
   "anatomy": {
     "grid": {
       "top": 156,
-      "h": 794,
-      "html": "<div> <div class=\"crk-tray crk-tray-main\" role=\"group\" aria-label=\"Evidence photographs\" tabindex=\"0\" data-crk-gallery=\"\"><div data-crk-slide=\"\"> <img src=\"//ezvw3xrffzdt93es-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans.png?v=1786031478&amp;width=1400\" alt=\"CROOKSLD"
+      "h": 996,
+      "html": "<div> <div class=\"crk-tray crk-tray-main\" role=\"group\" aria-label=\"Evidence photographs\" tabindex=\"0\" data-crk-gallery=\"\"><div data-crk-slide=\"\"> <img src=\"//kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png?v=178"
     },
     "sizeRow": {
-      "top": 674,
+      "top": 746,
       "w": 58,
       "h": 52
     },
@@ -112,7 +134,7 @@
     "fontStatus": "loaded",
     "fonts": [
       "CRX Mono loaded",
-      "CRX Mono unloaded",
+      "CRX Mono loaded",
       "Archivo Narrow loaded",
       "Archivo Narrow unloaded",
       "Archivo Narrow loaded",
@@ -157,6 +179,13 @@
       "size": "92x16",
       "text": "← CATALOGUE",
       "inHeader": true,
+      "inFooter": false
+    },
+    {
+      "sel": "a.shopify-payment-button__more-options",
+      "size": "324x22",
+      "text": "More payment options",
+      "inHeader": false,
       "inFooter": false
     },
     {
