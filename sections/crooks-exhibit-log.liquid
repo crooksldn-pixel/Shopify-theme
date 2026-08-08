@@ -104,6 +104,61 @@
             The window is a setting because it is the merchant's editorial call: too wide
             and every card is stamped, which is the same as no signal at all.
           endcomment
+          comment
+            Colourway swatches. Generic: the option treated as "colour" comes from a
+            setting, because this catalogue already spells it two ways — three tees use
+            "Colour" and CRXST*RZ uses "Color" — and a future product may use neither.
+
+            Colour source, in order: the merchant's configured Shopify swatch, else the
+            option value used directly as a CSS colour keyword (BLACK, WHITE, NAVY... all
+            resolve). Nothing is hardcoded and no colour is invented: if neither resolves
+            the square renders empty-with-a-rule and the hidden text still names it.
+
+            Only rendered when the option has more than one value — "available in one
+            colour" is not information.
+          endcomment
+          assign crk_sw = null
+          assign crk_sw_pos = 0
+          if section.settings.show_colourways
+            assign crk_names = section.settings.colour_option_names | downcase
+            for opt in product.options_with_values
+              assign crk_nm = opt.name | downcase | strip
+              assign crk_probe = ',' | append: crk_nm | append: ','
+              assign crk_hay = ',' | append: crk_names | append: ','
+              assign crk_hay = crk_hay | replace: ', ', ','
+              if crk_hay contains crk_probe and opt.values.size > 1
+                assign crk_sw = opt
+                assign crk_sw_pos = forloop.index
+                break
+              endif
+            endfor
+          endif
+
+          comment
+            One pass over the variants to learn which colourways are actually buyable.
+            A swatch for a colourway that is entirely gone would be a lie on a card the
+            shopper has not opened yet.
+          endcomment
+          assign crk_sw_live = '|'
+          if crk_sw
+            for v in product.variants
+              if v.available
+                case crk_sw_pos
+                  when 1
+                    assign crk_vv = v.option1
+                  when 2
+                    assign crk_vv = v.option2
+                  else
+                    assign crk_vv = v.option3
+                endcase
+                assign crk_probe = '|' | append: crk_vv | append: '|'
+                unless crk_sw_live contains crk_probe
+                  assign crk_sw_live = crk_sw_live | append: crk_vv | append: '|'
+                endunless
+              endif
+            endfor
+          endif
+
           assign crk_filed = false
           if product.published_at and section.settings.filed_days > 0
             assign crk_now_s = 'now' | date: '%s' | times: 1
@@ -205,6 +260,32 @@
               {%- endif -%}
             </span>
             <span class="crk-card__name">{% render 'crooks-title', product: product %}</span>
+            {%- if crk_sw -%}
+              {%- capture crk_sw_names -%}
+                {%- for val in crk_sw.values -%}
+                  {%- assign nm = val.name | default: val -%}
+                  {{ nm }}{% unless forloop.last %}, {% endunless %}
+                {%- endfor -%}
+              {%- endcapture -%}
+              <span class="crk-card__sw" aria-hidden="true">
+                {%- for val in crk_sw.values -%}
+                  {%- liquid
+                    assign nm = val.name | default: val
+                    assign col = val.swatch.color
+                    if col == blank
+                      assign col = nm | downcase | replace: ' ', ''
+                    endif
+                    assign probe = '|' | append: nm | append: '|'
+                    assign live = true
+                    unless crk_sw_live contains probe
+                      assign live = false
+                    endunless
+                  -%}
+                  <span class="crk-card__swatch" style="--crk-sw: {{ col }}"{% unless live %} data-crk-sw-out="true"{% endunless %}></span>
+                {%- endfor -%}
+              </span>
+              <span class="crk-sr">{{ section.settings.colourways_sr_label }}: {{ crk_sw_names | strip }}</span>
+            {%- endif -%}
             <span class="crk-card__row">
               <span class="crk-price">{{ product.price | money }}</span>
               <span class="crk-card__status"{% if crk_filed and product.available %} data-crk-filed="true"{% endif %}>
@@ -260,6 +341,9 @@
     },
     { "type": "text", "id": "filters_label", "label": "Filter group label (screen readers)", "default": "Filter products" },
     { "type": "header", "content": "Status labels" },
+    { "type": "checkbox", "id": "show_colourways", "label": "Show colourway swatches on cards", "default": true },
+    { "type": "text", "id": "colour_option_names", "label": "Option names treated as colourways", "info": "Comma separated. Matched case-insensitively.", "default": "Colour,Color,Colourway,Colorway" },
+    { "type": "text", "id": "colourways_sr_label", "label": "Colourways label (screen readers)", "default": "Colourways" },
     { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
     { "type": "text", "id": "filed_label", "label": "Recently filed label", "info": "Use [date]. Replaces the available label for products published inside the window below.", "default": "FILED [date]" },
     { "type": "text", "id": "filed_format", "label": "Filing date format", "info": "Liquid date format. %d.%m gives 08.08.", "default": "%d.%m" },

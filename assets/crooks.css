@@ -203,6 +203,13 @@
    the transparent PNGs composited two garments with no interaction at all, which
    is why it was worst on touch, where there is no hover state to leave. */
 .crk-card__name { display: block; font-weight: 500; font-size: 12px; line-height: 1.4; text-transform: uppercase; margin-bottom: 8px; min-height: 2.8em; overflow-wrap: anywhere }
+/* Colourway swatches. Square, 1px rule, no radius — the register stays a register.
+   The colour arrives as an inline --crk-sw custom property because it is per-value
+   merchant data; if it does not resolve to a real colour the square renders empty
+   with its rule and the visually-hidden text still names the colourway. */
+.crk-card__sw { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px }
+.crk-card__swatch { display: block; width: 12px; height: 12px; border: 1px solid var(--crk-line); background-color: var(--crk-sw) }
+.crk-card__swatch[data-crk-sw-out="true"] { opacity: .3 }
 .crk-card__row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px }
 .crk-card__status { font-weight: 500; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-lav); overflow-wrap: anywhere }
 .crk-card--sold .crk-card__status { color: var(--crk-red) }

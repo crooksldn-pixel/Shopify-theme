@@ -684,3 +684,46 @@ theme's so the stale keys cannot cause a future clobber.
 `templates/index.json` was diffed the same way and is clean: the only difference is an empty
 `"settings": {}` object Shopify normalises. The earlier worry that the index push might have
 lost editor changes is retracted — it did not.
+
+## Colourway swatches on catalogue cards
+
+Four products carry a colour option; nothing else does. The PDP already let you pick colour
+(the generic variant picker), but the register gave no sign a tee came in two colourways, so
+the information only existed after a shopper had already opened the product.
+
+**Colour source, in order:**
+1. the merchant's configured Shopify swatch (`value.swatch.color`)
+2. else the option value used directly as a CSS colour keyword — `BLACK`, `WHITE`, `NAVY`,
+   `OLIVE` all resolve
+3. else an empty square with its rule, plus the visually-hidden name
+
+No hardcoded colour map, nothing invented. Only **CRXST★RZ** has swatches configured today
+(`#000000` / `#FFFFFF`); the other three tees fall through to step 2 — and both paths render
+identical `rgb(0,0,0)` / `rgb(255,255,255)`, verified in the browser. Setting swatches in the
+admin for the other three would make the source authoritative rather than inferred.
+
+**Which option counts as "colour" is a setting**, not a hardcoded name, because this catalogue
+already spells it two ways: three tees use `Colour`, CRXST★RZ uses `Color`. Default matches
+`Colour,Color,Colourway,Colorway`. The socks are the proof the matching is not over-eager —
+their option is `Quantity`, and they correctly render no swatches.
+
+A colourway with no buyable variant is dimmed, computed in a single pass over the variants. A
+swatch for a colourway that is entirely gone would be a lie on a card nobody has opened yet.
+Swatches only render when the option has more than one value; "available in one colour" is not
+information.
+
+**"Pills" became squares.** The system enforces `border-radius: 0` globally, twice, once with
+`!important`. Rounded pills would have been the only rounded thing on the site.
+
+Reflow re-checked after the change: 195/195 and 320/320, unchanged.
+
+### Upstream inconsistency (admin, for George)
+
+| Product | Option 1 | Option 2 |
+|---|---|---|
+| 3 CLIVES TEE / BROADCAST TEE / MONEY CLIVE TEE | Size | Colour |
+| CRXST★RZ T-SHIRT | **Color** | **Size** |
+
+CRXST★RZ uses the American spelling and the reverse order, so on three tee pages the size row
+renders first and on that one the colour row does. The theme handles both spellings; the
+ordering inconsistency is visible to shoppers and is an admin fix.
