@@ -1091,3 +1091,51 @@ were confirmed server-side; the £60 server-render is pending a Shopify `/cart/a
 **Harness note:** fetching `crooks-cart-progress.js` from the CDN without its `?v=` returned a
 stale build and the boundary test "failed" against code that no longer existed. Test the source
 of truth, or carry the version.
+
+## Quick-add was a black box — a regression from replacing the product template
+
+Horizon's quick-add fetches the product page and extracts specific nodes:
+`[data-product-grid-content]`, `.product-details`, `product-form-component`,
+`variant-picker`, `product-price` (`assets/product-card.js:102, 208-211`).
+
+`sections/crooks-exhibit-record.liquid` emits **none of them** — grep returns 0 for all five.
+So the fetch succeeded, the extraction found nothing, and the dialog opened empty at
+390×844: a full-screen near-black box. The colours were fine; there was simply no content.
+
+This was caused by swapping `templates/product.json` to the custom record and never checking
+what else depended on Horizon's product markup. `quick_add` (default **true**) and
+`mobile_quick_add` are now set to `false` explicitly in `config/settings_data.json` — they were
+absent from `current`, so they were running on schema defaults. Cards now link to the product
+page, which works and is on-brand.
+
+Rebuilding quick-add in the register's own voice is possible later; a broken control is worse
+than none in the meantime.
+
+## Search page branded
+
+`templates/search.json` now renders the register (Horizon's preserved as
+`search.horizon.json`). The section takes `search.results` when
+`template.name == 'search'`, skips non-product results — search can return articles and pages,
+which have none of the fields a card needs — and counts products rather than "results".
+
+Verified: `tee` → 5 cards "Search: tee"; `jeans` → 4; a nonsense query → 0 with the empty state
+shown; no query → "Search" with the empty state. No overflow at 390.
+
+## Carriage bar moved out of the cart
+
+Behind the cart page it was invisible to anyone browsing or checking out through the wallet
+buttons — which, given Shop Pay express, is exactly the customer most likely to skip the cart.
+It now renders on **home, collection, product, search and cart**, and hides itself entirely when
+the cart is empty, so it only ever appears as genuine progress.
+
+Confirmed: with an empty cart the bar is absent from all four surfaces; with £60 in the bag it
+reads `£10.00 to free Tracked 24` on every one — including the £6 socks product page, which is
+the moment it is actually worth something.
+
+**Server-side render confirmed** at £60 (`fill=85%`), closing the gap left when Shopify
+rate-limited the earlier test.
+
+**Note on probing:** repeated `/cart/add.js` calls triggered 429s and then Shopify's
+"Verifying your connection" bot challenge, which silently returned a challenge page instead of
+the cart. One conclusion was drawn from that page before I noticed. Check for the challenge
+string before trusting any fetched HTML.

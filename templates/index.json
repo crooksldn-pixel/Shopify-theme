@@ -9,6 +9,10 @@
  */
 {
   "sections": {
+    "carriage": {
+      "type": "crooks-cart-progress",
+      "settings": {}
+    },
     "crooks_hero": {
       "type": "crooks-hero-intake",
       "blocks": {
@@ -240,6 +244,7 @@
     }
   },
   "order": [
+    "carriage",
     "crooks_hero",
     "crooks_exhibit_log",
     "crooks_case_file",

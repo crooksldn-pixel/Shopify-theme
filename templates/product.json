@@ -9,6 +9,10 @@
  */
 {
   "sections": {
+    "carriage": {
+      "type": "crooks-cart-progress",
+      "settings": {}
+    },
     "main": {
       "type": "crooks-exhibit-record",
       "blocks": {
@@ -61,6 +65,7 @@
     }
   },
   "order": [
+    "carriage",
     "main"
   ]
 }

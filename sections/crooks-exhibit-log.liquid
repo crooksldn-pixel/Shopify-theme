@@ -15,7 +15,28 @@
     assign crk_col = collection
   endif
   assign crk_products = crk_col.products
+
+  comment
+    Search results are products too, so the register renders them rather than
+    handing the page back to Horizon. search.results can also contain articles and
+    pages; those are skipped in the card loop, and counted out here so the total
+    reports products rather than "results".
+  endcomment
+  assign crk_is_search = false
+  if template.name == 'search'
+    assign crk_is_search = true
+    assign crk_products = search.results
+  endif
+
   assign crk_total = crk_products.size
+  if crk_is_search
+    assign crk_total = 0
+    for item in crk_products
+      if item.object_type == 'product'
+        assign crk_total = crk_total | plus: 1
+      endif
+    endfor
+  endif
 
   comment
     On a collection page the collection's own title is the honest heading. The
@@ -25,6 +46,13 @@
   assign crk_heading = section.settings.heading
   if crk_heading == blank and collection and collection.title != blank
     assign crk_heading = collection.title
+  endif
+  if crk_is_search
+    if search.terms != blank
+      assign crk_heading = section.settings.search_heading | replace: '[terms]', search.terms
+    else
+      assign crk_heading = section.settings.search_heading_blank
+    endif
   endif
 
   comment
@@ -139,6 +167,14 @@
     <ul class="crk-log__grid">
       {%- for product in crk_products -%}
         {%- liquid
+          comment
+            search.results mixes products with articles and pages; only products
+            have the fields a card renders.
+          endcomment
+          if crk_is_search and product.object_type != 'product'
+            continue
+          endif
+
           assign crk_cat = product.type | upcase
           assign crk_main = product.featured_image
           assign crk_alt = product.images[1]
@@ -370,6 +406,8 @@
     { "type": "text", "id": "heading", "label": "Heading", "default": "CATALOGUE" },
     { "type": "text", "id": "subheading", "label": "Subheading" },
     { "type": "text", "id": "count_label", "label": "Count label", "default": "ITEMS" },
+    { "type": "text", "id": "search_heading", "label": "Search heading", "info": "Use [terms].", "default": "Search: [terms]" },
+    { "type": "text", "id": "search_heading_blank", "label": "Search heading (no terms)", "default": "Search" },
     { "type": "text", "id": "exhibit_prefix", "label": "Product number prefix", "default": "NO." },
     { "type": "header", "content": "View mode" },
     { "type": "checkbox", "id": "show_view_toggle", "label": "Show Product / Model view toggle", "default": true },
