@@ -28,6 +28,15 @@
     </a>
 
     <div class="crk-header__actions">
+      {%- comment -%}
+        Catalogue sits first in the actions row, to the left of search: it is the
+        main browse destination and the homepage CTA uses the same word. A link,
+        not a menu item — the nav menu is merchant data and this is chrome.
+      {%- endcomment -%}
+      {%- if section.settings.show_catalogue and section.settings.catalogue_url != blank -%}
+        <a class="crk-header__link crk-header__link--catalogue" href="{{ section.settings.catalogue_url }}">{{ section.settings.catalogue_label }}</a>
+      {%- endif -%}
+
       {%- if section.settings.show_search -%}
         <a class="crk-header__link" href="{{ routes.search_url }}">{{ section.settings.search_label }}</a>
       {%- endif -%}
@@ -143,6 +152,9 @@
     { "type": "text", "id": "menu_label", "label": "Menu button (closed)", "default": "MENU" },
     { "type": "text", "id": "close_label", "label": "Menu button (open)", "default": "CLOSE" },
     { "type": "text", "id": "cart_label", "label": "Cart label", "default": "BAG" },
+    { "type": "checkbox", "id": "show_catalogue", "label": "Show the catalogue link", "default": true },
+    { "type": "text", "id": "catalogue_label", "label": "Catalogue label", "default": "CATALOGUE" },
+    { "type": "url", "id": "catalogue_url", "label": "Catalogue link", "info": "Shopify rejects a shopify:// default on a url setting, so the value is set on the header group rather than here." },
     { "type": "text", "id": "search_label", "label": "Search label", "default": "SEARCH" },
     { "type": "text", "id": "account_label", "label": "Account label", "default": "ACCOUNT" },
     { "type": "text", "id": "drawer_heading", "label": "Drawer heading", "default": "INDEX" },

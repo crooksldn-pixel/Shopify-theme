@@ -53,7 +53,10 @@
         "show_search": true,
         "show_theme_toggle": true,
         "label_to_light": "LIGHT MODE",
-        "label_to_dark": "DARK MODE"
+        "label_to_dark": "DARK MODE",
+        "show_catalogue": true,
+        "catalogue_label": "CATALOGUE",
+        "catalogue_url": "shopify://collections/all"
       }
     },
     "header_announcements_9jGBFp": {

@@ -418,12 +418,15 @@
 /* Structural guard: the wordmark is a merchant-editable setting, so never let
    its length push the bar wide. The actions keep their intrinsic size and the
    wordmark absorbs whatever is left. */
-.crk-header__logo { min-width: 0; overflow: hidden; white-space: nowrap }
+/* The wordmark absorbs slack, but never to nothing: with five controls in the
+   actions row it was being crushed to 4px at 390 and 0px at 360 — the mark
+   disappeared on every common phone. Below 430 the actions wrap instead. */
+.crk-header__logo { min-width: 44px; overflow: hidden; white-space: nowrap }
 .crk-header__actions { flex: none }
 /* At 200% zoom a 390px phone is 195 CSS px and the tightened bar still cannot fit
    the wordmark plus three 44px controls on one row. Wrap rather than shrink the
    targets: the cart stays in the bar, which is the rule that matters. */
-@media (max-width: 359px) {
+@media (max-width: 429px) {
   .crk-header__bar { flex-wrap: wrap }
   .crk-header__actions { flex-wrap: wrap; margin-left: 0; width: 100% }
 }

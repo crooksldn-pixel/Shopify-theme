@@ -1139,3 +1139,38 @@ rate-limited the earlier test.
 "Verifying your connection" bot challenge, which silently returned a challenge page instead of
 the cart. One conclusion was drawn from that page before I noticed. Check for the challenge
 string before trusting any fetched HTML.
+
+## Catalogue: a header control, not a menu item
+
+First attempt added CATALOGUE to the main nav menu. Wrong: the nav is merchant data shared with
+the live theme, and it put a second full product listing beside SHOP. Reverted — the menu is
+back to SHOP / TRACKING / Contact with the original item IDs intact, so nothing was lost.
+
+It is now a link in `.crk-header__actions`, first, to the left of SEARCH, behind three settings
+(`show_catalogue`, `catalogue_label`, `catalogue_url`).
+
+**Two things this broke, both caught by measuring:**
+
+1. **Shopify rejects a `shopify://` default on a `url` setting** — "default must be a string or
+   datasource access path". The push reported errors and the link silently did not render. The
+   default is removed and the value is stored on the header group instead.
+
+2. **The extra control ate the logo.** `.crk-header__logo` carried `min-width: 0` so the
+   wordmark absorbs whatever space is left. With five controls in the actions row that left it
+   **4px wide at 390 and 0px at 360** — the mark vanished on every common phone, the same mark
+   that had to be fixed for dark mode earlier the same day. The actions row now wraps below
+   430px instead of squeezing, and the logo has a 44px floor.
+
+| Width | logo | bar | overflow |
+|---|---|---|---|
+| 430 | 44×29 | 60px, one row | none |
+| 390 | 48×32 | 110px, two rows | none |
+| 360 | 48×32 | 158px | none |
+| 320 | 48×32 | 158px | none |
+| 195 | 48×32 | 206px | none |
+
+Zero sub-44px targets at every width.
+
+**Lesson:** adding one control to a flex row that contains a `min-width: 0` element does not
+overflow — it silently consumes that element. Overflow tests pass while something disappears.
+Measure the thing that absorbs the slack, not just `scrollWidth`.
