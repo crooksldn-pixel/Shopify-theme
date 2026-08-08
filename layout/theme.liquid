@@ -63,6 +63,10 @@
           if (t === 'light' || t === 'dark') {
             document.documentElement.setAttribute('data-crk-theme', t);
           }
+          var o = sessionStorage.getItem('crk-outline');
+          if (o === 'off') {
+            document.documentElement.setAttribute('data-crk-outline', 'off');
+          }
         } catch (e) { /* private mode: falls back to dark */ }
       })();
     </script>

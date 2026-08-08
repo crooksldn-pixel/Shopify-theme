@@ -687,6 +687,10 @@
 }
 /* Dark-mode treatment only, per brief. */
 :root[data-crk-theme="light"] .crk-product-image { filter: none }
+/* Evaluation toggle. Scoped to :root so the catalogue and the product page follow
+   the same choice, and so it survives navigation via sessionStorage. Beats the
+   base rule on specificity (0,3,0 vs 0,1,0) rather than on source order. */
+:root[data-crk-outline="off"] .crk-product-image { filter: none }
 
 /* ---- multi-option variant picker ----
    Products carry any number of options with any names (Size, Colour, Color,

@@ -809,3 +809,35 @@ A first run reported "the second add does nothing". That was the harness: it reu
 coordinates captured before the confirmation line shifted the layout. Re-probing the element
 before each click showed all three adds working. Same failure as the sold-out test — coordinates
 go stale the moment the DOM moves.
+
+## Outline toggle (temporary, for evaluation)
+
+A single chip in the catalogue toggles the alpha-trace outline on product shots. The attribute
+lands on `:root` and the choice is held in `sessionStorage`, so the product page follows the same
+setting and it survives navigation. Resolved in the existing inline head script alongside the
+theme, so there is no flash of outlined images before it applies.
+
+**Dark mode only.** `:root[data-crk-theme="light"] .crk-product-image` already sets
+`filter: none`, so the button does nothing in light mode. Worth knowing before judging.
+
+Deliberately built to be disposable: its own section setting (`show_outline_toggle`) so it can
+be removed in one click, its own `data-crk-outline-btn` attribute so `initLog`'s category filter
+can never pick it up — the view toggle and the category chips shared a class once and it hid
+every product — and an `outline_default` select so the winner can be made permanent from the
+theme editor without touching code.
+
+Verified: on → off → on, with the computed `filter` genuinely changing, `aria-pressed` following,
+and the choice persisting.
+
+### Three harness failures in one sitting, same root cause
+
+1. `scrollIntoView` and `getBoundingClientRect` in the same evaluate — the rect is the
+   pre-scroll one, so the click lands somewhere else entirely.
+2. The stray click hit a product card link and navigated the page away, after which the button
+   "did not exist".
+3. Earlier, the same stale-coordinate bug made a working second add-to-bag look broken.
+
+`locator.click()` re-measures after scrolling and waits for stability, which is why it worked
+first time. **Use it instead of `mouse.click` on computed coordinates** unless the point is
+specifically to test hit-testing — and when a harness says a feature is broken, suspect the
+harness before the feature.

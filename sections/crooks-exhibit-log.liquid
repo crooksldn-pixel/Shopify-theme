@@ -73,6 +73,28 @@
       </div>
     {%- endif -%}
 
+    {%- comment -%}
+      Temporary evaluation control for the alpha-trace outline on product shots.
+      Applies at :root and persists for the session, so a choice made here also
+      governs the product page. Dark mode only — light mode already sets
+      filter: none, so the button does nothing there.
+
+      Deliberately its own setting so it can be removed in one click once the
+      question is settled, and its own data attribute so initLog's category
+      filter never sees it (the two shared a class once already).
+    {%- endcomment -%}
+    {%- if section.settings.show_outline_toggle -%}
+      <div class="crk-views" role="group" aria-label="{{ section.settings.outline_group_label | escape }}">
+        <button
+          type="button"
+          class="crk-filter"
+          data-crk-outline-btn
+          data-crk-outline-default="{{ section.settings.outline_default }}"
+          aria-pressed="true"
+        >{{ section.settings.outline_label }}</button>
+      </div>
+    {%- endif -%}
+
     {%- if section.settings.show_filters and crk_categories.size > 0 -%}
       <div class="crk-filters" role="group" aria-label="{{ section.settings.filters_label | escape }}">
         <button type="button" class="crk-filter" data-crk-filter="ALL" aria-pressed="true">
@@ -341,6 +363,10 @@
     },
     { "type": "text", "id": "filters_label", "label": "Filter group label (screen readers)", "default": "Filter products" },
     { "type": "header", "content": "Status labels" },
+    { "type": "checkbox", "id": "show_outline_toggle", "label": "Show the white-outline toggle", "info": "Temporary control for comparing product shots with and without the outline. Dark mode only.", "default": true },
+    { "type": "text", "id": "outline_label", "label": "Outline toggle label", "default": "Outline" },
+    { "type": "text", "id": "outline_group_label", "label": "Outline toggle group label (screen readers)", "default": "Product image outline" },
+    { "type": "select", "id": "outline_default", "label": "Outline default", "options": [{ "value": "on", "label": "On" }, { "value": "off", "label": "Off" }], "default": "on" },
     { "type": "checkbox", "id": "show_colourways", "label": "Show colourway swatches on cards", "default": true },
     { "type": "text", "id": "colour_option_names", "label": "Option names treated as colourways", "info": "Comma separated. Matched case-insensitively.", "default": "Colour,Color,Colourway,Colorway" },
     { "type": "text", "id": "colourways_sr_label", "label": "Colourways label (screen readers)", "default": "Colourways" },

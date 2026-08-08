@@ -128,12 +128,36 @@
     apply(root.getAttribute('data-crk-view') || 'product');
   }
 
+  /* ---------- product image outline: evaluation toggle ---------- */
+  function initOutline(root) {
+    var btn = root.querySelector('[data-crk-outline-btn]');
+    if (!btn) return;
+    var el = document.documentElement;
+
+    // Session choice wins; otherwise the section's configured default. Stored
+    // rather than held in memory so the product page inherits the same choice.
+    var stored = null;
+    try { stored = sessionStorage.getItem('crk-outline'); } catch (e) {}
+    var on = stored ? stored !== 'off' : btn.getAttribute('data-crk-outline-default') !== 'off';
+
+    function apply(next) {
+      on = next;
+      if (on) el.removeAttribute('data-crk-outline');
+      else el.setAttribute('data-crk-outline', 'off');
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      try { sessionStorage.setItem('crk-outline', on ? 'on' : 'off'); } catch (e) {}
+    }
+    btn.addEventListener('click', function () { apply(!on); });
+    apply(on);
+  }
+
   /* ---------- boot ---------- */
   var INIT = [
     ['[data-crk-section="status-bar"]', initStatusBar],
     ['[data-crk-section="hero-intake"]', initBoot],
     ['[data-crk-section="exhibit-log"]', initLog],
-    ['[data-crk-section="exhibit-log"]', initViews]
+    ['[data-crk-section="exhibit-log"]', initViews],
+    ['[data-crk-section="exhibit-log"]', initOutline]
   ];
 
   function mountAll(scope) {
