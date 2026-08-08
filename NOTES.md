@@ -1174,3 +1174,25 @@ Zero sub-44px targets at every width.
 **Lesson:** adding one control to a flex row that contains a `min-width: 0` element does not
 overflow — it silently consumes that element. Overflow tests pass while something disappears.
 Measure the thing that absorbs the slack, not just `scrollWidth`.
+
+## Destructive error: menuUpdate wiped SHOP's sub-menu
+
+`menuUpdate` replaces the **entire item tree**, including children. Every menu query I ran
+fetched only `items { id title url type resourceId }` — never the nested `items` — so when
+adding TRACKING, and again when adding and reverting CATALOGUE, the child items under SHOP were
+sent back as absent and deleted.
+
+`sections/crooks-header.liquid` renders `link.links` as `.crk-drawer__sub`, so those children
+were the collection list in the pull-out menu. Losing them emptied it down to three top-level
+entries, which is what George noticed.
+
+**Not recoverable.** Navigation is store data, not a theme file, so none of the fallback themes
+contain it and Shopify exposes no menu history through the API. The sub-menu below has been
+**reconstructed**, not restored, and the order and labels are a guess that needs confirming:
+
+    SHOP → ALL · NEW · TEES · DENIM · SWEATS · TRACKSUITS · ACCESSORIES
+
+**Rule:** any `menuUpdate` must first read the full tree — `items { id title type url resourceId
+items { ... items { ... } } }` — and send it back intact. Shopify's menus nest three levels.
+This belongs with the `*-group.json` rule: read the whole of a merchant-owned structure before
+writing any part of it.
