@@ -1,9 +1,9 @@
 {
-  "generated": "2026-08-07T22:47:29.293Z",
+  "generated": "2026-08-08T17:08:03.253Z",
   "pages": {
     "home": {
       "label": "Homepage",
-      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/",
+      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/",
       "popupOnArrival": [
         {
           "cls": "ctc-overlay",
@@ -17,20 +17,20 @@
         390,
         844
       ],
-      "docHeight": 5086,
-      "docHeightInViewports": 6.03,
+      "docHeight": 5390,
+      "docHeightInViewports": 6.39,
       "scrollDepthViewports": {
-        "firstProductCard": 1.22,
+        "firstProductCard": 1.48,
         "firstProductCardSel": "a.crk-card",
         "addToCart": null,
         "addToCartSel": null,
-        "firstPrice": null,
-        "firstPriceText": null,
-        "footer": 5.15,
+        "firstPrice": 0.16,
+        "firstPriceText": "£45.00 to free Track",
+        "footer": 5.46,
         "checkout": null
       },
       "tapTargets": {
-        "total": 48,
+        "total": 50,
         "under44": 11,
         "under44Unique": [
           {
@@ -101,35 +101,35 @@
       "thumbZone": {
         "sel": "a.crk-card",
         "inFirstViewport": false,
-        "topOfDocPx": 1027,
-        "band": "top third",
-        "viewportsDown": 1.22
+        "topOfDocPx": 1247,
+        "band": "middle",
+        "viewportsDown": 1.48
       },
       "stickyBar": null
     },
     "pdpTee": {
       "label": "PDP — 3 CLIVES TEE",
-      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/products/3-clives-tee",
+      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/3-clives-tee",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 2964,
-      "docHeightInViewports": 3.51,
+      "docHeight": 3492,
+      "docHeightInViewports": 4.14,
       "scrollDepthViewports": {
-        "firstProductCard": 2.27,
+        "firstProductCard": 2.85,
         "firstProductCardSel": "a.crk-related-item",
-        "addToCart": 1.24,
+        "addToCart": 1.48,
         "addToCartSel": "button.crk-btn",
-        "firstPrice": null,
-        "firstPriceText": null,
-        "footer": 2.64,
+        "firstPrice": 0.16,
+        "firstPriceText": "£45.00 to free Track",
+        "footer": 3.21,
         "checkout": null
       },
       "tapTargets": {
-        "total": 44,
-        "under44": 11,
+        "total": 48,
+        "under44": 12,
         "under44Unique": [
           {
             "sel": "a",
@@ -174,6 +174,13 @@
             "count": 2
           },
           {
+            "sel": "a#more-payment-options-link.shopify-payment-button__more-options",
+            "w": 324,
+            "h": 22,
+            "text": "More payment options",
+            "count": 1
+          },
+          {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
             "w": 267,
             "h": 33,
@@ -199,9 +206,9 @@
       "thumbZone": {
         "sel": "button.crk-btn",
         "inFirstViewport": false,
-        "topOfDocPx": 1045,
-        "band": "top third",
-        "viewportsDown": 1.24
+        "topOfDocPx": 1247,
+        "band": "middle",
+        "viewportsDown": 1.48
       },
       "stickyBar": [
         {
@@ -211,8 +218,8 @@
         },
         {
           "cls": "crk-stickybar",
-          "h": 77,
-          "text": "3 CLIVES TEE $35.00 · XS · BLACK ADD TO BAG"
+          "h": 83,
+          "text": "3 CLIVES TEE £25.00 · XS · BLACK ADD TO BAG CHECKOUT NOW"
         },
         {
           "cls": "",
@@ -223,27 +230,27 @@
     },
     "pdpDenim": {
       "label": "PDP — BLUE WASH OG JEANS",
-      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/products/cb2-wash-jeans",
+      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/cb2-wash-jeans",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 2800,
-      "docHeightInViewports": 3.32,
+      "docHeight": 3400,
+      "docHeightInViewports": 4.03,
       "scrollDepthViewports": {
-        "firstProductCard": 2.08,
+        "firstProductCard": 2.74,
         "firstProductCardSel": "a.crk-related-item",
-        "addToCart": 1.04,
+        "addToCart": 1.37,
         "addToCartSel": "button.crk-btn",
-        "firstPrice": null,
-        "firstPriceText": null,
-        "footer": 2.44,
+        "firstPrice": 0.16,
+        "firstPriceText": "£45.00 to free Track",
+        "footer": 3.1,
         "checkout": null
       },
       "tapTargets": {
-        "total": 40,
-        "under44": 11,
+        "total": 46,
+        "under44": 12,
         "under44Unique": [
           {
             "sel": "a",
@@ -288,6 +295,13 @@
             "count": 2
           },
           {
+            "sel": "a#more-payment-options-link.shopify-payment-button__more-options",
+            "w": 324,
+            "h": 22,
+            "text": "More payment options",
+            "count": 1
+          },
+          {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
             "w": 267,
             "h": 33,
@@ -313,9 +327,9 @@
       "thumbZone": {
         "sel": "button.crk-btn",
         "inFirstViewport": false,
-        "topOfDocPx": 881,
-        "band": "top third",
-        "viewportsDown": 1.04
+        "topOfDocPx": 1156,
+        "band": "middle",
+        "viewportsDown": 1.37
       },
       "stickyBar": [
         {
@@ -325,8 +339,8 @@
         },
         {
           "cls": "crk-stickybar",
-          "h": 77,
-          "text": "BLUE WASH OG JEANS $83.00 · XS ADD TO BAG"
+          "h": 69,
+          "text": "BLUE WASH OG JEANS £60.00 · XS ADD TO BAG CHECKOUT NOW"
         },
         {
           "cls": "",
@@ -337,40 +351,33 @@
     },
     "cart": {
       "label": "Cart",
-      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/cart",
+      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cart",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 2079,
-      "docHeightInViewports": 2.46,
+      "docHeight": 2436,
+      "docHeightInViewports": 2.89,
       "scrollDepthViewports": {
-        "firstProductCard": 0.18,
+        "firstProductCard": 0.39,
         "firstProductCardSel": "a.cart-items__media-container",
-        "addToCart": 0,
-        "addToCartSel": "button.button.button",
-        "firstPrice": null,
-        "firstPriceText": null,
-        "footer": 1.59,
-        "checkout": 0.56
+        "addToCart": null,
+        "addToCartSel": null,
+        "firstPrice": 0.16,
+        "firstPriceText": "£45.00 to free Track",
+        "footer": 1.96,
+        "checkout": 0.88
       },
       "tapTargets": {
-        "total": 37,
-        "under44": 15,
+        "total": 38,
+        "under44": 12,
         "under44Unique": [
           {
             "sel": "label.visually-hidden",
             "w": 1,
             "h": 1,
             "text": "",
-            "count": 1
-          },
-          {
-            "sel": "a.size-style.link",
-            "w": 40,
-            "h": 22,
-            "text": "View all",
             "count": 1
           },
           {
@@ -381,24 +388,10 @@
             "count": 1
           },
           {
-            "sel": "input",
-            "w": 36,
-            "h": 28,
-            "text": "Quantity",
-            "count": 1
-          },
-          {
             "sel": "a",
             "w": 29,
             "h": 44,
             "text": "TEES",
-            "count": 1
-          },
-          {
-            "sel": "a#shopify-pc__banner__body-policy-link",
-            "w": 74,
-            "h": 18,
-            "text": "Privacy Policy",
             "count": 1
           },
           {
@@ -416,10 +409,10 @@
             "count": 2
           },
           {
-            "sel": "a.cart-items__title",
-            "w": 178,
-            "h": 26,
-            "text": "3 CLIVES TEE",
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 126,
+            "h": 21,
+            "text": "Privacy Policy",
             "count": 1
           },
           {
@@ -453,50 +446,43 @@
         ]
       },
       "thumbZone": {
-        "sel": "button.button.button",
+        "sel": "button#checkout.cart__checkout-button.button",
         "inFirstViewport": true,
-        "topOfDocPx": 0,
-        "band": "top third",
-        "viewportsDown": 0
+        "topOfDocPx": 747,
+        "band": "bottom 40% (thumb zone)",
+        "viewportsDown": 0.88
       },
       "stickyBar": null
     },
     "collection": {
       "label": "Collection — all",
-      "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/collections/all",
+      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/collections/all",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 3134,
-      "docHeightInViewports": 3.71,
+      "docHeight": 3388,
+      "docHeightInViewports": 4.01,
       "scrollDepthViewports": {
-        "firstProductCard": 0.24,
-        "firstProductCardSel": "a#222803c5bd533f4c2842dee7a088fa7c.product-card__link",
-        "addToCart": 0,
-        "addToCartSel": "button.button.button",
-        "firstPrice": null,
-        "firstPriceText": null,
-        "footer": 2.84,
+        "firstProductCard": 0.58,
+        "firstProductCardSel": "a.crk-card",
+        "addToCart": null,
+        "addToCartSel": null,
+        "firstPrice": 0.16,
+        "firstPriceText": "£45.00 to free Track",
+        "footer": 3.09,
         "checkout": null
       },
       "tapTargets": {
-        "total": 42,
-        "under44": 11,
+        "total": 43,
+        "under44": 10,
         "under44Unique": [
           {
             "sel": "a",
             "w": 22,
             "h": 44,
             "text": "NEW",
-            "count": 1
-          },
-          {
-            "sel": "button.button.facets-toggle__button",
-            "w": 51,
-            "h": 22,
-            "text": "Filter",
             "count": 1
           },
           {
@@ -551,11 +537,11 @@
         ]
       },
       "thumbZone": {
-        "sel": "button.button.button",
+        "sel": "a.crk-card",
         "inFirstViewport": true,
-        "topOfDocPx": 0,
-        "band": "top third",
-        "viewportsDown": 0
+        "topOfDocPx": 486,
+        "band": "middle",
+        "viewportsDown": 0.58
       },
       "stickyBar": null
     }
@@ -563,9 +549,9 @@
   "overflow": {
     "320": {
       "home": {
-        "scrollWidth": 334,
+        "scrollWidth": 320,
         "clientWidth": 320,
-        "horizontalScroll": true,
+        "horizontalScroll": false,
         "offenders": [
           {
             "sel": "a.skip-to-content-link.button-secondary",
@@ -575,81 +561,11 @@
             "overflowPx": 99999
           },
           {
-            "sel": "p.crk-status__msg",
-            "left": 16,
-            "right": 359,
-            "w": 343,
-            "overflowPx": 39
-          },
-          {
-            "sel": "li.crk-log__cell",
-            "left": 176,
-            "right": 334,
-            "w": 158,
-            "overflowPx": 14
-          },
-          {
-            "sel": "a.crk-card.crk-card--swap",
-            "left": 176,
-            "right": 334,
-            "w": 158,
-            "overflowPx": 14
-          },
-          {
-            "sel": "a.crk-card",
-            "left": 176,
-            "right": 334,
-            "w": 158,
-            "overflowPx": 14
-          },
-          {
-            "sel": "div",
-            "left": 0,
-            "right": 334,
-            "w": 334,
-            "overflowPx": 14
-          },
-          {
-            "sel": "iframe",
-            "left": 0,
-            "right": 334,
-            "w": 334,
-            "overflowPx": 14
-          },
-          {
             "sel": "button.crk-filter",
             "left": 239,
             "right": 330,
             "w": 92,
             "overflowPx": 10
-          },
-          {
-            "sel": "span.crk-card__top.crk-micro",
-            "left": 189,
-            "right": 321,
-            "w": 132,
-            "overflowPx": 1
-          },
-          {
-            "sel": "span",
-            "left": 275,
-            "right": 321,
-            "w": 47,
-            "overflowPx": 1
-          },
-          {
-            "sel": "span.crk-card__media",
-            "left": 189,
-            "right": 321,
-            "w": 132,
-            "overflowPx": 1
-          },
-          {
-            "sel": "img.crk-card__img.crk-card__img--main",
-            "left": 189,
-            "right": 321,
-            "w": 132,
-            "overflowPx": 1
           }
         ]
       },
@@ -664,13 +580,6 @@
             "right": -99877,
             "w": 122,
             "overflowPx": 99999
-          },
-          {
-            "sel": "p.crk-status__msg",
-            "left": 16,
-            "right": 359,
-            "w": 343,
-            "overflowPx": 39
           }
         ]
       },
@@ -685,13 +594,6 @@
             "right": -99877,
             "w": 122,
             "overflowPx": 99999
-          },
-          {
-            "sel": "p.crk-status__msg",
-            "left": 16,
-            "right": 359,
-            "w": 343,
-            "overflowPx": 39
           }
         ]
       },
@@ -703,16 +605,30 @@
           {
             "sel": "a.skip-to-content-link.button-secondary",
             "left": -99999,
-            "right": -99877,
-            "w": 122,
+            "right": -99816,
+            "w": 183,
             "overflowPx": 99999
           },
           {
-            "sel": "p.crk-status__msg",
-            "left": 16,
-            "right": 359,
-            "w": 343,
-            "overflowPx": 39
+            "sel": "slideshow-slide.product-media-container.media-fit",
+            "left": 304,
+            "right": 444,
+            "w": 140,
+            "overflowPx": 124
+          },
+          {
+            "sel": "div.product-media",
+            "left": 304,
+            "right": 444,
+            "w": 140,
+            "overflowPx": 124
+          },
+          {
+            "sel": "img.product-media__image",
+            "left": 304,
+            "right": 444,
+            "w": 140,
+            "overflowPx": 124
           }
         ]
       },
@@ -729,39 +645,11 @@
             "overflowPx": 99999
           },
           {
-            "sel": "slideshow-slide.product-media-container.media-fit",
-            "left": 308,
-            "right": 462,
-            "w": 154,
-            "overflowPx": 142
-          },
-          {
-            "sel": "div.product-media",
-            "left": 308,
-            "right": 462,
-            "w": 154,
-            "overflowPx": 142
-          },
-          {
-            "sel": "img.product-media__image",
-            "left": 308,
-            "right": 462,
-            "w": 154,
-            "overflowPx": 142
-          },
-          {
-            "sel": "a.category-chip",
-            "left": 290,
-            "right": 376,
-            "w": 86,
-            "overflowPx": 56
-          },
-          {
-            "sel": "p.crk-status__msg",
-            "left": 16,
-            "right": 359,
-            "w": 343,
-            "overflowPx": 39
+            "sel": "button.crk-filter",
+            "left": 239,
+            "right": 330,
+            "w": 92,
+            "overflowPx": 10
           }
         ]
       }
@@ -824,9 +712,30 @@
           {
             "sel": "a.skip-to-content-link.button-secondary",
             "left": -99999,
-            "right": -99877,
-            "w": 122,
+            "right": -99816,
+            "w": 183,
             "overflowPx": 99999
+          },
+          {
+            "sel": "slideshow-slide.product-media-container.media-fit",
+            "left": 344,
+            "right": 504,
+            "w": 160,
+            "overflowPx": 144
+          },
+          {
+            "sel": "div.product-media",
+            "left": 344,
+            "right": 504,
+            "w": 160,
+            "overflowPx": 144
+          },
+          {
+            "sel": "img.product-media__image",
+            "left": 344,
+            "right": 504,
+            "w": 160,
+            "overflowPx": 144
           }
         ]
       },
@@ -843,32 +752,11 @@
             "overflowPx": 99999
           },
           {
-            "sel": "slideshow-slide.product-media-container.media-fit",
-            "left": 348,
-            "right": 522,
-            "w": 174,
-            "overflowPx": 162
-          },
-          {
-            "sel": "div.product-media",
-            "left": 348,
-            "right": 522,
-            "w": 174,
-            "overflowPx": 162
-          },
-          {
-            "sel": "img.product-media__image",
-            "left": 348,
-            "right": 522,
-            "w": 174,
-            "overflowPx": 162
-          },
-          {
-            "sel": "a.category-chip",
-            "left": 290,
-            "right": 376,
-            "w": 86,
-            "overflowPx": 16
+            "sel": "button.crk-filter",
+            "left": 338,
+            "right": 442,
+            "w": 103,
+            "overflowPx": 82
           }
         ]
       }
@@ -931,9 +819,30 @@
           {
             "sel": "a.skip-to-content-link.button-secondary",
             "left": -99999,
-            "right": -99877,
-            "w": 122,
+            "right": -99816,
+            "w": 183,
             "overflowPx": 99999
+          },
+          {
+            "sel": "slideshow-slide.product-media-container.media-fit",
+            "left": 374,
+            "right": 549,
+            "w": 175,
+            "overflowPx": 159
+          },
+          {
+            "sel": "div.product-media",
+            "left": 374,
+            "right": 549,
+            "w": 175,
+            "overflowPx": 159
+          },
+          {
+            "sel": "img.product-media__image",
+            "left": 374,
+            "right": 549,
+            "w": 175,
+            "overflowPx": 159
           }
         ]
       },
@@ -950,32 +859,11 @@
             "overflowPx": 99999
           },
           {
-            "sel": "slideshow-slide.product-media-container.media-fit",
-            "left": 378,
-            "right": 567,
-            "w": 189,
-            "overflowPx": 177
-          },
-          {
-            "sel": "div.product-media",
-            "left": 378,
-            "right": 567,
-            "w": 189,
-            "overflowPx": 177
-          },
-          {
-            "sel": "img.product-media__image",
-            "left": 378,
-            "right": 567,
-            "w": 189,
-            "overflowPx": 177
-          },
-          {
-            "sel": "a.category-chip",
-            "left": 384,
-            "right": 510,
-            "w": 126,
-            "overflowPx": 120
+            "sel": "button.crk-filter",
+            "left": 338,
+            "right": 442,
+            "w": 103,
+            "overflowPx": 52
           }
         ]
       }
@@ -998,9 +886,9 @@
     "samples": [
       {
         "label": "board in viewport, idle",
-        "frames": 180,
+        "frames": 137,
         "ms": 3000,
-        "fps": 60
+        "fps": 45.7
       },
       {
         "label": "board OFF-screen",
@@ -1010,9 +898,9 @@
       },
       {
         "label": "board in viewport (control before blur)",
-        "frames": 121,
+        "frames": 102,
         "ms": 2000,
-        "fps": 60.5
+        "fps": 51
       },
       {
         "label": "tab HIDDEN",
@@ -1022,9 +910,9 @@
       }
     ],
     "scrollFps": {
-      "frames": 136,
-      "durMs": 2367,
-      "fps": 57.5
+      "frames": 141,
+      "durMs": 2828,
+      "fps": 49.9
     }
   }
 }

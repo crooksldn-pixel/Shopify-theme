@@ -1,17 +1,17 @@
 {
   "checkoutFocus": {
-    "outline": "1px solid rgb(10, 10, 10)",
+    "outline": "2px solid rgb(84, 37, 120)",
     "outlineOffset": "2px",
-    "buttonBg": "rgb(10, 10, 10)",
-    "buttonColor": "rgb(244, 241, 234)",
-    "surroundingBg": "rgb(244, 241, 234)",
-    "boxShadow": "rgb(10, 10, 10) 0px 0px 0px 0px inset",
+    "buttonBg": "rgb(84, 37, 120)",
+    "buttonColor": "rgb(221, 215, 201)",
+    "surroundingBg": "rgb(11, 10, 14)",
+    "boxShadow": "none",
     "text": "Check out"
   },
   "rails": [
     {
       "rail": "div.crk-filters",
-      "scrollWidth": 597,
+      "scrollWidth": 606,
       "clientWidth": 358,
       "items": 5,
       "hiddenItems": 2,
@@ -28,7 +28,7 @@
     "rail": "crk-filters",
     "item": "ACCESSORIES",
     "scrollLeftBefore": 0,
-    "scrollLeftAfter": 239,
+    "scrollLeftAfter": 248,
     "railScrolled": true,
     "itemNowVisible": true
   },
@@ -42,9 +42,9 @@
       "pos": "fixed"
     },
     "stickyBar": {
-      "top": 767,
+      "top": 775,
       "bottom": 844,
-      "h": 77,
+      "h": 69,
       "z": "40",
       "pos": "fixed"
     },
