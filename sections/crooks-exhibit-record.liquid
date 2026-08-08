@@ -217,8 +217,22 @@
                 </div>
               {%- endfor -%}
 
-              <p class="crk-stockline" data-crk-stockline data-out="false" aria-live="polite">
-                {{ section.settings.label_select }}
+              {%- comment -%}
+                The size buttons are pre-selected server-side from crk_var, so a stock line
+                hardcoded to "Select a size" contradicted the size the page was already
+                showing as chosen — and was wrong for anyone landing on ?variant=<sold out>.
+                Mirror the JS states here so the pre-JS render is variant-accurate.
+              {%- endcomment -%}
+              <p class="crk-stockline" data-crk-stockline data-out="{% if crk_var.available %}false{% else %}true{% endif %}" aria-live="polite">
+                {%- if crk_var == blank -%}
+                  {{ section.settings.label_select }}
+                {%- elsif crk_var.available == false -%}
+                  {{ section.settings.label_sold_size | replace: '[size]', crk_var.title }}
+                {%- elsif crk_var.inventory_quantity > 0 and crk_var.inventory_quantity <= section.settings.low_stock_threshold -%}
+                  {{ section.settings.label_low | replace: '[n]', crk_var.inventory_quantity | replace: '[size]', crk_var.title }}
+                {%- else -%}
+                  {{ section.settings.label_in_stock }}
+                {%- endif -%}
               </p>
               {%- if has_measurements -%}
                 <button type="button" class="crk-textbtn" style="margin-top: 8px;" data-crk-size-guide>
@@ -258,10 +272,15 @@
                 assign crk_mto = true
               endif
             -%}
+            {%- comment -%}
+              Hidden while the chosen variant is unavailable: "In stock · Ships within 24
+              hours" sat two lines under "SIZE L IS SOLD OUT" and flatly contradicted it.
+              JS re-evaluates on every size change; this covers the pre-JS render.
+            {%- endcomment -%}
             {%- if crk_mto and section.settings.made_to_order_text != blank -%}
-              <p class="crk-stockline">{{ section.settings.made_to_order_text }}</p>
+              <p class="crk-stockline" data-crk-delivery{% unless crk_var.available %} hidden{% endunless %}>{{ section.settings.made_to_order_text }}</p>
             {%- elsif section.settings.in_stock_text != blank -%}
-              <p class="crk-stockline">{{ section.settings.in_stock_text }}</p>
+              <p class="crk-stockline" data-crk-delivery{% unless crk_var.available %} hidden{% endunless %}>{{ section.settings.in_stock_text }}</p>
             {%- endif -%}
 
             {%- comment -%} App blocks (size charts, reviews) render here. {%- endcomment -%}
@@ -272,10 +291,55 @@
             {%- endfor -%}
 
             <span class="crk-label crk-buylabel">{{ section.settings.buy_label }}</span>
-            <button type="submit" name="add" class="crk-btn" data-crk-buy>
-              {%- if crk_has_options -%}{{ section.settings.label_select }}{%- else -%}{{ section.settings.label_add }}{%- endif -%}
+            {%- comment -%}
+              Server-side buy state. Without this a JS-off shopper landing on
+              ?variant=<sold out> got an enabled ADD TO BAG carrying that variant's id.
+              JS re-derives all of this on first render, so this only governs the
+              pre-JS and no-JS case. ADD TO BAG stays plain English either way.
+            {%- endcomment -%}
+            <button type="submit" name="add" class="crk-btn" data-crk-buy{% unless crk_var.available %} disabled{% endunless %}>
+              {%- if crk_var.available == false -%}
+                {{ section.settings.label_sold }}
+              {%- elsif crk_var == blank and crk_has_options -%}
+                {{ section.settings.label_select }}
+              {%- else -%}
+                {{ section.settings.label_add }}
+              {%- endif -%}
             </button>
           {%- endform -%}
+
+          {%- comment -%}
+            Variant-level sold-out capture. The block below only ever rendered when EVERY
+            variant was gone, so a shopper whose size is sold out while other sizes remain
+            was offered nothing at all — the worst finding in the audit. Same component,
+            same copy, surfaced at the right granularity. It sits outside the product form
+            because HTML forbids nested forms, and starts hidden unless the variant the
+            server selected is itself unavailable, so it is correct before JS runs.
+          {%- endcomment -%}
+          <div class="crk-notifypanel" data-crk-notify-panel{% if crk_var.available %} hidden{% endif %}>
+            {%- form 'contact', class: 'crk-notify' -%}
+              <input type="hidden" name="contact[subject]" value="{{ section.settings.notify_subject | escape }}">
+              <input type="hidden" name="contact[product]" value="{{ product.handle }}">
+              <input type="hidden" name="contact[product_url]" value="{{ shop.url }}{{ product.url }}">
+              <input type="hidden" name="contact[variant]" value="{{ crk_var.title | escape }}" data-crk-notify-variant>
+              <label class="crk-label crk-buylabel" for="crk-notify-variant-email">{{ section.settings.notify_variant_label }}</label>
+              <input
+                class="crk-input"
+                id="crk-notify-variant-email"
+                type="email"
+                name="contact[email]"
+                placeholder="{{ section.settings.notify_placeholder | escape }}"
+                autocomplete="email"
+                required
+              >
+              <button class="crk-btn" type="submit" style="margin-top: 8px;">{{ section.settings.notify_button }}</button>
+              {%- if form.posted_successfully? -%}
+                <p class="crk-body" style="margin-top: 16px;" aria-live="polite">{{ section.settings.notify_ok }}</p>
+              {%- elsif form.errors -%}
+                <p class="crk-body" style="margin-top: 16px; color: var(--crk-red);" role="alert">{{ section.settings.notify_err }}</p>
+              {%- endif -%}
+            {%- endform -%}
+          </div>
         {%- else -%}
           <p class="crk-stockline" data-out="true">{{ section.settings.released_text }}</p>
           {%- form 'contact', class: 'crk-notify' -%}
@@ -531,6 +595,7 @@
     { "type": "text", "id": "made_to_order_tag", "label": "Made-to-order tag", "default": "made-to-order" },
     { "type": "header", "content": "Sold out" },
     { "type": "text", "id": "released_text", "label": "Released text", "default": "RELEASED — NO LONGER IN CUSTODY" },
+    { "type": "text", "id": "notify_variant_label", "label": "Notify label (size sold out)", "default": "Tell me when this size is back" },
     { "type": "text", "id": "notify_placeholder", "label": "Notify placeholder", "default": "email address" },
     { "type": "text", "id": "notify_button", "label": "Notify button", "default": "Notify me" },
     { "type": "text", "id": "notify_subject", "label": "Notify email subject", "default": "Restock request" },

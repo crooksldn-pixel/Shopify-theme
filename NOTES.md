@@ -471,3 +471,50 @@ templates were re-shot at 390 and 1440 to confirm nothing moved at normal widths
 harness fetched `crooks.css` from the bare asset path and Shopify's CDN served a stale build
 for it. The `?v=` cache-buster has to stay on the request *and* in the local cache key. A
 harness that silently tests yesterday's CSS reports confident nonsense.
+
+## BACKLOG #3 — the worst finding was a symptom of BACKLOG #5
+
+The audit recorded that tapping a sold-out size on V2 BAGGIES did nothing: `selectedVariantId`
+stayed on XS, the sticky bar stayed on XS, the buy button stayed enabled, and `/cart/add.js`
+returned `"variant_title":"XS"`. It read as broken variant logic. It was not.
+
+Proven by A/B against the pre-audit fallback theme (#203044159831) kept as a control:
+
+| | pre-audit build | after the popup was gated |
+|---|---|---|
+| `elementFromPoint` at the sold-out chip | `iframe.ctc-frame` | `button.crk-size` |
+| after a **real** pointer click | stays XS, "Add to bag", enabled | cleared, "SOLD OUT", `disabled === true` |
+
+The CRACK THE CUFFS overlay at `z-index: 2147483647` was swallowing the taps. `crooks-record.js`
+had been correct the whole time.
+
+**Method note that matters.** A programmatic `element.click()` dispatches straight to the node and
+ignores hit-testing, so it "passes" underneath a full-screen overlay. Only `page.mouse.click()` at
+the element's centre — plus an `elementFromPoint` check — reproduces what a thumb does. The first
+run here used `.click()` and would have declared the bug fixed without FIX 1 having anything to do
+with it.
+
+### What was genuinely broken, and is now fixed
+
+- **The notify block was gated at product level.** `{% if product.available %}` meant the existing
+  RELEASED + email-capture block only rendered when *every* variant was gone, so the shopper whose
+  size was sold out while others remained was offered nothing. A second instance of the same
+  component now renders inside the available branch, hidden until the chosen combination is
+  unavailable. It sits outside the product form because HTML forbids nested forms, and it carries
+  the chosen size in `contact[variant]` so a restock request says which size.
+- **`--crk-red` is now used for the state it was reserved for**, and only that.
+- **The server render was variant-blind.** The size buttons were pre-selected from `crk_var` while
+  the stock line always said "Select a size" and ADD TO BAG was enabled — so a JS-off shopper
+  landing on `?variant=<sold out>` got an enabled buy button carrying that variant's id. Stock
+  line, buy label and `disabled` are now all derived from `crk_var`.
+- **Dead selector removed.** `crooks-record.js:19` queried `.crk-size[data-size]`; the Liquid emits
+  `data-crk-opt` / `data-value` and never `data-size`, so it matched nothing and was never read.
+
+### Found while fixing it, not in the audit
+
+`In stock · Ships within 24 hours` is product-level and sat two lines under `SIZE L IS SOLD OUT`.
+Now hidden whenever the chosen variant is unavailable, server-side and in JS.
+
+Verified end to end on the deployed staging build: L / XL / M / XS / S each tapped with a real
+pointer, every state consistent, no JS errors, one `h1`, size buttons keep `aria-label` and
+`aria-pressed`, and the noscript size list still renders only buyable sizes.

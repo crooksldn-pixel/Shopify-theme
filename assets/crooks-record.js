@@ -16,9 +16,12 @@
     var idInput = root.querySelector('[data-crk-variant-id]');
     var buyBtn = root.querySelector('[data-crk-buy]');
     var stockLine = root.querySelector('[data-crk-stockline]');
-    var cells = root.querySelectorAll('.crk-size[data-size]');
     var priceEl = root.querySelector('[data-crk-price]');
     var stickyMeta = root.querySelector('[data-crk-sticky-meta]');
+    // Variant-level restock capture: hidden until the chosen variant is the sold-out one.
+    var notifyPanel = root.querySelector('[data-crk-notify-panel]');
+    var notifyVariant = root.querySelector('[data-crk-notify-variant]');
+    var deliveryLine = root.querySelector('[data-crk-delivery]');
 
     var L = {
       add: root.getAttribute('data-crk-label-add') || 'Add to bag',
@@ -151,6 +154,18 @@
       if (!complete) setBuy(L.select, true);
       else if (v && v.available) setBuy(L.add, false);
       else setBuy(L.sold, true);
+
+      // The notify form appears only once a full option set is chosen and that
+      // combination is unavailable — never while the shopper is still mid-choice.
+      var soldChoice = complete && (!v || !v.available);
+      if (notifyPanel) {
+        notifyPanel.hidden = !soldChoice;
+        if (soldChoice && notifyVariant) {
+          notifyVariant.value = selected.filter(function (x) { return x; }).join(' / ');
+        }
+      }
+      // A dispatch promise must not sit under a sold-out line.
+      if (deliveryLine) deliveryLine.hidden = soldChoice;
 
       if (v && v.available) {
         try {
