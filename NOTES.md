@@ -518,3 +518,35 @@ Now hidden whenever the chosen variant is unavailable, server-side and in JS.
 Verified end to end on the deployed staging build: L / XL / M / XS / S each tapped with a real
 pointer, every state consistent, no JS errors, one `h1`, size buttons keep `aria-label` and
 `aria-pressed`, and the noscript size list still renders only buyable sizes.
+
+## BACKLOG #14 — filing dates in the register
+
+The status slot rendered `AVAILABLE` on all fourteen cards, so the register could not tell a
+returning shopper what had changed. It now carries `FILED dd.mm` for anything published inside
+a window, falling back to `AVAILABLE` outside it. The sold-out branch is untouched and
+`--crk-red` is not spent here.
+
+`product.published_at`, not `created_at`: several products were created months before they went
+on the storefront (V2 BAGGIES created 22 March, published 13 July), and it is the storefront
+date a shopper is being told about. Caveat: `published_at` moves if a product is unpublished and
+republished, so it can overstate freshness.
+
+**The window is a setting, not a constant, because it is an editorial call.** Measured against
+the real catalogue on 8 August:
+
+| Window | Cards stamped |
+|---|---|
+| 30 days (default) | **4 of 14 (29%)** — V2 BAGGIES, CRXST★RZ, both MOTIONTEC socks |
+| 35 days | 11 of 14 (79%) — seven products share a 4 July publish date |
+| 75 days | 14 of 14 — no signal at all |
+
+`/collections/new` returns 9 of 14 (64%), which is why the audit called it no signal. 30 days
+lands the register on the right side of that; 35 falls off a cliff because of the 4 July batch.
+
+**Liquid trap worth recording.** This first rendered as `13.07` with the label gone:
+
+    {{ filed_label | replace: '[date]', product.published_at | date: fmt }}
+
+Filters chain left to right with no grouping, so `date:` was applied to the *result of the
+replace* — it reformatted the whole `FILED 2026-07-13...` string and swallowed the label. The
+date has to be formatted into its own variable first.

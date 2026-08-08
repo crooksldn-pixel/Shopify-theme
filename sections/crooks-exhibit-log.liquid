@@ -94,6 +94,33 @@
           assign crk_cat = product.type | upcase
           assign crk_main = product.featured_image
           assign crk_alt = product.images[1]
+
+          comment
+            Filing date. The status slot rendered a constant on all fourteen cards, so
+            the register could not tell a returning shopper what had changed. A date is
+            more in voice than "NEW" and it is a fact rather than a claim — it reports
+            when the product went on the storefront, nothing more.
+
+            The window is a setting because it is the merchant's editorial call: too wide
+            and every card is stamped, which is the same as no signal at all.
+          endcomment
+          assign crk_filed = false
+          if product.published_at and section.settings.filed_days > 0
+            assign crk_now_s = 'now' | date: '%s' | times: 1
+            assign crk_pub_s = product.published_at | date: '%s' | times: 1
+            assign crk_age = crk_now_s | minus: crk_pub_s | divided_by: 86400
+            if crk_age >= 0 and crk_age <= section.settings.filed_days
+              assign crk_filed = true
+              comment
+                Format the date into its own variable first. Inlining it as
+                `filed_label | replace: '[date]', product.published_at | date: fmt`
+                parses as replace(...) THEN date(...), so `date` reformats the whole
+                replaced string and swallows the label — it rendered "13.07", not
+                "FILED 13.07".
+              endcomment
+              assign crk_filed_on = product.published_at | date: section.settings.filed_format
+            endif
+          endif
           comment
             Outline everything EXCEPT JPEG. JPEG cannot carry an alpha channel,
             so a JPEG product shot always has a baked-in background and the
@@ -180,11 +207,13 @@
             <span class="crk-card__name">{% render 'crooks-title', product: product %}</span>
             <span class="crk-card__row">
               <span class="crk-price">{{ product.price | money }}</span>
-              <span class="crk-card__status">
-                {%- if product.available -%}
-                  {{ section.settings.available_label }}
-                {%- else -%}
+              <span class="crk-card__status"{% if crk_filed and product.available %} data-crk-filed="true"{% endif %}>
+                {%- if product.available == false -%}
                   {{ section.settings.sold_out_label }}
+                {%- elsif crk_filed -%}
+                  {{ section.settings.filed_label | replace: '[date]', crk_filed_on }}
+                {%- else -%}
+                  {{ section.settings.available_label }}
                 {%- endif -%}
               </span>
             </span>
@@ -232,6 +261,9 @@
     { "type": "text", "id": "filters_label", "label": "Filter group label (screen readers)", "default": "Filter products" },
     { "type": "header", "content": "Status labels" },
     { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
+    { "type": "text", "id": "filed_label", "label": "Recently filed label", "info": "Use [date]. Replaces the available label for products published inside the window below.", "default": "FILED [date]" },
+    { "type": "text", "id": "filed_format", "label": "Filing date format", "info": "Liquid date format. %d.%m gives 08.08.", "default": "%d.%m" },
+    { "type": "range", "id": "filed_days", "label": "Treat as recently filed for", "unit": "d", "min": 0, "max": 90, "step": 1, "default": 30 },
     { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "SOLD OUT" },
     { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO PRODUCTS MATCH THIS CATEGORY." },
     { "type": "header", "content": "Advanced" },
