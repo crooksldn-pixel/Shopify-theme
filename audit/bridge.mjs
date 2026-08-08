@@ -8,8 +8,10 @@ import http from 'http';
 import https from 'https';
 import fs from 'fs';
 
-const UPSTREAM_HOST = '127.0.0.1';
-const UPSTREAM_PORT = 36431;
+// Derive the egress proxy from the environment — the port changes per container session.
+const UP = new URL(process.env.HTTPS_PROXY || 'http://127.0.0.1:36431');
+const UPSTREAM_HOST = UP.hostname;
+const UPSTREAM_PORT = Number(UP.port);
 const CA = fs.readFileSync('/root/.ccr/ca-bundle.crt');
 const key = fs.readFileSync(new URL('./certs/key.pem', import.meta.url));
 const cert = fs.readFileSync(new URL('./certs/cert.pem', import.meta.url));

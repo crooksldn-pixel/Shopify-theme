@@ -1,7 +1,7 @@
 [
   {
     "label": "HOMEPAGE",
-    "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/",
+    "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/",
     "rows": [
       {
         "name": "IMG_3682.png",
@@ -31,17 +31,8 @@
         "cdnCache": "HIT"
       },
       {
-        "name": "crooksldn-blue-wash-denim-jorts.png",
-        "param": "v=1786031414&width=600",
-        "contentType": "image/webp",
-        "magic": "WEBP",
-        "encodedKB": 46,
-        "vary": "Accept",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "crooksldn-blue-wash-baggy-jeans.png",
-        "param": "v=1786031478&width=600",
+        "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+        "param": "v=1786194968&width=600",
         "contentType": "image/webp",
         "magic": "WEBP",
         "encodedKB": 49,
@@ -49,11 +40,11 @@
         "cdnCache": "HIT"
       },
       {
-        "name": "crooksldn-grey-wash-denim-jorts.png",
-        "param": "v=1786031378&width=600",
+        "name": "crooksldn-blue-wash-denim-jorts.png",
+        "param": "v=1786031414&width=600",
         "contentType": "image/webp",
         "magic": "WEBP",
-        "encodedKB": 29,
+        "encodedKB": 46,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
@@ -67,29 +58,56 @@
         "cdnCache": "HIT"
       },
       {
-        "name": "7087223b-a77a-4219-9880-1e3a00cc166c_webp.webp",
-        "param": "v=1786031106&width=600",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 172,
+        "name": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
+        "param": "v=1786198507&width=600",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 17,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
       {
-        "name": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp.webp",
-        "param": "v=1786031163&width=600",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 113,
+        "name": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+        "param": "v=1786198500&width=600",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 19,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
       {
-        "name": "9dbaee36-324c-4962-a8ad-976d795cd949_webp.webp",
-        "param": "v=1786031026&width=600",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 186,
+        "name": "crooksldn-grey-wash-denim-jorts.png",
+        "param": "v=1786031378&width=600",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 29,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "IMG-3994.png",
+        "param": "v=1786198496&width=600",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 17,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
+        "param": "v=1786198504&width=600",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 16,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "blacksock.png",
+        "param": "v=1784542125&width=600",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 34,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
@@ -112,30 +130,21 @@
         "cdnCache": "HIT"
       },
       {
+        "name": "crooksldn-white-red-motiontec-socks.webp",
+        "param": "v=1785769861&width=600",
+        "contentType": "image/png",
+        "magic": "PNG",
+        "encodedKB": 181,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
         "name": "bef77.svg",
         "param": "",
         "contentType": "image/svg+xml",
         "magic": "SVG",
-        "encodedKB": 2,
+        "encodedKB": 1,
         "vary": "Accept-Encoding",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "IMG-3994.webp",
-        "param": "v=1785769913&width=600",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 122,
-        "vary": "Accept",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "blacksock.png",
-        "param": "v=1784542125&width=600",
-        "contentType": "image/webp",
-        "magic": "WEBP",
-        "encodedKB": 34,
-        "vary": "Accept",
         "cdnCache": "HIT"
       },
       {
@@ -155,21 +164,12 @@
         "encodedKB": 18,
         "vary": "Accept",
         "cdnCache": "HIT"
-      },
-      {
-        "name": "crooksldn-white-red-motiontec-socks.webp",
-        "param": "v=1785769861&width=600",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 181,
-        "vary": "Accept",
-        "cdnCache": "HIT"
       }
     ]
   },
   {
     "label": "PDP 3 CLIVES TEE",
-    "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/products/3-clives-tee",
+    "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/3-clives-tee",
     "rows": [
       {
         "name": "IMG_3682.png",
@@ -181,61 +181,34 @@
         "cdnCache": "HIT"
       },
       {
-        "name": "9dbaee36-324c-4962-a8ad-976d795cd949_webp.webp",
-        "param": "v=1786031026&width=1400",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 635,
+        "name": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+        "param": "v=1786198500&width=1400",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 45,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
       {
-        "name": "9dbaee36-324c-4962-a8ad-976d795cd949_webp.webp",
-        "param": "v=1786031026&width=128",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 15,
+        "name": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+        "param": "v=1786198500&width=128",
+        "contentType": "image/avif",
+        "magic": "AVIF/HEIF",
+        "encodedKB": 5,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
       {
-        "name": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.webp",
-        "param": "v=1786031315&width=128",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 16,
+        "name": "9dbaee36-324c-4962-a8ad-976d795cd949_webp.png",
+        "param": "v=1786198500&width=128",
+        "contentType": "image/avif",
+        "magic": "AVIF/HEIF",
+        "encodedKB": 4,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
       {
-        "name": "7087223b-a77a-4219-9880-1e3a00cc166c_webp.webp",
-        "param": "v=1786031106&width=400",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 93,
-        "vary": "Accept",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp.webp",
-        "param": "v=1786031163&width=400",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 66,
-        "vary": "Accept",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "IMG-3994.webp",
-        "param": "v=1785769913&width=400",
-        "contentType": "image/png",
-        "magic": "PNG",
-        "encodedKB": 64,
-        "vary": "Accept",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "10aef.svg",
+        "name": "shop-logo.svg",
         "param": "",
         "contentType": "image/svg+xml",
         "magic": "SVG",
@@ -244,7 +217,43 @@
         "cdnCache": "HIT"
       },
       {
+        "name": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
+        "param": "v=1786198507&width=400",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 12,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "IMG-3994.png",
+        "param": "v=1786198496&width=400",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 12,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
+        "param": "v=1786198504&width=400",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 11,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
         "name": "bef77.svg",
+        "param": "",
+        "contentType": "image/svg+xml",
+        "magic": "SVG",
+        "encodedKB": 1,
+        "vary": "Accept-Encoding",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "10aef.svg",
         "param": "",
         "contentType": "image/svg+xml",
         "magic": "SVG",
@@ -265,11 +274,11 @@
   },
   {
     "label": "PDP BLUE WASH OG JEANS (cb2-wash-jeans)",
-    "url": "https://ezvw3xrffzdt93es-100410786135.shopifypreview.com/products/cb2-wash-jeans",
+    "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/cb2-wash-jeans",
     "rows": [
       {
-        "name": "crooksldn-blue-wash-baggy-jeans.png",
-        "param": "v=1786031478&width=1400",
+        "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+        "param": "v=1786194968&width=1400",
         "contentType": "image/webp",
         "magic": "WEBP",
         "encodedKB": 182,
@@ -286,20 +295,38 @@
         "cdnCache": "HIT"
       },
       {
+        "name": "crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
+        "param": "v=1786194968&width=128",
+        "contentType": "image/avif",
+        "magic": "AVIF/HEIF",
+        "encodedKB": 6,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+        "param": "v=1786194968&width=128",
+        "contentType": "image/avif",
+        "magic": "AVIF/HEIF",
+        "encodedKB": 5,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "shop-logo.svg",
+        "param": "",
+        "contentType": "image/svg+xml",
+        "magic": "SVG",
+        "encodedKB": 2,
+        "vary": "Accept-Encoding",
+        "cdnCache": "HIT"
+      },
+      {
         "name": "crooksldn-blue-wash-denim-jorts.png",
         "param": "v=1786031414&width=400",
         "contentType": "image/webp",
         "magic": "WEBP",
         "encodedKB": 23,
-        "vary": "Accept",
-        "cdnCache": "HIT"
-      },
-      {
-        "name": "crooksldn-grey-wash-denim-jorts.png",
-        "param": "v=1786031378&width=400",
-        "contentType": "image/webp",
-        "magic": "WEBP",
-        "encodedKB": 15,
         "vary": "Accept",
         "cdnCache": "HIT"
       },
@@ -313,7 +340,16 @@
         "cdnCache": "HIT"
       },
       {
-        "name": "10aef.svg",
+        "name": "crooksldn-grey-wash-denim-jorts.png",
+        "param": "v=1786031378&width=400",
+        "contentType": "image/webp",
+        "magic": "WEBP",
+        "encodedKB": 15,
+        "vary": "Accept",
+        "cdnCache": "HIT"
+      },
+      {
+        "name": "bef77.svg",
         "param": "",
         "contentType": "image/svg+xml",
         "magic": "SVG",
@@ -322,7 +358,7 @@
         "cdnCache": "HIT"
       },
       {
-        "name": "bef77.svg",
+        "name": "10aef.svg",
         "param": "",
         "contentType": "image/svg+xml",
         "magic": "SVG",

@@ -1,0 +1,35 @@
+{
+  "pulledAt": "2026-08-08 (re-audit, ~11:00 UTC)",
+  "trading90d": {
+    "2026-07": { "total_sales": 9585.45, "orders": 186, "aov": 54.09 },
+    "2026-08_to_8th": { "total_sales": 930.67, "orders": 16, "aov": 60.68, "note": "was 994.66 at first pull same day — ~£64 reversed on an existing order; order count unchanged" },
+    "2026-06": { "total_sales": -195.09, "orders": 9 },
+    "2026-05": { "total_sales": 718.66, "orders": 30 },
+    "total": 11039.69
+  },
+  "lifetimeOrders": 764,
+  "latestOrder": "CROOKS-1764 (2026-08-07T14:56:38Z)",
+  "unitsSold365d": 878,
+  "oversellRepair": {
+    "MONEY CLIVE TEE": { "was": -22, "now": 100, "policy": "CONTINUE (unchanged)" },
+    "3 CLIVES TEE": { "was": -19, "now": 100, "policy": "CONTINUE (unchanged)" },
+    "BROADCAST TEE": { "was": -8, "now": 100, "policy": "CONTINUE (unchanged)" },
+    "note": "All three restocked to exactly 10 per variant since the first pull. Negative stock cleared; CONTINUE policy still set, so overselling re-arms at zero."
+  },
+  "syncArtefactResolved": {
+    "CRXST★RZ T-SHIRT": { "was": 970, "now": 98, "note": "reset to ~10/variant; Black XS and Black XL at 9 — confirms the first audit's suspected sync artefact" },
+    "CRX GARMS T-SHIRT": { "still": 985, "status": "ARCHIVED", "policy": "CONTINUE", "note": "NOT reset — still looks like an artefact, still archived" }
+  },
+  "v2BaggiesM": { "inventoryQuantity": -1, "policy": "DENY", "availableForSale": false, "note": "unchanged" },
+  "archivedInventory": {
+    "unchanged": true,
+    "totalUnits": 1452,
+    "products": {
+      "CRX GARMS T-SHIRT": 985, "BLACK CONVICT JOGGERS": 104, "OG JEANS": 93,
+      "HYRDOCUFF WINDBREAKER": 73, "V1 HOODIE": 72, "PINK CRSDR JOGGERS": 41,
+      "BLACK CONVICT HOODIE": 39, "CROOKS EXPRESS TEE": 33, "DOUBLE AGENT BALACLAVA (draft)": 8,
+      "OG CROOK TEE": 4, "PINK CRSDR HOODIE": 0
+    }
+  },
+  "topSellers365d": "identical to first pull — CROOKS EXPRESS TEE 146, V2 BAGGIES 127, BLACK CONVICT JOGGERS 105, LARGE DUFFLE BAG 51, CHARCOAL CELLBLOCK SHORTS 48"
+}
