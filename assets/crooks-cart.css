@@ -217,3 +217,65 @@ main .size-style.link,
   .cart-items__media-container,
   .cart-items__media-image { max-width: 120px; }
 }
+
+
+/* ---- cart line items on a phone ----
+   The row is a four-column table: media, details, quantity, price. The quantity
+   stepper is a fixed ~136px, which is 48% of the usable width at 320px, so the
+   image collapsed to 28px and the product title was left 61px — the clash.
+
+   Below 600px the row becomes a two-column grid: the thumbnail on the left, and
+   details / quantity / price stacked beside it. Safe for assistive tech because
+   the markup carries explicit role="table"/"rowgroup"/"row"/"cell", so changing
+   `display` does not strip the semantics. */
+@media screen and (max-width: 600px) {
+  .cart-items__table,
+  .cart-items__table > tbody,
+  .cart-items__table > thead { display: block }
+
+  .cart-items__table-row {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    grid-template-areas:
+      "media details"
+      "media quantity"
+      "media price";
+    column-gap: 14px;
+    row-gap: 6px;
+    align-items: start;
+    padding: 16px 0;
+    border-bottom: 1px solid rgb(var(--color-border-rgb));
+  }
+  .cart-items__table-row > td { display: block; padding-left: 0; padding-right: 0; min-width: 0 }
+  .cart-items__media    { grid-area: media; width: 88px; max-width: 88px }
+  .cart-items__details  { grid-area: details }
+  .cart-items__quantity { grid-area: quantity; justify-self: start }
+  .cart-items__price    { grid-area: price; justify-self: start; text-align: left }
+  .cart-items__error    { grid-column: 1 / -1 }
+
+  /* The cap set for desktop must not fight the grid track. */
+  .cart-items__media-container,
+  .cart-items__media-image { max-width: 88px }
+}
+
+/* Horizon's card-gallery arrows in the recommendations below the cart render at
+   20x26. Pre-existing and not part of the line-item fix, but they are tap targets
+   on this page and the rest of the cart is at 44. */
+.slideshow-control { min-width: 44px; min-height: 44px }
+
+/* The variant line ("XS") is a <dd>, which carries a 40px UA default indent.
+   crooks.css resets that inside .crk-root, but the cart is Horizon's markup and
+   never enters that scope, so it has to be reset here. */
+.cart-items__variants dd,
+.cart-items__variant dd { margin-left: 0 }
+
+/* Remove is destructive and secondary; it was inheriting the primary purple fill
+   and reading louder than Check out. Ghost it, keep the 44px target. */
+.cart-items__remove {
+  background: none;
+  border: 1px solid rgb(var(--color-border-rgb));
+  color: rgb(var(--color-foreground-rgb));
+  min-width: 44px;
+  min-height: 44px;
+}
+.cart-items__remove:hover { border-color: rgb(167 122 199) }

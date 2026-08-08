@@ -885,3 +885,48 @@ account template.
 
 **Not yet verified in a browser:** rendering needs a page in the admin using the `tracking`
 suffix, and creating one touches the live storefront. Left for George to authorise.
+
+## Cart line items on mobile
+
+Reported as "items clash with the text". Measured, it was not a text collision but a
+**four-column table forced onto a phone**:
+
+| Width | media | details | quantity | price |
+|---|---|---|---|---|
+| 390 | 96 | **63** | 136 | 53 |
+| 320 | **28** | **61** | 136 | 53 |
+
+The quantity stepper is a fixed ~136px — 48% of the usable width at 320px — so the thumbnail
+collapsed to 28px and the product title was left 61px to wrap into.
+
+Below 600px the row is now a two-column grid: an 88px thumbnail on the left, with details,
+quantity and price stacked beside it. Details went **63 → 256px** at 390 and **61 → 186px** at
+320. No overflow at 390, 360 or 320.
+
+**Why changing `display` on table elements was safe here.** It normally strips the implicit
+table semantics. Horizon's markup already carries explicit `role="row"` and `role="cell"`, but
+the table itself had no role — I had removed `role="table"` earlier to clear the
+`aria-required-children` violation caused by pairing it with a `<caption>`. So the caption (a
+screen-reader-only total) moved *out* of the table into a visually-hidden `<p>`, which let
+`role="table"` come back. Full ARIA structure, and the grid layout cannot break it.
+
+Two more found while measuring:
+- The variant line (`XS`) is a `<dd>` carrying the UA default `margin-left: 40px`. `crooks.css`
+  resets that inside `.crk-root`; the cart is Horizon's markup and never enters that scope.
+- The remove control was inheriting the primary purple fill and reading louder than *Check out*.
+  Ghosted, target kept at 44px.
+
+Sub-44px tap targets on the cart page: **0** (Horizon's card-gallery arrows in the
+recommendations rendered at 20×26 — pre-existing, not part of this fix, raised anyway).
+
+**Harness note:** the overlap detector flagged `Product image ⨯ IMG` throughout. False positive —
+those are `<th>`s inside a `position: absolute; clip: rect(0,0,0,0)` `<thead>`, so
+`getBoundingClientRect` reports a real box for something that is clipped to nothing. A detector
+that ignores `clip` will invent collisions.
+
+## Tracking added to the main menu
+
+`SHOP / TRACKING / Contact`. Navigation is store data shared with the live theme, so the item is
+live now — and on the live theme `/pages/tracking` still renders a bare titled page until the
+theme is published. Also noted: the menu's SHOP entry still points at `frontpage`, not the ALL
+collection the catalogue now uses.

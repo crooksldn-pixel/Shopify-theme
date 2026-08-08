@@ -71,22 +71,25 @@
         style="{%  render 'spacing-style', settings: block_settings %} --cart-items-gap:{{ block_settings.gap | append: "px" }};"
       >
         {%- comment -%}
-          No explicit role="table" / role="caption": both duplicate what <table> and
-          <caption> already expose, and the pair is what produced the cart's only
-          *critical* axe violation. The ARIA `table` role permits only row/rowgroup
-          children, so an explicit caption child is invalid under it, while the native
-          HTML pairing is correct. Dropping the attributes restores the native
-          semantics and clears the violation without changing the markup.
+          The screen-reader total lives OUTSIDE the table. Previously it was a
+          <caption> inside a table carrying role="table", which is invalid — that
+          role permits only row/rowgroup children — and was the cart's only critical
+          axe violation.
+
+          Moving it out lets role="table" come back, and that matters: the rows and
+          cells already carry explicit role="row"/"cell", so with the table role
+          restored the whole structure survives the mobile layout below, which
+          changes `display` on these elements and would otherwise strip the implicit
+          table semantics entirely.
         {%- endcomment -%}
+        <p class="visually-hidden">
+          {{ 'content.cart_total' | t }}
+          <span>{{ cart.total_price | money_with_currency }}</span>
+        </p>
         <table
           class="cart-items__table"
+          role="table"
         >
-          <caption
-            class="visually-hidden"
-          >
-            {{ 'content.cart_total' | t }}
-            <span>{{ cart.total_price | money_with_currency }}</span>
-          </caption>
 
           <thead
             class="visually-hidden"
