@@ -554,6 +554,31 @@
 .crk-record .crk-dispatch { color: var(--crk-accent); margin-top: 2px }
 .crk-record .crk-dispatch::before { content: "> " }
 .crk-record .crk-dispatch[hidden] { display: none }
+/* Dynamic checkout. The wallet buttons are Shopify-owned and cannot be restyled,
+   so they are framed rather than faked — same decision as the cart. */
+/* Frame only when there is a wallet to frame. Shopify renders the container
+   whether or not any payment method is enabled, and an unconditional border drew
+   an empty box under ADD TO BAG — the same fault the cart had. */
+.crk-record .crk-buynow:has(button, iframe, [role="button"]) { margin-top: 8px; border: 1px solid var(--crk-line); padding: 8px }
+.crk-record .crk-buynow:not(:has(button, iframe, [role="button"])) { margin: 0; padding: 0; border: 0 }
+.crk-record .crk-buynow[hidden] { display: none }
+.crk-record .crk-buynow * { border-radius: 0 !important }
+
+/* Add-to-bag confirmation: a readout, not a toast. */
+.crk-record .crk-added { color: var(--crk-accent); margin-top: 8px }
+.crk-record .crk-added::before { content: "> " }
+.crk-record .crk-added[data-out="true"] { color: var(--crk-red) }
+.crk-record .crk-added[hidden] { display: none }
+.crk-record .crk-added__link { text-decoration: underline; margin-left: 4px }
+
+/* Sticky bar with two actions. Both stay at 44px minimum; the title/price block
+   shrinks first because it is the only part that can lose width safely. */
+.crk-buybar__actions { display: flex; gap: 8px; flex: none }
+.crk-buybar__actions .crk-btn { min-height: 44px; padding: 0 12px; font-size: 10px; letter-spacing: .12em; white-space: nowrap }
+.crk-btn--now { background: none; border-color: var(--crk-line); color: var(--crk-text) }
+@media (max-width: 419px) {
+  .crk-buybar__actions .crk-btn { padding: 0 8px; letter-spacing: .06em }
+}
 .crk-record .crk-notifypanel { margin-top: 16px; padding: 16px; border: 1px solid var(--crk-red) }
 .crk-record .crk-notifypanel[hidden] { display: none }
 .crk-record .crk-input { width: 100%; min-height: 44px; padding: 0 12px; background: var(--crk-ground); border: 1px solid var(--crk-line); color: var(--crk-text); font-family: inherit; font-size: 14px; }

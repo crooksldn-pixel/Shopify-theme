@@ -52,6 +52,10 @@
   data-crk-photo-label="{{ section.settings.photo_label | escape }}"
   data-crk-low-threshold="{{ section.settings.low_stock_threshold }}"
   data-crk-label-select-option="{{ section.settings.label_select_option | escape }}"
+  data-crk-label-added="{{ section.settings.label_added | escape }}"
+  data-crk-label-adderror="{{ section.settings.label_add_error | escape }}"
+  data-crk-label-viewbag="{{ section.settings.label_view_bag | escape }}"
+  data-crk-cart-url="{{ routes.cart_url }}"
   {%- unless section.settings.show_texture %} data-crk-texture="off"{% endunless %}
 >
 
@@ -334,6 +338,24 @@
                 {{ section.settings.label_add }}
               {%- endif -%}
             </button>
+
+            {%- comment -%}
+              Shopify's dynamic checkout. Its chrome is Shopify-owned and cannot be
+              restyled — Shop Pay purple, PayPal blue — so it is framed rather than
+              faked, the same treatment the cart gets. Deliberate trade: one-tap for
+              anyone with saved details, at the cost of the only non-CROOKSLDN pixels
+              in the buy panel. It disappears by itself when the variant is unbuyable.
+            {%- endcomment -%}
+            {%- if section.settings.show_dynamic_checkout -%}
+              <div class="crk-buynow" data-crk-buynow>{{ form | payment_button }}</div>
+            {%- endif -%}
+
+            {%- comment -%}
+              Add-to-bag confirmation. A readout, in the same voice as the dispatch
+              line — no overlay, no drawer, nothing to dismiss. aria-live so it is
+              announced rather than only seen.
+            {%- endcomment -%}
+            <p class="crk-stockline crk-added" data-crk-added aria-live="polite" hidden></p>
           {%- endform -%}
 
           {%- comment -%}
@@ -584,7 +606,16 @@
         </div>
         <div class="crk-data crk-dim" data-crk-sticky-meta>{{ crk_var.price | money }}</div>
       </div>
-      <button type="button" class="crk-btn">{{ section.settings.label_add }}</button>
+      {%- comment -%}
+        Two actions, mirroring the panel. The bar sits outside the product form, so
+        it cannot host a payment_button — Shopify only renders those inside one.
+        Its CHECKOUT NOW is therefore a theme button that adds and goes straight to
+        checkout: same destination, different mechanism from the wallet row above.
+      {%- endcomment -%}
+      <div class="crk-buybar__actions">
+        <button type="button" class="crk-btn" data-crk-sticky-add>{{ section.settings.label_add }}</button>
+        <button type="button" class="crk-btn crk-btn--now" data-crk-sticky-now>{{ section.settings.label_checkout_now }}</button>
+      </div>
     </div>
   {%- endif -%}
 </div>
@@ -606,6 +637,11 @@
     { "type": "text", "id": "buy_label", "label": "Buy section label", "default": "Release request" },
     { "type": "text", "id": "size_group_label", "label": "Size group label (screen readers)", "default": "Select a size" },
     { "type": "text", "id": "label_add", "label": "Add to bag", "default": "Add to bag" },
+    { "type": "text", "id": "label_checkout_now", "label": "Checkout now", "default": "Checkout now" },
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Shopify dynamic checkout (Shop Pay etc.)", "info": "Shopify-owned chrome; cannot be restyled.", "default": true },
+    { "type": "text", "id": "label_added", "label": "Added confirmation", "info": "Use [n] for the bag count.", "default": "Added — [n] in bag" },
+    { "type": "text", "id": "label_add_error", "label": "Add failed", "default": "Could not add that. Refresh and try again." },
+    { "type": "text", "id": "label_view_bag", "label": "View bag link", "default": "View bag" },
     { "type": "text", "id": "label_select", "label": "No option chosen", "default": "Select a size" },
     { "type": "text", "id": "label_select_option", "label": "Prompt naming the missing option", "info": "Use [option].", "default": "Select [option]" },
     { "type": "text", "id": "label_sold", "label": "Sold out", "default": "SOLD OUT" },

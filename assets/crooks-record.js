@@ -31,16 +31,89 @@
       sold: root.getAttribute('data-crk-label-sold') || 'SOLD OUT',
       inStock: root.getAttribute('data-crk-label-instock') || 'IN STOCK',
       low: root.getAttribute('data-crk-label-low') || '[n] LEFT IN SIZE [size]',
-      soldSize: root.getAttribute('data-crk-label-soldsize') || 'SIZE [size] IS SOLD OUT'
+      soldSize: root.getAttribute('data-crk-label-soldsize') || 'SIZE [size] IS SOLD OUT',
+      added: root.getAttribute('data-crk-label-added') || 'Added — [n] in bag',
+      addError: root.getAttribute('data-crk-label-adderror') || 'Could not add that. Refresh and try again.',
+      viewBag: root.getAttribute('data-crk-label-viewbag') || 'View bag'
     };
     var LOW = parseInt(root.getAttribute('data-crk-low-threshold'), 10) || 3;
+
+    var addedLine = root.querySelector('[data-crk-added]');
+    var buyNowBox = root.querySelector('[data-crk-buynow]');
+    var cartUrl = root.getAttribute('data-crk-cart-url') || '/cart';
+
+    /* ---- add to bag without leaving the page ----
+     * Progressive enhancement: the form still posts normally if this never runs,
+     * which is the no-JS path that keeps the PDP able to sell.
+     */
+    function setCartCount(n) {
+      var nodes = document.querySelectorAll('[data-crk-cart-count]');
+      for (var i = 0; i < nodes.length; i++) nodes[i].innerHTML = '\u00a0[' + n + ']';
+    }
+
+    function say(msg, isError, count) {
+      if (!addedLine) return;
+      addedLine.textContent = msg;
+      addedLine.setAttribute('data-out', isError ? 'true' : 'false');
+      if (!isError && count != null) {
+        addedLine.appendChild(document.createTextNode(' '));
+        var a = document.createElement('a');
+        a.href = cartUrl;
+        a.className = 'crk-added__link';
+        a.textContent = L.viewBag;
+        addedLine.appendChild(a);
+      }
+      addedLine.hidden = false;
+    }
+
+    var adding = false;
+    function addToBag(then) {
+      if (adding || !form) return;
+      var id = idInput && idInput.value;
+      if (!id) return;
+      adding = true;
+      var body = new FormData(form);
+      fetch('/cart/add.js', {
+        method: 'POST', body: body, credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok) {
+            // Shopify returns the real reason (sold out, quantity limit). Show it
+            // rather than a generic failure — the shopper can act on the real one.
+            say(res.j && res.j.description ? res.j.description : L.addError, true);
+            return;
+          }
+          return fetch('/cart.js', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (cart) {
+              setCartCount(cart.item_count);
+              if (then === 'checkout') { window.location.href = '/checkout'; return; }
+              say(L.added.replace('[n]', cart.item_count), false, cart.item_count);
+            });
+        })
+        .catch(function () { say(L.addError, true); })
+        .then(function () { adding = false; });
+    }
+
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        addToBag();
+      });
+    }
 
     function setBuy(label, disabled) {
       if (!buyBtn) return;
       buyBtn.textContent = label;
       buyBtn.disabled = !!disabled;
-      var sticky = root.querySelector('[data-crk-buybar] button');
+      var sticky = root.querySelector('[data-crk-sticky-add]');
       if (sticky) { sticky.textContent = label; sticky.disabled = !!disabled; }
+      var stickyNow = root.querySelector('[data-crk-sticky-now]');
+      if (stickyNow) stickyNow.disabled = !!disabled;
+      // The wallet row cannot sell an unbuyable variant either.
+      if (buyNowBox) buyNowBox.hidden = !!disabled;
     }
 
     /* ---- variant matrix, read from DOM data (never a Liquid JSON blob) ---- */
@@ -264,6 +337,11 @@
         }
       })(groups[gg], gg);
     }
+
+    var sAdd = root.querySelector('[data-crk-sticky-add]');
+    if (sAdd) sAdd.addEventListener('click', function () { addToBag(); });
+    var sNow = root.querySelector('[data-crk-sticky-now]');
+    if (sNow) sNow.addEventListener('click', function () { addToBag('checkout'); });
 
     if (nOpts) render();
     else renderDispatch(false);

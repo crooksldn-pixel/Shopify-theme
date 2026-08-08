@@ -37,7 +37,7 @@
       {%- endcomment -%}
       <a class="crk-header__link" href="{{ routes.cart_url }}">
         {{ section.settings.cart_label }}
-        <span class="crk-header__count">&nbsp;[{{ crk_cart_count }}]</span>
+        <span class="crk-header__count" data-crk-cart-count>&nbsp;[{{ crk_cart_count }}]</span>
       </a>
 
       {%- if section.settings.show_theme_toggle -%}
@@ -124,7 +124,7 @@
           <a class="crk-header__link" href="{{ routes.account_url }}">{{ section.settings.account_label }}</a>
         {%- endif -%}
         <a class="crk-header__link" href="{{ routes.cart_url }}">
-          {{ section.settings.cart_label }}&nbsp;[{{ crk_cart_count }}]
+          {{ section.settings.cart_label }}<span data-crk-cart-count>&nbsp;[{{ crk_cart_count }}]</span>
         </a>
       </div>
     </div>

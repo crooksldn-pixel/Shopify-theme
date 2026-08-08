@@ -759,3 +759,53 @@ takes precedence, curation would silently stop mattering — a product added to 
 to ALL would still appear. A distinct handle (`catalogue`) would remove the ambiguity entirely.
 
 Pulled both templates from the theme before editing, per the rule from the header-group incident.
+
+## Buying from the product page: two actions, neither of which leaves the page unasked
+
+Before this, `ADD TO BAG` was a plain `{% form 'product' %}` POST with no JS anywhere, so every
+add did a full page load and dumped the shopper on `/cart`. For a catalogue with £6 socks and
+£60 jeans that is the wrong default — it ends the browse.
+
+**ADD TO BAG** now posts to `/cart/add.js`, stays put, updates both header cart counts and
+confirms with a readout in the same voice as the dispatch line — `> Added — 2 in bag`, with a
+link to the bag. No overlay, no drawer, nothing to dismiss; the audit found overlays interrupted
+every one of the eight personas. Errors are surfaced from Shopify's own `description` field
+rather than a generic message, so "sold out" reads as sold out.
+
+Progressive enhancement throughout: the form's `action="/cart/add"` is untouched, so with JS off
+it posts normally and lands on the cart. The no-JS path that KEEP.md flags as worth protecting
+still sells.
+
+**CHECKOUT NOW** is Shopify's dynamic checkout (`payment_button`) — George's call, made with the
+trade stated: one tap for anyone with Shop Pay saved, at the cost of the only non-CROOKSLDN
+pixels in the buy panel. Its chrome is Shopify-owned and cannot be restyled, so it is framed
+rather than faked, and the frame only draws when there is a wallet inside — Shopify renders the
+container regardless of whether any payment method is enabled, which is the same empty-box fault
+the cart had.
+
+**The sticky bar carries both.** It sits outside the product form, and Shopify only renders a
+`payment_button` inside one, so its CHECKOUT NOW is a theme button that adds and then goes to
+checkout: same destination, different mechanism from the wallet row above it. Worth knowing that
+the two paths are not identical.
+
+I warned that two controls plus title and price would squeeze the bar below 44px. Measured, it
+does not:
+
+| Viewport | ADD | CHECKOUT NOW | Page overflow |
+|---|---|---|---|
+| 390 | 108×44 | 121×44 | none |
+| 360 | 108×44 | 121×44 | none |
+| 320 | 108×44 | 121×44 | none |
+
+### Testing note
+
+The AJAX path cannot reach the network from this container, so it was tested by stubbing
+`window.fetch` — that exercises this code, not Shopify's. Three consecutive adds increment the
+bag 1 → 2 → 3 and the readout follows. Verified separately with curl that `/cart/add.js` works
+against the real store, and that Shopify is emitting `shopify-payment-button__button` in the
+served HTML.
+
+A first run reported "the second add does nothing". That was the harness: it reused click
+coordinates captured before the confirmation line shifted the layout. Re-probing the element
+before each click showed all three adds working. Same failure as the sold-out test — coordinates
+go stale the moment the DOM moves.
