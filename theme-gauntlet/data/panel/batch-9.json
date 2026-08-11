@@ -1,0 +1,3178 @@
+{
+ "batch": 9,
+ "personas": [
+  {
+   "id": "P81",
+   "name": "Freya Frost",
+   "age": 34,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "motor-limited",
+    "low-vision"
+   ],
+   "backstory": "34yo; navigates by keyboard/large targets; small tap targets are misses; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/old/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3997,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8245,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22115,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 24796,
+       "consoleErrors": 0,
+       "failedRequests": 4
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26961,
+       "consoleErrors": 4,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3607,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "loadMs": 2072,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/new/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3449,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22487,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 27604,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32847,
+       "consoleErrors": 14,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2947,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 2254,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P82",
+   "name": "Jaya Moreau",
+   "age": 51,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "low-tech",
+    "late-night"
+   ],
+   "backstory": "51yo; gets lost when interfaces behave unexpectedly; typos in search; phone in bed on a weak connection; every second of loading counts",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/new/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3510,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18274,
+       "consoleErrors": 13,
+       "failedRequests": 13
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 23627,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26183,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 28459,
+       "consoleErrors": 15,
+       "failedRequests": 23
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3148,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 1780,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/new/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6028,
+       "consoleErrors": 11,
+       "failedRequests": 7,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6236,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10199,
+       "consoleErrors": 14,
+       "failedRequests": 19,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10271,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 5956,
+       "perf": {
+        "load": 5680,
+        "fcp": 2388
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3111,
+       "perf": {
+        "load": 2674,
+        "fcp": 560
+       }
+      }
+     }
+    },
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/old/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4194,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/mobile/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8503,
+       "consoleErrors": 10,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/mobile/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22919,
+       "consoleErrors": 18,
+       "failedRequests": 15
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 29292,
+       "consoleErrors": 7,
+       "failedRequests": 11
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/mobile/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 33091,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3776,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/old/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 7223,
+       "consoleErrors": 3,
+       "failedRequests": 2,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 16241,
+       "consoleErrors": 8,
+       "failedRequests": 1
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19380,
+       "consoleErrors": 15,
+       "failedRequests": 17,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19463,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 15980,
+       "perf": {
+        "load": 15978,
+        "fcp": 1156
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3129,
+       "perf": {
+        "load": 3024,
+        "fcp": 384
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P83",
+   "name": "Nadia Byrne",
+   "age": 17,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "skeptical",
+    "late-night"
+   ],
+   "backstory": "17yo; assumes unfamiliar stores are drop-shippers until proven otherwise; phone in bed on a weak connection; every second of loading counts",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/old/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4194,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/mobile/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8503,
+       "consoleErrors": 10,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/mobile/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22919,
+       "consoleErrors": 18,
+       "failedRequests": 15
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 29292,
+       "consoleErrors": 7,
+       "failedRequests": 11
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/mobile/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 33091,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3776,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/old/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 7223,
+       "consoleErrors": 3,
+       "failedRequests": 2,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 16241,
+       "consoleErrors": 8,
+       "failedRequests": 1
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19380,
+       "consoleErrors": 15,
+       "failedRequests": 17,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19463,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 15980,
+       "perf": {
+        "load": 15978,
+        "fcp": 1156
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3129,
+       "perf": {
+        "load": 3024,
+        "fcp": 384
+       }
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/new/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3510,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18274,
+       "consoleErrors": 13,
+       "failedRequests": 13
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 23627,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26183,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 28459,
+       "consoleErrors": 15,
+       "failedRequests": 23
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3148,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 1780,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/new/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6028,
+       "consoleErrors": 11,
+       "failedRequests": 7,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6236,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10199,
+       "consoleErrors": 14,
+       "failedRequests": 19,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10271,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 5956,
+       "perf": {
+        "load": 5680,
+        "fcp": 2388
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3111,
+       "perf": {
+        "load": 2674,
+        "fcp": 560
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P84",
+   "name": "Sam Kim",
+   "age": 43,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive"
+   ],
+   "backstory": "43yo; compares every price against fast-fashion alternatives",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/new/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3449,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22487,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 27604,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32847,
+       "consoleErrors": 14,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2947,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 2254,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/old/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3997,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8245,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22115,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 24796,
+       "consoleErrors": 0,
+       "failedRequests": 4
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26961,
+       "consoleErrors": 4,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3607,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "loadMs": 2072,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P85",
+   "name": "Kai Diallo",
+   "age": 40,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical"
+   ],
+   "backstory": "40yo; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/old/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4194,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/mobile/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8503,
+       "consoleErrors": 10,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/mobile/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22919,
+       "consoleErrors": 18,
+       "failedRequests": 15
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 29292,
+       "consoleErrors": 7,
+       "failedRequests": 11
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/mobile/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 33091,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3776,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/new/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3510,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18274,
+       "consoleErrors": 13,
+       "failedRequests": 13
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 23627,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26183,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 28459,
+       "consoleErrors": 15,
+       "failedRequests": 23
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3148,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 1780,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P86",
+   "name": "Holly Reid",
+   "age": 54,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "54yo; has a competitor tab mentally open the whole time",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/new/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3510,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18274,
+       "consoleErrors": 13,
+       "failedRequests": 13
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 23627,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26183,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 28459,
+       "consoleErrors": 15,
+       "failedRequests": 23
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3148,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 1780,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/old/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4194,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/mobile/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8503,
+       "consoleErrors": 10,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/mobile/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22919,
+       "consoleErrors": 18,
+       "failedRequests": 15
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 29292,
+       "consoleErrors": 7,
+       "failedRequests": 11
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/mobile/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 33091,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3776,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P87",
+   "name": "Rosa Novak",
+   "age": 54,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "comparison-shopper"
+   ],
+   "backstory": "54yo; browses at 200% zoom; judges from the zoomed desktop evidence; has a competitor tab mentally open the whole time",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/old/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3997,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8245,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22115,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 24796,
+       "consoleErrors": 0,
+       "failedRequests": 4
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26961,
+       "consoleErrors": 4,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3607,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "loadMs": 2072,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/new/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3449,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22487,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 27604,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32847,
+       "consoleErrors": 14,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2947,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 2254,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P88",
+   "name": "Ravi Kim",
+   "age": 15,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "international"
+   ],
+   "backstory": "15yo; outside the UK; anxious about currency, duties and shipping",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/new/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3449,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22487,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 27604,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32847,
+       "consoleErrors": 14,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2947,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 2254,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/old/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3997,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8245,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22115,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 24796,
+       "consoleErrors": 0,
+       "failedRequests": 4
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26961,
+       "consoleErrors": 4,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3607,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "loadMs": 2072,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P89",
+   "name": "Tariq Moreau",
+   "age": 49,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "49yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/old/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3997,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8245,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22115,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 24796,
+       "consoleErrors": 0,
+       "failedRequests": 4
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26961,
+       "consoleErrors": 4,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3607,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "loadMs": 2072,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "desktop",
+     "dir": "captures/new/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3449,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22487,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 27604,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32847,
+       "consoleErrors": 14,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2947,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 2254,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P90",
+   "name": "Chloe Cole",
+   "age": 25,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "low-tech"
+   ],
+   "backstory": "25yo; navigates by keyboard/large targets; small tap targets are misses; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "no sizing help when unsure between two sizes"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/new/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3510,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18274,
+       "consoleErrors": 13,
+       "failedRequests": 13
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 23627,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26183,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 28459,
+       "consoleErrors": 15,
+       "failedRequests": 23
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3148,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "loadMs": 1780,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j5",
+     "device": "mobile",
+     "dir": "captures/old/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4194,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/mobile/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8503,
+       "consoleErrors": 10,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/mobile/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22919,
+       "consoleErrors": 18,
+       "failedRequests": 15
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 29292,
+       "consoleErrors": 7,
+       "failedRequests": 11
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/mobile/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 33091,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3776,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    }
+   ]
+  }
+ ]
+}

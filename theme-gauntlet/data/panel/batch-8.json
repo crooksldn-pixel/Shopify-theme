@@ -1,0 +1,2863 @@
+{
+ "batch": 8,
+ "personas": [
+  {
+   "id": "P71",
+   "name": "Kai Mensah",
+   "age": 26,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "26yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/old/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3601,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j7/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 8307,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j7/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?variant=53639824900439&_pos=1&_sid=f2985137b&_ss=r",
+       "atMs": 21676,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/old/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 25192,
+       "consoleErrors": 4,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/old/j7/desktop/step-05-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 27704,
+       "consoleErrors": 11,
+       "failedRequests": 4
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3156,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2203,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3009,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 2173,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/new/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3712,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 22448,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 26074,
+       "consoleErrors": 16,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 30635,
+       "consoleErrors": 9,
+       "failedRequests": 1,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/desktop/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 33104,
+       "consoleErrors": 18,
+       "failedRequests": 7
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3139,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 1991,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 3940,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2074,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P72",
+   "name": "Femi Iqbal",
+   "age": 38,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "38yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/new/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3712,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 22448,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 26074,
+       "consoleErrors": 16,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 30635,
+       "consoleErrors": 9,
+       "failedRequests": 1,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/desktop/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 33104,
+       "consoleErrors": 18,
+       "failedRequests": 7
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3139,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 1991,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 3940,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2074,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/old/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3601,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j7/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 8307,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j7/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?variant=53639824900439&_pos=1&_sid=f2985137b&_ss=r",
+       "atMs": 21676,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/old/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 25192,
+       "consoleErrors": 4,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/old/j7/desktop/step-05-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 27704,
+       "consoleErrors": 11,
+       "failedRequests": 4
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3156,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2203,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3009,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 2173,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P73",
+   "name": "Kofi Moreau",
+   "age": 15,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "15yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "a popup covering content before seeing anything",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/old/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3601,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j7/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 8307,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j7/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?variant=53639824900439&_pos=1&_sid=f2985137b&_ss=r",
+       "atMs": 21676,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/old/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 25192,
+       "consoleErrors": 4,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/old/j7/desktop/step-05-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 27704,
+       "consoleErrors": 11,
+       "failedRequests": 4
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3156,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2203,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3009,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 2173,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/new/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3712,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 22448,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 26074,
+       "consoleErrors": 16,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 30635,
+       "consoleErrors": 9,
+       "failedRequests": 1,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/desktop/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 33104,
+       "consoleErrors": 18,
+       "failedRequests": 7
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3139,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 1991,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 3940,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2074,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P74",
+   "name": "Amara Moreau",
+   "age": 22,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry",
+    "brand-driven"
+   ],
+   "backstory": "22yo; shopping in stolen minutes; abandons fast; buys the story as much as the product; sniffs out effort",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/new/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3799,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 19583,
+       "consoleErrors": 13,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 23305,
+       "consoleErrors": 13,
+       "failedRequests": 14
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/mobile/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 28841,
+       "consoleErrors": 3,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/mobile/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 31363,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3434,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2228,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 5012,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2215,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/old/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5888,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j7/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 10176,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j7/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?_pos=1&_psq=BLUE+WASH+JORTS&_psid=0cf01c695&_ss=e",
+       "atMs": 23595,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j7/mobile/step-04-pdp.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=d8472668-31d5-4f8d-8c37-bb0e71d26295&client_id=399c9fc6-060c-48cf-90",
+       "atMs": 32061,
+       "consoleErrors": 3,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "account-login",
+       "file": "captures/old/j7/mobile/step-05-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 36377,
+       "consoleErrors": 10,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 6,
+       "label": "home-end",
+       "file": "captures/old/j7/mobile/step-06-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 40615,
+       "consoleErrors": 17,
+       "failedRequests": 6
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 5500,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3634,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3966,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P75",
+   "name": "Marcus Alvarez",
+   "age": 15,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "brand-driven"
+   ],
+   "backstory": "15yo; navigates by keyboard/large targets; small tap targets are misses; buys the story as much as the product; sniffs out effort",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/old/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3601,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j7/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 8307,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j7/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?variant=53639824900439&_pos=1&_sid=f2985137b&_ss=r",
+       "atMs": 21676,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/old/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 25192,
+       "consoleErrors": 4,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/old/j7/desktop/step-05-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 27704,
+       "consoleErrors": 11,
+       "failedRequests": 4
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3156,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2203,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3009,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 2173,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/new/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3712,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 22448,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 26074,
+       "consoleErrors": 16,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 30635,
+       "consoleErrors": 9,
+       "failedRequests": 1,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/desktop/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 33104,
+       "consoleErrors": 18,
+       "failedRequests": 7
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3139,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 1991,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 3940,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2074,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P76",
+   "name": "Amara Iqbal",
+   "age": 40,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "price-sensitive"
+   ],
+   "backstory": "40yo; outside the UK; anxious about currency, duties and shipping; compares every price against fast-fashion alternatives",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/new/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3799,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 19583,
+       "consoleErrors": 13,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 23305,
+       "consoleErrors": 13,
+       "failedRequests": 14
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/mobile/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 28841,
+       "consoleErrors": 3,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/mobile/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 31363,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3434,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2228,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 5012,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2215,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/old/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5888,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j7/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 10176,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j7/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?_pos=1&_psq=BLUE+WASH+JORTS&_psid=0cf01c695&_ss=e",
+       "atMs": 23595,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j7/mobile/step-04-pdp.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=d8472668-31d5-4f8d-8c37-bb0e71d26295&client_id=399c9fc6-060c-48cf-90",
+       "atMs": 32061,
+       "consoleErrors": 3,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "account-login",
+       "file": "captures/old/j7/mobile/step-05-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 36377,
+       "consoleErrors": 10,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 6,
+       "label": "home-end",
+       "file": "captures/old/j7/mobile/step-06-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 40615,
+       "consoleErrors": 17,
+       "failedRequests": 6
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 5500,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3634,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3966,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P77",
+   "name": "Aiden Kaur",
+   "age": 51,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry"
+   ],
+   "backstory": "51yo; shopping in stolen minutes; abandons fast",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/old/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5888,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j7/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 10176,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j7/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?_pos=1&_psq=BLUE+WASH+JORTS&_psid=0cf01c695&_ss=e",
+       "atMs": 23595,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j7/mobile/step-04-pdp.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=d8472668-31d5-4f8d-8c37-bb0e71d26295&client_id=399c9fc6-060c-48cf-90",
+       "atMs": 32061,
+       "consoleErrors": 3,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "account-login",
+       "file": "captures/old/j7/mobile/step-05-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 36377,
+       "consoleErrors": 10,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 6,
+       "label": "home-end",
+       "file": "captures/old/j7/mobile/step-06-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 40615,
+       "consoleErrors": 17,
+       "failedRequests": 6
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 5500,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3634,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3966,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/new/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3799,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 19583,
+       "consoleErrors": 13,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 23305,
+       "consoleErrors": 13,
+       "failedRequests": 14
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/mobile/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 28841,
+       "consoleErrors": 3,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/mobile/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 31363,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3434,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2228,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 5012,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2215,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P78",
+   "name": "Ben Iqbal",
+   "age": 52,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night"
+   ],
+   "backstory": "52yo; phone in bed on a weak connection; every second of loading counts",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/new/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3799,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 19583,
+       "consoleErrors": 13,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 23305,
+       "consoleErrors": 13,
+       "failedRequests": 14
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/mobile/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 28841,
+       "consoleErrors": 3,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/mobile/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 31363,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3434,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2228,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 5012,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2215,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/new/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6028,
+       "consoleErrors": 11,
+       "failedRequests": 7,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6236,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10199,
+       "consoleErrors": 14,
+       "failedRequests": 19,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10271,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 5956,
+       "perf": {
+        "load": 5680,
+        "fcp": 2388
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3111,
+       "perf": {
+        "load": 2674,
+        "fcp": 560
+       }
+      }
+     }
+    },
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/old/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5888,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j7/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 10176,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j7/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?_pos=1&_psq=BLUE+WASH+JORTS&_psid=0cf01c695&_ss=e",
+       "atMs": 23595,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j7/mobile/step-04-pdp.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=d8472668-31d5-4f8d-8c37-bb0e71d26295&client_id=399c9fc6-060c-48cf-90",
+       "atMs": 32061,
+       "consoleErrors": 3,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "account-login",
+       "file": "captures/old/j7/mobile/step-05-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 36377,
+       "consoleErrors": 10,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 6,
+       "label": "home-end",
+       "file": "captures/old/j7/mobile/step-06-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 40615,
+       "consoleErrors": 17,
+       "failedRequests": 6
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 5500,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3634,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3966,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/old/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 7223,
+       "consoleErrors": 3,
+       "failedRequests": 2,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 16241,
+       "consoleErrors": 8,
+       "failedRequests": 1
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19380,
+       "consoleErrors": 15,
+       "failedRequests": 17,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19463,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 15980,
+       "perf": {
+        "load": 15978,
+        "fcp": 1156
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3129,
+       "perf": {
+        "load": 3024,
+        "fcp": 384
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P79",
+   "name": "Freya Diallo",
+   "age": 17,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "comparison-shopper"
+   ],
+   "backstory": "17yo; outside the UK; anxious about currency, duties and shipping; has a competitor tab mentally open the whole time",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/old/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3601,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j7/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 8307,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j7/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?variant=53639824900439&_pos=1&_sid=f2985137b&_ss=r",
+       "atMs": 21676,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/old/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 25192,
+       "consoleErrors": 4,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/old/j7/desktop/step-05-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 27704,
+       "consoleErrors": 11,
+       "failedRequests": 4
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3156,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2203,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3009,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 2173,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "desktop",
+     "dir": "captures/new/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3712,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 22448,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 26074,
+       "consoleErrors": 16,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 30635,
+       "consoleErrors": 9,
+       "failedRequests": 1,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/desktop/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 33104,
+       "consoleErrors": 18,
+       "failedRequests": 7
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3139,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 1991,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 3940,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2074,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P80",
+   "name": "Jaya Adeyemi",
+   "age": 32,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "comparison-shopper"
+   ],
+   "backstory": "32yo; outside the UK; anxious about currency, duties and shipping; has a competitor tab mentally open the whole time",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/new/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3799,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 19583,
+       "consoleErrors": 13,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 23305,
+       "consoleErrors": 13,
+       "failedRequests": 14
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/mobile/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 28841,
+       "consoleErrors": 3,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/mobile/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 31363,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 3434,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "loadMs": 2228,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "loadMs": 5012,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "loadMs": 2215,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j7",
+     "device": "mobile",
+     "dir": "captures/old/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5888,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j7/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 10176,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j7/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?_pos=1&_psq=BLUE+WASH+JORTS&_psid=0cf01c695&_ss=e",
+       "atMs": 23595,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j7/mobile/step-04-pdp.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=d8472668-31d5-4f8d-8c37-bb0e71d26295&client_id=399c9fc6-060c-48cf-90",
+       "atMs": 32061,
+       "consoleErrors": 3,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "account-login",
+       "file": "captures/old/j7/mobile/step-05-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 36377,
+       "consoleErrors": 10,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 6,
+       "label": "home-end",
+       "file": "captures/old/j7/mobile/step-06-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 40615,
+       "consoleErrors": 17,
+       "failedRequests": 6
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 5500,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "loadMs": 3634,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "loadMs": 3966,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   ]
+  }
+ ]
+}

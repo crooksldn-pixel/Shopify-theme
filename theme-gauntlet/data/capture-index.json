@@ -1,0 +1,5424 @@
+{
+ "themes": {
+  "new": {
+   "edge": {
+    "mobile": {
+     "dir": "captures/new/edge/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "typo-results",
+       "file": "captures/new/edge/mobile/step-01-typo-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=charcol+crewneck",
+       "atMs": 3412,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 2,
+       "label": "zero-results",
+       "file": "captures/new/edge/mobile/step-02-zero-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=xyzzyplugh",
+       "atMs": 6486,
+       "consoleErrors": 11,
+       "failedRequests": 9
+      },
+      {
+       "n": 3,
+       "label": "404",
+       "file": "captures/new/edge/mobile/step-03-404.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/this-does-not-exist",
+       "atMs": 8382,
+       "consoleErrors": 12,
+       "failedRequests": 9
+      },
+      {
+       "n": 4,
+       "label": "oos-pdp",
+       "file": "captures/new/edge/mobile/step-04-oos-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/v2-baggies?variant=53075854197079",
+       "atMs": 10539,
+       "consoleErrors": 13,
+       "failedRequests": 16
+      },
+      {
+       "n": 5,
+       "label": "cart-before-ops",
+       "file": "captures/new/edge/mobile/step-05-cart-before-ops.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 34950,
+       "consoleErrors": 28,
+       "failedRequests": 42
+      },
+      {
+       "n": 6,
+       "label": "cart-qty",
+       "file": "captures/new/edge/mobile/step-06-cart-qty.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 36619,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 7,
+       "label": "cart-removed",
+       "file": "captures/new/edge/mobile/step-07-cart-removed.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 38333,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 8,
+       "label": "discount-checkout",
+       "file": "captures/new/edge/mobile/step-08-discount-checkout.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 78198,
+       "consoleErrors": 29,
+       "failedRequests": 40,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "oos-variant-states": {
+       "variants": []
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "discount-field-in-cart": {
+       "found": true,
+       "detail": "cart-discount"
+      },
+      "discount-field-at-checkout": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"S\"]"
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      },
+      {
+       "note": "qty-increase",
+       "ok": true,
+       "how": "button[name=\"plus\"]"
+      },
+      {
+       "note": "remove-item",
+       "ok": true,
+       "how": "button[aria-label*=\"remove\" i]"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=charcol+crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 3262,
+       "perf": {
+        "dcl": 1483,
+        "load": 2253,
+        "fcp": 1312
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=xyzzyplugh",
+       "status": 200,
+       "err": null,
+       "loadMs": 2158,
+       "perf": {
+        "dcl": 926,
+        "load": 1150,
+        "fcp": 920
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/this-does-not-exist",
+       "status": 404,
+       "err": null,
+       "loadMs": 1810,
+       "perf": {
+        "dcl": 566,
+        "load": 800,
+        "fcp": 492
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/v2-baggies",
+       "status": 200,
+       "err": null,
+       "loadMs": 2029,
+       "perf": {
+        "dcl": 703,
+        "load": 1021,
+        "fcp": 600
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 1972,
+       "perf": {
+        "dcl": 557,
+        "load": 962,
+        "fcp": 496
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 1959,
+       "perf": {
+        "dcl": 625,
+        "load": 949,
+        "fcp": 628
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 6,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 78199,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    }
+   },
+   "edge-slow4g": {
+    "mobile": {
+     "dir": "captures/new/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6028,
+       "consoleErrors": 11,
+       "failedRequests": 7,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6236,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10199,
+       "consoleErrors": 14,
+       "failedRequests": 19,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10271,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 5956,
+       "perf": {
+        "load": 5680,
+        "fcp": 2388
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3111,
+       "perf": {
+        "load": 2674,
+        "fcp": 560
+       }
+      }
+     },
+     "actions": [],
+     "loads": [],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 10277,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    }
+   },
+   "edge-zoom": {
+    "desktop": {
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     },
+     "actions": [],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3093,
+       "perf": {
+        "dcl": 1393,
+        "load": 2080,
+        "fcp": 1180
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 1933,
+       "perf": {
+        "dcl": 540,
+        "load": 923,
+        "fcp": 468
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 12616,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    }
+   },
+   "j1": {
+    "desktop": {
+     "dir": "captures/new/j1/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j1/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 4161,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "pdp",
+       "file": "captures/new/j1/desktop/step-02-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 18234,
+       "consoleErrors": 18,
+       "failedRequests": 18
+      },
+      {
+       "n": 3,
+       "label": "variant-selected",
+       "file": "captures/new/j1/desktop/step-03-variant-selected.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 19410,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j1/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 22911,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j1/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 25390,
+       "consoleErrors": 20,
+       "failedRequests": 22
+      },
+      {
+       "n": 6,
+       "label": "checkout-click-failed",
+       "file": "captures/new/j1/desktop/step-06-checkout-click-failed.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 48030,
+       "consoleErrors": 9,
+       "failedRequests": 6,
+       "note": "evidence: checkout affordance did not navigate"
+      },
+      {
+       "n": 7,
+       "label": "checkout",
+       "file": "captures/new/j1/desktop/step-07-checkout.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "atMs": 51138,
+       "consoleErrors": 2,
+       "failedRequests": 0,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "tap-targets": {
+       "targets": {
+        "atc": {
+         "sel": "button[name=\"add\"]:not([disabled])",
+         "w": 413,
+         "h": 52
+        }
+       }
+      },
+      "variant-persistence": {
+       "before": "M",
+       "after": "M",
+       "stable": true
+      },
+      "cart-mode": {
+       "mode": "page"
+      }
+     },
+     "actions": [
+      {
+       "note": "route-to-product",
+       "ok": true,
+       "how": "direct-home-link"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      },
+      {
+       "note": "checkout-click-did-not-navigate",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3662,
+       "perf": {
+        "dcl": 1882,
+        "load": 2649,
+        "fcp": 1572
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "status": 403,
+       "err": null,
+       "loadMs": 1531,
+       "perf": {
+        "dcl": 519,
+        "load": 521,
+        "fcp": 528
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 51138,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Error while trying to use the following icon from the Manifest: https://www.gstatic.com/instantbuy/svg/transparent_squar",
+      "Failed to download or decode the icon from web app manifest \"https://pay.google.com/gp/p/web_manifest.json\" for payment "
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j1/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j1/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 4280,
+       "consoleErrors": 11,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "pdp",
+       "file": "captures/new/j1/mobile/step-02-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 14760,
+       "consoleErrors": 15,
+       "failedRequests": 18
+      },
+      {
+       "n": 3,
+       "label": "variant-selected",
+       "file": "captures/new/j1/mobile/step-03-variant-selected.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 17045,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 4,
+       "label": "pdp-scrolled",
+       "file": "captures/new/j1/mobile/step-04-pdp-scrolled.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 19360,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "sticky-atc evidence"
+      },
+      {
+       "n": 5,
+       "label": "after-atc",
+       "file": "captures/new/j1/mobile/step-05-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 21964,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 6,
+       "label": "cart",
+       "file": "captures/new/j1/mobile/step-06-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 24476,
+       "consoleErrors": 19,
+       "failedRequests": 23
+      },
+      {
+       "n": 7,
+       "label": "checkout-click-failed",
+       "file": "captures/new/j1/mobile/step-07-checkout-click-failed.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 46952,
+       "consoleErrors": 6,
+       "failedRequests": 3,
+       "note": "evidence: checkout affordance did not navigate"
+      },
+      {
+       "n": 8,
+       "label": "checkout",
+       "file": "captures/new/j1/mobile/step-08-checkout.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "atMs": 50077,
+       "consoleErrors": 2,
+       "failedRequests": 0,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "tap-targets": {
+       "targets": {
+        "atc": {
+         "sel": "button[name=\"add\"]:not([disabled])",
+         "w": 324,
+         "h": 52
+        }
+       }
+      },
+      "variant-persistence": {
+       "before": "M",
+       "after": "M",
+       "stable": true
+      },
+      "sticky-atc-on-scroll": {
+       "sticky": true
+      },
+      "cart-mode": {
+       "mode": "page"
+      }
+     },
+     "actions": [
+      {
+       "note": "route-to-product",
+       "ok": true,
+       "how": "direct-home-link"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      },
+      {
+       "note": "checkout-click-did-not-navigate",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3734,
+       "perf": {
+        "dcl": 1769,
+        "load": 2715,
+        "fcp": 1332
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "status": 403,
+       "err": null,
+       "loadMs": 1516,
+       "perf": {
+        "dcl": 502,
+        "load": 502,
+        "fcp": 512
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 50077,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Failed to load resource: the server responded with a status of 503 ()",
+      "pageerror: Unexpected token '<', \"<!--\n  The\"... is not valid JSON",
+      "pageerror: No empty section markup found",
+      "Error while trying to use the following icon from the Manifest: https://www.gstatic.com/instantbuy/svg/transparent_squar",
+      "Failed to download or decode the icon from web app manifest \"https://pay.google.com/gp/p/web_manifest.json\" for payment ",
+      "Failed to download or decode a non-empty icon for payment app with \"https://pay.google.com/gp/p/web_manifest.json\" manif"
+     ]
+    }
+   },
+   "j2": {
+    "desktop": {
+     "dir": "captures/new/j2/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j2/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3801,
+       "consoleErrors": 16,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j2/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=jeans",
+       "atMs": 23303,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j2/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb2-wash-jeans?_pos=2&_sid=ba96288ff&_ss=r&variant=53639822344535",
+       "atMs": 27768,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j2/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb2-wash-jeans?_pos=2&_sid=ba96288ff&_ss=r&variant=53639822410071",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j2/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32754,
+       "consoleErrors": 19,
+       "failedRequests": 23
+      },
+      {
+       "n": 6,
+       "label": "checkout-click-failed",
+       "file": "captures/new/j2/desktop/step-06-checkout-click-failed.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 55826,
+       "consoleErrors": 7,
+       "failedRequests": 5,
+       "note": "evidence: checkout affordance did not navigate"
+      },
+      {
+       "n": 7,
+       "label": "checkout",
+       "file": "captures/new/j2/desktop/step-07-checkout.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "atMs": 58722,
+       "consoleErrors": 2,
+       "failedRequests": 0,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "cart-mode": {
+       "mode": "page"
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "search-ui",
+       "ok": false,
+       "how": "fallback-url"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      },
+      {
+       "note": "checkout-click-did-not-navigate",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3321,
+       "perf": {
+        "dcl": 1534,
+        "load": 2308,
+        "fcp": 1288
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=jeans",
+       "status": 200,
+       "err": null,
+       "loadMs": 2094,
+       "perf": {
+        "dcl": 820,
+        "load": 1081,
+        "fcp": 916
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "status": 403,
+       "err": null,
+       "loadMs": 1337,
+       "perf": {
+        "dcl": 320,
+        "load": 321,
+        "fcp": 332
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 5,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 58723,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Access to XMLHttpRequest at 'https://www.paypal.com/xoplatform/logger/api/logger?disableSetCookie=true' from origin 'htt"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j2/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j2/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3783,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j2/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=jeans",
+       "atMs": 19561,
+       "consoleErrors": 13,
+       "failedRequests": 12
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j2/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb2-wash-jeans?_pos=2&_sid=ba96288ff&_ss=r&variant=53639822344535",
+       "atMs": 24184,
+       "consoleErrors": 13,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j2/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb2-wash-jeans?_pos=2&_sid=ba96288ff&_ss=r&variant=53639822410071",
+       "atMs": 27625,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j2/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 30327,
+       "consoleErrors": 17,
+       "failedRequests": 20
+      },
+      {
+       "n": 6,
+       "label": "checkout-click-failed",
+       "file": "captures/new/j2/mobile/step-06-checkout-click-failed.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 53643,
+       "consoleErrors": 6,
+       "failedRequests": 4,
+       "note": "evidence: checkout affordance did not navigate"
+      },
+      {
+       "n": 7,
+       "label": "checkout",
+       "file": "captures/new/j2/mobile/step-07-checkout.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "atMs": 56583,
+       "consoleErrors": 2,
+       "failedRequests": 0,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "cart-mode": {
+       "mode": "page"
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "search-ui",
+       "ok": false,
+       "how": "fallback-url"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      },
+      {
+       "note": "checkout-click-did-not-navigate",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3410,
+       "perf": {
+        "dcl": 1355,
+        "load": 2396,
+        "fcp": 1204
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=jeans",
+       "status": 200,
+       "err": null,
+       "loadMs": 2026,
+       "perf": {
+        "dcl": 771,
+        "load": 1014,
+        "fcp": 784
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/checkout",
+       "status": 403,
+       "err": null,
+       "loadMs": 1341,
+       "perf": {
+        "dcl": 313,
+        "load": 317,
+        "fcp": 328
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 5,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 56583,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to XMLHttpRequest at 'https://www.paypal.com/xoplatform/logger/api/logger?disableSetCookie=true' from origin 'htt",
+      "Failed to load resource: net::ERR_FAILED"
+     ]
+    }
+   },
+   "j3": {
+    "desktop": {
+     "dir": "captures/new/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 4003,
+       "consoleErrors": 18,
+       "failedRequests": 16,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 9850,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 16723,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 19020,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": true,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 3701,
+       "perf": {
+        "dcl": 1768,
+        "load": 2673,
+        "fcp": 1056
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "status": 200,
+       "err": null,
+       "loadMs": 2159,
+       "perf": {
+        "dcl": 691,
+        "load": 1140,
+        "fcp": 584
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 19020,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 3494,
+       "consoleErrors": 13,
+       "failedRequests": 15,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 6117,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 12954,
+       "consoleErrors": 13,
+       "failedRequests": 20
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16174,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 3322,
+       "perf": {
+        "dcl": 1470,
+        "load": 2311,
+        "fcp": 1156
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "status": 200,
+       "err": null,
+       "loadMs": 2143,
+       "perf": {
+        "dcl": 796,
+        "load": 1127,
+        "fcp": 620
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 16174,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    }
+   },
+   "j4": {
+    "desktop": {
+     "dir": "captures/new/j4/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j4/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3920,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j4/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22380,
+       "consoleErrors": 16,
+       "failedRequests": 11
+      },
+      {
+       "n": 3,
+       "label": "filtered",
+       "file": "captures/new/j4/desktop/step-03-filtered.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "atMs": 27823,
+       "consoleErrors": 14,
+       "failedRequests": 9
+      },
+      {
+       "n": 4,
+       "label": "pdp-1",
+       "file": "captures/new/j4/desktop/step-04-pdp-1.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/black-socks?variant=53455222964567",
+       "atMs": 36106,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 5,
+       "label": "back-1",
+       "file": "captures/new/j4/desktop/step-05-back-1.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "atMs": 40523,
+       "consoleErrors": 14,
+       "failedRequests": 9
+      },
+      {
+       "n": 6,
+       "label": "pdp-2",
+       "file": "captures/new/j4/desktop/step-06-pdp-2.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/white-socks?variant=53456567238999",
+       "atMs": 44001,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 7,
+       "label": "pdp-3",
+       "file": "captures/new/j4/desktop/step-07-pdp-3.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/large-duffle-bag?variant=53284472717655",
+       "atMs": 49731,
+       "consoleErrors": 30,
+       "failedRequests": 25
+      },
+      {
+       "n": 8,
+       "label": "home-return",
+       "file": "captures/new/j4/desktop/step-08-home-return.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 54109,
+       "consoleErrors": 28,
+       "failedRequests": 18
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "back-after-filter-1": {
+       "backUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "filterSurvived": true,
+       "landedOnCollection": true
+      },
+      "back-after-filter-2": {
+       "backUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "filterSurvived": true,
+       "landedOnCollection": true
+      },
+      "back-after-filter-3": {
+       "backUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "filterSurvived": true,
+       "landedOnCollection": true
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-filter-sort",
+       "ok": false
+      },
+      {
+       "note": "sort-low-high",
+       "ok": false
+      },
+      {
+       "note": "logo-home",
+       "ok": true,
+       "how": "header a[href=\"/\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3389,
+       "perf": {
+        "dcl": 1454,
+        "load": 2366,
+        "fcp": 1152
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "status": 200,
+       "err": null,
+       "loadMs": 1921,
+       "perf": {
+        "dcl": 662,
+        "load": 898,
+        "fcp": 820
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "status": 200,
+       "err": null,
+       "loadMs": 2062,
+       "perf": {
+        "dcl": 672,
+        "load": 1053,
+        "fcp": 752
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 7,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 54109,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j4/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j4/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3392,
+       "consoleErrors": 11,
+       "failedRequests": 7,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j4/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18134,
+       "consoleErrors": 13,
+       "failedRequests": 11
+      },
+      {
+       "n": 3,
+       "label": "filtered",
+       "file": "captures/new/j4/mobile/step-03-filtered.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "atMs": 22527,
+       "consoleErrors": 11,
+       "failedRequests": 9
+      },
+      {
+       "n": 4,
+       "label": "pdp-1",
+       "file": "captures/new/j4/mobile/step-04-pdp-1.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/black-socks?variant=53455222964567",
+       "atMs": 25466,
+       "consoleErrors": 13,
+       "failedRequests": 16
+      },
+      {
+       "n": 5,
+       "label": "back-1",
+       "file": "captures/new/j4/mobile/step-05-back-1.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "atMs": 27912,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 6,
+       "label": "pdp-2",
+       "file": "captures/new/j4/mobile/step-06-pdp-2.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/white-socks?variant=53456567238999",
+       "atMs": 30923,
+       "consoleErrors": 12,
+       "failedRequests": 14
+      },
+      {
+       "n": 7,
+       "label": "pdp-3",
+       "file": "captures/new/j4/mobile/step-07-pdp-3.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/large-duffle-bag?variant=53284472717655",
+       "atMs": 36089,
+       "consoleErrors": 23,
+       "failedRequests": 23
+      },
+      {
+       "n": 8,
+       "label": "home-return",
+       "file": "captures/new/j4/mobile/step-08-home-return.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 40520,
+       "consoleErrors": 22,
+       "failedRequests": 16
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "back-after-filter-1": {
+       "backUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "filterSurvived": true,
+       "landedOnCollection": true
+      },
+      "back-after-filter-2": {
+       "backUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "filterSurvived": true,
+       "landedOnCollection": true
+      },
+      "back-after-filter-3": {
+       "backUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "filterSurvived": true,
+       "landedOnCollection": true
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-filter-sort",
+       "ok": false
+      },
+      {
+       "note": "sort-low-high",
+       "ok": false
+      },
+      {
+       "note": "logo-home",
+       "ok": true,
+       "how": "header a[href=\"/\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3052,
+       "perf": {
+        "dcl": 1216,
+        "load": 2042,
+        "fcp": 1096
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "status": 200,
+       "err": null,
+       "loadMs": 2046,
+       "perf": {
+        "dcl": 828,
+        "load": 1033,
+        "fcp": 800
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all?sort_by=price-ascending",
+       "status": 200,
+       "err": null,
+       "loadMs": 1824,
+       "perf": {
+        "dcl": 587,
+        "load": 816,
+        "fcp": 524
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 7,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 40520,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    }
+   },
+   "j5": {
+    "desktop": {
+     "dir": "captures/new/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3449,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/desktop/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 22487,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 27604,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 30383,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/desktop/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 32847,
+       "consoleErrors": 14,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2947,
+       "perf": {
+        "dcl": 1150,
+        "load": 1938,
+        "fcp": 784
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "status": 200,
+       "err": null,
+       "loadMs": 2254,
+       "perf": {
+        "dcl": 1009,
+        "load": 1205,
+        "fcp": 1080
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 32848,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j5/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3510,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/new/j5/mobile/step-02-collection.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "atMs": 18274,
+       "consoleErrors": 13,
+       "failedRequests": 13
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j5/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 23627,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26183,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/new/j5/mobile/step-05-cart.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/cart",
+       "atMs": 28459,
+       "consoleErrors": 15,
+       "failedRequests": 23
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "page"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header a[href=\"/cart\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3148,
+       "perf": {
+        "dcl": 1303,
+        "load": 2129,
+        "fcp": 1108
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/collections/all",
+       "status": 200,
+       "err": null,
+       "loadMs": 1780,
+       "perf": {
+        "dcl": 558,
+        "load": 771,
+        "fcp": 488
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 28460,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    }
+   },
+   "j6": {
+    "desktop": {
+     "dir": "captures/new/j6/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j6/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3817,
+       "consoleErrors": 16,
+       "failedRequests": 8
+      },
+      {
+       "n": 2,
+       "label": "footer",
+       "file": "captures/new/j6/desktop/step-02-footer.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9189,
+       "consoleErrors": 2,
+       "failedRequests": 0,
+       "note": "support-links evidence"
+      },
+      {
+       "n": 3,
+       "label": "shipping-policy",
+       "file": "captures/new/j6/desktop/step-03-shipping-policy.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy",
+       "atMs": 17969,
+       "consoleErrors": 14,
+       "failedRequests": 10
+      },
+      {
+       "n": 4,
+       "label": "returns",
+       "file": "captures/new/j6/desktop/step-04-returns.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/refund-policy",
+       "atMs": 22738,
+       "consoleErrors": 28,
+       "failedRequests": 18
+      },
+      {
+       "n": 5,
+       "label": "contact",
+       "file": "captures/new/j6/desktop/step-05-contact.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/contact",
+       "atMs": 29178,
+       "consoleErrors": 28,
+       "failedRequests": 18
+      },
+      {
+       "n": 6,
+       "label": "size-guide",
+       "file": "captures/new/j6/desktop/step-06-size-guide.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 33765,
+       "consoleErrors": 30,
+       "failedRequests": 26
+      },
+      {
+       "n": 7,
+       "label": "tracking",
+       "file": "captures/new/j6/desktop/step-07-tracking.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/tracking",
+       "atMs": 39195,
+       "consoleErrors": 28,
+       "failedRequests": 18
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "support-shipping-policy": {
+       "how": "not-found-in-ui",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy"
+      },
+      "support-returns": {
+       "how": "footer-link:a[href*=\"refund-policy\"]",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/refund-policy"
+      },
+      "support-contact": {
+       "how": "not-found-in-ui",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/contact"
+      },
+      "pdp-find-size-guide": {
+       "found": false,
+       "detail": null
+      },
+      "support-size-guide": {
+       "found": false
+      },
+      "support-tracking": {
+       "how": "not-found-in-ui",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/tracking"
+      }
+     },
+     "actions": [],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3296,
+       "perf": {
+        "dcl": 1424,
+        "load": 2273,
+        "fcp": 1052
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy",
+       "status": 200,
+       "err": null,
+       "loadMs": 2025,
+       "perf": {
+        "dcl": 701,
+        "load": 1008,
+        "fcp": 812
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1708,
+       "perf": {
+        "dcl": 485,
+        "load": 700,
+        "fcp": 420
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1656,
+       "perf": {
+        "dcl": 409,
+        "load": 645,
+        "fcp": 316
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/contact",
+       "status": 200,
+       "err": null,
+       "loadMs": 1825,
+       "perf": {
+        "dcl": 555,
+        "load": 812,
+        "fcp": 560
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1791,
+       "perf": {
+        "dcl": 545,
+        "load": 780,
+        "fcp": 484
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2180,
+       "perf": {
+        "dcl": 674,
+        "load": 1170,
+        "fcp": 552
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1668,
+       "perf": {
+        "dcl": 418,
+        "load": 656,
+        "fcp": 372
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/tracking",
+       "status": 200,
+       "err": null,
+       "loadMs": 1845,
+       "perf": {
+        "dcl": 647,
+        "load": 834,
+        "fcp": 556
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 9,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 39195,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j6/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j6/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 4124,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 2,
+       "label": "footer",
+       "file": "captures/new/j6/mobile/step-02-footer.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6118,
+       "consoleErrors": 1,
+       "failedRequests": 2,
+       "note": "support-links evidence"
+      },
+      {
+       "n": 3,
+       "label": "shipping-policy",
+       "file": "captures/new/j6/mobile/step-03-shipping-policy.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy",
+       "atMs": 14804,
+       "consoleErrors": 12,
+       "failedRequests": 11
+      },
+      {
+       "n": 4,
+       "label": "returns",
+       "file": "captures/new/j6/mobile/step-04-returns.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/refund-policy",
+       "atMs": 19747,
+       "consoleErrors": 22,
+       "failedRequests": 17
+      },
+      {
+       "n": 5,
+       "label": "contact",
+       "file": "captures/new/j6/mobile/step-05-contact.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/contact",
+       "atMs": 26286,
+       "consoleErrors": 22,
+       "failedRequests": 18
+      },
+      {
+       "n": 6,
+       "label": "size-guide",
+       "file": "captures/new/j6/mobile/step-06-size-guide.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 30881,
+       "consoleErrors": 24,
+       "failedRequests": 25
+      },
+      {
+       "n": 7,
+       "label": "tracking",
+       "file": "captures/new/j6/mobile/step-07-tracking.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/tracking",
+       "atMs": 36661,
+       "consoleErrors": 22,
+       "failedRequests": 16
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "support-shipping-policy": {
+       "how": "not-found-in-ui",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy"
+      },
+      "support-returns": {
+       "how": "footer-link:a[href*=\"refund-policy\"]",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/refund-policy"
+      },
+      "support-contact": {
+       "how": "not-found-in-ui",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/contact"
+      },
+      "pdp-find-size-guide": {
+       "found": false,
+       "detail": null
+      },
+      "support-size-guide": {
+       "found": false
+      },
+      "support-tracking": {
+       "how": "not-found-in-ui",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/tracking"
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3680,
+       "perf": {
+        "dcl": 1565,
+        "load": 2667,
+        "fcp": 1444
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy",
+       "status": 200,
+       "err": null,
+       "loadMs": 2000,
+       "perf": {
+        "dcl": 674,
+        "load": 991,
+        "fcp": 640
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1868,
+       "perf": {
+        "dcl": 473,
+        "load": 854,
+        "fcp": 400
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1685,
+       "perf": {
+        "dcl": 466,
+        "load": 669,
+        "fcp": 396
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/contact",
+       "status": 200,
+       "err": null,
+       "loadMs": 1896,
+       "perf": {
+        "dcl": 606,
+        "load": 887,
+        "fcp": 628
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1762,
+       "perf": {
+        "dcl": 496,
+        "load": 746,
+        "fcp": 404
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2318,
+       "perf": {
+        "dcl": 847,
+        "load": 1307,
+        "fcp": 584
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1742,
+       "perf": {
+        "dcl": 472,
+        "load": 726,
+        "fcp": 416
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/pages/tracking",
+       "status": 200,
+       "err": null,
+       "loadMs": 2034,
+       "perf": {
+        "dcl": 887,
+        "load": 1010,
+        "fcp": 644
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 9,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 36661,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    }
+   },
+   "j7": {
+    "desktop": {
+     "dir": "captures/new/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/desktop/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3712,
+       "consoleErrors": 15,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/desktop/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 22448,
+       "consoleErrors": 16,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/desktop/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 26074,
+       "consoleErrors": 16,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 30635,
+       "consoleErrors": 9,
+       "failedRequests": 1,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/desktop/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 33104,
+       "consoleErrors": 18,
+       "failedRequests": 7
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3139,
+       "perf": {
+        "dcl": 1399,
+        "load": 2112,
+        "fcp": 1128
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "status": 200,
+       "err": null,
+       "loadMs": 1991,
+       "perf": {
+        "dcl": 743,
+        "load": 979,
+        "fcp": 776
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "status": 429,
+       "err": null,
+       "loadMs": 3940,
+       "perf": {
+        "dcl": 1743,
+        "load": 2930,
+        "fcp": 1753
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2074,
+       "perf": {
+        "dcl": 772,
+        "load": 1059,
+        "fcp": 588
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 5,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 33104,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/new/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/new/j7/mobile/step-01-home.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 3799,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/new/j7/mobile/step-02-results.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 19583,
+       "consoleErrors": 13,
+       "failedRequests": 10
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/new/j7/mobile/step-03-pdp.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/cb1-wash-jorts?_pos=1&_sid=f2985137b&_ss=r&variant=53639824900439",
+       "atMs": 23305,
+       "consoleErrors": 13,
+       "failedRequests": 14
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/new/j7/mobile/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 28841,
+       "consoleErrors": 3,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/new/j7/mobile/step-05-home-end.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 31363,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=841a6c21-d81c-4043-bd47-244fd8c808e4&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3434,
+       "perf": {
+        "dcl": 1537,
+        "load": 2418,
+        "fcp": 1240
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search?q=BLUE+WASH+JORTS",
+       "status": 200,
+       "err": null,
+       "loadMs": 2228,
+       "perf": {
+        "dcl": 959,
+        "load": 1216,
+        "fcp": 952
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/account/login",
+       "status": 200,
+       "err": null,
+       "loadMs": 5012,
+       "perf": {
+        "dcl": 3986,
+        "load": 3986,
+        "fcp": 4100
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2215,
+       "perf": {
+        "dcl": 944,
+        "load": 1198,
+        "fcp": 724
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 5,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 31363,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    }
+   }
+  },
+  "old": {
+   "edge": {
+    "mobile": {
+     "dir": "captures/old/edge/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "typo-results",
+       "file": "captures/old/edge/mobile/step-01-typo-results.jpg",
+       "url": "https://crooksldn.com/search?q=charcol+crewneck",
+       "atMs": 5262,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 2,
+       "label": "zero-results",
+       "file": "captures/old/edge/mobile/step-02-zero-results.jpg",
+       "url": "https://crooksldn.com/search?q=xyzzyplugh",
+       "atMs": 8121,
+       "consoleErrors": 13,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "404",
+       "file": "captures/old/edge/mobile/step-03-404.jpg",
+       "url": "https://crooksldn.com/products/this-does-not-exist",
+       "atMs": 10505,
+       "consoleErrors": 12,
+       "failedRequests": 8
+      },
+      {
+       "n": 4,
+       "label": "oos-pdp",
+       "file": "captures/old/edge/mobile/step-04-oos-pdp.jpg",
+       "url": "https://crooksldn.com/products/v2-baggies",
+       "atMs": 13700,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 5,
+       "label": "cart-before-ops",
+       "file": "captures/old/edge/mobile/step-05-cart-before-ops.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 60618,
+       "consoleErrors": 29,
+       "failedRequests": 39
+      },
+      {
+       "n": 6,
+       "label": "cart-qty",
+       "file": "captures/old/edge/mobile/step-06-cart-qty.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 62350,
+       "consoleErrors": 4,
+       "failedRequests": 0
+      },
+      {
+       "n": 7,
+       "label": "cart-removed",
+       "file": "captures/old/edge/mobile/step-07-cart-removed.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 64092,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 8,
+       "label": "discount-checkout",
+       "file": "captures/old/edge/mobile/step-08-discount-checkout.jpg",
+       "url": "https://crooksldn.com/checkouts/cn/hWNFXT7Z7gl5oGdY8pmmx4fS/en-us?_r=AQABsXhPTARZzQzpwtqluhlO3CFAQ90CipGaq_cOEsWG&auto_redirect=false&edge_r",
+       "atMs": 74870,
+       "consoleErrors": 50,
+       "failedRequests": 41,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "oos-variant-states": {
+       "variants": [
+        {
+         "value": "XS",
+         "disabled": false,
+         "cls": ""
+        },
+        {
+         "value": "S",
+         "disabled": false,
+         "cls": ""
+        },
+        {
+         "value": "M",
+         "disabled": false,
+         "cls": ""
+        },
+        {
+         "value": "L",
+         "disabled": false,
+         "cls": ""
+        },
+        {
+         "value": "XL",
+         "disabled": false,
+         "cls": ""
+        }
+       ]
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "discount-field-in-cart": {
+       "found": true,
+       "detail": "cart-discount"
+      },
+      "discount-field-at-checkout": {
+       "found": true,
+       "detail": "Discount code"
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"S\")"
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      },
+      {
+       "note": "qty-increase",
+       "ok": true,
+       "how": "button[name=\"plus\"]"
+      },
+      {
+       "note": "remove-item",
+       "ok": true,
+       "how": "button[aria-label*=\"remove\" i]"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/search?q=charcol+crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 5016,
+       "perf": {
+        "dcl": 1608,
+        "load": 4004,
+        "fcp": 1240
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=xyzzyplugh",
+       "status": 200,
+       "err": null,
+       "loadMs": 2433,
+       "perf": {
+        "dcl": 1009,
+        "load": 1423,
+        "fcp": 984
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/this-does-not-exist",
+       "status": 404,
+       "err": null,
+       "loadMs": 2143,
+       "perf": {
+        "dcl": 762,
+        "load": 1135,
+        "fcp": 716
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/v2-baggies",
+       "status": 200,
+       "err": null,
+       "loadMs": 2664,
+       "perf": {
+        "dcl": 998,
+        "load": 1655,
+        "fcp": 828
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2392,
+       "perf": {
+        "dcl": 750,
+        "load": 1383,
+        "fcp": 560
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2283,
+       "perf": {
+        "dcl": 752,
+        "load": 1270,
+        "fcp": 568
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 6,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 74871,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to XMLHttpRequest at 'https://www.paypal.com/xoplatform/logger/api/logger?disableSetCookie=true' from origin 'htt",
+      "Failed to load resource: net::ERR_FAILED",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    }
+   },
+   "edge-slow4g": {
+    "mobile": {
+     "dir": "captures/old/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 7223,
+       "consoleErrors": 3,
+       "failedRequests": 2,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 16241,
+       "consoleErrors": 8,
+       "failedRequests": 1
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19380,
+       "consoleErrors": 15,
+       "failedRequests": 17,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19463,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 15980,
+       "perf": {
+        "load": 15978,
+        "fcp": 1156
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3129,
+       "perf": {
+        "load": 3024,
+        "fcp": 384
+       }
+      }
+     },
+     "actions": [],
+     "loads": [],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 19474,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   },
+   "edge-zoom": {
+    "desktop": {
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     },
+     "actions": [],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3152,
+       "perf": {
+        "dcl": 1124,
+        "load": 2142,
+        "fcp": 940
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2207,
+       "perf": {
+        "dcl": 607,
+        "load": 1199,
+        "fcp": 356
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 8311,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   },
+   "j1": {
+    "desktop": {
+     "dir": "captures/old/j1/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j1/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4188,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "pdp",
+       "file": "captures/old/j1/desktop/step-02-pdp.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 16189,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 3,
+       "label": "variant-selected",
+       "file": "captures/old/j1/desktop/step-03-variant-selected.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 17679,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j1/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 21684,
+       "consoleErrors": 6,
+       "failedRequests": 15
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j1/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775",
+       "atMs": 24109,
+       "consoleErrors": 2,
+       "failedRequests": 2
+      },
+      {
+       "n": 6,
+       "label": "checkout",
+       "file": "captures/old/j1/desktop/step-06-checkout.jpg",
+       "url": "https://crooksldn.com/checkouts/cn/hWNFXSFPoNjO0KBvdjHzdtKM/en-us?_r=AQABiZaWtO859-1uoRDBPZ4OhLYugXXq_ez-u7SWln03&auto_redirect=false&edge_r",
+       "atMs": 33199,
+       "consoleErrors": 19,
+       "failedRequests": 7,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "tap-targets": {
+       "targets": {
+        "atc": {
+         "sel": "button[name=\"add\"]:not([disabled])",
+         "w": 292,
+         "h": 52
+        }
+       }
+      },
+      "variant-persistence": {
+       "before": "M",
+       "after": "M",
+       "stable": true
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-drawer-focus-trap": {
+       "trapped": true,
+       "sample": [
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer"
+       ]
+      }
+     },
+     "actions": [
+      {
+       "note": "route-to-product",
+       "ok": true,
+       "how": "direct-home-link"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3856,
+       "perf": {
+        "dcl": 1955,
+        "load": 2829,
+        "fcp": 1072
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 33199,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j1/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j1/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 6060,
+       "consoleErrors": 11,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "pdp",
+       "file": "captures/old/j1/mobile/step-02-pdp.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235217239&_su_rec=XkKcc2BoSKGeSPrEwEMDgUOnUVkz5WlPa3n3ihhiZslfJGJ6Nc",
+       "atMs": 19097,
+       "consoleErrors": 15,
+       "failedRequests": 15
+      },
+      {
+       "n": 3,
+       "label": "variant-selected",
+       "file": "captures/old/j1/mobile/step-03-variant-selected.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775&_su_rec=XkKcc2BoSKGeSPrEwEMDgUOnUVkz5WlPa3n3ihhiZslfJGJ6Nc",
+       "atMs": 20414,
+       "consoleErrors": 2,
+       "failedRequests": 2
+      },
+      {
+       "n": 4,
+       "label": "pdp-scrolled",
+       "file": "captures/old/j1/mobile/step-04-pdp-scrolled.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775&_su_rec=XkKcc2BoSKGeSPrEwEMDgUOnUVkz5WlPa3n3ihhiZslfJGJ6Nc",
+       "atMs": 22713,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "sticky-atc evidence"
+      },
+      {
+       "n": 5,
+       "label": "after-atc",
+       "file": "captures/old/j1/mobile/step-05-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775&_su_rec=XkKcc2BoSKGeSPrEwEMDgUOnUVkz5WlPa3n3ihhiZslfJGJ6Nc",
+       "atMs": 25438,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      },
+      {
+       "n": 6,
+       "label": "cart",
+       "file": "captures/old/j1/mobile/step-06-cart.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235282775&_su_rec=XkKcc2BoSKGeSPrEwEMDgUOnUVkz5WlPa3n3ihhiZslfJGJ6Nc",
+       "atMs": 27598,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      },
+      {
+       "n": 7,
+       "label": "checkout",
+       "file": "captures/old/j1/mobile/step-07-checkout.jpg",
+       "url": "https://crooksldn.com/checkouts/cn/hWNFXSC2LLzbRI8vNoSKP6Sg/en-us?_r=AQABGr-oo_SnBjmECUqDjiQpqSqTxQGRfkR7muDDddzm",
+       "atMs": 36329,
+       "consoleErrors": 27,
+       "failedRequests": 9,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "tap-targets": {
+       "targets": {
+        "atc": {
+         "sel": "button[name=\"add\"]:not([disabled])",
+         "w": 226,
+         "h": 52
+        }
+       }
+      },
+      "variant-persistence": {
+       "before": "M",
+       "after": "M",
+       "stable": true
+      },
+      "sticky-atc-on-scroll": {
+       "sticky": true
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-drawer-focus-trap": {
+       "trapped": true,
+       "sample": [
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "in-drawer",
+        "BODY.page-width-narrow card-hover-effect-none"
+       ]
+      }
+     },
+     "actions": [
+      {
+       "note": "route-to-product",
+       "ok": true,
+       "how": "direct-home-link"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 5648,
+       "perf": {
+        "dcl": 1391,
+        "load": 4634,
+        "fcp": 956
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 36330,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "[Report Only] Refused to frame 'https://pay.google.com/' because an ancestor violates the following Content Security Pol",
+      "Access to fetch at 'https://us-central1-shopify-instrumentat-ff788286.cloudfunctions.net/telemetry' from origin 'https:/",
+      "Failed to load resource: net::ERR_FAILED"
+     ]
+    }
+   },
+   "j2": {
+    "desktop": {
+     "dir": "captures/old/j2/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j2/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3926,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j2/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=jeans",
+       "atMs": 8849,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j2/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb2-wash-jeans?variant=53639822344535&_pos=2&_sid=ba96288ff&_ss=r",
+       "atMs": 22182,
+       "consoleErrors": 13,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j2/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb2-wash-jeans?variant=53639822410071&_pos=2&_sid=ba96288ff&_ss=r",
+       "atMs": 24842,
+       "consoleErrors": 3,
+       "failedRequests": 13
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j2/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb2-wash-jeans?variant=53639822410071&_pos=2&_sid=ba96288ff&_ss=r",
+       "atMs": 27019,
+       "consoleErrors": 1,
+       "failedRequests": 3
+      },
+      {
+       "n": 6,
+       "label": "checkout",
+       "file": "captures/old/j2/desktop/step-06-checkout.jpg",
+       "url": "https://crooksldn.com/checkouts/cn/hWNFXSNBSwCEzqIdXMxOWj0k/en-us?_r=AQABKM2DTha3ul8-ANB_tVM3wxpjnYMFiYT0-njbMFSd&auto_redirect=false&edge_r",
+       "atMs": 33838,
+       "consoleErrors": 19,
+       "failedRequests": 6,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "search-ui",
+       "ok": false,
+       "how": "fallback-url"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3529,
+       "perf": {
+        "dcl": 1442,
+        "load": 2511,
+        "fcp": 1120
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=jeans",
+       "status": 200,
+       "err": null,
+       "loadMs": 2078,
+       "perf": {
+        "dcl": 913,
+        "load": 1070,
+        "fcp": 640
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 4,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 33838,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j2/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j2/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5226,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j2/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 9121,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j2/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/search?q=jeans&options%5Bprefix%5D=last",
+       "atMs": 11889,
+       "consoleErrors": 15,
+       "failedRequests": 6
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j2/mobile/step-04-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb2-wash-jeans?variant=53639822344535&_pos=2&_sid=ba96288ff&_ss=r",
+       "atMs": 24568,
+       "consoleErrors": 19,
+       "failedRequests": 16
+      },
+      {
+       "n": 5,
+       "label": "after-atc",
+       "file": "captures/old/j2/mobile/step-05-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb2-wash-jeans?variant=53639822410071&_pos=2&_sid=ba96288ff&_ss=r",
+       "atMs": 27281,
+       "consoleErrors": 8,
+       "failedRequests": 17
+      },
+      {
+       "n": 6,
+       "label": "cart",
+       "file": "captures/old/j2/mobile/step-06-cart.jpg",
+       "url": "https://crooksldn.com/products/cb2-wash-jeans?variant=53639822410071&_pos=2&_sid=ba96288ff&_ss=r",
+       "atMs": 29360,
+       "consoleErrors": 4,
+       "failedRequests": 3
+      },
+      {
+       "n": 7,
+       "label": "checkout",
+       "file": "captures/old/j2/mobile/step-07-checkout.jpg",
+       "url": "https://crooksldn.com/checkouts/cn/hWNFXSJXB3PNF4z2vscRjCcM/en-us?_r=AQABhqhqWvp20_4KE7GnN3qWiMYJjELCu3zZ0mDHK388&auto_redirect=false&edge_r",
+       "atMs": 37255,
+       "consoleErrors": 21,
+       "failedRequests": 9,
+       "note": "STOP — never submit"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      },
+      {
+       "note": "go-checkout",
+       "ok": true,
+       "how": "button[name=\"checkout\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 4919,
+       "perf": {
+        "dcl": 1390,
+        "load": 3906,
+        "fcp": 1032
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 37255,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 503 ()",
+      "pageerror: No empty section markup found",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Failed to load resource: the server responded with a status of 401 ()"
+     ]
+    }
+   },
+   "j3": {
+    "desktop": {
+     "dir": "captures/old/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4451,
+       "consoleErrors": 16,
+       "failedRequests": 18,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 6201,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 13397,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16077,
+       "consoleErrors": 2,
+       "failedRequests": 14
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": true,
+        "variantPicker": true
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 4238,
+       "perf": {
+        "dcl": 1944,
+        "load": 3217,
+        "fcp": 1584
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "status": 200,
+       "err": null,
+       "loadMs": 2480,
+       "perf": {
+        "dcl": 807,
+        "load": 1469,
+        "fcp": 620
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 16077,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4500,
+       "consoleErrors": 15,
+       "failedRequests": 13,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 5965,
+       "consoleErrors": 0,
+       "failedRequests": 2,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 12902,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 15359,
+       "consoleErrors": 7,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 4328,
+       "perf": {
+        "dcl": 1366,
+        "load": 3315,
+        "fcp": 1056
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "status": 200,
+       "err": null,
+       "loadMs": 2339,
+       "perf": {
+        "dcl": 771,
+        "load": 1328,
+        "fcp": 576
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 15359,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   },
+   "j4": {
+    "desktop": {
+     "dir": "captures/old/j4/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j4/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4119,
+       "consoleErrors": 13,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j4/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8339,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "filter-open",
+       "file": "captures/old/j4/desktop/step-03-filter-open.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 9604,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 4,
+       "label": "filtered",
+       "file": "captures/old/j4/desktop/step-04-filtered.jpg",
+       "url": "https://crooksldn.com/collections/all?sort_by=price-ascending",
+       "atMs": 18454,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 5,
+       "label": "pdp-1",
+       "file": "captures/old/j4/desktop/step-05-pdp-1.jpg",
+       "url": "https://crooksldn.com/products/black-socks?variant=53455222964567",
+       "atMs": 30991,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 6,
+       "label": "back-1",
+       "file": "captures/old/j4/desktop/step-06-back-1.jpg",
+       "url": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#99c1ae7aba524a6ed004f9e19c556333",
+       "atMs": 34098,
+       "consoleErrors": 11,
+       "failedRequests": 6
+      },
+      {
+       "n": 7,
+       "label": "pdp-2",
+       "file": "captures/old/j4/desktop/step-07-pdp-2.jpg",
+       "url": "https://crooksldn.com/products/white-socks?variant=53456567238999",
+       "atMs": 45839,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 8,
+       "label": "pdp-3",
+       "file": "captures/old/j4/desktop/step-08-pdp-3.jpg",
+       "url": "https://crooksldn.com/products/large-duffle-bag?variant=53284472717655",
+       "atMs": 60515,
+       "consoleErrors": 24,
+       "failedRequests": 22
+      },
+      {
+       "n": 9,
+       "label": "home-return",
+       "file": "captures/old/j4/desktop/step-09-home-return.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 65605,
+       "consoleErrors": 21,
+       "failedRequests": 13
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "back-after-filter-1": {
+       "backUrl": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#99c1ae7aba524a6ed004f9e19c556333",
+       "filterSurvived": false,
+       "landedOnCollection": true
+      },
+      "back-after-filter-2": {
+       "backUrl": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#0f67078badf435f2cf5ff77eec86bd09",
+       "filterSurvived": false,
+       "landedOnCollection": true
+      },
+      "back-after-filter-3": {
+       "backUrl": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#bc524975cad252d48811435b0bfd1cbc",
+       "filterSurvived": false,
+       "landedOnCollection": true
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-filter-sort",
+       "ok": true,
+       "how": "summary:has-text(\"Sort\")"
+      },
+      {
+       "note": "sort-low-high",
+       "ok": false
+      },
+      {
+       "note": "logo-home",
+       "ok": true,
+       "how": "header a[href=\"/\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3760,
+       "perf": {
+        "dcl": 1428,
+        "load": 2750,
+        "fcp": 1088
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "status": 200,
+       "err": null,
+       "loadMs": 2166,
+       "perf": {
+        "dcl": 881,
+        "load": 1156,
+        "fcp": 572
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all?sort_by=price-ascending",
+       "status": 200,
+       "err": null,
+       "loadMs": 2094,
+       "perf": {
+        "dcl": 866,
+        "load": 1085,
+        "fcp": 596
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 7,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 65605,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j4/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j4/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5347,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "menu-open",
+       "file": "captures/old/j4/mobile/step-02-menu-open.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 7124,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "collection",
+       "file": "captures/old/j4/mobile/step-03-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 9965,
+       "consoleErrors": 11,
+       "failedRequests": 5
+      },
+      {
+       "n": 4,
+       "label": "filter-open",
+       "file": "captures/old/j4/mobile/step-04-filter-open.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 11201,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 5,
+       "label": "filtered",
+       "file": "captures/old/j4/mobile/step-05-filtered.jpg",
+       "url": "https://crooksldn.com/collections/all?sort_by=price-ascending",
+       "atMs": 15200,
+       "consoleErrors": 11,
+       "failedRequests": 6
+      },
+      {
+       "n": 6,
+       "label": "pdp-1",
+       "file": "captures/old/j4/mobile/step-06-pdp-1.jpg",
+       "url": "https://crooksldn.com/products/black-socks?variant=53455222964567",
+       "atMs": 26458,
+       "consoleErrors": 17,
+       "failedRequests": 15
+      },
+      {
+       "n": 7,
+       "label": "back-1",
+       "file": "captures/old/j4/mobile/step-07-back-1.jpg",
+       "url": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#99c1ae7aba524a6ed004f9e19c556333",
+       "atMs": 29818,
+       "consoleErrors": 11,
+       "failedRequests": 6
+      },
+      {
+       "n": 8,
+       "label": "pdp-2",
+       "file": "captures/old/j4/mobile/step-08-pdp-2.jpg",
+       "url": "https://crooksldn.com/products/white-socks?variant=53456567238999",
+       "atMs": 41392,
+       "consoleErrors": 17,
+       "failedRequests": 14
+      },
+      {
+       "n": 9,
+       "label": "pdp-3",
+       "file": "captures/old/j4/mobile/step-09-pdp-3.jpg",
+       "url": "https://crooksldn.com/products/large-duffle-bag?variant=53284472717655",
+       "atMs": 55754,
+       "consoleErrors": 28,
+       "failedRequests": 18
+      },
+      {
+       "n": 10,
+       "label": "home-return",
+       "file": "captures/old/j4/mobile/step-10-home-return.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 60132,
+       "consoleErrors": 20,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "back-after-filter-1": {
+       "backUrl": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#99c1ae7aba524a6ed004f9e19c556333",
+       "filterSurvived": false,
+       "landedOnCollection": true
+      },
+      "back-after-filter-2": {
+       "backUrl": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#0f67078badf435f2cf5ff77eec86bd09",
+       "filterSurvived": false,
+       "landedOnCollection": true
+      },
+      "back-after-filter-3": {
+       "backUrl": "https://crooksldn.com/collections/all?sort_by=price-ascending&page=1#bc524975cad252d48811435b0bfd1cbc",
+       "filterSurvived": false,
+       "landedOnCollection": true
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-filter-sort",
+       "ok": true,
+       "how": "button:has-text(\"Filter\")"
+      },
+      {
+       "note": "sort-low-high",
+       "ok": false
+      },
+      {
+       "note": "logo-home",
+       "ok": true,
+       "how": "header a[href=\"/\"]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 4960,
+       "perf": {
+        "dcl": 1270,
+        "load": 3950,
+        "fcp": 976
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all?sort_by=price-ascending",
+       "status": 200,
+       "err": null,
+       "loadMs": 2293,
+       "perf": {
+        "dcl": 948,
+        "load": 1283,
+        "fcp": 708
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 6,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 60133,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   },
+   "j5": {
+    "desktop": {
+     "dir": "captures/old/j5/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3997,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/desktop/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8245,
+       "consoleErrors": 11,
+       "failedRequests": 8
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22115,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 24796,
+       "consoleErrors": 0,
+       "failedRequests": 4
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/desktop/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 26961,
+       "consoleErrors": 4,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "nav-to-all",
+       "ok": false
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3607,
+       "perf": {
+        "dcl": 1506,
+        "load": 2585,
+        "fcp": 1120
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/collections/all",
+       "status": 200,
+       "err": null,
+       "loadMs": 2072,
+       "perf": {
+        "dcl": 756,
+        "load": 1049,
+        "fcp": 376
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 3,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 26961,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j5/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j5/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4194,
+       "consoleErrors": 11,
+       "failedRequests": 8,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "collection",
+       "file": "captures/old/j5/mobile/step-02-collection.jpg",
+       "url": "https://crooksldn.com/collections/all",
+       "atMs": 8503,
+       "consoleErrors": 10,
+       "failedRequests": 4
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j5/mobile/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819231575",
+       "atMs": 22919,
+       "consoleErrors": 18,
+       "failedRequests": 15
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j5/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 29292,
+       "consoleErrors": 7,
+       "failedRequests": 11
+      },
+      {
+       "n": 5,
+       "label": "cart",
+       "file": "captures/old/j5/mobile/step-05-cart.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jeans?variant=53639819297111",
+       "atMs": 33091,
+       "consoleErrors": 5,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "price-filter-available": {
+       "available": false
+      },
+      "pdp-find-gift-options": {
+       "found": false,
+       "detail": null
+      },
+      "cart-mode": {
+       "mode": "drawer"
+      },
+      "cart-gift-note": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "nav-to-all",
+       "ok": true,
+       "how": "a[href=\"/collections/all\"]"
+      },
+      {
+       "note": "open-price-filter",
+       "ok": false
+      },
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      },
+      {
+       "note": "open-cart",
+       "ok": true,
+       "how": "header button[aria-label*=\"cart\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3776,
+       "perf": {
+        "dcl": 1212,
+        "load": 2765,
+        "fcp": 1172
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 2,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 33091,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Failed to load resource: the server responded with a status of 403 ()"
+     ]
+    }
+   },
+   "j6": {
+    "desktop": {
+     "dir": "captures/old/j6/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j6/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4994,
+       "consoleErrors": 13,
+       "failedRequests": 6
+      },
+      {
+       "n": 2,
+       "label": "footer",
+       "file": "captures/old/j6/desktop/step-02-footer.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 6172,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "support-links evidence"
+      },
+      {
+       "n": 3,
+       "label": "shipping-policy",
+       "file": "captures/old/j6/desktop/step-03-shipping-policy.jpg",
+       "url": "https://crooksldn.com/policies/shipping-policy",
+       "atMs": 9937,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 4,
+       "label": "returns",
+       "file": "captures/old/j6/desktop/step-04-returns.jpg",
+       "url": "https://crooksldn.com/policies/refund-policy",
+       "atMs": 21816,
+       "consoleErrors": 22,
+       "failedRequests": 15
+      },
+      {
+       "n": 5,
+       "label": "contact",
+       "file": "captures/old/j6/desktop/step-05-contact.jpg",
+       "url": "https://crooksldn.com/pages/contact",
+       "atMs": 28298,
+       "consoleErrors": 22,
+       "failedRequests": 14
+      },
+      {
+       "n": 6,
+       "label": "size-guide",
+       "file": "captures/old/j6/desktop/step-06-size-guide.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 33445,
+       "consoleErrors": 24,
+       "failedRequests": 24
+      },
+      {
+       "n": 7,
+       "label": "tracking",
+       "file": "captures/old/j6/desktop/step-07-tracking.jpg",
+       "url": "https://crooksldn.com/pages/tracking",
+       "atMs": 39647,
+       "consoleErrors": 22,
+       "failedRequests": 15
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "support-shipping-policy": {
+       "how": "not-found-in-ui",
+       "url": "https://crooksldn.com/policies/shipping-policy"
+      },
+      "support-returns": {
+       "how": "not-found-in-ui",
+       "url": "https://crooksldn.com/policies/refund-policy"
+      },
+      "support-contact": {
+       "how": "not-found-in-ui",
+       "url": "https://crooksldn.com/pages/contact"
+      },
+      "pdp-find-size-guide": {
+       "found": false,
+       "detail": null
+      },
+      "support-size-guide": {
+       "found": false
+      },
+      "support-tracking": {
+       "how": "not-found-in-ui",
+       "url": "https://crooksldn.com/pages/tracking"
+      }
+     },
+     "actions": [],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 4552,
+       "perf": {
+        "dcl": 2484,
+        "load": 3538,
+        "fcp": 1728
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/policies/shipping-policy",
+       "status": 200,
+       "err": null,
+       "loadMs": 1948,
+       "perf": {
+        "dcl": 718,
+        "load": 919,
+        "fcp": 520
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2054,
+       "perf": {
+        "dcl": 796,
+        "load": 1023,
+        "fcp": 596
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/policies/refund-policy",
+       "status": 200,
+       "err": null,
+       "loadMs": 1837,
+       "perf": {
+        "dcl": 656,
+        "load": 819,
+        "fcp": 484
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1746,
+       "perf": {
+        "dcl": 569,
+        "load": 736,
+        "fcp": 320
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/pages/contact",
+       "status": 200,
+       "err": null,
+       "loadMs": 1832,
+       "perf": {
+        "dcl": 657,
+        "load": 823,
+        "fcp": 468
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2001,
+       "perf": {
+        "dcl": 665,
+        "load": 990,
+        "fcp": 396
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2547,
+       "perf": {
+        "dcl": 980,
+        "load": 1520,
+        "fcp": 648
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 1905,
+       "perf": {
+        "dcl": 699,
+        "load": 893,
+        "fcp": 400
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/pages/tracking",
+       "status": 200,
+       "err": null,
+       "loadMs": 2387,
+       "perf": {
+        "dcl": 1057,
+        "load": 1375,
+        "fcp": 896
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 10,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 39647,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j6/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j6/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5706,
+       "consoleErrors": 11,
+       "failedRequests": 5
+      },
+      {
+       "n": 2,
+       "label": "footer",
+       "file": "captures/old/j6/mobile/step-02-footer.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 6760,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "support-links evidence"
+      },
+      {
+       "n": 3,
+       "label": "shipping-policy",
+       "file": "captures/old/j6/mobile/step-03-shipping-policy.jpg",
+       "url": "https://crooksldn.com/policies/shipping-policy",
+       "atMs": 12249,
+       "consoleErrors": 9,
+       "failedRequests": 6
+      },
+      {
+       "n": 4,
+       "label": "returns",
+       "file": "captures/old/j6/mobile/step-04-returns.jpg",
+       "url": "https://crooksldn.com/policies/refund-policy",
+       "atMs": 30847,
+       "consoleErrors": 20,
+       "failedRequests": 10
+      },
+      {
+       "n": 5,
+       "label": "contact",
+       "file": "captures/old/j6/mobile/step-05-contact.jpg",
+       "url": "https://crooksldn.com/pages/contact",
+       "atMs": 38517,
+       "consoleErrors": 16,
+       "failedRequests": 12
+      },
+      {
+       "n": 6,
+       "label": "size-guide",
+       "file": "captures/old/j6/mobile/step-06-size-guide.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 44371,
+       "consoleErrors": 27,
+       "failedRequests": 25
+      },
+      {
+       "n": 7,
+       "label": "tracking",
+       "file": "captures/old/j6/mobile/step-07-tracking.jpg",
+       "url": "https://crooksldn.com/collections/tracksuits",
+       "atMs": 49822,
+       "consoleErrors": 18,
+       "failedRequests": 12
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "support-shipping-policy": {
+       "how": "not-found-in-ui",
+       "url": "https://crooksldn.com/policies/shipping-policy"
+      },
+      "support-returns": {
+       "how": "not-found-in-ui",
+       "url": "https://crooksldn.com/policies/refund-policy"
+      },
+      "support-contact": {
+       "how": "menu-link:a[href*=\"contact\"]",
+       "url": "https://crooksldn.com/pages/contact"
+      },
+      "pdp-find-size-guide": {
+       "found": false,
+       "detail": null
+      },
+      "support-size-guide": {
+       "found": false
+      },
+      "support-tracking": {
+       "how": "menu-link",
+       "url": "https://crooksldn.com/collections/tracksuits"
+      }
+     },
+     "actions": [
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      },
+      {
+       "note": "open-menu",
+       "ok": true,
+       "how": "header summary[aria-label*=\"menu\" i]"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 5418,
+       "perf": {
+        "dcl": 1724,
+        "load": 4409,
+        "fcp": 1292
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/policies/shipping-policy",
+       "status": 200,
+       "err": null,
+       "loadMs": 2974,
+       "perf": {
+        "dcl": 772,
+        "load": 1965,
+        "fcp": 608
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2391,
+       "perf": {
+        "dcl": 882,
+        "load": 1372,
+        "fcp": 596
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/policies/refund-policy",
+       "status": 200,
+       "err": null,
+       "loadMs": 1941,
+       "perf": {
+        "dcl": 705,
+        "load": 910,
+        "fcp": 792
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2329,
+       "perf": {
+        "dcl": 914,
+        "load": 1311,
+        "fcp": 920
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2332,
+       "perf": {
+        "dcl": 850,
+        "load": 1319,
+        "fcp": 452
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "status": 200,
+       "err": null,
+       "loadMs": 2887,
+       "perf": {
+        "dcl": 1131,
+        "load": 1874,
+        "fcp": 732
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2019,
+       "perf": {
+        "dcl": 682,
+        "load": 1007,
+        "fcp": 288
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 8,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 49822,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   },
+   "j7": {
+    "desktop": {
+     "dir": "captures/old/j7/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/desktop/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 3601,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "results",
+       "file": "captures/old/j7/desktop/step-02-results.jpg",
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "atMs": 8307,
+       "consoleErrors": 11,
+       "failedRequests": 7
+      },
+      {
+       "n": 3,
+       "label": "pdp",
+       "file": "captures/old/j7/desktop/step-03-pdp.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?variant=53639824900439&_pos=1&_sid=f2985137b&_ss=r",
+       "atMs": 21676,
+       "consoleErrors": 13,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "account-login",
+       "file": "captures/old/j7/desktop/step-04-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f",
+       "atMs": 25192,
+       "consoleErrors": 4,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 5,
+       "label": "home-end",
+       "file": "captures/old/j7/desktop/step-05-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 27704,
+       "consoleErrors": 11,
+       "failedRequests": 4
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=c33ad3e5-ca79-4651-98fa-2d145d89044c&client_id=b15d6038-b69e-4f3e-8f"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": false
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3156,
+       "perf": {
+        "dcl": 1137,
+        "load": 2145,
+        "fcp": 832
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/search?q=BLUE+WASH+JORTS",
+       "status": 200,
+       "err": null,
+       "loadMs": 2203,
+       "perf": {
+        "dcl": 867,
+        "load": 1193,
+        "fcp": 672
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "status": 200,
+       "err": null,
+       "loadMs": 3009,
+       "perf": {
+        "dcl": 1957,
+        "load": 1957,
+        "fcp": 2052
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 2173,
+       "perf": {
+        "dcl": 861,
+        "load": 1165,
+        "fcp": 756
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 5,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 27704,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
+     ]
+    },
+    "mobile": {
+     "dir": "captures/old/j7/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "home",
+       "file": "captures/old/j7/mobile/step-01-home.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 5888,
+       "consoleErrors": 11,
+       "failedRequests": 5,
+       "note": "five-second source"
+      },
+      {
+       "n": 2,
+       "label": "search-suggest",
+       "file": "captures/old/j7/mobile/step-02-search-suggest.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 10176,
+       "consoleErrors": 2,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "results",
+       "file": "captures/old/j7/mobile/step-03-results.jpg",
+       "url": "https://crooksldn.com/products/cb1-wash-jorts?_pos=1&_psq=BLUE+WASH+JORTS&_psid=0cf01c695&_ss=e",
+       "atMs": 23595,
+       "consoleErrors": 15,
+       "failedRequests": 17
+      },
+      {
+       "n": 4,
+       "label": "pdp",
+       "file": "captures/old/j7/mobile/step-04-pdp.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=d8472668-31d5-4f8d-8c37-bb0e71d26295&client_id=399c9fc6-060c-48cf-90",
+       "atMs": 32061,
+       "consoleErrors": 3,
+       "failedRequests": 1
+      },
+      {
+       "n": 5,
+       "label": "account-login",
+       "file": "captures/old/j7/mobile/step-05-account-login.jpg",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs",
+       "atMs": 36377,
+       "consoleErrors": 10,
+       "failedRequests": 3,
+       "note": "STOP — no credentials, no signup"
+      },
+      {
+       "n": 6,
+       "label": "home-end",
+       "file": "captures/old/j7/mobile/step-06-home-end.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 40615,
+       "consoleErrors": 17,
+       "failedRequests": 6
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "account-entry": {
+       "found": false,
+       "how": "direct-url",
+       "url": "https://friendsof.crooksldn.com/authentication/oauth/authorize?buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI1d24wM3Qtbm0ubXlzaG9waWZ5LmNvbSIs"
+      },
+      "reorder-affordances": {
+       "found": false,
+       "detail": []
+      }
+     },
+     "actions": [
+      {
+       "note": "open-search",
+       "ok": true,
+       "how": "header button[aria-label*=\"search\" i]"
+      },
+      {
+       "note": "account-entry-header",
+       "ok": false
+      },
+      {
+       "note": "open-menu",
+       "ok": false
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 5500,
+       "perf": {
+        "dcl": 1615,
+        "load": 4472,
+        "fcp": 1424
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/account/login",
+       "status": 429,
+       "err": null,
+       "loadMs": 3634,
+       "perf": {
+        "dcl": 1381,
+        "load": 2619,
+        "fcp": 1394
+       },
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/",
+       "status": 200,
+       "err": null,
+       "loadMs": 3966,
+       "perf": {
+        "dcl": 1870,
+        "load": 2949,
+        "fcp": 1316
+       },
+       "cls": 0
+      }
+     ],
+     "themeAssertions": {
+      "total": 4,
+      "failed": 0
+     },
+     "poisoned": false,
+     "durationMs": 40615,
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg",
+      "Failed to load resource: the server responded with a status of 429 ()",
+      "%c%d font-size:0;color:transparent NaN"
+     ]
+    }
+   }
+  }
+ },
+ "builtAt": "2026-08-11T17:16:42.293Z"
+}

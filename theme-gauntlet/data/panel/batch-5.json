@@ -1,0 +1,2714 @@
+{
+ "batch": 5,
+ "personas": [
+  {
+   "id": "P41",
+   "name": "Milo Kim",
+   "age": 40,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech",
+    "brand-driven"
+   ],
+   "backstory": "40yo; gets lost when interfaces behave unexpectedly; typos in search; buys the story as much as the product; sniffs out effort",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "being pushed to create an account",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/old/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4451,
+       "consoleErrors": 16,
+       "failedRequests": 18,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 6201,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 13397,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16077,
+       "consoleErrors": 2,
+       "failedRequests": 14
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": true,
+        "variantPicker": true
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4238,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2480,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/new/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 4003,
+       "consoleErrors": 18,
+       "failedRequests": 16,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 9850,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 16723,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 19020,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": true,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3701,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2159,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P42",
+   "name": "Zeke Adeyemi",
+   "age": 39,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "39yo; has a competitor tab mentally open the whole time",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/new/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 3494,
+       "consoleErrors": 13,
+       "failedRequests": 15,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 6117,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 12954,
+       "consoleErrors": 13,
+       "failedRequests": 20
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16174,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3322,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2143,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/old/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4500,
+       "consoleErrors": 15,
+       "failedRequests": 13,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 5965,
+       "consoleErrors": 0,
+       "failedRequests": 2,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 12902,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 15359,
+       "consoleErrors": 7,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4328,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2339,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P43",
+   "name": "Rosa Adeyemi",
+   "age": 34,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "low-tech"
+   ],
+   "backstory": "34yo; browses at 200% zoom; judges from the zoomed desktop evidence; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/old/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4451,
+       "consoleErrors": 16,
+       "failedRequests": 18,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 6201,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 13397,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16077,
+       "consoleErrors": 2,
+       "failedRequests": 14
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": true,
+        "variantPicker": true
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4238,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2480,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/new/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 4003,
+       "consoleErrors": 18,
+       "failedRequests": 16,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 9850,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 16723,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 19020,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": true,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3701,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2159,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P44",
+   "name": "Viktor Kim",
+   "age": 17,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive",
+    "international"
+   ],
+   "backstory": "17yo; compares every price against fast-fashion alternatives; outside the UK; anxious about currency, duties and shipping",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/new/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 4003,
+       "consoleErrors": 18,
+       "failedRequests": 16,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 9850,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 16723,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 19020,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": true,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3701,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2159,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/old/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4451,
+       "consoleErrors": 16,
+       "failedRequests": 18,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 6201,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 13397,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16077,
+       "consoleErrors": 2,
+       "failedRequests": 14
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": true,
+        "variantPicker": true
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4238,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2480,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P45",
+   "name": "Daria Diallo",
+   "age": 34,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "34yo; has a competitor tab mentally open the whole time",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/old/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4500,
+       "consoleErrors": 15,
+       "failedRequests": 13,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 5965,
+       "consoleErrors": 0,
+       "failedRequests": 2,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 12902,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 15359,
+       "consoleErrors": 7,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4328,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2339,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/new/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 3494,
+       "consoleErrors": 13,
+       "failedRequests": 15,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 6117,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 12954,
+       "consoleErrors": 13,
+       "failedRequests": 20
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16174,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3322,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2143,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P46",
+   "name": "Ivan Novak",
+   "age": 52,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "52yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/new/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 4003,
+       "consoleErrors": 18,
+       "failedRequests": 16,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 9850,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 16723,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 19020,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": true,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3701,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2159,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/new/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 9263,
+       "consoleErrors": 17,
+       "failedRequests": 8,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 12615,
+       "consoleErrors": 16,
+       "failedRequests": 17,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    },
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/old/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4451,
+       "consoleErrors": 16,
+       "failedRequests": 18,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 6201,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 13397,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16077,
+       "consoleErrors": 2,
+       "failedRequests": 14
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": true,
+        "variantPicker": true
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4238,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2480,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-zoom",
+     "device": "desktop",
+     "dir": "captures/old/edge-zoom/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "zoom-home-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-01-zoom-home-200pct.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 4747,
+       "consoleErrors": 14,
+       "failedRequests": 6,
+       "note": "low-vision evidence: 200% zoom desktop"
+      },
+      {
+       "n": 2,
+       "label": "zoom-pdp-200pct",
+       "file": "captures/old/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 8310,
+       "consoleErrors": 13,
+       "failedRequests": 16,
+       "note": "low-vision evidence: 200% zoom desktop"
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P47",
+   "name": "Callum Reid",
+   "age": 45,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "45yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/old/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4500,
+       "consoleErrors": 15,
+       "failedRequests": 13,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 5965,
+       "consoleErrors": 0,
+       "failedRequests": 2,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 12902,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 15359,
+       "consoleErrors": 7,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4328,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2339,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/new/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 3494,
+       "consoleErrors": 13,
+       "failedRequests": 15,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 6117,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 12954,
+       "consoleErrors": 13,
+       "failedRequests": 20
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16174,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3322,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2143,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P48",
+   "name": "Ximena Okafor",
+   "age": 34,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive",
+    "comparison-shopper"
+   ],
+   "backstory": "34yo; compares every price against fast-fashion alternatives; has a competitor tab mentally open the whole time",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/new/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 4003,
+       "consoleErrors": 18,
+       "failedRequests": 16,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 9850,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 16723,
+       "consoleErrors": 16,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 19020,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": true,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 977,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3701,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2159,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=caijh1httspvte6b-100410786135.sh",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "desktop",
+     "dir": "captures/old/j3/desktop",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/desktop/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4451,
+       "consoleErrors": 16,
+       "failedRequests": 18,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/desktop/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 6201,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/desktop/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 13397,
+       "consoleErrors": 13,
+       "failedRequests": 18
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/desktop/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16077,
+       "consoleErrors": 2,
+       "failedRequests": 14
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": true,
+        "variantPicker": true
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4238,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2480,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Refused to frame 'https://shop.app/' because an ancestor violates the following Content Security Policy directive: \"fram",
+      "Failed to load resource: the server responded with a status of 403 ()",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the ",
+      "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=crooksldn.com&shopType=shopify&s",
+      "Failed to load resource: net::ERR_FAILED",
+      "pageerror: Failed to fetch"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "P49",
+   "name": "Zeke Moreau",
+   "age": 47,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "motor-limited",
+    "late-night"
+   ],
+   "backstory": "47yo; navigates by keyboard/large targets; small tap targets are misses; phone in bed on a weak connection; every second of loading counts",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "old",
+    "new"
+   ],
+   "sessions": [
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/old/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4500,
+       "consoleErrors": 15,
+       "failedRequests": 13,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 5965,
+       "consoleErrors": 0,
+       "failedRequests": 2,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 12902,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 15359,
+       "consoleErrors": 7,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4328,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2339,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/old/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 7223,
+       "consoleErrors": 3,
+       "failedRequests": 2,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://crooksldn.com/",
+       "atMs": 16241,
+       "consoleErrors": 8,
+       "failedRequests": 1
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/old/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19380,
+       "consoleErrors": 15,
+       "failedRequests": 17,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/old/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 19463,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 15980,
+       "perf": {
+        "load": 15978,
+        "fcp": 1156
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3129,
+       "perf": {
+        "load": 3024,
+        "fcp": 384
+       }
+      }
+     }
+    },
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/new/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 3494,
+       "consoleErrors": 13,
+       "failedRequests": 15,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 6117,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 12954,
+       "consoleErrors": 13,
+       "failedRequests": 20
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16174,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3322,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2143,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    },
+    {
+     "theme": "new",
+     "journey": "edge-slow4g",
+     "device": "mobile",
+     "dir": "captures/new/edge-slow4g/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "slow4g-home-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-01-slow4g-home-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6028,
+       "consoleErrors": 11,
+       "failedRequests": 7,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 2,
+       "label": "slow4g-home-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-02-slow4g-home-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/",
+       "atMs": 6236,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      },
+      {
+       "n": 3,
+       "label": "slow4g-pdp-at-3s",
+       "file": "captures/new/edge-slow4g/mobile/step-03-slow4g-pdp-at-3s.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10199,
+       "consoleErrors": 14,
+       "failedRequests": 19,
+       "note": "what a slow-connection shopper sees after 3s"
+      },
+      {
+       "n": 4,
+       "label": "slow4g-pdp-loaded",
+       "file": "captures/new/edge-slow4g/mobile/step-04-slow4g-pdp-loaded.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 10271,
+       "consoleErrors": 0,
+       "failedRequests": 0
+      }
+     ],
+     "checks": {
+      "slow4g-home": {
+       "loadMs": 5956,
+       "perf": {
+        "load": 5680,
+        "fcp": 2388
+       }
+      },
+      "cookie-consent": {
+       "present": false
+      },
+      "slow4g-pdp": {
+       "loadMs": 3111,
+       "perf": {
+        "load": 2674,
+        "fcp": 560
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "P50",
+   "name": "Sofia Frost",
+   "age": 33,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "motor-limited"
+   ],
+   "backstory": "33yo; assumes unfamiliar stores are drop-shippers until proven otherwise; navigates by keyboard/large targets; small tap targets are misses",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ],
+   "sessions": [
+    {
+     "theme": "new",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/new/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/new/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 3494,
+       "consoleErrors": 13,
+       "failedRequests": 15,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/new/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+       "atMs": 6117,
+       "consoleErrors": 0,
+       "failedRequests": 0,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/new/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234856791",
+       "atMs": 12954,
+       "consoleErrors": 13,
+       "failedRequests": 20
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/new/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 16174,
+       "consoleErrors": 0,
+       "failedRequests": 1
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": true,
+       "note": "modal shown before content; accepted to proceed"
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": true,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-returns": {
+       "found": true,
+       "detail": {
+        "text": "Chain of custody — shipping & returns\n                +",
+        "tag": "H2",
+        "y": 1239,
+        "clickable": false
+       }
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "button.crk-size[data-value=\"M\"]"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 3322,
+       "cls": 0
+      },
+      {
+       "url": "https://caijh1httspvte6b-100410786135.shopifypreview.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2143,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Refused to execute script from 'https://caijh1httspvte6b-100410786135.shopifypreview.com/web-pixels@8a38caafwfc02b679pa9"
+     ]
+    },
+    {
+     "theme": "old",
+     "journey": "j3",
+     "device": "mobile",
+     "dir": "captures/old/j3/mobile",
+     "steps": [
+      {
+       "n": 1,
+       "label": "pdp-landing",
+       "file": "captures/old/j3/mobile/step-01-pdp-landing.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 4500,
+       "consoleErrors": 15,
+       "failedRequests": 13,
+       "note": "five-second source for research intent"
+      },
+      {
+       "n": 2,
+       "label": "pdp-bottom",
+       "file": "captures/old/j3/mobile/step-02-pdp-bottom.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "atMs": 5965,
+       "consoleErrors": 0,
+       "failedRequests": 2,
+       "note": "evidence for shipping/returns/reviews presence below fold"
+      },
+      {
+       "n": 3,
+       "label": "pdp-compare",
+       "file": "captures/old/j3/mobile/step-03-pdp-compare.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "atMs": 12902,
+       "consoleErrors": 15,
+       "failedRequests": 16
+      },
+      {
+       "n": 4,
+       "label": "after-atc",
+       "file": "captures/old/j3/mobile/step-04-after-atc.jpg",
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts?variant=53936234922327",
+       "atMs": 15359,
+       "consoleErrors": 7,
+       "failedRequests": 9
+      }
+     ],
+     "checks": {
+      "cookie-consent": {
+       "present": false
+      },
+      "buybox-viewport": {
+       "visible": {
+        "price": false,
+        "atc": false,
+        "variantPicker": false
+       }
+      },
+      "pdp-find-shipping": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-returns": {
+       "found": false,
+       "detail": null
+      },
+      "pdp-find-reviews": {
+       "found": false,
+       "detail": null
+      }
+     },
+     "actions": [
+      {
+       "note": "select-size",
+       "ok": true,
+       "how": "label:has-text(\"M\")"
+      },
+      {
+       "note": "add-to-cart",
+       "ok": true,
+       "how": "button[name=\"add\"]:not([disabled])"
+      }
+     ],
+     "loads": [
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+       "loadMs": 4328,
+       "cls": 0
+      },
+      {
+       "url": "https://crooksldn.com/products/charcoal-cellblock-shorts",
+       "loadMs": 2339,
+       "cls": 0
+      }
+     ],
+     "uniqueConsoleErrors": [
+      "pageerror: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "pageerror: Failed to read the 'serviceWorker' property from 'Navigator': Service worker is disabled because the context ",
+      "Error producing monorail event MonorailRequestError: Error completing request. A network failure may have prevented the "
+     ]
+    }
+   ]
+  }
+ ]
+}

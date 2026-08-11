@@ -1,0 +1,68 @@
+{
+ "new_mobile_menu": {
+  "opens": true,
+  "links": [
+   "SHOP->/collections/frontpage",
+   "ALL->/collections/all",
+   "NEW->/collections/new",
+   "TEES->/collections/tees",
+   "DENIM->/collections/denim",
+   "SWEATS->/collections/sweats",
+   "TRACKSUITS->/collections/tracksuits",
+   "ACCESSORIES->/collections/accessories",
+   "TRACKING->/pages/tracking",
+   "Contact->/pages/contact",
+   "ACCOUNT->/account",
+   "BAG [0]->/cart"
+  ]
+ },
+ "new_search": {
+  "afterClickUrl": "https://caijh1httspvte6b-100410786135.shopifypreview.com/search",
+  "works": "no-input-found"
+ },
+ "new_footer_shipping": {
+  "exists": true,
+  "text": "SHIPPING",
+  "w": 60.84375,
+  "h": 44,
+  "top": 404.421875,
+  "display": "inline-flex",
+  "visibility": "visible",
+  "opacity": "1",
+  "clickLandsOn": "https://caijh1httspvte6b-100410786135.shopifypreview.com/policies/shipping-policy"
+ },
+ "new_account_desktop": [
+  {
+   "tag": "A",
+   "txt": "ACCOUNT",
+   "href": "/account",
+   "visible": false
+  }
+ ],
+ "new_collection_controls": [],
+ "old_footer_links": [
+  "->/",
+  "SHOP->/collections/frontpage",
+  "ALL->/collections/all",
+  "NEW->/collections/new",
+  "TEES->/collections/tees",
+  "DENIM->/collections/denim",
+  "SWEATS->/collections/sweats",
+  "TRACKSUITS->/collections/tracksuits",
+  "ACCESSORIES->/collections/accessories",
+  "TRACKING->/pages/tracking",
+  "Contact->/pages/contact",
+  "3 CLIVES TEE->/products/3-clives-tee?variant=53936250192215",
+  "V2 BAGGIES->/products/v2-baggies?variant=53075854197079",
+  "CRXST★RZ T-SHIRT->/products/crxst-rz-t-shirt?variant=53456984146263",
+  "BLACK/BLUE MOTIONTEC™️ SOCKS->/products/black-socks?variant=53455222964567",
+  "WHITE/RED MOTIONTEC™️ SOCKS->/products/white-socks?variant=53456567238999",
+  "LARGE DUFFLE BAG->/products/large-duffle-bag?variant=53284472717655",
+  "Login->/customer_authentication/login?return_to=%2F",
+  "Explore store->/collections/all"
+ ],
+ "old_account_icon": {
+  "present": true,
+  "landsOn": "https://crooksldn.com/"
+ }
+}

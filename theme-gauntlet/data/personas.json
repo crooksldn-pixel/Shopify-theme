@@ -1,0 +1,2832 @@
+{
+ "seed": 42,
+ "generated": "2026-08-11",
+ "personas": [
+  {
+   "id": "P01",
+   "name": "Eshan Weber",
+   "age": 36,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "brand-driven"
+   ],
+   "backstory": "36yo; outside the UK; anxious about currency, duties and shipping; buys the story as much as the product; sniffs out effort",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P02",
+   "name": "Theo Cole",
+   "age": 35,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven"
+   ],
+   "backstory": "35yo; buys the story as much as the product; sniffs out effort",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P03",
+   "name": "Chloe Haddad",
+   "age": 17,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry"
+   ],
+   "backstory": "17yo; shopping in stolen minutes; abandons fast",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P04",
+   "name": "Ravi Reid",
+   "age": 16,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "comparison-shopper"
+   ],
+   "backstory": "16yo; assumes unfamiliar stores are drop-shippers until proven otherwise; has a competitor tab mentally open the whole time",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P05",
+   "name": "Kofi Silva",
+   "age": 23,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "low-tech"
+   ],
+   "backstory": "23yo; navigates by keyboard/large targets; small tap targets are misses; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P06",
+   "name": "Ivan Iqbal",
+   "age": 32,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night"
+   ],
+   "backstory": "32yo; phone in bed on a weak connection; every second of loading counts",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P07",
+   "name": "Yusuf Rossi",
+   "age": 52,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "price-sensitive",
+    "low-vision"
+   ],
+   "backstory": "52yo; compares every price against fast-fashion alternatives; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P08",
+   "name": "Grace Moreau",
+   "age": 38,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "skeptical"
+   ],
+   "backstory": "38yo; phone in bed on a weak connection; every second of loading counts; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "no sizing help when unsure between two sizes"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P09",
+   "name": "Wren Doyle",
+   "age": 32,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "motor-limited"
+   ],
+   "backstory": "32yo; phone in bed on a weak connection; every second of loading counts; navigates by keyboard/large targets; small tap targets are misses",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P10",
+   "name": "Nadia Varga",
+   "age": 47,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "47yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "walls of identical-looking products with no guidance",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P11",
+   "name": "Lena Mensah",
+   "age": 28,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "international"
+   ],
+   "backstory": "28yo; outside the UK; anxious about currency, duties and shipping",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P12",
+   "name": "Tariq Patel",
+   "age": 44,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "price-sensitive"
+   ],
+   "backstory": "44yo; assumes unfamiliar stores are drop-shippers until proven otherwise; compares every price against fast-fashion alternatives",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P13",
+   "name": "Yusuf Novak",
+   "age": 43,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "43yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P14",
+   "name": "Zeke Haddad",
+   "age": 37,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven",
+    "in-a-hurry"
+   ],
+   "backstory": "37yo; buys the story as much as the product; sniffs out effort; shopping in stolen minutes; abandons fast",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P15",
+   "name": "Tariq Byrne",
+   "age": 39,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "comparison-shopper"
+   ],
+   "backstory": "39yo; assumes unfamiliar stores are drop-shippers until proven otherwise; has a competitor tab mentally open the whole time",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P16",
+   "name": "Quinn Frost",
+   "age": 42,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven"
+   ],
+   "backstory": "42yo; buys the story as much as the product; sniffs out effort",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P17",
+   "name": "Kofi Reid",
+   "age": 51,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "51yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P18",
+   "name": "Ravi Varga",
+   "age": 39,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven"
+   ],
+   "backstory": "39yo; buys the story as much as the product; sniffs out effort",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "being pushed to create an account",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P19",
+   "name": "Yusuf Doyle",
+   "age": 17,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "price-sensitive"
+   ],
+   "backstory": "17yo; browses at 200% zoom; judges from the zoomed desktop evidence; compares every price against fast-fashion alternatives",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "prices in an unexpected currency with no explanation"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P20",
+   "name": "Oscar Rossi",
+   "age": 29,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "comparison-shopper"
+   ],
+   "backstory": "29yo; navigates by keyboard/large targets; small tap targets are misses; has a competitor tab mentally open the whole time",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P21",
+   "name": "Freya Byrne",
+   "age": 15,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven",
+    "low-tech"
+   ],
+   "backstory": "15yo; buys the story as much as the product; sniffs out effort; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "prices in an unexpected currency with no explanation"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P22",
+   "name": "Ximena Alvarez",
+   "age": 20,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry"
+   ],
+   "backstory": "20yo; shopping in stolen minutes; abandons fast",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P23",
+   "name": "Nadia Nakamura",
+   "age": 35,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international"
+   ],
+   "backstory": "35yo; outside the UK; anxious about currency, duties and shipping",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P24",
+   "name": "Priya Patel",
+   "age": 36,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry",
+    "comparison-shopper"
+   ],
+   "backstory": "36yo; shopping in stolen minutes; abandons fast; has a competitor tab mentally open the whole time",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P25",
+   "name": "Will Hughes",
+   "age": 18,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech",
+    "comparison-shopper"
+   ],
+   "backstory": "18yo; gets lost when interfaces behave unexpectedly; typos in search; has a competitor tab mentally open the whole time",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "a popup covering content before seeing anything",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P26",
+   "name": "Callum Lin",
+   "age": 46,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "comparison-shopper"
+   ],
+   "backstory": "46yo; browses at 200% zoom; judges from the zoomed desktop evidence; has a competitor tab mentally open the whole time",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P27",
+   "name": "Ellis Hughes",
+   "age": 41,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international"
+   ],
+   "backstory": "41yo; outside the UK; anxious about currency, duties and shipping",
+   "task": "Buy a grey crewneck under $80 for themselves before enthusiasm wears off",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "walls of identical-looking products with no guidance",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P28",
+   "name": "Omar Osei",
+   "age": 53,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "in-a-hurry",
+    "late-night"
+   ],
+   "backstory": "53yo; shopping in stolen minutes; abandons fast; phone in bed on a weak connection; every second of loading counts",
+   "task": "Replace worn-out baggy jeans; find and buy wide-leg jeans in M without browsing anything else",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P29",
+   "name": "Callum Osei",
+   "age": 45,
+   "intent": "buy-now",
+   "journey": "j1",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "45yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Buy the CHARCOAL CELLBLOCK CREWNECK in size M — friend recommended it, wants it ordered tonight",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P30",
+   "name": "Zeke Nakamura",
+   "age": 41,
+   "intent": "buy-now",
+   "journey": "j2",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international"
+   ],
+   "backstory": "41yo; outside the UK; anxious about currency, duties and shipping",
+   "task": "Buy the BLUE WASH OG JEANS in a size that fits a 32in waist, quickly, between other errands",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P31",
+   "name": "Uma Byrne",
+   "age": 49,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "comparison-shopper"
+   ],
+   "backstory": "49yo; navigates by keyboard/large targets; small tap targets are misses; has a competitor tab mentally open the whole time",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P32",
+   "name": "Nia Rossi",
+   "age": 22,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "international"
+   ],
+   "backstory": "22yo; browses at 200% zoom; judges from the zoomed desktop evidence; outside the UK; anxious about currency, duties and shipping",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P33",
+   "name": "Yusuf Varga",
+   "age": 39,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech",
+    "skeptical"
+   ],
+   "backstory": "39yo; gets lost when interfaces behave unexpectedly; typos in search; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P34",
+   "name": "Grace Kaur",
+   "age": 18,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "international"
+   ],
+   "backstory": "18yo; navigates by keyboard/large targets; small tap targets are misses; outside the UK; anxious about currency, duties and shipping",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "prices in an unexpected currency with no explanation"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P35",
+   "name": "Freya Varga",
+   "age": 40,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "price-sensitive"
+   ],
+   "backstory": "40yo; assumes unfamiliar stores are drop-shippers until proven otherwise; compares every price against fast-fashion alternatives",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "no sizing help when unsure between two sizes"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P36",
+   "name": "Zara Reid",
+   "age": 42,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven",
+    "motor-limited"
+   ],
+   "backstory": "42yo; buys the story as much as the product; sniffs out effort; navigates by keyboard/large targets; small tap targets are misses",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P37",
+   "name": "Marcus Adeyemi",
+   "age": 28,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper",
+    "motor-limited"
+   ],
+   "backstory": "28yo; has a competitor tab mentally open the whole time; navigates by keyboard/large targets; small tap targets are misses",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "a popup covering content before seeing anything",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P38",
+   "name": "Kofi Nakamura",
+   "age": 45,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven",
+    "price-sensitive"
+   ],
+   "backstory": "45yo; buys the story as much as the product; sniffs out effort; compares every price against fast-fashion alternatives",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "prices in an unexpected currency with no explanation"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P39",
+   "name": "Idris Patel",
+   "age": 45,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "brand-driven"
+   ],
+   "backstory": "45yo; outside the UK; anxious about currency, duties and shipping; buys the story as much as the product; sniffs out effort",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "prices in an unexpected currency with no explanation"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P40",
+   "name": "Kofi Iqbal",
+   "age": 53,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "price-sensitive"
+   ],
+   "backstory": "53yo; browses at 200% zoom; judges from the zoomed desktop evidence; compares every price against fast-fashion alternatives",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P41",
+   "name": "Milo Kim",
+   "age": 40,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech",
+    "brand-driven"
+   ],
+   "backstory": "40yo; gets lost when interfaces behave unexpectedly; typos in search; buys the story as much as the product; sniffs out effort",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "being pushed to create an account",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P42",
+   "name": "Zeke Adeyemi",
+   "age": 39,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "39yo; has a competitor tab mentally open the whole time",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P43",
+   "name": "Rosa Adeyemi",
+   "age": 34,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "low-tech"
+   ],
+   "backstory": "34yo; browses at 200% zoom; judges from the zoomed desktop evidence; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P44",
+   "name": "Viktor Kim",
+   "age": 17,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive",
+    "international"
+   ],
+   "backstory": "17yo; compares every price against fast-fashion alternatives; outside the UK; anxious about currency, duties and shipping",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P45",
+   "name": "Daria Diallo",
+   "age": 34,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "34yo; has a competitor tab mentally open the whole time",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P46",
+   "name": "Ivan Novak",
+   "age": 52,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "52yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P47",
+   "name": "Callum Reid",
+   "age": 45,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "45yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P48",
+   "name": "Ximena Okafor",
+   "age": 34,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive",
+    "comparison-shopper"
+   ],
+   "backstory": "34yo; compares every price against fast-fashion alternatives; has a competitor tab mentally open the whole time",
+   "task": "Comparing these jeans against a competitor tab; will only add to cart if shipping+returns make total risk acceptable",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P49",
+   "name": "Zeke Moreau",
+   "age": 47,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "motor-limited",
+    "late-night"
+   ],
+   "backstory": "47yo; navigates by keyboard/large targets; small tap targets are misses; phone in bed on a weak connection; every second of loading counts",
+   "task": "Clicked an ad straight to the $69 charcoal crewneck; decide if it beats the $63 shorts for value — must find shipping cost, returns and any reviews without leaving the funnel",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P50",
+   "name": "Sofia Frost",
+   "age": 33,
+   "intent": "research-compare",
+   "journey": "j3",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "motor-limited"
+   ],
+   "backstory": "33yo; assumes unfamiliar stores are drop-shippers until proven otherwise; navigates by keyboard/large targets; small tap targets are misses",
+   "task": "Deciding between the crewneck and shorts as a first order from an unknown brand; needs proof of quality and a returns escape hatch before adding to cart",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "consistent look between shop and checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P51",
+   "name": "Kai Hughes",
+   "age": 39,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry"
+   ],
+   "backstory": "39yo; shopping in stolen minutes; abandons fast",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P52",
+   "name": "Kai Okafor",
+   "age": 38,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "in-a-hurry"
+   ],
+   "backstory": "38yo; navigates by keyboard/large targets; small tap targets are misses; shopping in stolen minutes; abandons fast",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P53",
+   "name": "Priya Weber",
+   "age": 38,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "brand-driven"
+   ],
+   "backstory": "38yo; phone in bed on a weak connection; every second of loading counts; buys the story as much as the product; sniffs out effort",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P54",
+   "name": "Poppy Kaur",
+   "age": 22,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "brand-driven",
+    "late-night"
+   ],
+   "backstory": "22yo; buys the story as much as the product; sniffs out effort; phone in bed on a weak connection; every second of loading counts",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P55",
+   "name": "Theo Nakamura",
+   "age": 18,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive"
+   ],
+   "backstory": "18yo; compares every price against fast-fashion alternatives",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "a popup covering content before seeing anything",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P56",
+   "name": "Lola Rossi",
+   "age": 48,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "48yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "being pushed to create an account",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P57",
+   "name": "Freya Haddad",
+   "age": 38,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper",
+    "skeptical"
+   ],
+   "backstory": "38yo; has a competitor tab mentally open the whole time; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P58",
+   "name": "Kai Silva",
+   "age": 38,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "skeptical"
+   ],
+   "backstory": "38yo; phone in bed on a weak connection; every second of loading counts; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P59",
+   "name": "Rosa Varga",
+   "age": 21,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "in-a-hurry"
+   ],
+   "backstory": "21yo; phone in bed on a weak connection; every second of loading counts; shopping in stolen minutes; abandons fast",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "walls of identical-looking products with no guidance",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P60",
+   "name": "Gio Rossi",
+   "age": 23,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "in-a-hurry",
+    "late-night"
+   ],
+   "backstory": "23yo; shopping in stolen minutes; abandons fast; phone in bed on a weak connection; every second of loading counts",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P61",
+   "name": "Omar Iqbal",
+   "age": 29,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "comparison-shopper"
+   ],
+   "backstory": "29yo; assumes unfamiliar stores are drop-shippers until proven otherwise; has a competitor tab mentally open the whole time",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "being pushed to create an account",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P62",
+   "name": "Bella Varga",
+   "age": 40,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "skeptical"
+   ],
+   "backstory": "40yo; navigates by keyboard/large targets; small tap targets are misses; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "prices in an unexpected currency with no explanation"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P63",
+   "name": "Idris Okafor",
+   "age": 15,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "in-a-hurry"
+   ],
+   "backstory": "15yo; assumes unfamiliar stores are drop-shippers until proven otherwise; shopping in stolen minutes; abandons fast",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "no sizing help when unsure between two sizes"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P64",
+   "name": "Ivan Patel",
+   "age": 39,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry",
+    "skeptical"
+   ],
+   "backstory": "39yo; shopping in stolen minutes; abandons fast; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Scout the whole range to decide if this brand deserves a bookmark; sort by price to see the spread",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "search that cannot be found or does not work"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P65",
+   "name": "Ellis Novak",
+   "age": 49,
+   "intent": "browse-graze",
+   "journey": "j4",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited"
+   ],
+   "backstory": "49yo; navigates by keyboard/large targets; small tap targets are misses",
+   "task": "Kill ten minutes browsing the catalogue; open three products that catch the eye; leave if it gets boring or repetitive",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P66",
+   "name": "Lola Iqbal",
+   "age": 21,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical"
+   ],
+   "backstory": "21yo; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P67",
+   "name": "Ellis Diallo",
+   "age": 36,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "comparison-shopper",
+    "late-night"
+   ],
+   "backstory": "36yo; has a competitor tab mentally open the whole time; phone in bed on a weak connection; every second of loading counts",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P68",
+   "name": "Lena Iqbal",
+   "age": 36,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "36yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P69",
+   "name": "Sofia Varga",
+   "age": 34,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "34yo; has a competitor tab mentally open the whole time",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P70",
+   "name": "Chloe Patel",
+   "age": 28,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven"
+   ],
+   "backstory": "28yo; buys the story as much as the product; sniffs out effort",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "no spelling errors or broken sections"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P71",
+   "name": "Kai Mensah",
+   "age": 26,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "26yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P72",
+   "name": "Femi Iqbal",
+   "age": 38,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "38yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "working social links with real activity"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P73",
+   "name": "Kofi Moreau",
+   "age": 15,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech"
+   ],
+   "backstory": "15yo; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "a popup covering content before seeing anything",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P74",
+   "name": "Amara Moreau",
+   "age": 22,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry",
+    "brand-driven"
+   ],
+   "backstory": "22yo; shopping in stolen minutes; abandons fast; buys the story as much as the product; sniffs out effort",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P75",
+   "name": "Marcus Alvarez",
+   "age": 15,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "brand-driven"
+   ],
+   "backstory": "15yo; navigates by keyboard/large targets; small tap targets are misses; buys the story as much as the product; sniffs out effort",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "walls of identical-looking products with no guidance"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P76",
+   "name": "Amara Iqbal",
+   "age": 40,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "price-sensitive"
+   ],
+   "backstory": "40yo; outside the UK; anxious about currency, duties and shipping; compares every price against fast-fashion alternatives",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 10,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P77",
+   "name": "Aiden Kaur",
+   "age": 51,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry"
+   ],
+   "backstory": "51yo; shopping in stolen minutes; abandons fast",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P78",
+   "name": "Ben Iqbal",
+   "age": 52,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night"
+   ],
+   "backstory": "52yo; phone in bed on a weak connection; every second of loading counts",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P79",
+   "name": "Freya Diallo",
+   "age": 17,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "comparison-shopper"
+   ],
+   "backstory": "17yo; outside the UK; anxious about currency, duties and shipping; has a competitor tab mentally open the whole time",
+   "task": "Came back for jorts seen weeks ago; checks if an account or order history path exists before re-buying",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "consistent look between shop and checkout",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P80",
+   "name": "Jaya Adeyemi",
+   "age": 32,
+   "intent": "returning",
+   "journey": "j7",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "international",
+    "comparison-shopper"
+   ],
+   "backstory": "32yo; outside the UK; anxious about currency, duties and shipping; has a competitor tab mentally open the whole time",
+   "task": "Bought BLUE WASH JORTS last month, wants the same again — search the exact name, then find where to log in / see orders",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P81",
+   "name": "Freya Frost",
+   "age": 34,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "motor-limited",
+    "low-vision"
+   ],
+   "backstory": "34yo; navigates by keyboard/large targets; small tap targets are misses; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P82",
+   "name": "Jaya Moreau",
+   "age": 51,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "low-tech",
+    "late-night"
+   ],
+   "backstory": "51yo; gets lost when interfaces behave unexpectedly; typos in search; phone in bed on a weak connection; every second of loading counts",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "page still loading after ~5 seconds",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P83",
+   "name": "Nadia Byrne",
+   "age": 17,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "skeptical",
+    "late-night"
+   ],
+   "backstory": "17yo; assumes unfamiliar stores are drop-shippers until proven otherwise; phone in bed on a weak connection; every second of loading counts",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P84",
+   "name": "Sam Kim",
+   "age": 43,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "price-sensitive"
+   ],
+   "backstory": "43yo; compares every price against fast-fashion alternatives",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "a popup covering content before seeing anything"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P85",
+   "name": "Kai Diallo",
+   "age": 40,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical"
+   ],
+   "backstory": "40yo; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "a brand story that explains who makes this"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P86",
+   "name": "Holly Reid",
+   "age": 54,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper"
+   ],
+   "backstory": "54yo; has a competitor tab mentally open the whole time",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 7,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P87",
+   "name": "Rosa Novak",
+   "age": 54,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision",
+    "comparison-shopper"
+   ],
+   "backstory": "54yo; browses at 200% zoom; judges from the zoomed desktop evidence; has a competitor tab mentally open the whole time",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "checkout that looks different from the shop they were just in",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "clear shipping costs before the payment page",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P88",
+   "name": "Ravi Kim",
+   "age": 15,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "international"
+   ],
+   "backstory": "15yo; outside the UK; anxious about currency, duties and shipping",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "no visible price on first screen"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P89",
+   "name": "Tariq Moreau",
+   "age": 49,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "desktop",
+   "edgeEvidence": [
+    "edge-zoom"
+   ],
+   "traits": [
+    "low-vision"
+   ],
+   "backstory": "49yo; browses at 200% zoom; judges from the zoomed desktop evidence",
+   "task": "Find a gift around $76–127 for a nephew who lives in baggy streetwear; would love a gift-note option at checkout",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "a real contact method (not just a form)"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P90",
+   "name": "Chloe Cole",
+   "age": 25,
+   "intent": "gift-hunt",
+   "journey": "j5",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "motor-limited",
+    "low-tech"
+   ],
+   "backstory": "25yo; navigates by keyboard/large targets; small tap targets are misses; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Buying for a teenager they do not understand; needs price filtering or clear price sorting to stay in a $76–127 budget, and safe returns if the size is wrong",
+   "patience_budget": 9,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "no sizing help when unsure between two sizes"
+   ],
+   "trust_needs": [
+    "working social links with real activity",
+    "stock/size availability that looks honest"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P91",
+   "name": "Freya Rossi",
+   "age": 53,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "skeptical"
+   ],
+   "backstory": "53yo; phone in bed on a weak connection; every second of loading counts; assumes unfamiliar stores are drop-shippers until proven otherwise",
+   "task": "Find, in order: what shipping costs, how many days to return, how to contact a human, a size guide, and where to track an order — timing each hunt",
+   "patience_budget": 11,
+   "bail_triggers": [
+    "no visible price on first screen",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P92",
+   "name": "Marcus Lin",
+   "age": 49,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "international"
+   ],
+   "backstory": "49yo; assumes unfamiliar stores are drop-shippers until proven otherwise; outside the UK; anxious about currency, duties and shipping",
+   "task": "Pre-purchase due diligence only: locate shipping policy, returns window, contact method, sizing help and order tracking without buying anything",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "no findable returns info before paying",
+    "a button moving under their thumb mid-tap"
+   ],
+   "trust_needs": [
+    "a findable returns window before checkout",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P93",
+   "name": "Yara Moreau",
+   "age": 18,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper",
+    "brand-driven"
+   ],
+   "backstory": "18yo; has a competitor tab mentally open the whole time; buys the story as much as the product; sniffs out effort",
+   "task": "Find, in order: what shipping costs, how many days to return, how to contact a human, a size guide, and where to track an order — timing each hunt",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "no sizing help when unsure between two sizes",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "clear shipping costs before the payment page"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P94",
+   "name": "Marcus Silva",
+   "age": 50,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "in-a-hurry"
+   ],
+   "backstory": "50yo; shopping in stolen minutes; abandons fast",
+   "task": "Pre-purchase due diligence only: locate shipping policy, returns window, contact method, sizing help and order tracking without buying anything",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "no findable returns info before paying"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P95",
+   "name": "Callum Weber",
+   "age": 34,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "skeptical",
+    "comparison-shopper"
+   ],
+   "backstory": "34yo; assumes unfamiliar stores are drop-shippers until proven otherwise; has a competitor tab mentally open the whole time",
+   "task": "Find, in order: what shipping costs, how many days to return, how to contact a human, a size guide, and where to track an order — timing each hunt",
+   "patience_budget": 8,
+   "bail_triggers": [
+    "search that cannot be found or does not work",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "a brand story that explains who makes this",
+    "working social links with real activity"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P96",
+   "name": "Eshan Patel",
+   "age": 49,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "brand-driven"
+   ],
+   "backstory": "49yo; buys the story as much as the product; sniffs out effort",
+   "task": "Pre-purchase due diligence only: locate shipping policy, returns window, contact method, sizing help and order tracking without buying anything",
+   "patience_budget": 5,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "the item they came for being sold out"
+   ],
+   "trust_needs": [
+    "a real contact method (not just a form)",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P97",
+   "name": "Yusuf Hughes",
+   "age": 39,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "desktop",
+   "edgeEvidence": [],
+   "traits": [
+    "low-tech",
+    "in-a-hurry"
+   ],
+   "backstory": "39yo; gets lost when interfaces behave unexpectedly; typos in search; shopping in stolen minutes; abandons fast",
+   "task": "Find, in order: what shipping costs, how many days to return, how to contact a human, a size guide, and where to track an order — timing each hunt",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "a button moving under their thumb mid-tap",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "no spelling errors or broken sections",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P98",
+   "name": "Amara Osei",
+   "age": 25,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [],
+   "traits": [
+    "comparison-shopper",
+    "price-sensitive"
+   ],
+   "backstory": "25yo; has a competitor tab mentally open the whole time; compares every price against fast-fashion alternatives",
+   "task": "Pre-purchase due diligence only: locate shipping policy, returns window, contact method, sizing help and order tracking without buying anything",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "the item they came for being sold out",
+    "page still loading after ~5 seconds"
+   ],
+   "trust_needs": [
+    "photos that look shot by the brand, not suppliers",
+    "reviews or any social proof"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  },
+  {
+   "id": "P99",
+   "name": "Freya Cole",
+   "age": 49,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "late-night",
+    "low-tech"
+   ],
+   "backstory": "49yo; phone in bed on a weak connection; every second of loading counts; gets lost when interfaces behave unexpectedly; typos in search",
+   "task": "Find, in order: what shipping costs, how many days to return, how to contact a human, a size guide, and where to track an order — timing each hunt",
+   "patience_budget": 12,
+   "bail_triggers": [
+    "prices in an unexpected currency with no explanation",
+    "checkout that looks different from the shop they were just in"
+   ],
+   "trust_needs": [
+    "reviews or any social proof",
+    "photos that look shot by the brand, not suppliers"
+   ],
+   "order": [
+    "old",
+    "new"
+   ]
+  },
+  {
+   "id": "P100",
+   "name": "Chloe Reid",
+   "age": 53,
+   "intent": "lookup-support",
+   "journey": "j6",
+   "device": "mobile",
+   "edgeEvidence": [
+    "edge-slow4g"
+   ],
+   "traits": [
+    "in-a-hurry",
+    "late-night"
+   ],
+   "backstory": "53yo; shopping in stolen minutes; abandons fast; phone in bed on a weak connection; every second of loading counts",
+   "task": "Pre-purchase due diligence only: locate shipping policy, returns window, contact method, sizing help and order tracking without buying anything",
+   "patience_budget": 6,
+   "bail_triggers": [
+    "walls of identical-looking products with no guidance",
+    "being pushed to create an account"
+   ],
+   "trust_needs": [
+    "stock/size availability that looks honest",
+    "a findable returns window before checkout"
+   ],
+   "order": [
+    "new",
+    "old"
+   ]
+  }
+ ]
+}
