@@ -1,35 +1,35 @@
 {
   "tag": "phase",
-  "generatedAt": "2026-08-11T17:13:36.012Z",
+  "generatedAt": "2026-08-11T17:27:24.295Z",
   "pages": {
     "home": {
       "url": "https://phaselondon.com/",
       "device": "mobile-390",
       "throttled": true,
-      "wallMs": 33918,
+      "wallMs": 34779,
       "vitals": {
         "cls": 0,
         "shifts": [],
-        "lcp": 26500,
+        "lcp": 27344,
         "lcpEl": "IMG. src=Comp3_2-ezgif.com-effects.gif",
-        "inp": 496,
-        "longTasks": 22,
-        "longMs": 4336,
-        "ttfb": 189,
-        "fcp": 788,
-        "domContentLoaded": 3562,
-        "load": 26345
+        "inp": 589,
+        "longTasks": 26,
+        "longMs": 4340,
+        "ttfb": 671,
+        "fcp": 1360,
+        "domContentLoaded": 4581,
+        "load": 27191
       },
       "transfer": {
-        "totalKB": 12013,
-        "requests": 169,
+        "totalKB": 11831,
+        "requests": 167,
         "byTypeKB": {
-          "stylesheet": 131,
           "document": 610,
-          "script": 5294,
+          "stylesheet": 131,
+          "script": 5295,
           "ping": 0,
           "fetch": 4,
-          "other": 2571,
+          "other": 2386,
           "image": 3404,
           "xhr": 0
         },
@@ -94,11 +94,293 @@
         "topHosts": [
           {
             "host": "phaselondon.com",
-            "kb": 8070
+            "kb": 7886
           },
           {
             "host": "www.googletagmanager.com",
-            "kb": 1641
+            "kb": 1643
+          },
+          {
+            "host": "sdk.pop-convert.com",
+            "kb": 940
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 678
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 284
+          },
+          {
+            "host": "omnisnippet1.com",
+            "kb": 135
+          },
+          {
+            "host": "ajax.googleapis.com",
+            "kb": 94
+          },
+          {
+            "host": "cdnjs.cloudflare.com",
+            "kb": 85
+          },
+          {
+            "host": "a.mailmunch.co",
+            "kb": 47
+          },
+          {
+            "host": "cdn.s3.pop-convert.com",
+            "kb": 34
+          }
+        ]
+      }
+    },
+    "pdp": {
+      "url": "https://phaselondon.com/products/washed-waffle-zip-blue",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 34837,
+      "vitals": {
+        "cls": 0.26661334152703214,
+        "shifts": [
+          {
+            "v": 0.2666,
+            "t": 3042,
+            "src": [
+              "shopify-section shopify-section-group-footer-group"
+            ]
+          }
+        ],
+        "lcp": 3056,
+        "lcpEl": "H1.locksmith-heading locksmith-email-heading",
+        "inp": 571,
+        "longTasks": 25,
+        "longMs": 4449,
+        "ttfb": 508,
+        "fcp": 1192,
+        "domContentLoaded": 4399,
+        "load": 27277
+      },
+      "transfer": {
+        "totalKB": 12020,
+        "requests": 182,
+        "byTypeKB": {
+          "document": 602,
+          "stylesheet": 131,
+          "script": 5297,
+          "fetch": 15,
+          "ping": 0,
+          "other": 2571,
+          "image": 3404,
+          "xhr": 0
+        },
+        "largest": [
+          {
+            "name": "Comp3_2-ezgif.com-effects.gif",
+            "host": "phaselondon.com",
+            "kb": 2144,
+            "type": "image",
+            "mime": "image/gif"
+          },
+          {
+            "name": "Comp3_2-ezgif.com-effects.gif",
+            "host": "phaselondon.com",
+            "kb": 1260,
+            "type": "image",
+            "mime": "image/gif"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "phaselondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "washed-waffle-zip-blue",
+            "host": "phaselondon.com",
+            "kb": 595,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "phaselondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "sdk.js",
+            "host": "sdk.pop-convert.com",
+            "kb": 470,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "sdk.js",
+            "host": "sdk.pop-convert.com",
+            "kb": 470,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 434,
+            "type": "script",
+            "mime": "application/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "phaselondon.com",
+            "kb": 8069
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 1645
+          },
+          {
+            "host": "sdk.pop-convert.com",
+            "kb": 940
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 678
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 284
+          },
+          {
+            "host": "omnisnippet1.com",
+            "kb": 135
+          },
+          {
+            "host": "ajax.googleapis.com",
+            "kb": 94
+          },
+          {
+            "host": "cdnjs.cloudflare.com",
+            "kb": 85
+          },
+          {
+            "host": "a.mailmunch.co",
+            "kb": 47
+          },
+          {
+            "host": "cdn.s3.pop-convert.com",
+            "kb": 34
+          }
+        ]
+      }
+    },
+    "pdpDesktop": {
+      "url": "https://phaselondon.com/products/washed-waffle-zip-blue",
+      "device": "desktop-1440",
+      "throttled": false,
+      "wallMs": 12107,
+      "vitals": {
+        "cls": 0.10038961226851852,
+        "shifts": [
+          {
+            "v": 0.1004,
+            "t": 1849,
+            "src": [
+              "shopify-section shopify-section-group-footer-group"
+            ]
+          }
+        ],
+        "lcp": 1876,
+        "lcpEl": "H1.locksmith-heading locksmith-email-heading",
+        "inp": 744,
+        "longTasks": 7,
+        "longMs": 526,
+        "ttfb": 420,
+        "fcp": 1228,
+        "domContentLoaded": 2023,
+        "load": 4591
+      },
+      "transfer": {
+        "totalKB": 11611,
+        "requests": 249,
+        "byTypeKB": {
+          "document": 601,
+          "other": 3595,
+          "stylesheet": 131,
+          "script": 5294,
+          "image": 1975,
+          "ping": 0,
+          "fetch": 15,
+          "xhr": 0
+        },
+        "largest": [
+          {
+            "name": "Comp3_2-ezgif.com-effects.gif",
+            "host": "phaselondon.com",
+            "kb": 1341,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "phaselondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "Comp3_2-ezgif.com-effects.gif",
+            "host": "phaselondon.com",
+            "kb": 634,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "washed-waffle-zip-blue",
+            "host": "phaselondon.com",
+            "kb": 594,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "phaselondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "sdk.js",
+            "host": "sdk.pop-convert.com",
+            "kb": 470,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "sdk.js",
+            "host": "sdk.pop-convert.com",
+            "kb": 470,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 434,
+            "type": "script",
+            "mime": "application/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "phaselondon.com",
+            "kb": 7660
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 1645
           },
           {
             "host": "sdk.pop-convert.com",

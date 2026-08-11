@@ -1,5 +1,51 @@
 {
   "tag": "phase",
+  "pdpBefore": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": false,
+      "sizesVisible": false,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": false
+    },
+    "cookie": null,
+    "overlays": []
+  },
+  "bannerDismissed": false,
+  "pdp": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": false,
+      "sizesVisible": false,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": false
+    },
+    "sizeControls": 0,
+    "price": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": false,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    }
+  },
+  "sizeGuide": {
+    "present": false
+  },
+  "delivery": {
+    "claim": null,
+    "mentionsFree": false
+  },
+  "soldOutSignal": {
+    "sizeEls": 0,
+    "visiblyDisabled": 0
+  },
   "trustPages": {
     "/policies/refund-policy": {
       "status": 200,

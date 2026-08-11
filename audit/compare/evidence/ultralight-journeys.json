@@ -1,53 +1,53 @@
 {
-  "tag": "phase",
+  "tag": "ultralight",
   "personas": {
     "p1_coldClick": {
-      "wallMs": 31890,
-      "lcp": 1888,
-      "cls": 0.2666,
+      "wallMs": 36020,
+      "lcp": 8612,
+      "cls": 0.0017,
       "atLoad": {
-        "url": "/products/washed-waffle-zip-blue",
+        "url": "/products/spider-man-tee",
         "overlays": [],
         "cookie": null,
         "fv": {
-          "titleVisible": true,
-          "priceVisible": false,
+          "titleVisible": false,
+          "priceVisible": true,
           "sizesVisible": false,
           "atcVisible": false,
           "atcText": null,
-          "stockWordVisible": false
+          "stockWordVisible": true
         },
-        "price": null,
+        "price": "$42.00",
         "trust": {
           "returns": false,
           "shippingInfo": true,
           "tracking": false,
-          "contact": false,
-          "sizeGuide": false,
+          "contact": true,
+          "sizeGuide": true,
           "reviews": false,
           "urgency": false,
           "countdown": false
         }
       },
       "at5s": {
-        "url": "/products/washed-waffle-zip-blue",
+        "url": "/products/spider-man-tee",
         "overlays": [],
         "cookie": null,
         "fv": {
-          "titleVisible": true,
-          "priceVisible": false,
+          "titleVisible": false,
+          "priceVisible": true,
           "sizesVisible": false,
           "atcVisible": false,
           "atcText": null,
-          "stockWordVisible": false
+          "stockWordVisible": true
         },
-        "price": null,
+        "price": "$42.00",
         "trust": {
           "returns": false,
           "shippingInfo": true,
           "tracking": false,
-          "contact": false,
-          "sizeGuide": false,
+          "contact": true,
+          "sizeGuide": true,
           "reviews": false,
           "urgency": false,
           "countdown": false
@@ -69,31 +69,27 @@
     "p4_sceptic": {
       "refund": {
         "status": 200,
-        "words": 584,
+        "words": 95,
         "placeholders": [],
-        "email": "info@phaselondon.com",
+        "email": null,
         "address": false
       },
       "contact": {
         "status": 200,
-        "words": 154,
+        "words": 92,
         "placeholders": [],
-        "email": "info@phaselondon.com",
+        "email": "contact@ultralightlondon.com",
         "address": false
       },
       "about": {
-        "status": 200,
-        "words": 123,
-        "placeholders": [],
-        "email": null,
-        "address": false
+        "status": 404
       }
     },
     "p5_aimless": {
       "hooks": {
         "newsletter": true,
         "editorial": false,
-        "social": 2,
+        "social": 4,
         "anythingPlayful": false
       }
     },
@@ -101,8 +97,8 @@
       "atcReachableByKeyboard": false
     },
     "p7_slow": {
-      "wallMs": 26449,
-      "lcp": 22096,
+      "wallMs": 88130,
+      "lcp": 24852,
       "productImgInFirstViewport": true
     },
     "p8_postPurchase": {
@@ -115,10 +111,10 @@
     },
     "p9_comparison": {
       "spine": {
-        "price": null,
+        "price": "$42.00",
         "shippingCostStated": false,
         "returnsCostStated": false,
-        "materialStated": false,
+        "materialStated": true,
         "madeWhere": false
       }
     },
@@ -128,7 +124,7 @@
         "sizeHelpFromHome": false,
         "exchangePolicyVisible": false,
         "returnWindowVisible": false,
-        "categoriesClear": 0
+        "categoriesClear": 18
       }
     }
   }

@@ -7,7 +7,64 @@
         {
           "id": "color-contrast",
           "impact": "serious",
-          "nodes": 9
+          "nodes": 8
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "BUTTON",
+          "text": "Dismiss notice",
+          "focusVisible": true
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "SETTLE",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Dismiss notice",
+          "focusVisible": true
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "SETTLE",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Dismiss notice",
+          "focusVisible": true
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    },
+    "pdp": {
+      "url": "https://phaselondon.com/products/washed-waffle-zip-blue",
+      "axeViolations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 6
         }
       ],
       "tabStops": [
