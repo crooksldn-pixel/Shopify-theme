@@ -1,0 +1,196 @@
+{
+  "tag": "poser",
+  "homeUrl": "https://www.poserlondon.com/",
+  "fetchedAt": "2026-08-11T16:57:04.812Z",
+  "homeStatus": 200,
+  "botWall": false,
+  "home": {
+    "seo": {
+      "title": "Poser London",
+      "titleLen": 12,
+      "metaDesc": "Offical And Only Website.",
+      "h1": null,
+      "h1Count": 3,
+      "canonical": "https://www.poserlondon.com/",
+      "ogImage": true,
+      "jsonLdTypes": [],
+      "robotsMeta": null,
+      "wordCount": 151
+    },
+    "overlaysAtArrival": [],
+    "cookieBanner": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": false,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "platform": "Shopify"
+  },
+  "overlaysAt10s": [],
+  "nav": [
+    {
+      "t": "Skip to content",
+      "href": "#MainContent"
+    },
+    {
+      "t": "NEW DROP",
+      "href": "/collections/new-drop"
+    },
+    {
+      "t": "ALL",
+      "href": "/collections/all-products"
+    },
+    {
+      "t": "SHORTS",
+      "href": "/collections/shorts"
+    },
+    {
+      "t": "TOPS",
+      "href": "/collections/tops-1"
+    },
+    {
+      "t": "JEANS",
+      "href": "/collections/jeans"
+    },
+    {
+      "t": "T-SHIRTS",
+      "href": "/collections/t-shirts"
+    },
+    {
+      "t": "SKATEBOARDS",
+      "href": "/collections/skateboards"
+    },
+    {
+      "t": "Log in",
+      "href": "/account/login"
+    },
+    {
+      "t": "Search",
+      "href": "/search"
+    },
+    {
+      "t": "0 items",
+      "href": "/cart"
+    },
+    {
+      "t": "SEARCH",
+      "href": "/search"
+    },
+    {
+      "t": "0 ITEMS",
+      "href": "/cart"
+    },
+    {
+      "t": "Buzz Tee",
+      "href": "/products/buzz-tee"
+    },
+    {
+      "t": "DigitalMarketing Tee",
+      "href": "/products/posercity-tee"
+    },
+    {
+      "t": "Pelican Jorts Dark Blue",
+      "href": "/products/pelican-jorts-dark-blue"
+    },
+    {
+      "t": "Apache Shorts",
+      "href": "/products/apache-shorts"
+    },
+    {
+      "t": "BlackMarket Tee",
+      "href": "/products/black-market-tee"
+    },
+    {
+      "t": "Pelican Jorts Light Blue",
+      "href": "/products/pelican-jorts-light-blue"
+    },
+    {
+      "t": "Apache Lite Jacket",
+      "href": "/products/apache-lite-jacket"
+    },
+    {
+      "t": "Zooka Jorts",
+      "href": "/products/zooka-jorts"
+    },
+    {
+      "t": "Cops & Robbers Jorts",
+      "href": "/products/cops-robbers-jorts"
+    },
+    {
+      "t": "Flecktarn Shorts",
+      "href": "/products/flecktarn-shorts"
+    },
+    {
+      "t": "‘Buzz’ Deck",
+      "href": "/products/buzz-deck"
+    },
+    {
+      "t": "Flecktarn Lite Jacket",
+      "href": "/products/flecktarn-lite-jacket"
+    },
+    {
+      "t": "INSTAGRAM",
+      "href": "https://instagram.com/poserlondon"
+    },
+    {
+      "t": "TIKTOK",
+      "href": "https://tiktok.com/@poserlondon"
+    },
+    {
+      "t": "POSER",
+      "href": "/"
+    },
+    {
+      "t": "Continue shopping",
+      "href": "/"
+    }
+  ],
+  "discovered": {
+    "pdpUrl": "https://www.poserlondon.com/products/buzz-tee",
+    "collectionUrl": "https://www.poserlondon.com/collections/new-drop",
+    "productLinkCount": 12
+  },
+  "pdp": {
+    "seo": {
+      "title": "Buzz Tee – Poser",
+      "titleLen": 16,
+      "metaDesc": "Buzz drinking a Buzz. Part of the air brush character series, if you walk into the cinema with this tee on and ask to see the new Toy Story I've heard they will upgrade you to those premium seats whic",
+      "h1": "Buzz Tee",
+      "h1Count": 2,
+      "canonical": "https://www.poserlondon.com/products/buzz-tee",
+      "ogImage": true,
+      "jsonLdTypes": [
+        "Product"
+      ],
+      "robotsMeta": null,
+      "wordCount": 169
+    },
+    "firstViewport": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": true,
+      "atcVisible": true,
+      "atcText": "ADD TO CART",
+      "stockWordVisible": false
+    },
+    "sizeControls": 15,
+    "price": "$39.00",
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": true,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "cookieBanner": null,
+    "overlays": []
+  }
+}

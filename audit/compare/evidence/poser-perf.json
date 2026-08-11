@@ -1,0 +1,408 @@
+{
+  "tag": "poser",
+  "generatedAt": "2026-08-11T16:57:24.609Z",
+  "pages": {
+    "home": {
+      "url": "https://www.poserlondon.com/",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 51213,
+      "vitals": {
+        "cls": 0.0006153390043462635,
+        "shifts": [],
+        "lcp": 43780,
+        "lcpEl": "FORM.needsclick klaviyo-form klaviyo-form-version-cid_1 go4173824",
+        "inp": 686,
+        "longTasks": 15,
+        "longMs": 1675,
+        "ttfb": 188,
+        "fcp": 956,
+        "domContentLoaded": 16530,
+        "load": 43683
+      },
+      "transfer": {
+        "totalKB": 12332,
+        "requests": 152,
+        "byTypeKB": {
+          "document": 322,
+          "stylesheet": 192,
+          "script": 1749,
+          "image": 7970,
+          "font": 75,
+          "fetch": 0,
+          "xhr": 21,
+          "ping": 0,
+          "other": 2001
+        },
+        "largest": [
+          {
+            "name": "8e385f15-34b6-4b7d-abc6-30e964bdb150.png",
+            "host": "d3k81ch9hvuctc.cloudfront.net",
+            "kb": 2700,
+            "type": "image",
+            "mime": "image/png"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "www.poserlondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "D3E0B39C-1168-43DF-8AEB-E433595F4258.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 508,
+            "type": "image",
+            "mime": "image/jpeg"
+          },
+          {
+            "name": "B2CCC999-682F-4B38-98D9-5CB5BA91B2A7.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 488,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "www.poserlondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "6DF7E61E-A55E-47C2-999A-435E3197D5E1.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 456,
+            "type": "image",
+            "mime": "image/jpeg"
+          },
+          {
+            "name": "1A5D1BFF-2637-424C-8596-77A8021DA241.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 431,
+            "type": "image",
+            "mime": "image/jpeg"
+          },
+          {
+            "name": "B7CB7A4B-43F6-4CD4-A3A0-6D14B2DAA847.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 425,
+            "type": "image",
+            "mime": "image/jpeg"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "www.poserlondon.com",
+            "kb": 8610
+          },
+          {
+            "host": "d3k81ch9hvuctc.cloudfront.net",
+            "kb": 2720
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 733
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 188
+          },
+          {
+            "host": "static-tracking.klaviyo.com",
+            "kb": 60
+          },
+          {
+            "host": "static-forms.klaviyo.com",
+            "kb": 21
+          },
+          {
+            "host": "",
+            "kb": 0
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "a.klaviyo.com",
+            "kb": 0
+          },
+          {
+            "host": "fast.a.klaviyo.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdp": {
+      "url": "https://www.poserlondon.com/products/buzz-tee",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 15516,
+      "vitals": {
+        "cls": 0.0008152146329389934,
+        "shifts": [],
+        "lcp": 2092,
+        "lcpEl": "IMG.peer/image absolute inset-0 w-full h-full object-cover src=IMG-6121.jpg",
+        "inp": 461,
+        "longTasks": 24,
+        "longMs": 2422,
+        "ttfb": 216,
+        "fcp": 756,
+        "domContentLoaded": 4603,
+        "load": 7989
+      },
+      "transfer": {
+        "totalKB": 5724,
+        "requests": 166,
+        "byTypeKB": {
+          "document": 411,
+          "stylesheet": 269,
+          "font": 137,
+          "image": 479,
+          "script": 2409,
+          "xhr": 21,
+          "fetch": 2,
+          "ping": 0,
+          "other": 1994
+        },
+        "largest": [
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "www.poserlondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "www.poserlondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "portable-wallets.en.js",
+            "host": "www.poserlondon.com",
+            "kb": 374,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "6E43A577-25EA-47FB-9EF8-11985AAB3CEC.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 329,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "buzz-tee",
+            "host": "www.poserlondon.com",
+            "kb": 299,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "context-browser.CELsuekm.js",
+            "host": "www.poserlondon.com",
+            "kb": 273,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "b8a38caafwfc02b679pa9a69aacmb7fb9dd3m.js",
+            "host": "www.poserlondon.com",
+            "kb": 239,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "Render.c0b6c24990610.js",
+            "host": "static.klaviyo.com",
+            "kb": 231,
+            "type": "script",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "www.poserlondon.com",
+            "kb": 4247
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 733
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 453
+          },
+          {
+            "host": "shop.app",
+            "kb": 147
+          },
+          {
+            "host": "static-tracking.klaviyo.com",
+            "kb": 60
+          },
+          {
+            "host": "d2wy8f7a9ursnm.cloudfront.net",
+            "kb": 43
+          },
+          {
+            "host": "static-forms.klaviyo.com",
+            "kb": 21
+          },
+          {
+            "host": "d3k81ch9hvuctc.cloudfront.net",
+            "kb": 19
+          },
+          {
+            "host": "",
+            "kb": 0
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdpDesktop": {
+      "url": "https://www.poserlondon.com/products/buzz-tee",
+      "device": "desktop-1440",
+      "throttled": false,
+      "wallMs": 10482,
+      "vitals": {
+        "cls": 0.0024247362008637686,
+        "shifts": [],
+        "lcp": 1520,
+        "lcpEl": "IMG.peer/image absolute inset-0 w-full h-full object-cover is-co src=IMG-6121.jpg",
+        "inp": 148,
+        "longTasks": 1,
+        "longMs": 87,
+        "ttfb": 305,
+        "fcp": 476,
+        "domContentLoaded": 1088,
+        "load": 2973
+      },
+      "transfer": {
+        "totalKB": 6727,
+        "requests": 239,
+        "byTypeKB": {
+          "document": 410,
+          "stylesheet": 188,
+          "other": 3338,
+          "font": 137,
+          "script": 2076,
+          "image": 554,
+          "xhr": 21,
+          "fetch": 2,
+          "ping": 0
+        },
+        "largest": [
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "www.poserlondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "www.poserlondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "6E43A577-25EA-47FB-9EF8-11985AAB3CEC.jpg",
+            "host": "www.poserlondon.com",
+            "kb": 422,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "portable-wallets.en.js",
+            "host": "www.poserlondon.com",
+            "kb": 374,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "buzz-tee",
+            "host": "www.poserlondon.com",
+            "kb": 298,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "context-browser.CELsuekm.js",
+            "host": "www.poserlondon.com",
+            "kb": 273,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "b8a38caafwfc02b679pa9a69aacmb7fb9dd3m.js",
+            "host": "www.poserlondon.com",
+            "kb": 239,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "components-useVaultedMsiInstallments.naITSxZO.js",
+            "host": "www.poserlondon.com",
+            "kb": 237,
+            "type": "other",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "www.poserlondon.com",
+            "kb": 5640
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 453
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 363
+          },
+          {
+            "host": "shop.app",
+            "kb": 147
+          },
+          {
+            "host": "static-tracking.klaviyo.com",
+            "kb": 60
+          },
+          {
+            "host": "d2wy8f7a9ursnm.cloudfront.net",
+            "kb": 43
+          },
+          {
+            "host": "static-forms.klaviyo.com",
+            "kb": 21
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "a.klaviyo.com",
+            "kb": 0
+          },
+          {
+            "host": "fast.a.klaviyo.com",
+            "kb": 0
+          }
+        ]
+      }
+    }
+  }
+}
