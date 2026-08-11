@@ -16,6 +16,10 @@
         "photo_label": "PHOTO [i] OF [n]",
         "gallery_label": "EVIDENCE PHOTOGRAPHY",
         "low_stock_threshold": 3,
+        "spec_open": false,
+        "provenance_open": false,
+        "measure_open": false,
+        "custody_open": false,
         "show_wash": true
       }
     }
