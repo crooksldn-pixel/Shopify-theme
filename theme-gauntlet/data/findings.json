@@ -1,0 +1,158 @@
+{
+ "meta": {
+  "themes": {"old": "202044309847 (live, CROOKSLDN — Dev)", "new": "202053779799 (staging, CROOKSLDN — Staging)"},
+  "panel": "100 personas x 2 themes = 200 verdicts; 100 paired comparisons",
+  "preference": {"new": 59, "old": 36, "neither": 5, "sign_test_two_sided_p": 0.023, "label": "simulation-internal, not a live A/B"},
+  "note": "n=100 simulated shoppers walking captured evidence is directional, not statistical proof."
+ },
+ "findings": [
+  {
+   "id": "F1", "skeptic_target": true, "section": "surprise",
+   "claim": "NEW's buy-now funnel converts WORSE than OLD despite winning overall preference: buy-now-intent completion 43% (NEW) vs 80% (OLD); checkout-reach among buy-intent personas 48% (NEW) vs 72% (OLD). The redesign improved identity while regressing the money path.",
+   "funnel_stage": "PDP->cart->checkout",
+   "themes_compared": {"new": "buy-now completion 43%, checkout-reach 48%", "old": "buy-now completion 80%, checkout-reach 72%"},
+   "affected_personas": {"count": 17, "ids": ["P02","P03","P04","P05","P07","P08","P10","P11","P13","P14","P16","P19","P20","P22","P23","P26","P30"]},
+   "evidence": ["data/aggregate.json (by_theme.new.intent_buy-now vs old)", "data/verdicts/batch-1.jsonl", "data/verdicts/batch-2.jsonl", "data/verdicts/batch-3.jsonl"],
+   "severity": 4,
+   "artifact_caveat": "Part of the gap is inflated by capture artifacts: the Shopify preview checkout block (F-DN3) and the consent overlay (F-DN1). The durable core is F2 (broken search) plus popup/currency friction. Skeptic must quantify how much of the 43%-vs-80% gap survives removing artifact-driven abandonment."
+  },
+  {
+   "id": "F2", "skeptic_target": true, "section": "regression",
+   "claim": "NEW's search is a dead end. Tapping SEARCH in the header lands on /search whose input sits inside a display:none dialog that never opens; there is nothing to type into and keystrokes do nothing. Results render only if a query is already in the URL. OLD's search works (predictive dropdown with product thumbnails on keystroke). 12 personas abandoned at 'search' on NEW.",
+   "funnel_stage": "discovery/search",
+   "themes_compared": {"new": "search UI non-functional (verified live)", "old": "predictive search dropdown functional"},
+   "affected_personas": {"count": 41, "abandoned": 12, "ids": ["P02","P04","P08","P14","P16","P20","P22","P57","P71","P72","P79","P90"]},
+   "evidence": ["captures/new/live/search-opened-mobile.jpg", "captures/new/live/search-after-typing.jpg", "captures/old/j2/mobile/step-02-search-suggest.jpg", "data/followup-resolutions.json (new_search)", "data/decisions.md"],
+   "severity": 4,
+   "artifact_caveat": "Verified independently on the live preview site after captures; not an automation artifact. Search-led buy (j2) and returning-customer (j7) intents depend on it."
+  },
+  {
+   "id": "F3", "skeptic_target": true, "section": "surprise",
+   "claim": "NEW actually SOLVED the store's worst trust gap, but hid the win. NEW's 'Chain of custody — shipping & returns' accordion on every PDP contains a specific policy: 14-day returns, free UK shipping over £20 (Tracked 24 over £70), UK 1-2 day / intl 7-14 day delivery, returns by email. OLD has NO shipping or returns information anywhere in its UI (not on PDP, not in footer). This is why OLD research-compare and lookup-support completion are both 0%. The accordion is collapsed by default, so cold shoppers still had to hunt (66 flagged), but the information EXISTS on NEW and is ABSENT on OLD.",
+   "funnel_stage": "trust/pre-purchase",
+   "themes_compared": {"new": "full shipping+returns policy on every PDP, one tap away (collapsed)", "old": "no returns/shipping info in any UI surface; direct-URL policy pages only"},
+   "affected_personas": {"count_new_hunt": 66, "count_old_absent": 76, "old_research_compare_0pct_ids": ["P31","P32","P33","P34","P35","P36","P37","P38","P39","P40"]},
+   "evidence": ["data/followup-accordions.json (new_expanded_text 'Chain of custody')", "captures/new/live/fu-crewneck-expanded.jpg", "captures/live-checks.json (old_footer_links has no policy links)", "captures/old/j6/mobile/meta.jsonl (support-shipping/returns not-found-in-ui)", "data/aggregate.json (old intent_research-compare completed 0%)"],
+   "severity": 3,
+   "artifact_caveat": "Panel trust scores penalized NEW's collapsed accordion on cold walk; the resolved truth is NEW=findable, OLD=absent. Remaining real friction on NEW: the accordion is closed by default so the win is under-advertised."
+  },
+  {
+   "id": "F4", "skeptic_target": true, "section": "surprise",
+   "claim": "The identity repositioning measurably succeeded. feels-like-reseller dropped 31% (OLD) to 0% (NEW); feels-like-brand rose 49% to 81%. Price perception moved from 98% 'mid' (OLD) to 44% 'premium' + 45% 'mid' (NEW). The brand name was recalled unprompted 11x on NEW and 0x on OLD. Audience read sharpened from generic 'young people/teens' (OLD) to specific 'streetwear kids into the heist/case-file concept, lore and drops' (NEW).",
+   "funnel_stage": "identity/branding",
+   "themes_compared": {"new": "brand 81% / template 19% / reseller 0%; premium 44%", "old": "brand 49% / reseller 31% / template 20%; mid 98%"},
+   "affected_personas": {"count": 100, "basis": "aggregated five_second + brand_recall across all 100 personas x both themes"},
+   "evidence": ["data/aggregate.json (identity.new.feels_like, identity.old.feels_like, price_guess)", "data/verdicts/*.jsonl (brand_recall.three_words)"],
+   "severity": 1,
+   "artifact_caveat": "This is a positive finding; severity marks it as no-fix. Intended adjectives (confident/new/exciting/cool/bold) surface on NEW and score literally 0 on OLD."
+  },
+  {
+   "id": "F5", "skeptic_target": true, "section": "regression",
+   "claim": "NEW removed collection filtering and sorting entirely. /collections/all shows only category tabs (PRODUCT/OUTLINE/ALL/T-SHIRT/DENIM...) with zero sort or price-filter controls. OLD has a 'Filter' button and sort dropdown. Browse and gift personas trying to narrow by price or newness have no tool on NEW.",
+   "funnel_stage": "browse/collection",
+   "themes_compared": {"new": "no sort/filter UI on collection pages", "old": "Filter button + sort dropdown present"},
+   "affected_personas": {"count": 14, "ids": ["P18","P48","P51","P52","P56","P59","P60","P61","P62","P64","P80","P82","P83","P84"]},
+   "evidence": ["captures/new/live/collection-all-desktop.jpg", "data/followup-resolutions.json (new_collection_controls empty)", "captures/old/j4/desktop/step-05-filtered.jpg", "captures/old/j4/mobile/meta.jsonl (open-filter-sort ok)"],
+   "severity": 2,
+   "artifact_caveat": "Catalogue is only 14 products, so impact is bounded; still a capability OLD has and NEW dropped."
+  },
+  {
+   "id": "F6", "skeptic_target": true, "section": "regression",
+   "claim": "NEW removed the currency/region selector that OLD has. OLD's header carries a USD/GBP region-and-language selector; NEW has none anywhere (header, menu drawer, or footer). Combined with the 'FREE UK SHIPPING OVER £20' banner rendered above USD prices, international and price-sensitive personas cannot switch currency or reconcile the £/$ clash; several read it as 'not for overseas buyers like me.'",
+   "funnel_stage": "trust/pricing",
+   "themes_compared": {"new": "no currency/region selector", "old": "USD/GBP region selector in header"},
+   "affected_personas": {"count": 43, "ids": ["P01","P06","P07","P11","P12","P16","P19","P21","P23","P25","P27","P29","P30","P31"]},
+   "evidence": ["data/followup-resolutions.json (new_currency_ui empty vs old_currency_ui USD/GBP)", "captures/new/j1/mobile/step-01-home.jpg (FREE UK SHIPPING banner over $ prices)", "data/verdicts (for_whom: 'UK street kids, not overseas buyers like me')"],
+   "severity": 3,
+   "artifact_caveat": "The $-vs-£ display itself is a shared geo artifact (F-DN4); the NEW-specific regression is the REMOVED ability to switch, not the default currency."
+  },
+  {
+   "id": "F7", "skeptic_target": true, "section": "regression",
+   "claim": "NEW introduces a timed 'CRACK THE CUFFS' discount-puzzle popup that covers content; popup-averse personas (bail trigger 'popup before content') reacted badly. 35 personas flagged it.",
+   "funnel_stage": "home/engagement",
+   "themes_compared": {"new": "timed discount popup present", "old": "no timed popup observed"},
+   "affected_personas": {"count": 35, "ids": ["P02","P04","P05","P07","P09","P12","P13","P17","P19","P20","P25","P26","P27","P29"]},
+   "evidence": ["captures/new/edge-zoom/desktop/meta.jsonl (popup at ~9s)", "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg"],
+   "severity": 2,
+   "artifact_caveat": "IMPORTANT: a dedicated 20s mobile follow-up did NOT reproduce the popup (data/followup-resolutions.json new_mobile_timed_popup appearedWithin20s=false). It may be desktop-only, first-visit-only, or trigger past 20s. Personas judged from the single capture where it appeared; weight accordingly."
+  },
+  {
+   "id": "F8", "skeptic_target": true, "section": "regression",
+   "claim": "NEW hides the account entry on desktop. The ACCOUNT link lives only inside the MENU drawer (verified in the mobile menu; not visible in the desktop header). OLD shows a persistent person icon in the header on every page. Returning-customer personas on desktop found no account entry in the header.",
+   "funnel_stage": "returning/account",
+   "themes_compared": {"new": "ACCOUNT only inside MENU drawer, not in desktop header", "old": "persistent header account icon"},
+   "affected_personas": {"count": 19, "ids": ["P30","P37","P50","P57","P58","P66","P67","P68","P69","P71","P73","P74","P75","P76"]},
+   "evidence": ["captures/live-checks.json (new_account_desktop visible:false)", "data/followup-resolutions.json (new_desktop_menu)", "captures/new/j7/desktop/meta.jsonl (account-entry found:false)"],
+   "severity": 2,
+   "artifact_caveat": "Both themes reach the SAME working login at friendsof.crooksldn.com by direct URL (F-DN2); the regression is header discoverability on desktop, not login function."
+  },
+  {
+   "id": "F9", "skeptic_target": true, "section": "regression",
+   "claim": "NEW's 'FILED [date]' labels on product cards (e.g. 'FILED 13.07', 'FILED 03.08') read as sold-out or archived to shoppers, but the items are fully in stock and buyable (v2-baggies shows 'FILED 13.07' yet its Add-to-bag is enabled). The evidence-locker motif creates false scarcity/unavailability signals with no explanation.",
+   "funnel_stage": "browse/PDP",
+   "themes_compared": {"new": "ambiguous 'FILED' date labels on buyable items", "old": "plain price labels, no ambiguous status"},
+   "affected_personas": {"count": 37, "ids": ["P09","P15","P18","P19","P21","P29","P31","P34","P35","P37","P38","P39","P41","P100"]},
+   "evidence": ["data/followup-resolutions.json (new_filed_cards + new_filed_pdp_buyable atc enabled)", "captures/new/j1/mobile/step-01-home.jpg"],
+   "severity": 2,
+   "artifact_caveat": "Design-language ambiguity, not a functional break; buyability confirmed intact."
+  },
+  {
+   "id": "F10", "skeptic_target": true, "section": "regression",
+   "claim": "NEW's cold-walk trust and first-impression are dragged by a stack of concept-over-clarity costs: recall words include 'maze' (9), 'broken-search' (6), 'popup' (4) and 19% still say 'template'; five_second price was un-guessable for ~10 personas because no price is visible above the fold on some landings. The heist/terminal concept that wins identity also costs legibility for hurried and low-tech personas.",
+   "funnel_stage": "home/first-impression",
+   "themes_compared": {"new": "distinct but sometimes confusing (maze/terminal/broken-search)", "old": "legible but generic (plain/basic/grey/empty)"},
+   "affected_personas": {"count": 20, "basis": "personas citing confusion/legibility on NEW five_second or home step"},
+   "evidence": ["data/aggregate.json (identity.new.recall_words_top15)", "data/verdicts/*.jsonl (five_second.price_guess 'unknowable')"],
+   "severity": 2,
+   "artifact_caveat": "This is the flip side of F4: the same concept that eliminates 'reseller' also introduces 'maze/confusing' for a minority. Do not fix by reverting identity; fix by adding legibility (visible price, working search)."
+  },
+  {
+   "id": "F-SHARED1", "section": "shared",
+   "claim": "Both themes render USD to non-UK visitors while all copy says 'FREE UK SHIPPING'. The £/$ mismatch confused international and price-sensitive personas on BOTH themes (NEW 43, OLD 42). This is a store/market-settings issue, not a theme issue.",
+   "themes_compared": {"new": "USD shown, £ banner", "old": "USD shown, £ banner"},
+   "affected_personas": {"count_new": 43, "count_old": 42},
+   "evidence": ["captures/old/j1/desktop/step-01-home.jpg", "captures/new/j1/mobile/step-01-home.jpg", "data/decisions.md (currency note)"],
+   "severity": 2
+  },
+  {
+   "id": "F-SHARED2", "section": "shared",
+   "claim": "Account login on both themes routes to friendsof.crooksldn.com (Shopify new customer accounts); a Cloudflare 'verify you are human' interstitial intermittently walls it. When it appeared it flipped several personas' task outcomes on both themes. Login itself works (email field present, 'Sign in or create an account').",
+   "themes_compared": {"new": "same hosted login + intermittent CF wall", "old": "same hosted login + intermittent CF wall"},
+   "affected_personas": {"count": 12, "note": "returning-customer personas across both themes"},
+   "evidence": ["data/followup-resolutions.json (old_account_login, new_account_login both hasEmailField:true)", "captures/new/j7/desktop/meta.jsonl"],
+   "severity": 2
+  },
+  {
+   "id": "F-SHARED3", "section": "shared",
+   "claim": "/pages/tracking is an empty stub ('Tracking', no form, no widget) linked by both themes. Neither theme offers a real order-tracking entry point beyond a Royal Mail email promise.",
+   "themes_compared": {"new": "links /pages/tracking (stub)", "old": "links /pages/tracking (stub)"},
+   "affected_personas": {"count": 6},
+   "evidence": ["data/followup-resolutions.json (old_tracking_page bodyText:'Tracking', hasForm:false)"],
+   "severity": 1
+  },
+  {
+   "id": "F-DN1", "section": "do-nothing",
+   "claim": "The cookie-consent banner appears on NEW (86 personas) but never on OLD (0). This is almost certainly a preview-domain consent-storage artifact (the ephemeral shopifypreview.com session has no stored consent; the live crooksldn.com domain does), NOT a theme design choice. Do not redesign around it; verify on the live domain post-publish before treating it as a theme issue.",
+   "evidence": ["data/followup-resolutions.json (new_consent_persistence: banner on home/PDP/cart)", "captures/*/*/meta.jsonl (cookie-consent present only on new preview)"],
+   "severity": 0
+  },
+  {
+   "id": "F-DN2", "section": "do-nothing",
+   "claim": "NEW cart's PayPal express button renders disabled ('shopify-paypal-button[disabled]'). Dynamic/accelerated checkout buttons are routinely disabled in Shopify preview mode; this is very likely a preview artifact, not a live theme bug. Verify on the published theme before acting.",
+   "evidence": ["data/followup-resolutions.json (new_cart_express_pay text 'shopify-paypal-button[disabled]')"],
+   "severity": 0
+  },
+  {
+   "id": "F-DN3", "section": "do-nothing",
+   "claim": "Clicking checkout on NEW shows 'Checkout isn't available in preview' (/checkout => 403). This is a Shopify preview-link platform limitation. The theme's cart->checkout action fires and navigates correctly; checkout itself is theme-independent. Not a theme defect.",
+   "evidence": ["captures/new/j1/mobile/step-07-checkout-click-failed.jpg", "data/decisions.md"],
+   "severity": 0
+  },
+  {
+   "id": "F-DN4", "section": "do-nothing",
+   "claim": "All captured prices are USD because the storefront geo-detected the audit's egress IP. Real UK shoppers see GBP admin prices. Persona price figures are USD-relative; do not treat the currency symbol itself as a theme choice (the removed SWITCHER on NEW, F6, is the real issue).",
+   "evidence": ["data/decisions.md (currency note)", "products.json GBP vs rendered USD"],
+   "severity": 0
+  }
+ ]
+}

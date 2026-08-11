@@ -1,0 +1,97 @@
+{
+ "new_pdp_accordions_crewneck": {
+  "accordionText": [],
+  "sizeGuideVisible": false
+ },
+ "new_sizeguide_crewneck": "no-size-guide-button-on-this-product",
+ "new_pdp_accordions_jeans": {
+  "accordionText": [],
+  "sizeGuideVisible": false
+ },
+ "new_sizeguide_jeans": "Search Search Clear Recently viewed Clear BLUE WASH OG JEANS BLUE WASH OG JEANS $83.00 Regular price Sale price $83.00 CHARCOAL CELLBLOCK CREWNECK CHARCOAL CELLBLOCK CREWNECK $69.00 Regular price Sale price $69.00 Products CHARCOAL CELLBLOCK CREWNECK CHARCOAL CELLBLOCK CREWNECK $69.00 Regular price Sale price $69.00 CHARCOAL CELLBLOCK SHORTS CHARCOAL CELLBLOCK SHORTS $62.00 Regular price Sale price $62.00 BLUE WASH OG JEANS BLUE WASH OG JEANS $83.00 Regular price Sale price $83.00 BLUE WASH JORTS BLUE WASH JORTS $69.00 Regular price Sale price $69.00 View all",
+ "new_currency_ui": [],
+ "new_desktop_menu_links": "menu-open-failed: locator.click: Timeout 4000ms exceeded.",
+ "old_currency_ui": [
+  {
+   "tag": "SUMMARY",
+   "txt": "USD",
+   "visible": false
+  },
+  {
+   "tag": "DIV",
+   "txt": "USD",
+   "visible": false
+  },
+  {
+   "tag": "DIV",
+   "txt": "USD",
+   "visible": false
+  },
+  {
+   "tag": "SPAN",
+   "txt": "USD",
+   "visible": false
+  },
+  {
+   "tag": "SPAN",
+   "txt": "GBP\n                  £",
+   "visible": false
+  },
+  {
+   "tag": "SPAN",
+   "txt": "GBP\n                  £",
+   "visible": false
+  }
+ ],
+ "new_mobile_timed_popup": {
+  "appearedWithin20s": false,
+  "text": null
+ },
+ "old_account_login": {
+  "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=350c5384-126b-421f-83e3-c8d56db364ce&client_id=b",
+  "hasEmailField": true,
+  "bodySnippet": "CROOKSLDN Sign in Sign in or create an account or Email By continuing, you agree to our Terms of service Submit Privacy policy externalNewWindow newWindow external"
+ },
+ "new_account_login": {
+  "url": "https://friendsof.crooksldn.com/authentication/login?analytics_trace_id=7e118d09-4bd5-4f05-8fb3-8e0ddfed6459&client_id=b",
+  "hasEmailField": true,
+  "bodySnippet": "CROOKSLDN Sign in Sign in or create an account or Email By continuing, you agree to our Terms of service Submit Privacy policy externalNewWindow newWindow external"
+ },
+ "new_consent_persistence": {
+  "onHomeDesktop": true,
+  "onPdpAfterAccept": true,
+  "onCartAfterAccept": true
+ },
+ "new_cart_express_pay": {
+  "present": true,
+  "hasIframe": true,
+  "iframeSrc": "",
+  "text": "shopify-paypal-button[disabled]{opacity:.5;cursor:not-allowed}shopify-paypal-but",
+  "h": 194
+ },
+ "new_filed_cards": [
+  "NO. 09 T-SHIRT CRXST★RZ T-SHIRT Colourways: Black, White $35.00 FILED 03.08",
+  "NO. 09 T-SHIRT CRXST★RZ T-SHIRT Colourways: Black, White $35.00 FILED 03.08",
+  "$35.00 FILED 03.08",
+  "FILED 03.08",
+  "NO. 11 SWEATS V2 BAGGIES $83.00 FILED 13.07"
+ ],
+ "new_filed_pdp_buyable": {
+  "atcText": "Add to bag",
+  "disabled": false,
+  "filedBadge": true
+ },
+ "new_social_links": [
+  "INSTAGRAM->https://instagram.com/crooksldn",
+  "TIKTOK->https://tiktok.com/@crooksldn",
+  "EMAIL->mailto:info@crooksldn.com"
+ ],
+ "old_tracking_page": {
+  "bodyText": "Tracking",
+  "hasForm": false
+ },
+ "old_account_click": {
+  "landsOn": "https://crooksldn.com/",
+  "bodySnippet": "Skip to content FREE UK SHIPPING | 24 HOUR SHIPPING AVAILABLE CROOKSLDN SHOP TRACKING CONTACT USD Region and language selector CHARCOAL CELLBLOCK CREW"
+ }
+}

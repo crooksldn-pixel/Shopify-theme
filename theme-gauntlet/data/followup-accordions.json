@@ -1,0 +1,30 @@
+{
+ "new_headers": [
+  "Specification +",
+  "Specification +",
+  "Item description +",
+  "Item description +",
+  "Chain of custody — shipping & returns +",
+  "Chain of custody — shipping & returns +"
+ ],
+ "new_expanded_text": {
+  "Specification −": "Specification − ::  Fabric450gsm brushed fleeceCutRelaxedOriginMade in PortugalCareCold wash. Do not tumble dry.",
+  "Item description −": "Item description − ::  Cellblock crewneck, designed for everyday movement. Premium heavyweight fabric with a relaxed silhouette and signature 3D embroidery. 9–16 days delivery UK 16–21 days international",
+  "Chain of custody — shipping & returns −": "Chain of custody — shipping & returns − ::  01 Logged Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day. 02 Dispatched Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70. 03 In transit Tracking issued by email. UK 1–2 working days. International 7–14 working days. 04 Released You have 14 days from delivery to return unworn goods with tags attached. Start a return by email: info@crooksldn.com."
+ },
+ "new_pdp_bodytext_has": {
+  "returns_days": true,
+  "free_returns": false,
+  "returns_word": true,
+  "shipping_cost": true,
+  "measurements": false
+ },
+ "old_pdp_bodytext_has": {
+  "returns_days": true,
+  "returns_word": false,
+  "shipping_cost": true,
+  "measurements": false,
+  "size_chart": false
+ },
+ "old_headers": []
+}
