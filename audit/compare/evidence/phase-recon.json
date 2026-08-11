@@ -1,0 +1,94 @@
+{
+  "tag": "phase",
+  "homeUrl": "https://phaselondon.com/",
+  "fetchedAt": "2026-08-11T17:13:22.442Z",
+  "homeStatus": 200,
+  "botWall": false,
+  "home": {
+    "seo": {
+      "title": "PHASELONDON",
+      "titleLen": 11,
+      "metaDesc": "PHASE LONDON is a U.K.-based streetwear brand born in Soho, London in early 2019. Blending British classic style with modern streetwear, PHASE creates limited releases of premium tees, hoodies, and ou",
+      "h1": null,
+      "h1Count": 4,
+      "canonical": "https://phaselondon.com/",
+      "ogImage": true,
+      "jsonLdTypes": [],
+      "robotsMeta": null,
+      "wordCount": 99
+    },
+    "overlaysAtArrival": [],
+    "cookieBanner": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": true,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "platform": "Shopify"
+  },
+  "overlaysAt10s": [],
+  "nav": [
+    {
+      "t": "Skip to content",
+      "href": "#MainContent"
+    },
+    {
+      "t": "TERMS",
+      "href": "http://phaseclothing.myshopify.com/pages/terms"
+    },
+    {
+      "t": "PRIVACY POLICY",
+      "href": "/pages/privacy-policy"
+    },
+    {
+      "t": "CONTACT",
+      "href": "/pages/contact"
+    },
+    {
+      "t": "Log in",
+      "href": "https://phaselondon.com/customer_authentication/redirect?locale=en&region_country=US"
+    },
+    {
+      "t": "Search",
+      "href": "/search"
+    },
+    {
+      "t": "0 items",
+      "href": "/cart"
+    },
+    {
+      "t": "SHOP•\nSHOP•\nSHOP•\nSHOP•\nSHOP•\nSHOP•\nSHOP",
+      "href": "/collections/frontpage"
+    },
+    {
+      "t": "WORLD•\nWORLD•\nWORLD•\nWORLD•\nWORLD•\nWORLD",
+      "href": "/pages/world"
+    },
+    {
+      "t": "ABOUT•\nABOUT•\nABOUT•\nABOUT•\nABOUT•\nABOUT",
+      "href": "/pages/about"
+    },
+    {
+      "t": "CONTACT•\nCONTACT•\nCONTACT•\nCONTACT•\nCONT",
+      "href": "/pages/contact"
+    },
+    {
+      "t": "PHASELONDON",
+      "href": "/"
+    },
+    {
+      "t": "Continue shopping",
+      "href": "/"
+    }
+  ],
+  "discovered": {
+    "pdpUrl": null,
+    "collectionUrl": "https://phaselondon.com/collections/frontpage",
+    "productLinkCount": 0
+  }
+}

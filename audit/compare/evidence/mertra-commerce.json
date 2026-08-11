@@ -1,0 +1,74 @@
+{
+  "tag": "mertra",
+  "pdpBefore": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": false,
+      "sizesVisible": true,
+      "atcVisible": false,
+      "atcText": "ADD TO CART",
+      "stockWordVisible": false
+    },
+    "cookie": null,
+    "overlays": []
+  },
+  "bannerDismissed": false,
+  "pdp": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": false,
+      "sizesVisible": true,
+      "atcVisible": false,
+      "atcText": "ADD TO CART",
+      "stockWordVisible": false
+    },
+    "sizeControls": 31,
+    "price": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": true,
+      "sizeGuide": true,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    }
+  },
+  "sizeGuide": {
+    "present": false
+  },
+  "delivery": {
+    "claim": null,
+    "mentionsFree": false
+  },
+  "soldOutSignal": {
+    "sizeEls": 31,
+    "visiblyDisabled": 2
+  },
+  "addToCart": {
+    "urlChanged": true,
+    "drawerOpened": false,
+    "feedbackText": null
+  },
+  "trustPages": {
+    "/policies/refund-policy": {
+      "status": 200,
+      "words": 142,
+      "placeholders": [],
+      "email": "support@mertra.com"
+    },
+    "/pages/contact": {
+      "status": 200,
+      "words": 46,
+      "placeholders": [],
+      "email": null
+    },
+    "/policies/shipping-policy": {
+      "status": 200,
+      "words": 140,
+      "placeholders": [],
+      "email": "support@mertra.com"
+    }
+  }
+}

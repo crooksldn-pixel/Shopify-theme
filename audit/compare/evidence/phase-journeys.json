@@ -1,0 +1,128 @@
+{
+  "tag": "phase",
+  "personas": {
+    "p1_coldClick": {
+      "wallMs": 31637,
+      "lcp": 26348,
+      "cls": 0,
+      "atLoad": {
+        "url": "/",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": false,
+          "priceVisible": false,
+          "sizesVisible": false,
+          "atcVisible": false,
+          "atcText": null,
+          "stockWordVisible": false
+        },
+        "price": null,
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": true,
+          "sizeGuide": false,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      },
+      "at5s": {
+        "url": "/",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": false,
+          "priceVisible": false,
+          "sizesVisible": false,
+          "atcVisible": false,
+          "atcText": null,
+          "stockWordVisible": false
+        },
+        "price": null,
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": true,
+          "sizeGuide": false,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      }
+    },
+    "p2_returningFan": {
+      "newSignal": {
+        "wordNew": false,
+        "dates": true,
+        "badges": 0,
+        "justDropped": false
+      }
+    },
+    "p3_sizeAnxious": {
+      "error": "Error: page.goto: url: expected string, got object"
+    },
+    "p4_sceptic": {
+      "refund": {
+        "status": 200,
+        "words": 584,
+        "placeholders": [],
+        "email": "info@phaselondon.com",
+        "address": false
+      },
+      "contact": {
+        "status": 200,
+        "words": 154,
+        "placeholders": [],
+        "email": "info@phaselondon.com",
+        "address": false
+      },
+      "about": {
+        "status": 200,
+        "words": 123,
+        "placeholders": [],
+        "email": null,
+        "address": false
+      }
+    },
+    "p5_aimless": {
+      "hooks": {
+        "newsletter": true,
+        "editorial": false,
+        "social": 2,
+        "anythingPlayful": false
+      }
+    },
+    "p6_a11y": {
+      "error": "Error: page.goto: url: expected string, got object"
+    },
+    "p7_slow": {
+      "wallMs": 26597,
+      "lcp": 22596,
+      "productImgInFirstViewport": true
+    },
+    "p8_postPurchase": {
+      "hunt": {
+        "trackLink": false,
+        "accountLink": true,
+        "returnsLink": false,
+        "faqLink": false
+      }
+    },
+    "p9_comparison": {
+      "error": "Error: page.goto: url: expected string, got object"
+    },
+    "p10_gift": {
+      "aff": {
+        "giftCard": false,
+        "sizeHelpFromHome": false,
+        "exchangePolicyVisible": false,
+        "returnWindowVisible": false,
+        "categoriesClear": 0
+      }
+    }
+  }
+}

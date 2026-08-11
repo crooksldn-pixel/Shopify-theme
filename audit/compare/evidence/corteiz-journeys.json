@@ -1,0 +1,140 @@
+{
+  "tag": "corteiz",
+  "personas": {
+    "p1_coldClick": {
+      "wallMs": 20372,
+      "lcp": 4812,
+      "cls": 0.3522,
+      "atLoad": {
+        "url": "/products/dual-layer-litework-jacket-cream",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": true,
+          "sizesVisible": true,
+          "atcVisible": false,
+          "atcText": null,
+          "stockWordVisible": false
+        },
+        "price": "$200.00",
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": false,
+          "sizeGuide": true,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      },
+      "at5s": {
+        "url": "/products/dual-layer-litework-jacket-cream",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": true,
+          "sizesVisible": true,
+          "atcVisible": false,
+          "atcText": null,
+          "stockWordVisible": false
+        },
+        "price": "$200.00",
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": false,
+          "sizeGuide": true,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      }
+    },
+    "p2_returningFan": {
+      "newSignal": {
+        "wordNew": false,
+        "dates": false,
+        "badges": 3,
+        "justDropped": false
+      }
+    },
+    "p3_sizeAnxious": {
+      "sizeGuidePresent": true,
+      "table": {
+        "units": {
+          "cm": true,
+          "inches": true
+        },
+        "dims": [
+          "chest",
+          "length",
+          "hem",
+          "shoulder"
+        ],
+        "laidFlat": false,
+        "modelInfo": false
+      }
+    },
+    "p4_sceptic": {
+      "refund": {
+        "status": 200,
+        "words": 38,
+        "placeholders": [],
+        "email": null,
+        "address": false
+      },
+      "contact": {
+        "status": 404
+      },
+      "about": {
+        "status": 404
+      }
+    },
+    "p5_aimless": {
+      "hooks": {
+        "newsletter": true,
+        "editorial": false,
+        "social": 2,
+        "anythingPlayful": true
+      }
+    },
+    "p6_a11y": {
+      "atcReachableByKeyboard": false
+    },
+    "p7_slow": {
+      "wallMs": 37648,
+      "lcp": 8452,
+      "productImgInFirstViewport": true
+    },
+    "p8_postPurchase": {
+      "hunt": {
+        "trackLink": true,
+        "accountLink": false,
+        "returnsLink": false,
+        "faqLink": false
+      }
+    },
+    "p9_comparison": {
+      "spine": {
+        "price": "$200.00",
+        "shippingCostStated": false,
+        "returnsCostStated": false,
+        "materialStated": false,
+        "madeWhere": false
+      }
+    },
+    "p10_gift": {
+      "aff": {
+        "giftCard": false,
+        "sizeHelpFromHome": false,
+        "exchangePolicyVisible": false,
+        "returnWindowVisible": false,
+        "categoriesClear": 25
+      }
+    }
+  }
+}

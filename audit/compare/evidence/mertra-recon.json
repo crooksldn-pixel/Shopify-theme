@@ -1,0 +1,320 @@
+{
+  "tag": "mertra",
+  "homeUrl": "https://mertra.com/",
+  "fetchedAt": "2026-08-11T17:07:27.467Z",
+  "homeStatus": 200,
+  "botWall": false,
+  "home": {
+    "seo": {
+      "title": "MERTRA",
+      "titleLen": 6,
+      "metaDesc": "The official & only website of MERTRA. EST 2022.",
+      "h1": null,
+      "h1Count": 0,
+      "canonical": "https://mertra.com/",
+      "ogImage": true,
+      "jsonLdTypes": [],
+      "robotsMeta": null,
+      "wordCount": 621
+    },
+    "overlaysAtArrival": [],
+    "cookieBanner": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": false,
+      "tracking": true,
+      "contact": true,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "platform": "Shopify"
+  },
+  "overlaysAt10s": [],
+  "nav": [
+    {
+      "t": "HOME",
+      "href": "/"
+    },
+    {
+      "t": "ALL",
+      "href": "/collections/all"
+    },
+    {
+      "t": "OUTERWEAR",
+      "href": "/collections/outerwear"
+    },
+    {
+      "t": "MIDLAYERS",
+      "href": "/collections/midlayers"
+    },
+    {
+      "t": "BOTTOMS",
+      "href": "/collections/bottoms"
+    },
+    {
+      "t": "TOPS",
+      "href": "/collections/tops"
+    },
+    {
+      "t": "ACCESSORIES",
+      "href": "/collections/accessories"
+    },
+    {
+      "t": "SETS",
+      "href": "/collections/tracky"
+    },
+    {
+      "t": "WOMEN",
+      "href": "/collections/women"
+    },
+    {
+      "t": "TERMS",
+      "href": "/pages/terms"
+    },
+    {
+      "t": "TIMELINE",
+      "href": "/pages/archive"
+    },
+    {
+      "t": "VIEW ALL",
+      "href": "/collections/july-drop-1"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/technical-hooded-gilet-black"
+    },
+    {
+      "t": "TECHNICAL HOODED GILET (BLACK)\n138.00 US",
+      "href": "/products/technical-hooded-gilet-black"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/technical-hooded-gilet-white"
+    },
+    {
+      "t": "TECHNICAL HOODED GILET (WHITE)\n138.00 US",
+      "href": "/products/technical-hooded-gilet-white"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/logo-plaid-polo-white-blue"
+    },
+    {
+      "t": "CROSSCUT POLO (WHITE / BLUE)\n76.00 USD",
+      "href": "/products/logo-plaid-polo-white-blue"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/logo-plaid-rugby-black-red"
+    },
+    {
+      "t": "CROSSCUT RUGBY (BLACK / RED)\n86.00 USD",
+      "href": "/products/logo-plaid-rugby-black-red"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/heat-wave-jacket-blue"
+    },
+    {
+      "t": "HEAT MAP JACKET (BLUE)\n197.00 USD",
+      "href": "/products/heat-wave-jacket-blue"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/logo-plaid-shorts-black"
+    },
+    {
+      "t": "MERVA CHECK SHORTS (BLACK)\n95.00 USD",
+      "href": "/products/logo-plaid-shorts-black"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL",
+      "href": "/products/plaid-bikini-topblack"
+    },
+    {
+      "t": "MERVA CHECK BIKINI TOP (BLACK)\n53.00 USD",
+      "href": "/products/plaid-bikini-topblack"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL",
+      "href": "/products/plaid-bikini-bottom-black"
+    },
+    {
+      "t": "MERVA CHECK BIKINI BOTTOM (BLACK)\n53.00 ",
+      "href": "/products/plaid-bikini-bottom-black"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/overlock-track-jacket-cream-charcoal"
+    },
+    {
+      "t": "CONTRA TRACK JACKET (CREAM / CHARCOAL)\n1",
+      "href": "/products/overlock-track-jacket-cream-charcoal"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/overlock-track-shorts-cream-charcoal"
+    },
+    {
+      "t": "CONTRA TRACK SHORTS (CREAM / CHARCOAL)\n9",
+      "href": "/products/overlock-track-shorts-cream-charcoal"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/contrast-mesh-zip-up-hood-black"
+    },
+    {
+      "t": "SERPENT ZIP UP HOOD (BLACK)\n122.00 USD",
+      "href": "/products/contrast-mesh-zip-up-hood-black"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/contrast-mesh-shorts-black"
+    },
+    {
+      "t": "SERPENT SHORTS (BLACK)\n95.00 USD",
+      "href": "/products/contrast-mesh-shorts-black"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL",
+      "href": "/products/womens-plaid-polo-black-red"
+    },
+    {
+      "t": "WOMEN'S CROSSCUT POLO (BLACK / RED)\n66.0",
+      "href": "/products/womens-plaid-polo-black-red"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL",
+      "href": "/products/womens-plaid-skirt-black-red"
+    },
+    {
+      "t": "WOMEN'S CROSSCUT SKIRT (BLACK / RED)\n59.",
+      "href": "/products/womens-plaid-skirt-black-red"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/tri-mesh-tee-navy"
+    },
+    {
+      "t": "TRI-MESH SPORT TEE (NAVY)\n63.00 USD",
+      "href": "/products/tri-mesh-tee-navy"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/tri-mesh-shorts-navy"
+    },
+    {
+      "t": "TRI-MESH SPORT SHORTS (NAVY)\n86.00 USD",
+      "href": "/products/tri-mesh-shorts-navy"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/tri-mesh-singlet-navy"
+    },
+    {
+      "t": "TRI-MESH SPORT TANK (NAVY)\n59.00 USD",
+      "href": "/products/tri-mesh-singlet-navy"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/bubble-woven-shorts-black"
+    },
+    {
+      "t": "BUBBLE WOVEN SHORTS (BLACK)\n95.00 USD",
+      "href": "/products/bubble-woven-shorts-black"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/cat-tee-pink"
+    },
+    {
+      "t": "CAT IN DA HAT TEE (PINK)\n56.00 USD",
+      "href": "/products/cat-tee-pink"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/cat-tee-white"
+    },
+    {
+      "t": "CAT IN DA HAT TEE (WHITE)\n56.00 USD",
+      "href": "/products/cat-tee-white"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/cat-tee-blue"
+    },
+    {
+      "t": "CAT IN DA HAT TEE (BLUE)\n56.00 USD",
+      "href": "/products/cat-tee-blue"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/cat-tee-red"
+    },
+    {
+      "t": "CAT IN DA HAT TEE (RED)\n56.00 USD",
+      "href": "/products/cat-tee-red"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/cat-tee-navy"
+    },
+    {
+      "t": "CAT IN DA HAT TEE (NAVY)\n56.00 USD",
+      "href": "/products/cat-tee-navy"
+    },
+    {
+      "t": "XS\nS\nM\nL\nXL\nXXL",
+      "href": "/products/cat-tee-green"
+    },
+    {
+      "t": "CAT IN DA HAT TEE (GREEN)\n56.00 USD",
+      "href": "/products/cat-tee-green"
+    }
+  ],
+  "discovered": {
+    "pdpUrl": "https://mertra.com/products/technical-hooded-gilet-black",
+    "collectionUrl": "https://mertra.com/collections/all",
+    "productLinkCount": 48
+  },
+  "pdp": {
+    "seo": {
+      "title": "Technical Hooded Gilet (Black) – MERTRA",
+      "titleLen": 39,
+      "metaDesc": "- Water-resistant, lightweight shell fabric- Mesh-lined interior- Waterproof chest pocket- Branded lycra armholes and hood- Hidden zipper pockets- Adjustable hem drawcords- Branded zipper pullers",
+      "h1": "TECHNICAL HOODED GILET (BLACK)",
+      "h1Count": 1,
+      "canonical": "https://mertra.com/products/technical-hooded-gilet-black",
+      "ogImage": true,
+      "jsonLdTypes": [
+        "ProductGroup"
+      ],
+      "robotsMeta": null,
+      "wordCount": 154
+    },
+    "firstViewport": {
+      "titleVisible": true,
+      "priceVisible": false,
+      "sizesVisible": true,
+      "atcVisible": false,
+      "atcText": "ADD TO CART",
+      "stockWordVisible": false
+    },
+    "sizeControls": 31,
+    "price": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": true,
+      "sizeGuide": true,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "cookieBanner": null,
+    "overlays": []
+  }
+}

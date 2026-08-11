@@ -1,0 +1,23 @@
+{
+  "tag": "phase",
+  "trustPages": {
+    "/policies/refund-policy": {
+      "status": 200,
+      "words": 584,
+      "placeholders": [],
+      "email": "info@phaselondon.com"
+    },
+    "/pages/contact": {
+      "status": 200,
+      "words": 154,
+      "placeholders": [],
+      "email": "info@phaselondon.com"
+    },
+    "/policies/shipping-policy": {
+      "status": 200,
+      "words": 44,
+      "placeholders": [],
+      "email": null
+    }
+  }
+}

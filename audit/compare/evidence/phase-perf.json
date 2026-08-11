@@ -1,0 +1,139 @@
+{
+  "tag": "phase",
+  "generatedAt": "2026-08-11T17:13:36.012Z",
+  "pages": {
+    "home": {
+      "url": "https://phaselondon.com/",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 33918,
+      "vitals": {
+        "cls": 0,
+        "shifts": [],
+        "lcp": 26500,
+        "lcpEl": "IMG. src=Comp3_2-ezgif.com-effects.gif",
+        "inp": 496,
+        "longTasks": 22,
+        "longMs": 4336,
+        "ttfb": 189,
+        "fcp": 788,
+        "domContentLoaded": 3562,
+        "load": 26345
+      },
+      "transfer": {
+        "totalKB": 12013,
+        "requests": 169,
+        "byTypeKB": {
+          "stylesheet": 131,
+          "document": 610,
+          "script": 5294,
+          "ping": 0,
+          "fetch": 4,
+          "other": 2571,
+          "image": 3404,
+          "xhr": 0
+        },
+        "largest": [
+          {
+            "name": "Comp3_2-ezgif.com-effects.gif",
+            "host": "phaselondon.com",
+            "kb": 2144,
+            "type": "image",
+            "mime": "image/gif"
+          },
+          {
+            "name": "Comp3_2-ezgif.com-effects.gif",
+            "host": "phaselondon.com",
+            "kb": 1260,
+            "type": "image",
+            "mime": "image/gif"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "phaselondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "",
+            "host": "phaselondon.com",
+            "kb": 603,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "phaselondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "sdk.js",
+            "host": "sdk.pop-convert.com",
+            "kb": 470,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "sdk.js",
+            "host": "sdk.pop-convert.com",
+            "kb": 470,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 434,
+            "type": "script",
+            "mime": "application/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "phaselondon.com",
+            "kb": 8070
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 1641
+          },
+          {
+            "host": "sdk.pop-convert.com",
+            "kb": 940
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 678
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 284
+          },
+          {
+            "host": "omnisnippet1.com",
+            "kb": 135
+          },
+          {
+            "host": "ajax.googleapis.com",
+            "kb": 94
+          },
+          {
+            "host": "cdnjs.cloudflare.com",
+            "kb": 85
+          },
+          {
+            "host": "a.mailmunch.co",
+            "kb": 47
+          },
+          {
+            "host": "cdn.s3.pop-convert.com",
+            "kb": 34
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,416 @@
+{
+  "tag": "mertra",
+  "generatedAt": "2026-08-11T17:07:46.977Z",
+  "pages": {
+    "home": {
+      "url": "https://mertra.com/",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 49716,
+      "vitals": {
+        "cls": 0,
+        "shifts": [],
+        "lcp": null,
+        "lcpEl": null,
+        "inp": 0,
+        "longTasks": 2,
+        "longMs": 474,
+        "ttfb": 434,
+        "fcp": 1492,
+        "domContentLoaded": 0,
+        "load": 0
+      },
+      "transfer": {
+        "totalKB": 17579,
+        "requests": 410,
+        "byTypeKB": {
+          "stylesheet": 348,
+          "document": 1191,
+          "font": 181,
+          "script": 7620,
+          "image": 6751,
+          "xhr": 93,
+          "fetch": 4,
+          "ping": 0,
+          "other": 1391
+        },
+        "largest": [
+          {
+            "name": "ups-ext.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "adtr-shopify.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "adtr-shopify.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "slidecarthq.js",
+            "host": "slidecart-store.useamp.com",
+            "kb": 700,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "",
+            "host": "mertra.com",
+            "kb": 662,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "july-drop-1",
+            "host": "mertra.com",
+            "kb": 526,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 489,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "mertra.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "mertra.com",
+            "kb": 11362
+          },
+          {
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 2265
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 1349
+          },
+          {
+            "host": "slidecart-store.useamp.com",
+            "kb": 700
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 489
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 378
+          },
+          {
+            "host": "us-assets.i.posthog.com",
+            "kb": 361
+          },
+          {
+            "host": "cdn-app.cart-bot.net",
+            "kb": 200
+          },
+          {
+            "host": "fonts.gstatic.com",
+            "kb": 139
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 101
+          }
+        ]
+      }
+    },
+    "pdp": {
+      "url": "https://mertra.com/products/technical-hooded-gilet-black",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 32078,
+      "vitals": {
+        "cls": 0.00008873859908519115,
+        "shifts": [],
+        "lcp": 5276,
+        "lcpEl": "IMG.pdp__media-img src=E-COM_Hooded_Gilet_Black___Grey_-V1_1__1_3x_a2301f9d-3050-4548-a5b7-af420e377e68.png",
+        "inp": 852,
+        "longTasks": 31,
+        "longMs": 6287,
+        "ttfb": 507,
+        "fcp": 1484,
+        "domContentLoaded": 6422,
+        "load": 24514
+      },
+      "transfer": {
+        "totalKB": 12304,
+        "requests": 280,
+        "byTypeKB": {
+          "stylesheet": 284,
+          "document": 429,
+          "script": 6736,
+          "image": 2312,
+          "font": 177,
+          "xhr": 93,
+          "fetch": 6,
+          "ping": 0,
+          "other": 2268
+        },
+        "largest": [
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "mertra.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "ups-ext.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "adtr-shopify.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "slidecarthq.js",
+            "host": "slidecart-store.useamp.com",
+            "kb": 700,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 491,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "mertra.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "fbevents.js",
+            "host": "connect.facebook.net",
+            "kb": 398,
+            "type": "script",
+            "mime": "application/x-javascript"
+          },
+          {
+            "name": "fbevents.js",
+            "host": "connect.facebook.net",
+            "kb": 398,
+            "type": "script",
+            "mime": "application/x-javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "mertra.com",
+            "kb": 6335
+          },
+          {
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 1510
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 1349
+          },
+          {
+            "host": "slidecart-store.useamp.com",
+            "kb": 700
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 491
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 364
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 363
+          },
+          {
+            "host": "us-assets.i.posthog.com",
+            "kb": 361
+          },
+          {
+            "host": "cdn-app.cart-bot.net",
+            "kb": 200
+          },
+          {
+            "host": "cdn.jsdelivr.net",
+            "kb": 169
+          }
+        ]
+      }
+    },
+    "pdpDesktop": {
+      "url": "https://mertra.com/products/technical-hooded-gilet-black",
+      "device": "desktop-1440",
+      "throttled": false,
+      "wallMs": 11883,
+      "vitals": {
+        "cls": 0.05940212398157525,
+        "shifts": [
+          {
+            "v": 0.0583,
+            "t": 1712,
+            "src": [
+              "swiper-slide pdp__media-item"
+            ]
+          }
+        ],
+        "lcp": 1368,
+        "lcpEl": "IMG.pdp__media-img src=E-COM_Hooded_Gilet_Black___Grey_-V1_1__1_3x_a2301f9d-3050-4548-a5b7-af420e377e68.png",
+        "inp": 581,
+        "longTasks": 5,
+        "longMs": 506,
+        "ttfb": 527,
+        "fcp": 1124,
+        "domContentLoaded": 2415,
+        "load": 4363
+      },
+      "transfer": {
+        "totalKB": 15156,
+        "requests": 333,
+        "byTypeKB": {
+          "document": 429,
+          "stylesheet": 283,
+          "script": 5374,
+          "image": 5262,
+          "font": 160,
+          "other": 3552,
+          "ping": 0,
+          "fetch": 3,
+          "xhr": 93
+        },
+        "largest": [
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "mertra.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "ups-ext.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "adtr-shopify.min.js",
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 755,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "slidecarthq.js",
+            "host": "slidecart-store.useamp.com",
+            "kb": 700,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 491,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "mertra.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "E-COM_Hooded_Gilet_Black___Grey_-V1_CLOSE_UPS_2.png",
+            "host": "mertra.com",
+            "kb": 462,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "E-COM_Hooded_Gilet_Black___Grey_-V1_CLOSE_UPS_6.png",
+            "host": "mertra.com",
+            "kb": 402,
+            "type": "image",
+            "mime": "image/webp"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "mertra.com",
+            "kb": 10565
+          },
+          {
+            "host": "prod2-cdn.upstackified.com",
+            "kb": 1510
+          },
+          {
+            "host": "slidecart-store.useamp.com",
+            "kb": 700
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 491
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 363
+          },
+          {
+            "host": "us-assets.i.posthog.com",
+            "kb": 361
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 354
+          },
+          {
+            "host": "cdn-app.cart-bot.net",
+            "kb": 200
+          },
+          {
+            "host": "cdn.jsdelivr.net",
+            "kb": 169
+          },
+          {
+            "host": "shop.app",
+            "kb": 146
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "tag": "mertra",
+  "pages": {
+    "home": {
+      "url": "https://mertra.com/",
+      "axeViolations": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodes": 3
+        },
+        {
+          "id": "image-alt",
+          "impact": "critical",
+          "nodes": 1
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "nodes": 1
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "MERTRA",
+          "focusVisible": true
+        },
+        {
+          "tag": "SELECT",
+          "text": "AUD\nEUR\nUSD\nCZK\nDKK\nHUF\nNZD\nPLN\nRON\nSEK\n",
+          "focusVisible": false
+        },
+        {
+          "tag": "A",
+          "text": "Log in",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Search",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Cart",
+          "focusVisible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Toggle menu",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Show slide 1",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    },
+    "pdp": {
+      "url": "https://mertra.com/products/technical-hooded-gilet-black",
+      "axeViolations": [
+        {
+          "id": "aria-hidden-focus",
+          "impact": "serious",
+          "nodes": 3
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "MERTRA",
+          "focusVisible": true
+        },
+        {
+          "tag": "SELECT",
+          "text": "AUD\nEUR\nUSD\nCZK\nDKK\nHUF\nNZD\nPLN\nRON\nSEK\n",
+          "focusVisible": false
+        },
+        {
+          "tag": "A",
+          "text": "Log in",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Search",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Cart",
+          "focusVisible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Toggle menu",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Show image 1",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Show image 2",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 211,
+        "clientWidth": 195,
+        "horizontalScroll": true
+      }
+    }
+  }
+}

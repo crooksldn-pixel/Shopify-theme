@@ -1,0 +1,131 @@
+{
+  "tag": "mertra",
+  "personas": {
+    "p1_coldClick": {
+      "wallMs": 29435,
+      "lcp": 5344,
+      "cls": 0.0001,
+      "atLoad": {
+        "url": "/products/technical-hooded-gilet-black",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": false,
+          "sizesVisible": true,
+          "atcVisible": false,
+          "atcText": "ADD TO CART",
+          "stockWordVisible": false
+        },
+        "price": null,
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": true,
+          "sizeGuide": true,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      },
+      "at5s": {
+        "url": "/products/technical-hooded-gilet-black",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": false,
+          "sizesVisible": true,
+          "atcVisible": false,
+          "atcText": "ADD TO CART",
+          "stockWordVisible": false
+        },
+        "price": null,
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": true,
+          "sizeGuide": true,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      }
+    },
+    "p2_returningFan": {
+      "newSignal": {
+        "wordNew": true,
+        "dates": false,
+        "badges": 1,
+        "justDropped": false
+      }
+    },
+    "p3_sizeAnxious": {
+      "sizeGuidePresent": false,
+      "table": null
+    },
+    "p4_sceptic": {
+      "refund": {
+        "status": 200,
+        "words": 138,
+        "placeholders": [],
+        "email": "support@mertra.com",
+        "address": false
+      },
+      "contact": {
+        "status": 200,
+        "words": 46,
+        "placeholders": [],
+        "email": null,
+        "address": false
+      },
+      "about": {
+        "status": 404
+      }
+    },
+    "p5_aimless": {
+      "hooks": {
+        "newsletter": false,
+        "editorial": false,
+        "social": 2,
+        "anythingPlayful": true
+      }
+    },
+    "p6_a11y": {
+      "atcReachableByKeyboard": false
+    },
+    "p7_slow": {
+      "wallMs": 42290,
+      "lcp": 9444,
+      "productImgInFirstViewport": true
+    },
+    "p8_postPurchase": {
+      "hunt": {
+        "trackLink": true,
+        "accountLink": false,
+        "returnsLink": false,
+        "faqLink": false
+      }
+    },
+    "p9_comparison": {
+      "spine": {
+        "price": null,
+        "shippingCostStated": false,
+        "returnsCostStated": false,
+        "materialStated": false,
+        "madeWhere": false
+      }
+    },
+    "p10_gift": {
+      "aff": {
+        "giftCard": true,
+        "sizeHelpFromHome": false,
+        "exchangePolicyVisible": false,
+        "returnWindowVisible": false,
+        "categoriesClear": 21
+      }
+    }
+  }
+}

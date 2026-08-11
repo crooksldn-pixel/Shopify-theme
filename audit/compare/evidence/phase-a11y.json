@@ -1,0 +1,62 @@
+{
+  "tag": "phase",
+  "pages": {
+    "home": {
+      "url": "https://phaselondon.com/",
+      "axeViolations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 9
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "BUTTON",
+          "text": "Dismiss notice",
+          "focusVisible": true
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "SETTLE",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Dismiss notice",
+          "focusVisible": true
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "SETTLE",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Dismiss notice",
+          "focusVisible": true
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    }
+  }
+}
