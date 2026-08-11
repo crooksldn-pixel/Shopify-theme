@@ -1,0 +1,426 @@
+{
+  "tag": "ultralight",
+  "generatedAt": "2026-08-11T17:16:48.735Z",
+  "pages": {
+    "home": {
+      "url": "https://ultralightlondon.com/",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 95779,
+      "vitals": {
+        "cls": 0,
+        "shifts": [],
+        "lcp": null,
+        "lcpEl": null,
+        "inp": 0,
+        "longTasks": 2,
+        "longMs": 222,
+        "ttfb": 1357,
+        "fcp": 0,
+        "domContentLoaded": 0,
+        "load": 0
+      },
+      "transfer": {
+        "totalKB": 22019,
+        "requests": 191,
+        "byTypeKB": {
+          "document": 379,
+          "stylesheet": 86,
+          "image": 17107,
+          "script": 2275,
+          "ping": 0,
+          "font": 39,
+          "fetch": 0,
+          "other": 2134
+        },
+        "largest": [
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "ultralightlondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "IMG_7882_1200x.heic",
+            "host": "ultralightlondon.com",
+            "kb": 604,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "IMG_1394_1200x.jpg",
+            "host": "ultralightlondon.com",
+            "kb": 506,
+            "type": "image",
+            "mime": "image/jpeg"
+          },
+          {
+            "name": "IMG_7870_1200x.heic",
+            "host": "ultralightlondon.com",
+            "kb": 501,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 487,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 487,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "ultralightlondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "IMG_7892_2_1200x.heic",
+            "host": "ultralightlondon.com",
+            "kb": 478,
+            "type": "image",
+            "mime": "image/webp"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "ultralightlondon.com",
+            "kb": 20691
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 975
+          },
+          {
+            "host": "code.jquery.com",
+            "kb": 278
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 75
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "shop.app",
+            "kb": 0
+          },
+          {
+            "host": "www.google-analytics.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdp": {
+      "url": "https://ultralightlondon.com/products/spider-man-tee",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 37531,
+      "vitals": {
+        "cls": 0.21749433828295664,
+        "shifts": [
+          {
+            "v": 0.0138,
+            "t": 1724,
+            "src": [
+              "product-options",
+              "product-info__cart-btn button",
+              "shopify-payment-button",
+              "product-block-content",
+              "undefined"
+            ]
+          },
+          {
+            "v": 0.2014,
+            "t": 2619,
+            "src": [
+              "product-info__main",
+              "product__item-img",
+              "image-navigation",
+              "shopify-payment-button__skeleton"
+            ]
+          }
+        ],
+        "lcp": 8004,
+        "lcpEl": "IMG.product__item-img active src=spiderman_tee.png",
+        "inp": 381,
+        "longTasks": 14,
+        "longMs": 2308,
+        "ttfb": 221,
+        "fcp": 768,
+        "domContentLoaded": 4304,
+        "load": 30007
+      },
+      "transfer": {
+        "totalKB": 9852,
+        "requests": 135,
+        "byTypeKB": {
+          "document": 252,
+          "stylesheet": 120,
+          "script": 2117,
+          "image": 5032,
+          "ping": 0,
+          "font": 120,
+          "fetch": 2,
+          "other": 2208
+        },
+        "largest": [
+          {
+            "name": "IMG_8200.heic",
+            "host": "ultralightlondon.com",
+            "kb": 2670,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "IMG_8866.heic",
+            "host": "ultralightlondon.com",
+            "kb": 1014,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "IMG_8867.heic",
+            "host": "ultralightlondon.com",
+            "kb": 1002,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "hydrate.BRmg83jw.js",
+            "host": "ultralightlondon.com",
+            "kb": 805,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 487,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "hooks-useShopPayQuery.B8WKQDkf.js",
+            "host": "ultralightlondon.com",
+            "kb": 477,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "portable-wallets.en.js",
+            "host": "ultralightlondon.com",
+            "kb": 374,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "jquery-3.7.0.js",
+            "host": "code.jquery.com",
+            "kb": 278,
+            "type": "script",
+            "mime": "application/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "ultralightlondon.com",
+            "kb": 8576
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 487
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 364
+          },
+          {
+            "host": "code.jquery.com",
+            "kb": 278
+          },
+          {
+            "host": "shop.app",
+            "kb": 147
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "error-analytics-sessions-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "www.google-analytics.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdpDesktop": {
+      "url": "https://ultralightlondon.com/products/spider-man-tee",
+      "device": "desktop-1440",
+      "throttled": false,
+      "wallMs": 10419,
+      "vitals": {
+        "cls": 0.061753562167446305,
+        "shifts": [
+          {
+            "v": 0.0269,
+            "t": 1128,
+            "src": [
+              "shopify-payment-button",
+              "product-info__cart-btn button",
+              "accordion-container acc-pc  last-accordion",
+              "accordion-container acc-pc  ",
+              "accordion-container acc-pc  "
+            ]
+          },
+          {
+            "v": 0.0348,
+            "t": 1480,
+            "src": [
+              "FORM",
+              "shopify-section",
+              "accordion-container acc-pc last-accordion",
+              "accordion-container acc-pc first-accordion",
+              "accordion-container acc-pc"
+            ]
+          }
+        ],
+        "lcp": 1716,
+        "lcpEl": "IMG.product__item-img active src=spiderman_tee.png",
+        "inp": 666,
+        "longTasks": 2,
+        "longMs": 141,
+        "ttfb": 244,
+        "fcp": 940,
+        "domContentLoaded": 1381,
+        "load": 2911
+      },
+      "transfer": {
+        "totalKB": 11065,
+        "requests": 207,
+        "byTypeKB": {
+          "document": 251,
+          "other": 3450,
+          "script": 2089,
+          "stylesheet": 120,
+          "image": 5032,
+          "font": 120,
+          "fetch": 2,
+          "ping": 0
+        },
+        "largest": [
+          {
+            "name": "IMG_8200.heic",
+            "host": "ultralightlondon.com",
+            "kb": 2670,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "IMG_8866.heic",
+            "host": "ultralightlondon.com",
+            "kb": 1014,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "IMG_8867.heic",
+            "host": "ultralightlondon.com",
+            "kb": 1002,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "ultralightlondon.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "js",
+            "host": "www.googletagmanager.com",
+            "kb": 487,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "ultralightlondon.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "portable-wallets.en.js",
+            "host": "ultralightlondon.com",
+            "kb": 374,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "jquery-3.7.0.js",
+            "host": "code.jquery.com",
+            "kb": 278,
+            "type": "script",
+            "mime": "application/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "ultralightlondon.com",
+            "kb": 9814
+          },
+          {
+            "host": "www.googletagmanager.com",
+            "kb": 487
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 339
+          },
+          {
+            "host": "code.jquery.com",
+            "kb": 278
+          },
+          {
+            "host": "shop.app",
+            "kb": 147
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "error-analytics-sessions-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "monorail-edge.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "www.google-analytics.com",
+            "kb": 0
+          }
+        ]
+      }
+    }
+  }
+}

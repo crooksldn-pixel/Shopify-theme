@@ -1,0 +1,69 @@
+{
+  "tag": "ultralight",
+  "pdpBefore": {
+    "fv": {
+      "titleVisible": false,
+      "priceVisible": true,
+      "sizesVisible": false,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": true
+    },
+    "cookie": null,
+    "overlays": []
+  },
+  "bannerDismissed": false,
+  "pdp": {
+    "fv": {
+      "titleVisible": false,
+      "priceVisible": true,
+      "sizesVisible": false,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": true
+    },
+    "sizeControls": 0,
+    "price": "$42.00",
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": true,
+      "sizeGuide": true,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    }
+  },
+  "sizeGuide": {
+    "present": false
+  },
+  "delivery": {
+    "claim": "7–18 working days",
+    "mentionsFree": false
+  },
+  "soldOutSignal": {
+    "sizeEls": 0,
+    "visiblyDisabled": 0
+  },
+  "trustPages": {
+    "/policies/refund-policy": {
+      "status": 200,
+      "words": 95,
+      "placeholders": [],
+      "email": null
+    },
+    "/pages/contact": {
+      "status": 200,
+      "words": 92,
+      "placeholders": [],
+      "email": "contact@ultralightlondon.com"
+    },
+    "/policies/shipping-policy": {
+      "status": 200,
+      "words": 162,
+      "placeholders": [],
+      "email": null
+    }
+  }
+}
