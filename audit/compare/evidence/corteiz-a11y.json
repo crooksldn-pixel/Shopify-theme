@@ -1,0 +1,129 @@
+{
+  "tag": "corteiz",
+  "pages": {
+    "home": {
+      "url": "https://www.corteiz.com/",
+      "axeViolations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "nodes": 1
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "nodes": 2
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "Skip to content",
+          "focusVisible": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Menu",
+          "focusVisible": false
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "DUAL-LAYER LITEWORK JACKET [CREAM]",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    },
+    "pdp": {
+      "url": "https://www.corteiz.com/products/dual-layer-litework-jacket-cream",
+      "axeViolations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "nodes": 1
+        },
+        {
+          "id": "link-name",
+          "impact": "serious",
+          "nodes": 4
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "Skip to content",
+          "focusVisible": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Menu",
+          "focusVisible": false
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    }
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "tag": "poser",
+  "personas": {
+    "p1_coldClick": {
+      "wallMs": 13178,
+      "lcp": 2908,
+      "cls": 0.0008,
+      "atLoad": {
+        "url": "/products/buzz-tee",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": true,
+          "sizesVisible": true,
+          "atcVisible": true,
+          "atcText": "ADD TO CART",
+          "stockWordVisible": false
+        },
+        "price": "$39.00",
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": true,
+          "sizeGuide": false,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      },
+      "at5s": {
+        "url": "/products/buzz-tee",
+        "overlays": [],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": true,
+          "sizesVisible": true,
+          "atcVisible": true,
+          "atcText": "ADD TO CART",
+          "stockWordVisible": false
+        },
+        "price": "$39.00",
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": true,
+          "sizeGuide": false,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      }
+    },
+    "p2_returningFan": {
+      "newSignal": {
+        "wordNew": true,
+        "dates": false,
+        "badges": 2,
+        "justDropped": false
+      }
+    },
+    "p3_sizeAnxious": {
+      "sizeGuidePresent": false,
+      "table": null
+    },
+    "p4_sceptic": {
+      "refund": {
+        "status": 404
+      },
+      "contact": {
+        "status": 200,
+        "words": 50,
+        "placeholders": [],
+        "email": null,
+        "address": false
+      },
+      "about": {
+        "status": 404
+      }
+    },
+    "p5_aimless": {
+      "hooks": {
+        "newsletter": true,
+        "editorial": false,
+        "social": 2,
+        "anythingPlayful": false
+      }
+    },
+    "p6_a11y": {
+      "atcReachableByKeyboard": true
+    },
+    "p7_slow": {
+      "wallMs": 43911,
+      "lcp": 10868,
+      "productImgInFirstViewport": true
+    },
+    "p8_postPurchase": {
+      "hunt": {
+        "trackLink": false,
+        "accountLink": true,
+        "returnsLink": false,
+        "faqLink": false
+      }
+    },
+    "p9_comparison": {
+      "spine": {
+        "price": "$39.00",
+        "shippingCostStated": false,
+        "returnsCostStated": false,
+        "materialStated": true,
+        "madeWhere": false
+      }
+    },
+    "p10_gift": {
+      "aff": {
+        "giftCard": false,
+        "sizeHelpFromHome": false,
+        "exchangePolicyVisible": false,
+        "returnWindowVisible": false,
+        "categoriesClear": 11
+      }
+    }
+  }
+}

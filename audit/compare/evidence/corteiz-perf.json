@@ -1,0 +1,428 @@
+{
+  "tag": "corteiz",
+  "generatedAt": "2026-08-11T17:02:48.315Z",
+  "pages": {
+    "home": {
+      "url": "https://www.corteiz.com/",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 45296,
+      "vitals": {
+        "cls": 0,
+        "shifts": [],
+        "lcp": 1268,
+        "lcpEl": "H1.product-single__title",
+        "inp": 0,
+        "longTasks": 6,
+        "longMs": 617,
+        "ttfb": 274,
+        "fcp": 932,
+        "domContentLoaded": 1663,
+        "load": 0
+      },
+      "transfer": {
+        "totalKB": 11709,
+        "requests": 368,
+        "byTypeKB": {
+          "stylesheet": 200,
+          "document": 466,
+          "script": 2618,
+          "image": 6494,
+          "font": 40,
+          "xhr": 1,
+          "fetch": 0,
+          "ping": 0,
+          "other": 1889
+        },
+        "largest": [
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "www.corteiz.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "HANDWRITTENDENIMTRUCKERJACKET_MIDWASHINIGO_01.png",
+            "host": "www.corteiz.com",
+            "kb": 498,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "www.corteiz.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "HANDWRITTENDENIMTRUCKERJACKET_MIDWASHINIGO_02.png",
+            "host": "www.corteiz.com",
+            "kb": 470,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "HANDWRITTENDENIMJEANS_MIDWASHINIGO_01.png",
+            "host": "www.corteiz.com",
+            "kb": 329,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "HANDWRITTENDENIMJEANS_MIDWASHINIGO_02.png",
+            "host": "www.corteiz.com",
+            "kb": 324,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "RUSTLEATHERSHORT2.png",
+            "host": "www.corteiz.com",
+            "kb": 288,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "context-browser.CELsuekm.js",
+            "host": "www.corteiz.com",
+            "kb": 273,
+            "type": "other",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "www.corteiz.com",
+            "kb": 11136
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 175
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 158
+          },
+          {
+            "host": "tnc-app.herokuapp.com",
+            "kb": 103
+          },
+          {
+            "host": "static-tracking.klaviyo.com",
+            "kb": 45
+          },
+          {
+            "host": "limits.minmaxify.com",
+            "kb": 44
+          },
+          {
+            "host": "cdn.jsdelivr.net",
+            "kb": 33
+          },
+          {
+            "host": "cdnjs.cloudflare.com",
+            "kb": 11
+          },
+          {
+            "host": "fonts.googleapis.com",
+            "kb": 3
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdp": {
+      "url": "https://www.corteiz.com/products/dual-layer-litework-jacket-cream",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 22997,
+      "vitals": {
+        "cls": 0.3522159702508583,
+        "shifts": [
+          {
+            "v": 0.3519,
+            "t": 5047,
+            "src": [
+              "grid__item medium-up--one-half",
+              "product-gallery-thumbs",
+              "btn product-single__cart-submit btn--secondary",
+              "flex-next"
+            ]
+          }
+        ],
+        "lcp": 5096,
+        "lcpEl": "IMG. src=2LAYERSHUKUJACKET_CREAM_01_64421a5e-b49c-4b74-a68c-c399010361b1.png",
+        "inp": 922,
+        "longTasks": 13,
+        "longMs": 1457,
+        "ttfb": 276,
+        "fcp": 1368,
+        "domContentLoaded": 4949,
+        "load": 15425
+      },
+      "transfer": {
+        "totalKB": 6261,
+        "requests": 140,
+        "byTypeKB": {
+          "document": 194,
+          "stylesheet": 102,
+          "script": 1569,
+          "image": 2299,
+          "ping": 0,
+          "font": 20,
+          "xhr": 1,
+          "fetch": 0,
+          "other": 2077
+        },
+        "largest": [
+          {
+            "name": "CORTEIZ_ECOM_06_DETAILS_1822.jpg",
+            "host": "www.corteiz.com",
+            "kb": 1259,
+            "type": "image",
+            "mime": "image/jpeg"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "www.corteiz.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "www.corteiz.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "CORTEIZ_ECOM_06_DETAILS_1822.jpg",
+            "host": "www.corteiz.com",
+            "kb": 420,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "context-browser.CELsuekm.js",
+            "host": "www.corteiz.com",
+            "kb": 273,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "b8a38caafwfc02b679pa9a69aacmb7fb9dd3m.js",
+            "host": "www.corteiz.com",
+            "kb": 239,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "esnext-vendor.BGpCzk53.js",
+            "host": "www.corteiz.com",
+            "kb": 134,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "locale-en.DRf-P-RU.js",
+            "host": "www.corteiz.com",
+            "kb": 124,
+            "type": "other",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "www.corteiz.com",
+            "kb": 5783
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 150
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 130
+          },
+          {
+            "host": "tnc-app.herokuapp.com",
+            "kb": 103
+          },
+          {
+            "host": "static-tracking.klaviyo.com",
+            "kb": 45
+          },
+          {
+            "host": "limits.minmaxify.com",
+            "kb": 22
+          },
+          {
+            "host": "cdn.jsdelivr.net",
+            "kb": 16
+          },
+          {
+            "host": "cdnjs.cloudflare.com",
+            "kb": 11
+          },
+          {
+            "host": "fonts.googleapis.com",
+            "kb": 2
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdpDesktop": {
+      "url": "https://www.corteiz.com/products/dual-layer-litework-jacket-cream",
+      "device": "desktop-1440",
+      "throttled": false,
+      "wallMs": 10972,
+      "vitals": {
+        "cls": 0.015645562032482425,
+        "shifts": [
+          {
+            "v": 0.0155,
+            "t": 2965,
+            "src": [
+              "product-gallery-thumbs",
+              "flex-next"
+            ]
+          }
+        ],
+        "lcp": 3036,
+        "lcpEl": "IMG. src=2LAYERSHUKUJACKET_CREAM_01_64421a5e-b49c-4b74-a68c-c399010361b1.png",
+        "inp": 1136,
+        "longTasks": 1,
+        "longMs": 78,
+        "ttfb": 618,
+        "fcp": 1836,
+        "domContentLoaded": 2865,
+        "load": 3455
+      },
+      "transfer": {
+        "totalKB": 7355,
+        "requests": 178,
+        "byTypeKB": {
+          "document": 194,
+          "script": 1566,
+          "stylesheet": 102,
+          "image": 2299,
+          "other": 3173,
+          "ping": 0,
+          "font": 20,
+          "fetch": 0,
+          "xhr": 1
+        },
+        "largest": [
+          {
+            "name": "CORTEIZ_ECOM_06_DETAILS_1822.jpg",
+            "host": "www.corteiz.com",
+            "kb": 1259,
+            "type": "image",
+            "mime": "image/jpeg"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "www.corteiz.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "crtz-right-turn-v3_x320.gif",
+            "host": "cdn.shopify.com",
+            "kb": 655,
+            "type": "other",
+            "mime": "image/gif"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "www.corteiz.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "CORTEIZ_ECOM_06_DETAILS_1822.jpg",
+            "host": "www.corteiz.com",
+            "kb": 420,
+            "type": "image",
+            "mime": "image/webp"
+          },
+          {
+            "name": "context-browser.CELsuekm.js",
+            "host": "www.corteiz.com",
+            "kb": 273,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "b8a38caafwfc02b679pa9a69aacmb7fb9dd3m.js",
+            "host": "www.corteiz.com",
+            "kb": 239,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "esnext-vendor.BGpCzk53.js",
+            "host": "www.corteiz.com",
+            "kb": 134,
+            "type": "other",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "www.corteiz.com",
+            "kb": 6222
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 784
+          },
+          {
+            "host": "static.klaviyo.com",
+            "kb": 150
+          },
+          {
+            "host": "tnc-app.herokuapp.com",
+            "kb": 103
+          },
+          {
+            "host": "static-tracking.klaviyo.com",
+            "kb": 45
+          },
+          {
+            "host": "limits.minmaxify.com",
+            "kb": 22
+          },
+          {
+            "host": "cdn.jsdelivr.net",
+            "kb": 16
+          },
+          {
+            "host": "cdnjs.cloudflare.com",
+            "kb": 11
+          },
+          {
+            "host": "fonts.googleapis.com",
+            "kb": 2
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          }
+        ]
+      }
+    }
+  }
+}

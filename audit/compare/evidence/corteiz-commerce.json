@@ -1,0 +1,67 @@
+{
+  "tag": "corteiz",
+  "pdpBefore": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": true,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": false
+    },
+    "cookie": null,
+    "overlays": []
+  },
+  "bannerDismissed": false,
+  "pdp": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": true,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": false
+    },
+    "sizeControls": 5,
+    "price": "$200.00",
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": false,
+      "sizeGuide": true,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    }
+  },
+  "sizeGuide": {
+    "present": true,
+    "leadsToMeasurements": true
+  },
+  "delivery": {
+    "claim": null,
+    "mentionsFree": false
+  },
+  "soldOutSignal": {
+    "sizeEls": 5,
+    "visiblyDisabled": 0
+  },
+  "trustPages": {
+    "/policies/refund-policy": {
+      "status": 200,
+      "words": 38,
+      "placeholders": [],
+      "email": null
+    },
+    "/pages/contact": {
+      "status": 404
+    },
+    "/policies/shipping-policy": {
+      "status": 200,
+      "words": 120,
+      "placeholders": [],
+      "email": null
+    }
+  }
+}

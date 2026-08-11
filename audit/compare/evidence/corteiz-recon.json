@@ -1,0 +1,318 @@
+{
+  "tag": "corteiz",
+  "homeUrl": "https://www.corteiz.com/",
+  "fetchedAt": "2026-08-11T17:02:29.093Z",
+  "homeStatus": 200,
+  "botWall": false,
+  "home": {
+    "seo": {
+      "title": "CORTEIZ – CRTZRTW",
+      "titleLen": 17,
+      "metaDesc": "RULESTHEWORLD.",
+      "h1": "CRTZRTW",
+      "h1Count": 2,
+      "canonical": "https://www.corteiz.com/",
+      "ogImage": true,
+      "jsonLdTypes": [],
+      "robotsMeta": null,
+      "wordCount": 706
+    },
+    "overlaysAtArrival": [],
+    "cookieBanner": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": true,
+      "contact": false,
+      "sizeGuide": false,
+      "reviews": true,
+      "urgency": false,
+      "countdown": false
+    },
+    "platform": "Shopify"
+  },
+  "overlaysAt10s": [],
+  "nav": [
+    {
+      "t": "Skip to content",
+      "href": "#MainContent"
+    },
+    {
+      "t": "Checkout",
+      "href": "/cart"
+    },
+    {
+      "t": "Instagram",
+      "href": "https://instagram.com/corteiz"
+    },
+    {
+      "t": "ARCHIVE",
+      "href": "/blogs/archive/"
+    },
+    {
+      "t": "NEWSLETTER",
+      "href": "#"
+    },
+    {
+      "t": "SHIPPING POLICY",
+      "href": "/policies/shipping-policy"
+    },
+    {
+      "t": "TERMS OF SERVICE",
+      "href": "/policies/terms-of-service"
+    },
+    {
+      "t": "DUAL-LAYER LITEWORK JACKET [CREAM]",
+      "href": "/products/dual-layer-litework-jacket-cream"
+    },
+    {
+      "t": "DUAL-LAYER LITEWORK PANT [CREAM]",
+      "href": "/products/dual-layer-litework-pant-cream"
+    },
+    {
+      "t": "ARDWEAR LEATHER SHORT [BLACK]",
+      "href": "/products/ardwear-leather-short-black"
+    },
+    {
+      "t": "ARDWEAR LEATHER SHORT [RUST]",
+      "href": "/products/ardwear-leather-short-rust"
+    },
+    {
+      "t": "HANDWRITTEN DENIM JACKET [MIDWASH INDIGO",
+      "href": "/products/handwritten-denim-jacket-midwash-indigo"
+    },
+    {
+      "t": "HANDWRITTEN BAGGY JEANS [MIDWASH INDIGO]",
+      "href": "/products/handwritten-baggy-jeans-midwash-indigo"
+    },
+    {
+      "t": "ROSSA WINDBREAKER [NAVY]",
+      "href": "/products/rossa-windbreaker-navy"
+    },
+    {
+      "t": "ROSSA WINDBREAKER [GREY]",
+      "href": "/products/rossa-windbreaker-grey"
+    },
+    {
+      "t": "ROSSA SHORT [NAVY]",
+      "href": "/products/rossa-short-navy"
+    },
+    {
+      "t": "ROSSA SHORT [GREY]",
+      "href": "/products/rossa-short-grey"
+    },
+    {
+      "t": "ROSSA CAP [NAVY]",
+      "href": "/products/rossa-cap-navy"
+    },
+    {
+      "t": "ROSSA CAP [GREY]",
+      "href": "/products/rossa-cap-grey"
+    },
+    {
+      "t": "PISTA VELOUR TRACK JACKET [BLACK/BROWN]",
+      "href": "/products/pista-velour-track-jacket-black-brown"
+    },
+    {
+      "t": "PISTA VELOUR TRACK PANT [BLACK]",
+      "href": "/products/pista-velour-track-pant-black"
+    },
+    {
+      "t": "DIPLOMATIC ZIP HOODIE [OLIVE]",
+      "href": "/products/diplomatic-zip-hoodie-olive"
+    },
+    {
+      "t": "DIPLOMATIC SWEATSHORT [OLIVE]",
+      "href": "/products/diplomatic-sweatshort-olive"
+    },
+    {
+      "t": "MINI ISLAND ZIP HOODIE [BABY BLUE]",
+      "href": "/products/mini-island-zip-hoodie-baby-blue"
+    },
+    {
+      "t": "MINI ISLAND SWEATSHORT [BABY BLUE]",
+      "href": "/products/mini-island-sweatshort-baby-blue"
+    },
+    {
+      "t": "MINI ISLAND ZIP HOODIE [FOREST GREEN]",
+      "href": "/products/mini-island-zip-hoodie-forest-green"
+    },
+    {
+      "t": "MINI ISLAND SWEATSHORT [FOREST GREEN]",
+      "href": "/products/mini-island-sweatshort-forest-green"
+    },
+    {
+      "t": "ALPINE POLO SHIRT [RSLM NAVY]",
+      "href": "/products/alpine-polo-shirt-rslm-navy"
+    },
+    {
+      "t": "ALPINE POLO SHIRT [RSLM SAND]",
+      "href": "/products/alpine-polo-shirt-rslm-sand"
+    },
+    {
+      "t": "ALPINE POLO SHIRT [CLASSIQUE BLACK]",
+      "href": "/products/alpine-polo-shirt-classique-black"
+    },
+    {
+      "t": "ALPINE POLO SHIRT [BACH CAMO]",
+      "href": "/products/alpine-polo-shirt-bach-camo"
+    },
+    {
+      "t": "RUGBY LEAGUE JERSEY [BLACK]",
+      "href": "/products/rugby-league-jersey-black"
+    },
+    {
+      "t": "RUGBY LEAGUE JERSEY [ROYAL BLUE]",
+      "href": "/products/rugby-league-jersey-royal-blue"
+    },
+    {
+      "t": "OPEN MESH PANEL JERSEY [BLACK]",
+      "href": "/products/open-mesh-panel-jersey-black"
+    },
+    {
+      "t": "OPEN MESH PANEL JERSEY [PINK]",
+      "href": "/products/open-mesh-panel-jersey-pink"
+    },
+    {
+      "t": "OPEN MESH PANEL JERSEY [FOREST GREEN]",
+      "href": "/products/open-mesh-panel-jersey-forest-green"
+    },
+    {
+      "t": "OPEN MESH PANEL JERSEY [CREAM]",
+      "href": "/products/open-mesh-panel-jersey"
+    },
+    {
+      "t": "SANTI KNIT JERSEY [BURGUNDY]",
+      "href": "/products/santi-knit-jersey-burgundy"
+    },
+    {
+      "t": "VICE MESH KNIT VEST [OLIVE]",
+      "href": "/products/vice-mesh-knit-vest-olive"
+    },
+    {
+      "t": "TOURING JERSEY [BLACK]",
+      "href": "/products/touring-jersey-black"
+    },
+    {
+      "t": "TOURING JERSEY [SUNSET]",
+      "href": "/products/touring-jersey-sunset"
+    },
+    {
+      "t": "TOURING SHORT [BLACK]",
+      "href": "/products/touring-short-black"
+    },
+    {
+      "t": "TOURING SHORT [SUNSET]",
+      "href": "/products/touring-short-sunset"
+    },
+    {
+      "t": "CORTEIZ STORM NEW ERA 59FIFTY FITTED CAP",
+      "href": "/products/corteiz-storm-new-era-59fifty-fitted-cap-navy"
+    },
+    {
+      "t": "CORTEIZ STORM NEW ERA 59FIFTY FITTED CAP",
+      "href": "/products/corteiz-storm-new-era-59fifty-fitted-cap-cream"
+    },
+    {
+      "t": "CORTEIZ STORM NEW ERA 59FIFTY FITTED CAP",
+      "href": "/products/corteiz-storm-new-era-59fifty-fitted-cap-yellow"
+    },
+    {
+      "t": "DIPLOMATIC CAP [BLACK]",
+      "href": "/products/diplomatic-cap-black"
+    },
+    {
+      "t": "DIPLOMATIC CAP [OLIVE]",
+      "href": "/products/diplomatic-cap-olive"
+    },
+    {
+      "t": "DIPLOMATIC CAP [RED]",
+      "href": "/products/diplomatic-cap-red"
+    },
+    {
+      "t": "SINGLES TEE [BLACK]",
+      "href": "/products/singles-tee-black"
+    },
+    {
+      "t": "SINGLES TEE [WHITE]",
+      "href": "/products/singles-tee-white"
+    },
+    {
+      "t": "SINGLES TEE [GREEN]",
+      "href": "/products/singles-tee-green"
+    },
+    {
+      "t": "STARS TEE [BLACK]",
+      "href": "/products/stars-tee-black"
+    },
+    {
+      "t": "STARS TEE [WHITE]",
+      "href": "/products/stars-tee-white"
+    },
+    {
+      "t": "STARS TEE [BROWN]",
+      "href": "/products/stars-tee-brown"
+    },
+    {
+      "t": "DOGGY TEE [BLACK]",
+      "href": "/products/doggy-tee-black"
+    },
+    {
+      "t": "DOGGY TEE [WHITE]",
+      "href": "/products/doggy-tee-white"
+    },
+    {
+      "t": "DOGGY TEE [ORANGE]",
+      "href": "/products/doggy-tee-orange"
+    },
+    {
+      "t": "KINGDOM TEE [BLACK]",
+      "href": "/products/kingdom-tee-black"
+    },
+    {
+      "t": "KINGDOM TEE [WHITE]",
+      "href": "/products/kingdom-tee-white"
+    }
+  ],
+  "discovered": {
+    "pdpUrl": "https://www.corteiz.com/products/dual-layer-litework-jacket-cream",
+    "collectionUrl": null,
+    "productLinkCount": 53
+  },
+  "pdp": {
+    "seo": {
+      "title": "DUAL-LAYER LITEWORK JACKET [CREAM] – CRTZRTW",
+      "titleLen": 44,
+      "metaDesc": "2-LAYER POLY/NYLON JACKET. WATER RESISTANT. TRANSLUCENT TOP LAYER. REFLECTIVE BRANDING ON CHEST &amp; BACK. ADJUSTABLE SHOCK CORD BOTTOM HEM. RAGLAN CONSTRUCTION. YKK ZIPPER SIDE ENTRY POCKETS. MOE IS",
+      "h1": "DUAL-LAYER LITEWORK JACKET [CREAM]",
+      "h1Count": 1,
+      "canonical": "https://www.corteiz.com/products/dual-layer-litework-jacket-cream",
+      "ogImage": true,
+      "jsonLdTypes": [],
+      "robotsMeta": null,
+      "wordCount": 80
+    },
+    "firstViewport": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": true,
+      "atcVisible": false,
+      "atcText": null,
+      "stockWordVisible": false
+    },
+    "sizeControls": 5,
+    "price": "$200.00",
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": false,
+      "sizeGuide": true,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "cookieBanner": null,
+    "overlays": []
+  }
+}

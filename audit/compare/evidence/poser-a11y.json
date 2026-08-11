@@ -1,0 +1,113 @@
+{
+  "tag": "poser",
+  "pages": {
+    "home": {
+      "url": "https://www.poserlondon.com/",
+      "axeViolations": [],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "Skip to content",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "MENU",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "SEARCH",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "0 ITEMS",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Buzz Tee",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "DigitalMarketing Tee",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Pelican Jorts Dark Blue",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 252,
+        "clientWidth": 195,
+        "horizontalScroll": true
+      }
+    },
+    "pdp": {
+      "url": "https://www.poserlondon.com/products/buzz-tee",
+      "axeViolations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 1
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "Skip to content",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "MENU",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "SEARCH",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "0 ITEMS",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Home",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Buzz Tee",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Previous slide",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 252,
+        "clientWidth": 195,
+        "horizontalScroll": true
+      }
+    }
+  }
+}

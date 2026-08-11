@@ -1,0 +1,68 @@
+{
+  "tag": "poser",
+  "pdpBefore": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": true,
+      "atcVisible": true,
+      "atcText": "ADD TO CART",
+      "stockWordVisible": false
+    },
+    "cookie": null,
+    "overlays": []
+  },
+  "bannerDismissed": false,
+  "pdp": {
+    "fv": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": true,
+      "atcVisible": true,
+      "atcText": "ADD TO CART",
+      "stockWordVisible": false
+    },
+    "sizeControls": 15,
+    "price": "$39.00",
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": true,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    }
+  },
+  "sizeGuide": {
+    "present": false
+  },
+  "delivery": {
+    "claim": "1-3 working days for printing and shipping",
+    "mentionsFree": false
+  },
+  "soldOutSignal": {
+    "sizeEls": 10,
+    "visiblyDisabled": 5
+  },
+  "addToCart": {
+    "urlChanged": false,
+    "drawerOpened": false,
+    "feedbackText": null
+  },
+  "trustPages": {
+    "/policies/refund-policy": {
+      "status": 404
+    },
+    "/pages/contact": {
+      "status": 200,
+      "words": 50,
+      "placeholders": [],
+      "email": null
+    },
+    "/policies/shipping-policy": {
+      "status": 404
+    }
+  }
+}
