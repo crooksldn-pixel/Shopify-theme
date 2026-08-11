@@ -1,0 +1,124 @@
+{
+  "tag": "crooks-live",
+  "pages": {
+    "home": {
+      "url": "https://crooksldn.com/",
+      "axeViolations": [
+        {
+          "id": "scrollable-region-focusable",
+          "impact": "serious",
+          "nodes": 2
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "Skip to content",
+          "focusVisible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Menu",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Search",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "SHOPIFY-ACCOUNT",
+          "text": "",
+          "focusVisible": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Cart",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "CHARCOAL CELLBLOCK CREWNECK",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "CHARCOAL CELLBLOCK SHORTS",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    },
+    "pdp": {
+      "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+      "axeViolations": [
+        {
+          "id": "button-name",
+          "impact": "critical",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "nodes": 1
+        }
+      ],
+      "tabStops": [
+        {
+          "tag": "A",
+          "text": "Skip to content",
+          "focusVisible": true
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Menu",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Search",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "SHOPIFY-ACCOUNT",
+          "text": "",
+          "focusVisible": false
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Cart",
+          "focusVisible": true
+        },
+        {
+          "tag": "BUTTON",
+          "text": "",
+          "focusVisible": true
+        },
+        {
+          "tag": "A",
+          "text": "Skip to product information",
+          "focusVisible": true
+        }
+      ],
+      "zoom": {
+        "scrollWidth": 195,
+        "clientWidth": 195,
+        "horizontalScroll": false
+      }
+    }
+  }
+}

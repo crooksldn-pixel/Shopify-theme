@@ -1,0 +1,233 @@
+{
+  "tag": "crooks-live",
+  "homeUrl": "https://crooksldn.com/",
+  "fetchedAt": "2026-08-11T16:50:41.452Z",
+  "homeStatus": 200,
+  "botWall": false,
+  "home": {
+    "seo": {
+      "title": "CROOKSLDN",
+      "titleLen": 9,
+      "metaDesc": null,
+      "h1": "CROOKSLDN",
+      "h1Count": 1,
+      "canonical": "https://crooksldn.com/",
+      "ogImage": false,
+      "jsonLdTypes": [
+        "Organization"
+      ],
+      "robotsMeta": null,
+      "wordCount": 140
+    },
+    "overlaysAtArrival": [
+      {
+        "cls": "\n        menu-drawer\n        color-scheme-1\n      ",
+        "pct": 95,
+        "z": "18"
+      }
+    ],
+    "cookieBanner": null,
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": false,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "platform": "Shopify"
+  },
+  "overlaysAt10s": [
+    {
+      "cls": "\n        menu-drawer\n        color-scheme-1\n      ",
+      "pct": 95,
+      "z": "18"
+    }
+  ],
+  "nav": [
+    {
+      "t": "Skip to content",
+      "href": "#MainContent"
+    },
+    {
+      "t": "SHOP",
+      "href": "/collections/frontpage"
+    },
+    {
+      "t": "ALL",
+      "href": "/collections/all"
+    },
+    {
+      "t": "NEW",
+      "href": "/collections/new"
+    },
+    {
+      "t": "TEES",
+      "href": "/collections/tees"
+    },
+    {
+      "t": "DENIM",
+      "href": "/collections/denim"
+    },
+    {
+      "t": "SWEATS",
+      "href": "/collections/sweats"
+    },
+    {
+      "t": "TRACKSUITS",
+      "href": "/collections/tracksuits"
+    },
+    {
+      "t": "ACCESSORIES",
+      "href": "/collections/accessories"
+    },
+    {
+      "t": "TRACKING",
+      "href": "/pages/tracking"
+    },
+    {
+      "t": "Contact",
+      "href": "/pages/contact"
+    },
+    {
+      "t": "Log in",
+      "href": "https://crooksldn.com/customer_authentication/redirect?locale=en&region_country=US"
+    },
+    {
+      "t": "Continue shopping",
+      "href": "/collections/all"
+    },
+    {
+      "t": "CHARCOAL CELLBLOCK CREWNECK",
+      "href": "/products/charcoal-cellblock-crewneck?variant=53936235217239"
+    },
+    {
+      "t": "CHARCOAL CELLBLOCK SHORTS",
+      "href": "/products/charcoal-cellblock-shorts?variant=53936234856791"
+    },
+    {
+      "t": "BLUE WASH JORTS",
+      "href": "/products/cb1-wash-jorts?variant=53639824900439"
+    },
+    {
+      "t": "BLUE WASH OG JEANS",
+      "href": "/products/cb2-wash-jeans?variant=53639822344535"
+    },
+    {
+      "t": "GREY WASH JORTS",
+      "href": "/products/cb2-wash-jorts?variant=53639835582807"
+    },
+    {
+      "t": "GREY WASH OG JEANS",
+      "href": "/products/cb1-wash-jeans?variant=53639819231575"
+    },
+    {
+      "t": "BROADCAST TEE",
+      "href": "/products/broadcast-tee?variant=53936250716503"
+    },
+    {
+      "t": "MONEY CLIVE TEE",
+      "href": "/products/evil-clive-tee?variant=53936252223831"
+    },
+    {
+      "t": "3 CLIVES TEE",
+      "href": "/products/3-clives-tee?variant=53936250192215"
+    },
+    {
+      "t": "V2 BAGGIES",
+      "href": "/products/v2-baggies?variant=53075854197079"
+    },
+    {
+      "t": "CRXST★RZ T-SHIRT",
+      "href": "/products/crxst-rz-t-shirt?variant=53456984146263"
+    },
+    {
+      "t": "BLACK/BLUE MOTIONTEC™️ SOCKS",
+      "href": "/products/black-socks?variant=53455222964567"
+    },
+    {
+      "t": "WHITE/RED MOTIONTEC™️ SOCKS",
+      "href": "/products/white-socks?variant=53456567238999"
+    },
+    {
+      "t": "LARGE DUFFLE BAG",
+      "href": "/products/large-duffle-bag?variant=53284472717655"
+    },
+    {
+      "t": "CHARCOAL CELLBLOCK CREWNECK",
+      "href": "/products/charcoal-cellblock-crewneck"
+    },
+    {
+      "t": "CHARCOAL CELLBLOCK SHORTS",
+      "href": "/products/charcoal-cellblock-shorts"
+    },
+    {
+      "t": "BLUE WASH OG JEANS",
+      "href": "/products/cb2-wash-jeans"
+    },
+    {
+      "t": "BLUE WASH JORTS",
+      "href": "/products/cb1-wash-jorts"
+    },
+    {
+      "t": "Login",
+      "href": "/customer_authentication/login?return_to=%2F"
+    },
+    {
+      "t": "Explore store",
+      "href": "/collections/all"
+    }
+  ],
+  "discovered": {
+    "pdpUrl": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+    "collectionUrl": "https://crooksldn.com/collections/frontpage",
+    "productLinkCount": 18
+  },
+  "pdp": {
+    "seo": {
+      "title": "CHARCOAL CELLBLOCK CREWNECK – CROOKSLDN",
+      "titleLen": 39,
+      "metaDesc": "Cellblock crewneck, designed for everyday movement. Premium heavyweight fabric with a relaxed silhouette and signature 3D embroidery. 9–16 days delivery UK 16–21 days international",
+      "h1": "CHARCOAL CELLBLOCK CREWNECK",
+      "h1Count": 1,
+      "canonical": "https://crooksldn.com/products/charcoal-cellblock-crewneck",
+      "ogImage": true,
+      "jsonLdTypes": [
+        "Organization",
+        "ProductGroup"
+      ],
+      "robotsMeta": null,
+      "wordCount": 105
+    },
+    "firstViewport": {
+      "titleVisible": true,
+      "priceVisible": true,
+      "sizesVisible": false,
+      "atcVisible": false,
+      "atcText": "Add to cart",
+      "stockWordVisible": true
+    },
+    "sizeControls": 10,
+    "price": "$69.00",
+    "trust": {
+      "returns": false,
+      "shippingInfo": true,
+      "tracking": false,
+      "contact": false,
+      "sizeGuide": false,
+      "reviews": false,
+      "urgency": false,
+      "countdown": false
+    },
+    "cookieBanner": null,
+    "overlays": [
+      {
+        "cls": "\n        menu-drawer\n        color-scheme-1\n      ",
+        "pct": 95,
+        "z": "18"
+      }
+    ]
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "tag": "crooks-live",
+  "personas": {
+    "p1_coldClick": {
+      "wallMs": 22932,
+      "lcp": 17212,
+      "cls": 0.043,
+      "atLoad": {
+        "url": "/products/charcoal-cellblock-crewneck",
+        "overlays": [
+          {
+            "cls": "\n        menu-drawer\n        color-scheme-1\n      ",
+            "pct": 95,
+            "z": "18"
+          }
+        ],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": true,
+          "sizesVisible": false,
+          "atcVisible": false,
+          "atcText": "Add to cart",
+          "stockWordVisible": true
+        },
+        "price": "$69.00",
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": false,
+          "sizeGuide": false,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      },
+      "at5s": {
+        "url": "/products/charcoal-cellblock-crewneck",
+        "overlays": [
+          {
+            "cls": "\n        menu-drawer\n        color-scheme-1\n      ",
+            "pct": 95,
+            "z": "18"
+          }
+        ],
+        "cookie": null,
+        "fv": {
+          "titleVisible": true,
+          "priceVisible": true,
+          "sizesVisible": false,
+          "atcVisible": false,
+          "atcText": "Add to cart",
+          "stockWordVisible": true
+        },
+        "price": "$69.00",
+        "trust": {
+          "returns": false,
+          "shippingInfo": true,
+          "tracking": false,
+          "contact": false,
+          "sizeGuide": false,
+          "reviews": false,
+          "urgency": false,
+          "countdown": false
+        }
+      }
+    },
+    "p2_returningFan": {
+      "newSignal": {
+        "wordNew": false,
+        "dates": false,
+        "badges": 0,
+        "justDropped": false
+      }
+    },
+    "p3_sizeAnxious": {
+      "sizeGuidePresent": false,
+      "table": null
+    },
+    "p4_sceptic": {
+      "refund": {
+        "status": 200,
+        "words": 306,
+        "placeholders": [
+          "[crooksldn@gmail.com]",
+          "[crooksldn@gmail.com]",
+          "[Crooksldn LTD]"
+        ],
+        "email": "crooksldn@gmail.com",
+        "address": false
+      },
+      "contact": {
+        "status": 200,
+        "words": 17,
+        "placeholders": [],
+        "email": null,
+        "address": false
+      },
+      "about": {
+        "status": 404
+      }
+    },
+    "p5_aimless": {
+      "hooks": {
+        "newsletter": false,
+        "editorial": false,
+        "social": 0,
+        "anythingPlayful": false
+      }
+    },
+    "p6_a11y": {
+      "atcReachableByKeyboard": true
+    },
+    "p7_slow": {
+      "wallMs": 23566,
+      "lcp": 2340,
+      "productImgInFirstViewport": true
+    },
+    "p8_postPurchase": {
+      "hunt": {
+        "trackLink": true,
+        "accountLink": true,
+        "returnsLink": false,
+        "faqLink": false
+      }
+    },
+    "p9_comparison": {
+      "spine": {
+        "price": "$69.00",
+        "shippingCostStated": true,
+        "returnsCostStated": false,
+        "materialStated": false,
+        "madeWhere": false
+      }
+    },
+    "p10_gift": {
+      "aff": {
+        "giftCard": false,
+        "sizeHelpFromHome": false,
+        "exchangePolicyVisible": false,
+        "returnWindowVisible": false,
+        "categoriesClear": 19
+      }
+    }
+  }
+}

@@ -1,0 +1,417 @@
+{
+  "tag": "crooks-live",
+  "generatedAt": "2026-08-11T16:51:26.940Z",
+  "pages": {
+    "home": {
+      "url": "https://crooksldn.com/",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 31193,
+      "vitals": {
+        "cls": 0,
+        "shifts": [],
+        "lcp": 0,
+        "lcpEl": null,
+        "inp": 0,
+        "longTasks": 4,
+        "longMs": 455,
+        "ttfb": 872,
+        "fcp": 0,
+        "domContentLoaded": 0,
+        "load": 0
+      },
+      "transfer": {
+        "totalKB": 13129,
+        "requests": 375,
+        "byTypeKB": {
+          "stylesheet": 931,
+          "document": 1817,
+          "script": 4593,
+          "image": 2714,
+          "fetch": 633,
+          "font": 288,
+          "xhr": 0,
+          "ping": 0,
+          "other": 2152
+        },
+        "largest": [
+          {
+            "name": "cellcrew.webp",
+            "host": "crooksldn.com",
+            "kb": 952,
+            "type": "image",
+            "mime": "image/png"
+          },
+          {
+            "name": "",
+            "host": "crooksldn.com",
+            "kb": 935,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "index.js",
+            "host": "cdn.shopify.com",
+            "kb": 901,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "crooksldn.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "charcoal-cellblock-crewneck",
+            "host": "crooksldn.com",
+            "kb": 778,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "",
+            "host": "crooksldn.com",
+            "kb": 592,
+            "type": "fetch",
+            "mime": "text/html"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "crooksldn.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "v2baggies.webp",
+            "host": "crooksldn.com",
+            "kb": 419,
+            "type": "image",
+            "mime": "image/png"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "crooksldn.com",
+            "kb": 10270
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 1592
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 678
+          },
+          {
+            "host": "cdn.notify-me.io",
+            "kb": 329
+          },
+          {
+            "host": "omnisnippet1.com",
+            "kb": 135
+          },
+          {
+            "host": "shop.app",
+            "kb": 124
+          },
+          {
+            "host": "customer-first-focus.b-cdn.net",
+            "kb": 1
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "",
+            "kb": 0
+          },
+          {
+            "host": "forms.shopifyapps.com",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdp": {
+      "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+      "device": "mobile-390",
+      "throttled": true,
+      "wallMs": 24990,
+      "vitals": {
+        "cls": 0.04653871488062534,
+        "shifts": [
+          {
+            "v": 0.043,
+            "t": 3529,
+            "src": [
+              "product-information section section--page-width sp",
+              "undefined"
+            ]
+          }
+        ],
+        "lcp": 17568,
+        "lcpEl": "IMG.product-media__image src=cellcrew.webp",
+        "inp": 1198,
+        "longTasks": 30,
+        "longMs": 4159,
+        "ttfb": 402,
+        "fcp": 1656,
+        "domContentLoaded": 7851,
+        "load": 17440
+      },
+      "transfer": {
+        "totalKB": 10699,
+        "requests": 333,
+        "byTypeKB": {
+          "stylesheet": 672,
+          "document": 993,
+          "script": 4712,
+          "image": 1030,
+          "fetch": 659,
+          "font": 238,
+          "ping": 0,
+          "other": 2395,
+          "xhr": 0
+        },
+        "largest": [
+          {
+            "name": "cellcrew.webp",
+            "host": "crooksldn.com",
+            "kb": 952,
+            "type": "image",
+            "mime": "image/png"
+          },
+          {
+            "name": "index.js",
+            "host": "cdn.shopify.com",
+            "kb": 901,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "crooksldn.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "charcoal-cellblock-crewneck",
+            "host": "crooksldn.com",
+            "kb": 778,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "charcoal-cellblock-crewneck",
+            "host": "crooksldn.com",
+            "kb": 592,
+            "type": "fetch",
+            "mime": "text/html"
+          },
+          {
+            "name": "SizingPlugin.prod.js",
+            "host": "app.kiwisizing.com",
+            "kb": 527,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "crooksldn.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "fbevents.js",
+            "host": "connect.facebook.net",
+            "kb": 398,
+            "type": "script",
+            "mime": "application/x-javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "crooksldn.com",
+            "kb": 6805
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 1863
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 678
+          },
+          {
+            "host": "app.kiwisizing.com",
+            "kb": 618
+          },
+          {
+            "host": "cdn.notify-me.io",
+            "kb": 329
+          },
+          {
+            "host": "shop.app",
+            "kb": 270
+          },
+          {
+            "host": "omnisnippet1.com",
+            "kb": 135
+          },
+          {
+            "host": "customer-first-focus.b-cdn.net",
+            "kb": 1
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "",
+            "kb": 0
+          }
+        ]
+      }
+    },
+    "pdpDesktop": {
+      "url": "https://crooksldn.com/products/charcoal-cellblock-crewneck?variant=53936235217239",
+      "device": "desktop-1440",
+      "throttled": false,
+      "wallMs": 11213,
+      "vitals": {
+        "cls": 0.006838900819629308,
+        "shifts": [],
+        "lcp": 1292,
+        "lcpEl": "IMG.product-media__image src=cellcrew.webp",
+        "inp": 293,
+        "longTasks": 6,
+        "longMs": 437,
+        "ttfb": 376,
+        "fcp": 724,
+        "domContentLoaded": 2134,
+        "load": 3698
+      },
+      "transfer": {
+        "totalKB": 10665,
+        "requests": 370,
+        "byTypeKB": {
+          "document": 993,
+          "stylesheet": 672,
+          "other": 3304,
+          "script": 4655,
+          "font": 238,
+          "image": 183,
+          "fetch": 620,
+          "ping": 0,
+          "xhr": 0
+        },
+        "largest": [
+          {
+            "name": "index.js",
+            "host": "cdn.shopify.com",
+            "kb": 901,
+            "type": "script",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "hydrate.CebBjEcZ.js",
+            "host": "crooksldn.com",
+            "kb": 842,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "charcoal-cellblock-crewneck",
+            "host": "crooksldn.com",
+            "kb": 778,
+            "type": "document",
+            "mime": "text/html"
+          },
+          {
+            "name": "charcoal-cellblock-crewneck",
+            "host": "crooksldn.com",
+            "kb": 592,
+            "type": "fetch",
+            "mime": "text/html"
+          },
+          {
+            "name": "SizingPlugin.prod.js",
+            "host": "app.kiwisizing.com",
+            "kb": 527,
+            "type": "script",
+            "mime": "application/javascript"
+          },
+          {
+            "name": "helpers-getNormalizedPaymentMethodName.B0JATA8e.js",
+            "host": "crooksldn.com",
+            "kb": 482,
+            "type": "other",
+            "mime": "text/javascript"
+          },
+          {
+            "name": "fbevents.js",
+            "host": "connect.facebook.net",
+            "kb": 398,
+            "type": "script",
+            "mime": "application/x-javascript"
+          },
+          {
+            "name": "portable-wallets.en.js",
+            "host": "crooksldn.com",
+            "kb": 374,
+            "type": "script",
+            "mime": "text/javascript"
+          }
+        ],
+        "topHosts": [
+          {
+            "host": "crooksldn.com",
+            "kb": 6780
+          },
+          {
+            "host": "cdn.shopify.com",
+            "kb": 1853
+          },
+          {
+            "host": "connect.facebook.net",
+            "kb": 678
+          },
+          {
+            "host": "app.kiwisizing.com",
+            "kb": 618
+          },
+          {
+            "host": "cdn.notify-me.io",
+            "kb": 329
+          },
+          {
+            "host": "shop.app",
+            "kb": 270
+          },
+          {
+            "host": "omnisnippet1.com",
+            "kb": 135
+          },
+          {
+            "host": "customer-first-focus.b-cdn.net",
+            "kb": 1
+          },
+          {
+            "host": "otlp-http-production.shopifysvc.com",
+            "kb": 0
+          },
+          {
+            "host": "forms.shopifyapps.com",
+            "kb": 0
+          }
+        ]
+      }
+    }
+  }
+}
