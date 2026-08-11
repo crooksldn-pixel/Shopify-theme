@@ -1,4 +1,3 @@
-<!-- REPORT BODY DRAFT — executive summary, confirmed findings, and verdict are finalized after the skeptic pass. -->
 # CROOKSLDN theme gauntlet — 100-shopper audit: NEW redesign vs OLD live theme
 
 **Method.** 100 deterministic simulated shoppers (seed 42), the same roster walking BOTH themes across 7 journey scripts × 2 devices, over 246 real Playwright screenshots with per-step timing, console-error, failed-request and theme-ID-assertion instrumentation. 200 structured verdicts + 100 paired comparisons. **n=100 simulated shoppers is directional evidence, not a live A/B test** — every preference count below is simulation-internal. Personas never saw the brand brief (information firewall held: intended adjectives appear 0× as quoted-back language in persona output).
@@ -6,7 +5,15 @@
 - **OLD** = live published theme `202044309847` (CROOKSLDN — Dev), Horizon 3.5.0.
 - **NEW** = unpublished staging theme `202053779799` (CROOKSLDN — Staging), Horizon 3.5.0 — a genuinely different custom build (`crk-*` markup, own header/drawer/cart), not a re-skin. Homepage HTML is 5× smaller and structurally distinct. The panel was justified; this is not a colors-only change.
 
-<!-- EXEC-SUMMARY-PLACEHOLDER -->
+## Verdict: SHIP WITH FIXES
+
+**The redesign did what it set out to do on identity — and it did not just restyle the furniture.** It measurably moved perception from "reseller/template, plainly mid-priced" to "a real brand, plausibly premium," gave the store a name shoppers actually remember, and sharpened the audience read toward young streetwear buyers. On the evidence, that is expansion, not a re-skin. NEW also wins trust (2.73 vs 2.25 / 5), would-return (51% vs 32%), and the whole mobile experience (mobile preference 41–15, mobile completion 50% vs 40%).
+
+**But it shipped with a P0 hole in the money path: search is broken.** Tapping SEARCH on NEW lands on a dead page with no usable input — verified live, not an artifact — and search-led and returning shoppers hit a wall. That, not "the whole funnel," is the real conversion regression. The scary-looking buy-now number (43% complete vs OLD's 80%) is **mostly a measurement artifact**: OLD was captured on the live domain where checkout works, NEW on the preview link where Shopify blocks checkout. Correct for that and NEW's buy-now completion is ~57%; the durable, theme-caused loss is concentrated in search plus a few smaller regressions below.
+
+**Net:** publish the redesign — the identity gain is real and OLD is genuinely weak (research/support shoppers complete 0% on OLD because it has no findable returns policy). But **do not publish until search works**, and clear the four smaller regressions. Full fix list in Section G.
+
+Confirmed by the adversarial skeptic pass (5 of 10 top findings CONFIRMED, 5 WEAKENED with caveats attached, 0 fabricated). Only confirmed findings drive this summary; weakened ones carry their caveat inline below.
 
 ---
 
@@ -18,8 +25,8 @@ All percentages are of the personas in that cell. "Shopping intents" = buy-now +
 |---|---|---|---|
 | Task completion (all 100) | 47% | **52%** | NEW slightly ahead overall |
 | Add-to-cart rate (shopping intents) | 58% | **62%** | ~even, NEW nudge |
-| **Checkout-reach (buy-intent)** | **72%** | 48% | **OLD wins — NEW's money path regressed** |
-| Buy-now completion | **80%** | 43% | **OLD wins decisively** |
+| **Checkout-reach (buy-intent)** | 72% | 48%* | *OLD wins, but see S3 — confounded by live-vs-preview checkout block |
+| Buy-now completion | 80% | 43%* | *artifact-inflated; ~57% after correcting for the preview block (S3) |
 | Median steps to task end | 6 | 6 | identical |
 | Search success | 57% | 50% | OLD ahead; NEW desktop search 27% |
 | Mean trust (1–5) | 2.25 | **2.73** | NEW +0.48 |
@@ -62,13 +69,41 @@ All percentages are of the personas in that cell. "Shopping intents" = buy-now +
 
 ## C. Findings (ranked by conversion impact)
 
-<!-- CONFIRMED-FINDINGS-PLACEHOLDER -->
+Each finding carries its skeptic verdict. **CONFIRMED** = survived adversarial refutation; **WEAKENED** = core holds, caveat attached. Killed findings are not shown (none were). Evidence paths are relative to `theme-gauntlet/`.
+
+### Surprises (things you likely don't already know)
+
+**S1 — The identity reposition genuinely worked, and it's measurable. [F4 · CONFIRMED · severity 1, no fix]**
+"Feels like a reseller" went **31% → 0%**; "feels like a real brand" **49% → 81%**; price read **98% "mid" → 44% "premium"** (identical $69/$83 prices — pure perception). Shoppers recalled the brand name **unprompted 15× on NEW, 0× on OLD**. The skeptic's preview-artifact theory failed: OLD's header shows the CROOKSLDN wordmark yet earned zero name recall, so the shift is the concept working, not the preview chrome. This is the thesis ("brand authenticity + coherence") delivered. *Evidence: `data/aggregate.json` identity block; `data/verdicts/*.jsonl` brand_recall.*
+
+**S2 — Your OLD theme, not the redesign, is the real trust liability — and NEW already fixes it. [F3 · WEAKENED · severity 3]**
+On OLD, research-compare and lookup-support personas complete **0%**: the OLD PDP shows delivery timeframes and a free-shipping banner but **no findable returns policy anywhere in the UI**, and its policy pages aren't linked from any menu or footer. NEW puts a complete, specific policy on every PDP — 14-day returns, free UK shipping over £20 (Tracked 24 over £70), UK 1–2 / intl 7–14 day delivery — inside the "Chain of custody — shipping & returns" accordion. *Skeptic caveat: the original claim overstated OLD ("no shipping info at all") — OLD does show delivery timeframes; the true gap is the missing returns policy and unlinked policy pages. Also, NEW's accordion is collapsed by default, so cold shoppers still had to hunt (66 flagged) — the win is real but under-advertised.* *Evidence: `data/followup-accordions.json`; `captures/new/live/fu-crewneck-expanded.jpg`; `captures/old/j6/mobile/meta.jsonl`.*
+
+**S3 — The buy-now "regression" is mostly a measurement artifact; the real loss is search. [F1 · WEAKENED · severity 4→re-scored]**
+The raw numbers (buy-now completion 43% vs 80%, checkout-reach 48% vs 72%) are **not like-for-like**: OLD was captured on the live domain and reached a working `/checkouts/cn/…` page; NEW ran on the preview link where Shopify blocks checkout entirely. The 4 checkout-blocked personas alone are ~13 of the 37-point gap; crediting them lifts NEW buy-now to ~57%. Of 17 "affected" personas, 3 actually completed on NEW and 6 also failed on OLD. *Skeptic caveat: NEW's buy-now is plausibly somewhat worse, but the durable, theme-caused core is ~a third of the headline gap and traces to R1 (broken search), a missing above-fold price on some landings, and currency — not a broad funnel collapse.* *Evidence: `captures/{old,new}/j1/*/meta.jsonl`; `data/aggregate.json`.*
 
 ---
 
 ## D. What the new theme broke (mandatory regression section)
 
-<!-- REGRESSIONS-PLACEHOLDER -->
+Every persona was required to hunt for one thing NEW does worse. Five survived scrutiny; ranked by conversion impact.
+
+**R1 — Search is a dead end on NEW. [F2 · CONFIRMED · severity 4] — this is the ship blocker.**
+Tapping SEARCH in the NEW header lands on `/search` whose input sits in a `display:none` dialog that never opens; there is nothing to type into and keystrokes do nothing. Results render only if a query is already in the URL. OLD's search works — a predictive dropdown with product thumbnails on keystroke. **12 personas abandoned at search on NEW; 41 flagged it.** Verified on the live preview site, so not an automation artifact. Search-led buy (J2) and returning-customer (J7) intents depend on it, and NEW desktop search-success is 27% vs OLD's 91%. *Evidence: `captures/new/live/search-opened-mobile.jpg`, `captures/new/live/search-after-typing.jpg`, `captures/old/j2/mobile/step-02-search-suggest.jpg`, `data/followup-resolutions.json` (new_search).*
+
+**R2 — NEW dropped collection filtering and sorting entirely. [F5 · CONFIRMED · severity 2]**
+`/collections/all` on NEW shows only category tabs — zero sort or price-filter controls. OLD has an Availability filter and a Sort dropdown. Browse and gift personas trying to narrow by price or newness have no tool (14 flagged). Bounded by the small 14-product catalogue, but it's a capability OLD has and NEW removed. *Evidence: `captures/new/live/collection-all-desktop.jpg`, `captures/old/j4/desktop/step-03-filter-open.jpg`, `data/followup-resolutions.json` (new_collection_controls = []).*
+
+**R3 — "FILED [date]" labels read as sold-out on buyable products. [F9 · CONFIRMED · severity 2]**
+NEW's product cards alternate "AVAILABLE" and "FILED 13.07 / 03.08" with no legend. Shoppers read FILED as sold-out or archived — in their own words: "is FILED sold out?", "if that means sold out, say sold out", "archived?". The items are fully in stock (v2-baggies shows "FILED 13.07" yet Add-to-bag is enabled). The evidence-locker motif manufactures false unavailability signals (~30 flagged). *Evidence: `data/followup-resolutions.json` (new_filed_cards, new_filed_pdp_buyable atc enabled), `captures/new/live/collection-all-desktop.jpg`.*
+
+**R4 — The concept costs legibility for hurried, low-tech and low-vision shoppers. [F10 · CONFIRMED · severity 2]**
+The same heist/terminal concept that wins identity (S1) also generates the recall words "maze" (9), "broken-search" (6) and "popup" (4); 19% still say "template"; and ~11 personas couldn't guess a price because none was visible above the fold on some landings. OLD's failure mode is the opposite — legible but generic ("plain/basic/grey/empty"). **Do not fix this by reverting the identity; fix it by adding legibility** (visible price, working search, a FILED legend). *Evidence: `data/aggregate.json` identity.new.recall_words; `data/verdicts/*.jsonl` five_second.price_guess.*
+
+**R5 — Two smaller, real-but-narrower regressions (both WEAKENED on impact, not on existence):**
+- **Currency switcher removed. [F6 · WEAKENED · severity 3]** OLD's header carries a USD/GBP region selector; NEW has none anywhere. Combined with the "FREE UK SHIPPING OVER £20" banner over USD prices, international personas can't switch or reconcile the clash. *Caveat: the £/$ confusion itself is shared (both themes render USD — see E); the NEW-specific regression is the removed ability to switch, affecting the 14 listed personas, not the full 43.*
+- **Desktop account entry hidden. [F8 · WEAKENED · severity 2]** NEW puts ACCOUNT only inside the MENU drawer; OLD shows a persistent header person-icon. *Caveat: verified on desktop, but both themes reach the same working login by direct URL, and the affected set is mostly the few desktop returning personas, not the 19 originally listed.*
+- **CRACK THE CUFFS discount popup. [F7 · WEAKENED · severity 2]** A timed discount-puzzle modal covers content on NEW. *Caveat: desktop-only (did not reproduce on mobile within 20s), and the defensible count is ~20 personas, not 35 — the original number conflated it with cookie-consent reactions.*
 
 ---
 
@@ -91,7 +126,22 @@ All percentages are of the personas in that cell. "Shopping intents" = buy-now +
 
 ## G. Verdict & fix list
 
-<!-- VERDICT-PLACEHOLDER -->
+**SHIP WITH FIXES.** The redesign delivers the identity/authenticity/coherence half of its thesis (S1, confirmed) and beats a genuinely weak OLD theme on trust, would-return and mobile. It does **not** yet deliver the conversion half — but the block is a small set of fixable utilities, not the concept. Publish after R1; the rest can follow fast.
+
+Every fix below traces to a confirmed or structurally-verified finding. Effort is a rough guess (S/M/L).
+
+| # | Fix | Finding | Funnel stage | % of panel affected | Effort | Evidence |
+|---|---|---|---|---|---|---|
+| **P0** | **Make search work** — the `/search` input is in a `display:none` dialog; wire the SEARCH control to a functioning search field/overlay | R1 / F2 (CONFIRMED) | discovery | 41% flagged, 12 abandoned | **M** | `captures/new/live/search-opened-mobile.jpg` |
+| P1 | Add a legend or change "FILED [date]" so buyable ≠ reads-as-sold-out (e.g. keep FILED as a date stamp but show explicit stock/"AVAILABLE" state prominently) | R3 / F9 (CONFIRMED) | browse/PDP | ~30% flagged | S | `data/followup-resolutions.json` (new_filed_*) |
+| P1 | Restore collection sort + price filter on `/collections/all` | R2 / F5 (CONFIRMED) | browse | 14 flagged | M | `captures/new/live/collection-all-desktop.jpg` |
+| P1 | Surface a price above the fold on PDP/landing and open (or preview) the "Chain of custody" returns line by default — the policy is great, just hidden | R4/S2 (F10 CONFIRMED / F3) | first-impression + trust | ~11 no-price, 66 hunted returns | S | `data/followup-accordions.json` |
+| P2 | Re-add a currency/region switcher (OLD has one; NEW dropped it) | R5 / F6 (WEAKENED) | pricing/trust | 14 clean, up to 43 incl. shared | S | `data/followup-resolutions.json` (new_currency_ui) |
+| P2 | Add an ACCOUNT entry to the NEW desktop header (not only the MENU drawer) | R5 / F8 (WEAKENED) | returning | few desktop returning | S | `captures/live-checks.json` (new_account_desktop) |
+| P2 | Make the CRACK THE CUFFS popup dismissible-before-content / delay it / suppress on repeat visits | R5 / F7 (WEAKENED) | home | ~20 (desktop) | S | `captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg` |
+| P3 (store, not theme) | Fix Markets so UK copy and currency agree; build a real order-tracking page; smooth the Cloudflare wall on account login | E / F-SHARED1–3 | trust/support | both themes | M | Section E |
+
+**Before treating any of these as live bugs, confirm the do-nothing items (F-DN1–4) on the published theme** — the consent banner, disabled PayPal button, checkout block and USD pricing are preview/geo artifacts, not theme defects, and "fixing" them would be wasted work.
 
 ---
 

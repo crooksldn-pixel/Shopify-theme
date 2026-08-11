@@ -31,3 +31,8 @@
 
 ## Firewall
 - BRAND_INTENT and REDESIGN_THESIS are held in the orchestrator conversation only. They are not written into `data/` and do not appear in any persona card, capture script, or panel-batch prompt. They first touch disk in `report/report.md` at synthesis.
+- Firewall verification: scanned all 200 verdicts for the intended adjectives used as quoted-back brand language — 0 leaks (incidental use of common words like "cool" reflects independent shopper vocabulary, not brief contamination; the intended-adjective *coverage* metric in the report is computed at synthesis, not fed to personas). No batch required a rerun for leakage.
+
+## Panel execution note
+- First attempt ran the 10 batches via the Workflow tool; all 10 agents failed at the structured-output return step due to a harness-level permission-callback bug that stripped tool-call parameters (the shopper analysis itself was unaffected). Re-ran the identical batch instructions as 10 standard subagents (Agent tool) — all 10 returned 20 verdicts + 10 compares each = 200 verdicts / 100 comparisons, 0 malformed, all 200 persona-theme cells present. Logged so the rerun path is reproducible.
+- Skeptic pass: 1 adversarial subagent attacked the top-10 findings → 5 CONFIRMED (F2,F4,F5,F9,F10), 5 WEAKENED (F1,F3,F6,F7,F8), 0 KILLED. Verdicts in `data/skeptic-verdicts.json`; caveats folded into `report/report.md`. It caught a mis-cited popup screenshot (F7) and the live-vs-preview checkout confound behind the buy-now gap (F1) — both corrected in the report.

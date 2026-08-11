@@ -72,9 +72,9 @@
    "funnel_stage": "home/engagement",
    "themes_compared": {"new": "timed discount popup present", "old": "no timed popup observed"},
    "affected_personas": {"count": 35, "ids": ["P02","P04","P05","P07","P09","P12","P13","P17","P19","P20","P25","P26","P27","P29"]},
-   "evidence": ["captures/new/edge-zoom/desktop/meta.jsonl (popup at ~9s)", "captures/new/edge-zoom/desktop/step-02-zoom-pdp-200pct.jpg"],
+   "evidence": ["captures/new/edge-zoom/desktop/step-01-zoom-home-200pct.jpg (CRACK THE CUFFS modal)", "captures/new/edge-zoom/desktop/meta.jsonl"],
    "severity": 2,
-   "artifact_caveat": "IMPORTANT: a dedicated 20s mobile follow-up did NOT reproduce the popup (data/followup-resolutions.json new_mobile_timed_popup appearedWithin20s=false). It may be desktop-only, first-visit-only, or trigger past 20s. Personas judged from the single capture where it appeared; weight accordingly."
+   "artifact_caveat": "Skeptic correction: the originally-cited step-02-zoom-pdp screenshot showed the cookie-consent modal, not this popup. The real CRACK THE CUFFS modal is in step-01-zoom-home-200pct.jpg (desktop). It did NOT reproduce on mobile within 20s (new_mobile_timed_popup appearedWithin20s=false). Defensible count ~20 (desktop-predominant), not 35 — the higher number conflated it with cookie-consent reactions."
   },
   {
    "id": "F8", "skeptic_target": true, "section": "regression",
