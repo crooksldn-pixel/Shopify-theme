@@ -2755,7 +2755,8 @@
       "Unsafe attempt to load URL https://cdn.shopify.com/shopifycloud/customer-authentication-web/production/sprite-1b2b2c.svg"
      ]
     }
-   }
+   },
+   "live": {}
   },
   "old": {
    "edge": {
@@ -5417,8 +5418,9 @@
       "%c%d font-size:0;color:transparent NaN"
      ]
     }
-   }
+   },
+   "live": {}
   }
  },
- "builtAt": "2026-08-11T17:16:42.293Z"
+ "builtAt": "2026-08-11T18:06:17.710Z"
 }
