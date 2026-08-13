@@ -15,7 +15,8 @@
         "show_colourways": true,
         "empty_text": "NO ITEMS IN THE REGISTER MATCH THAT QUERY.",
         "empty_text_noquery": "ENTER A QUERY ABOVE, OR USE A DIRECT LINK.",
-        "docs_heading": "PAGES & ANSWERS"
+        "docs_heading": "PAGES & ANSWERS",
+        "search_heading_blank": ""
       }
     },
     "query": {

@@ -47,11 +47,13 @@
   if crk_heading == blank and collection and collection.title != blank
     assign crk_heading = collection.title
   endif
+  assign crk_show_count = true
   if crk_is_search
     if search.terms != blank
       assign crk_heading = section.settings.search_heading | replace: '[terms]', search.terms
     else
       assign crk_heading = section.settings.search_heading_blank
+      assign crk_show_count = false
     endif
   endif
 
@@ -105,7 +107,9 @@
       {%- if section.settings.subheading != blank -%}
         <p class="crk-eyebrow">{{ section.settings.subheading }}</p>
       {%- endif -%}
-      <span class="crk-log__count crk-micro">{{ crk_total }} {{ section.settings.count_label }}</span>
+      {%- if crk_show_count -%}
+        <span class="crk-log__count crk-micro">{{ crk_total }} {{ section.settings.count_label }}</span>
+      {%- endif -%}
     </header>
 
     {%- if section.settings.show_view_toggle -%}

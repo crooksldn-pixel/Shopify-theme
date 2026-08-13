@@ -61,6 +61,10 @@
       ></div>
     </form>
 
+    {%- if section.settings.hint != blank -%}
+      <p class="crk-micro crk-query__hint">{{ section.settings.hint }}</p>
+    {%- endif -%}
+
     {%- comment -%}
       DIRECT LINKS. Shopify indexes products, pages and articles — never
       /policies/*, and never a page whose text lives in a section rather than in
@@ -126,9 +130,7 @@
       {%- endfor -%}
     </ul>
 
-    {%- if section.settings.hint != blank -%}
-      <p class="crk-micro crk-query__hint">{{ section.settings.hint }}</p>
-    {%- endif -%}
+
   </div>
 </section>
 
