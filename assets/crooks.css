@@ -813,3 +813,14 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
   .shopify-policy__title h1 { font-size: 96px }
   .shopify-policy__body { font-size: 14px }
 }
+
+/* ---- query bar (search) ---- */
+.crk-query { padding-bottom: 0 }
+.crk-query__label { display: block; margin-bottom: 8px }
+.crk-query__form { display: flex; flex-wrap: wrap; gap: 8px }
+.crk-query__input { flex: 1 1 240px }
+.crk-query__go { flex: 0 0 auto }
+.crk-query__hint { display: block; margin-top: 8px }
+/* Safari paints a native clear control that does not follow the palette. */
+.crk-query__input::-webkit-search-decoration,
+.crk-query__input::-webkit-search-cancel-button { -webkit-appearance: none }

@@ -15,10 +15,15 @@
         "show_colourways": true,
         "empty_text": "NO RECORDS MATCH THAT QUERY."
       }
+    },
+    "query": {
+      "type": "crooks-search",
+      "settings": {}
     }
   },
   "order": [
     "carriage",
+    "query",
     "main"
   ]
 }

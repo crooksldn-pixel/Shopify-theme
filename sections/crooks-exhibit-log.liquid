@@ -391,8 +391,19 @@
       Shown by JS when a filter matches nothing. Visible without JS only when the
       collection itself is empty, which is the honest state in that case.
     {%- endcomment -%}
-    {%- if section.settings.empty_text != blank -%}
-      <p class="crk-log__empty"{% if crk_total > 0 %} hidden{% endif %}>{{ section.settings.empty_text }}</p>
+    {%- liquid
+      comment
+        A search page with no query has not failed to match anything — nothing
+        has been asked yet. Saying "no records match" there reads as a broken
+        search, which is exactly how it was reported.
+      endcomment
+      assign crk_empty = section.settings.empty_text
+      if crk_is_search and search.terms == blank
+        assign crk_empty = section.settings.empty_text_noquery
+      endif
+    -%}
+    {%- if crk_empty != blank -%}
+      <p class="crk-log__empty"{% if crk_total > 0 %} hidden{% endif %}>{{ crk_empty }}</p>
     {%- endif -%}
   </div>
 </section>
@@ -440,6 +451,7 @@
     { "type": "range", "id": "filed_days", "label": "Treat as recently filed for", "unit": "d", "min": 0, "max": 90, "step": 1, "default": 30 },
     { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "SOLD OUT" },
     { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO PRODUCTS MATCH THIS CATEGORY." },
+    { "type": "text", "id": "empty_text_noquery", "label": "Empty state text (search, no query yet)", "default": "ENTER A QUERY ABOVE TO SEARCH THE REGISTER." },
     { "type": "header", "content": "Advanced" },
     { "type": "text", "id": "anchor_id", "label": "Anchor id", "info": "Used by in-page links such as the hero's primary button.", "default": "exhibits" }
   ],

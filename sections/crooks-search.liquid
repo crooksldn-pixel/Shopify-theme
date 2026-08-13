@@ -1,0 +1,65 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  QUERY BAR.
+
+  The site had no reachable search field. The only input in the DOM belongs to
+  Horizon's <dialog-component id="search-modal">, which is opened by Horizon's
+  header — and the Crooks header replaced it, so nothing on the page could open
+  the modal. The header's SEARCH control is a plain link to /search, which
+  landed on a results page with no way to type a query. This is that field.
+
+  options[prefix]=last is Shopify's documented opt-in for prefix matching on the
+  last term. Measured on this store it changes nothing — "cliv", "hoodi" and
+  "jort" return identical counts with and without it, so the engine is already
+  matching partial words. It is kept because that behaviour is not ours to
+  guarantee, but the hint below deliberately does not promise it: "hood"
+  returns nothing while "hoodi" returns five.
+{%- endcomment -%}
+
+<section class="crk-root" data-crk-section="search-bar">
+  <div class="crk-inner crk-query">
+    {%- if section.settings.label != blank -%}
+      <label class="crk-eyebrow crk-query__label" for="crk-q">{{ section.settings.label }}</label>
+    {%- endif -%}
+
+    <form class="crk-query__form" action="{{ routes.search_url }}" method="get" role="search">
+      {%- comment -%}
+        The register renders products only, so the query is restricted to
+        products: otherwise a matching page or article inflates the result
+        count against a grid that never shows it.
+      {%- endcomment -%}
+      <input type="hidden" name="type" value="product">
+      <input type="hidden" name="options[prefix]" value="last">
+      <input
+        class="crk-input crk-query__input"
+        id="crk-q"
+        type="search"
+        name="q"
+        value="{{ search.terms | escape }}"
+        placeholder="{{ section.settings.placeholder | escape }}"
+        autocomplete="off"
+        {% if search.terms == blank %}autofocus{% endif %}
+      >
+      <button class="crk-btn crk-btn--fill crk-query__go" type="submit">{{ section.settings.button_label }}</button>
+    </form>
+
+    {%- if section.settings.hint != blank -%}
+      <p class="crk-micro crk-query__hint">{{ section.settings.hint }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Query bar",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "label", "label": "Field label", "default": "QUERY THE REGISTER" },
+    { "type": "text", "id": "placeholder", "label": "Placeholder", "default": "Item, category or case reference" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "SEARCH" },
+    { "type": "text", "id": "hint", "label": "Hint under the field", "default": "SEARCH BY ITEM, CATEGORY OR COLOUR" }
+  ],
+  "presets": [{ "name": "Crooks — Query bar" }]
+}
+{% endschema %}
