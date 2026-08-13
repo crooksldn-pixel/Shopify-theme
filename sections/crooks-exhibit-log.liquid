@@ -164,6 +164,35 @@
       </div>
     {%- endif -%}
 
+    {%- comment -%}
+      Non-product results. The grid is product-shaped — image, price, colourways
+      — so pages and articles get their own list rather than being dropped. This
+      is what makes a search for "returns" or "delivery" land somewhere useful.
+    {%- endcomment -%}
+    {%- if crk_is_search -%}
+      {%- assign crk_docs = 0 -%}
+      {%- capture crk_doclist -%}
+        {%- for item in crk_products -%}
+          {%- if item.object_type == 'product' -%}{%- continue -%}{%- endif -%}
+          {%- assign crk_docs = crk_docs | plus: 1 -%}
+          <li>
+            <a class="crk-links__item" href="{{ item.url }}">
+              <span class="crk-links__label">{{ item.title }}</span>
+              <span class="crk-links__note">{{ item.object_type | upcase }}</span>
+            </a>
+          </li>
+        {%- endfor -%}
+      {%- endcapture -%}
+      {%- if crk_docs > 0 -%}
+        <div class="crk-links crk-links--results">
+          {%- if section.settings.docs_heading != blank -%}
+            <p class="crk-eyebrow">{{ section.settings.docs_heading }}</p>
+          {%- endif -%}
+          <ul class="crk-links__list">{{ crk_doclist }}</ul>
+        </div>
+      {%- endif -%}
+    {%- endif -%}
+
     <ul class="crk-log__grid">
       {%- for product in crk_products -%}
         {%- liquid
@@ -452,6 +481,7 @@
     { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "SOLD OUT" },
     { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO PRODUCTS MATCH THIS CATEGORY." },
     { "type": "text", "id": "empty_text_noquery", "label": "Empty state text (search, no query yet)", "default": "ENTER A QUERY ABOVE TO SEARCH THE REGISTER." },
+    { "type": "text", "id": "docs_heading", "label": "Search: heading for page results", "default": "PAGES & ANSWERS" },
     { "type": "header", "content": "Advanced" },
     { "type": "text", "id": "anchor_id", "label": "Anchor id", "info": "Used by in-page links such as the hero's primary button.", "default": "exhibits" }
   ],

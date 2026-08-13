@@ -21,14 +21,14 @@
           "type": "clause",
           "settings": {
             "title": "Returns",
-            "body": "<p>You have 14 days from delivery to tell us you want to return something, and 14 days from then to post it back.</p><p>Items must be unworn, unwashed, and have their tags attached. Return postage is paid by you unless the item was faulty or we sent the wrong thing.</p><p><strong>Put your order number in the parcel.</strong> Without it we cannot match the return to you, and it will sit unrefunded.</p><p>Returns go to: Oairo UK Office, Bourne End Business Park, Bourne End, Buckinghamshire, SL8 5AS, United Kingdom.</p>"
+            "body": "<p>You have 14 days from delivery to tell us you want to return something, and 14 days from then to post it back.</p><p><strong>Start your return here: <a href=\"https://5wn03tnm.aftership.com\">the returns centre</a>.</strong> It takes your order number and email, and issues the return so we can match the parcel to you.</p><p>Items must be unworn, unwashed, and have their tags attached. Return postage is paid by you unless the item was faulty or we sent the wrong thing.</p><p>Returns go to: Oairo UK Office, Bourne End Business Park, Bourne End, Buckinghamshire, SL8 5AS, United Kingdom.</p>"
           }
         },
         "c4": {
           "type": "clause",
           "settings": {
             "title": "Size swaps",
-            "body": "<p>UK size swaps are free: we do not charge a fee for the exchange, and we cover the postage sending the new size out to you. You cover the postage sending the original back.</p><p>Swaps depend on the size being in stock. If it is not, we refund you instead.</p>"
+            "body": "<p>UK size swaps are free: we do not charge a fee for the exchange, and we cover the postage sending the new size out to you. You cover the postage sending the original back.</p><p>Request the swap through <a href=\"https://5wn03tnm.aftership.com\">the returns centre</a> and say which size you want. Swaps depend on that size being in stock — if it is not, we refund you instead.</p>"
           }
         },
         "c5": {

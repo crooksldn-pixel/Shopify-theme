@@ -13,12 +13,126 @@
         "show_view_toggle": false,
         "show_outline_toggle": false,
         "show_colourways": true,
-        "empty_text": "NO RECORDS MATCH THAT QUERY."
+        "empty_text": "NO ITEMS IN THE REGISTER MATCH THAT QUERY.",
+        "empty_text_noquery": "ENTER A QUERY ABOVE, OR USE A DIRECT LINK.",
+        "docs_heading": "PAGES & ANSWERS"
       }
     },
     "query": {
       "type": "crooks-search",
-      "settings": {}
+      "settings": {},
+      "blocks": {
+        "l1": {
+          "type": "link",
+          "settings": {
+            "label": "Start a return",
+            "url": "https://5wn03tnm.aftership.com",
+            "note": "RETURNS CENTRE",
+            "keywords": "return,returns,send back,exchange,swap,wrong size,refund me,returning",
+            "always": true,
+            "new_tab": true
+          }
+        },
+        "l2": {
+          "type": "link",
+          "settings": {
+            "label": "Refund policy",
+            "url": "shopify://policies/refund-policy",
+            "note": "POLICY",
+            "keywords": "refund,refunds,money back,cancel,chargeback",
+            "always": false,
+            "new_tab": false
+          }
+        },
+        "l3": {
+          "type": "link",
+          "settings": {
+            "label": "Shipping policy",
+            "url": "shopify://policies/shipping-policy",
+            "note": "POLICY",
+            "keywords": "shipping,delivery,postage,dispatch,courier,royal mail,when will,how long,tracked",
+            "always": false,
+            "new_tab": false
+          }
+        },
+        "l4": {
+          "type": "link",
+          "settings": {
+            "label": "Track your order",
+            "url": "shopify://pages/tracking",
+            "note": "TRACKING",
+            "keywords": "track,tracking,where is,order status,delivered,parcel,lost",
+            "always": true,
+            "new_tab": false
+          }
+        },
+        "l5": {
+          "type": "link",
+          "settings": {
+            "label": "Terms",
+            "url": "shopify://pages/terms",
+            "note": "TERMS",
+            "keywords": "terms,conditions,policy,rules,cancel,bot,customs,duties,statutory",
+            "always": false,
+            "new_tab": false
+          }
+        },
+        "l6": {
+          "type": "link",
+          "settings": {
+            "label": "Questions",
+            "url": "shopify://pages/faq",
+            "note": "FAQ",
+            "keywords": "faq,question,questions,help,how do i,support",
+            "always": true,
+            "new_tab": false
+          }
+        },
+        "l7": {
+          "type": "link",
+          "settings": {
+            "label": "Size guide",
+            "url": "shopify://pages/faq",
+            "note": "SIZING",
+            "keywords": "size,sizes,sizing,measurements,fit,chart,cm,inches,true to size",
+            "always": false,
+            "new_tab": false
+          }
+        },
+        "l8": {
+          "type": "link",
+          "settings": {
+            "label": "Contact us",
+            "url": "shopify://pages/contact",
+            "note": "CONTACT",
+            "keywords": "contact,email,message,dm,speak,human,support",
+            "always": false,
+            "new_tab": false
+          }
+        },
+        "l9": {
+          "type": "link",
+          "settings": {
+            "label": "Privacy policy",
+            "url": "shopify://policies/privacy-policy",
+            "note": "POLICY",
+            "keywords": "privacy,data,cookies,gdpr",
+            "always": false,
+            "new_tab": false
+          }
+        }
+      },
+      "block_order": [
+        "l1",
+        "l2",
+        "l3",
+        "l4",
+        "l5",
+        "l6",
+        "l7",
+        "l8",
+        "l9"
+      ]
     }
   },
   "order": [

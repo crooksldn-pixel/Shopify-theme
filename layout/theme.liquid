@@ -178,7 +178,17 @@
       {% sections 'footer-group' %}
     </footer>
 
-    {% render 'search-modal' %}
+    {%- comment -%}
+      Horizon's search modal is not rendered. Nothing can open it by pointer —
+      the Crooks header replaced Horizon's, and its search control is a link to
+      /search — but predictive-search.js binds ⌘K globally
+      (assets/predictive-search.js:95), so the old cream search bar could still
+      be summoned over the terminal. One search surface, not two.
+
+      Removing the render also drops predictive-search.js and dialog.js from
+      every page. To put it back, restore the render tag below.
+      {% render 'search-modal' %}
+    {%- endcomment -%}
 
     {% if settings.quick_add or settings.mobile_quick_add %}
       {% render 'quick-add-modal' %}

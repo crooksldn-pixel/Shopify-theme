@@ -824,3 +824,22 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
 /* Safari paints a native clear control that does not follow the palette. */
 .crk-query__input::-webkit-search-decoration,
 .crk-query__input::-webkit-search-cancel-button { -webkit-appearance: none }
+
+/* ---- direct links + page results ---- */
+.crk-links { margin-top: 20px }
+.crk-links--results { margin: 0 0 28px }
+.crk-links__list { margin-top: 8px; border-top: 1px solid var(--crk-line) }
+.crk-links__item { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; padding: 12px 0; border-bottom: 1px solid var(--crk-line) }
+.crk-links__item:hover .crk-links__label { color: var(--crk-lav) }
+.crk-links__label { font-weight: 500; font-size: 13px; letter-spacing: .04em; text-transform: uppercase }
+.crk-links__note { flex: none; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-micro) }
+
+/* ---- typeahead ---- */
+.crk-query__form { position: relative }
+.crk-suggest { position: absolute; z-index: 60; top: 100%; left: 0; right: 0; margin-top: -1px; max-height: min(60vh, 460px); overflow-y: auto; background: var(--crk-panel); border: 1px solid var(--crk-line) }
+.crk-suggest__head { display: block; padding: 12px 16px 4px }
+.crk-suggest__row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 16px; border-top: 1px solid var(--crk-line) }
+.crk-suggest__row:hover, .crk-suggest__row[data-active="true"], .crk-suggest__row:focus-visible { background: var(--crk-tray) }
+.crk-suggest__img { flex: none; width: 40px; height: 40px; object-fit: cover; background: var(--crk-tray); border: 1px solid var(--crk-line) }
+.crk-suggest__label { flex: 1 1 auto; min-width: 0; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.crk-suggest__note { flex: none; font-size: 11px; color: var(--crk-dim) }

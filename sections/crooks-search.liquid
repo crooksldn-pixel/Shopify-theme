@@ -1,4 +1,5 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-search.js' | asset_url }}" defer></script>
 
 {%- comment -%}
   QUERY BAR.
@@ -25,11 +26,10 @@
 
     <form class="crk-query__form" action="{{ routes.search_url }}" method="get" role="search">
       {%- comment -%}
-        The register renders products only, so the query is restricted to
-        products: otherwise a matching page or article inflates the result
-        count against a grid that never shows it.
+        Products AND pages: "refund", "returns" and "delivery" are answers,
+        not garments, and the register now renders both.
       {%- endcomment -%}
-      <input type="hidden" name="type" value="product">
+      <input type="hidden" name="type" value="product,page">
       <input type="hidden" name="options[prefix]" value="last">
       <input
         class="crk-input crk-query__input"
@@ -42,7 +42,89 @@
         {% if search.terms == blank %}autofocus{% endif %}
       >
       <button class="crk-btn crk-btn--fill crk-query__go" type="submit">{{ section.settings.button_label }}</button>
+
+      {%- comment -%}
+        Suggestions land here. Populated by crooks-search.js from
+        /search/suggest.json; the curated links below are handed over as JSON in
+        a data attribute rather than inlined into a script tag.
+      {%- endcomment -%}
+      <div
+        class="crk-suggest"
+        id="crk-suggest"
+        role="listbox"
+        aria-label="{{ section.settings.suggest_label | escape }}"
+        hidden
+        data-crk-suggest
+        data-crk-heading-products="{{ section.settings.suggest_products | escape }}"
+        data-crk-heading-links="{{ section.settings.suggest_links | escape }}"
+        data-crk-money-format="{{ shop.money_format | escape }}"
+      ></div>
     </form>
+
+    {%- comment -%}
+      DIRECT LINKS. Shopify indexes products, pages and articles — never
+      /policies/*, and never a page whose text lives in a section rather than in
+      page.content, which is true of both Terms and FAQ. So "refund" would find
+      nothing however the query was widened. These links are matched against the
+      query in Liquid, which does not depend on the search index at all.
+    {%- endcomment -%}
+    {%- assign crk_q = search.terms | downcase -%}
+    {%- assign crk_hits = 0 -%}
+    {%- capture crk_links -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type != 'link' or block.settings.label == blank -%}{%- continue -%}{%- endif -%}
+        {%- assign crk_show = false -%}
+        {%- if crk_q == blank -%}
+          {%- if block.settings.always -%}{%- assign crk_show = true -%}{%- endif -%}
+        {%- else -%}
+          {%- assign crk_keys = block.settings.keywords | downcase | split: ',' -%}
+          {%- for k in crk_keys -%}
+            {%- assign crk_k = k | strip -%}
+            {%- if crk_k != blank and crk_q contains crk_k -%}
+              {%- assign crk_show = true -%}
+              {%- break -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+        {%- if crk_show -%}
+          {%- assign crk_hits = crk_hits | plus: 1 -%}
+          <li {{ block.shopify_attributes }}>
+            <a class="crk-links__item" href="{{ block.settings.url | default: '#' }}"{% if block.settings.new_tab %} target="_blank" rel="noopener noreferrer"{% endif %}>
+              <span class="crk-links__label">{{ block.settings.label }}</span>
+              {%- if block.settings.note != blank -%}
+                <span class="crk-links__note">{{ block.settings.note }}</span>
+              {%- endif -%}
+            </a>
+          </li>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+
+    {%- if crk_hits > 0 -%}
+      <div class="crk-links">
+        {%- if section.settings.links_heading != blank -%}
+          <p class="crk-eyebrow">{{ section.settings.links_heading }}</p>
+        {%- endif -%}
+        <ul class="crk-links__list">{{ crk_links }}</ul>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%}
+      The same links, unfiltered, for the typeahead to match against as you
+      type. Data travels in attributes — never Liquid inside a script tag.
+    {%- endcomment -%}
+    <ul class="crk-sr" data-crk-linkdata aria-hidden="true">
+      {%- for block in section.blocks -%}
+        {%- if block.type != 'link' or block.settings.label == blank -%}{%- continue -%}{%- endif -%}
+        <li
+          data-label="{{ block.settings.label | escape }}"
+          data-url="{{ block.settings.url | default: '#' | escape }}"
+          data-note="{{ block.settings.note | escape }}"
+          data-keywords="{{ block.settings.keywords | downcase | escape }}"
+          data-new-tab="{{ block.settings.new_tab }}"
+        ></li>
+      {%- endfor -%}
+    </ul>
 
     {%- if section.settings.hint != blank -%}
       <p class="crk-micro crk-query__hint">{{ section.settings.hint }}</p>
@@ -58,8 +140,29 @@
     { "type": "text", "id": "label", "label": "Field label", "default": "QUERY THE REGISTER" },
     { "type": "text", "id": "placeholder", "label": "Placeholder", "default": "Item, category or case reference" },
     { "type": "text", "id": "button_label", "label": "Button label", "default": "SEARCH" },
-    { "type": "text", "id": "hint", "label": "Hint under the field", "default": "SEARCH BY ITEM, CATEGORY OR COLOUR" }
+    { "type": "text", "id": "hint", "label": "Hint under the field", "default": "SEARCH BY ITEM, CATEGORY OR COLOUR" },
+    { "type": "header", "content": "Suggestions" },
+    { "type": "text", "id": "suggest_label", "label": "Suggestion list landmark", "info": "Screen-reader name for the live results.", "default": "Search suggestions" },
+    { "type": "text", "id": "suggest_products", "label": "Products heading", "default": "ITEMS" },
+    { "type": "text", "id": "suggest_links", "label": "Links heading", "default": "PAGES" },
+    { "type": "header", "content": "Direct links" },
+    { "type": "text", "id": "links_heading", "label": "Direct links heading", "default": "DIRECT LINKS" }
   ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Direct link",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label" },
+        { "type": "url", "id": "url", "label": "Link" },
+        { "type": "text", "id": "note", "label": "Note beside the label" },
+        { "type": "text", "id": "keywords", "label": "Keywords", "info": "Comma separated. The link shows when the query contains any of them." },
+        { "type": "checkbox", "id": "always", "label": "Show before anything is typed", "default": false },
+        { "type": "checkbox", "id": "new_tab", "label": "Open in a new tab", "default": false }
+      ]
+    }
+  ],
+  "max_blocks": 16,
   "presets": [{ "name": "Crooks — Query bar" }]
 }
 {% endschema %}
