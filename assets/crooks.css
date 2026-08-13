@@ -41,7 +41,8 @@
      --crk-font-display VT323 for the big terminal display type.
    ============================================================ */
 
-.crk-root {
+.crk-root,
+main:has(> .shopify-policy__container) {
   /* fonts */
   --crk-font-mono: 'CRX Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --crk-font-display: 'VT323', ui-monospace, monospace;
@@ -84,7 +85,8 @@
 
 /* ---- canonical tokens: LIGHT (bone). Re-derived, not inverted. ----
    Set on :root by the theme toggle, so every .crk-root on the page follows. */
-:root[data-crk-theme="light"] .crk-root {
+:root[data-crk-theme="light"] .crk-root,
+:root[data-crk-theme="light"] main:has(> .shopify-policy__container) {
   --crk-ground: #FAFAFB;
   --crk-panel: #FFFFFF;
   --crk-tray: #F1F1F3;
@@ -720,3 +722,94 @@
 /* A card with no model image at all keeps its product image rather than going
    blank — the same failure the single-image hover fix addressed. */
 .crk-root[data-crk-view="model"] .crk-log__cell:not([data-crk-has-model]) .crk-card__img--main { display: block }
+
+/* ============================================================
+   TERMS, QUESTIONS, AND THE SHOPIFY-RENDERED POLICY PAGES
+
+   Three surfaces, one visual language:
+     .crk-terms   our own /pages/terms — numbered clauses, evidence-schedule
+                  spacing, plain English inside.
+     .crk-faq     native <details> accordion, no JavaScript.
+     .shopify-policy__*   Shopify's markup on /policies/*. There is no `policy`
+                  template in Online Store 2.0, so sections cannot be added
+                  there — this is a skin over markup we do not control. Without
+                  it those pages render on Horizon's cream #F4F1EA between the
+                  terminal header and footer.
+   ============================================================ */
+
+/* ---- terms ---- */
+.crk-terms__head { border-bottom: 1px solid var(--crk-line); padding-bottom: 24px }
+.crk-terms__heading { margin-top: 8px }
+.crk-terms__standfirst { margin-top: 16px; max-width: 56ch; color: var(--crk-paper) }
+.crk-terms__revised { display: block; margin-top: 16px }
+
+.crk-terms__index { border-bottom: 1px solid var(--crk-line); padding: 16px 0 }
+.crk-terms__index ol { display: grid; gap: 4px 24px }
+@media (min-width: 768px) { .crk-terms__index ol { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (min-width: 1024px) { .crk-terms__index ol { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+.crk-terms__index a { display: flex; gap: 12px; align-items: baseline; min-height: 32px; padding: 4px 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--crk-dim) }
+.crk-terms__index a:hover { color: var(--crk-text) }
+.crk-terms__index-num { font-family: var(--crk-font-display); font-size: 16px; color: var(--crk-lav) }
+
+.crk-terms__clause { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 0 16px; border-bottom: 1px solid var(--crk-line); padding: 28px 0; scroll-margin-top: 96px }
+.crk-terms__num { font-family: var(--crk-font-display); font-size: 26px; line-height: 1; color: var(--crk-lav) }
+.crk-terms__title { font-family: var(--crk-font-display); font-weight: 400; font-size: 22px; line-height: 1; text-transform: uppercase; margin-bottom: 12px }
+.crk-terms__body { font-size: 13px; line-height: 1.65; color: var(--crk-paper) }
+.crk-terms__body > :last-child { margin-bottom: 0 }
+@media (min-width: 1024px) {
+  .crk-terms__clause { grid-template-columns: 88px minmax(0, 1fr); gap: 0 24px; padding: 36px 0 }
+  .crk-terms__num { font-size: 34px }
+  .crk-terms__title { font-size: 28px }
+  .crk-terms__body { font-size: 14px }
+}
+
+.crk-terms__legal { padding-top: 28px }
+.crk-terms__legal-note { display: block; margin-bottom: 12px }
+.crk-terms__legal-links { display: flex; flex-wrap: wrap; gap: 8px 24px }
+.crk-terms__legal-links a { display: inline-flex; align-items: center; min-height: 44px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--crk-lav); border-bottom: 1px solid transparent }
+.crk-terms__legal-links a:hover { border-bottom-color: var(--crk-lav) }
+
+/* ---- questions ---- */
+.crk-faq__head { border-bottom: 1px solid var(--crk-line); padding-bottom: 24px; margin-bottom: 8px }
+.crk-faq__heading { margin-top: 8px }
+.crk-faq__standfirst { margin-top: 16px; max-width: 56ch; color: var(--crk-paper) }
+.crk-faq__group { display: block; margin: 32px 0 4px }
+.crk-faq__group:first-child { margin-top: 16px }
+
+.crk-faq__item { border-bottom: 1px solid var(--crk-line) }
+.crk-faq__q { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 16px 0; cursor: pointer; list-style: none; font-weight: 500; font-size: 13px; letter-spacing: .04em; text-transform: uppercase }
+.crk-faq__q::-webkit-details-marker { display: none }
+.crk-faq__q:hover { color: var(--crk-lav) }
+.crk-faq__mark { flex: none; font-family: var(--crk-font-display); font-size: 22px; line-height: 1; color: var(--crk-lav) }
+.crk-faq__mark::after { content: '+' }
+.crk-faq__item[open] .crk-faq__mark::after { content: '\2212' }
+.crk-faq__a { padding-bottom: 20px; max-width: 68ch; font-size: 13px; line-height: 1.65; color: var(--crk-paper) }
+.crk-faq__a > :last-child { margin-bottom: 0 }
+.crk-faq__foot { margin-top: 32px; font-size: 12px; color: var(--crk-dim) }
+@media (min-width: 1024px) {
+  .crk-faq__q { font-size: 14px }
+  .crk-faq__a { font-size: 14px }
+}
+
+/* ---- Shopify's policy pages ---- */
+main:has(> .shopify-policy__container) { background: var(--crk-ground); color: var(--crk-text); font-family: var(--crk-font-mono) }
+.shopify-policy__container { max-width: 1320px; margin: 0 auto; padding: 48px 16px }
+.shopify-policy__title { border-bottom: 1px solid var(--crk-line); padding-bottom: 24px; margin-bottom: 32px }
+.shopify-policy__title h1 { font-family: var(--crk-font-display); font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: 0; text-transform: uppercase; text-align: left; color: var(--crk-text) }
+.shopify-policy__body { max-width: 68ch; font-size: 13px; line-height: 1.65; color: var(--crk-paper) }
+.shopify-policy__body h2, .shopify-policy__body h3, .shopify-policy__body h4 { font-family: var(--crk-font-display); font-weight: 400; text-transform: uppercase; line-height: 1; color: var(--crk-text); margin: 32px 0 12px }
+.shopify-policy__body h2 { font-size: 22px }
+.shopify-policy__body h3, .shopify-policy__body h4 { font-size: 18px }
+.shopify-policy__body p { margin: 0 0 16px }
+.shopify-policy__body ul, .shopify-policy__body ol { margin: 0 0 16px; padding-left: 24px }
+.shopify-policy__body ul { list-style: square }
+.shopify-policy__body strong { color: var(--crk-text) }
+.shopify-policy__body a { color: var(--crk-lav) }
+.shopify-policy__body code { font-family: var(--crk-font-mono); font-size: inherit; background: none; color: var(--crk-lav) }
+.shopify-policy__body table { border-collapse: collapse; width: 100% }
+.shopify-policy__body th, .shopify-policy__body td { border: 1px solid var(--crk-line); padding: 8px; text-align: left }
+@media (min-width: 1024px) {
+  .shopify-policy__container { padding: 64px 24px }
+  .shopify-policy__title h1 { font-size: 96px }
+  .shopify-policy__body { font-size: 14px }
+}

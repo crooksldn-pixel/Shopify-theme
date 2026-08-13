@@ -8,7 +8,7 @@
           <h2 class="crk-eyebrow">{{ block.settings.heading }}</h2>
         {%- endif -%}
         <ul>
-          {%- for i in (1..5) -%}
+          {%- for i in (1..6) -%}
             {%- liquid
               case i
                 when 1
@@ -26,6 +26,9 @@
                 when 5
                   assign lbl = block.settings.label_5
                   assign url = block.settings.url_5
+                when 6
+                  assign lbl = block.settings.label_6
+                  assign url = block.settings.url_6
               endcase
             -%}
             {%- comment -%} A row with no label does not render. {%- endcomment -%}
@@ -39,7 +42,15 @@
   </div>
   {%- if section.settings.base_line != blank -%}
     <p class="crk-footer__base crk-micro">
-      {{ section.settings.base_line | replace: '[year]', 'now' | date: '%Y' }}
+      {%- comment -%}
+        Filters chain left to right with no grouping, so
+        `base_line | replace: '[year]', 'now' | date: '%Y'` fed the WHOLE
+        replaced sentence to `date`, which is not a date, so it passed
+        through untouched and the footer read © now. Format first, then
+        substitute.
+      {%- endcomment -%}
+      {%- assign crk_year = 'now' | date: '%Y' -%}
+      {{ section.settings.base_line | replace: '[year]', crk_year }}
     </p>
   {%- endif -%}
 </section>
@@ -72,7 +83,9 @@
         { "type": "text", "id": "label_4", "label": "Link 4 label" },
         { "type": "url", "id": "url_4", "label": "Link 4 URL" },
         { "type": "text", "id": "label_5", "label": "Link 5 label" },
-        { "type": "url", "id": "url_5", "label": "Link 5 URL" }
+        { "type": "url", "id": "url_5", "label": "Link 5 URL" },
+        { "type": "text", "id": "label_6", "label": "Link 6 label" },
+        { "type": "url", "id": "url_6", "label": "Link 6 URL" }
       ]
     }
   ],

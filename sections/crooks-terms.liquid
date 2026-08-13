@@ -1,0 +1,120 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  TERMS — the customer-facing trading terms.
+
+  Shopify has no `policy` template, so /policies/* pages cannot take sections:
+  they render Shopify's own bare container inside theme.liquid. This page is
+  therefore the branded, plain-English document, and the legal texts stay where
+  they are — linked from the rail at the bottom via the `shop.*_policy` objects,
+  so those links can never point at a page that does not exist.
+
+  Every clause is a block, so wording is editable without touching code.
+{%- endcomment -%}
+
+<section class="crk-root crk-section" data-crk-section="terms">
+  <div class="crk-inner crk-terms">
+    <header class="crk-terms__head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="crk-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h1 class="crk-h1 crk-terms__heading">{{ section.settings.heading }}</h1>
+      {%- endif -%}
+      {%- if section.settings.standfirst != blank -%}
+        <p class="crk-terms__standfirst">{{ section.settings.standfirst }}</p>
+      {%- endif -%}
+      {%- if section.settings.revised != blank -%}
+        <p class="crk-micro crk-terms__revised">{{ section.settings.revised_label }} {{ section.settings.revised }}</p>
+      {%- endif -%}
+    </header>
+
+    {%- if section.settings.show_index and section.blocks.size > 1 -%}
+      <nav class="crk-terms__index" aria-label="{{ section.settings.index_label | escape }}">
+        <ol>
+          {%- for block in section.blocks -%}
+            {%- assign anchor = block.settings.title | handleize -%}
+            <li>
+              <a href="#{{ anchor }}">
+                <span class="crk-terms__index-num">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+                <span>{{ block.settings.title }}</span>
+              </a>
+            </li>
+          {%- endfor -%}
+        </ol>
+      </nav>
+    {%- endif -%}
+
+    <ol class="crk-terms__list">
+      {%- for block in section.blocks -%}
+        {%- assign anchor = block.settings.title | handleize -%}
+        <li class="crk-terms__clause" id="{{ anchor }}" {{ block.shopify_attributes }}>
+          <p class="crk-terms__num" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</p>
+          <div class="crk-terms__col">
+            {%- if block.settings.title != blank -%}
+              <h2 class="crk-terms__title">{{ block.settings.title }}</h2>
+            {%- endif -%}
+            {%- if block.settings.body != blank -%}
+              <div class="crk-prose crk-terms__body">{{ block.settings.body }}</div>
+            {%- endif -%}
+          </div>
+        </li>
+      {%- endfor -%}
+    </ol>
+
+    {%- comment -%}
+      Legal rail. Built from the shop policy objects rather than hard-coded
+      hrefs: whatever is filled in inside the admin is what gets linked, and an
+      empty policy simply does not render a dead link.
+    {%- endcomment -%}
+    <div class="crk-terms__legal">
+      {%- if section.settings.legal_note != blank -%}
+        <p class="crk-micro crk-terms__legal-note">{{ section.settings.legal_note }}</p>
+      {%- endif -%}
+      <ul class="crk-terms__legal-links">
+        {%- if shop.refund_policy != blank -%}
+          <li><a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title }}</a></li>
+        {%- endif -%}
+        {%- if shop.shipping_policy != blank -%}
+          <li><a href="{{ shop.shipping_policy.url }}">{{ shop.shipping_policy.title }}</a></li>
+        {%- endif -%}
+        {%- if shop.privacy_policy != blank -%}
+          <li><a href="{{ shop.privacy_policy.url }}">{{ shop.privacy_policy.title }}</a></li>
+        {%- endif -%}
+        {%- if shop.terms_of_service != blank -%}
+          <li><a href="{{ shop.terms_of_service.url }}">{{ shop.terms_of_service.title }}</a></li>
+        {%- endif -%}
+      </ul>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Terms",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "STANDING ORDERS" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "TERMS" },
+    { "type": "textarea", "id": "standfirst", "label": "Standfirst", "default": "How buying from us actually works — carriage, dispatch, returns and refunds, in plain English. The full legal texts are linked at the bottom." },
+    { "type": "text", "id": "revised_label", "label": "Revision label", "default": "LAST REVISED" },
+    { "type": "text", "id": "revised", "label": "Revision date", "info": "Update this whenever you change a clause." },
+    { "type": "checkbox", "id": "show_index", "label": "Show the clause index", "default": true },
+    { "type": "text", "id": "index_label", "label": "Index landmark label", "info": "Screen-reader name for the jump list.", "default": "Clause index" },
+    { "type": "header", "content": "Legal rail" },
+    { "type": "text", "id": "legal_note", "label": "Note above the links", "default": "THE FULL LEGAL TEXTS:" }
+  ],
+  "blocks": [
+    {
+      "type": "clause",
+      "name": "Clause",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Clause title", "info": "Also becomes the anchor link, e.g. #returns.", "default": "Clause" },
+        { "type": "richtext", "id": "body", "label": "Clause body" }
+      ]
+    }
+  ],
+  "max_blocks": 14,
+  "presets": [{ "name": "Crooks — Terms" }]
+}
+{% endschema %}

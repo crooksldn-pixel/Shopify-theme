@@ -1,0 +1,105 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  COMMONLY ASKED QUESTIONS.
+
+  Built on native <details name="..."> — the shared name makes the group behave
+  as an exclusive accordion with no JavaScript at all, which matters here
+  because crooks-record.js only loads on the product template. Browsers without
+  the name attribute simply allow several panels open at once, which is a
+  perfectly good fallback.
+
+  No FAQPage JSON-LD: the convention is no Liquid inside <script> tags, and
+  Google restricted FAQ rich results to government and health sites in 2023, so
+  the exception would buy nothing.
+{%- endcomment -%}
+
+<section class="crk-root crk-section" data-crk-section="faq">
+  <div class="crk-inner crk-faq">
+    <header class="crk-faq__head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="crk-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        {%- if section.settings.heading_level == 'h1' -%}
+          <h1 class="crk-h1 crk-faq__heading">{{ section.settings.heading }}</h1>
+        {%- else -%}
+          <h2 class="crk-h2 crk-faq__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+      {%- endif -%}
+      {%- if section.settings.standfirst != blank -%}
+        <p class="crk-faq__standfirst">{{ section.settings.standfirst }}</p>
+      {%- endif -%}
+    </header>
+
+    <div class="crk-faq__list">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'group' -%}
+            {%- if block.settings.title != blank -%}
+              <h3 class="crk-eyebrow crk-faq__group" id="{{ block.settings.title | handleize }}" {{ block.shopify_attributes }}>{{ block.settings.title }}</h3>
+            {%- endif -%}
+          {%- when 'qa' -%}
+            {%- if block.settings.question != blank -%}
+              <details class="crk-faq__item" name="{{ section.id }}-faq" {{ block.shopify_attributes }}>
+                <summary class="crk-faq__q">
+                  <span>{{ block.settings.question }}</span>
+                  <span class="crk-faq__mark" aria-hidden="true"></span>
+                </summary>
+                {%- if block.settings.answer != blank -%}
+                  <div class="crk-prose crk-faq__a">{{ block.settings.answer }}</div>
+                {%- endif -%}
+              </details>
+            {%- endif -%}
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+
+    {%- if section.settings.footer_text != blank -%}
+      <div class="crk-prose crk-faq__foot">{{ section.settings.footer_text }}</div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Questions",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "ENQUIRIES" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "COMMONLY ASKED QUESTIONS" },
+    {
+      "type": "select",
+      "id": "heading_level",
+      "label": "Heading level",
+      "info": "Use H1 on a dedicated questions page, H2 when the section sits inside another page.",
+      "options": [
+        { "value": "h1", "label": "H1 — this is the page's main heading" },
+        { "value": "h2", "label": "H2 — sits inside another page" }
+      ],
+      "default": "h1"
+    },
+    { "type": "textarea", "id": "standfirst", "label": "Standfirst" },
+    { "type": "richtext", "id": "footer_text", "label": "Footer note" }
+  ],
+  "blocks": [
+    {
+      "type": "qa",
+      "name": "Question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question" },
+        { "type": "richtext", "id": "answer", "label": "Answer" }
+      ]
+    },
+    {
+      "type": "group",
+      "name": "Group heading",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Group heading", "default": "DELIVERY" }
+      ]
+    }
+  ],
+  "max_blocks": 32,
+  "presets": [{ "name": "Crooks — Questions" }]
+}
+{% endschema %}

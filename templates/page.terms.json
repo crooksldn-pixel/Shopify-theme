@@ -1,0 +1,96 @@
+{
+  "sections": {
+    "main": {
+      "type": "crooks-terms",
+      "blocks": {
+        "c1": {
+          "type": "clause",
+          "settings": {
+            "title": "Carriage",
+            "body": "<p>UK shipping is free on orders over £20, and free Royal Mail Tracked 24 over £70. Below £20 it is charged at checkout before you pay.</p><p>Once dispatched, UK orders arrive in 1–2 working days. International orders take 7–14 working days. Tracking is emailed the moment your parcel leaves us.</p><p>International customers are responsible for any customs duties or import taxes. These are set by your country, not by us, and we cannot predict or refund them.</p>"
+          }
+        },
+        "c2": {
+          "type": "clause",
+          "settings": {
+            "title": "Dispatch",
+            "body": "<p>Orders placed before 18:00 are dispatched the same day where possible, Monday to Saturday. Orders placed after 18:00, or on a Sunday, go out on the next dispatch day.</p><p>After a drop, allow up to two working days — we would rather pack every order properly than promise a cutoff we cannot hold.</p>"
+          }
+        },
+        "c3": {
+          "type": "clause",
+          "settings": {
+            "title": "Returns",
+            "body": "<p>You have 14 days from delivery to tell us you want to return something, and 14 days from then to post it back.</p><p>Items must be unworn, unwashed, and have their tags attached. Return postage is paid by you unless the item was faulty or we sent the wrong thing.</p><p><strong>Put your order number in the parcel.</strong> Without it we cannot match the return to you, and it will sit unrefunded.</p><p>Returns go to: Oairo UK Office, Bourne End Business Park, Bourne End, Buckinghamshire, SL8 5AS, United Kingdom.</p>"
+          }
+        },
+        "c4": {
+          "type": "clause",
+          "settings": {
+            "title": "Size swaps",
+            "body": "<p>UK size swaps are free: we do not charge a fee for the exchange, and we cover the postage sending the new size out to you. You cover the postage sending the original back.</p><p>Swaps depend on the size being in stock. If it is not, we refund you instead.</p>"
+          }
+        },
+        "c5": {
+          "type": "clause",
+          "settings": {
+            "title": "Faults and wrong items",
+            "body": "<p>If we sent the wrong item, or it arrived faulty or damaged, that is on us. Message us with your order number and a photo and we will refund or replace it in full, postage included.</p><p>For transit damage, tell us within 48 hours of delivery so we can raise it with the courier while the claim is still open.</p>"
+          }
+        },
+        "c6": {
+          "type": "clause",
+          "settings": {
+            "title": "Refunds",
+            "body": "<p>Approved refunds go back to your original payment method within 5–7 days of us receiving the item.</p><p>Original shipping charges are not refunded unless the item was faulty or wrongly sent. Items marked final sale are labelled as such on the product page and cannot be returned.</p><p>None of this affects your statutory rights.</p>"
+          }
+        },
+        "c7": {
+          "type": "clause",
+          "settings": {
+            "title": "Lost parcels",
+            "body": "<p>If tracking says delivered and nothing has arrived, check with your neighbours and your safe place first, then tell us within 14 days of the expected delivery date.</p><p>We will open an investigation with the courier. Royal Mail allow up to 10 working days to complete one. We cannot refund or replace before that investigation closes.</p>"
+          }
+        },
+        "c8": {
+          "type": "clause",
+          "settings": {
+            "title": "Orders we cancel",
+            "body": "<p>We can cancel and refund any order in full: if a piece oversells, if the delivery address is wrong or undeliverable, or if we believe automated checkout software was used.</p><p>Drops are for people, not scripts.</p>"
+          }
+        },
+        "c9": {
+          "type": "clause",
+          "settings": {
+            "title": "Contact",
+            "body": "<p>Email <a href=\"mailto:crooksldn@gmail.com\">crooksldn@gmail.com</a> or DM <a href=\"https://instagram.com/crooksldn\">@crooksldn</a> with your order number. We reply within 1–2 working days.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "c6",
+        "c7",
+        "c8",
+        "c9"
+      ],
+      "settings": {
+        "eyebrow": "STANDING ORDERS",
+        "heading": "TERMS",
+        "standfirst": "How buying from us actually works — carriage, dispatch, returns and refunds, in plain English. The full legal texts are linked at the bottom.",
+        "revised_label": "LAST REVISED",
+        "revised": "13.08.2026",
+        "show_index": true,
+        "index_label": "Clause index",
+        "legal_note": "THE FULL LEGAL TEXTS:"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

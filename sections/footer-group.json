@@ -197,6 +197,7 @@
         "footer_policy_list_VCdnpa",
         "social_links_Ew63Kq"
       ],
+      "disabled": true,
       "name": "t:names.utilities",
       "settings": {
         "section_width": "page-width",
@@ -205,8 +206,7 @@
         "color_scheme": "",
         "padding-block-start": 20,
         "padding-block-end": 48
-      },
-      "disabled": true
+      }
     },
     "crooks_footer_log": {
       "type": "crooks-footer-log",
@@ -231,14 +231,18 @@
           "type": "column",
           "settings": {
             "heading": "INFORMATION",
-            "label_1": "SHIPPING",
-            "url_1": "shopify://policies/shipping-policy",
-            "label_2": "REFUNDS",
-            "url_2": "shopify://policies/refund-policy",
-            "label_3": "CASE 001",
-            "url_3": "https://crooks-case-break.base44.app",
-            "label_4": "TRACK ORDER",
-            "url_4": "shopify://pages/tracking"
+            "label_1": "QUESTIONS",
+            "url_1": "shopify://pages/faq",
+            "label_2": "TERMS",
+            "url_2": "shopify://pages/terms",
+            "label_3": "SHIPPING",
+            "url_3": "shopify://policies/shipping-policy",
+            "label_4": "REFUNDS",
+            "url_4": "shopify://policies/refund-policy",
+            "label_5": "TRACK ORDER",
+            "url_5": "shopify://pages/tracking",
+            "label_6": "CASE 001",
+            "url_6": "https://crooks-case-break.base44.app"
           }
         },
         "c3": {
@@ -250,7 +254,7 @@
             "label_2": "TIKTOK",
             "url_2": "https://tiktok.com/@crooksldn",
             "label_3": "EMAIL",
-            "url_3": "mailto:info@crooksldn.com"
+            "url_3": "mailto:crooksldn@gmail.com"
           }
         }
       },

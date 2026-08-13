@@ -1,0 +1,161 @@
+{
+  "sections": {
+    "main": {
+      "type": "crooks-faq",
+      "blocks": {
+        "g1": {
+          "type": "group",
+          "settings": {
+            "title": "DELIVERY"
+          }
+        },
+        "q1": {
+          "type": "qa",
+          "settings": {
+            "question": "When will my order be dispatched?",
+            "answer": "<p>Orders placed before 18:00 are dispatched the same day where possible, Monday to Saturday. After 18:00, or on a Sunday, they go out on the next dispatch day. Allow up to two working days after a drop.</p>"
+          }
+        },
+        "q2": {
+          "type": "qa",
+          "settings": {
+            "question": "How long does delivery take?",
+            "answer": "<p>Once it has left us: 1–2 working days in the UK, 7–14 working days internationally.</p>"
+          }
+        },
+        "q3": {
+          "type": "qa",
+          "settings": {
+            "question": "How much is shipping?",
+            "answer": "<p>Free on UK orders over £20. Over £70 you get Royal Mail Tracked 24 free. Below £20 it is calculated at checkout before you pay.</p>"
+          }
+        },
+        "q4": {
+          "type": "qa",
+          "settings": {
+            "question": "Do you ship internationally?",
+            "answer": "<p>Yes. International orders take 7–14 working days. Any customs duties or import taxes are set by your country and are payable by you — we have no control over them and cannot refund them.</p>"
+          }
+        },
+        "q5": {
+          "type": "qa",
+          "settings": {
+            "question": "How do I track my order?",
+            "answer": "<p>Tracking is emailed the moment your parcel is dispatched. You can also look your order up on the <a href=\"/pages/tracking\">tracking page</a> — no account needed.</p>"
+          }
+        },
+        "q6": {
+          "type": "qa",
+          "settings": {
+            "question": "Tracking says delivered but I have nothing.",
+            "answer": "<p>Check with neighbours and your safe place first, then message us within 14 days of the expected delivery date and we will open a courier investigation. Royal Mail take up to 10 working days to complete one.</p>"
+          }
+        },
+        "g2": {
+          "type": "group",
+          "settings": {
+            "title": "SIZING"
+          }
+        },
+        "q7": {
+          "type": "qa",
+          "settings": {
+            "question": "How do I know what size to buy?",
+            "answer": "<p>Where a piece has been measured, its product page carries a measurements table — tap SIZE GUIDE next to the size buttons. Everything is measured with the garment laid flat, and you can switch the table between centimetres and inches.</p><p>If the piece you want is not listed yet, message us and we will measure it for you.</p>"
+          }
+        },
+        "q8": {
+          "type": "qa",
+          "settings": {
+            "question": "Do you do exchanges?",
+            "answer": "<p>UK size swaps are free: no fee for the exchange, and we cover postage on the replacement going out. You cover the postage sending the original back. Swaps depend on the size being in stock — if it is not, we refund you instead.</p>"
+          }
+        },
+        "g3": {
+          "type": "group",
+          "settings": {
+            "title": "RETURNS AND REFUNDS"
+          }
+        },
+        "q9": {
+          "type": "qa",
+          "settings": {
+            "question": "Can I return something?",
+            "answer": "<p>Yes. You have 14 days from delivery to tell us, and 14 days from then to post it back, unworn and with tags attached. Return postage is yours unless the item was faulty or wrongly sent. Put your order number in the parcel.</p><p>Full detail is on the <a href=\"/pages/terms#returns\">terms page</a>.</p>"
+          }
+        },
+        "q10": {
+          "type": "qa",
+          "settings": {
+            "question": "When will I get my refund?",
+            "answer": "<p>Within 5–7 days of us receiving the item, back to the payment method you used. Original shipping charges are not refunded unless the item was faulty or wrongly sent.</p>"
+          }
+        },
+        "q11": {
+          "type": "qa",
+          "settings": {
+            "question": "My item is faulty or you sent the wrong thing.",
+            "answer": "<p>That is on us. Message us with your order number and a photo and we will refund or replace it in full, postage included. For transit damage, tell us within 48 hours of delivery so we can raise it with the courier.</p>"
+          }
+        },
+        "g4": {
+          "type": "group",
+          "settings": {
+            "title": "ORDERS AND PAYMENT"
+          }
+        },
+        "q12": {
+          "type": "qa",
+          "settings": {
+            "question": "What payment methods do you take?",
+            "answer": "<p>Shop Pay, Apple Pay and Google Pay, plus all major debit and credit cards at checkout.</p>"
+          }
+        },
+        "q13": {
+          "type": "qa",
+          "settings": {
+            "question": "Do I need an account to order?",
+            "answer": "<p>No. You can check out as a guest and still track your order. An account just saves your details and keeps your order history in one place.</p>"
+          }
+        },
+        "q14": {
+          "type": "qa",
+          "settings": {
+            "question": "Can I change or cancel my order?",
+            "answer": "<p>Message us as fast as you can with your order number. If it has not been packed we will sort it. Once it is dispatched it has to go through the returns process instead.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "g1",
+        "q1",
+        "q2",
+        "q3",
+        "q4",
+        "q5",
+        "q6",
+        "g2",
+        "q7",
+        "q8",
+        "g3",
+        "q9",
+        "q10",
+        "q11",
+        "g4",
+        "q12",
+        "q13",
+        "q14"
+      ],
+      "settings": {
+        "eyebrow": "ENQUIRIES",
+        "heading": "COMMONLY ASKED QUESTIONS",
+        "heading_level": "h1",
+        "standfirst": "The things people ask us most. If your answer is not here, message us and we will answer it — and it will probably end up on this page.",
+        "footer_text": "<p>Still stuck? Email <a href=\"mailto:crooksldn@gmail.com\">crooksldn@gmail.com</a> or DM <a href=\"https://instagram.com/crooksldn\">@crooksldn</a> with your order number. We reply within 1–2 working days. The full trading terms are on the <a href=\"/pages/terms\">terms page</a>.</p>"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}
