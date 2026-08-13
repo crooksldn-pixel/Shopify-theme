@@ -1278,3 +1278,13 @@ unqualified claim and has been left alone — that is a business decision, not a
 group carrying the new `label_6` / `url_6`. Shopify **silently stripped both keys** — the group
 was validated against the schema the theme had at the start of the push. Pulling the file back
 proved it. Push the section first, then the group.
+
+### Main menu now carries QUESTIONS and TERMS
+
+    SHOP → ALL · NEW · TEES · DENIM · SWEATS · TRACKSUITS · ACCESSORIES
+    TRACKING · QUESTIONS · TERMS · Contact
+
+Added by reading the full nested tree first and sending every existing item back with its own
+`id` — the seven children under SHOP survived, verified in the rendered drawer. New items were
+sent without an `id` and with `type: PAGE` + `resourceId` only; Shopify derives the url. Menus
+are store data, so this is not in any commit.
