@@ -1196,3 +1196,85 @@ contain it and Shopify exposes no menu history through the API. The sub-menu bel
 items { ... items { ... } } }` — and send it back intact. Shopify's menus nest three levels.
 This belongs with the `*-group.json` rule: read the whole of a merchant-owned structure before
 writing any part of it.
+
+## Terms + Questions pages, and the one source of truth for trading facts
+
+Modelled on Mertra's `/pages/terms` (their site is password-gated between drops; read from the
+Wayback copy): one plain-English page covering shipping rates, order processing, refunds and a
+bot clause, with the legal documents demoted to a single link at the bottom.
+
+**Shopify has no `policy` template.** The template list is 404, article, blog, cart, collection,
+index, list-collections, page, password, product, search, metaobject, plus a few `.liquid`
+specials. `/policies/*` renders Shopify's own `.shopify-policy__container` inside `theme.liquid`
+and cannot take sections. That is *why* the page exists rather than a styling preference — the
+legal pages can only ever be skinned with CSS, and they were rendering on Horizon's cream
+`rgb(244 241 234)` between the terminal header and footer.
+
+The skin needs `--crk-*` to resolve inside markup we do not own, so the token block's selector
+now also matches `main:has(> .shopify-policy__container)` — the container's parent, so the
+tokens inherit down. Two selectors changed, nothing duplicated.
+
+### Canonical trading facts
+
+These are stated in the PDP custody blocks, the four legal policies, `/pages/terms` and
+`/pages/faq`. They have already drifted twice. Change them **together** or not at all.
+
+| Fact | Value |
+|---|---|
+| Free UK shipping | over £20 |
+| Free Tracked 24 | over £70 |
+| UK delivery, once dispatched | 1–2 working days |
+| International delivery | 7–14 working days |
+| Return window | 14 days from delivery to notify, 14 more to post back |
+| Return condition | unworn, unwashed, tags attached |
+| Return postage | paid by the customer unless faulty or wrongly sent |
+| Return address | Oairo UK Office, Bourne End Business Park, Bourne End, Bucks, SL8 5AS |
+| Refund speed | 5–7 days to the original payment method |
+| Transit damage | report within 48 hours |
+| Lost parcel | report within 14 days; courier investigation up to 10 working days |
+| Contact | crooksldn@gmail.com (the store's own address) / @crooksldn |
+
+`info@crooksldn.com` was on the footer and the PDP custody step and is **not** the store's
+contact address — `shop.email` and `shop.contactEmail` are both `crooksldn@gmail.com`. Returns
+requests sent to `info@` may have gone nowhere. Both corrected.
+
+### Dispatch: measured, not assumed
+
+Fulfilment timestamps for the last 50 shipped orders:
+
+| | |
+|---|---|
+| Fulfilments by weekday | Mon 3 · Tue 0 · Wed 10 · Thu 11 · Fri 13 · **Sat 13** · Sun 0 |
+| Orders placed before 18:00 that shipped the same calendar day | **17 of 35 (49%)** |
+| Median order → fulfilment | 23.7 h (p25 3.3 h, p75 52.7 h) |
+| Within 24 h / 48 h | 26 of 50 / 35 of 50 |
+
+Two conclusions. **Saturday is a real dispatch day** — the shipping policy's "orders are not
+shipped on weekends" is the document that is wrong, not the PDP. And **the same-day claim holds
+about half the time**: fulfilments come in batches every few days (ten orders spanning 8–12
+August were all fulfilled within six minutes of each other on the 12th), so a customer ordering
+at 17:00 on a Sunday, Monday or Tuesday is unlikely to see their parcel move that day.
+
+New copy therefore says "dispatched the same day where possible, Monday to Saturday" and "allow
+up to two working days after a drop", which is true. The PDP custody step still makes the
+unqualified claim and has been left alone — that is a business decision, not a bug.
+
+### Left open deliberately
+
+- **Faults window.** The refund policy says 14 days; the Consumer Rights Act gives 30 for the
+  short-term right to reject. The new pages state no deadline at all rather than publish a term
+  narrower than the law or contradict the policy.
+- **Restocks.** No answer exists, so there is no restock question on the FAQ.
+- **Terms of service** is still Shopify boilerplate: `[LINK TO REFUND POLICY]` twice,
+  `[LINK TO PRIVACY POLICY]`, `[Crooksldn LTD]`, `[Crooksldn@gmail.com]`, `[TW200JW]`, and it
+  names the operator "Crooks Store".
+- **Kiwi Sizing.** `templates/product.horizon.json` carries an app block for
+  `kiwi-size-chart-recommender`. The crooks product template does not, so if that app is still
+  subscribed it is being paid for and rendering nowhere.
+
+### Section groups reject settings their schema has not yet seen
+
+`sections/footer-group.json` and `sections/crooks-footer-log.liquid` were pushed together, the
+group carrying the new `label_6` / `url_6`. Shopify **silently stripped both keys** — the group
+was validated against the schema the theme had at the start of the push. Pulling the file back
+proved it. Push the section first, then the group.
