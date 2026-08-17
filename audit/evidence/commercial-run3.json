@@ -1,0 +1,30 @@
+{
+  "pulledAt": "2026-08-17 (run 3)",
+  "sinceRun2": "9 days",
+  "trading": {
+    "august_to_17th": { "total_sales": 1868.42, "orders": 38, "aov": 50.15, "run2_at_8th": { "total_sales": 930.67, "orders": 16 } },
+    "delta_9_days": { "sales": 937.75, "orders": 22 },
+    "note_may_window": "the -90d window now starts ~May 19, dropping May 10-18; May's visible slice flips to -375.18/4 — window artefact plus refunds, not a restatement"
+  },
+  "lifetimeOrders": 786,
+  "latestOrder": "CROOKS-1786 (2026-08-17T17:08:20Z)",
+  "denyFlip": {
+    "done": false,
+    "3 CLIVES TEE": { "total": 95, "policy": "CONTINUE all variants", "lowest": "S/BLACK 8" },
+    "MONEY CLIVE TEE": { "total": 96, "policy": "CONTINUE all variants", "lowest": "XS/S/M BLACK 9" },
+    "BROADCAST TEE": { "total": 99, "policy": "CONTINUE all variants" },
+    "note": "Three pulls, three audits, still armed - and now depleting toward zero on live trade. Several variants at 8-9 units."
+  },
+  "crxGarms": { "status": "ARCHIVED", "units": 985, "policy": "CONTINUE", "unchanged": true },
+  "v2BaggiesM": { "qty": -1, "policy": "DENY", "unchanged": true },
+  "archive": {
+    "unchanged_third_pull": true,
+    "totalUnits": 1452,
+    "note": "identical product-by-product to runs 1 and 2"
+  },
+  "sellThrough9d": {
+    "BLUE WASH JORTS": "61->58", "GREY WASH JORTS": "61->59", "CHARCOAL CELLBLOCK SHORTS": "100->97",
+    "CHARCOAL CELLBLOCK CREWNECK": "48->46", "GREY WASH OG JEANS": "65->64", "V2 BAGGIES": "128->126 (XS/S)",
+    "LARGE DUFFLE BAG": "71->70", "3 CLIVES TEE": "100->95", "MONEY CLIVE TEE": "100->96", "BROADCAST TEE": "100->99"
+  }
+}
