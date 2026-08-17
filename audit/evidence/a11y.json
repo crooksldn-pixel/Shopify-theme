@@ -1,26 +1,11 @@
 {
-  "generated": "2026-08-08T17:10:37.201Z",
+  "generated": "2026-08-17T21:36:04.633Z",
   "contrast": {
     "home": {
       "label": "Homepage",
       "total": 24,
-      "failing": 1,
-      "fails": [
-        {
-          "sel": "em",
-          "sample": "London",
-          "fg": "rgba(0, 0, 0, 0)",
-          "bg": "rgb(11, 10, 14)",
-          "fontPx": 13,
-          "weight": 400,
-          "large": false,
-          "ratio": 1,
-          "required": 4.5,
-          "pass": false,
-          "overImage": false,
-          "opacity": "1"
-        }
-      ],
+      "failing": 0,
+      "fails": [],
       "worstPassing": [
         {
           "sel": "p.crk-status__msg",
@@ -38,7 +23,7 @@
         },
         {
           "sel": "p.crk-intake__small",
-          "sample": "Unsubscribe at any time. We do not sell th",
+          "sample": "One text per drop. Reply STOP to leave the",
           "fg": "rgb(138, 131, 119)",
           "bg": "rgb(14, 12, 19)",
           "fontPx": 12,
@@ -65,8 +50,8 @@
           "opacity": "1"
         },
         {
-          "sel": "a",
-          "sample": "NEW",
+          "sel": "span.crk-pack__note",
+          "sample": "Numbered, seized by CROOKS LDN, QR to veri",
           "fg": "rgb(138, 131, 119)",
           "bg": "rgb(11, 10, 14)",
           "fontPx": 12,
@@ -82,7 +67,7 @@
     },
     "pdpTee": {
       "label": "PDP — 3 CLIVES TEE",
-      "total": 35,
+      "total": 28,
       "failing": 0,
       "fails": [],
       "worstPassing": [
@@ -115,28 +100,28 @@
           "opacity": "1"
         },
         {
-          "sel": "dt",
-          "sample": "FABRIC",
+          "sel": "span",
+          "sample": "TRACKED 24 FREE",
           "fg": "rgb(138, 131, 119)",
-          "bg": "rgb(14, 12, 19)",
-          "fontPx": 10,
-          "weight": 500,
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
           "large": false,
-          "ratio": 5.18,
+          "ratio": 5.26,
           "required": 4.5,
           "pass": true,
           "overImage": true,
           "opacity": "1"
         },
         {
-          "sel": "th",
-          "sample": "SIZE",
+          "sel": "span.crk-data.crk-dim",
+          "sample": "T-SHIRT",
           "fg": "rgb(138, 131, 119)",
-          "bg": "rgb(14, 12, 19)",
-          "fontPx": 11,
-          "weight": 500,
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 13,
+          "weight": 400,
           "large": false,
-          "ratio": 5.18,
+          "ratio": 5.26,
           "required": 4.5,
           "pass": true,
           "overImage": true,
@@ -146,7 +131,7 @@
     },
     "pdpDenim": {
       "label": "PDP — BLUE WASH OG JEANS",
-      "total": 35,
+      "total": 28,
       "failing": 0,
       "fails": [],
       "worstPassing": [
@@ -179,28 +164,28 @@
           "opacity": "1"
         },
         {
-          "sel": "dt",
-          "sample": "FABRIC",
+          "sel": "span",
+          "sample": "TRACKED 24 FREE",
           "fg": "rgb(138, 131, 119)",
-          "bg": "rgb(14, 12, 19)",
-          "fontPx": 10,
-          "weight": 500,
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 9,
+          "weight": 400,
           "large": false,
-          "ratio": 5.18,
+          "ratio": 5.26,
           "required": 4.5,
           "pass": true,
           "overImage": true,
           "opacity": "1"
         },
         {
-          "sel": "th",
-          "sample": "SIZE",
+          "sel": "span.crk-data.crk-dim",
+          "sample": "DENIM",
           "fg": "rgb(138, 131, 119)",
-          "bg": "rgb(14, 12, 19)",
-          "fontPx": 11,
-          "weight": 500,
+          "bg": "rgb(11, 10, 14)",
+          "fontPx": 13,
+          "weight": 400,
           "large": false,
-          "ratio": 5.18,
+          "ratio": 5.26,
           "required": 4.5,
           "pass": true,
           "overImage": true,
@@ -210,7 +195,7 @@
     },
     "cart": {
       "label": "Cart",
-      "total": 20,
+      "total": 21,
       "failing": 0,
       "fails": [],
       "worstPassing": [
@@ -274,7 +259,7 @@
     },
     "collection": {
       "label": "Collection",
-      "total": 15,
+      "total": 16,
       "failing": 0,
       "fails": [],
       "worstPassing": [
@@ -340,15 +325,16 @@
   "keyboard": {
     "home": {
       "label": "Homepage",
-      "stops": 17,
+      "stops": 18,
       "trapped": true,
       "order": [
-        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgba(92, 171, 214, 0.8)] \"Privacy Policy\"",
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
         "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
         "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
         "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
         "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link.crk-header__link--catalogue [outline 2px rgb(167, 122, 199)] \"CATALOGUE\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
         "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
@@ -366,21 +352,21 @@
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs"
       ],
       "focusOnHidden": [
-        "a.crk-btn.crk-btn--fill",
         "button.crk-filter"
       ]
     },
     "pdpTee": {
       "label": "PDP — 3 CLIVES TEE",
-      "stops": 20,
+      "stops": 21,
       "trapped": true,
       "order": [
-        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgba(92, 171, 214, 0.8)] \"Privacy Policy\"",
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
         "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
         "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
         "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
         "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link.crk-header__link--catalogue [outline 2px rgb(167, 122, 199)] \"CATALOGUE\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
         "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
@@ -406,15 +392,16 @@
     },
     "pdpDenim": {
       "label": "PDP — BLUE WASH OG JEANS",
-      "stops": 41,
+      "stops": 39,
       "trapped": true,
       "order": [
-        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgba(92, 171, 214, 0.8)] \"Privacy Policy\"",
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
         "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
         "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
         "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
         "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link.crk-header__link--catalogue [outline 2px rgb(167, 122, 199)] \"CATALOGUE\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
         "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
@@ -432,12 +419,9 @@
         "button.crk-btn [outline 2px rgb(167, 122, 199)] \"ADD TO BAG\"",
         "shop-pay-wallet-button [NONE]",
         "a#more-payment-options-link.shopify-payment-button__more-options [outline 2px rgb(167, 122, 199)] \"More payment options\"",
-        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"SPECIFICATION −\"",
-        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"ITEM DESCRIPTION −\"",
-        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"MEASUREMENTS −\"",
-        "button.crk-unit [outline 2px rgb(167, 122, 199)] \"CM\"",
-        "button.crk-unit [outline 2px rgb(167, 122, 199)] \"IN\"",
-        "div.crk-tablewrap [outline 2px rgb(167, 122, 199)] \"GARMENT LAID FLAT. ALL MEASUREMENT\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"SPECIFICATION +\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"ITEM DESCRIPTION +\"",
+        "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"MEASUREMENTS +\"",
         "button.crk-section-head [outline 2px rgb(167, 122, 199)] \"CHAIN OF CUSTODY — SHIPPING & RETU\"",
         "a.crk-related-item [outline 2px rgb(167, 122, 199)] \"BLUE WASH JORTS £50.00\"",
         "a.crk-related-item [outline 2px rgb(167, 122, 199)] \"GREY WASH OG JEANS £60.00\"",
@@ -449,7 +433,7 @@
         "a [outline 2px rgb(167, 122, 199)] \"DENIM\"",
         "a [outline 2px rgb(167, 122, 199)] \"SWEATS\"",
         "a [outline 2px rgb(167, 122, 199)] \"ACCESSORIES\"",
-        "a [outline 2px rgb(167, 122, 199)] \"SHIPPING\""
+        "a [outline 2px rgb(167, 122, 199)] \"QUESTIONS\""
       ],
       "noIndicatorCount": 2,
       "noIndicator": [
@@ -463,23 +447,22 @@
         "shop-pay-wallet-button",
         "a#more-payment-options-link.shopify-payment-button__more-options",
         "button.crk-section-head",
-        "button.crk-unit",
-        "div.crk-tablewrap",
         "a.crk-related-item",
         "a"
       ]
     },
     "cart": {
       "label": "Cart",
-      "stops": 32,
+      "stops": 33,
       "trapped": true,
       "order": [
-        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgba(92, 171, 214, 0.8)] \"Privacy Policy\"",
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
         "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
         "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
         "a.skip-to-content-link.button-secondary [outline 1px rgb(221, 215, 201)] \"Skip to content\"",
         "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link.crk-header__link--catalogue [outline 2px rgb(167, 122, 199)] \"CATALOGUE\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
         "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
@@ -493,7 +476,7 @@
         "shopify-payment-terms [NONE]",
         "button#checkout.cart__checkout-button.button [outline 2px rgb(84, 37, 120)] \"Check out\"",
         "shop-pay-wallet-button [NONE]",
-        "iframe#jsx-iframe-9d6ab83f02.component-frame.visible [NONE]",
+        "iframe#jsx-iframe-94342fbfd3.component-frame.visible [NONE]",
         "shopify-google-pay-button [NONE]",
         "a.size-style.link [outline 2px rgb(167, 122, 199)] \"View all\"",
         "a#7ecd25041ee2be029283cf13dc968bd9.product-card__link [outline 2px rgb(167, 122, 199)] \"CHARCOAL CELLBLOCK CREWNECK\"",
@@ -505,18 +488,20 @@
         "a [outline 2px rgb(167, 122, 199)] \"DENIM\"",
         "a [outline 2px rgb(167, 122, 199)] \"SWEATS\"",
         "a [outline 2px rgb(167, 122, 199)] \"ACCESSORIES\"",
-        "a [outline 2px rgb(167, 122, 199)] \"SHIPPING\""
+        "a [outline 2px rgb(167, 122, 199)] \"QUESTIONS\""
       ],
       "noIndicatorCount": 5,
       "noIndicator": [
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
         "shopify-payment-terms",
         "shop-pay-wallet-button",
-        "iframe#jsx-iframe-9d6ab83f02.component-frame.visible",
+        "iframe#jsx-iframe-94342fbfd3.component-frame.visible",
         "shopify-google-pay-button"
       ],
       "focusOnHidden": [
-        "iframe#jsx-iframe-9d6ab83f02.component-frame.visible",
+        "button#checkout.cart__checkout-button.button",
+        "shop-pay-wallet-button",
+        "iframe#jsx-iframe-94342fbfd3.component-frame.visible",
         "shopify-google-pay-button",
         "a.size-style.link",
         "a#7ecd25041ee2be029283cf13dc968bd9.product-card__link",
@@ -528,15 +513,16 @@
     },
     "collection": {
       "label": "Collection",
-      "stops": 16,
+      "stops": 17,
       "trapped": true,
       "order": [
-        "a#shopify-pc__banner__body-policy-link [outline 2px rgb(158, 218, 250)] \"Privacy Policy\"",
+        "a#shopify-pc__banner__body-policy-link [outline 2px rgba(92, 171, 214, 0.8)] \"Privacy Policy\"",
         "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs [NONE] \"Manage preferences\"",
         "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept [box-shadow] \"Accept\"",
         "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline [box-shadow] \"Decline\"",
         "a.skip-to-content-link.button-secondary [outline 1px rgb(10, 10, 10)] \"Skip to content\"",
         "a.crk-header__logo [outline 2px rgb(167, 122, 199)]",
+        "a.crk-header__link.crk-header__link--catalogue [outline 2px rgb(167, 122, 199)] \"CATALOGUE\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"SEARCH\"",
         "a.crk-header__link [outline 2px rgb(167, 122, 199)] \"BAG [1]\"",
         "button.crk-header__link [outline 2px rgb(167, 122, 199)] \"LIGHT MODE\"",
@@ -696,38 +682,31 @@
     "prefersReducedMotion": true,
     "boardFramesIn3s": 0,
     "boardFps": 0,
-    "stillRunningCssAnimations": [
-      {
-        "sel": "div.resource-card",
-        "name": "fadeIn",
-        "dur": "0.15s",
-        "iter": "1"
-      }
-    ],
+    "stillRunningCssAnimations": [],
     "matches": true
   },
   "noJs": {
     "home": {
       "label": "Homepage",
       "screenshot": "audit/screens/a11y-nojs-home.png",
-      "visibleTextChars": 2250,
-      "visibleTextSample": "Skip to content FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 14 PRODUCTS CURRENTLY ONLINE SEARCH BAG [0] LIGHT MODE MENU SHOP TRACKING CONTACT CASE 001 — ATTRACT MODE REF 001 / 13×11 / DECLASSIFIED Animated pixel map from CASE 001: a figure moves through an alley grid collecting three packages. > 14 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREETS™ CATALOGUE CATALOGUE 1",
-      "productLinks": 18,
+      "visibleTextChars": 1889,
+      "visibleTextSample": "Skip to content FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 14 PRODUCTS CURRENTLY ONLINE CATALOGUE SEARCH BAG [0] LIGHT MODE MENU SHOP TRACKING QUESTIONS TERMS CONTACT > 14 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREETS™ CATALOGUE CATALOGUE 14 ITEMS PRODUCT MODEL OUTLINE ALL T-SHIRT DENIM SWEATS ACCESSORIES NO. 01 SWEATS CHARCOAL CELLBLOCK CREWNECK $70.00 AVAILABLE N",
+      "productLinks": 14,
       "hasAddToCartForm": false,
       "hasPriceInHtml": true,
       "hasNoscriptFallback": true,
-      "imagesInHtml": 42
+      "imagesInHtml": 37
     },
     "pdpDenim": {
       "label": "PDP",
       "screenshot": "audit/screens/a11y-nojs-pdpDenim.png",
-      "visibleTextChars": 1240,
-      "visibleTextSample": "Skip to content FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 14 PRODUCTS CURRENTLY ONLINE SEARCH BAG [0] LIGHT MODE MENU SHOP TRACKING CONTACT ← CATALOGUE PRODUCT 03 / 14 DENIM PHOTO 1 OF 2 BLUE WASH OG JEANS $83.00 SIZE XS S M L XL IN STOCK SIZE GUIDE CHOOSE A SIZE: XS S M L XL Order before 18:00 and it ships today (Mon–Sat) RELEASE REQUEST ADD TO BAG SPECIFICATION − FABRIC 14",
-      "productLinks": 14,
+      "visibleTextChars": 840,
+      "visibleTextSample": "Skip to content FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 14 PRODUCTS CURRENTLY ONLINE CATALOGUE SEARCH BAG [0] LIGHT MODE MENU SHOP TRACKING QUESTIONS TERMS CONTACT ← CATALOGUE PRODUCT 03 / 14 DENIM PHOTO 1 OF 2 BLUE WASH OG JEANS $83.00 SIZE XS S M L XL IN STOCK SIZE GUIDE CHOOSE A SIZE: XS S M L XL Order before 18:00 and it ships today (Mon–Sat) RELEASE REQUEST ADD TO BAG",
+      "productLinks": 10,
       "hasAddToCartForm": true,
       "hasPriceInHtml": true,
       "hasNoscriptFallback": true,
-      "imagesInHtml": 14
+      "imagesInHtml": 8
     }
   },
   "zoom": {
@@ -736,16 +715,8 @@
     "clientWidth": 195,
     "horizontalScroll": false,
     "clipped": [
-      "section.shopify-pc__banner__dialog",
-      "div.shopify-pc__banner__wrapper",
-      "div.shopify-pc__banner__body",
-      "h2.",
-      "p.",
-      "div.shopify-pc__banner__btns",
-      "button.shopify-pc__banner__btn-manage-prefs",
-      "button.shopify-pc__banner__btn-accept",
-      "button.shopify-pc__banner__btn-decline",
-      "table.crk-table"
+      "div.crk-buybar__actions",
+      "button.crk-btn"
     ],
     "atcReachable": true
   }

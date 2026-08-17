@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-08T17:04:02.735Z",
+  "generated": "2026-08-17T21:29:00.196Z",
   "conditions": {
     "download": 209715.2,
     "upload": 96000,
@@ -9,56 +9,74 @@
   "pages": {
     "home": {
       "label": "Homepage",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/",
       "device": "390x844@3x",
       "throttled": true,
       "onTheme": {
         "crkRoot": true,
         "theme": "CROOKSLDN — Staging"
       },
-      "wallClockMs": 20507,
+      "wallClockMs": 21094,
       "vitals": {
-        "lcp": 4528,
+        "lcp": 4608,
         "lcpElement": "P",
-        "cls": 0.001,
-        "clsShifts": [],
-        "inp": 1144,
-        "ttfb": 228,
-        "domContentLoaded": 4324,
-        "loadEvent": 14502,
-        "fcp": 1416,
+        "cls": 0.3252,
+        "clsShifts": [
+          {
+            "v": 0.325,
+            "t": 1823,
+            "src": [
+              "MAIN.content-for-layout",
+              "P.crk-status__msg",
+              "SPAN.crk-card__media"
+            ]
+          }
+        ],
+        "inp": 1208,
+        "ttfb": 265,
+        "domContentLoaded": 4067,
+        "loadEvent": 15086,
+        "fcp": 1520,
         "firstProductImage": null,
-        "longTasksOver50ms": 15,
-        "longTaskTotalMs": 2042
+        "longTasksOver50ms": 12,
+        "longTaskTotalMs": 1725
       },
       "consoleErrors": [
-        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=kbwcga0qjjqhdh2w-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
+        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=bbushaa5dr2elw8f-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
         "Failed to load resource: net::ERR_FAILED",
         "pageerror: Failed to fetch",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Refused to execute script from 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/web-pixels@8b4bdd91w657eaa09pa445a201m797ba740/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
+        "Refused to execute script from 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/web-pixels@5f5c0921we198f819p6efddfcfm66c0f9a3/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
         "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
       ],
       "transfer": {
-        "totalBytes": 2621800,
-        "totalKB": 2560,
+        "totalBytes": 2790471,
+        "totalKB": 2725,
         "byTypeKB": {
-          "document": 45,
-          "css": 194,
-          "script": 1165,
-          "image": 910,
+          "document": 43,
+          "css": 192,
+          "script": 1167,
+          "image": 1078,
           "font": 217,
           "json": 9,
-          "other:text": 20
+          "other:text": 19
         },
         "requestCount": 174,
         "largest": [
           {
-            "name": "cellcrew.webp",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "name": "v2baggies.webp",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 261474,
+            "bytes": 285319,
+            "mime": "image/png",
+            "status": 200
+          },
+          {
+            "name": "cellcrew.webp",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
+            "type": "image",
+            "bytes": 261472,
             "mime": "image/png",
             "status": 200
           },
@@ -66,7 +84,7 @@
             "name": "index.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 258716,
+            "bytes": 259035,
             "mime": "text/javascript",
             "status": 200
           },
@@ -74,15 +92,15 @@
             "name": "vendor-DfR6YY9mO42n.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 188321,
+            "bytes": 188323,
             "mime": "text/javascript",
             "status": 200
           },
           {
             "name": "crooksldn-white-red-motiontec-socks.webp",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 185431,
+            "bytes": 185428,
             "mime": "image/png",
             "status": 200
           },
@@ -95,42 +113,34 @@
             "status": 200
           },
           {
-            "name": "v2baggies.webp",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
-            "type": "image",
-            "bytes": 152833,
-            "mime": "image/png",
-            "status": 200
-          },
-          {
             "name": "vendor.css",
             "host": "cdn.shopify.com",
             "type": "css",
-            "bytes": 99514,
+            "bytes": 99510,
             "mime": "text/css",
             "status": 200
           },
           {
-            "name": "app-ClXuvt2052vC.js",
+            "name": "app-Dg4m_5HrBxDU.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 76484,
+            "bytes": 76298,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "b8b4bdd91w657eaa09pa445a201m797ba740m.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "name": "b5f5c0921we198f819p6efddfcfm66c0f9a3m.js",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 72433,
+            "bytes": 72851,
             "mime": "text/javascript",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.p",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 50134,
+            "bytes": 50140,
             "mime": "image/webp",
             "status": 200
           },
@@ -138,7 +148,7 @@
             "name": "InterVariable-latin-1751944278923.woff2",
             "host": "cdn.shopify.com",
             "type": "font",
-            "bytes": 49873,
+            "bytes": 49875,
             "mime": "font/woff2",
             "status": 200
           },
@@ -146,22 +156,23 @@
             "name": "UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2",
             "host": "fonts.gstatic.com",
             "type": "font",
-            "bytes": 49109,
+            "bytes": 49111,
             "mime": "font/woff2",
             "status": 200
           }
         ]
       },
       "images": {
-        "count": 15,
+        "count": 16,
         "formats": {
           "png": 12,
-          "webp": 3
+          "webp": 3,
+          "jpg": 1
         },
         "detail": [
           {
             "src": "IMG_3682.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
             "query": "v=1774356387&width=400",
             "natural": [
               234,
@@ -178,14 +189,14 @@
             "objectFit": "fill",
             "inFirstViewport": true,
             "alt": "CROOKSLDN",
-            "bytes": 6069,
+            "bytes": 10361,
             "format": "png",
             "overscaleVsDpr": 1.63,
             "overscaleVsCss": 4.88
           },
           {
             "src": "cellcrew.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/cellcrew.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/cellcrew.webp",
             "query": "v=1785770354&width=600",
             "natural": [
               195,
@@ -202,14 +213,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CHARCOAL CELLBLOCK CREWNECK",
-            "bytes": 261474,
+            "bytes": 261472,
             "format": "webp",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
             "query": "v=1786139677&width=600",
             "natural": [
               195,
@@ -233,7 +244,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=600",
             "natural": [
               195,
@@ -257,7 +268,7 @@
           },
           {
             "src": "crooksldn-blue-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
             "query": "v=1786031414&width=600",
             "natural": [
               195,
@@ -274,14 +285,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets",
-            "bytes": 46760,
+            "bytes": 46766,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "crooksldn-grey-wash-baggy-jeans.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
             "query": "v=1786031509&width=600",
             "natural": [
               195,
@@ -298,14 +309,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN grey wash heavyweight denim jeans with baggy fit and handcuff graphic on back pockets",
-            "bytes": 37048,
+            "bytes": 37051,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "crooksldn-grey-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
             "query": "v=1786031378&width=600",
             "natural": [
               195,
@@ -322,14 +333,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN grey wash baggy denim jorts featuring white handcuff graphic print on the back pockets",
-            "bytes": 29320,
+            "bytes": 29310,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
             "query": "v=1786198507&width=600",
             "natural": [
               195,
@@ -353,7 +364,7 @@
           },
           {
             "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
             "query": "v=1786198500&width=600",
             "natural": [
               195,
@@ -370,14 +381,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "3 CLIVES TEE",
-            "bytes": 18997,
+            "bytes": 19439,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "IMG-3994.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG-3994.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG-3994.png",
             "query": "v=1786198496&width=600",
             "natural": [
               195,
@@ -394,14 +405,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CRXST★RZ T-SHIRT",
-            "bytes": 17897,
+            "bytes": 17791,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
             "query": "v=1786198504&width=600",
             "natural": [
               195,
@@ -425,7 +436,7 @@
           },
           {
             "src": "v2baggies.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/v2baggies.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/v2baggies.webp",
             "query": "v=1785770336&width=600",
             "natural": [
               195,
@@ -442,14 +453,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "V2 BAGGIES",
-            "bytes": 152833,
+            "bytes": 285319,
             "format": "webp",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "blacksock.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/blacksock.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/blacksock.png",
             "query": "v=1784542125&width=600",
             "natural": [
               195,
@@ -466,14 +477,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "BLACK/BLUE MOTIONTEC SOCKS",
-            "bytes": 34470,
+            "bytes": 34471,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "crooksldn-white-red-motiontec-socks.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-white-red-motiontec-socks.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-white-red-motiontec-socks.webp",
             "query": "v=1785769861&width=600",
             "natural": [
               195,
@@ -490,14 +501,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN white and red MotionTec performance socks with grey accents and small handcuff logo detail",
-            "bytes": 185431,
+            "bytes": 185428,
             "format": "webp",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
           },
           {
             "src": "crooksldn-large-black-duffle-bag.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-large-black-duffle-bag.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-large-black-duffle-bag.png",
             "query": "v=1786031562&width=600",
             "natural": [
               195,
@@ -514,82 +525,106 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN large black duffle bag with white circular logo print and zippered front pocket",
-            "bytes": 18920,
+            "bytes": 18914,
             "format": "png",
             "overscaleVsDpr": 0.43,
             "overscaleVsCss": 1.28
+          },
+          {
+            "src": "023A5758-35A6-4900-9A9E-AC2AD72E1341_1_105_c.jpg",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/023A5758-35A6-4900-9A9E-AC2AD72E1341_1_105_c.jpg",
+            "query": "v=1786997854&width=1280",
+            "natural": [
+              360,
+              202
+            ],
+            "rendered": [
+              356,
+              200
+            ],
+            "loading": "lazy",
+            "fetchpriority": "auto",
+            "hasSrcset": true,
+            "sizes": "(min-width: 1024px) 60vw, 100vw",
+            "objectFit": "fill",
+            "inFirstViewport": false,
+            "alt": "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring.",
+            "bytes": 34398,
+            "format": "jpg",
+            "overscaleVsDpr": 0.34,
+            "overscaleVsCss": 1.01
           }
         ]
       }
     },
     "pdpTee": {
       "label": "PDP — 3 CLIVES TEE",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/3-clives-tee",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/products/3-clives-tee",
       "device": "390x844@3x",
       "throttled": true,
       "onTheme": {
         "crkRoot": true,
         "theme": "CROOKSLDN — Staging"
       },
-      "wallClockMs": 16421,
+      "wallClockMs": 16680,
       "vitals": {
-        "lcp": 2404,
+        "lcp": 3684,
         "lcpElement": "IMG.crk-main-img.crk-product-image url=df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-        "cls": 0.2349,
+        "cls": 0.3269,
         "clsShifts": [
           {
-            "v": 0.2321,
-            "t": 5424,
+            "v": 0.325,
+            "t": 2337,
             "src": [
-              "DIV.crk-grid",
-              "SPAN.crk-data",
-              "BUTTON.crk-size"
+              "MAIN.content-for-layout",
+              "P.crk-status__msg",
+              "BUTTON.crk-header__link"
             ]
           }
         ],
-        "inp": 608,
-        "ttfb": 509,
-        "domContentLoaded": 5280,
-        "loadEvent": 10412,
-        "fcp": 1164,
+        "inp": 1064,
+        "ttfb": 536,
+        "domContentLoaded": 5692,
+        "loadEvent": 10673,
+        "fcp": 1716,
         "firstProductImage": {
-          "t": 2347,
+          "t": 2788,
           "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-          "w": 332,
-          "h": 332
+          "w": 54,
+          "h": 54
         },
-        "longTasksOver50ms": 19,
-        "longTaskTotalMs": 2165
+        "longTasksOver50ms": 15,
+        "longTaskTotalMs": 1878
       },
       "consoleErrors": [
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=kbwcga0qjjqhdh2w-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
+        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=bbushaa5dr2elw8f-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
         "Failed to load resource: net::ERR_FAILED",
         "pageerror: Failed to fetch",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Refused to execute script from 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/web-pixels@8b4bdd91w657eaa09pa445a201m797ba740/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe"
+        "Refused to execute script from 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/web-pixels@5f5c0921we198f819p6efddfcfm66c0f9a3/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe"
       ],
       "transfer": {
-        "totalBytes": 1720426,
-        "totalKB": 1680,
+        "totalBytes": 1713403,
+        "totalKB": 1673,
         "byTypeKB": {
-          "css": 180,
-          "document": 63,
-          "script": 1082,
-          "image": 102,
+          "css": 178,
+          "document": 50,
+          "script": 1086,
           "font": 222,
+          "image": 107,
           "json": 9,
           "other": 0,
           "other:text": 22
         },
-        "requestCount": 170,
+        "requestCount": 168,
         "largest": [
           {
             "name": "index.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 258714,
+            "bytes": 259043,
             "mime": "text/javascript",
             "status": 200
           },
@@ -597,7 +632,7 @@
             "name": "vendor-DfR6YY9mO42n.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 188321,
+            "bytes": 188325,
             "mime": "text/javascript",
             "status": 200
           },
@@ -605,31 +640,31 @@
             "name": "vendor.css",
             "host": "cdn.shopify.com",
             "type": "css",
-            "bytes": 99507,
+            "bytes": 99517,
             "mime": "text/css",
             "status": 200
           },
           {
             "name": "portable-wallets.en.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 76954,
+            "bytes": 77298,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "app-ClXuvt2052vC.js",
+            "name": "app-Dg4m_5HrBxDU.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 76488,
+            "bytes": 76299,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "b8b4bdd91w657eaa09pa445a201m797ba740m.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "name": "b5f5c0921we198f819p6efddfcfm66c0f9a3m.js",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 72431,
+            "bytes": 72867,
             "mime": "text/javascript",
             "status": 200
           },
@@ -637,7 +672,7 @@
             "name": "GTStandard-MRegular.woff2",
             "host": "cdn.shopify.com",
             "type": "font",
-            "bytes": 65052,
+            "bytes": 65054,
             "mime": "font/woff2",
             "status": 200
           },
@@ -645,29 +680,29 @@
             "name": "InterVariable-latin-1751944278923.woff2",
             "host": "cdn.shopify.com",
             "type": "font",
-            "bytes": 49871,
+            "bytes": 49875,
             "mime": "font/woff2",
             "status": 200
           },
           {
             "name": "archivo_n4.dc8d917cc69af0a65ae04d01fd8eeab28a3573c9.woff2",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "font",
-            "bytes": 46553,
+            "bytes": 46550,
             "mime": "font/woff2",
             "status": 200
           },
           {
             "name": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 46139,
+            "bytes": 46143,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "styles.css",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "css",
             "bytes": 43773,
             "mime": "text/css",
@@ -675,9 +710,9 @@
           },
           {
             "name": "3-clives-tee",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "document",
-            "bytes": 37838,
+            "bytes": 35678,
             "mime": "text/html",
             "status": 200
           }
@@ -691,7 +726,7 @@
         "detail": [
           {
             "src": "IMG_3682.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
             "query": "v=1774356387&width=400",
             "natural": [
               234,
@@ -708,14 +743,14 @@
             "objectFit": "fill",
             "inFirstViewport": true,
             "alt": "CROOKSLDN",
-            "bytes": 6073,
+            "bytes": 10367,
             "format": "png",
             "overscaleVsDpr": 1.63,
             "overscaleVsCss": 4.88
           },
           {
             "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
             "query": "v=1786198500&width=1400",
             "natural": [
               390,
@@ -732,14 +767,14 @@
             "objectFit": "contain",
             "inFirstViewport": true,
             "alt": "3 CLIVES TEE",
-            "bytes": 4807,
+            "bytes": 5192,
             "format": "png",
             "overscaleVsDpr": 0.39,
             "overscaleVsCss": 1.17
           },
           {
             "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
             "query": "v=1786198500&width=128",
             "natural": [
               390,
@@ -756,14 +791,14 @@
             "objectFit": "contain",
             "inFirstViewport": true,
             "alt": "",
-            "bytes": 4807,
+            "bytes": 5192,
             "format": "png",
             "overscaleVsDpr": 2.41,
             "overscaleVsCss": 7.22
           },
           {
             "src": "9dbaee36-324c-4962-a8ad-976d795cd949_webp.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/9dbaee36-324c-4962-a8ad-976d795cd949_webp.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/9dbaee36-324c-4962-a8ad-976d795cd949_webp.png",
             "query": "v=1786198500&width=128",
             "natural": [
               390,
@@ -780,14 +815,14 @@
             "objectFit": "contain",
             "inFirstViewport": true,
             "alt": "",
-            "bytes": 4391,
+            "bytes": 4307,
             "format": "png",
             "overscaleVsDpr": 2.41,
             "overscaleVsCss": 7.22
           },
           {
             "src": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
             "query": "v=1786198507&width=400",
             "natural": [
               390,
@@ -811,7 +846,7 @@
           },
           {
             "src": "IMG-3994.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG-3994.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG-3994.png",
             "query": "v=1786198496&width=400",
             "natural": [
               390,
@@ -828,14 +863,14 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "CRXST★RZ T-SHIRT",
-            "bytes": 11889,
+            "bytes": 11881,
             "format": "png",
             "overscaleVsDpr": 1.4,
             "overscaleVsCss": 4.19
           },
           {
             "src": "7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
             "query": "v=1786198504&width=400",
             "natural": [
               390,
@@ -862,72 +897,72 @@
     },
     "pdpDenim": {
       "label": "PDP — BLUE WASH OG JEANS (cb2-wash-jeans, £60)",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/cb2-wash-jeans",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/products/cb2-wash-jeans",
       "device": "390x844@3x",
       "throttled": true,
       "onTheme": {
         "crkRoot": true,
         "theme": "CROOKSLDN — Staging"
       },
-      "wallClockMs": 16651,
+      "wallClockMs": 17347,
       "vitals": {
-        "lcp": 4196,
+        "lcp": 4860,
         "lcpElement": "IMG.crk-main-img.crk-product-image url=crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-        "cls": 0.2324,
+        "cls": 0.3252,
         "clsShifts": [
           {
-            "v": 0.2315,
-            "t": 5549,
+            "v": 0.325,
+            "t": 2300,
             "src": [
-              "DIV.crk-grid",
-              "SPAN.crk-data",
-              "BUTTON.crk-textbtn"
+              "MAIN.content-for-layout",
+              "P.crk-status__msg",
+              "BUTTON.crk-header__link"
             ]
           }
         ],
-        "inp": 584,
-        "ttfb": 249,
-        "domContentLoaded": 5368,
-        "loadEvent": 10644,
-        "fcp": 884,
+        "inp": 1032,
+        "ttfb": 544,
+        "domContentLoaded": 6483,
+        "loadEvent": 11343,
+        "fcp": 1696,
         "firstProductImage": {
-          "t": 2700,
-          "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+          "t": 2886,
+          "src": "crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
           "w": 54,
           "h": 54
         },
-        "longTasksOver50ms": 19,
-        "longTaskTotalMs": 2192
+        "longTasksOver50ms": 14,
+        "longTaskTotalMs": 1796
       },
       "consoleErrors": [
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=kbwcga0qjjqhdh2w-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=bbushaa5dr2elw8f-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
         "Failed to load resource: net::ERR_FAILED",
         "pageerror: Failed to fetch",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Refused to execute script from 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/web-pixels@8b4bdd91w657eaa09pa445a201m797ba740/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe"
+        "Refused to execute script from 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/web-pixels@5f5c0921we198f819p6efddfcfm66c0f9a3/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe"
       ],
       "transfer": {
-        "totalBytes": 1901438,
-        "totalKB": 1857,
+        "totalBytes": 1875449,
+        "totalKB": 1831,
         "byTypeKB": {
-          "document": 62,
-          "css": 180,
-          "script": 1082,
-          "image": 261,
-          "font": 240,
+          "document": 50,
+          "css": 178,
+          "script": 1086,
+          "font": 222,
+          "image": 265,
           "json": 9,
           "other": 0,
           "other:text": 22
         },
-        "requestCount": 171,
+        "requestCount": 167,
         "largest": [
           {
             "name": "index.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 258714,
+            "bytes": 259035,
             "mime": "text/javascript",
             "status": 200
           },
@@ -935,15 +970,15 @@
             "name": "vendor-DfR6YY9mO42n.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 188325,
+            "bytes": 188319,
             "mime": "text/javascript",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.p",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 186655,
+            "bytes": 186643,
             "mime": "image/webp",
             "status": 200
           },
@@ -951,31 +986,31 @@
             "name": "vendor.css",
             "host": "cdn.shopify.com",
             "type": "css",
-            "bytes": 99511,
+            "bytes": 99517,
             "mime": "text/css",
             "status": 200
           },
           {
             "name": "portable-wallets.en.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 76960,
+            "bytes": 77302,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "app-ClXuvt2052vC.js",
+            "name": "app-Dg4m_5HrBxDU.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 76482,
+            "bytes": 76299,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "b8b4bdd91w657eaa09pa445a201m797ba740m.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "name": "b5f5c0921we198f819p6efddfcfm66c0f9a3m.js",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 72431,
+            "bytes": 72859,
             "mime": "text/javascript",
             "status": 200
           },
@@ -991,31 +1026,31 @@
             "name": "InterVariable-latin-1751944278923.woff2",
             "host": "cdn.shopify.com",
             "type": "font",
-            "bytes": 49875,
+            "bytes": 49881,
             "mime": "font/woff2",
             "status": 200
           },
           {
             "name": "archivo_n4.dc8d917cc69af0a65ae04d01fd8eeab28a3573c9.woff2",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "font",
-            "bytes": 46543,
+            "bytes": 46548,
             "mime": "font/woff2",
             "status": 200
           },
           {
             "name": "styles.css",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "css",
-            "bytes": 43781,
+            "bytes": 43769,
             "mime": "text/css",
             "status": 200
           },
           {
             "name": "cb2-wash-jeans",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "document",
-            "bytes": 37166,
+            "bytes": 35278,
             "mime": "text/html",
             "status": 200
           }
@@ -1029,7 +1064,7 @@
         "detail": [
           {
             "src": "IMG_3682.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
             "query": "v=1774356387&width=400",
             "natural": [
               234,
@@ -1046,14 +1081,14 @@
             "objectFit": "fill",
             "inFirstViewport": true,
             "alt": "CROOKSLDN",
-            "bytes": 6073,
+            "bytes": 10367,
             "format": "png",
             "overscaleVsDpr": 1.63,
             "overscaleVsCss": 4.88
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=1400",
             "natural": [
               390,
@@ -1077,7 +1112,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=128",
             "natural": [
               390,
@@ -1101,7 +1136,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
             "query": "v=1786194968&width=128",
             "natural": [
               390,
@@ -1125,7 +1160,7 @@
           },
           {
             "src": "crooksldn-blue-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
             "query": "v=1786031414&width=400",
             "natural": [
               390,
@@ -1142,14 +1177,14 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "BLUE WASH JORTS",
-            "bytes": 23234,
+            "bytes": 23220,
             "format": "png",
             "overscaleVsDpr": 1.4,
             "overscaleVsCss": 4.19
           },
           {
             "src": "crooksldn-grey-wash-baggy-jeans.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
             "query": "v=1786031509&width=400",
             "natural": [
               390,
@@ -1166,14 +1201,14 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "GREY WASH OG JEANS",
-            "bytes": 17818,
+            "bytes": 17611,
             "format": "png",
             "overscaleVsDpr": 1.4,
             "overscaleVsCss": 4.19
           },
           {
             "src": "crooksldn-grey-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
             "query": "v=1786031378&width=400",
             "natural": [
               390,
@@ -1190,7 +1225,7 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "GREY WASH JORTS",
-            "bytes": 14904,
+            "bytes": 15310,
             "format": "png",
             "overscaleVsDpr": 1.4,
             "overscaleVsCss": 4.19
@@ -1200,70 +1235,79 @@
     },
     "cart": {
       "label": "Cart",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cart",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cart",
       "device": "390x844@3x",
       "throttled": true,
       "onTheme": {
         "crkRoot": true,
         "theme": "CROOKSLDN — Staging"
       },
-      "wallClockMs": 28809,
+      "wallClockMs": 29120,
       "vitals": {
-        "lcp": 9444,
+        "lcp": 10308,
         "lcpElement": "P",
-        "cls": 0.0113,
+        "cls": 0.3906,
         "clsShifts": [
           {
-            "v": 0.0095,
-            "t": 3657,
+            "v": 0.0599,
+            "t": 2176,
             "src": [
-              "DIV.cart__ctas",
-              "DIV.cart-totals__item",
-              "LI.wallet-cart-button-container"
+              "DIV.section-background",
+              "P.crk-carriage__msg",
+              "P.crk-carriage__tiers"
+            ]
+          },
+          {
+            "v": 0.325,
+            "t": 2241,
+            "src": [
+              "MAIN.content-for-layout",
+              "P.crk-status__msg",
+              "BUTTON.crk-header__link"
             ]
           }
         ],
-        "inp": 1096,
-        "ttfb": 415,
-        "domContentLoaded": 8766,
-        "loadEvent": 22802,
-        "fcp": 1560,
+        "inp": 1160,
+        "ttfb": 403,
+        "domContentLoaded": 9672,
+        "loadEvent": 23115,
+        "fcp": 1604,
         "firstProductImage": {
-          "t": 3330,
+          "t": 3941,
           "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
           "w": 88,
           "h": 110
         },
-        "longTasksOver50ms": 30,
-        "longTaskTotalMs": 4281
+        "longTasksOver50ms": 29,
+        "longTaskTotalMs": 3995
       },
       "consoleErrors": [
-        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=kbwcga0qjjqhdh2w-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
+        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=bbushaa5dr2elw8f-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
         "Failed to load resource: net::ERR_FAILED",
         "pageerror: Failed to fetch",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Refused to execute script from 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/web-pixels@8b4bdd91w657eaa09pa445a201m797ba740/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
+        "Refused to execute script from 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/web-pixels@5f5c0921we198f819p6efddfcfm66c0f9a3/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
         "Failed to load resource: the server responded with a status of 404 (Not Found)"
       ],
       "transfer": {
-        "totalBytes": 4315909,
-        "totalKB": 4215,
+        "totalBytes": 4319527,
+        "totalKB": 4218,
         "byTypeKB": {
-          "css": 193,
-          "document": 657,
-          "script": 1616,
+          "css": 180,
+          "document": 652,
+          "script": 1622,
           "font": 369,
-          "image": 1340,
           "json": 16,
-          "other": 2,
-          "other:text": 22
+          "image": 1355,
+          "other:text": 22,
+          "other": 2
         },
-        "requestCount": 240,
+        "requestCount": 237,
         "largest": [
           {
             "name": "cellcrew.webp",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
             "bytes": 976401,
             "mime": "image/png",
@@ -1273,7 +1317,7 @@
             "name": "pay",
             "host": "pay.google.com",
             "type": "document",
-            "bytes": 417663,
+            "bytes": 419283,
             "mime": "text/html",
             "status": 200
           },
@@ -1281,7 +1325,7 @@
             "name": "index.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 258724,
+            "bytes": 259041,
             "mime": "text/javascript",
             "status": 200
           },
@@ -1289,7 +1333,7 @@
             "name": "vendor-DfR6YY9mO42n.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 188321,
+            "bytes": 188323,
             "mime": "text/javascript",
             "status": 200
           },
@@ -1297,23 +1341,23 @@
             "name": "buttons",
             "host": "www.paypal.com",
             "type": "document",
-            "bytes": 177811,
+            "bytes": 183773,
             "mime": "text/html",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.p",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 153477,
+            "bytes": 158185,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-denim-jorts.png",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 131751,
+            "bytes": 137379,
             "mime": "image/webp",
             "status": 200
           },
@@ -1321,7 +1365,7 @@
             "name": "js",
             "host": "www.paypal.com",
             "type": "script",
-            "bytes": 102423,
+            "bytes": 102420,
             "mime": "application/javascript",
             "status": 200
           },
@@ -1329,7 +1373,7 @@
             "name": "js",
             "host": "www.paypal.com",
             "type": "script",
-            "bytes": 102421,
+            "bytes": 102418,
             "mime": "application/javascript",
             "status": 200
           },
@@ -1337,23 +1381,23 @@
             "name": "vendor.css",
             "host": "cdn.shopify.com",
             "type": "css",
-            "bytes": 99517,
+            "bytes": 99513,
             "mime": "text/css",
             "status": 200
           },
           {
             "name": "crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd05",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 83785,
+            "bytes": 83768,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "portable-wallets.en.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 76960,
+            "bytes": 77296,
             "mime": "text/javascript",
             "status": 200
           }
@@ -1368,7 +1412,7 @@
         "detail": [
           {
             "src": "IMG_3682.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
             "query": "v=1774356387&width=400",
             "natural": [
               234,
@@ -1385,14 +1429,14 @@
             "objectFit": "fill",
             "inFirstViewport": true,
             "alt": "CROOKSLDN",
-            "bytes": 6068,
+            "bytes": 10362,
             "format": "png",
             "overscaleVsDpr": 1.63,
             "overscaleVsCss": 4.88
           },
           {
             "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
             "query": "v=1786198500&width=250",
             "natural": [
               390,
@@ -1409,14 +1453,14 @@
             "objectFit": "cover",
             "inFirstViewport": true,
             "alt": "3 CLIVES TEE",
-            "bytes": 7341,
+            "bytes": 8244,
             "format": "png",
             "overscaleVsDpr": 1.48,
             "overscaleVsCss": 4.43
           },
           {
             "src": "cellcrew.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/cellcrew.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/cellcrew.webp",
             "query": "v=1785770354&width=1200",
             "natural": [
               390,
@@ -1440,7 +1484,7 @@
           },
           {
             "src": "crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
             "query": "v=1786139677&width=1200",
             "natural": [
               390,
@@ -1464,7 +1508,7 @@
           },
           {
             "src": "crooksldn-charcoal-cellblock-shorts-1_0165fb2f-9018-4133-96de-b97cf262f248.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts-1_0165fb2f-9018-4133-96de-b97cf262f248.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts-1_0165fb2f-9018-4133-96de-b97cf262f248.png",
             "query": "v=1786139677&width=3840",
             "natural": [
               0,
@@ -1488,7 +1532,7 @@
           },
           {
             "src": "crooksldn-charcoal-cellblock-shorts_f961443e-e8ec-4be1-8135-38b583de2dcc.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_f961443e-e8ec-4be1-8135-38b583de2dcc.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_f961443e-e8ec-4be1-8135-38b583de2dcc.png",
             "query": "v=1786139678&width=3840",
             "natural": [
               0,
@@ -1512,7 +1556,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=1200",
             "natural": [
               390,
@@ -1536,7 +1580,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
             "query": "v=1786194968&width=3840",
             "natural": [
               0,
@@ -1560,7 +1604,7 @@
           },
           {
             "src": "crooksldn-blue-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
             "query": "v=1786031414&width=1200",
             "natural": [
               390,
@@ -1577,7 +1621,7 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets",
-            "bytes": 131751,
+            "bytes": 137379,
             "format": "png",
             "overscaleVsDpr": 0.74,
             "overscaleVsCss": 2.23
@@ -1587,59 +1631,62 @@
     },
     "homeDesktop": {
       "label": "Homepage [desktop]",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/",
       "device": "1440x900@2x",
       "throttled": true,
       "onTheme": {
         "crkRoot": true,
         "theme": "CROOKSLDN — Staging"
       },
-      "wallClockMs": 19339,
+      "wallClockMs": 20454,
       "vitals": {
-        "lcp": 1512,
+        "lcp": 1724,
         "lcpElement": "H1.crk-h1",
-        "cls": 0.0005,
+        "cls": 0.0013,
         "clsShifts": [],
-        "inp": 656,
-        "ttfb": 810,
-        "domContentLoaded": 4517,
-        "loadEvent": 13333,
-        "fcp": 1512,
-        "firstProductImage": null,
+        "inp": 1104,
+        "ttfb": 573,
+        "domContentLoaded": 5661,
+        "loadEvent": 14447,
+        "fcp": 1724,
+        "firstProductImage": {
+          "t": 3731,
+          "src": "crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
+          "w": 291,
+          "h": 291
+        },
         "longTasksOver50ms": 16,
-        "longTaskTotalMs": 2095
+        "longTaskTotalMs": 1864
       },
       "consoleErrors": [
-        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=kbwcga0qjjqhdh2w-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=bbushaa5dr2elw8f-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
         "Failed to load resource: net::ERR_FAILED",
         "pageerror: Failed to fetch",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Access to fetch at 'https://shop.app/pay/session?v=1&token=1fadbc46-eee4-43e6-bfb5-ee0a37c79fb4&shop_id=100410786135' from origin 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com' has been bl",
-        "Failed to load resource: net::ERR_FAILED",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Refused to execute script from 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/web-pixels@8b4bdd91w657eaa09pa445a201m797ba740/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
+        "Refused to execute script from 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/web-pixels@5f5c0921we198f819p6efddfcfm66c0f9a3/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
         "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
       ],
       "transfer": {
-        "totalBytes": 2303371,
-        "totalKB": 2249,
+        "totalBytes": 2344896,
+        "totalKB": 2290,
         "byTypeKB": {
-          "document": 52,
-          "css": 195,
+          "document": 51,
+          "css": 192,
           "script": 1123,
-          "image": 626,
+          "image": 668,
           "font": 223,
-          "json": 10,
-          "other:text": 20
+          "json": 13,
+          "other:text": 19
         },
-        "requestCount": 159,
+        "requestCount": 158,
         "largest": [
           {
             "name": "index.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 258714,
+            "bytes": 259039,
             "mime": "text/javascript",
             "status": 200
           },
@@ -1647,7 +1694,7 @@
             "name": "vendor-DfR6YY9mO42n.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 188323,
+            "bytes": 188322,
             "mime": "text/javascript",
             "status": 200
           },
@@ -1655,7 +1702,7 @@
             "name": "index-BZt26T72.js",
             "host": "crack-cuff-codes.base44.app",
             "type": "script",
-            "bytes": 166889,
+            "bytes": 166883,
             "mime": "application/javascript",
             "status": 200
           },
@@ -1663,86 +1710,87 @@
             "name": "vendor.css",
             "host": "cdn.shopify.com",
             "type": "css",
-            "bytes": 99517,
+            "bytes": 99515,
             "mime": "text/css",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.p",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 85551,
+            "bytes": 86309,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-denim-jorts.png",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 77243,
+            "bytes": 77245,
             "mime": "image/webp",
             "status": 200
           },
           {
-            "name": "app-ClXuvt2052vC.js",
+            "name": "app-Dg4m_5HrBxDU.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 76478,
+            "bytes": 76303,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "b8b4bdd91w657eaa09pa445a201m797ba740m.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "name": "b5f5c0921we198f819p6efddfcfm66c0f9a3m.js",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 72427,
+            "bytes": 72855,
             "mime": "text/javascript",
             "status": 200
           },
           {
             "name": "cellcrew.webp",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 66673,
+            "bytes": 66679,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "crooksldn-grey-wash-baggy-jeans.png",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 58944,
+            "bytes": 58954,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd05",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 53481,
+            "bytes": 53949,
             "mime": "image/webp",
             "status": 200
           },
           {
             "name": "blacksock.png",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 52438,
+            "bytes": 52434,
             "mime": "image/webp",
             "status": 200
           }
         ]
       },
       "images": {
-        "count": 15,
+        "count": 16,
         "formats": {
           "png": 12,
-          "webp": 3
+          "webp": 3,
+          "jpg": 1
         },
         "detail": [
           {
             "src": "IMG_3682.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
             "query": "v=1774356387&width=400",
             "natural": [
               867,
@@ -1759,14 +1807,14 @@
             "objectFit": "fill",
             "inFirstViewport": true,
             "alt": "CROOKSLDN",
-            "bytes": 6072,
+            "bytes": 10368,
             "format": "png",
             "overscaleVsDpr": 9.03,
             "overscaleVsCss": 18.06
           },
           {
             "src": "cellcrew.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/cellcrew.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/cellcrew.webp",
             "query": "v=1785770354&width=800",
             "natural": [
               360,
@@ -1781,16 +1829,16 @@
             "hasSrcset": true,
             "sizes": "(min-width: 1024px) 25vw, 50vw",
             "objectFit": "cover",
-            "inFirstViewport": false,
+            "inFirstViewport": true,
             "alt": "CHARCOAL CELLBLOCK CREWNECK",
-            "bytes": 66673,
+            "bytes": 66679,
             "format": "webp",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-charcoal-cellblock-shorts_e5a60ba3-3fde-4919-b524-d93d1efd0550.png",
             "query": "v=1786139677&width=800",
             "natural": [
               360,
@@ -1805,7 +1853,7 @@
             "hasSrcset": true,
             "sizes": "(min-width: 1024px) 25vw, 50vw",
             "objectFit": "cover",
-            "inFirstViewport": false,
+            "inFirstViewport": true,
             "alt": "CROOKSLDN charcoal Cellblock shorts in heavyweight fabric with a relaxed fit and 3D embroidered detail",
             "bytes": null,
             "format": "png",
@@ -1814,7 +1862,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=800",
             "natural": [
               360,
@@ -1829,7 +1877,7 @@
             "hasSrcset": true,
             "sizes": "(min-width: 1024px) 25vw, 50vw",
             "objectFit": "cover",
-            "inFirstViewport": false,
+            "inFirstViewport": true,
             "alt": "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets",
             "bytes": null,
             "format": "png",
@@ -1838,7 +1886,7 @@
           },
           {
             "src": "crooksldn-blue-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
             "query": "v=1786031414&width=800",
             "natural": [
               360,
@@ -1853,16 +1901,16 @@
             "hasSrcset": true,
             "sizes": "(min-width: 1024px) 25vw, 50vw",
             "objectFit": "cover",
-            "inFirstViewport": false,
+            "inFirstViewport": true,
             "alt": "CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets",
-            "bytes": 77243,
+            "bytes": 77245,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "crooksldn-grey-wash-baggy-jeans.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
             "query": "v=1786031509&width=800",
             "natural": [
               360,
@@ -1879,14 +1927,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN grey wash heavyweight denim jeans with baggy fit and handcuff graphic on back pockets",
-            "bytes": 58944,
+            "bytes": 58954,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "crooksldn-grey-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
             "query": "v=1786031378&width=800",
             "natural": [
               360,
@@ -1903,14 +1951,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN grey wash baggy denim jorts featuring white handcuff graphic print on the back pockets",
-            "bytes": 45337,
+            "bytes": 45239,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png",
             "query": "v=1786198507&width=800",
             "natural": [
               360,
@@ -1934,7 +1982,7 @@
           },
           {
             "src": "df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/df150894-177a-426a-8156-e2ebf1c0aabf_webp.png",
             "query": "v=1786198500&width=800",
             "natural": [
               360,
@@ -1951,14 +1999,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "3 CLIVES TEE",
-            "bytes": 25532,
+            "bytes": 25876,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "IMG-3994.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG-3994.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG-3994.png",
             "query": "v=1786198496&width=800",
             "natural": [
               360,
@@ -1975,14 +2023,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CRXST★RZ T-SHIRT",
-            "bytes": 23826,
+            "bytes": 23740,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/7087223b-a77a-4219-9880-1e3a00cc166c_webp_e8bc0464-40ff-447f-88a0-7344c3204cb1.png",
             "query": "v=1786198504&width=800",
             "natural": [
               360,
@@ -2006,7 +2054,7 @@
           },
           {
             "src": "v2baggies.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/v2baggies.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/v2baggies.webp",
             "query": "v=1785770336&width=800",
             "natural": [
               360,
@@ -2023,14 +2071,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "V2 BAGGIES",
-            "bytes": 34285,
+            "bytes": 35321,
             "format": "webp",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "blacksock.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/blacksock.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/blacksock.png",
             "query": "v=1784542125&width=800",
             "natural": [
               360,
@@ -2047,14 +2095,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "BLACK/BLUE MOTIONTEC SOCKS",
-            "bytes": 52438,
+            "bytes": 52434,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "crooksldn-white-red-motiontec-socks.webp",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-white-red-motiontec-socks.webp",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-white-red-motiontec-socks.webp",
             "query": "v=1785769861&width=800",
             "natural": [
               360,
@@ -2071,14 +2119,14 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN white and red MotionTec performance socks with grey accents and small handcuff logo detail",
-            "bytes": 40472,
+            "bytes": 41550,
             "format": "webp",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
           },
           {
             "src": "crooksldn-large-black-duffle-bag.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-large-black-duffle-bag.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-large-black-duffle-bag.png",
             "query": "v=1786031562&width=800",
             "natural": [
               360,
@@ -2095,83 +2143,97 @@
             "objectFit": "cover",
             "inFirstViewport": false,
             "alt": "CROOKSLDN large black duffle bag with white circular logo print and zippered front pocket",
-            "bytes": 25021,
+            "bytes": 25831,
             "format": "png",
             "overscaleVsDpr": 0.62,
             "overscaleVsCss": 1.24
+          },
+          {
+            "src": "023A5758-35A6-4900-9A9E-AC2AD72E1341_1_105_c.jpg",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/023A5758-35A6-4900-9A9E-AC2AD72E1341_1_105_c.jpg",
+            "query": "v=1786997854&width=1800",
+            "natural": [
+              567,
+              319
+            ],
+            "rendered": [
+              717,
+              403
+            ],
+            "loading": "lazy",
+            "fetchpriority": "auto",
+            "hasSrcset": true,
+            "sizes": "(min-width: 1024px) 60vw, 100vw",
+            "objectFit": "fill",
+            "inFirstViewport": false,
+            "alt": "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring.",
+            "bytes": 34404,
+            "format": "jpg",
+            "overscaleVsDpr": 0.4,
+            "overscaleVsCss": 0.79
           }
         ]
       }
     },
     "pdpDenimDesktop": {
       "label": "PDP — BLUE WASH OG JEANS (cb2-wash-jeans, £60) [desktop]",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/cb2-wash-jeans",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/products/cb2-wash-jeans",
       "device": "1440x900@2x",
       "throttled": true,
       "onTheme": {
         "crkRoot": true,
         "theme": "CROOKSLDN — Staging"
       },
-      "wallClockMs": 16571,
+      "wallClockMs": 16270,
       "vitals": {
-        "lcp": 3752,
+        "lcp": 4300,
         "lcpElement": "IMG.crk-main-img.crk-product-image url=crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-        "cls": 0.0115,
-        "clsShifts": [
-          {
-            "v": 0.0081,
-            "t": 5643,
-            "src": [
-              "FORM.shopify-product-form",
-              "DIV.crk-display",
-              "."
-            ]
-          }
-        ],
-        "inp": 560,
-        "ttfb": 426,
-        "domContentLoaded": 5468,
-        "loadEvent": 10566,
-        "fcp": 1044,
+        "cls": 0.0033,
+        "clsShifts": [],
+        "inp": 1152,
+        "ttfb": 462,
+        "domContentLoaded": 5514,
+        "loadEvent": 10265,
+        "fcp": 1656,
         "firstProductImage": {
-          "t": 3141,
+          "t": 2750,
           "src": "crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
           "w": 54,
           "h": 54
         },
-        "longTasksOver50ms": 18,
-        "longTaskTotalMs": 2011
+        "longTasksOver50ms": 14,
+        "longTaskTotalMs": 1747
       },
       "consoleErrors": [
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=kbwcga0qjjqhdh2w-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
+        "Access to fetch at 'https://wt.omnisendlink.com/REST/inShop/v1/getSettings?shopHostname=bbushaa5dr2elw8f-100410786135.shopifypreview.com&shopType=shopify&shopID=100410786135&responseType=json' from or",
         "Failed to load resource: net::ERR_FAILED",
         "pageerror: Failed to fetch",
         "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Failed to load resource: the server responded with a status of 404 (Not Found)",
-        "Refused to execute script from 'https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/web-pixels@8b4bdd91w657eaa09pa445a201m797ba740/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe"
+        "Refused to execute script from 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/web-pixels@5f5c0921we198f819p6efddfcfm66c0f9a3/app/web-pixel-4860805463@abff2a8add143ccb04deb20f0ebd74a9~2/pixe",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
       ],
       "transfer": {
-        "totalBytes": 1869665,
-        "totalKB": 1826,
+        "totalBytes": 1840007,
+        "totalKB": 1797,
         "byTypeKB": {
-          "document": 70,
-          "css": 180,
-          "script": 1043,
-          "image": 258,
-          "font": 240,
+          "document": 57,
+          "css": 178,
+          "script": 1044,
+          "image": 262,
+          "font": 222,
           "json": 14,
           "other": 0,
-          "other:text": 22
+          "other:text": 20
         },
-        "requestCount": 159,
+        "requestCount": 152,
         "largest": [
           {
             "name": "index.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 258720,
+            "bytes": 259039,
             "mime": "text/javascript",
             "status": 200
           },
@@ -2179,15 +2241,15 @@
             "name": "vendor-DfR6YY9mO42n.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 188319,
+            "bytes": 188322,
             "mime": "text/javascript",
             "status": 200
           },
           {
             "name": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.p",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "image",
-            "bytes": 186646,
+            "bytes": 186651,
             "mime": "image/webp",
             "status": 200
           },
@@ -2195,31 +2257,31 @@
             "name": "vendor.css",
             "host": "cdn.shopify.com",
             "type": "css",
-            "bytes": 99511,
+            "bytes": 99521,
             "mime": "text/css",
             "status": 200
           },
           {
             "name": "portable-wallets.en.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 76946,
+            "bytes": 77303,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "app-ClXuvt2052vC.js",
+            "name": "app-Dg4m_5HrBxDU.js",
             "host": "cdn.shopify.com",
             "type": "script",
-            "bytes": 76482,
+            "bytes": 76303,
             "mime": "text/javascript",
             "status": 200
           },
           {
-            "name": "b8b4bdd91w657eaa09pa445a201m797ba740m.js",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "name": "b5f5c0921we198f819p6efddfcfm66c0f9a3m.js",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "script",
-            "bytes": 72437,
+            "bytes": 72851,
             "mime": "text/javascript",
             "status": 200
           },
@@ -2227,7 +2289,7 @@
             "name": "GTStandard-MRegular.woff2",
             "host": "cdn.shopify.com",
             "type": "font",
-            "bytes": 65054,
+            "bytes": 65052,
             "mime": "font/woff2",
             "status": 200
           },
@@ -2235,21 +2297,21 @@
             "name": "InterVariable-latin-1751944278923.woff2",
             "host": "cdn.shopify.com",
             "type": "font",
-            "bytes": 49877,
+            "bytes": 49873,
             "mime": "font/woff2",
             "status": 200
           },
           {
             "name": "archivo_n4.dc8d917cc69af0a65ae04d01fd8eeab28a3573c9.woff2",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "font",
-            "bytes": 46549,
+            "bytes": 46546,
             "mime": "font/woff2",
             "status": 200
           },
           {
             "name": "styles.css",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "css",
             "bytes": 43774,
             "mime": "text/css",
@@ -2257,9 +2319,9 @@
           },
           {
             "name": "cb2-wash-jeans",
-            "host": "kbwcga0qjjqhdh2w-100410786135.shopifypreview.com",
+            "host": "bbushaa5dr2elw8f-100410786135.shopifypreview.com",
             "type": "document",
-            "bytes": 37233,
+            "bytes": 35433,
             "mime": "text/html",
             "status": 200
           }
@@ -2273,7 +2335,7 @@
         "detail": [
           {
             "src": "IMG_3682.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/IMG_3682.png",
             "query": "v=1774356387&width=400",
             "natural": [
               867,
@@ -2290,14 +2352,14 @@
             "objectFit": "fill",
             "inFirstViewport": true,
             "alt": "CROOKSLDN",
-            "bytes": 6070,
+            "bytes": 10360,
             "format": "png",
             "overscaleVsDpr": 9.03,
             "overscaleVsCss": 18.06
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=1400",
             "natural": [
               792,
@@ -2321,7 +2383,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png",
             "query": "v=1786194968&width=128",
             "natural": [
               1440,
@@ -2345,7 +2407,7 @@
           },
           {
             "src": "crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_64ad3bb0-1de3-4a9a-b8b0-35e2ce23d8f2.png",
             "query": "v=1786194968&width=128",
             "natural": [
               1440,
@@ -2369,7 +2431,7 @@
           },
           {
             "src": "crooksldn-blue-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-denim-jorts.png",
             "query": "v=1786031414&width=400",
             "natural": [
               1440,
@@ -2386,14 +2448,14 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "BLUE WASH JORTS",
-            "bytes": 23233,
+            "bytes": 23236,
             "format": "png",
             "overscaleVsDpr": 2.81,
             "overscaleVsCss": 5.63
           },
           {
             "src": "crooksldn-grey-wash-baggy-jeans.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-baggy-jeans.png",
             "query": "v=1786031509&width=400",
             "natural": [
               1440,
@@ -2410,14 +2472,14 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "GREY WASH OG JEANS",
-            "bytes": 17817,
+            "bytes": 17611,
             "format": "png",
             "overscaleVsDpr": 2.81,
             "overscaleVsCss": 5.63
           },
           {
             "src": "crooksldn-grey-wash-denim-jorts.png",
-            "full": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
+            "full": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-grey-wash-denim-jorts.png",
             "query": "v=1786031378&width=400",
             "natural": [
               1440,
@@ -2434,7 +2496,7 @@
             "objectFit": "contain",
             "inFirstViewport": false,
             "alt": "GREY WASH JORTS",
-            "bytes": 14893,
+            "bytes": 15322,
             "format": "png",
             "overscaleVsDpr": 2.81,
             "overscaleVsCss": 5.63
@@ -2445,9 +2507,9 @@
   },
   "notes": [],
   "harnessBaseline": {
-    "unthrottledWallMs": 1708,
-    "unthrottledTtfbMs": 276,
-    "unthrottledDclMs": 1705,
+    "unthrottledWallMs": 2261,
+    "unthrottledTtfbMs": 651,
+    "unthrottledDclMs": 2259,
     "note": "Unthrottled, but still through the session egress proxy + local TLS bridge. Treat throttled figures as an upper bound; the proxy hop adds a fixed penalty to TTFB that a real shopper would not pay."
   }
 }

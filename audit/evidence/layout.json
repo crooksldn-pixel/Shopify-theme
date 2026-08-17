@@ -1,9 +1,9 @@
 {
-  "generated": "2026-08-08T17:08:03.253Z",
+  "generated": "2026-08-17T21:33:17.378Z",
   "pages": {
     "home": {
       "label": "Homepage",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/",
       "popupOnArrival": [
         {
           "cls": "ctc-overlay",
@@ -17,29 +17,22 @@
         390,
         844
       ],
-      "docHeight": 5390,
-      "docHeightInViewports": 6.39,
+      "docHeight": 5022,
+      "docHeightInViewports": 5.95,
       "scrollDepthViewports": {
-        "firstProductCard": 1.48,
+        "firstProductCard": 1.14,
         "firstProductCardSel": "a.crk-card",
         "addToCart": null,
         "addToCartSel": null,
-        "firstPrice": 0.16,
+        "firstPrice": 0.28,
         "firstPriceText": "£45.00 to free Track",
-        "footer": 5.46,
+        "footer": 4.92,
         "checkout": null
       },
       "tapTargets": {
-        "total": 50,
+        "total": 49,
         "under44": 11,
         "under44Unique": [
-          {
-            "sel": "label.crk-sr",
-            "w": 1,
-            "h": 1,
-            "text": "Email address",
-            "count": 1
-          },
           {
             "sel": "a",
             "w": 22,
@@ -66,7 +59,7 @@
             "w": 36,
             "h": 44,
             "text": "DENIM",
-            "count": 2
+            "count": 3
           },
           {
             "sel": "a",
@@ -77,21 +70,21 @@
           },
           {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
-            "w": 267,
+            "w": 316,
             "h": 33,
             "text": "Manage preferences",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Accept",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Decline",
             "count": 1
@@ -101,35 +94,35 @@
       "thumbZone": {
         "sel": "a.crk-card",
         "inFirstViewport": false,
-        "topOfDocPx": 1247,
-        "band": "middle",
-        "viewportsDown": 1.48
+        "topOfDocPx": 965,
+        "band": "top third",
+        "viewportsDown": 1.14
       },
       "stickyBar": null
     },
     "pdpTee": {
       "label": "PDP — 3 CLIVES TEE",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/3-clives-tee",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/products/3-clives-tee",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 3492,
-      "docHeightInViewports": 4.14,
+      "docHeight": 3002,
+      "docHeightInViewports": 3.56,
       "scrollDepthViewports": {
-        "firstProductCard": 2.85,
+        "firstProductCard": 2.16,
         "firstProductCardSel": "a.crk-related-item",
-        "addToCart": 1.48,
+        "addToCart": 1.59,
         "addToCartSel": "button.crk-btn",
-        "firstPrice": 0.16,
+        "firstPrice": 0.28,
         "firstPriceText": "£45.00 to free Track",
-        "footer": 3.21,
+        "footer": 2.52,
         "checkout": null
       },
       "tapTargets": {
         "total": 48,
-        "under44": 12,
+        "under44": 13,
         "under44Unique": [
           {
             "sel": "a",
@@ -164,7 +157,7 @@
             "w": 36,
             "h": 44,
             "text": "DENIM",
-            "count": 2
+            "count": 3
           },
           {
             "sel": "a",
@@ -176,27 +169,27 @@
           {
             "sel": "a#more-payment-options-link.shopify-payment-button__more-options",
             "w": 324,
-            "h": 22,
+            "h": 18,
             "text": "More payment options",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
-            "w": 267,
+            "w": 316,
             "h": 33,
             "text": "Manage preferences",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Accept",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Decline",
             "count": 1
@@ -206,9 +199,9 @@
       "thumbZone": {
         "sel": "button.crk-btn",
         "inFirstViewport": false,
-        "topOfDocPx": 1247,
+        "topOfDocPx": 1345,
         "band": "middle",
-        "viewportsDown": 1.48
+        "viewportsDown": 1.59
       },
       "stickyBar": [
         {
@@ -230,27 +223,27 @@
     },
     "pdpDenim": {
       "label": "PDP — BLUE WASH OG JEANS",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/products/cb2-wash-jeans",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/products/cb2-wash-jeans",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 3400,
-      "docHeightInViewports": 4.03,
+      "docHeight": 2911,
+      "docHeightInViewports": 3.45,
       "scrollDepthViewports": {
-        "firstProductCard": 2.74,
+        "firstProductCard": 2.05,
         "firstProductCardSel": "a.crk-related-item",
-        "addToCart": 1.37,
+        "addToCart": 1.49,
         "addToCartSel": "button.crk-btn",
-        "firstPrice": 0.16,
+        "firstPrice": 0.28,
         "firstPriceText": "£45.00 to free Track",
-        "footer": 3.1,
+        "footer": 2.42,
         "checkout": null
       },
       "tapTargets": {
         "total": 46,
-        "under44": 12,
+        "under44": 13,
         "under44Unique": [
           {
             "sel": "a",
@@ -285,7 +278,7 @@
             "w": 36,
             "h": 44,
             "text": "DENIM",
-            "count": 2
+            "count": 3
           },
           {
             "sel": "a",
@@ -297,27 +290,27 @@
           {
             "sel": "a#more-payment-options-link.shopify-payment-button__more-options",
             "w": 324,
-            "h": 22,
+            "h": 18,
             "text": "More payment options",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
-            "w": 267,
+            "w": 316,
             "h": 33,
             "text": "Manage preferences",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Accept",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Decline",
             "count": 1
@@ -327,9 +320,9 @@
       "thumbZone": {
         "sel": "button.crk-btn",
         "inFirstViewport": false,
-        "topOfDocPx": 1156,
+        "topOfDocPx": 1254,
         "band": "middle",
-        "viewportsDown": 1.37
+        "viewportsDown": 1.49
       },
       "stickyBar": [
         {
@@ -351,26 +344,26 @@
     },
     "cart": {
       "label": "Cart",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cart",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/cart",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 2436,
-      "docHeightInViewports": 2.89,
+      "docHeight": 2624,
+      "docHeightInViewports": 3.11,
       "scrollDepthViewports": {
-        "firstProductCard": 0.39,
+        "firstProductCard": 0.51,
         "firstProductCardSel": "a.cart-items__media-container",
         "addToCart": null,
         "addToCartSel": null,
-        "firstPrice": 0.16,
+        "firstPrice": 0.28,
         "firstPriceText": "£45.00 to free Track",
-        "footer": 1.96,
-        "checkout": 0.88
+        "footer": 2.08,
+        "checkout": 1
       },
       "tapTargets": {
-        "total": 38,
+        "total": 41,
         "under44": 12,
         "under44Unique": [
           {
@@ -399,7 +392,7 @@
             "w": 36,
             "h": 44,
             "text": "DENIM",
-            "count": 2
+            "count": 3
           },
           {
             "sel": "a",
@@ -409,74 +402,67 @@
             "count": 2
           },
           {
-            "sel": "a#shopify-pc__banner__body-policy-link",
-            "w": 126,
-            "h": 21,
-            "text": "Privacy Policy",
-            "count": 1
-          },
-          {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
-            "w": 267,
+            "w": 316,
             "h": 33,
             "text": "Manage preferences",
             "count": 1
           },
           {
+            "sel": "a#shopify-pc__banner__body-policy-link",
+            "w": 279,
+            "h": 39,
+            "text": "Privacy Policy",
+            "count": 1
+          },
+          {
             "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Accept",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Decline",
-            "count": 1
-          },
-          {
-            "sel": "summary.cart-discount__summary",
-            "w": 358,
-            "h": 42,
-            "text": "Discount",
             "count": 1
           }
         ]
       },
       "thumbZone": {
         "sel": "button#checkout.cart__checkout-button.button",
-        "inFirstViewport": true,
-        "topOfDocPx": 747,
-        "band": "bottom 40% (thumb zone)",
-        "viewportsDown": 0.88
+        "inFirstViewport": false,
+        "topOfDocPx": 847,
+        "band": "top third",
+        "viewportsDown": 1
       },
       "stickyBar": null
     },
     "collection": {
       "label": "Collection — all",
-      "url": "https://kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/collections/all",
+      "url": "https://bbushaa5dr2elw8f-100410786135.shopifypreview.com/collections/all",
       "popupOnArrival": [],
       "viewport": [
         390,
         844
       ],
-      "docHeight": 3388,
-      "docHeightInViewports": 4.01,
+      "docHeight": 3574,
+      "docHeightInViewports": 4.23,
       "scrollDepthViewports": {
-        "firstProductCard": 0.58,
+        "firstProductCard": 0.69,
         "firstProductCardSel": "a.crk-card",
         "addToCart": null,
         "addToCartSel": null,
-        "firstPrice": 0.16,
+        "firstPrice": 0.28,
         "firstPriceText": "£45.00 to free Track",
-        "footer": 3.09,
+        "footer": 3.2,
         "checkout": null
       },
       "tapTargets": {
-        "total": 43,
-        "under44": 10,
+        "total": 46,
+        "under44": 11,
         "under44Unique": [
           {
             "sel": "a",
@@ -504,7 +490,7 @@
             "w": 36,
             "h": 44,
             "text": "DENIM",
-            "count": 2
+            "count": 3
           },
           {
             "sel": "a",
@@ -515,21 +501,21 @@
           },
           {
             "sel": "button#shopify-pc__banner__btn-manage-prefs.shopify-pc__banner__btn-manage-prefs",
-            "w": 267,
+            "w": 316,
             "h": 33,
             "text": "Manage preferences",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-accept.shopify-pc__banner__btn-accept",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Accept",
             "count": 1
           },
           {
             "sel": "button#shopify-pc__banner__btn-decline.shopify-pc__banner__btn-decline",
-            "w": 267,
+            "w": 316,
             "h": 35,
             "text": "Decline",
             "count": 1
@@ -539,9 +525,9 @@
       "thumbZone": {
         "sel": "a.crk-card",
         "inFirstViewport": true,
-        "topOfDocPx": 486,
-        "band": "middle",
-        "viewportsDown": 0.58
+        "topOfDocPx": 584,
+        "band": "bottom 40% (thumb zone)",
+        "viewportsDown": 0.69
       },
       "stickyBar": null
     }
@@ -873,22 +859,22 @@
     "boardInfo": {
       "present": true,
       "cssSize": [
-        356,
-        301
+        0,
+        0
       ],
       "bitmap": [
-        1066,
-        902
+        832,
+        704
       ],
-      "topOfDocPx": 160,
-      "viewportsDown": 0.19
+      "topOfDocPx": 0,
+      "viewportsDown": 0
     },
     "samples": [
       {
         "label": "board in viewport, idle",
-        "frames": 137,
+        "frames": 0,
         "ms": 3000,
-        "fps": 45.7
+        "fps": 0
       },
       {
         "label": "board OFF-screen",
@@ -898,9 +884,9 @@
       },
       {
         "label": "board in viewport (control before blur)",
-        "frames": 102,
+        "frames": 0,
         "ms": 2000,
-        "fps": 51
+        "fps": 0
       },
       {
         "label": "tab HIDDEN",
@@ -910,9 +896,9 @@
       }
     ],
     "scrollFps": {
-      "frames": 141,
-      "durMs": 2828,
-      "fps": 49.9
+      "frames": 125,
+      "durMs": 2074,
+      "fps": 60.3
     }
   }
 }
