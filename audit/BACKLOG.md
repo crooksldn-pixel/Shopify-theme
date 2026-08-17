@@ -1,26 +1,23 @@
-# BACKLOG.md — CROOKSLDN — REFRESHED AFTER RE-AUDIT (RUN 2)
+# BACKLOG.md — CROOKSLDN — REFRESHED AFTER RUN 3
 
-The run-1 backlog is preserved in git history (`15ef712`); its item-by-item outcome is scored in
-`DELTA.md §1`. This file is the **live** list: what is still worth doing, ranked, after twenty
-fix commits (`1b6bc4c → db96aa3`) and the run-2 verification pass. Council round-2 verdict:
-`COUNCIL.md`.
-
-**Severity:** `BLOCKS` · `HESITATION` · `POLISH`. **Effort:** `minutes` · `hours` · `days` ·
-`project`. `[A]` = Shopify admin, live-on-save, no undo. `[T]` = theme code, PR-able.
+Run-1 and run-2 lists live in git history; `DELTA-3WAY.md` scores all three runs. Council
+round-3 verdict: `COUNCIL.md`. **Standing rule adopted from the council: no further theme
+commits beyond item 2 until item 1 flips.**
 
 ---
 
-## THE TOP FIVE
+## THE TOP FIVE (post-run-3)
 
 | # | Item | Severity | Effort | Where |
 |---|---|---|---|---|
-| 1 | **[A] Flip `inventoryPolicy: CONTINUE → DENY`** on MONEY CLIVE TEE, 3 CLIVES TEE, BROADCAST TEE — restocked to 10/variant but the oversell mechanism re-arms at zero. The only item all five round-2 advisors listed. While there: decide CRX GARMS (phantom 985, archived, still CONTINUE) and reconcile V2 BAGGIES/M at −1. | **BLOCKS** | minutes | Products → variant → untick "Continue selling when out of stock" |
-| 2 | **[A] The archive: hand-count, then open the closed cases properly.** 1,452 units / ~467 real ≈ **£28,270** unchanged since run 1, incl. the #1 lifetime seller. Council-ruled path: (1) DENY first, (2) hand-count — the repull proves counts lie (CRXST★RZ 970→98), (3) trial a **separate closed-case register** (the collection-page register from `1892419` does most of the build) — NOT a plain unarchive: `/14` stays honest, the WITNESS STATEMENT stays untouched. Archived products carry no `crooks.*` metafields — records need filling before they render properly. | **BLOCKS** | days | Products → Archived + one collection + metafields |
-| 3 | **[A] Re-upload the three remaining mis-named masters** — `cellcrew.webp` (976 KB, homepage **and cart**), `v2baggies.webp`, `crooksldn-white-red-motiontec-socks.webp` — with `.png` filenames. Same fix took the tee PDP 13.9 s → 2.4 s this run. Closes the cart regression and ~700 KB of homepage. Re-drag to position, re-enter alt text; do **not** use `image-backups/` (pre-cut-out originals). | **BLOCKS** | minutes | Products → media |
-| 4 | **[A] The sceptic bundle: placeholders, contact page, banner position.** The only persona still leaving, and this is their entire checklist. `[Crooksldn LTD] [Crooksldn@gmail.com] [TW200JW]` byte-identical to run 1; 8 Gmail mentions vs 0 `info@` in policy text; contact page still a bare form; banner still 40% of viewport / first 4 tab stops / covering all five size-button centres at scroll 0 (proven the cause of run 1's worst finding). | **BLOCKS** | ~1 hour | Settings → Policies · Pages → Contact · Customer privacy → banner position |
-| 5 | **[T] Retire the VT323 layout tax: `size-adjust` fallback in the display stack.** The 0.2315 PDP CLS is `PRODUCT NN / 14` (display face) inside `flex-wrap: wrap` (`crooks.css:500`); the wider fallback wraps the row, deferred JS un-wraps it at ~5.5 s. `white-space: nowrap` on the span is a **no-op** (it's flex wrap) and `flex-wrap: nowrap` risks re-breaking the 200% zoom fix. Correct fix: a `size-adjust`ed local fallback in `--crk-font-display` (`crooks.css:47`) — retires the hazard for every VT323 surface at once. Verify: CLS < 0.05 on both PDPs, 200% zoom still 195==195, no-JS fallback intact. | **HESITATION** | hours | `assets/crooks.css` |
+| 1 | **[A] CONTINUE → DENY on the three tees** — third audit, now a countdown: variants at 8–9 units on live trade (22 orders/9 days). The next sell-out fires the notify capture or sells phantom stock; one checkbox decides. Decide CRX GARMS (985, archived, CONTINUE) in the same visit. | **BLOCKS** | minutes | Products → variants |
+| 2 | **[T] Reserve the header; `size-adjust` fallbacks for BOTH faces.** CLS 0.325–0.391 on every mobile page (journey 0.59); V2 BAGGIES size row at the fold. `crx-mono.css:7,14` (swap, no fallback), `crooks.css:397` (min-height, not fixed), `:431–434` (wrap), stacks at `:47–48`. Fixes the site-wide jump, the fold regression, and the defect class that topped two audits. Verify: CLS < 0.05 all pages, size row back in viewport, zoom + no-JS intact. | **BLOCKS** | hours | `assets/` |
+| 3 | **[A] Email find-and-replace** — `info@crooksldn.com` everywhere; kill `crooksldn@gmail.com.com` (undeliverable, on the shipping policy). Completes the sceptic. | **BLOCKS** | minutes | Settings → Policies + pages |
+| 4 | **[A] The three image masters** — `cellcrew.webp` (976 KB) still on the cart, third audit. | BLOCKS | minutes | Products → media |
+| 5 | **[A] The archive decision** — ~£28,270, frozen across three pulls, includes the #1 lifetime seller. Hand-count first; closed-case register per council round 2. The largest number in the pack vs ~£104/day of trade. | **BLOCKS** | days | Products → Archived |
 
----
+**Then ship the theme.** All trading data still comes from the live site (14/50 in the
+competitive field). The theme's measured advantages become receipts only in production.
 
 ## WORTH DOING
 
