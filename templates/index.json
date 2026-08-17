@@ -79,13 +79,18 @@
       "settings": {
         "heading": "REGISTER AS INFORMANT",
         "subheading": "Drops go to the register before they go public. One message per drop, nothing else.",
-        "email_label": "Email address",
-        "placeholder": "EMAIL ADDRESS",
+        "email_label": "EMAIL",
         "button_label": "SUBMIT",
-        "tag": "newsletter",
         "success_text": "CLEARANCE ACCEPTED — RECORD SUBMITTED",
-        "error_text": "SUBMISSION REJECTED — CHECK THE ADDRESS",
-        "small_print": "Unsubscribe at any time. We do not sell the register."
+        "error_text": "SUBMISSION REJECTED — CHECK THE NUMBER",
+        "small_print": "One text per drop. Reply STOP to leave the register at any time. We do not sell it.",
+        "email_placeholder": "EMAIL ADDRESS",
+        "phone_label": "MOBILE NUMBER",
+        "phone_placeholder": "07700 900123",
+        "optional_label": "OPTIONAL",
+        "consent_text": "Text me when a drop lands. I can stop at any time.",
+        "consent_value": "YES — SMS marketing consent given on the storefront",
+        "register_name": "SMS DROP LIST"
       }
     },
     "lookbook_crx": {

@@ -912,3 +912,37 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
 /* The board's backing store is 832x704; CSS scales it and keeps the pixels hard. */
 .crk-drawer__case-board { display: block; width: 100%; height: auto; image-rendering: pixelated }
 .crk-drawer__case-cta { display: flex; width: 100% }
+
+/* ---- informant intake: SMS first, email optional ---- */
+.crk-intake__form { display: block }
+.crk-intake__field + .crk-intake__field { margin-top: 16px }
+.crk-intake__label { display: block; margin-bottom: 6px }
+.crk-intake__optional { margin-left: 8px; color: var(--crk-micro) }
+.crk-intake__field .crk-input { display: block; width: 100%; max-width: 420px }
+.crk-intake__consent { display: flex; align-items: flex-start; gap: 12px; margin-top: 20px; max-width: 52ch; font-size: 12px; line-height: 1.5; color: var(--crk-paper); cursor: pointer }
+/* The native control is square and 1px-ruled already in most engines; forcing
+   appearance keeps Safari from rounding it. */
+.crk-root input.crk-check {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  background: var(--crk-panel);
+  border: 1px solid var(--crk-line);
+  border-radius: 0;
+  cursor: pointer;
+}
+.crk-root input.crk-check:checked { background: var(--crk-purple); border-color: var(--crk-lav) }
+.crk-root input.crk-check:checked::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 5px;
+  background: var(--crk-onpurple, #fff);
+}
+.crk-root input.crk-check:focus-visible { outline: 2px solid var(--crk-lav); outline-offset: 2px }
+.crk-intake__go { margin-top: 20px }
+.crk-intake__msg { display: block; margin-top: 12px }
