@@ -908,9 +908,7 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
 /* ---- CASE 001 panel, bottom of the menu drawer ---- */
 .crk-drawer__case { display: block; margin: 8px 16px 16px; border: 1px solid var(--crk-line); background: var(--crk-ground) }
 .crk-drawer__case:hover { border-color: var(--crk-lav) }
-.crk-drawer__case-art { display: block; padding: 16px }
-.crk-drawer__case-img { width: 100%; height: auto; margin-bottom: 12px; border: 1px solid var(--crk-line) }
-.crk-drawer__case-status { display: block }
-.crk-drawer__case-title { display: block; margin-top: 6px; font-family: var(--crk-font-display); font-size: 26px; line-height: 1; text-transform: uppercase }
-.crk-drawer__case-body { display: block; margin-top: 8px; font-size: 12px; line-height: 1.55; color: var(--crk-dim) }
+.crk-drawer__case-art { display: block; padding: 8px }
+/* The board's backing store is 832x704; CSS scales it and keeps the pixels hard. */
+.crk-drawer__case-board { display: block; width: 100%; height: auto; image-rendering: pixelated }
 .crk-drawer__case-cta { display: flex; width: 100% }

@@ -28,7 +28,7 @@
         "b3"
       ],
       "settings": {
-        "show_board": true,
+        "show_board": false,
         "board_label_top": "CASE 001 — ATTRACT MODE",
         "board_label_bottom": "REF 001 / 13×11 / DECLASSIFIED",
         "board_caption": "Animated pixel map from CASE 001: a figure moves through an alley grid collecting three packages.",

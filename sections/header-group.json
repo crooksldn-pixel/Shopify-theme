@@ -60,10 +60,8 @@
         "show_case": true,
         "case_url": "https://crooks-case-break.base44.app",
         "case_new_tab": true,
-        "case_status": "STATUS: DECLASSIFIED",
-        "case_title": "CASE 001: THE GETAWAY",
-        "case_body": "A turn-based escape simulation recovered from an unsecured terminal. Collect the evidence, avoid the officers, reach the vehicle.",
-        "case_cta": "PLAY CASE:001 NOW"
+        "case_cta": "PLAY CASE:001 NOW",
+        "case_caption": "CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below."
       }
     },
     "header_announcements_9jGBFp": {
