@@ -946,3 +946,9 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
 .crk-root input.crk-check:focus-visible { outline: 2px solid var(--crk-lav); outline-offset: 2px }
 .crk-intake__go { margin-top: 20px }
 .crk-intake__msg { display: block; margin-top: 12px }
+
+/* App-block slot inside the informant panel. An app's form is its own markup —
+   often shadow DOM or an iframe — so this only gives it room and a top rule.
+   Anything beyond that has to be set in the app's own appearance settings. */
+.crk-intake__app { margin-top: 20px; border-top: 1px solid var(--crk-line); padding-top: 20px }
+.crk-intake__app > * { max-width: 100% }

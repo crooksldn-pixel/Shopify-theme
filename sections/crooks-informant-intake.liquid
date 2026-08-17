@@ -3,22 +3,25 @@
 {%- comment -%}
   INFORMANT INTAKE — SMS first, email optional.
 
-  IMPORTANT, and the reason this is a `contact` form rather than a `customer`
-  one: a theme cannot create SMS marketing consent. Shopify documents the
-  newsletter form as taking `contact[email]` only, and SMS consent is captured
-  at checkout or by an app — every SMS consent already on this store reads
-  `consentCollectedFrom: SHOPIFY`, i.e. the checkout opt-in. A `customer` form
-  posted with a phone number would subscribe the person to EMAIL and silently
-  drop the number.
+  Two ways to capture, and the panel supports both:
 
-  So this submits through `contact`, which accepts arbitrary fields and
-  delivers them to the store's inbox. The number arrives somewhere real, and
-  the consent checkbox is recorded in the message. Adding it to an SMS
-  platform is a manual step — say so honestly rather than implying the number
-  is subscribed to anything the moment it is typed.
+  1. APP BLOCK (preferred). Shopify Forms and Omnisend are both installed and
+     enabled on this store, and either one writes a real customer record with
+     real SMS marketing consent — which is what a merchant actually wants and
+     what a Liquid form cannot do. Add one inside this section in the theme
+     editor and it renders here, inside the terminal frame, in place of the
+     fallback below.
 
-  UK PECR requires prior consent for marketing texts, so the checkbox is
-  required and the small print states frequency and how to stop.
+  2. FALLBACK (no app block added). A `contact` form: the number reaches the
+     store inbox and nothing is silently lost, but it creates no consent record
+     and no customer. Better than nothing, worse than the app block.
+
+  Note for anyone tempted to "simplify" this to {% form 'customer' %} with a
+  phone field: that form is documented to take contact[email] only. It would
+  subscribe the person to EMAIL and drop the number without an error.
+
+  UK PECR requires prior consent for marketing texts, so the fallback's consent
+  checkbox is required and the small print states frequency and how to stop.
 {%- endcomment -%}
 
 <section class="crk-root crk-section" data-crk-section="informant-intake">
@@ -31,69 +34,80 @@
         <p class="crk-intake__sub">{{ section.settings.subheading }}</p>
       {%- endif -%}
 
+      {%- if section.blocks.size > 0 -%}
+        <div class="crk-intake__app">
+          {%- for block in section.blocks -%}
+            {%- case block.type -%}
+              {%- when '@app' -%}
+                {%- render block -%}
+            {%- endcase -%}
+          {%- endfor -%}
+        </div>
+      {%- else -%}
       {%- form 'contact', class: 'crk-intake__form', id: 'crk-informant' -%}
-        {%- comment -%}
-          Shopify names every contact[*] field in the notification email, so
-          these read as a register entry rather than as form debris.
-        {%- endcomment -%}
-        <input type="hidden" name="contact[Register]" value="{{ section.settings.register_name | escape }}">
-
-        <div class="crk-intake__field">
-          <label class="crk-eyebrow crk-intake__label" for="crk-informant-phone">
-            {{ section.settings.phone_label }}
-          </label>
-          <input
-            class="crk-input"
-            id="crk-informant-phone"
-            type="tel"
-            name="contact[phone]"
-            inputmode="tel"
-            autocomplete="tel"
-            placeholder="{{ section.settings.phone_placeholder | escape }}"
-            required
-          >
-        </div>
-
-        <div class="crk-intake__field">
-          <label class="crk-eyebrow crk-intake__label" for="crk-informant-email">
-            {{ section.settings.email_label }}
-            <span class="crk-intake__optional">{{ section.settings.optional_label }}</span>
-          </label>
-          <input
-            class="crk-input"
-            id="crk-informant-email"
-            type="email"
-            name="contact[email]"
-            value="{{ form.email }}"
-            autocomplete="email"
-            placeholder="{{ section.settings.email_placeholder | escape }}"
-          >
-        </div>
-
-        {%- if section.settings.consent_text != blank -%}
-          <label class="crk-intake__consent" for="crk-informant-consent">
+          {%- comment -%}
+            Shopify names every contact[*] field in the notification email, so
+            these read as a register entry rather than as form debris.
+          {%- endcomment -%}
+          <input type="hidden" name="contact[Register]" value="{{ section.settings.register_name | escape }}">
+  
+          <div class="crk-intake__field">
+            <label class="crk-eyebrow crk-intake__label" for="crk-informant-phone">
+              {{ section.settings.phone_label }}
+            </label>
             <input
-              class="crk-check"
-              id="crk-informant-consent"
-              type="checkbox"
-              name="contact[Consent]"
-              value="{{ section.settings.consent_value | escape }}"
+              class="crk-input"
+              id="crk-informant-phone"
+              type="tel"
+              name="contact[phone]"
+              inputmode="tel"
+              autocomplete="tel"
+              placeholder="{{ section.settings.phone_placeholder | escape }}"
               required
             >
-            <span>{{ section.settings.consent_text }}</span>
-          </label>
-        {%- endif -%}
-
-        <button class="crk-btn crk-btn--fill crk-intake__go" type="submit">{{ section.settings.button_label }}</button>
-
-        {%- if form.posted_successfully? -%}
-          <p class="crk-intake__msg crk-intake__msg--ok" role="status">{{ section.settings.success_text }}</p>
-        {%- elsif form.errors -%}
-          <p class="crk-intake__msg crk-intake__msg--err" role="alert">
-            {{ section.settings.error_text }}
-          </p>
-        {%- endif -%}
-      {%- endform -%}
+          </div>
+  
+          <div class="crk-intake__field">
+            <label class="crk-eyebrow crk-intake__label" for="crk-informant-email">
+              {{ section.settings.email_label }}
+              <span class="crk-intake__optional">{{ section.settings.optional_label }}</span>
+            </label>
+            <input
+              class="crk-input"
+              id="crk-informant-email"
+              type="email"
+              name="contact[email]"
+              value="{{ form.email }}"
+              autocomplete="email"
+              placeholder="{{ section.settings.email_placeholder | escape }}"
+            >
+          </div>
+  
+          {%- if section.settings.consent_text != blank -%}
+            <label class="crk-intake__consent" for="crk-informant-consent">
+              <input
+                class="crk-check"
+                id="crk-informant-consent"
+                type="checkbox"
+                name="contact[Consent]"
+                value="{{ section.settings.consent_value | escape }}"
+                required
+              >
+              <span>{{ section.settings.consent_text }}</span>
+            </label>
+          {%- endif -%}
+  
+          <button class="crk-btn crk-btn--fill crk-intake__go" type="submit">{{ section.settings.button_label }}</button>
+  
+          {%- if form.posted_successfully? -%}
+            <p class="crk-intake__msg crk-intake__msg--ok" role="status">{{ section.settings.success_text }}</p>
+          {%- elsif form.errors -%}
+            <p class="crk-intake__msg crk-intake__msg--err" role="alert">
+              {{ section.settings.error_text }}
+            </p>
+          {%- endif -%}
+        {%- endform -%}
+      {%- endif -%}
 
       {%- if section.settings.small_print != blank -%}
         <p class="crk-intake__small">{{ section.settings.small_print }}</p>
@@ -107,7 +121,8 @@
   "name": "Crooks — Informant Intake",
   "tag": "section",
   "settings": [
-    { "type": "paragraph", "content": "Submissions arrive as an email to your store contact address — they are NOT added to Shopify's customer list and do NOT create SMS marketing consent. A theme form cannot do that; SMS consent is captured at checkout or by an SMS app. Add numbers to your SMS platform yourself." },
+    { "type": "paragraph", "content": "RECOMMENDED: add your Shopify Forms or Omnisend block to this section (Add block → the app). Both are already installed, and either one saves a real customer with real SMS marketing consent. It renders inside the terminal frame and replaces the fallback form." },
+    { "type": "paragraph", "content": "FALLBACK, used only when no app block is added: the fields below post as a contact form. The number reaches your store inbox, but no customer and no consent record is created — a Liquid form cannot do that." },
     { "type": "text", "id": "heading", "label": "Heading", "default": "REGISTER AS INFORMANT" },
     { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Drops go to the register before they go public. One message per drop, nothing else." },
     { "type": "header", "content": "Fields" },
@@ -126,6 +141,7 @@
     { "type": "text", "id": "error_text", "label": "Error message", "default": "SUBMISSION REJECTED — CHECK THE NUMBER" },
     { "type": "textarea", "id": "small_print", "label": "Small print", "default": "One text per drop. Reply STOP to leave the register at any time. We do not sell it." }
   ],
+  "blocks": [{ "type": "@app" }],
   "presets": [{ "name": "Crooks — Informant Intake" }]
 }
 {% endschema %}
