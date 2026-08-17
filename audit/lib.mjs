@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 
-export const BASE = 'https://4k8ciabapx960i7c-100410786135.shopifypreview.com';
+export const BASE = 'https://bbushaa5dr2elw8f-100410786135.shopifypreview.com';
 export const PROXY = 'http://127.0.0.1:38081';
 
 export const PAGES = {
