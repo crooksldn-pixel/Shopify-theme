@@ -1,23 +1,23 @@
 {
   "shifts": [
     {
-      "value": 0.0007,
-      "t": 1930,
+      "value": 0.325,
+      "t": 2053,
       "sources": [
         {
-          "node": "DIV.crk-header__actions",
-          "text": "SEARCH BAG [0] LIGHT MODE MENU",
+          "node": "MAIN.content-for-layout",
+          "text": "← CATALOGUE PRODUCT 03 / 14 DENIM PHOTO ",
           "from": [
-            98,
-            36,
-            280,
-            44
+            0,
+            139,
+            390,
+            705
           ],
           "to": [
-            88,
-            36,
-            290,
-            44
+            0,
+            187,
+            390,
+            657
           ]
         },
         {
@@ -34,13 +34,61 @@
             0,
             249,
             27
+          ]
+        },
+        {
+          "node": "BUTTON.crk-header__link",
+          "text": "LIGHT MODE",
+          "from": [
+            209,
+            86,
+            106,
+            44
+          ],
+          "to": [
+            222,
+            86,
+            108,
+            44
+          ]
+        },
+        {
+          "node": "BUTTON.crk-header__link",
+          "text": "MENU",
+          "from": [
+            319,
+            86,
+            50,
+            44
+          ],
+          "to": [
+            12,
+            134,
+            50,
+            44
+          ]
+        },
+        {
+          "node": "A.crk-header__link",
+          "text": "BAG [0]",
+          "from": [
+            146,
+            86,
+            60,
+            44
+          ],
+          "to": [
+            154,
+            86,
+            64,
+            44
           ]
         }
       ]
     },
     {
       "value": 0.0003,
-      "t": 5198,
+      "t": 5446,
       "sources": [
         {
           "node": "P.crk-status__msg",
@@ -59,82 +107,28 @@
           ]
         }
       ]
-    },
-    {
-      "value": 0.2315,
-      "t": 5488,
-      "sources": [
-        {
-          "node": "DIV.crk-grid",
-          "text": "PHOTO 1 OF 2 BLUE WASH OG JEANS £60.00 S",
-          "from": [
-            16,
-            184,
-            358,
-            660
-          ],
-          "to": [
-            16,
-            156,
-            358,
-            688
-          ]
-        },
-        {
-          "node": "SPAN.crk-data.crk-dim",
-          "text": "DENIM",
-          "from": [
-            16,
-            131,
-            40,
-            20
-          ],
-          "to": [
-            275,
-            102,
-            40,
-            20
-          ]
-        },
-        {
-          "node": "BUTTON.crk-textbtn",
-          "text": "SIZE GUIDE",
-          "from": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "to": [
-            33,
-            834,
-            114,
-            10
-          ]
-        }
-      ]
     }
   ],
-  "total": 0.2325,
+  "total": 0.32530000000000003,
   "anatomy": {
     "grid": {
-      "top": 156,
-      "h": 996,
-      "html": "<div> <div class=\"crk-tray crk-tray-main\" role=\"group\" aria-label=\"Evidence photographs\" tabindex=\"0\" data-crk-gallery=\"\"><div data-crk-slide=\"\"> <img src=\"//kbwcga0qjjqhdh2w-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png?v=178"
+      "top": 254,
+      "h": 990,
+      "html": "<div> <div class=\"crk-tray crk-tray-main\" role=\"group\" aria-label=\"Evidence photographs\" tabindex=\"0\" data-crk-gallery=\"\"><div data-crk-slide=\"\"> <img src=\"//bbushaa5dr2elw8f-100410786135.shopifypreview.com/cdn/shop/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png?v=178"
     },
     "sizeRow": {
-      "top": 746,
+      "top": 844,
       "w": 58,
       "h": 52
     },
     "gallery": {
-      "top": 156,
+      "top": 254,
       "h": 358
     },
     "fontStatus": "loaded",
     "fonts": [
       "CRX Mono loaded",
-      "CRX Mono loaded",
+      "CRX Mono unloaded",
       "Archivo Narrow loaded",
       "Archivo Narrow unloaded",
       "Archivo Narrow loaded",
@@ -155,21 +149,21 @@
     },
     {
       "sel": "button.shopify-pc__banner__btn-manage-prefs",
-      "size": "267x33",
+      "size": "316x33",
       "text": "Manage preferences",
       "inHeader": false,
       "inFooter": false
     },
     {
       "sel": "button.shopify-pc__banner__btn-accept",
-      "size": "267x35",
+      "size": "316x35",
       "text": "Accept",
       "inHeader": false,
       "inFooter": false
     },
     {
       "sel": "button.shopify-pc__banner__btn-decline",
-      "size": "267x35",
+      "size": "316x35",
       "text": "Decline",
       "inHeader": false,
       "inFooter": false
@@ -183,7 +177,7 @@
     },
     {
       "sel": "a.shopify-payment-button__more-options",
-      "size": "324x22",
+      "size": "324x18",
       "text": "More payment options",
       "inHeader": false,
       "inFooter": false
@@ -213,6 +207,13 @@
       "sel": "a",
       "size": "44x44",
       "text": "SWEATS",
+      "inHeader": false,
+      "inFooter": true
+    },
+    {
+      "sel": "a",
+      "size": "36x44",
+      "text": "TERMS",
       "inHeader": false,
       "inFooter": true
     },

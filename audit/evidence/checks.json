@@ -122,8 +122,7 @@
     {
       "tapped": "XS",
       "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
-      "buyButton": "ADD TO BAG",
-      "buyDisabled": false,
+      "buyButton": "PLAY CASE:001 NOW",
       "stockLine": [
         "IN STOCK"
       ],
@@ -139,8 +138,7 @@
     {
       "tapped": "M",
       "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
-      "buyButton": "ADD TO BAG",
-      "buyDisabled": false,
+      "buyButton": "PLAY CASE:001 NOW",
       "stockLine": [
         "IN STOCK"
       ],
@@ -156,8 +154,7 @@
     {
       "tapped": "L",
       "stickybar": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
-      "buyButton": "ADD TO BAG",
-      "buyDisabled": false,
+      "buyButton": "PLAY CASE:001 NOW",
       "stockLine": [
         "IN STOCK"
       ],
@@ -182,14 +179,14 @@
       "dialogs": 0
     },
     "after": {
-      "y": 1764,
+      "y": 1540,
       "dialogs": 0,
       "measureVisible": {
-        "top": -1764,
+        "top": -1540,
         "inViewport": false
       }
     },
-    "behaviour": "scrolls page 1764px"
+    "behaviour": "scrolls page 1540px"
   },
   "releaseRequest": {
     "tag": "SPAN",
@@ -201,7 +198,7 @@
     "parentTag": "DIV",
     "parentCls": "crk-panel crk-panel-record crk-panel-sticky",
     "isInteractive": false,
-    "context": "PHOTO 1 OF 2 BLUE WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves Monday RELEASE "
+    "context": "PHOTO 1 OF 2 BLUE WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves tomorrow RELEAS"
   },
   "deliveryClaims": {
     "cb2-wash-jeans": {

@@ -7,23 +7,23 @@
   "hitTestAfterAccept": [
     {
       "size": "XS",
-      "hits": true
+      "hits": false
     },
     {
       "size": "S",
-      "hits": true
+      "hits": false
     },
     {
       "size": "M",
-      "hits": true
+      "hits": false
     },
     {
       "size": "L",
-      "hits": true
+      "hits": false
     },
     {
       "size": "XL",
-      "hits": true
+      "hits": false
     }
   ],
   "tapSequenceAfterAccept": [
@@ -42,33 +42,33 @@
     },
     {
       "tapped": "M",
-      "selectedVariantId": "",
+      "selectedVariantId": "53075854197079",
       "stockLine": [
-        "SIZE M IS SOLD OUT"
+        "IN STOCK"
       ],
       "buy": {
-        "text": "SOLD OUT",
-        "disabled": true
+        "text": "ADD TO BAG",
+        "disabled": false
       },
-      "sticky": "V2 BAGGIES £60.00 · M SOLD OUT CHECKOUT NOW",
-      "notifyHidden": false
+      "sticky": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
+      "notifyHidden": true
     },
     {
       "tapped": "L",
-      "selectedVariantId": "",
+      "selectedVariantId": "53075854197079",
       "stockLine": [
-        "SIZE L IS SOLD OUT"
+        "IN STOCK"
       ],
       "buy": {
-        "text": "SOLD OUT",
-        "disabled": true
+        "text": "ADD TO BAG",
+        "disabled": false
       },
-      "sticky": "V2 BAGGIES £60.00 · L SOLD OUT CHECKOUT NOW",
-      "notifyHidden": false
+      "sticky": "V2 BAGGIES £60.00 · XS ADD TO BAG CHECKOUT NOW",
+      "notifyHidden": true
     }
   ],
   "addAttemptOnSoldChoice": {
-    "note": "variant id empty — form disarmed, nothing to attempt",
-    "id": ""
+    "status": 200,
+    "body": "{\"id\":53075854197079,\"properties\":{},\"quantity\":1,\"variant_id\":53075854197079,\"key\":\"53075854197079:5d2509daf3f6e7225e5c2ba6792b6859\",\"title\":\"V2 BAGGIES - XS\",\"product_title\":\"V2 BAGGIES\",\"variant_ti"
   }
 }
