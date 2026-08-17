@@ -868,3 +868,49 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
    single column than as one field stretched across 1300px. */
 .crk-query__form, .crk-query__hint, .crk-query__label, .crk-links { max-width: 760px }
 .crk-query__go { min-width: 132px }
+
+/* ============================================================
+   PACKAGING MANIFEST (homepage)
+   The photograph carries numbered evidence tents, so the list is a key to
+   them: same numbering treatment as the custody steps and the terms clauses,
+   so a reader who has seen one recognises the other.
+   ============================================================ */
+.crk-pack__head { border-bottom: 1px solid var(--crk-line); padding-bottom: 20px }
+.crk-pack__heading { margin-top: 8px }
+.crk-pack__body { margin-top: 12px; max-width: 56ch; color: var(--crk-paper) }
+.crk-pack__figure { margin-top: 24px; border: 1px solid var(--crk-line); background: var(--crk-void, var(--crk-panel)) }
+.crk-pack__img { width: 100%; height: auto }
+/* placeholder_svg_tag takes a class argument, which REPLACES its default
+   .placeholder-svg class — so target the element, not that class. */
+.crk-pack__placeholder svg { display: block; width: 100%; height: auto; background: var(--crk-tray); fill: var(--crk-dim) }
+
+.crk-pack__list { margin-top: 24px; border-top: 1px solid var(--crk-line) }
+.crk-pack__item { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 2px 16px; align-items: baseline; border-bottom: 1px solid var(--crk-line); padding: 14px 0 }
+.crk-pack__num { grid-row: span 2; font-family: var(--crk-font-display); font-size: 26px; line-height: 1; color: var(--crk-lav) }
+.crk-pack__label { font-weight: 500; font-size: 13px; letter-spacing: .08em; text-transform: uppercase }
+.crk-pack__star { color: var(--crk-lav) }
+.crk-pack__note { font-size: 12px; color: var(--crk-dim) }
+.crk-pack__foot { display: block; margin-top: 16px }
+
+@media (min-width: 1024px) {
+  /* Photo and key side by side: the markers stay in view while the key is read. */
+  .crk-pack { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 0 40px; align-items: start }
+  .crk-pack__head { grid-column: 1 / -1 }
+  .crk-pack__figure { grid-column: 1; margin-top: 32px }
+  .crk-pack__list { grid-column: 2; margin-top: 32px; border-top: 0 }
+  .crk-pack__foot { grid-column: 2; margin-top: 12px }
+  .crk-pack__item { grid-template-columns: 56px minmax(0, 1fr); padding: 16px 0 }
+  .crk-pack__item:first-child { border-top: 1px solid var(--crk-line) }
+  .crk-pack__num { font-size: 32px }
+  .crk-pack__label { font-size: 14px }
+}
+
+/* ---- CASE 001 panel, bottom of the menu drawer ---- */
+.crk-drawer__case { display: block; margin: 8px 16px 16px; border: 1px solid var(--crk-line); background: var(--crk-ground) }
+.crk-drawer__case:hover { border-color: var(--crk-lav) }
+.crk-drawer__case-art { display: block; padding: 16px }
+.crk-drawer__case-img { width: 100%; height: auto; margin-bottom: 12px; border: 1px solid var(--crk-line) }
+.crk-drawer__case-status { display: block }
+.crk-drawer__case-title { display: block; margin-top: 6px; font-family: var(--crk-font-display); font-size: 26px; line-height: 1; text-transform: uppercase }
+.crk-drawer__case-body { display: block; margin-top: 8px; font-size: 12px; line-height: 1.55; color: var(--crk-dim) }
+.crk-drawer__case-cta { display: flex; width: 100% }

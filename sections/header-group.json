@@ -56,7 +56,14 @@
         "label_to_dark": "DARK MODE",
         "show_catalogue": true,
         "catalogue_label": "CATALOGUE",
-        "catalogue_url": "shopify://collections/all"
+        "catalogue_url": "shopify://collections/all",
+        "show_case": true,
+        "case_url": "https://crooks-case-break.base44.app",
+        "case_new_tab": true,
+        "case_status": "STATUS: DECLASSIFIED",
+        "case_title": "CASE 001: THE GETAWAY",
+        "case_body": "A turn-based escape simulation recovered from an unsecured terminal. Collect the evidence, avoid the officers, reach the vehicle.",
+        "case_cta": "PLAY CASE:001 NOW"
       }
     },
     "header_announcements_9jGBFp": {

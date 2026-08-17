@@ -66,21 +66,6 @@
         "anchor_id": "products"
       }
     },
-    "crooks_case_file": {
-      "type": "crooks-case-file",
-      "settings": {
-        "heading": "CASE 001: THE GETAWAY",
-        "status": "STATUS: DECLASSIFIED",
-        "body": "A turn-based escape simulation recovered from an unsecured terminal. Collect the evidence, avoid the officers, reach the vehicle. Scores are logged publicly.",
-        "button_label": "OPEN CASE FILE",
-        "button_url": "https://crooks-case-break.base44.app",
-        "button_new_tab": true,
-        "leaderboard": "none",
-        "leaderboard_heading": "TOP OPERATIVES — THIS WEEK",
-        "leaderboard_rows": 5,
-        "leaderboard_note": "AWAITING SYNC"
-      }
-    },
     "crooks_manifest": {
       "type": "crooks-manifest",
       "settings": {
@@ -241,13 +226,54 @@
         "padding-block-start": 0,
         "padding-block-end": 0
       }
+    },
+    "crooks_packaging": {
+      "type": "crooks-packaging",
+      "blocks": {
+        "m1": {
+          "type": "item",
+          "settings": {
+            "label": "Evidence tag",
+            "note": "Numbered, seized by CROOKS LDN, QR to verify.",
+            "footnote": false
+          }
+        },
+        "m2": {
+          "type": "item",
+          "settings": {
+            "label": "Security seal",
+            "note": "Pull-tight, stamped with the cuffs.",
+            "footnote": false
+          }
+        },
+        "m3": {
+          "type": "item",
+          "settings": {
+            "label": "Cuff keyring",
+            "note": "Miniature cuffs, on the ring.",
+            "footnote": true
+          }
+        }
+      },
+      "block_order": [
+        "m1",
+        "m2",
+        "m3"
+      ],
+      "settings": {
+        "eyebrow": "PROPERTY BAG",
+        "heading": "EVERY ORDER SHIPS LIKE THIS",
+        "body": "Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for.",
+        "image_alt": "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring.",
+        "footnote": "* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY."
+      }
     }
   },
   "order": [
     "carriage",
     "crooks_hero",
     "crooks_exhibit_log",
-    "crooks_case_file",
+    "crooks_packaging",
     "crooks_manifest",
     "crooks_informant",
     "lookbook_crx",

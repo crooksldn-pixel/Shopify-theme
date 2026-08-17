@@ -128,6 +128,43 @@
         </ul>
       </nav>
 
+      {%- comment -%}
+        CASE 001 lived in a full-width box on the homepage. Moved here: the
+        drawer had dead space between the last menu item and the account/cart
+        row, and a game promo is exactly the kind of thing that belongs in a
+        menu rather than between the catalogue and the manifest.
+
+        One anchor wraps the whole panel, so the CTA underneath is a styled
+        span rather than a second interactive element inside a link.
+      {%- endcomment -%}
+      {%- if section.settings.show_case and section.settings.case_url != blank -%}
+        <a
+          class="crk-drawer__case"
+          href="{{ section.settings.case_url }}"
+          {% if section.settings.case_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}
+        >
+          <span class="crk-drawer__case-art">
+            {%- if section.settings.case_image != blank -%}
+              {{
+                section.settings.case_image
+                | image_url: width: 800
+                | image_tag: widths: '400, 600, 800', sizes: '(min-width: 420px) 420px, 100vw', alt: '', loading: 'lazy', class: 'crk-drawer__case-img'
+              }}
+            {%- endif -%}
+            {%- if section.settings.case_status != blank -%}
+              <span class="crk-eyebrow crk-drawer__case-status">{{ section.settings.case_status }}</span>
+            {%- endif -%}
+            {%- if section.settings.case_title != blank -%}
+              <span class="crk-drawer__case-title">{{ section.settings.case_title }}</span>
+            {%- endif -%}
+            {%- if section.settings.case_body != blank -%}
+              <span class="crk-drawer__case-body">{{ section.settings.case_body }}</span>
+            {%- endif -%}
+          </span>
+          <span class="crk-btn crk-btn--fill crk-drawer__case-cta">{{ section.settings.case_cta }}</span>
+        </a>
+      {%- endif -%}
+
       <div class="crk-drawer__foot">
         {%- if shop.customer_accounts_enabled -%}
           <a class="crk-header__link" href="{{ routes.account_url }}">{{ section.settings.account_label }}</a>
@@ -159,6 +196,15 @@
     { "type": "text", "id": "account_label", "label": "Account label", "default": "ACCOUNT" },
     { "type": "text", "id": "drawer_heading", "label": "Drawer heading", "default": "INDEX" },
     { "type": "text", "id": "drawer_label", "label": "Drawer label (screen readers)", "default": "Main menu" },
+    { "type": "header", "content": "Case 001 (menu drawer)" },
+    { "type": "checkbox", "id": "show_case", "label": "Show the case panel in the menu", "default": true },
+    { "type": "image_picker", "id": "case_image", "label": "Case artwork" },
+    { "type": "text", "id": "case_status", "label": "Status line", "default": "STATUS: DECLASSIFIED" },
+    { "type": "text", "id": "case_title", "label": "Case title", "default": "CASE 001: THE GETAWAY" },
+    { "type": "textarea", "id": "case_body", "label": "Case body", "default": "A turn-based escape simulation recovered from an unsecured terminal. Collect the evidence, avoid the officers, reach the vehicle." },
+    { "type": "text", "id": "case_cta", "label": "Button label", "default": "PLAY CASE:001 NOW" },
+    { "type": "url", "id": "case_url", "label": "Case link" },
+    { "type": "checkbox", "id": "case_new_tab", "label": "Open in a new tab", "default": true },
     { "type": "header", "content": "Options" },
     { "type": "checkbox", "id": "show_search", "label": "Show search link", "default": true },
     { "type": "checkbox", "id": "show_theme_toggle", "label": "Show light/dark toggle", "default": true },

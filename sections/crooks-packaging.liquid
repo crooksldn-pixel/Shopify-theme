@@ -1,0 +1,99 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  PACKAGING MANIFEST.
+
+  Replaces the CASE 001 box on the homepage. The photograph already carries
+  numbered evidence markers, so the list beneath it is a key to those markers
+  rather than decoration — read the photo, read the line. Numbering is
+  automatic from block order so the key can never drift out of step with itself.
+
+  The footnote is marked per item, not written into the label, so moving the
+  asterisk is a checkbox rather than an edit in two places.
+{%- endcomment -%}
+
+<section class="crk-root crk-section" data-crk-section="packaging">
+  <div class="crk-inner crk-pack">
+    <header class="crk-pack__head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="crk-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="crk-h2 crk-pack__heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.body != blank -%}
+        <p class="crk-pack__body">{{ section.settings.body }}</p>
+      {%- endif -%}
+    </header>
+
+    <figure class="crk-pack__figure">
+      {%- if section.settings.image != blank -%}
+        {{
+          section.settings.image
+          | image_url: width: 1800
+          | image_tag:
+            widths: '480, 720, 960, 1280, 1800',
+            sizes: '(min-width: 1024px) 60vw, 100vw',
+            alt: section.settings.image_alt,
+            loading: 'lazy',
+            class: 'crk-pack__img'
+        }}
+      {%- else -%}
+        {%- comment -%} Keeps the block measurable in the editor before the shot is picked. {%- endcomment -%}
+        <div class="crk-pack__placeholder">{{ 'lifestyle-1' | placeholder_svg_tag: 'crk-pack__img' }}</div>
+      {%- endif -%}
+    </figure>
+
+    {%- if section.blocks.size > 0 -%}
+      <ol class="crk-pack__list">
+        {%- for block in section.blocks -%}
+          {%- if block.settings.label == blank -%}{%- continue -%}{%- endif -%}
+          <li class="crk-pack__item" {{ block.shopify_attributes }}>
+            <span class="crk-pack__num" aria-hidden="true">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
+            <span class="crk-pack__label">
+              {{ block.settings.label }}
+              {%- if block.settings.footnote -%}
+                <span class="crk-pack__star" aria-hidden="true">*</span>
+              {%- endif -%}
+            </span>
+            {%- if block.settings.note != blank -%}
+              <span class="crk-pack__note">{{ block.settings.note }}</span>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ol>
+    {%- endif -%}
+
+    {%- if section.settings.footnote != blank -%}
+      <p class="crk-micro crk-pack__foot">{{ section.settings.footnote }}</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Packaging",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "PROPERTY BAG" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "EVERY ORDER SHIPS LIKE THIS" },
+    { "type": "textarea", "id": "body", "label": "Body" },
+    { "type": "image_picker", "id": "image", "label": "Packaging photograph" },
+    { "type": "text", "id": "image_alt", "label": "Image description", "info": "Read aloud by screen readers and shown if the image fails to load.", "default": "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring." },
+    { "type": "text", "id": "footnote", "label": "Footnote", "default": "* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY." }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Marker",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label", "info": "Numbering is automatic and follows block order." },
+        { "type": "text", "id": "note", "label": "Note" },
+        { "type": "checkbox", "id": "footnote", "label": "Mark with the footnote asterisk", "default": false }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [{ "name": "Crooks — Packaging" }]
+}
+{% endschema %}
