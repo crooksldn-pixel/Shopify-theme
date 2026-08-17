@@ -1,0 +1,182 @@
+{
+  "generated": "2026-08-17T21:54:39.213Z",
+  "footerLinks": [
+    {
+      "t": "NEW",
+      "href": "/collections/new"
+    },
+    {
+      "t": "TEES",
+      "href": "/collections/tees"
+    },
+    {
+      "t": "DENIM",
+      "href": "/collections/denim"
+    },
+    {
+      "t": "SWEATS",
+      "href": "/collections/sweats"
+    },
+    {
+      "t": "ACCESSORIES",
+      "href": "/collections/accessories"
+    },
+    {
+      "t": "QUESTIONS",
+      "href": "/pages/faq"
+    },
+    {
+      "t": "TERMS",
+      "href": "/pages/terms"
+    },
+    {
+      "t": "SHIPPING",
+      "href": "/policies/shipping-policy"
+    },
+    {
+      "t": "REFUNDS",
+      "href": "/policies/refund-policy"
+    },
+    {
+      "t": "TRACK ORDER",
+      "href": "/pages/tracking"
+    },
+    {
+      "t": "CASE 001",
+      "href": "https://crooks-case-break.base44.app"
+    },
+    {
+      "t": "INSTAGRAM",
+      "href": "https://instagram.com/crooksldn"
+    },
+    {
+      "t": "TIKTOK",
+      "href": "https://tiktok.com/@crooksldn"
+    },
+    {
+      "t": "EMAIL",
+      "href": "mailto:crooksldn@gmail.com"
+    }
+  ],
+  "homepage": {
+    "packagingManifest": true,
+    "case001OnHome": true,
+    "boardPresent": true
+  },
+  "menu": {
+    "entries": [
+      "Skip to content",
+      "CATALOGUE",
+      "SEARCH",
+      "BAG\n [0]",
+      "LIGHT MODE",
+      "CLOSE",
+      "SHOP",
+      "ALL",
+      "NEW",
+      "TEES",
+      "DENIM",
+      "SWEATS",
+      "TRACKSUITS",
+      "ACCESSORIES",
+      "TRACKING",
+      "QUESTIONS",
+      "TERMS",
+      "CONTACT",
+      "PLAY CASE:001 NOW\nCASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below.",
+      "ACCOUNT"
+    ],
+    "hasGame": true,
+    "hasQuestions": true
+  },
+  "faq": {
+    "linkedFrom": {
+      "t": "QUESTIONS",
+      "href": "/pages/faq"
+    },
+    "status": 200,
+    "inDesignSystem": true,
+    "questionCount": 14,
+    "groups": [
+      "SHOP",
+      "INFORMATION",
+      "CONTACT"
+    ],
+    "coversDelivery": true,
+    "coversSizing": true,
+    "coversReturns": true,
+    "coversTracking": true,
+    "faqSchema": false,
+    "firstAccordionOpens": "unknown",
+    "noJs": {
+      "textVisible": true,
+      "answersReadable": true
+    }
+  },
+  "terms": {
+    "linkedFrom": {
+      "t": "TERMS",
+      "href": "/pages/terms"
+    },
+    "status": 200,
+    "inDesignSystem": true,
+    "sections": [
+      "CARRIAGE",
+      "DISPATCH",
+      "RETURNS",
+      "SIZE SWAPS",
+      "FAULTS AND WRONG ITEMS",
+      "REFUNDS",
+      "LOST PARCELS",
+      "ORDERS WE CANCEL",
+      "CONTACT",
+      "SHOP",
+      "INFORMATION",
+      "CONTACT"
+    ],
+    "words": 654,
+    "placeholders": [],
+    "email": "crooksldn@gmail.com",
+    "statesReturnPostage": true,
+    "statesReturnWindow": true,
+    "governingLaw": false
+  },
+  "search": {
+    "headerLink": "/search",
+    "fieldPresent": true,
+    "typeahead": {
+      "visible": true,
+      "items": 2,
+      "sample": "ITEMS GREY WASH OG JEANS £60 BLUE WASH OG JEANS £60"
+    },
+    "productQuery": {
+      "url": "/search?type=product%2Cpage&options%5Bprefix%5D=last&q=jeans",
+      "resultCount": 4,
+      "jeansInResults": true
+    },
+    "pageQuery": {
+      "surfacesPages": true,
+      "text": "Skip to content FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH CATALOGUE SEARCH BAG [0] LIGHT MODE MENU QUERY THE REGISTER SEARCH SEARCH BY ITEM, CATEGORY OR COLOUR DIRECT LINKS STAR"
+    },
+    "noJs": {
+      "resultsRendered": 4
+    }
+  },
+  "policies": {
+    "/policies/refund-policy": {
+      "inDesignSystem": true,
+      "placeholders": [],
+      "email": "crooksldn@gmail.com"
+    },
+    "/policies/privacy-policy": {
+      "inDesignSystem": true,
+      "placeholders": [],
+      "email": "crooksldn@gmail.com"
+    },
+    "/policies/shipping-policy": {
+      "inDesignSystem": true,
+      "placeholders": [],
+      "email": "crooksldn@gmail.com.com"
+    }
+  }
+}

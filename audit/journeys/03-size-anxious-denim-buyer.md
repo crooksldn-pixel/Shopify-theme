@@ -1,24 +1,13 @@
-# PERSONA 3 — SIZE-ANXIOUS DENIM BUYER (RUN 2)
+# PERSONA 3 — SIZE-ANXIOUS DENIM BUYER (RUN 3)
 
-Mobile + desktop repeat. Run 1 verdict: *would buy* — the strongest journey on the site. Run 2
-verdict: **would buy — apparatus unchanged and still excellent; the data inside it is still
-fake.**
+Run 2: *would buy; still owed real measurements.* Run 3: **would buy — and for the first time
+can read the whole deal before paying.**
 
-## Unchanged and still working
+New for them: the TERMS page states the return window **and who pays return postage** — the
+deciding fact runs 1 and 2 flagged as missing everywhere. SIZE SWAPS has its own section. The
+FAQ answers sizing questions in plain voice. The apparatus (laid-flat table, CM/IN toggle,
+one-tap guide) is unchanged and still the best in the measured competitive field.
 
-`GARMENT LAID FLAT…`, the CM/IN toggle (38 cm → 15 in verified again), `SIZE GUIDE` landing
-`MEASUREMENTS` at y=0, the `SPECIFICATION` block. The jeans PDPs now show `Photo 1 of 2`
-*(run 1: `PHOTO 1 OF 1` — one back view on a £60 garment)*. A second photograph halves the
-"empty shop window" objection; it does not close it.
-
-## Still broken, and still admin
-
-- **The measurement table is the identical placeholder** — same waist/inseam/rise/hem values as
-  run 1, every column a perfect arithmetic progression, same table on 500 gsm cotton baggies and
-  14 oz denim. BACKLOG #11, untouched. Nothing in the theme can fix invented numbers.
-- **Return postage liability is still unstated** (`whoPaysPostage: null` on the refund policy),
-  and the refund contact is still `crooksldn@gmail.com`.
-
-**Outcome: converts on the apparatus, exactly as in run 1 — and is still owed real
-measurements.** If they order between sizes and the placeholder numbers are wrong, this journey
-produces the exact refund the sold-out fix just prevented elsewhere.
+Still owed: real numbers. The table is the same arithmetic-progression placeholder as run 1,
+three audits running. Detail panels now start collapsed — one extra tap to reach the table,
+acceptable; the SIZE GUIDE button still lands it at y=0.

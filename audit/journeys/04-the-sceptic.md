@@ -1,22 +1,15 @@
-# PERSONA 4 — THE SCEPTIC (RUN 2)
+# PERSONA 4 — THE SCEPTIC (RUN 3)
 
-Mobile. The persona whose whole job is deciding whether this is a real business. Run 1 verdict:
-*would leave.* Run 2 verdict: **still leaves — nothing on their checklist changed.**
+Run 1: *leaves.* Run 2: *leaves.* Run 3: **doesn't leave — hesitates.**
 
-Every item this persona hits is an admin surface, and every one is byte-identical to run 1:
+What changed their exit: the placeholders are gone from every policy page, the policies render
+in the site's own design system instead of a strange bare template, a real TERMS page answers
+carriage, faults, lost parcels and cancellations in nine sections, and QUESTIONS answers the
+rest. Search finds these pages by name. This is the trust plumbing two audits demanded.
 
-- **The legal pages still contain unfilled template placeholders** — `[LINK TO REFUND POLICY]`,
-  `[LINK TO PRIVACY POLICY]`, `[Crooksldn LTD]`, `[Crooksldn@gmail.com]`, `[TW200JW]` — verified
-  identical to run 1's capture. Eight Gmail mentions; zero `info@crooksldn.com` in policy text.
-- **The contact page is still a bare form** — no address, no email, no response time, no company
-  number.
-- **On first visit the cookie banner still blocks the footer trust links** (SHIPPING, REFUNDS,
-  INSTAGRAM, TIKTOK, EMAIL) — and this run proved it is the banner, alone, that eats those taps
-  (METRICS §8, §10).
+What keeps the hesitation: every legal surface signs `crooksldn@gmail.com` while the footer
+says `info@crooksldn.com` — and the shipping policy says **`crooksldn@gmail.com.com`**, which
+is not an address at all. A sceptic who emails it gets a bounce from a legal page. And the
+cookie banner still blocks the footer links on first visit (third audit, same setting).
 
-What did improve — the tracking page, the branded cart, the honest sold-out state — sits on
-paths this persona never reaches, because they bounce at the placeholder text.
-
-**Outcome: unchanged.** For a brand that deliberately removed every conventional trust signal,
-the plumbing has to be perfect; it is still bracketed. The fix is an hour in Shopify admin
-settings and it is the cheapest BLOCKS-class item left on the list.
+One string replace and one admin toggle from a clean sheet.

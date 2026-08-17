@@ -4,55 +4,55 @@
       "crooksldn@gmail.com"
     ],
     "mailto": [
-      "mailto:info@crooksldn.com"
+      "mailto:crooksldn@gmail.com"
     ],
-    "returnHow": " HOW TO REQUEST A REFUND Contact us within 14 days of delivery at [crooksldn@gmail.",
-    "postage": null
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION QUESTIONS TERMS SHIPPING REFUNDS TRACK ORDER CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": " Size swaps are free within the UK — however return postage is covered by the customer."
   },
   "shipping": {
+    "emails": [
+      "crooksldn@gmail.com.com"
+    ],
+    "mailto": [
+      "mailto:crooksldn@gmail.com"
+    ],
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION QUESTIONS TERMS SHIPPING REFUNDS TRACK ORDER CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "postage": null
+  },
+  "pdp": {
     "emails": [
       "crooksldn@gmail.com"
     ],
     "mailto": [
-      "mailto:info@crooksldn.com"
+      "mailto:crooksldn@gmail.com"
     ],
-    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 TRACK ORDER CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
-    "postage": " INCORRECT ADDRESS INFORMATION Customers are responsible for providing accurate shipping details."
-  },
-  "pdp": {
-    "emails": [
-      "info@crooksldn.com"
-    ],
-    "mailto": [
-      "mailto:info@crooksldn.com"
-    ],
-    "returnHow": " Start a return by email: info@crooksldn.",
+    "returnHow": " Start a return by email: crooksldn@gmail.",
     "postage": null
   },
   "home": {
     "emails": [],
     "mailto": [
-      "mailto:info@crooksldn.com"
+      "mailto:crooksldn@gmail.com"
     ],
-    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 TRACK ORDER CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION QUESTIONS TERMS SHIPPING REFUNDS TRACK ORDER CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
     "postage": null
   },
   "contact": {
     "emails": [],
     "mailto": [
-      "mailto:info@crooksldn.com"
+      "mailto:crooksldn@gmail.com"
     ],
-    "returnHow": "0] LIGHT MODE MENU CONTACT Name Email* Phone Comment Submit SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 TRACK ORDER CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "returnHow": "NU CONTACT Name Email* Phone Comment Submit SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION QUESTIONS TERMS SHIPPING REFUNDS TRACK ORDER CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
     "postage": null
   },
   "tos": {
     "emails": [
-      "Crooksldn@gmail.com"
+      "crooksldn@gmail.com"
     ],
     "mailto": [
-      "mailto:info@crooksldn.com"
+      "mailto:crooksldn@gmail.com"
     ],
-    "returnHow": "com] [TW200JW] SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 TRACK ORDER CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "returnHow": "com SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION QUESTIONS TERMS SHIPPING REFUNDS TRACK ORDER CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
     "postage": " You are solely responsible for any comments you make and their accuracy."
   },
   "privacy": {
@@ -60,9 +60,9 @@
       "crooksldn@gmail.com"
     ],
     "mailto": [
-      "mailto:info@crooksldn.com"
+      "mailto:crooksldn@gmail.com"
     ],
-    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION SHIPPING REFUNDS CASE 001 TRACK ORDER CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
+    "returnHow": " SHOP NEW TEES DENIM SWEATS ACCESSORIES INFORMATION QUESTIONS TERMS SHIPPING REFUNDS TRACK ORDER CASE 001 CONTACT INSTAGRAM TIKTOK EMAIL EVIDENCE TERMINAL V0.",
     "postage": " If you choose to use the Services and register an account, you are responsible for keeping your account credentials safe."
   }
 }
