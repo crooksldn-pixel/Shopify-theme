@@ -134,8 +134,8 @@ async function coldContext(device = MOBILE) {
       wordNewOnPage: /\bNEW\b/.test(t),
       newInFooterOnly: !![...document.querySelectorAll('footer a')].find(a => a.innerText.trim() === 'NEW'),
       newInGrid: [...document.querySelectorAll('.crk-card')].filter(c => /NEW/.test(c.innerText)).length,
-      gridBadges: [...new Set([...document.querySelectorAll('.crk-card')].map(c => (c.innerText.match(/AVAILABLE|SOLD OUT|NEW|LOW/g) || []).join('|')))].slice(0, 5),
-      anyDates: /\b(20\d\d|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/.test(t),
+      gridBadges: [...new Set([...document.querySelectorAll('.crk-card')].map(c => (c.innerText.match(/FILED [0-9.]+|AVAILABLE|SOLD OUT|NEW|LOW/g) || []).join('|')))].slice(0, 8),
+      anyDates: /FILED [0-9.]+|\b(20\d\d|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b|\b\d{2}\.\d{2}\b/.test(t),
       menuHasNew: true,
     };
   });
