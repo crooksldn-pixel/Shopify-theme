@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import fs from 'fs';
 
 export const BASE = 'https://4k8ciabapx960i7c-100410786135.shopifypreview.com';
 export const PROXY = 'http://127.0.0.1:38081';
@@ -44,23 +45,37 @@ export async function newContext(browser, device = MOBILE, extra = {}) {
  * sees GBP, so we pin GBP before measuring anything.
  */
 export async function primePreview(context, { forceGB = true } = {}) {
+  // Share links can be invalidated mid-run (a theme push kills outstanding links).
+  // Establish the preview session ONCE, persist its cookies, and reuse them in every
+  // later context so the link only needs to be alive for the first priming.
+  const STATE = 'audit/.preview-state.json';
   if (forceGB) {
-    // Must be set BEFORE the first navigation — Shopify otherwise pins the cart to the
-    // IP-geolocated market (US, via the egress proxy) and never re-converts.
     await context.addCookies([{ name: 'cart_currency', value: 'GBP', domain: new URL(BASE).host, path: '/' }]);
   }
+  const verify = async (p) => {
+    await p.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await p.waitForTimeout(1200);
+    return p.evaluate(() => ({
+      crk: !!document.querySelector('.crk-root'),
+      theme: window.Shopify?.theme?.name,
+      cur: window.Shopify?.currency?.active,
+    }));
+  };
   const p = await context.newPage();
-  await p.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await p.waitForTimeout(1500);
-  const state = await p.evaluate(() => ({
-    crk: !!document.querySelector('.crk-root'),
-    theme: window.Shopify?.theme?.name,
-    cur: window.Shopify?.currency?.active,
-    country: window.Shopify?.country,
-  }));
-  await p.close();
+  if (fs.existsSync(STATE)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(STATE, 'utf8'));
+      await context.addCookies(saved.cookies.filter(c => c.name !== 'cart_currency'));
+      const st = await verify(p);
+      if (st.crk) { await p.close(); return st; }
+      // saved session no longer serves the preview — fall through to a fresh prime
+    } catch { /* corrupt state file — reprime */ }
+  }
+  const state = await verify(p);
   if (!state.crk) throw new Error('PREVIEW PRIMING FAILED — .crk-root absent; would be auditing the live theme.');
-  if (forceGB && state.cur !== 'GBP') console.warn(`  [warn] market not pinned to GB: ${state.cur}/${state.country}`);
+  const full = await context.storageState();
+  fs.writeFileSync(STATE, JSON.stringify({ savedAt: new Date().toISOString(), cookies: full.cookies }, null, 2));
+  await p.close();
   return state;
 }
 
