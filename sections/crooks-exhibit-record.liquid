@@ -324,7 +324,13 @@
               {%- endif -%}
             {%- endfor -%}
 
-            <span class="crk-label crk-buylabel">{{ section.settings.buy_label }}</span>
+            {%- comment -%}
+              The buy spine carries no label. "Release request" sat above ADD TO
+              BAG, which is the one place KEEP.md §2 says fiction must never go:
+              "Never let ADD TO BAG become in-fiction. That rule is the reason
+              the whole aesthetic survives contact with a stranger." The size
+              row, price and button say what this is without a heading.
+            {%- endcomment -%}
             {%- comment -%}
               Server-side buy state. Without this a JS-off shopper landing on
               ?variant=<sold out> got an enabled ADD TO BAG carrying that variant's id.
@@ -398,7 +404,13 @@
             <input type="hidden" name="contact[subject]" value="{{ section.settings.notify_subject | escape }}">
             <input type="hidden" name="contact[product]" value="{{ product.handle }}">
             <input type="hidden" name="contact[product_url]" value="{{ shop.url }}{{ product.url }}">
-            <label class="crk-label crk-buylabel" for="crk-notify-email">{{ section.settings.buy_label }}</label>
+            {%- comment -%}
+              This input's accessible name came from buy_label. That setting is
+              gone from the buy spine, so the field gets a label of its own —
+              KEEP.md §4 records "interactive controls with no accessible name:
+              0 of 35", and that number stays 0.
+            {%- endcomment -%}
+            <label class="crk-sr" for="crk-notify-email">{{ section.settings.notify_email_label }}</label>
             <input
               class="crk-input"
               id="crk-notify-email"
@@ -636,7 +648,6 @@
     { "type": "text", "id": "photo_label", "label": "Photo counter", "info": "Use [i] and [n].", "default": "Photo [i] of [n]" },
     { "type": "text", "id": "gallery_label", "label": "Gallery group label (screen readers)", "default": "Evidence photographs" },
     { "type": "header", "content": "Buying" },
-    { "type": "text", "id": "buy_label", "label": "Buy section label", "default": "Release request" },
     { "type": "text", "id": "size_group_label", "label": "Size group label (screen readers)", "default": "Select a size" },
     { "type": "text", "id": "label_add", "label": "Add to bag", "default": "Add to bag" },
     { "type": "text", "id": "label_checkout_now", "label": "Checkout now", "default": "Checkout now" },
@@ -672,6 +683,7 @@
     { "type": "text", "id": "notify_variant_label", "label": "Notify label (size sold out)", "default": "Tell me when this size is back" },
     { "type": "text", "id": "notify_placeholder", "label": "Notify placeholder", "default": "email address" },
     { "type": "text", "id": "notify_button", "label": "Notify button", "default": "Notify me" },
+    { "type": "text", "id": "notify_email_label", "label": "Notify email field label (screen readers)", "default": "Email address" },
     { "type": "text", "id": "notify_subject", "label": "Notify email subject", "default": "Restock request" },
     { "type": "text", "id": "notify_ok", "label": "Notify success", "default": "Logged. We will email you when this exhibit returns." },
     { "type": "text", "id": "notify_err", "label": "Notify error", "default": "Submission rejected — check the address." },
@@ -700,7 +712,7 @@
     { "type": "text", "id": "unit_cm", "label": "Centimetres button", "default": "CM" },
     { "type": "text", "id": "unit_in", "label": "Inches button", "default": "IN" },
     { "type": "text", "id": "custody_heading", "label": "Chain of custody heading", "default": "Chain of custody \u2014 shipping & returns" },
-    { "type": "text", "id": "related_heading", "label": "Related heading", "default": "Filed under the same case" }
+    { "type": "text", "id": "related_heading", "label": "Related heading", "default": "More from this drop" }
   ],
   "blocks": [
     { "type": "@app" },

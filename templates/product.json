@@ -59,12 +59,12 @@
         "show_texture": true,
         "photo_label": "Photo [i] of [n]",
         "gallery_label": "Evidence photographs",
-        "buy_label": "Release request",
         "low_stock_threshold": 3,
         "spec_open": false,
         "provenance_open": false,
         "measure_open": false,
-        "custody_open": false
+        "custody_open": false,
+        "related_heading": "More from this drop"
       }
     }
   },

@@ -240,9 +240,7 @@
             "label_4": "REFUNDS",
             "url_4": "shopify://policies/refund-policy",
             "label_5": "TRACK ORDER",
-            "url_5": "shopify://pages/tracking",
-            "label_6": "CASE 001",
-            "url_6": "https://crooks-case-break.base44.app"
+            "url_5": "shopify://pages/tracking"
           }
         },
         "c3": {
@@ -256,12 +254,21 @@
             "label_3": "EMAIL",
             "url_3": "mailto:crooksldn@gmail.com"
           }
+        },
+        "c4": {
+          "type": "column",
+          "settings": {
+            "heading": "GAME",
+            "label_1": "Play CROOKSLDN: The Getaway",
+            "url_1": "https://crooks-case-break.base44.app"
+          }
         }
       },
       "block_order": [
         "c1",
         "c2",
-        "c3"
+        "c3",
+        "c4"
       ],
       "settings": {
         "base_line": "EVIDENCE TERMINAL v0.2 // CROOKSLDN // OWN THE STREETS™ // © [year]"

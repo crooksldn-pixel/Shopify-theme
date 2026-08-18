@@ -21,7 +21,12 @@
         "show_filters": true,
         "show_view_toggle": true,
         "show_outline_toggle": false,
-        "show_colourways": true
+        "show_colourways": true,
+        "label_view_product": "Flat",
+        "label_view_model": "On model",
+        "filed_label": "DROPPED [date]",
+        "low_stock_label": "LOW STOCK",
+        "low_stock_threshold": 3
       }
     }
   },

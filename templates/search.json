@@ -16,7 +16,12 @@
         "empty_text": "NO ITEMS IN THE REGISTER MATCH THAT QUERY.",
         "empty_text_noquery": "ENTER A QUERY ABOVE, OR USE A DIRECT LINK.",
         "docs_heading": "PAGES & ANSWERS",
-        "search_heading_blank": ""
+        "search_heading_blank": "",
+        "label_view_product": "Flat",
+        "label_view_model": "On model",
+        "filed_label": "DROPPED [date]",
+        "low_stock_label": "LOW STOCK",
+        "low_stock_threshold": 3
       }
     },
     "query": {

@@ -285,6 +285,24 @@
             endfor
           endif
 
+          comment
+            Low stock from real inventory only — a threshold over the summed
+            quantity of purchasable variants. No invented scarcity: if nothing
+            is tracked the total is 0 and the product simply reads AVAILABLE.
+          endcomment
+          assign crk_low = false
+          if section.settings.low_stock_threshold > 0 and product.available
+            assign crk_qty = 0
+            for v in product.variants
+              if v.available
+                assign crk_qty = crk_qty | plus: v.inventory_quantity
+              endif
+            endfor
+            if crk_qty > 0 and crk_qty <= section.settings.low_stock_threshold
+              assign crk_low = true
+            endif
+          endif
+
           assign crk_filed = false
           if product.published_at and section.settings.filed_days > 0
             assign crk_now_s = 'now' | date: '%s' | times: 1
@@ -414,16 +432,27 @@
             {%- endif -%}
             <span class="crk-card__row">
               <span class="crk-price">{{ product.price | money }}</span>
-              <span class="crk-card__status"{% if crk_filed and product.available %} data-crk-filed="true"{% endif %}>
+              {%- comment -%}
+                KEEP.md §7 asks for the filing date as "an addition to the
+                format, not a replacement of it". It was built as a replacement:
+                an in-stock product inside the window rendered FILED 03.08
+                INSTEAD OF its availability, so new arrivals read as sold out —
+                the opposite of what the slot is for. Stock status is now always
+                present and the date sits below it, de-emphasised.
+              {%- endcomment -%}
+              <span class="crk-card__status">
                 {%- if product.available == false -%}
                   {{ section.settings.sold_out_label }}
-                {%- elsif crk_filed -%}
-                  {{ section.settings.filed_label | replace: '[date]', crk_filed_on }}
+                {%- elsif crk_low -%}
+                  {{ section.settings.low_stock_label }}
                 {%- else -%}
                   {{ section.settings.available_label }}
                 {%- endif -%}
               </span>
             </span>
+            {%- if crk_filed and product.available and section.settings.filed_label != blank -%}
+              <span class="crk-card__dropped">{{ section.settings.filed_label | replace: '[date]', crk_filed_on }}</span>
+            {%- endif -%}
           </a>
         </li>
       {%- endfor -%}
@@ -512,8 +541,8 @@
     { "type": "text", "id": "exhibit_prefix", "label": "Product number prefix", "default": "NO." },
     { "type": "header", "content": "View mode" },
     { "type": "checkbox", "id": "show_view_toggle", "label": "Show Product / Model view toggle", "default": true },
-    { "type": "text", "id": "label_view_product", "label": "Product view label", "default": "PRODUCT" },
-    { "type": "text", "id": "label_view_model", "label": "Model view label", "default": "MODEL" },
+    { "type": "text", "id": "label_view_product", "label": "Product view label", "default": "Flat" },
+    { "type": "text", "id": "label_view_model", "label": "Model view label", "default": "On model" },
     { "type": "text", "id": "view_group_label", "label": "View toggle label (screen readers)", "default": "Choose how products are shown" },
     { "type": "image_picker", "id": "model_placeholder", "label": "Model view placeholder", "info": "Stands in for any product with no Model image metafield set. Leave empty to show the product image instead." },
     { "type": "header", "content": "Filters" },
@@ -536,11 +565,13 @@
     { "type": "text", "id": "colour_option_names", "label": "Option names treated as colourways", "info": "Comma separated. Matched case-insensitively.", "default": "Colour,Color,Colourway,Colorway" },
     { "type": "text", "id": "colourways_sr_label", "label": "Colourways label (screen readers)", "default": "Colourways" },
     { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
-    { "type": "text", "id": "filed_label", "label": "Recently filed label", "info": "Use [date]. Replaces the available label for products published inside the window below.", "default": "FILED [date]" },
+    { "type": "text", "id": "low_stock_label", "label": "Low stock label", "default": "LOW STOCK" },
+    { "type": "range", "id": "low_stock_threshold", "label": "Low stock at or below", "unit": "u", "min": 0, "max": 20, "step": 1, "default": 3 },
+    { "type": "text", "id": "filed_label", "label": "Drop date label", "info": "Use [date]. Shown BELOW the stock status, never instead of it. Leave empty to hide the date.", "default": "DROPPED [date]" },
     { "type": "text", "id": "filed_format", "label": "Filing date format", "info": "Liquid date format. %d.%m gives 08.08.", "default": "%d.%m" },
     { "type": "range", "id": "filed_days", "label": "Treat as recently filed for", "unit": "d", "min": 0, "max": 90, "step": 1, "default": 30 },
     { "type": "text", "id": "sold_out_label", "label": "Sold out label", "default": "SOLD OUT" },
-    { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "NO PRODUCTS MATCH THIS CATEGORY." },
+    { "type": "text", "id": "empty_text", "label": "Empty state text", "default": "Nothing in this category yet." },
     { "type": "text", "id": "empty_text_noquery", "label": "Empty state text (search, no query yet)", "default": "ENTER A QUERY ABOVE TO SEARCH THE REGISTER." },
     { "type": "text", "id": "docs_heading", "label": "Search: heading for page results", "default": "PAGES & ANSWERS" },
     { "type": "header", "content": "Advanced" },

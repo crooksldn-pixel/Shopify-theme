@@ -1008,3 +1008,11 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
    Anything beyond that has to be set in the app's own appearance settings. */
 .crk-intake__app { margin-top: 20px; border-top: 1px solid var(--crk-line); padding-top: 20px }
 .crk-intake__app > * { max-width: 100% }
+
+/* The drop date sits under the stock status, not in place of it — see the note
+   in crooks-exhibit-log.liquid. Deliberately quieter than the status above it. */
+.crk-card__dropped { display: block; margin-top: 2px; font-weight: 400; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-micro) }
+
+/* A fourth footer column (the game link moved out of INFORMATION) — auto-fit so
+   the row takes 3 or 4 without a hardcoded count. */
+@media (min-width: 640px) { .crk-footer__cols { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) } }
