@@ -9,9 +9,16 @@
   the name attribute simply allow several panels open at once, which is a
   perfectly good fallback.
 
-  No FAQPage JSON-LD: the convention is no Liquid inside <script> tags, and
-  Google restricted FAQ rich results to government and health sites in 2023, so
-  the exception would buy nothing.
+  FAQPage JSON-LD is emitted below (audit run 3, A3). This is the one place the
+  no-Liquid-in-<script> rule is deliberately broken, because there is no other
+  way to publish structured data from a theme. It is safe here for two reasons:
+  the payload is machine-readable JSON rather than executable code, and every
+  interpolated value goes through the `json` filter, which is Shopify's own
+  escaper for exactly this — it emits a quoted, escaped JSON string, so no block
+  setting can break out of the literal.
+
+  The entries are generated from the same blocks that render the visible Q&As,
+  so the two can never drift apart.
 {%- endcomment -%}
 
 <section class="crk-root crk-section" data-crk-section="faq">
@@ -60,6 +67,23 @@
     {%- endif -%}
   </div>
 </section>
+
+{%- comment -%} Built from the rendered blocks; skips group headings and incomplete pairs. {%- endcomment -%}
+{%- assign crk_faq_count = 0 -%}
+{%- capture crk_faq_entities -%}
+  {%- for block in section.blocks -%}
+    {%- if block.type != 'qa' -%}{%- continue -%}{%- endif -%}
+    {%- if block.settings.question == blank or block.settings.answer == blank -%}{%- continue -%}{%- endif -%}
+    {%- assign crk_faq_count = crk_faq_count | plus: 1 -%}
+    {%- unless crk_faq_count == 1 -%},{%- endunless -%}
+    {%- assign crk_q = block.settings.question | strip_html | strip_newlines | strip -%}
+    {%- assign crk_a = block.settings.answer | strip_html | strip_newlines | strip -%}
+    {"@type":"Question","name":{{ crk_q | json }},"acceptedAnswer":{"@type":"Answer","text":{{ crk_a | json }}}}
+  {%- endfor -%}
+{%- endcapture -%}
+{%- if crk_faq_count > 0 -%}
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{{ crk_faq_entities }}]}</script>
+{%- endif -%}
 
 {% schema %}
 {

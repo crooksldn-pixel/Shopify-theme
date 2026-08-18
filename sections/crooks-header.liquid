@@ -1,8 +1,5 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'crooks-drawer.js' | asset_url }}" defer></script>
-{%- if section.settings.show_case and section.settings.case_url != blank -%}
-  <script src="{{ 'crooks-board.js' | asset_url }}" defer></script>
-{%- endif -%}
 <script src="{{ 'crooks-theme.js' | asset_url }}" defer></script>
 
 {%- liquid
@@ -16,7 +13,23 @@
   It is a setting because inverting a COLOUR logo would wreck it — anyone who
   uploads one turns this off rather than editing CSS.
 {%- endcomment -%}
-<header class="crk-root crk-header" data-crk-section="header"{% if section.settings.logo_invert_dark %} data-crk-logo-invert="true"{% endif %}>
+{%- comment -%}
+  crooks-board.js is NOT loaded here. It used to be, on every page of the site,
+  to power the canvas in the menu drawer — and audit run 3 caught INP doubling
+  (~600ms -> ~1,050ms) from that change. The board auto-mounts on DOMContentLoaded
+  and schedules a frame before its IntersectionObserver can stop it, so every page
+  paid for a 1,100-fillRect frame nobody could see.
+
+  The URL rides on the header as data, and crooks-drawer.js injects the script on
+  the first menu open. The board and its pause guards are untouched (KEEP §1) —
+  this is about WHEN the code loads, not what it does.
+{%- endcomment -%}
+<header
+  class="crk-root crk-header"
+  data-crk-section="header"
+  {% if section.settings.show_case and section.settings.case_url != blank %}data-crk-board-src="{{ 'crooks-board.js' | asset_url }}"{% endif %}
+  {% if section.settings.logo_invert_dark %}data-crk-logo-invert="true"{% endif %}
+>
   <div class="crk-header__bar">
     <a class="crk-header__logo" href="{{ routes.root_url }}">
       {%- if section.settings.logo != blank -%}

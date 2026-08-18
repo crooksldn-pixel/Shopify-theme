@@ -11,7 +11,17 @@
   "sections": {
     "carriage": {
       "type": "crooks-cart-progress",
-      "settings": {}
+      "settings": {
+        "country_code": "GB",
+        "tier_1_threshold": 20,
+        "tier_1_label": "Tracked 48 free",
+        "tier_2_threshold": 70,
+        "tier_2_label": "Tracked 24 free",
+        "label_to_tier_1": "[amount] to free Tracked 48",
+        "label_to_tier_2": "[amount] to free Tracked 24",
+        "label_complete": "Free Tracked 24 — unlocked",
+        "progress_label": "Progress toward free carriage"
+      }
     },
     "crooks_hero": {
       "type": "crooks-hero-intake",
@@ -51,46 +61,117 @@
         "heading": "CATALOGUE",
         "subheading": "",
         "count_label": "ITEMS",
+        "search_heading": "Search: [terms]",
+        "search_heading_blank": "Search",
         "exhibit_prefix": "NO.",
         "show_view_toggle": true,
         "label_view_product": "PRODUCT",
         "label_view_model": "MODEL",
+        "view_group_label": "Choose how products are shown",
         "model_placeholder": "shopify://shop_images/crooksldn-charcoal-cellblock-shorts.png",
         "show_filters": true,
         "all_label": "ALL",
         "category_order": "T-SHIRT, DENIM, SWEATS, ACCESSORIES",
         "filters_label": "Filter exhibits",
+        "show_outline_toggle": true,
+        "outline_label": "Outline",
+        "outline_group_label": "Product image outline",
+        "outline_default": "on",
+        "show_colourways": true,
+        "colour_option_names": "Colour,Color,Colourway,Colorway",
+        "colourways_sr_label": "Colourways",
         "available_label": "AVAILABLE",
+        "filed_label": "FILED [date]",
+        "filed_format": "%d.%m",
+        "filed_days": 30,
         "sold_out_label": "SOLD OUT",
         "empty_text": "NO EXHIBITS MATCH THIS CATEGORY.",
+        "empty_text_noquery": "ENTER A QUERY ABOVE TO SEARCH THE REGISTER.",
+        "docs_heading": "PAGES & ANSWERS",
         "anchor_id": "products"
       }
     },
-    "crooks_manifest": {
-      "type": "crooks-manifest",
+    "crooks_packaging": {
+      "type": "crooks-packaging",
+      "blocks": {
+        "m1": {
+          "type": "item",
+          "settings": {
+            "label": "Evidence tag",
+            "note": "Numbered, seized by CROOKS LDN, QR to verify.",
+            "footnote": false
+          }
+        },
+        "m2": {
+          "type": "item",
+          "settings": {
+            "label": "Security seal",
+            "note": "Pull-tight, stamped with the cuffs.",
+            "footnote": false
+          }
+        },
+        "m3": {
+          "type": "item",
+          "settings": {
+            "label": "Cuff keyring",
+            "note": "Miniature cuffs, on the ring.",
+            "footnote": true
+          }
+        }
+      },
+      "block_order": [
+        "m1",
+        "m2",
+        "m3"
+      ],
       "settings": {
-        "heading": "WITNESS STATEMENT",
-        "body": "<p>CROOKSLDN is an independent label operating out of <em>London</em>. Everything is produced in short runs. When a run is gone it does not come back, and we do not restock it <em>to order</em>.</p><p>Garments are cut for wear, not for display. If you need the fit explained, the size guide is on every product page.</p><p>Own the streets.</p>",
-        "credit": "— Filed by the proprietor. No further comment offered."
+        "eyebrow": "PROPERTY BAG",
+        "heading": "EVERY ORDER SHIPS LIKE THIS",
+        "body": "Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for.",
+        "image": "shopify://shop_images/023A5758-35A6-4900-9A9E-AC2AD72E1341_1_105_c.jpg",
+        "image_alt": "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring.",
+        "footnote": "* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY."
       }
     },
     "crooks_informant": {
       "type": "crooks-informant-intake",
+      "blocks": {
+        "forms_inline_bgCmeq": {
+          "type": "shopify://apps/forms/blocks/inline/8744a304-fcb1-4347-b211-bb6b4759a76a",
+          "settings": {
+            "form_id": "923202",
+            "text_color": "#202020",
+            "button_background_color": "#4B276E",
+            "button_label_color": "#DDD7C9",
+            "links_color": "#1878B9",
+            "errors_color": "#E02229",
+            "text_alignment": "center",
+            "form_alignment": "center",
+            "padding_top": 0,
+            "padding_bottom": 24,
+            "padding_right": 0,
+            "padding_left": 0
+          }
+        }
+      },
+      "block_order": [
+        "forms_inline_bgCmeq"
+      ],
       "settings": {
         "heading": "REGISTER AS INFORMANT",
         "subheading": "Drops go to the register before they go public. One message per drop, nothing else.",
-        "email_label": "EMAIL",
-        "button_label": "SUBMIT",
-        "success_text": "CLEARANCE ACCEPTED — RECORD SUBMITTED",
-        "error_text": "SUBMISSION REJECTED — CHECK THE NUMBER",
-        "small_print": "One text per drop. Reply STOP to leave the register at any time. We do not sell it.",
-        "email_placeholder": "EMAIL ADDRESS",
         "phone_label": "MOBILE NUMBER",
         "phone_placeholder": "07700 900123",
+        "email_label": "EMAIL",
         "optional_label": "OPTIONAL",
+        "email_placeholder": "EMAIL ADDRESS",
+        "button_label": "SUBMIT",
         "consent_text": "Text me when a drop lands. I can stop at any time.",
         "consent_value": "YES — SMS marketing consent given on the storefront",
-        "register_name": "SMS DROP LIST"
+        "register_name": "SMS DROP LIST",
+        "success_text": "CLEARANCE ACCEPTED — RECORD SUBMITTED",
+        "error_text": "SUBMISSION REJECTED — CHECK THE NUMBER",
+        "small_print": "One text per drop. Reply STOP to leave the register at any time. We do not sell it."
       }
     },
     "lookbook_crx": {
@@ -99,43 +180,138 @@
         "media": {
           "type": "_media-without-appearance",
           "static": true,
-          "settings": {}
+          "settings": {
+            "media_type": "image",
+            "link": "",
+            "video_loop": true,
+            "video_autoplay": false,
+            "image_position": "cover",
+            "video_position": "cover"
+          },
+          "blocks": {}
         },
         "content": {
           "type": "_content-without-appearance",
           "static": true,
           "settings": {
             "horizontal_alignment_flex_direction_column": "flex-start",
-            "vertical_alignment_flex_direction_column": "space-between"
+            "vertical_alignment_flex_direction_column": "space-between",
+            "gap": 24
           },
           "blocks": {
             "caption": {
               "type": "text",
               "settings": {
                 "text": "<p>Lookbook</p>",
-                "type_preset": "h6"
-              }
+                "width": "fit-content",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "h6",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
             },
             "group": {
               "type": "group",
               "settings": {
-                "height": "fit"
+                "content_direction": "column",
+                "vertical_on_mobile": true,
+                "horizontal_alignment": "flex-start",
+                "vertical_alignment": "center",
+                "align_baseline": false,
+                "horizontal_alignment_flex_direction_column": "flex-start",
+                "vertical_alignment_flex_direction_column": "center",
+                "gap": 12,
+                "width": "fill",
+                "custom_width": 100,
+                "width_mobile": "fill",
+                "custom_width_mobile": 100,
+                "height": "fit",
+                "custom_height": 100,
+                "inherit_color_scheme": true,
+                "color_scheme": "",
+                "background_media": "none",
+                "video_position": "cover",
+                "background_image_position": "cover",
+                "border": "none",
+                "border_width": 1,
+                "border_opacity": 100,
+                "border_radius": 0,
+                "toggle_overlay": false,
+                "overlay_color": "#00000026",
+                "overlay_style": "solid",
+                "gradient_direction": "to top",
+                "link": "",
+                "open_in_new_tab": false,
+                "placeholder": "",
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
               },
               "blocks": {
                 "heading": {
                   "type": "text",
                   "settings": {
                     "text": "<h3>The world of CROOKSLDN</h3>",
-                    "type_preset": "h3"
-                  }
+                    "width": "fit-content",
+                    "max_width": "normal",
+                    "alignment": "left",
+                    "type_preset": "h3",
+                    "font": "var(--font-body--family)",
+                    "font_size": "1rem",
+                    "line_height": "normal",
+                    "letter_spacing": "normal",
+                    "case": "none",
+                    "wrap": "pretty",
+                    "color": "var(--color-foreground)",
+                    "background": false,
+                    "background_color": "#00000026",
+                    "corner_radius": 0,
+                    "padding-block-start": 0,
+                    "padding-block-end": 0,
+                    "padding-inline-start": 0,
+                    "padding-inline-end": 0
+                  },
+                  "blocks": {}
                 },
                 "text": {
                   "type": "text",
                   "settings": {
                     "text": "<p>Seasonal shoots, off the record. A closer look at the fits, the details and the characters behind the label.</p>",
+                    "width": "fit-content",
                     "max_width": "narrow",
-                    "type_preset": "rte"
-                  }
+                    "alignment": "left",
+                    "type_preset": "rte",
+                    "font": "var(--font-body--family)",
+                    "font_size": "1rem",
+                    "line_height": "normal",
+                    "letter_spacing": "normal",
+                    "case": "none",
+                    "wrap": "pretty",
+                    "color": "var(--color-foreground)",
+                    "background": false,
+                    "background_color": "#00000026",
+                    "corner_radius": 0,
+                    "padding-block-start": 0,
+                    "padding-block-end": 0,
+                    "padding-inline-start": 0,
+                    "padding-inline-end": 0
+                  },
+                  "blocks": {}
                 }
               },
               "block_order": [
@@ -148,8 +324,14 @@
               "settings": {
                 "label": "View lookbook",
                 "link": "shopify://collections/new",
-                "style_class": "link"
-              }
+                "open_in_new_tab": false,
+                "style_class": "link",
+                "width": "fit-content",
+                "custom_width": 100,
+                "width_mobile": "fit-content",
+                "custom_width_mobile": 100
+              },
+              "blocks": {}
             }
           },
           "block_order": [
@@ -165,7 +347,10 @@
         "media_width": "medium",
         "media_height": "60svh",
         "section_width": "full-width",
-        "color_scheme": "scheme-5"
+        "extend_media": true,
+        "color_scheme": "scheme-5",
+        "padding-block-start": 0,
+        "padding-block-end": 0
       }
     },
     "1774366260e2c7d880": {
@@ -231,47 +416,6 @@
         "padding-block-start": 0,
         "padding-block-end": 0
       }
-    },
-    "crooks_packaging": {
-      "type": "crooks-packaging",
-      "blocks": {
-        "m1": {
-          "type": "item",
-          "settings": {
-            "label": "Evidence tag",
-            "note": "Numbered, seized by CROOKS LDN, QR to verify.",
-            "footnote": false
-          }
-        },
-        "m2": {
-          "type": "item",
-          "settings": {
-            "label": "Security seal",
-            "note": "Pull-tight, stamped with the cuffs.",
-            "footnote": false
-          }
-        },
-        "m3": {
-          "type": "item",
-          "settings": {
-            "label": "Cuff keyring",
-            "note": "Miniature cuffs, on the ring.",
-            "footnote": true
-          }
-        }
-      },
-      "block_order": [
-        "m1",
-        "m2",
-        "m3"
-      ],
-      "settings": {
-        "eyebrow": "PROPERTY BAG",
-        "heading": "EVERY ORDER SHIPS LIKE THIS",
-        "body": "Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for.",
-        "image_alt": "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring.",
-        "footnote": "* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY."
-      }
     }
   },
   "order": [
@@ -279,7 +423,6 @@
     "crooks_hero",
     "crooks_exhibit_log",
     "crooks_packaging",
-    "crooks_manifest",
     "crooks_informant",
     "lookbook_crx",
     "1774366260e2c7d880"

@@ -58,8 +58,30 @@
       }
     }
 
+    /* The attract board is loaded on demand, not on every page — see the note in
+       crooks-header.liquid. Injected once, on the first open; the board's own
+       auto-mount catches it because readyState is already 'complete' by then,
+       and the explicit mountAll covers the case where it was loaded earlier. */
+    var boardRequested = false;
+    function loadBoard() {
+      if (boardRequested) return;
+      var src = header.getAttribute('data-crk-board-src');
+      var canvas = drawer.querySelector('[data-crk-board]');
+      if (!src || !canvas) return;
+      boardRequested = true;
+      if (window.CrooksBoard) { window.CrooksBoard.mountAll(drawer); return; }
+      var tag = document.createElement('script');
+      tag.src = src;
+      tag.defer = true;
+      tag.addEventListener('load', function () {
+        if (window.CrooksBoard) window.CrooksBoard.mountAll(drawer);
+      });
+      document.head.appendChild(tag);
+    }
+
     function open() {
       if (!drawer.hidden) return;
+      loadBoard();
       lastFocused = document.activeElement;
       drawer.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
