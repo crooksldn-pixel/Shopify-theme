@@ -86,7 +86,8 @@
 }
 
 .crk-root,
-main:has(> .shopify-policy__container) {
+main:has(> .shopify-policy__container),
+body:has(main [data-crk-section]) {
   /* fonts */
   --crk-font-mono: 'CRX Mono', 'CRX Mono Fallback', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --crk-font-display: 'VT323', 'VT323 Fallback', ui-monospace, monospace;
@@ -130,7 +131,8 @@ main:has(> .shopify-policy__container) {
 /* ---- canonical tokens: LIGHT (bone). Re-derived, not inverted. ----
    Set on :root by the theme toggle, so every .crk-root on the page follows. */
 :root[data-crk-theme="light"] .crk-root,
-:root[data-crk-theme="light"] main:has(> .shopify-policy__container) {
+:root[data-crk-theme="light"] main:has(> .shopify-policy__container),
+:root[data-crk-theme="light"] body:has(main [data-crk-section]) {
   --crk-ground: #FAFAFB;
   --crk-panel: #FFFFFF;
   --crk-tray: #F1F1F3;
@@ -1046,3 +1048,19 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
 .crk-setcart__offer a { color: var(--crk-lav); border-bottom: 1px solid transparent }
 .crk-setcart__offer a:hover { border-bottom-color: var(--crk-lav) }
 .crk-setcart__applied { padding: 12px 0; border-bottom: 1px solid var(--crk-line); font-weight: 500; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-lav) }
+
+/* ============================================================
+   THE PAGE GROUND
+
+   Every crk- section paints its own surface, but the page beneath them is
+   Horizon's, and Horizon's is cream — rgb(244 241 234). Anywhere a template's
+   sections do not fill the viewport, that cream showed through as a large pale
+   band between the content and the footer. It was most obvious on the search
+   page, where the results register renders nothing until a query is run.
+
+   Scoped to pages whose <main> actually contains a crk- section, so Horizon's
+   own templates (blog, article) keep their own ground. Mode-aware: the token
+   follows the light/dark switch rather than being pinned to a hex value.
+   ============================================================ */
+body:has(main [data-crk-section]) { background: var(--crk-ground) }
+body:has(main [data-crk-section]) main { background: var(--crk-ground) }
