@@ -1288,3 +1288,26 @@ Added by reading the full nested tree first and sending every existing item back
 `id` — the seven children under SHOP survived, verified in the rendered drawer. New items were
 sent without an `id` and with `type: PAGE` + `resourceId` only; Shopify derives the url. Menus
 are store data, so this is not in any commit.
+
+### Owner override of KEEP.md §6: `04 RELEASED` → `04 Delivered`
+
+`audit/KEEP.md` §6 protects the chain-of-custody copy — *"the label needs the
+word 'shipping' appended (BACKLOG #13); the copy inside must not be touched."*
+The step label was changed anyway, on George's explicit instruction after the
+conflict was put to him: *"change the released to delivered i even believe that
+it would look better."*
+
+Rationale accepted: `RELEASED` is the one step in the timeline a customer has to
+decode, and it sits at the point where they are checking whether the parcel has
+arrived. The other three steps and every line of body copy are untouched.
+
+Changed in three places, because the label lives in all of them:
+`templates/product.json` (what renders), the section preset in
+`sections/crooks-exhibit-record.liquid` (so a fresh instance matches), and
+`templates/product.crooks.json` (the unused legacy template).
+
+The section preset also still carried `info@crooksldn.com` — the address proven
+dead and corrected on the live template earlier. Fixed at the same time, so
+adding a fresh Exhibit Record can no longer reintroduce it.
+
+This is a deliberate decision, not drift. The next audit should not re-flag it.
