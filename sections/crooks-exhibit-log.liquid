@@ -98,6 +98,14 @@
   assign crk_categories = crk_ordered | split: '|'
 -%}
 
+{%- comment -%}
+  Nothing to render on a search page before a query is run: the grid is empty,
+  the heading and count are suppressed, and what is left is an empty section —
+  which the theme editor draws as a tall placeholder box. The query bar above
+  already carries the prompt and the direct links, so this simply stands down.
+{%- endcomment -%}
+{%- if crk_is_search and search.terms == blank -%}
+{%- else -%}
 <section class="crk-root crk-section crk-exhibit-log" data-crk-section="exhibit-log" data-crk-view="product" id="{{ section.settings.anchor_id | default: 'exhibits' }}">
   <div class="crk-inner">
     <header class="crk-log__head">
@@ -525,6 +533,8 @@
     ]
   }
   </script>
+{%- endif -%}
+
 {%- endif -%}
 
 {% schema %}

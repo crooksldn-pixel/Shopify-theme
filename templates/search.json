@@ -1,32 +1,30 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "carriage": {
       "type": "crooks-cart-progress",
-      "settings": {}
-    },
-    "main": {
-      "type": "crooks-exhibit-log",
       "settings": {
-        "heading": "",
-        "count_label": "RESULTS",
-        "show_filters": true,
-        "show_view_toggle": false,
-        "show_outline_toggle": false,
-        "show_colourways": true,
-        "empty_text": "NO ITEMS IN THE REGISTER MATCH THAT QUERY.",
-        "empty_text_noquery": "ENTER A QUERY ABOVE, OR USE A DIRECT LINK.",
-        "docs_heading": "PAGES & ANSWERS",
-        "search_heading_blank": "",
-        "label_view_product": "Flat",
-        "label_view_model": "On model",
-        "filed_label": "DROPPED [date]",
-        "low_stock_label": "LOW STOCK",
-        "low_stock_threshold": 3
+        "country_code": "GB",
+        "tier_1_threshold": 20,
+        "tier_1_label": "Tracked 48 free",
+        "tier_2_threshold": 70,
+        "tier_2_label": "Tracked 24 free",
+        "label_to_tier_1": "[amount] to free Tracked 48",
+        "label_to_tier_2": "[amount] to free Tracked 24",
+        "label_complete": "Free Tracked 24 — unlocked",
+        "progress_label": "Progress toward free carriage"
       }
     },
     "query": {
       "type": "crooks-search",
-      "settings": {},
       "blocks": {
         "l1": {
           "type": "link",
@@ -138,7 +136,38 @@
         "l7",
         "l8",
         "l9"
-      ]
+      ],
+      "settings": {
+        "label": "",
+        "placeholder": "Item, category or question",
+        "button_label": "SEARCH",
+        "hint": "SEARCH BY ITEM, CATEGORY OR COLOUR",
+        "suggest_label": "Search suggestions",
+        "suggest_products": "ITEMS",
+        "suggest_links": "PAGES",
+        "links_heading": "DIRECT LINKS"
+      }
+    },
+    "main": {
+      "type": "crooks-exhibit-log",
+      "settings": {
+        "heading": "",
+        "count_label": "RESULTS",
+        "show_filters": true,
+        "show_view_toggle": false,
+        "show_outline_toggle": false,
+        "show_colourways": true,
+        "empty_text": "NO ITEMS IN THE REGISTER MATCH THAT QUERY.",
+        "empty_text_noquery": "",
+        "docs_heading": "PAGES & ANSWERS",
+        "search_heading": "Search: [terms]",
+        "search_heading_blank": "",
+        "label_view_product": "Flat",
+        "label_view_model": "On model",
+        "filed_label": "DROPPED [date]",
+        "low_stock_label": "LOW STOCK",
+        "low_stock_threshold": 3
+      }
     }
   },
   "order": [
