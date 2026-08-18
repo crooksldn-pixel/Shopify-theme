@@ -101,8 +101,17 @@
 <section class="crk-root crk-section crk-exhibit-log" data-crk-section="exhibit-log" data-crk-view="product" id="{{ section.settings.anchor_id | default: 'exhibits' }}">
   <div class="crk-inner">
     <header class="crk-log__head">
+      {%- comment -%}
+        A collection page had no h1 at all — on this theme or the live one. The
+        register is also the homepage's product grid, where the hero already
+        owns the h1, so the level follows the template rather than being fixed.
+      {%- endcomment -%}
       {%- if crk_heading != blank -%}
-        <h2 class="crk-h2">{{ crk_heading }}</h2>
+        {%- if template.name == 'collection' -%}
+          <h1 class="crk-h2">{{ crk_heading }}</h1>
+        {%- else -%}
+          <h2 class="crk-h2">{{ crk_heading }}</h2>
+        {%- endif -%}
       {%- endif -%}
       {%- if section.settings.subheading != blank -%}
         <p class="crk-eyebrow">{{ section.settings.subheading }}</p>
@@ -440,6 +449,54 @@
     {%- endif -%}
   </div>
 </section>
+
+{%- comment -%}
+  Collection structured data. ItemList names the products this page actually
+  renders, in the order it renders them, so it can never describe a grid that
+  is not there. Only on a real collection page — not the homepage register, and
+  not search results, which should not be indexed at all.
+{%- endcomment -%}
+{%- if template.name == 'collection' and collection and collection.handle != blank -%}
+  {%- assign crk_col_url = shop.url | append: collection.url -%}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": {{ crk_col_url | append: '#collection' | json }},
+    "name": {{ collection.title | json }},
+    "url": {{ crk_col_url | json }},
+    {% if collection.description != blank %}"description": {{ collection.description | strip_html | strip_newlines | truncate: 320 | json }},{% endif %}
+    "isPartOf": { "@id": {{ shop.url | append: '#website' | json }} },
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": {{ crk_total | json }},
+      "itemListElement": [
+        {%- assign crk_pos = 0 -%}
+        {%- for product in crk_products limit: 30 -%}
+          {%- assign crk_pos = crk_pos | plus: 1 -%}
+          {%- unless forloop.first -%},{%- endunless -%}
+          {
+            "@type": "ListItem",
+            "position": {{ crk_pos }},
+            "name": {{ product.title | json }},
+            "url": {{ shop.url | append: product.url | json }}
+          }
+        {%- endfor -%}
+      ]
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": {{ shop.url | json }} },
+      { "@type": "ListItem", "position": 2, "name": {{ collection.title | json }}, "item": {{ crk_col_url | json }} }
+    ]
+  }
+  </script>
+{%- endif -%}
 
 {% schema %}
 {

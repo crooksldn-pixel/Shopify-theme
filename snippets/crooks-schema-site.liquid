@@ -1,0 +1,109 @@
+{%- comment -%}
+  Organization + WebSite structured data, emitted once per page from the footer.
+
+  WHY THE FOOTER: the Organization's sameAs profiles are the social links the
+  footer already renders as blocks, so they are read from that data rather than
+  retyped into a second place that could drift. Horizon emitted Organization
+  from sections/header.liquid, which is disabled in this theme's header group —
+  so without this the redesign shipped with no entity markup at all.
+
+  WebSite/SearchAction declares the on-site search endpoint, which is what makes
+  a sitelinks search box possible. /search is real and takes ?q=, so this
+  describes something that genuinely exists.
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_social_hosts = 'instagram.com,tiktok.com,facebook.com,youtube.com,x.com,twitter.com,pinterest.com,linkedin.com,threads.net,threads.com,snapchat.com,tumblr.com,soundcloud.com,spotify.com' | split: ','
+  assign crk_same = ''
+  for block in section.blocks
+    for i in (1..6)
+      case i
+        when 1
+          assign crk_u = block.settings.url_1
+        when 2
+          assign crk_u = block.settings.url_2
+        when 3
+          assign crk_u = block.settings.url_3
+        when 4
+          assign crk_u = block.settings.url_4
+        when 5
+          assign crk_u = block.settings.url_5
+        when 6
+          assign crk_u = block.settings.url_6
+      endcase
+      comment
+        Off-site profile links only: skip internal routes, mailto and the
+        shop's own domain.
+      endcomment
+      comment
+        sameAs means "another profile of THIS organisation", so it is limited to
+        known social hosts. Without the allowlist the footer's CASE 001 link —
+        a game on base44 — was being published as a CROOKSLDN profile.
+      endcomment
+      assign crk_is_social = false
+      for host in crk_social_hosts
+        if crk_u contains host
+          assign crk_is_social = true
+          break
+        endif
+      endfor
+      if crk_is_social
+            if crk_same == ''
+              assign crk_same = crk_u
+            else
+              unless crk_same contains crk_u
+                assign crk_same = crk_same | append: '|' | append: crk_u
+              endunless
+            endif
+      endif
+    endfor
+  endfor
+  assign crk_same_list = crk_same | split: '|'
+
+  comment
+    SearchAction needs the literal {search_term_string} placeholder. A brace
+    inside a Liquid tag argument is read as a delimiter and the theme is
+    rejected at upload, so it is assembled from single-character variables.
+  endcomment
+  assign crk_ob = '{'
+  assign crk_cb = '}'
+  assign crk_search_template = shop.url | append: '/search?q=' | append: crk_ob | append: 'search_term_string' | append: crk_cb
+-%}
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": {{ shop.url | append: '#organization' | json }},
+  "name": {{ shop.name | json }},
+  "url": {{ shop.url | json }},
+  {% if settings.logo != blank %}"logo": {{ settings.logo | image_url: width: 512 | prepend: 'https:' | replace: 'https:https:', 'https:' | json }},{% endif %}
+  {% if shop.description != blank %}"description": {{ shop.description | strip_html | strip_newlines | json }},{% endif %}
+  {% if crk_same_list.size > 0 %}"sameAs": [{% for u in crk_same_list %}{% unless forloop.first %},{% endunless %}{{ u | json }}{% endfor %}],{% endif %}
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "email": {{ shop.email | json }},
+    "areaServed": "GB"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": {{ shop.url | append: '#website' | json }},
+  "url": {{ shop.url | json }},
+  "name": {{ shop.name | json }},
+  "publisher": { "@id": {{ shop.url | append: '#organization' | json }} },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": {{ crk_search_template | json }}
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>

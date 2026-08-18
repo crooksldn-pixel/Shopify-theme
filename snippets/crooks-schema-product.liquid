@@ -1,0 +1,170 @@
+{%- comment -%}
+  Product structured data for the Exhibit Record PDP.
+
+  WHY THIS EXISTS: the live theme emits ProductGroup JSON-LD from Horizon's
+  sections/product-information.liquid. The Crooks product template does not use
+  that section, so publishing the redesign without this snippet would have
+  DELETED every product rich result and all Google Shopping free-listing
+  eligibility. This restores it from our own template.
+
+  Shape follows Google's variant guidance: ProductGroup wrapping one Product per
+  variant when the product has real options, a plain Product when it does not.
+  Server-rendered in Liquid, never injected by JS, per Google's December 2025
+  JS-SEO guidance.
+
+  Every interpolated value goes through the `json` filter — Shopify's own
+  escaper — so no title, description or option value can break the literal.
+
+  NOT included, deliberately: aggregateRating/review (no reviews app is
+  installed, and inventing ratings is both wrong and a manual action), and
+  OfferShippingDetails (the rate card is tiered and country-dependent; wrong
+  shipping data in schema is worse than none).
+
+  Accepts: product (required), breadcrumb_collection (optional).
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_url = shop.url | append: product.url
+  assign crk_desc = product.description | strip_html | strip_newlines | truncate: 320
+  assign crk_brand = product.vendor | default: shop.name
+
+  assign crk_images = ''
+  for image in product.images limit: 5
+    assign crk_img = image | image_url: width: 1600
+    if forloop.first
+      assign crk_images = crk_img
+    else
+      assign crk_images = crk_images | append: '|' | append: crk_img
+    endif
+  endfor
+  assign crk_image_list = crk_images | split: '|'
+
+  comment
+    variesBy maps the product's own option names onto schema properties, so a
+    catalogue that spells it "Colour" and "Color" both resolve.
+  endcomment
+  assign crk_varies = ''
+  for opt in product.options_with_values
+    assign crk_opt = opt.name | downcase
+    assign crk_prop = ''
+    if crk_opt contains 'size'
+      assign crk_prop = 'https://schema.org/size'
+    elsif crk_opt contains 'colour' or crk_opt contains 'color'
+      assign crk_prop = 'https://schema.org/color'
+    endif
+    if crk_prop != ''
+      if crk_varies == ''
+        assign crk_varies = crk_prop
+      else
+        assign crk_varies = crk_varies | append: '|' | append: crk_prop
+      endif
+    endif
+  endfor
+  assign crk_varies_list = crk_varies | split: '|'
+
+  assign crk_multi = true
+  if product.variants.size == 1 and product.variants.first.title == 'Default Title'
+    assign crk_multi = false
+  endif
+-%}
+
+{%- capture crk_offers -%}
+  {%- for variant in product.variants -%}
+    {%- unless forloop.first -%},{%- endunless -%}
+    {%- assign crk_avail = 'https://schema.org/OutOfStock' -%}
+    {%- if variant.available -%}{%- assign crk_avail = 'https://schema.org/InStock' -%}{%- endif -%}
+    {%- assign crk_price = variant.price | money_without_currency | replace: ',', '' -%}
+    {
+      "@type": "Product",
+      "@id": {{ crk_url | append: '?variant=' | append: variant.id | json }},
+      "name": {{ product.title | append: ' — ' | append: variant.title | json }},
+      {% if variant.sku != blank %}"sku": {{ variant.sku | json }},{% endif %}
+      {% if variant.barcode != blank %}"gtin": {{ variant.barcode | json }},{% endif %}
+      {% if variant.image %}"image": {{ variant.image | image_url: width: 1600 | prepend: 'https:' | replace: 'https:https:', 'https:' | json }},{% endif %}
+      "offers": {
+        "@type": "Offer",
+        "url": {{ crk_url | append: '?variant=' | append: variant.id | json }},
+        "price": {{ crk_price | json }},
+        "priceCurrency": {{ cart.currency.iso_code | json }},
+        "availability": {{ crk_avail | json }},
+        "itemCondition": "https://schema.org/NewCondition",
+        "seller": { "@type": "Organization", "name": {{ shop.name | json }} }
+      }
+    }
+  {%- endfor -%}
+{%- endcapture -%}
+
+<script type="application/ld+json">
+{%- if crk_multi -%}
+{
+  "@context": "https://schema.org",
+  "@type": "ProductGroup",
+  "@id": {{ crk_url | append: '#product' | json }},
+  "name": {{ product.title | json }},
+  "description": {{ crk_desc | json }},
+  "url": {{ crk_url | json }},
+  "productGroupID": {{ product.id | json }},
+  "brand": { "@type": "Brand", "name": {{ crk_brand | json }} },
+  {% if product.type != blank %}"category": {{ product.type | json }},{% endif %}
+  "image": [{% for src in crk_image_list %}{% unless forloop.first %},{% endunless %}{{ src | prepend: 'https:' | replace: 'https:https:', 'https:' | json }}{% endfor %}],
+  {% if crk_varies_list.size > 0 %}"variesBy": [{% for v in crk_varies_list %}{% unless forloop.first %},{% endunless %}{{ v | json }}{% endfor %}],{% endif %}
+  "hasVariant": [{{ crk_offers }}]
+}
+{%- else -%}
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "@id": {{ crk_url | append: '#product' | json }},
+  "name": {{ product.title | json }},
+  "description": {{ crk_desc | json }},
+  "url": {{ crk_url | json }},
+  "brand": { "@type": "Brand", "name": {{ crk_brand | json }} },
+  {% if product.type != blank %}"category": {{ product.type | json }},{% endif %}
+  {% if product.selected_or_first_available_variant.sku != blank %}"sku": {{ product.selected_or_first_available_variant.sku | json }},{% endif %}
+  "image": [{% for src in crk_image_list %}{% unless forloop.first %},{% endunless %}{{ src | prepend: 'https:' | replace: 'https:https:', 'https:' | json }}{% endfor %}],
+  "offers": {
+    "@type": "Offer",
+    "url": {{ crk_url | json }},
+    "price": {{ product.selected_or_first_available_variant.price | money_without_currency | replace: ',', '' | json }},
+    "priceCurrency": {{ cart.currency.iso_code | json }},
+    "availability": {% if product.available %}"https://schema.org/InStock"{% else %}"https://schema.org/OutOfStock"{% endif %},
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": { "@type": "Organization", "name": {{ shop.name | json }} }
+  }
+}
+{%- endif -%}
+</script>
+
+{%- comment -%}
+  Breadcrumb: Home > Collection > Product. `collection` is only set when the
+  visitor arrived through one, so a direct landing (which is what a search
+  result is) fell back to a two-level crumb. The product's own collections
+  supply the middle level instead — skipping the catch-all ones, which describe
+  nothing.
+{%- endcomment -%}
+{%- liquid
+  assign crk_crumb = collection
+  unless crk_crumb
+    for c in product.collections
+      unless c.handle == 'all' or c.handle == 'frontpage' or c.handle == 'new'
+        assign crk_crumb = c
+        break
+      endunless
+    endfor
+  endunless
+-%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": {{ shop.url | json }} }
+    {%- if crk_crumb and crk_crumb.title != blank -%}
+      ,{ "@type": "ListItem", "position": 2, "name": {{ crk_crumb.title | json }}, "item": {{ shop.url | append: crk_crumb.url | json }} },
+      { "@type": "ListItem", "position": 3, "name": {{ product.title | json }}, "item": {{ crk_url | json }} }
+    {%- else -%}
+      ,{ "@type": "ListItem", "position": 2, "name": {{ product.title | json }}, "item": {{ crk_url | json }} }
+    {%- endif -%}
+  ]
+}
+</script>
