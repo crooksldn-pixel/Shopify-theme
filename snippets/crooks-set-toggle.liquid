@@ -1,0 +1,176 @@
+{%- comment -%}
+  "Complete the set" toggle — inside the purchase panel, between the dispatch
+  line and ADD TO BAG.
+
+  Data-driven, never hardcoded. A product joins a set by carrying four
+  metafields; no product handle appears anywhere in this file:
+    crooks.set_partner        the other garment (product reference)
+    crooks.set_bundle         the bundle product that sells both (product ref)
+    crooks.set_partner_option the name of the bundle option holding the
+                              PARTNER's size — stated explicitly so the theme
+                              never guesses which of the bundle's two size
+                              options belongs to which garment
+    crooks.set_short_name     how a product is named in its partner's copy
+
+  Wiring: the bundle product carries one variant per size PAIR (5 x 5 = 25),
+  each mapping to the two component variants, so inventory and fulfilment track
+  per component. Ticking the box swaps the form's variant id to the matching
+  bundle variant; unticking restores the single item. One add to cart, one line.
+
+  Every price below is rendered through `money` in Liquid, so it follows the
+  shopper's presentment currency — no currency string is ever assembled in JS.
+
+  All copy is a section setting. No concept vocabulary on this element.
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_partner = product.metafields.crooks.set_partner.value
+  assign crk_bundle = product.metafields.crooks.set_bundle.value
+  assign crk_partner_option = product.metafields.crooks.set_partner_option.value
+  assign crk_set_ok = false
+  if crk_partner and crk_bundle and crk_partner_option != blank and crk_bundle.available
+    assign crk_set_ok = true
+  endif
+-%}
+
+{%- if crk_set_ok -%}
+  {%- liquid
+    assign crk_partner_name = crk_partner.metafields.crooks.set_short_name.value | default: crk_partner.title
+
+    comment
+      Which of this product's options carries the size, so the toggle can follow
+      the shopper's main selection.
+    endcomment
+    assign crk_size_index = 0
+    for opt in product.options_with_values
+      assign crk_opt_name = opt.name | downcase
+      if crk_opt_name contains 'size'
+        assign crk_size_index = forloop.index0
+        break
+      endif
+    endfor
+
+    comment
+      Position of the partner's size within the bundle's options, read from the
+      metafield rather than inferred from option names.
+    endcomment
+    assign crk_partner_pos = 0
+    for opt in crk_bundle.options_with_values
+      if opt.name == crk_partner_option
+        assign crk_partner_pos = forloop.index
+        break
+      endif
+    endfor
+  -%}
+
+  <div
+    class="crk-set"
+    data-crk-set
+    data-crk-set-size-index="{{ crk_size_index }}"
+    data-crk-set-cta="{{ section.settings.set_cta | escape }}"
+    data-crk-set-sold="{{ section.settings.set_sold_text | replace: '[partner]', crk_partner_name | escape }}"
+  >
+    <label class="crk-set__row" for="crk-set-toggle">
+      <input class="crk-check" id="crk-set-toggle" type="checkbox" data-crk-set-check>
+      {%- if crk_partner.featured_image -%}
+        {{
+          crk_partner.featured_image
+          | image_url: width: 96
+          | image_tag: widths: '48, 96', alt: '', loading: 'lazy', class: 'crk-set__thumb'
+        }}
+      {%- endif -%}
+      <span class="crk-set__copy">
+        {%- liquid
+          assign crk_pair = product.price | plus: crk_partner.price
+          assign crk_saving_money = crk_pair | minus: crk_bundle.price | money_without_trailing_zeros
+          assign crk_line = section.settings.set_collapsed_text | replace: '[partner]', crk_partner_name
+          assign crk_line = crk_line | replace: '[saving]', crk_saving_money
+        -%}
+        {{ crk_line }}
+      </span>
+    </label>
+
+    <div class="crk-set__panel" data-crk-set-panel hidden>
+      <p class="crk-eyebrow crk-set__label" id="crk-set-size-label">
+        {{ section.settings.set_partner_size_label | replace: '[partner]', crk_partner_name }}
+      </p>
+      <div class="crk-sizes crk-set__sizes" role="group" aria-labelledby="crk-set-size-label" data-crk-set-sizes>
+        {%- for opt in crk_partner.options_with_values -%}
+          {%- assign crk_opt_name = opt.name | downcase -%}
+          {%- if crk_opt_name contains 'size' -%}
+            {%- for val in opt.values -%}
+              <button
+                type="button"
+                class="crk-size"
+                data-crk-set-size="{{ val | escape }}"
+                aria-pressed="false"
+              >{{ val }}</button>
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      <p class="crk-stockline crk-set__stock" data-crk-set-stock aria-live="polite"></p>
+
+      <p class="crk-set__price">
+        <s class="crk-set__was" data-crk-set-was></s>
+        <span class="crk-set__now" data-crk-set-now></span>
+      </p>
+
+      {%- if section.settings.set_shipping_text != blank -%}
+        <p class="crk-micro crk-set__ship">{{ section.settings.set_shipping_text }}</p>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%}
+      The bundle's variants, one per size pair, with prices already formatted by
+      Liquid. JS only reads and swaps these strings.
+    {%- endcomment -%}
+    <ul class="crk-sr" data-crk-set-variants aria-hidden="true">
+      {%- for bv in crk_bundle.variants -%}
+        {%- liquid
+          if crk_partner_pos == 1
+            assign crk_bv_partner = bv.option1
+            assign crk_bv_main = bv.option2
+          else
+            assign crk_bv_partner = bv.option2
+            assign crk_bv_main = bv.option1
+          endif
+
+          assign crk_main_v = null
+          for v in product.variants
+            if v.title == crk_bv_main
+              assign crk_main_v = v
+              break
+            endif
+          endfor
+          assign crk_partner_v = null
+          for v in crk_partner.variants
+            if v.title == crk_bv_partner
+              assign crk_partner_v = v
+              break
+            endif
+          endfor
+
+          assign crk_was = 0
+          if crk_main_v and crk_partner_v
+            assign crk_was = crk_main_v.price | plus: crk_partner_v.price
+          endif
+          assign crk_was_money = crk_was | money_without_trailing_zeros
+          assign crk_now_money = bv.price | money_without_trailing_zeros
+          assign crk_cta_line = section.settings.set_cta | replace: '[price]', crk_now_money
+          assign crk_now_line = section.settings.set_price_label | replace: '[price]', crk_now_money
+        -%}
+        <li
+          data-id="{{ bv.id }}"
+          data-main="{{ crk_bv_main | escape }}"
+          data-partner="{{ crk_bv_partner | escape }}"
+          data-available="{{ bv.available }}"
+          data-was="{{ crk_was_money | escape }}"
+          data-now="{{ crk_now_line | escape }}"
+          data-cta="{{ crk_cta_line | escape }}"
+        ></li>
+      {%- endfor -%}
+    </ul>
+  </div>
+{%- endif -%}

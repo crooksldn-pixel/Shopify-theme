@@ -1,0 +1,103 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  Cart-side half of the complete-the-set offer. Two states, both quiet, both
+  server-rendered — no modal, no popup, no script.
+
+  1. Exactly one half of a set is in the cart -> one line offering the other,
+     linking to its product page.
+  2. The bundle is in the cart -> the saving is confirmed in words, because a
+     shopper who took the offer should see it land.
+
+  Set membership is read from the same crooks.* metafields the product page
+  uses, so this file contains no product handle and needs no editing when a
+  second set is added.
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_offer_partner = null
+  assign crk_offer_saving = ''
+
+  for line in cart.items
+    assign li_product = line.product
+    assign li_partner = li_product.metafields.crooks.set_partner.value
+    assign li_bundle = li_product.metafields.crooks.set_bundle.value
+
+    if li_partner and li_bundle
+      assign crk_has_partner = false
+      for other in cart.items
+        if other.product.id == li_partner.id
+          assign crk_has_partner = true
+          break
+        endif
+      endfor
+      unless crk_has_partner
+        if crk_offer_partner == null
+          assign crk_offer_partner = li_partner
+          assign crk_pair = li_product.price | plus: li_partner.price
+          assign crk_offer_saving = crk_pair | minus: li_bundle.price | money_without_trailing_zeros
+        endif
+      endunless
+    endif
+  endfor
+
+  comment
+    The bundle is identified by reference, not by name: a cart line is the
+    bundle when some product in the catalogue points at it through
+    crooks.set_bundle. Nothing here depends on a handle or a title.
+  endcomment
+  assign crk_bundle_in_cart = false
+  assign crk_bundle_saving = ''
+  for line in cart.items
+    for other in cart.items
+      assign ob = other.product.metafields.crooks.set_bundle.value
+      if ob and ob.id == line.product.id
+        assign crk_bundle_in_cart = true
+      endif
+    endfor
+  endfor
+-%}
+
+{%- if crk_bundle_in_cart or crk_offer_partner -%}
+  <section class="crk-root" data-crk-section="set-cart">
+    <div class="crk-inner crk-setcart">
+      {%- if crk_bundle_in_cart -%}
+        {%- for line in cart.items -%}
+          {%- for other in cart.items -%}
+            {%- assign ob = other.product.metafields.crooks.set_bundle.value -%}
+            {%- if ob and ob.id == line.product.id and crk_bundle_saving == '' -%}
+              {%- liquid
+                assign comp_pair = other.product.price | plus: other.product.metafields.crooks.set_partner.value.price
+                assign crk_bundle_saving = comp_pair | minus: line.product.price | money_without_trailing_zeros
+              -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+        <p class="crk-setcart__applied" data-crk-set-applied>
+          {{ section.settings.applied_text | replace: '[saving]', crk_bundle_saving }}
+        </p>
+      {%- elsif crk_offer_partner -%}
+        {%- assign crk_offer_name = crk_offer_partner.metafields.crooks.set_short_name.value | default: crk_offer_partner.title -%}
+        {%- capture crk_offer_line -%}
+          {{ section.settings.offer_text | replace: '[partner]', crk_offer_name | replace: '[saving]', crk_offer_saving }}
+        {%- endcapture -%}
+        <p class="crk-setcart__offer">
+          <a href="{{ crk_offer_partner.url }}">{{ crk_offer_line | strip }}</a>
+        </p>
+      {%- endif -%}
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Crooks — Set (cart)",
+  "tag": "section",
+  "settings": [
+    { "type": "paragraph", "content": "Renders on the cart only. One line when half a set is present, a confirmation when the set is. Placeholders: [partner], [saving]." },
+    { "type": "text", "id": "offer_text", "label": "Offer line", "default": "Complete the set — add the [partner], save [saving]." },
+    { "type": "text", "id": "applied_text", "label": "Saving confirmed", "default": "SET SAVING APPLIED — [saving]" }
+  ],
+  "presets": [{ "name": "Crooks — Set (cart)" }]
+}
+{% endschema %}

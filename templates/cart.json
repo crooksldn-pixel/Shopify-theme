@@ -260,10 +260,15 @@
         "padding-block-start": 48,
         "padding-block-end": 48
       }
+    },
+    "set_line": {
+      "type": "crooks-set-cart",
+      "settings": {}
     }
   },
   "order": [
     "carriage",
+    "set_line",
     "cart-section",
     "product_list_NNFgcy"
   ]

@@ -1,0 +1,150 @@
+/* CROOKSLDN — complete-the-set toggle.
+ *
+ * Ticking the box swaps the product form's variant id to the matching BUNDLE
+ * variant (one per size pair, so inventory and fulfilment track per component)
+ * and relabels the button. Unticking restores whatever crooks-record.js had
+ * decided. One add to cart, one line, no second request.
+ *
+ * Every price string is pre-rendered by Liquid through `money` and carried in a
+ * data attribute — this file never assembles a currency string, so presentment
+ * currency and geo conversion are Shopify's to handle, not ours.
+ *
+ * Progressive enhancement: with this file absent the toggle stays collapsed and
+ * inert, and the panel is `hidden`, so the page still sells the single item.
+ */
+(function () {
+  'use strict';
+
+  var root = document.querySelector('[data-crk-section="exhibit-record"]');
+  if (!root) return;
+  var set = root.querySelector('[data-crk-set]');
+  if (!set) return;
+
+  var check = set.querySelector('[data-crk-set-check]');
+  var panel = set.querySelector('[data-crk-set-panel]');
+  var sizesBox = set.querySelector('[data-crk-set-sizes]');
+  var stockLine = set.querySelector('[data-crk-set-stock]');
+  var wasEl = set.querySelector('[data-crk-set-was]');
+  var nowEl = set.querySelector('[data-crk-set-now]');
+  if (!check || !panel) return;
+
+  var SIZE_INDEX = parseInt(set.getAttribute('data-crk-set-size-index'), 10) || 0;
+  var SOLD_TPL = set.getAttribute('data-crk-set-sold') || '';
+
+  var variants = [];
+  var nodes = set.querySelectorAll('[data-crk-set-variants] li');
+  for (var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    variants.push({
+      id: n.getAttribute('data-id'),
+      main: n.getAttribute('data-main'),
+      partner: n.getAttribute('data-partner'),
+      available: n.getAttribute('data-available') === 'true',
+      was: n.getAttribute('data-was'),
+      now: n.getAttribute('data-now'),
+      cta: n.getAttribute('data-cta')
+    });
+  }
+  if (!variants.length) return;
+
+  var sizeBtns = sizesBox ? sizesBox.querySelectorAll('[data-crk-set-size]') : [];
+  var partnerSize = null;   // null until the shopper's main size is known
+  var mainSize = null;
+  var touched = false;      // true once the shopper picks a partner size themselves
+
+  function find(main, partner) {
+    for (var i = 0; i < variants.length; i++) {
+      if (variants[i].main === main && variants[i].partner === partner) return variants[i];
+    }
+    return null;
+  }
+
+  function partnerAvailable(size) {
+    // A partner size is offerable if ANY pairing with it can be bought.
+    for (var i = 0; i < variants.length; i++) {
+      if (variants[i].partner === size && variants[i].available) return true;
+    }
+    return false;
+  }
+
+  function paintSizes() {
+    for (var i = 0; i < sizeBtns.length; i++) {
+      var val = sizeBtns[i].getAttribute('data-crk-set-size');
+      var on = val === partnerSize;
+      sizeBtns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      sizeBtns[i].setAttribute('data-selected', on ? 'true' : 'false');
+      if (partnerAvailable(val)) sizeBtns[i].removeAttribute('aria-disabled');
+      else sizeBtns[i].setAttribute('aria-disabled', 'true');
+    }
+  }
+
+  /* Re-render on any change: the shopper's main size, their partner size, or
+     the tick itself. Returns the bundle variant when the set is sellable. */
+  function current() {
+    if (!check.checked || !mainSize || !partnerSize) return null;
+    var v = find(mainSize, partnerSize);
+    return v && v.available ? v : null;
+  }
+
+  function paint() {
+    panel.hidden = !check.checked;
+    if (!check.checked) {
+      set.removeAttribute('data-crk-set-on');
+      return;
+    }
+    set.setAttribute('data-crk-set-on', 'true');
+    paintSizes();
+
+    var v = mainSize && partnerSize ? find(mainSize, partnerSize) : null;
+    if (v && v.available) {
+      if (stockLine) { stockLine.textContent = ''; stockLine.hidden = true; }
+      if (wasEl) wasEl.textContent = v.was;
+      if (nowEl) nowEl.textContent = v.now;
+    } else {
+      if (stockLine) {
+        stockLine.hidden = false;
+        stockLine.setAttribute('data-out', 'true');
+        stockLine.textContent = SOLD_TPL.replace('[size]', partnerSize || '');
+      }
+      if (wasEl) wasEl.textContent = '';
+      if (nowEl) nowEl.textContent = '';
+    }
+  }
+
+  /* crooks-record.js calls this after it has settled the normal buy state, so
+     the set has the last word without racing it. */
+  root._crkAfterRender = function (state) {
+    var nextMain = state.selected[SIZE_INDEX] || null;
+    if (nextMain !== mainSize) {
+      mainSize = nextMain;
+      // Match the main size until the shopper says otherwise — never assume it.
+      if (!touched && mainSize) partnerSize = mainSize;
+      paint();
+    }
+
+    var v = current();
+    if (!v) return;                      // leave the record's own state alone
+    if (state.idInput) state.idInput.value = v.id;
+    state.setBuy(v.cta, false);
+  };
+
+  check.addEventListener('change', function () {
+    if (check.checked && !partnerSize && mainSize) partnerSize = mainSize;
+    paint();
+    // Re-ask the record to settle the buy state, which re-enters the hook.
+    root.dispatchEvent(new CustomEvent('crk:rerender'));
+  });
+
+  for (var b = 0; b < sizeBtns.length; b++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        touched = true;
+        partnerSize = btn.getAttribute('data-crk-set-size');
+        paint();
+        root.dispatchEvent(new CustomEvent('crk:rerender'));
+      });
+    })(sizeBtns[b]);
+  }
+
+  paint();
+})();

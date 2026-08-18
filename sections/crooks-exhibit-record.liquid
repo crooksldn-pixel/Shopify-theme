@@ -1,5 +1,6 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'crooks-record.js' | asset_url }}" defer></script>
+<script src="{{ 'crooks-set.js' | asset_url }}" defer></script>
 
 {%- liquid
   assign crk_var = product.selected_or_first_available_variant
@@ -316,6 +317,14 @@
                 ></p>
               {%- endif -%}
             {%- endif -%}
+
+            {%- comment -%}
+              Complete-the-set toggle. Sits here by design: after the shopper
+              knows what it is, that it is in stock and when it ships, and
+              before the button. Renders only for products carrying the set
+              metafields, collapsed, once per page.
+            {%- endcomment -%}
+            {%- render 'crooks-set-toggle', product: product, section: section -%}
 
             {%- comment -%} App blocks (size charts, reviews) render here. {%- endcomment -%}
             {%- for block in section.blocks -%}
@@ -702,6 +711,14 @@
     { "type": "checkbox", "id": "measure_open", "label": "Measurements (size chart) open", "default": false },
     { "type": "checkbox", "id": "provenance_open", "label": "Description open", "default": false },
     { "type": "checkbox", "id": "custody_open", "label": "Chain of custody open", "default": false },
+    { "type": "header", "content": "Complete the set" },
+    { "type": "paragraph", "content": "Shown only on products carrying the crooks.set_partner, set_bundle, set_partner_option and set_short_name metafields. Placeholders: [partner] the other garment, [saving] the amount saved, [price] the set price, [size] the chosen size. Amounts are formatted by Shopify in the shopper's currency." },
+    { "type": "text", "id": "set_collapsed_text", "label": "Collapsed row", "default": "Cop the full fit — add the matching [partner]. Save [saving]." },
+    { "type": "text", "id": "set_partner_size_label", "label": "Second size label", "default": "[partner] size" },
+    { "type": "text", "id": "set_sold_text", "label": "Partner sold out", "default": "[partner] sold out in [size] — pick another size" },
+    { "type": "text", "id": "set_price_label", "label": "Set price line", "default": "[price] for the set" },
+    { "type": "text", "id": "set_shipping_text", "label": "Shipping line", "default": "Free UK Tracked 24 included" },
+    { "type": "text", "id": "set_cta", "label": "Button when the set is on", "default": "ADD THE FULL FIT — [price]" },
     { "type": "header", "content": "Other sections" },
     { "type": "text", "id": "provenance_heading", "label": "Description heading", "default": "Item description" },
     { "type": "text", "id": "measure_heading", "label": "Measurements heading", "default": "Measurements" },

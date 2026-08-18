@@ -1016,3 +1016,33 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
 /* A fourth footer column (the game link moved out of INFORMATION) — auto-fit so
    the row takes 3 or 4 without a hardcoded count. */
 @media (min-width: 640px) { .crk-footer__cols { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) } }
+
+/* ============================================================
+   COMPLETE THE SET
+   A row inside the purchase panel, not an upsell widget: same 1px rules, same
+   mono, no badge, no animation, no colour beyond the accent already in use.
+   Collapsed it is one line tall — the mobile constraint that matters, since the
+   panel must not push ADD TO BAG past the fold at 390x844.
+   ============================================================ */
+.crk-set { border-top: 1px solid var(--crk-line); border-bottom: 1px solid var(--crk-line); margin: 16px 0; padding: 12px 0 }
+.crk-set__row { display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer }
+.crk-set__thumb { flex: none; width: 36px; height: 36px; object-fit: cover; border: 1px solid var(--crk-line) }
+.crk-set__copy { flex: 1 1 auto; min-width: 0; font-size: 12px; line-height: 1.4; color: var(--crk-paper) }
+@media (min-width: 768px) { .crk-set__copy { font-size: 13px } }
+
+.crk-set__panel { padding-top: 12px }
+.crk-set__label { display: block; margin-bottom: 6px }
+.crk-set__sizes { margin-bottom: 8px }
+.crk-set__stock { margin: 4px 0 }
+.crk-set__price { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; flex-wrap: wrap }
+.crk-set__was { font-size: 13px; color: var(--crk-micro) }
+.crk-set__now { font-family: var(--crk-font-display); font-size: 22px; line-height: 1; color: var(--crk-text) }
+.crk-set__ship { display: block; margin-top: 4px }
+
+/* Cart-side set line. One rule, one line, no panel — it must read as part of
+   the cart, not as an ad placed inside it. */
+.crk-setcart { padding-top: 0; padding-bottom: 0 }
+.crk-setcart__offer { padding: 12px 0; border-bottom: 1px solid var(--crk-line); font-size: 12px; color: var(--crk-paper) }
+.crk-setcart__offer a { color: var(--crk-lav); border-bottom: 1px solid transparent }
+.crk-setcart__offer a:hover { border-bottom-color: var(--crk-lav) }
+.crk-setcart__applied { padding: 12px 0; border-bottom: 1px solid var(--crk-line); font-weight: 500; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-lav) }

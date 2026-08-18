@@ -282,6 +282,21 @@
       else if (v && v.available) setBuy(L.add, false);
       else setBuy(L.sold, true);
 
+      /* Hook for optional add-ons that need the last word on the buy state —
+         currently the complete-the-set toggle, which swaps the form's variant
+         id to a bundle variant and relabels the button. Called after the normal
+         state is settled so an add-on overrides rather than races it. Absent
+         file, absent hook, unchanged behaviour. */
+      if (typeof root._crkAfterRender === 'function') {
+        root._crkAfterRender({
+          selected: selected.slice(),
+          variant: v,
+          complete: complete,
+          setBuy: setBuy,
+          idInput: idInput
+        });
+      }
+
       // The notify form appears only once a full option set is chosen and that
       // combination is unavailable — never while the shopper is still mid-choice.
       var soldChoice = complete && (!v || !v.available);
@@ -345,6 +360,11 @@
 
     if (nOpts) render();
     else renderDispatch(false);
+
+    /* Add-ons (the complete-the-set toggle) ask for the buy state to be settled
+       again after they change something. Re-entering render() means one code
+       path owns that state instead of two writing to the same button. */
+    root.addEventListener('crk:rerender', function () { render(); });
 
     // A tab left open across 18:00 would keep claiming "leaves today". Re-check when
     // the shopper comes back to it. No interval: a line that rewrites itself while
