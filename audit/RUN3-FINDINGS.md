@@ -130,6 +130,41 @@ homepage-gated since run 2.
 
 ---
 
+### A6 · Close the tracking promise gap — found by the eyeball pass, not the scripts
+
+**Finding (human read of the rendered pages, 2026-08-17):** the FAQ's tracking answer promises
+*"You can also look your order up on the tracking page — no account needed."* The tracking page
+itself is a sign-in wall: `IDENTIFICATION REQUIRED`, a SIGN IN button to
+`routes.account_login_url` (the unbranded hosted login), and for guests only *"the tracking
+link in your dispatch email."* **There is no lookup on the tracking page.** Meanwhile the TERMS
+page already routes guests to a returns centre (`5wn03tnm.aftership.com`) that takes order
+number + email — the exact mechanism the tracking page lacks.
+
+**Fix:** make the FAQ's sentence true rather than deleting it — add a guest route to the
+tracking gate (`sections/crooks-tracking.liquid`, the gate block around `:167–180`): an
+order-number + email path (AfterShip tracking or Shopify order status), presented in the same
+`IDENTIFICATION` fiction ("No account? File your order number and email"). If that's declined,
+reword the FAQ answer (`templates/page.faq.json`) so it stops promising a lookup that isn't
+there. One of the two must change — a shopper following the FAQ's instruction currently hits a
+wall.
+
+**Verify:** the FAQ's claim and the tracking page's behaviour agree; guest path works without
+sign-in; the gate copy stays in-voice.
+
+### A7 · Recorded so nobody "fixes" them — the eyeball pass verdicts on the new surfaces
+
+- **The FAQ answer copy is excellent.** Specific, honest, plain-voiced — dispatch cutoffs with
+  the drop caveat, customs liability stated straight, courier-investigation timelines, the
+  safe-place check. Accordion taps verified working. Do not rewrite this copy while fixing A6.
+- **The terms page is the best-written legal surface the audits have seen** — numbered like the
+  register, generous and specific (free UK size swaps with split postage, 48-hour transit
+  window, a real returns address), and in-voice without obscuring anything ("we would rather
+  pack every order properly than promise a cutoff we cannot hold"). Protect the copy.
+- **The tracking page's presentation is right** (`PROPERTY TRANSFER NETWORK`, the boot line,
+  the gate framing) — A6 is about capability, not design.
+- **Scope note for B2:** the Gmail address is also in the FAQ's visible closing copy and the
+  terms mailto — the find-and-replace must cover page content, not just policy settings.
+
 ## SECTION B — ADMIN ITEMS (no code can fix these; listed so this file is complete)
 
 | # | Item | Urgency | Where |
