@@ -41,11 +41,55 @@
      --crk-font-display VT323 for the big terminal display type.
    ============================================================ */
 
+/* ============================================================
+   METRIC-MATCHED FALLBACKS — the fix for the header CLS defect class.
+
+   Measured, not guessed (fontTools over the actual woff2 files in this repo):
+
+     CRX Mono (Space Mono)  upem 1000  advance 612  =  0.612 em/char
+     VT323                  upem 1000  advance 400  =  0.400 em/char
+     DejaVu Sans Mono       upem 2048  advance 1233 =  0.60205 em/char   <- the fallback
+     Liberation Mono / Roboto Mono / FreeMono        0.60010 - 0.60000
+
+   Every fallback mono sits in a 0.600-0.602 band; CRX Mono is 1.7% WIDER than
+   all of them. That 1.7% is the whole defect: the header actions row
+   (CATALOGUE SEARCH BAG LIGHT MODE MENU) sits ~6px from its wrap threshold at
+   phone widths, so when CRX Mono lands the row grows past it, wraps to a
+   second line, and MAIN drops 48px at t~1.9s. Measured in isolation: at 383px
+   the fallback renders one 44px row and CRX Mono two 92px rows, MAIN shifting
+   exactly the 48px the audit reported.
+
+   size-adjust makes the fallback's advance width equal the web font's, so the
+   row occupies identical width in both states and the wrap cannot change.
+   ascent/descent are divided by the same factor so the line box is unchanged
+   too. line-gap is 0 in both faces.
+
+   Both faces get one, per the audit: VT323 is font-display:optional so it does
+   not swap, but a 0.400 face falling back to a 0.602 one renders headings 50%
+   over-wide, which is its own layout hazard.
+   ============================================================ */
+@font-face {
+  font-family: 'CRX Mono Fallback';
+  src: local('DejaVu Sans Mono'), local('Menlo'), local('Roboto Mono'), local('Liberation Mono'), local('Courier New');
+  size-adjust: 101.653%;
+  ascent-override: 110.179%;
+  descent-override: 35.513%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'VT323 Fallback';
+  src: local('DejaVu Sans Mono'), local('Menlo'), local('Roboto Mono'), local('Liberation Mono'), local('Courier New');
+  size-adjust: 66.440%;
+  ascent-override: 120.410%;
+  descent-override: 30.103%;
+  line-gap-override: 0%;
+}
+
 .crk-root,
 main:has(> .shopify-policy__container) {
   /* fonts */
-  --crk-font-mono: 'CRX Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --crk-font-display: 'VT323', ui-monospace, monospace;
+  --crk-font-mono: 'CRX Mono', 'CRX Mono Fallback', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --crk-font-display: 'VT323', 'VT323 Fallback', ui-monospace, monospace;
 
   /* ---- canonical tokens: DARK (the terminal) ----
      Names and values come from THE EXHIBIT RECORD prototype (src/index.css),
@@ -429,9 +473,21 @@ main:has(> .shopify-policy__container) {
    the wordmark plus three 44px controls on one row. Wrap rather than shrink the
    targets: the cart stays in the bar, which is the rule that matters. */
 @media (max-width: 429px) {
-  .crk-header__bar { flex-wrap: wrap }
+  /* Layer 2 of the CLS fix (audit A1, "belt and braces"). Metric-matched
+     fallbacks above remove the font-driven width change; this widens the margin
+     so nothing ELSE late-arriving can tip the row over its wrap threshold.
+     Measured at 390px: the actions row is 360px of content in 366px of space —
+     6px of headroom. Trimming the bar's inline padding from 16px to 10px buys
+     12px, roughly tripling it, and costs nothing visually at this width.
+     flex-wrap stays: the 200% zoom fix (run 2) depends on it. */
+  .crk-header__bar { flex-wrap: wrap; padding-inline: 10px }
   .crk-header__actions { flex-wrap: wrap; margin-left: 0; width: 100% }
 }
+
+/* The cart count is the one header label whose text length changes after load
+   ([9] -> [10] on an add). Reserve two digits and lock the figure width so it
+   cannot reflow the row it sits in. */
+.crk-header__count { display: inline-block; min-width: 5ch; font-variant-numeric: tabular-nums }
 
 /* no-JS fallback: the drawer cannot open, so the menu renders inline instead */
 .crk-header__nofallback { border-top: 1px solid var(--crk-line); padding: 8px 16px }
