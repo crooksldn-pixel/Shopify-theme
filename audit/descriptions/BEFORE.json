@@ -1,0 +1,19 @@
+{
+  "snapshot": "2026-08-19, before description rewrite (13 active products)",
+  "products": {
+    "v2-baggies": {"id": "gid://shopify/Product/10636762808663", "descriptionHtml": "<p>500GSM - 100% cotton<span style=\"text-decoration: underline;\"></span></p>"},
+    "large-duffle-bag": {"id": "gid://shopify/Product/10747945124183", "descriptionHtml": "<p>55CM LENGTH<br><br></p>"},
+    "black-socks": {"id": "gid://shopify/Product/10787430367575", "descriptionHtml": "<p><span><strong>MotionTec</strong> socks, engineered for constant movement.</span></p>\n<p><span>Same/Next-Day Dispatch.</span></p>"},
+    "white-socks": {"id": "gid://shopify/Product/10837189853527", "descriptionHtml": "<p><span><strong>MotionTec</strong> socks, engineered for constant movement.</span></p>\n<p><span>Same/Next-Day Dispatch.</span></p>"},
+    "crxst-rz-t-shirt": {"id": "gid://shopify/Product/10837911503191", "descriptionHtml": "<p><span>CRXST★RZ tee, Wokstar energy only.</span><span><br> </span><span>Boxy fit with a clean structure.</span></p>"},
+    "cb1-wash-jeans": {"id": "gid://shopify/Product/10890055680343", "descriptionHtml": "<p><span><strong>OG jeans</strong>, built for structure and everyday wear.</span><span><br></span><span>Heavyweight denim with a baggy, stacked fit.</span></p>"},
+    "cb2-wash-jeans": {"id": "gid://shopify/Product/10890058203479", "descriptionHtml": "<p><span><strong>OG jeans</strong>, built for structure and everyday wear.</span><span><br></span><span>Heavyweight denim with a baggy, stacked fit.</span></p>"},
+    "cb1-wash-jorts": {"id": "gid://shopify/Product/10890060235095", "descriptionHtml": "<p><span>Blue Wash Jorts, built for structure and everyday wear.</span><span><br></span><span>Premium heavyweight denim with a baggy fit and signature back pocket artwork.</span><span></span></p>"},
+    "cb2-wash-jorts": {"id": "gid://shopify/Product/10890069016919", "descriptionHtml": "<p><span>Grey Wash Jorts, built for structure and everyday wear.</span><span><br></span><span>Premium heavyweight denim with a baggy fit and signature back pocket artwork.</span></p>"},
+    "charcoal-cellblock-crewneck": {"id": "gid://shopify/Product/10967989944663", "descriptionHtml": "<p><span>Cellblock crewneck, designed for everyday movement.</span><span><br> </span><span>Premium heavyweight fabric with a relaxed silhouette and signature 3D embroidery.</span></p>\n<p><span>9–16 days delivery UK</span><span><br> </span><span>16–21 days international</span></p>"},
+    "charcoal-cellblock-shorts": {"id": "gid://shopify/Product/10967990010199", "descriptionHtml": "<p><span>Cellblock Shorts, designed for everyday movement.</span><span><br> </span><span>Premium heavyweight fabric with a relaxed silhouette and signature 3D embroidered.</span></p>\n<p><span>9–16 days delivery UK</span><span><br> </span><span>16–21 days international</span></p>"},
+    "evil-clive-tee": {"id": "gid://shopify/Product/10967995416919", "descriptionHtml": "<p><span>Money Clive Tee, built for everyday wear.</span><span><br></span><span>Premium heavyweight cotton with a relaxed fit and bold front graphic.</span></p>"},
+    "cellblock-set": {"id": "gid://shopify/Product/11078937805143", "descriptionHtml": ""}
+  },
+  "notes": "broadcast-tee and 3-clives-tee found ARCHIVED at snapshot time (were live during the 2026-08-18 audit). Jeans descriptions no longer carry the 9-16-days lines seen in the audit; the two Cellblock products still do."
+}
