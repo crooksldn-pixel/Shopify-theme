@@ -31,8 +31,11 @@ parses these directly (verified against `crooks-record.js` conversion code).
 - **Grey jorts inherit the blue jorts' tech pack** (ZY124 photos show blue;
   same style/cut per metafields). If the grey is a different pattern, say so
   and it gets its own table.
-- **Not touched**: V2 BAGGIES still carries its invented placeholder — no real
-  chart supplied yet.
+- **V2 BAGGIES now carries the jeans chart** (waist/inseam/hem) — owner
+  confirmed the baggies match those laid-flat measurements. The last invented
+  placeholder in the store is gone. Note: jeans and baggies now intentionally
+  share numbers by owner decision (previously they shared them by
+  placeholder accident — the audit's original flag).
   The pink hoodie chart (with the height guide) awaits a product name, and
   the Arc'teryx body chart was **refused** for the windbreaker: another
   brand's body-fit table is not this garment's measurements.
