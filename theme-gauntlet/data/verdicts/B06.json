@@ -1,0 +1,89 @@
+{
+  "buyer_id": "B06",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online art/creativity courses tied to a technique called Neurographica and a spiritual 'Art of Manifesting Method'",
+    "for_whom": "people into art therapy, mindfulness, and manifestation/wellness practices",
+    "adjectives": ["mystical", "artsy", "wellness-focused"],
+    "price_guess": "$50-200 per course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 13,
+    "abandoned_at": "the 'Art of Manifesting Method Coaching Certification' course page showing $997-$1997 pricing, after exhausting the homepage course tiles and the full Courses/store list",
+    "abandon_trigger": "no course anywhere on the homepage, the hamburger nav, or the full Courses/store catalog was labeled 'NeuroGraphica', 'basics', or 'beginner' - the only prominent, top-listed course card turned out to be a $997-$1997 four-month coaching certification, a total mismatch for the entry-level course my friend described"
+  },
+  "features_used": [
+    {
+      "feature": "homepage hero 'Learn More' button",
+      "moment": "I tapped the big hero button hoping it would jump straight to course details, but it just scrolled me down to a course section on the same page.",
+      "verdict": "neutral",
+      "shot": ""
+    },
+    {
+      "feature": "hamburger navigation menu",
+      "moment": "I tapped the menu icon to find a direct 'courses' link; the first tap only scrolled the page and the menu didn't visibly open, so I had to tap it again before the nav list appeared.",
+      "verdict": "got_in_the_way",
+      "shot": ""
+    },
+    {
+      "feature": "Courses page / full course catalog",
+      "moment": "I scrolled through every featured course card looking for a NeuroGraphica basics option and found six items, none named or described as NeuroGraphica or beginner.",
+      "verdict": "got_in_the_way",
+      "shot": "b06-02-courses-list-no-basics.png"
+    },
+    {
+      "feature": "course detail page (AM Method Coaching Certification)",
+      "moment": "I opened the top, most prominent course card hoping it was a starter option, and instead found a four-month professional certification priced from $997 to almost $2000.",
+      "verdict": "got_in_the_way",
+      "shot": "b06-03-wrong-course-certification-price.png"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a course literally named 'NeuroGraphica' or 'NeuroGraphica Basics/Beginner'",
+    "a 'start here' or skill-level label on the course catalog",
+    "a search bar to search for 'neurographica' directly",
+    "price or level sorting/filtering on the courses page"
+  ],
+  "feature_that_most_helped_the_decision": "the Courses page listing every featured course in one scrollable list, at least letting me quickly rule out each one by name",
+  "feature_that_most_hurt_the_decision": "the total absence of any course named or labeled 'NeuroGraphica basics/beginner' despite Neurographica being the site's own headline term, plus the top course card turning out to be a four-figure certification instead of an entry-level option",
+  "friction": [
+    {
+      "moment": "the hamburger menu needed two taps before it actually opened with the nav links",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "no item in the full course catalog matches the 'NeuroGraphica' branding used in the site's own hero text and page title",
+      "shot": "b06-02-courses-list-no-basics.png",
+      "severity": 4
+    },
+    {
+      "moment": "the only 'top' looking, most prominent course card was a $997-$1997 professional coaching certification, not a starter course",
+      "shot": "b06-03-wrong-course-certification-price.png",
+      "severity": 3
+    }
+  ],
+  "delight": [
+    {
+      "moment": "the homepage's calm, colorful hand-drawn artwork on landing felt inviting and matched the creative-wellness mood",
+      "shot": "b06-01-landing.png"
+    }
+  ],
+  "trust": {
+    "score": 2,
+    "what_earned_it": [
+      "real, active-looking social links (Facebook, Instagram, YouTube, TikTok) suggesting a genuine small business",
+      "consistent personal branding around a named instructor (Anna Denning / Neuro Art School) rather than a generic template feel"
+    ],
+    "what_it_would_take": "a clearly labeled 'NeuroGraphica for Beginners' course card on the homepage and courses page, with a normal starter price shown up front, so I'm not left guessing whether the $1000+ certification is the thing my friend recommended"
+  },
+  "brand_recall": {
+    "three_words": ["mystical", "artsy", "confusing"],
+    "tell_a_friend_one_sentence": "It's a pretty New-Age-y art course site about something called Neurographica, but I hunted through the whole course list and never found the basic beginner course you meant - the closest thing I found was a $1000+ coaching certification.",
+    "product_remembered": "Art of Manifesting Method Coaching Certification",
+    "price_remembered": "somewhere around $997 to almost $2000"
+  },
+  "would_return": false
+}

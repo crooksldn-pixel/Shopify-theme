@@ -1,0 +1,117 @@
+{
+  "buyer_id": "B07",
+  "device": "desktop",
+  "five_second": {
+    "sells": "online art/drawing courses framed around meditation, 'manifesting' and neuroscience-flavored spirituality",
+    "for_whom": "people wanting a mindful, spiritual creative hobby or a new coaching credential built around drawing",
+    "adjectives": ["new-agey", "personal-brand-driven", "unproven-looking at first glance"],
+    "price_guess": "somewhere in the $50-300 range for a course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 31,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "About Me page",
+      "verdict": "helped",
+      "moment": "Found a real named founder, Anna Denning, with a bio mentioning a Hay House-published book co-authored with a named bestselling author, Colette Baron-Reid.",
+      "shot": "shots/b07-02-about-anna.png"
+    },
+    {
+      "feature": "Our Graduates directory",
+      "verdict": "helped",
+      "moment": "Opened the certified facilitators directory and found 28 named people with their own live websites, Instagram, Facebook and email addresses, real proof the school produces practitioners.",
+      "shot": "shots/b07-03-graduates-directory.png"
+    },
+    {
+      "feature": "individual course page (Zendala Drawing Course)",
+      "verdict": "got_in_the_way",
+      "moment": "Had to scroll through a very long page of course content before the price finally appeared at the very bottom.",
+      "shot": "shots/b07-04-zendala-price.png"
+    },
+    {
+      "feature": "flagship course page (AM Method Coaching Certification)",
+      "verdict": "neutral",
+      "moment": "Found clear tiered pricing (997/1497 GBP or 1397/1997 USD) with split-payment options, but realized this 'beta' program is a coaching certification aimed at practitioners, not a casual hobby class.",
+      "shot": "shots/b07-05-coaching-cert-price.png"
+    },
+    {
+      "feature": "FAQ accordion",
+      "verdict": "neutral",
+      "moment": "Opened the 'Are results guaranteed?' question and got only a no-guarantee disclaimer, nothing about refunds.",
+      "shot": ""
+    },
+    {
+      "feature": "Terms and Conditions page",
+      "verdict": "helped",
+      "moment": "Found a real refund clause: a 14-day UK cooling-off period for digital purchases, waived once content is accessed, refund requests must be in writing.",
+      "shot": "shots/b07-06-refund-terms.png"
+    },
+    {
+      "feature": "testimonials/reviews search",
+      "verdict": "broken",
+      "moment": "Checked the homepage, the store page and multiple course pages and never found a single quoted student testimonial or star rating anywhere.",
+      "shot": "shots/b07-07-no-testimonials-found.png"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "quoted student testimonials or reviews",
+    "star ratings or review counts",
+    "a refund policy stated on the course page itself instead of buried in general Terms"
+  ],
+  "feature_that_most_helped_the_decision": "The Our Graduates directory of 28 named certified facilitators with real working websites and social accounts - harder to fake than any testimonial quote.",
+  "feature_that_most_hurt_the_decision": "No testimonials anywhere on the site, and the flagship course is a four-figure 'beta' coaching certification aimed at therapists/coaches rather than the simple mindful hobby I came looking for.",
+  "friction": [
+    {
+      "moment": "Price on the Zendala course page only appeared after scrolling the entire page top to bottom.",
+      "shot": "shots/b07-04-zendala-price.png",
+      "severity": 2
+    },
+    {
+      "moment": "Refund terms are not on any course page, only inside a long general Terms and Conditions page, and the right to cancel is waived once you access the content.",
+      "shot": "shots/b07-06-refund-terms.png",
+      "severity": 3
+    },
+    {
+      "moment": "No testimonials or reviews from past students found anywhere on the site.",
+      "shot": "shots/b07-07-no-testimonials-found.png",
+      "severity": 3
+    },
+    {
+      "moment": "The main course promoted in the nav bar is a coaching certification for professionals, not a beginner hobby class, so it took real digging to find something that actually fits a retiree looking for a relaxing pastime.",
+      "shot": "shots/b07-05-coaching-cert-price.png",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Anna Denning's bio checked out as a real, verifiable person with a published Hay House book co-authored with a named bestselling author.",
+      "shot": "shots/b07-02-about-anna.png"
+    },
+    {
+      "moment": "The graduates directory was far more convincing than expected - 28 real named facilitators each with their own live business, not a handful of stock-photo quotes.",
+      "shot": "shots/b07-03-graduates-directory.png"
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "a real named founder with a verifiable book credential",
+      "a registered company name (Neuro Art School Ltd, England and Wales) named in the Terms",
+      "a large directory of named graduates with working personal websites and social links",
+      "a written refund/cooling-off clause in the Terms and Conditions"
+    ],
+    "what_it_would_take": "Actual quoted testimonials or reviews from past students, and the refund terms stated plainly on the course page itself rather than buried in a general legal document."
+  },
+  "brand_recall": {
+    "three_words": ["spiritual", "credentialed", "pricey"],
+    "tell_a_friend_one_sentence": "It's an online art-and-manifesting school run by a real published author with dozens of named graduates you can actually look up, but the flagship coaching certification runs nearly a thousand pounds and felt built for therapists and coaches, not someone just wanting a relaxing hobby.",
+    "product_remembered": "Art of Manifesting Method Coaching Certification",
+    "price_remembered": "997 pounds (or about 1497 for the mentored tier)"
+  },
+  "would_return": true
+}

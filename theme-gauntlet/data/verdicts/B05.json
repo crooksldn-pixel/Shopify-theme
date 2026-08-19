@@ -1,0 +1,100 @@
+{
+  "buyer_id": "B05",
+  "device": "desktop",
+  "five_second": {
+    "sells": "art-based manifesting/self-development courses and a coaching certification, with a mention of a related book",
+    "for_whom": "adults into creative self-development and manifesting, mostly women",
+    "adjectives": ["artsy", "personal", "new-agey"],
+    "price_guess": "courses/membership in the tens to low hundreds of dollars a month",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 8,
+    "abandoned_at": "The Resources page (annadenning.com/resources), on the 'The Book' section",
+    "abandon_trigger": "No shopping cart, search box, or Shop section exists anywhere on the site for the book. The only purchase paths are outbound Amazon affiliate links (Buy on Amazon, Kindle Edition, Audiobook), which I won't follow through to completion per my own rule against buying on another site."
+  },
+  "features_used": [
+    {
+      "feature": "main navigation (checked for a Shop/Store link)",
+      "moment": "Out of habit I scanned the top nav for a Shop or Store link before anything else, but it only had Courses, Blog, Resources, Library - no store.",
+      "verdict": "got_in_the_way",
+      "shot": "shots/b05-01-landing.png"
+    },
+    {
+      "feature": "Resources page (affiliate book/tools list)",
+      "moment": "I clicked Resources and immediately found the exact book from the podcast, described in detail with author credit and a '#1 New Release' badge.",
+      "verdict": "helped",
+      "shot": "shots/b05-02-found-book-amazon-only.png"
+    },
+    {
+      "feature": "Buy on Amazon link",
+      "moment": "I clicked through to see if I could actually buy it, and it just dumped me on an Amazon bot-check 'continue shopping' screen, not even a real product page.",
+      "verdict": "broken",
+      "shot": "shots/b05-03-redirected-to-amazon.png"
+    },
+    {
+      "feature": "site search",
+      "moment": "I looked for a search icon or box anywhere in the header to search for the book title directly, but there wasn't one on any page I visited.",
+      "verdict": "got_in_the_way",
+      "shot": ""
+    },
+    {
+      "feature": "Art of Manifesting Method nav link",
+      "moment": "I clicked this hoping it might relate to the book or a shop, but it was a $997-$1997 coaching certification programme, unrelated to buying the book.",
+      "verdict": "neutral",
+      "shot": "shots/b05-04-coaching-program-pricing.png"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a Shop or Store section on the site",
+    "a search box",
+    "an on-site add-to-cart / checkout for the book",
+    "a price for the book shown directly on the site"
+  ],
+  "feature_that_most_helped_the_decision": "The Resources page named and described the exact book from the podcast (title, co-author Colette Baron-Reid, '#1 New Release' badge), confirming I had the right item within one click of the homepage.",
+  "feature_that_most_hurt_the_decision": "There is no way to actually buy the book on this site itself - every 'buy' link routes off-site to Amazon instead of offering a cart or checkout here.",
+  "friction": [
+    {
+      "moment": "No Shop/Store link anywhere in the main navigation, so my usual habit of going straight to the store section hit a dead end.",
+      "shot": "shots/b05-01-landing.png",
+      "severity": 2
+    },
+    {
+      "moment": "No search box anywhere on the site to type in the book title directly.",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "The 'Buy on Amazon' link led to a bot-check screen on Amazon instead of a product page, and I wasn't willing to shop off-site anyway.",
+      "shot": "shots/b05-03-redirected-to-amazon.png",
+      "severity": 3
+    },
+    {
+      "moment": "The site's only purchase paths for the book are outbound affiliate links - there is no cart or checkout of its own, so the errand cannot be completed on this site at all.",
+      "shot": "shots/b05-05-abandon-no-onsite-checkout.png",
+      "severity": 4
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Finding the exact right book, described with real detail (co-author name, subtitle, '#1 New Release' badge) within one click of the homepage, felt like I'd landed in the right place fast.",
+      "shot": "shots/b05-02-found-book-amazon-only.png"
+    }
+  ],
+  "trust": {
+    "score": 2,
+    "what_earned_it": [
+      "The book description matched the podcast exactly, with real author credit and specific detail, so it felt like a legitimate, specific product rather than a bait-and-switch.",
+      "The site has a real, consistent personal brand (Anna Denning) with matching social links and an actual coaching business behind it, not a generic template."
+    ],
+    "what_it_would_take": "Let me actually add the book to a cart and pay right here, or at least show its price on the page and give a working link instead of routing me through an Amazon bot-check screen."
+  },
+  "brand_recall": {
+    "three_words": ["artsy", "personal", "roundabout"],
+    "tell_a_friend_one_sentence": "It's a manifesting/drawing coach's site that talks up a great new book with Colette Baron-Reid, but you can't actually buy it there - it just kicks you over to Amazon.",
+    "product_remembered": "The Art of Manifesting (book with Colette Baron-Reid)",
+    "price_remembered": "No price for the book stuck with me - what I remember is the coaching certification running somewhere around $997 to $1997"
+  },
+  "would_return": false
+}

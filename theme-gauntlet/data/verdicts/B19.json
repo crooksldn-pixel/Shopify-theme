@@ -1,0 +1,83 @@
+{
+  "buyer_id": "B19",
+  "device": "mobile",
+  "five_second": {
+    "sells": "Online art and manifesting courses (NeuroGraphica, Art of Manifesting Method) blending art, neuroscience and mindful practice",
+    "for_whom": "people interested in creative self-development, wellness and spiritual growth",
+    "adjectives": ["mystical", "artsy", "wellness-coachy"],
+    "price_guess": "unclear from the homepage, but felt like it would land somewhere in the $50-$300 range for a course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 9,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "hamburger menu navigation",
+      "moment": "I opened the menu to see where a facilitator directory might be listed, since the homepage itself had no obvious link.",
+      "verdict": "helped",
+      "shot": ""
+    },
+    {
+      "feature": "facilitator directory search box",
+      "moment": "I typed 'Spain' into the search by name/country/language box and it live-filtered to 0 facilitators found, confirming no one there.",
+      "verdict": "helped",
+      "shot": "b19-03-spain-not-found"
+    },
+    {
+      "feature": "facilitator directory country filter buttons",
+      "moment": "I tapped the United Kingdom button and it correctly narrowed the list from 28 down to 3 facilitators.",
+      "verdict": "helped",
+      "shot": ""
+    },
+    {
+      "feature": "facilitator name search",
+      "moment": "I searched 'Garcia' and found Angelica Garcia Petersen, an AMM Facilitator who lists Spanish among her languages - a solid Spanish-sounding proxy for my workshop leader.",
+      "verdict": "helped",
+      "shot": "b19-04-spanish-name-found"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a Spain option among the quick-filter country buttons",
+    "a way to tell which specific method (NeuroGraphica vs Art of Manifesting) each facilitator is certified to teach"
+  ],
+  "feature_that_most_helped_the_decision": "the live search box in the facilitator directory that filtered results instantly as I typed, without needing to press Find",
+  "feature_that_most_hurt_the_decision": "the 'All' filter button didn't clear my typed search text, so results stayed stuck at 0 until I manually erased what I'd typed",
+  "friction": [
+    {
+      "moment": "Clicking 'All' right after searching 'Spain' didn't reset the search box - it still showed 0 facilitators found until I cleared the text myself.",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "Spain isn't one of the quick-filter country buttons (only UK, USA, Canada, Taiwan, Hellas/Greece, Saudi Arabia, Hong Kong, New Zealand were offered), so I could only check it by typing the country name into search.",
+      "shot": "",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The directory searched live as I typed - no need to hit Find - and it actually worked like a real directory with names, locations, languages, and contact links for each person.",
+      "shot": "b19-02-directory-found"
+    }
+  ],
+  "trust": {
+    "score": 4,
+    "what_earned_it": [
+      "a genuinely searchable and filterable directory instead of a static dumped list",
+      "real facilitator profiles with their own websites, social links, and emails, not placeholder text",
+      "the search accurately matched on country and language details, not just name"
+    ],
+    "what_it_would_take": "add Spain (and more countries) as quick filter buttons, and make the 'All' button actually clear any typed search text"
+  },
+  "brand_recall": {
+    "three_words": ["mystical", "artsy", "wellness-coachy"],
+    "tell_a_friend_one_sentence": "It's an online art-and-manifesting course site by Anna Denning that actually has a real, searchable directory of certified facilitators around the world.",
+    "product_remembered": "Art of Manifesting Method course / facilitator certification",
+    "price_remembered": "not sure - I never got to a price page, I only used the facilitator directory"
+  },
+  "would_return": true
+}

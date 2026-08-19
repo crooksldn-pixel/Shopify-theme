@@ -1,0 +1,115 @@
+{
+  "buyer_id": "B04",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online art/drawing courses and a spiritual, meditative creative membership",
+    "for_whom": "adults looking for a calming, meaningful creative hobby and community",
+    "adjectives": ["spiritual", "homemade", "wordy"],
+    "price_guess": "somewhere around $20-50 a month",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 27,
+    "abandoned_at": "checkout page for the Neuro Arts Membership monthly plan, after typing my email but before entering any card details",
+    "abandon_trigger": "an undisclosed 3-day trial with a full credit-card form appearing only at checkout, stacked on top of never finding the class day/time and a wall of legal terms right before the pay button"
+  },
+  "features_used": [
+    {
+      "feature": "Join Membership homepage link",
+      "verdict": "helped",
+      "moment": "Tapping this from the homepage took me straight to the Neuro Arts Membership page, which is exactly what I was looking for.",
+      "shot": "b04-02-membership-page"
+    },
+    {
+      "feature": "membership page pricing boxes (monthly vs annual)",
+      "verdict": "got_in_the_way",
+      "moment": "I found $38/month and $375/year with a badge saying 'Get 3 Months free,' but when I did the math myself ($38 x 12 = $456, minus $375) it only came out to about 2 months saved, not 3.",
+      "shot": "b04-04-pricing-full"
+    },
+    {
+      "feature": "long scrolling membership page",
+      "verdict": "got_in_the_way",
+      "moment": "I had to scroll through testimonials, seasonal theme examples, and an About Anna section for a very long time before reaching the actual pricing, and I never found what day or time the live class happens.",
+      "shot": "b04-03-pricing-plans"
+    },
+    {
+      "feature": "checkout page (3-day trial + card form)",
+      "verdict": "got_in_the_way",
+      "moment": "Tapping the $38 price sent me straight to a checkout with a '3-day trial' badge and a full credit card form, something I was never told about anywhere on the membership page.",
+      "shot": "b04-05-checkout-trial-surprise"
+    },
+    {
+      "feature": "email field at checkout",
+      "verdict": "helped",
+      "moment": "I typed my email into the checkout box and it accepted it without any trouble.",
+      "shot": ""
+    },
+    {
+      "feature": "terms and conditions text at checkout",
+      "verdict": "got_in_the_way",
+      "moment": "Right before the payment button there was a long wall of legal text to agree to, which made me feel unsure exactly what I would be signing up for.",
+      "shot": "b04-06-terms-wall-before-bail"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a clear day and time for the weekly live class",
+    "an upfront note on the membership page that joining starts a paid trial requiring a card",
+    "a simple side-by-side chart showing exactly how much money the annual plan saves"
+  ],
+  "feature_that_most_helped_the_decision": "the clearly labeled Pay Monthly / Annual Plan price boxes near the bottom of the membership page, which at least gave me numbers to work with",
+  "feature_that_most_hurt_the_decision": "the surprise 3-day trial and credit card form appearing only at checkout with no earlier warning",
+  "friction": [
+    {
+      "moment": "Never found what day or time the weekly live class actually happens, despite reading the entire membership page top to bottom.",
+      "shot": "",
+      "severity": 3
+    },
+    {
+      "moment": "Annual plan advertised as 'Get 3 Months free' but my own math only worked out to about 2 months of real savings.",
+      "shot": "b04-04-pricing-full",
+      "severity": 3
+    },
+    {
+      "moment": "Checkout revealed an undisclosed 3-day trial requiring a credit card, never mentioned on the membership page itself.",
+      "shot": "b04-05-checkout-trial-surprise",
+      "severity": 4
+    },
+    {
+      "moment": "The membership page is extremely long, needing well over a dozen scrolls on my phone just to reach the price and buy buttons.",
+      "shot": "b04-03-pricing-plans",
+      "severity": 2
+    },
+    {
+      "moment": "A long wall of legal terms and conditions text sits right before the payment button.",
+      "shot": "b04-06-terms-wall-before-bail",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Anna's personal 'I'm Anna' bio and photos made her feel like a real, warm person running this, not a faceless company.",
+      "shot": ""
+    },
+    {
+      "moment": "Several detailed, named testimonials from members in different countries made the weekly community feel genuine.",
+      "shot": ""
+    }
+  ],
+  "trust": {
+    "score": 2,
+    "what_earned_it": [
+      "a real named founder (Anna) with photos and a personal bio",
+      "multiple detailed testimonials with names and countries",
+      "clearly displayed price boxes with two currency options"
+    ],
+    "what_it_would_take": "tell me up front on the membership page that there is a 3-day trial before any charge, state plainly which day and time the live class meets, and make the annual savings math actually match what the badge claims"
+  },
+  "brand_recall": {
+    "three_words": ["spiritual", "flowery", "uncertain"],
+    "tell_a_friend_one_sentence": "It's a sweet, artsy weekly drawing group run by one woman named Anna, but the site never told me what day the class is on and then sprang a free trial and a credit card form on me at checkout, so I didn't sign up.",
+    "product_remembered": "Neuro Arts Membership",
+    "price_remembered": "$38 a month"
+  },
+  "would_return": false
+}

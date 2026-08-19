@@ -1,0 +1,105 @@
+{
+  "buyer_id": "B02",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online creative/mindfulness art courses (manifesting, neurographica, pattern drawing)",
+    "for_whom": "people wanting a calming, self-improvement creative practice",
+    "adjectives": ["new-agey", "soft-focus", "funnel-like"],
+    "price_guess": "no price visible on landing; guessed somewhere $100-$300",
+    "feels_like": "template"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 22,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "course catalog / Courses menu",
+      "moment": "Used the hamburger menu to find the Courses page and located the Zendala course among six course tiles.",
+      "verdict": "helped",
+      "shot": ""
+    },
+    {
+      "feature": "course detail page (long-form course description)",
+      "moment": "Scrolled through the full course page reading about techniques (Betweed, Meer, Aquafleur patterns), which convinced me the teacher genuinely knows Zentangle/Zendala.",
+      "verdict": "helped",
+      "shot": "b02-02-zendala-course-page"
+    },
+    {
+      "feature": "currency toggle (Pay in US dollars / Pay in British pounds)",
+      "moment": "Found dual pay buttons right on the course page and picked the pounds one instead of guessing at a dollar-to-pound conversion.",
+      "verdict": "helped",
+      "shot": "b02-03-price-in-pounds"
+    },
+    {
+      "feature": "Terms & Conditions / refund policy",
+      "moment": "Followed the footer link to Terms & Conditions and found a specific UK 14-day cooling-off clause for digital purchases.",
+      "verdict": "helped",
+      "shot": "b02-04-refund-policy-terms"
+    },
+    {
+      "feature": "checkout page",
+      "moment": "Clicked through to checkout and saw the price stated unambiguously as £75.00 GBP at the very top of the card form.",
+      "verdict": "helped",
+      "shot": "b02-05-checkout-gbp"
+    },
+    {
+      "feature": "checkout country/postcode field",
+      "moment": "Noticed the checkout defaulted Country to United States and labelled the field 'ZIP code' rather than postcode, even though I was paying in pounds.",
+      "verdict": "got_in_the_way",
+      "shot": "b02-05-checkout-gbp"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "an upfront note that the course is instant digital delivery, not a physical shipment",
+    "student reviews/testimonials specific to the Zendala course itself"
+  ],
+  "feature_that_most_helped_the_decision": "the 'Pay in British pounds' option showing a clear £75 GBP price both on the course page and unambiguously at checkout",
+  "feature_that_most_hurt_the_decision": "the course being credited to a different-sounding teacher name ('Ann Diane Tai' / 'Tangle with Ann') than the site's own branding (Anna Denning), which briefly made me doubt I was in the right place before the page explained it was a partner teacher within Neuro Art School",
+  "friction": [
+    {
+      "moment": "Course page credited to 'Ann Diane Tai' / 'Tangle with Ann', a different name to the site's Anna Denning branding, with no immediate explanation up top - a moment of doubt about whether I'd wandered onto the wrong seller's page.",
+      "shot": "b02-02-zendala-course-page",
+      "severity": 2
+    },
+    {
+      "moment": "Homepage gave no course names or prices at all; had to dig through the hamburger menu and Courses list before reaching anything relevant to my errand.",
+      "shot": "b02-01-landing",
+      "severity": 2
+    },
+    {
+      "moment": "Checkout form defaulted Country to United States and used 'ZIP code' instead of postcode, despite correctly charging in GBP.",
+      "shot": "b02-05-checkout-gbp",
+      "severity": 1
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Seeing 'Pay in British pounds' sitting right next to 'Pay in US dollars' on the course page itself, before I even had to ask.",
+      "shot": "b02-03-price-in-pounds"
+    },
+    {
+      "moment": "Checkout header showing '£75.00 GBP' in bold, completely unambiguous - exactly what I needed to trust the price before entering card details.",
+      "shot": "b02-05-checkout-gbp"
+    }
+  ],
+  "trust": {
+    "score": 4,
+    "what_earned_it": [
+      "clear GBP price shown both pre-checkout and at checkout",
+      "UK-registered company (Neuro Art School Ltd) named in Terms & Conditions",
+      "specific UK 14-day cooling-off refund clause for digital purchases",
+      "genuinely detailed, craft-specific course content naming real Zentangle patterns"
+    ],
+    "what_it_would_take": "a 5 would need the refund policy to be reachable in one tap from the checkout itself rather than three clicks deep in Terms & Conditions, and the teacher-name mismatch on the course page explained higher on the page instead of after several scrolls."
+  },
+  "brand_recall": {
+    "three_words": ["calming", "circular-patterns", "pounds-friendly"],
+    "tell_a_friend_one_sentence": "It's Anna Denning's Neuro Art School - I found a proper Zendala circular pattern drawing course taught by a Certified Zentangle teacher, and it let me pay in actual pounds so I knew exactly what I'd be charged.",
+    "product_remembered": "Zendala Drawing Course (Tangle with Ann)",
+    "price_remembered": "£75 (down from £119)"
+  },
+  "would_return": true
+}

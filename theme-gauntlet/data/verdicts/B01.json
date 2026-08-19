@@ -1,0 +1,132 @@
+{
+  "buyer_id": "B01",
+  "device": "mobile",
+  "five_second": {
+    "sells": "Online drawing/art courses built around 'Neurographica' and chakra/manifesting spiritual themes",
+    "for_whom": "people into mindfulness, spiritual healing, and calming creative hobbies",
+    "adjectives": ["spiritual", "homemade", "calming"],
+    "price_guess": "no price visible on the first screen at all; my gut guess before scrolling would have been $30-50 for an online course",
+    "feels_like": "template"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 24,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "hamburger navigation menu",
+      "moment": "Opened the menu right away since the homepage had no obvious shop link, and found Courses there.",
+      "shot": "",
+      "verdict": "helped"
+    },
+    {
+      "feature": "course catalog (/store)",
+      "moment": "Scrolled through the full Featured Courses list looking for something called Neurographica, but none of the six course names showed a price.",
+      "shot": "",
+      "verdict": "got_in_the_way"
+    },
+    {
+      "feature": "course sales page (Tangle with Ann / Zendala)",
+      "moment": "Read the whole calming description but still no price, only a Join Now button, so I had to click further to find out what it cost.",
+      "shot": "b01-02-zendala-course.png",
+      "verdict": "got_in_the_way"
+    },
+    {
+      "feature": "checkout price display",
+      "moment": "The price only appeared once I reached the actual checkout page, and for this course it was $99, way over my $70 budget.",
+      "shot": "b01-03-price-shock-99.png",
+      "verdict": "got_in_the_way"
+    },
+    {
+      "feature": "coupon field",
+      "moment": "Out of habit I typed WELCOME10 and hit Apply; it correctly told me the coupon was invalid since no code was ever actually advertised on the site.",
+      "shot": "b01-04-coupon-invalid.png",
+      "verdict": "neutral"
+    },
+    {
+      "feature": "7 Chakras Neurographica course page",
+      "moment": "Found a page literally titled '7 Chakras NeuroGraphica Drawing Masterclasses' which matched the word I half-remembered from the TikTok video.",
+      "shot": "b01-05-neurographica-chakras.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "checkout price for 7 Chakras course",
+      "moment": "This checkout clearly showed $59.00 USD, and back on the sales page I saw it was discounted from a crossed-out $159.99, which felt like a real deal under my budget.",
+      "shot": "b01-06-price-59-good.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "Our Graduates directory",
+      "moment": "Checked the menu's 'Our Graduates' link looking for proof real people took courses here, and found a directory of 28 named facilitators with their own websites and social links.",
+      "shot": "b01-08-graduates-directory.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "checkout form fields",
+      "moment": "Filled in my email and name and saw the rest of the form was just card number, expiration, CVC, country and zip, plus an unchecked newsletter box - nothing excessive.",
+      "shot": "b01-09-checkout-filled.png",
+      "verdict": "helped"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a visible price on the course catalog list or on each course's own sales page, instead of only at checkout",
+    "student reviews, testimonials, or star ratings on the 7 Chakras Neurographica course page itself",
+    "a short preview video or sample drawing to see what the course actually teaches before paying"
+  ],
+  "feature_that_most_helped_the_decision": "Finding the '7 Chakras Neurographica Drawing Masterclasses' page, which literally had the word I remembered from the TikTok video, with a clear $59 price at checkout and a crossed-out higher price showing a real discount.",
+  "feature_that_most_hurt_the_decision": "Prices were hidden from every course listing and sales page - I had to click all the way to checkout to see a number, and the first course I checked that way turned out to be $99, well over my $70 budget.",
+  "friction": [
+    {
+      "moment": "The /store course catalog listed six courses with descriptions but zero prices anywhere.",
+      "shot": "",
+      "severity": 3
+    },
+    {
+      "moment": "Clicked Join Now on the Zendala course and only found out it was $99 (over budget) after reaching the checkout page, three screens in.",
+      "shot": "b01-03-price-shock-99.png",
+      "severity": 4
+    },
+    {
+      "moment": "No testimonials, reviews, or student count on the 7 Chakras Neurographica sales page itself, even though the course I actually wanted lived there.",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "Tried my usual promo code habit (WELCOME10) at checkout and it was rejected as invalid, though to be fair no discount was ever advertised on the site.",
+      "shot": "b01-04-coupon-invalid.png",
+      "severity": 1
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Landing on a page literally titled '7 Chakras NeuroGraphica Drawing Masterclasses' - the exact word I half-remembered from the TikTok video.",
+      "shot": "b01-05-neurographica-chakras.png"
+    },
+    {
+      "moment": "Seeing $59.00 clearly on the checkout page, comfortably under my $70 budget, with a crossed-out $159.99 showing a real discount.",
+      "shot": "b01-06-price-59-good.png"
+    },
+    {
+      "moment": "The checkout form itself was refreshingly simple - email, name, and standard card fields, nothing extra demanded.",
+      "shot": "b01-09-checkout-filled.png"
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "a directory of 28 real, named graduates/facilitators with their own personal websites and social links",
+      "checkout only asked for card, email, and name - nothing excessive that would make me bail",
+      "a clearly displayed final price with a secure/SSL payment note before I'd need to enter card details"
+    ],
+    "what_it_would_take": "Show the price directly on each course's own sales page instead of hiding it until checkout, and add a couple of real testimonials or before/after examples specific to the actual drawing course, not just the advanced certification graduates."
+  },
+  "brand_recall": {
+    "three_words": ["spiritual", "calming", "homemade"],
+    "tell_a_friend_one_sentence": "It's a small site called Neuro Art School for calming chakra and manifesting drawing courses - the neurographica one I wanted ended up being $59, but be warned the prices are hidden until you get all the way to checkout and one course I looked at first was actually $99.",
+    "product_remembered": "7 Chakras Neurographica Drawing Masterclasses",
+    "price_remembered": "$59 (and I remember another course being $99)"
+  },
+  "would_return": true
+}

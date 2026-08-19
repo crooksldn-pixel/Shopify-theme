@@ -1,0 +1,100 @@
+{
+  "buyer_id": "B16",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online courses and coaching in a manifesting/drawing method (NeuroGraphica, Art of Manifesting) - not obviously a bookstore or any kind of product shop",
+    "for_whom": "people into spiritual self-development, mindfulness, and creative wellness practices",
+    "adjectives": ["spiritual", "coursey", "personal-brand"],
+    "price_guess": "no price visible on this first screen at all - just email signup forms",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 10,
+    "abandoned_at": "Resources page, after using the Books category filter and confirming every book link on the site (including the one my sister wants) routes out to Amazon with no on-site cart or checkout",
+    "abandon_trigger": "no direct purchase path exists on annadenning.com for the book - it only exists as an Amazon affiliate link inside a general 'Resources and Favorite Drawing Tools' page, so there was nothing left to do here except leave for Amazon, which I won't do inside this errand"
+  },
+  "features_used": [
+    {
+      "feature": "main navigation menu",
+      "verdict": "neutral",
+      "moment": "opened the hamburger menu right away hoping for a Shop or Store link, but only found course and content pages (Courses, Blog, Resources, Library, Membership)",
+      "shot": "b16-02-menu-no-store"
+    },
+    {
+      "feature": "Art of Manifesting Method page",
+      "verdict": "got_in_the_way",
+      "moment": "clicked it thinking it was about the book my sister wants, but it was actually a 4-month coaching certification programme priced 997 to 1997 in various currencies",
+      "shot": ""
+    },
+    {
+      "feature": "Resources page book listing",
+      "verdict": "helped",
+      "moment": "eventually found the exact book - 'The Art of Manifesting: A Meditative Drawing Practice to Rewire Your Brain and Create Your Reality' by Colette Baron-Reid with Anna Denning - inside a personal recommendations page, with an upfront Amazon Associate disclosure right above it",
+      "shot": "b16-03-found-the-book"
+    },
+    {
+      "feature": "Buy on Amazon link",
+      "verdict": "helped",
+      "moment": "clicked it and landed straight on an Amazon page carrying an annadenning08-20 affiliate tag, which matched exactly what the disclosure had said would happen",
+      "shot": "b16-05-sent-to-amazon"
+    },
+    {
+      "feature": "Books category filter on Resources page",
+      "verdict": "neutral",
+      "moment": "checked whether there were other on-site ways to buy the book, but the filter just showed more unrelated titles that also linked out to Amazon",
+      "shot": "b16-06-no-direct-purchase-path"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a Shop or Store link in the main menu",
+    "an on-site product page or cart for the book",
+    "any price for the book shown on annadenning.com itself"
+  ],
+  "feature_that_most_helped_the_decision": "The Resources page's 'The Book' section, which gave the full title, co-author, and a clearly labeled Buy on Amazon link so I could confirm it was the right book",
+  "feature_that_most_hurt_the_decision": "There is no Shop or Store link anywhere in the main menu, so I had to guess my way through a coaching-certification page before stumbling onto the book inside a general affiliate resources page",
+  "friction": [
+    {
+      "moment": "No Shop or Store section in the main menu even though I came here specifically to buy something",
+      "shot": "b16-02-menu-no-store",
+      "severity": 3
+    },
+    {
+      "moment": "Clicking 'Art of Manifesting Method' led to a 997-1997 coaching certification course instead of the book, a wasted detour",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "The book is buried inside a general 'Resources and Favorite Drawing Tools' affiliate page instead of having its own findable listing",
+      "shot": "b16-03-found-the-book",
+      "severity": 2
+    },
+    {
+      "moment": "No price for the book is shown anywhere on annadenning.com itself - I'd have to go to Amazon just to see what it costs",
+      "shot": "",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The Amazon Associate disclosure sat right above the book link, plainly worded, before I even clicked anything",
+      "shot": "b16-04-book-title-confirmed"
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "clear, upfront Amazon Associate disclosure before any affiliate links",
+      "the book title, author, and co-author matched exactly what I was looking for",
+      "the 'Buy on Amazon' link was labeled plainly, not disguised as an on-site purchase"
+    ],
+    "what_it_would_take": "a real Shop or Store section with a dedicated page for the book (cover, price, buy options) instead of only surfacing it inside a general drawing-supplies affiliate roundup"
+  },
+  "brand_recall": {
+    "three_words": ["manifesting", "coursey", "roundabout"],
+    "tell_a_friend_one_sentence": "It's mainly an online course site for a manifesting/drawing method, and the book she wanted is just an Amazon affiliate link buried on a general resources page, not something you can actually buy on the site itself.",
+    "product_remembered": "The Art of Manifesting (the manifesting drawing book with Colette Baron-Reid)",
+    "price_remembered": "none shown for the book itself - I only recall the unrelated coaching certification being priced around 997 to 1997"
+  },
+  "would_return": false
+}

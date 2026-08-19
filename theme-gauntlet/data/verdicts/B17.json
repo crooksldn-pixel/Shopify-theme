@@ -1,0 +1,79 @@
+{
+  "buyer_id": "B17",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online art and mindfulness courses (NeuroGraphica, chakra drawing, manifesting)",
+    "for_whom": "people into creative self-development and spiritual/wellness practices",
+    "adjectives": ["mystical", "artsy", "wellness-focused"],
+    "price_guess": "somewhere in the $100-300 range per course, just a guess",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 5,
+    "abandoned_at": "the /login page, right after confirming Forgot Password works - stopped before entering any credentials per session rules (never submit a login)",
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "hamburger menu navigation",
+      "verdict": "helped",
+      "moment": "Opened the menu and immediately saw 'Library' and 'Log In / Sign Up' listed together near the top, so I knew right away where members go.",
+      "shot": ""
+    },
+    {
+      "feature": "Library link",
+      "verdict": "helped",
+      "moment": "Tapped Library from the menu and it routed straight to a login page instead of a dead end or a 404, which told me the content is real and just gated.",
+      "shot": "b17-02-login-page"
+    },
+    {
+      "feature": "Forgot Password page",
+      "verdict": "helped",
+      "moment": "Tapped Forgot Password to check my options since I wasn't sure of my saved password on this phone; found a genuine email-based recovery form with a Send Recovery Info button. Did not submit it.",
+      "shot": "b17-03-forgot-password"
+    },
+    {
+      "feature": "login page",
+      "verdict": "helped",
+      "moment": "Went back to a clean, stable login form with Email, Password, Remember Me, Submit, and Forgot Password all present and working.",
+      "shot": "b17-04-login-clean"
+    }
+  ],
+  "features_looked_for_but_missing": [],
+  "feature_that_most_helped_the_decision": "The 'Library' link in the main menu that routed directly to a working login page instead of a dead end",
+  "feature_that_most_hurt_the_decision": "",
+  "friction": [
+    {
+      "moment": "On the very first landing screen, before opening the menu, there was no visible login or account icon - just a hamburger and hero content - so I had to open the menu to find my way in.",
+      "shot": "b17-01-landing",
+      "severity": 1
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The menu had 'Library' and 'Log In / Sign Up' sitting right next to each other, so it was obvious in one glance where returning students go.",
+      "shot": ""
+    },
+    {
+      "moment": "The Forgot Password page was a real, functioning recovery form, not a broken link or a vague 'contact us' message.",
+      "shot": "b17-03-forgot-password"
+    }
+  ],
+  "trust": {
+    "score": 4,
+    "what_earned_it": [
+      "Library link in the menu led straight to login instead of a dead end",
+      "Forgot Password page had a real, working recovery form",
+      "Login page was clean and stable on a second visit"
+    ],
+    "what_it_would_take": "Actually logging in with my real password and watching lesson 3 load without a hitch"
+  },
+  "brand_recall": {
+    "three_words": ["mystical", "artsy", "wellness-y"],
+    "tell_a_friend_one_sentence": "It's Anna Denning's online school for neuro-art and manifesting courses - if you're already enrolled, the course library and login are easy to find in the menu.",
+    "product_remembered": "NeuroGraphica / chakra drawing course",
+    "price_remembered": ""
+  },
+  "would_return": true
+}

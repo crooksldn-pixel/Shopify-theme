@@ -1,0 +1,87 @@
+{
+  "buyer_id": "B13",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online courses in meditative pattern drawing, sacred geometry, and 'manifesting' art",
+    "for_whom": "reads like it's aimed at wellness-curious adults into self-help, not casual young creatives",
+    "adjectives": ["new-agey", "soft-toned", "text-heavy"],
+    "price_guess": "$50-150 per course",
+    "feels_like": "template"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 8,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "course card - Sacred Geometry",
+      "verdict": "got_in_the_way",
+      "moment": "Tapped the Sacred Geometry card hoping for more of the pretty spiral pattern art, but it dropped me on a business-coaching-flavored 'Power of Spirals' sales page with testimonials from an entrepreneur and an HR specialist.",
+      "shot": "b13-04-spirals-course.png"
+    },
+    {
+      "feature": "course card - Pattern Drawing (Zentangle-inspired)",
+      "verdict": "got_in_the_way",
+      "moment": "Tapped the card that actually matched my TikTok and got sent to a completely differently-branded page, 'Tangle With Ann', taught by someone named Ann Diane Tai instead of Anna Denning.",
+      "shot": "b13-05-zendala-course.png"
+    },
+    {
+      "feature": "checkout / price check",
+      "verdict": "got_in_the_way",
+      "moment": "Tapped the 'Pay in US dollars' link just to see the price and landed straight on a real checkout page with card fields, showing $99 and a big wall of terms-and-conditions text right there.",
+      "shot": "b13-06-checkout-price.png"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a free preview or sample pattern I could try before paying",
+    "a simple price tag on the course card instead of having to enter checkout to see it",
+    "one consistent teacher/brand name across every course page"
+  ],
+  "feature_that_most_helped_the_decision": "the colorful hand-drawn spiral and heart pattern artwork on the course card thumbnails - genuinely TikTok-pretty and gave instant visual proof this was real pattern-drawing content",
+  "feature_that_most_hurt_the_decision": "the $99 price only showing up once I was already on a real checkout page, next to a wall of terms-and-conditions text, and taught by a different-named instructor than the homepage",
+  "friction": [
+    {
+      "moment": "Sacred Geometry card led to an entrepreneur/HR-testimonial coaching page instead of pattern art content",
+      "shot": "b13-04-spirals-course.png",
+      "severity": 2
+    },
+    {
+      "moment": "Pattern Drawing card jumped to a differently-branded 'Tangle With Ann' page with a different named instructor than Anna Denning, making it unclear whose site I was even on",
+      "shot": "b13-05-zendala-course.png",
+      "severity": 3
+    },
+    {
+      "moment": "Had to enter an actual card-number checkout page just to learn the price was $99, with a big terms-and-conditions wall right there",
+      "shot": "b13-06-checkout-price.png",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The green spiral mandala drawing on the Sacred Geometry card was genuinely pretty, exactly the kind of thing I'd screenshot off TikTok",
+      "shot": "b13-03-pattern-drawing-found.png"
+    },
+    {
+      "moment": "The colorful heart pattern piece under Art of Manifesting Method looked like real hand-drawn art, not stock photos",
+      "shot": "b13-02-courses-section.png"
+    }
+  ],
+  "trust": {
+    "score": 2,
+    "what_earned_it": [
+      "real hand-drawn artwork samples instead of stock photos",
+      "matching social icons (TikTok, Instagram, YouTube) linking out consistently",
+      "a secure/SSL note on the checkout page"
+    ],
+    "what_it_would_take": "keep one consistent name and face across every course page instead of jumping from Anna Denning to Tangle With Ann/Ann Diane Tai, and show a price or a free preview before I'm dropped onto an actual card-number checkout page"
+  },
+  "brand_recall": {
+    "three_words": ["spiritual", "spendy", "pattern-art"],
+    "tell_a_friend_one_sentence": "It's a $99-a-course site for meditative spiral and mandala drawing plus 'manifesting' stuff - pretty pictures, but it felt more like your aunt's wellness hobby than something I'd grab off a TikTok.",
+    "product_remembered": "Zendala Drawing Course (Tangle With Ann)",
+    "price_remembered": "$99"
+  },
+  "would_return": false
+}

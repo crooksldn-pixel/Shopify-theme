@@ -1,0 +1,110 @@
+{
+  "buyer_id": "B11",
+  "device": "mobile",
+  "five_second": {
+    "sells": "Online courses that use drawing/pattern-art as a mindfulness and manifesting practice - not physical art supplies, actual video courses and a membership",
+    "for_whom": "creative-minded people looking for a calming self-development or healing practice, seems aimed mostly at women into wellness/spirituality",
+    "adjectives": ["dreamy", "soft", "new-agey"],
+    "price_guess": "guessing somewhere around $30-80 per course, maybe $20-30/month for the membership",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 27,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "homepage course card grid",
+      "moment": "scrolled through five course cards (Art of Manifesting, Membership, Sacred Geometry, Pattern Drawing, Chakra-Based Art) one by one",
+      "shot": "shots/b11-02-courses-section.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "hamburger menu",
+      "moment": "tapped it once and nothing visibly opened, had to tap a second time before the full menu slid in",
+      "shot": "shots/b11-07-menu-retry.png",
+      "verdict": "got_in_the_way"
+    },
+    {
+      "feature": "blog",
+      "moment": "opened the blog from the menu and a headline about calming pattern drawing grabbed me immediately, like the reel that brought me here",
+      "shot": "shots/b11-08-blog-list.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "blog post (Zendala Drawing)",
+      "moment": "read a good chunk of the post in bed, it felt personal and genuinely soothing, not just sales copy",
+      "shot": "shots/b11-10-zendala-content.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "inline newsletter signup forms",
+      "moment": "ran into three separate email-for-10%-off boxes baked right into the scroll on the homepage and blog post, ignored all of them per my own rule",
+      "shot": "",
+      "verdict": "got_in_the_way"
+    },
+    {
+      "feature": "dedicated course sales page (Zendala Drawing Course)",
+      "moment": "clicked through hoping to finally see a price, got a long JOIN NOW landing page with a teacher bio instead",
+      "shot": "shots/b11-12-course-landing.png",
+      "verdict": "neutral"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "an actual price shown on the homepage course cards",
+    "a real dollar number anywhere before multiple screens of scrolling",
+    "a simple way to save/bookmark a course for later without typing an email"
+  ],
+  "feature_that_most_helped_the_decision": "the Zendala Drawing blog post - it read like something a real person wrote at midnight for someone like me, which made the whole site feel worth a daylight revisit",
+  "feature_that_most_hurt_the_decision": "the total absence of visible pricing - not on the homepage cards, not in the blog's course pitch (just 'special introductory price'), not in the first three screens of the actual course sales page",
+  "friction": [
+    {
+      "moment": "hamburger menu needed a second tap before the menu actually opened",
+      "shot": "shots/b11-07-menu-retry.png",
+      "severity": 1
+    },
+    {
+      "moment": "scrolled all five homepage course cards top to bottom and never saw a single price",
+      "shot": "shots/b11-02-courses-section.png",
+      "severity": 2
+    },
+    {
+      "moment": "the blog post teased a 'special introductory price' with zero actual number, then the dedicated course page still had no visible price after three scrolls",
+      "shot": "shots/b11-11-price-tease.png",
+      "severity": 2
+    },
+    {
+      "moment": "three separate email-capture boxes appeared unprompted while just casually scrolling, none were popups but the repetition felt naggy",
+      "shot": "",
+      "severity": 1
+    }
+  ],
+  "delight": [
+    {
+      "moment": "the 'Nice to meet you' section with Anna's own bio made the site feel like one real person's life work, not a template",
+      "shot": "shots/b11-04-meet-anna.png"
+    },
+    {
+      "moment": "reading the Zendala blog post about calm pattern drawing felt genuinely soothing for an 11:40pm phone-in-bed scroll, exactly the mood the reel promised",
+      "shot": "shots/b11-10-zendala-content.png"
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "a named, visible founder with her own bio and story",
+      "a real blog with a personal, caring voice instead of generic marketing copy",
+      "consistent niche and look across every page (same logo, palette, and tone)"
+    ],
+    "what_it_would_take": "show me one real price on the first screen I see, and let me save something for later without handing over my email"
+  },
+  "brand_recall": {
+    "three_words": ["soothing", "artsy", "new-agey"],
+    "tell_a_friend_one_sentence": "It's this small, personal site run by a woman named Anna who teaches drawing-as-mindfulness and manifesting courses - kind of spiritual, but weirdly calming to scroll through at night.",
+    "product_remembered": "Zendala Drawing Course (Tangle with Ann)",
+    "price_remembered": ""
+  },
+  "would_return": true
+}

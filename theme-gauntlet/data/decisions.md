@@ -76,3 +76,13 @@ data/personas.json (panel_version v1-seed42). The committed file itself is the
 stable panel future runs reuse — rerunning the gauntlet must load this file,
 not regenerate it. Intent mix, device split, and trait sprinkling follow the
 spec exactly (see D7).
+
+## D11 — Third-party pages and our probe environment
+Three buyer moments hinge on how NON-annadenning properties responded to our
+cloud environment: B18's Cloudflare "Attention Required" block on the login
+path, B08's Instagram error page, and B05's Amazon bot-check interstitial.
+A datacenter IP can be treated more harshly than a home buyer's connection, so
+the synthesis must not present third-party blocks as site defects. What stands
+regardless: the on-site facts (the members' area requires login; the book has
+no on-site purchase path; the Instagram link's destination is what it is).
+The skeptic seat and chairman weigh these accordingly.

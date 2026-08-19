@@ -1,0 +1,97 @@
+{
+  "buyer_id": "B15",
+  "device": "desktop",
+  "five_second": {
+    "sells": "online courses in meditative pattern-drawing and 'manifesting' art (Neurographica, Zentangle-style Zendala, chakra drawing)",
+    "for_whom": "people wanting a calming, therapeutic creative practice / personal growth",
+    "adjectives": ["spiritual", "personal", "artsy"],
+    "price_guess": "£30-100 per course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 19,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "currency selector",
+      "moment": "On the Zendala course page I found 'Pay in US dollars' / 'Pay in British pounds' links side by side and used the pounds one.",
+      "shot": "shots/b15-02-zendala-course.png",
+      "verdict": "helped"
+    },
+    {
+      "feature": "course catalog (Courses page)",
+      "moment": "Browsed the Courses page and scrolled through titles - Membership, 7 Chakras, Tangle with Ann, Power of Spirals - before picking one to look at closer.",
+      "shot": "",
+      "verdict": "neutral"
+    },
+    {
+      "feature": "membership subscription checkout",
+      "moment": "Clicked the £28/month membership option to compare it against the course, and found a rolling subscription with a 3-day trial and card required upfront instead of a one-time gift price.",
+      "shot": "shots/b15-05-membership-subscription-trap.png",
+      "verdict": "got_in_the_way"
+    },
+    {
+      "feature": "course checkout form",
+      "moment": "Filled in my email and name on the Tangle with Ann checkout and watched the price stay at £75.00 GBP all the way down to the Stripe card fields.",
+      "shot": "shots/b15-06-checkout-filled.png",
+      "verdict": "helped"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "an explicit 'send this as a gift' option with a recipient email and gift message field",
+    "a currency selector visible on the homepage or store page itself, rather than only appearing once you open a single course"
+  ],
+  "feature_that_most_helped_the_decision": "The 'Pay in British pounds' toggle on the course page, which carried through unchanged to '£75.00 GBP' at the checkout and card form.",
+  "feature_that_most_hurt_the_decision": "The membership's checkout turned out to be a rolling monthly subscription (£28/month, 3-day trial, card required now) rather than a one-off gift price, which ruled it out for a clean gift.",
+  "friction": [
+    {
+      "moment": "No price appeared anywhere on the homepage or first two scrolls of the Courses page - I had to click into an individual course before any number showed up.",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "The Zendala pattern course is taught by a different named person (Ann Diane Tai) than the site's namesake Anna Denning, which was momentarily confusing on a site branded 'Anna Denning'.",
+      "shot": "shots/b15-02-zendala-course.png",
+      "severity": 1
+    },
+    {
+      "moment": "Even after choosing to pay in pounds, the checkout's Country field defaulted to United States, which felt like a small mismatch.",
+      "shot": "shots/b15-03-zendala-checkout-price.png",
+      "severity": 1
+    },
+    {
+      "moment": "The membership presented as a rolling monthly subscription with a 3-day trial rather than a simple one-off gift, and there was no 'gift' option anywhere on the site for either product.",
+      "shot": "shots/b15-05-membership-subscription-trap.png",
+      "severity": 3
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Seeing '£75.00 GBP' and 'TANGLE WITH ANN £75' agree with each other right down to the Stripe card form, with no dollar sign in sight once I'd chosen pounds.",
+      "shot": "shots/b15-06-checkout-filled.png"
+    },
+    {
+      "moment": "Finding a named, credentialed teacher (Certified Zentangle Teacher, co-authored books) behind the pattern-drawing course, which made the £75 feel justified.",
+      "shot": ""
+    }
+  ],
+  "trust": {
+    "score": 4,
+    "what_earned_it": [
+      "the pound price stayed identical from the course page to the checkout to the card form",
+      "a named, credentialed teacher bio for the course I chose",
+      "a Stripe-powered checkout with recognizable card logos and SSL messaging"
+    ],
+    "what_it_would_take": "an explicit 'send as a gift' checkbox with a recipient email/message field, and the country field defaulting to United Kingdom once I've chosen to pay in pounds"
+  },
+  "brand_recall": {
+    "three_words": ["spiritual", "artsy", "trustworthy"],
+    "tell_a_friend_one_sentence": "It's one woman's online school for calming pattern-drawing and 'manifesting' art courses, and refreshingly, once I picked pounds the price actually stayed pounds all the way to the card box.",
+    "product_remembered": "Tangle with Ann (the Zendala pattern-drawing course)",
+    "price_remembered": "£75"
+  },
+  "would_return": true
+}

@@ -1,0 +1,131 @@
+{
+  "buyer_id": "B12",
+  "device": "desktop",
+  "five_second": {
+    "sells": "Online art and drawing courses for personal growth and relaxation, branded as a 'Neuro Art School' with a spiritual/manifesting angle",
+    "for_whom": "adults looking for a calming creative hobby or a bit of self-improvement, seems mostly aimed at women",
+    "adjectives": ["dreamy", "spiritual", "homemade"],
+    "price_guess": "somewhere around $50-150 per course, just a guess since nothing was priced on that first screen",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 20,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "course catalog page",
+      "moment": "I clicked Courses expecting a shelf of classes with prices like a shop window, and got a list of course names and pretty pictures with no dollar signs anywhere on the whole page",
+      "verdict": "got_in_the_way",
+      "shot": "b12-02-course-catalog"
+    },
+    {
+      "feature": "individual course landing page (Tangle with Ann)",
+      "moment": "I opened the Zendala drawing course to find its price and had to scroll through the teacher's story and course description twice before anything about cost showed up",
+      "verdict": "got_in_the_way",
+      "shot": "b12-03-course-landing"
+    },
+    {
+      "feature": "'Pay in US dollars' link",
+      "moment": "clicking it to see the price jumped me straight into a payment form with a card number box, and the price was tucked in small text there",
+      "verdict": "got_in_the_way",
+      "shot": "b12-04-price-found-at-checkout"
+    },
+    {
+      "feature": "course pricing card (bottom of page)",
+      "moment": "going back landed me at the true price display near the very bottom of the page, a clean card showing $99 crossed out from $159",
+      "verdict": "helped",
+      "shot": "b12-05-price-at-bottom"
+    },
+    {
+      "feature": "Neuro Arts Membership page",
+      "moment": "I looked at what the membership includes, weekly live sessions and a private group, which felt clear and inviting",
+      "verdict": "helped",
+      "shot": "b12-06-membership-page"
+    },
+    {
+      "feature": "membership sign-up / trial checkout",
+      "moment": "clicking the $38 price took me straight to a card-entry form for a 'free' 3-day trial that bills monthly after, which made me uneasy even though it says cancel anytime",
+      "verdict": "got_in_the_way",
+      "shot": "b12-07-membership-checkout-trial"
+    },
+    {
+      "feature": "membership pricing table",
+      "moment": "going back again showed me the real comparison I wanted: Pay Monthly $38 or Annual $375 with 3 months free",
+      "verdict": "helped",
+      "shot": "b12-08-membership-pricing-table"
+    },
+    {
+      "feature": "logo (home button)",
+      "moment": "after a long tiring scroll on the Spirals course page with no price ever showing up, I clicked the little logo picture like I always do to get back to somewhere familiar",
+      "verdict": "helped",
+      "shot": "b12-10-final-homepage"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "prices shown right next to each course on the main course list, like price tags in a shop window",
+    "a simple one-page list comparing all the course prices side by side"
+  ],
+  "feature_that_most_helped_the_decision": "the pricing cards that eventually appeared (course page bottom and membership page bottom) once I scrolled far enough or backed into them, which gave a clear dollar figure",
+  "feature_that_most_hurt_the_decision": "the main course catalog page, which shows names and photos of every course but not one single price, so I had to open each course and hunt for it",
+  "friction": [
+    {
+      "moment": "Opened the Courses page expecting a shop shelf with prices and found none anywhere on it",
+      "shot": "b12-02-course-catalog",
+      "severity": 3
+    },
+    {
+      "moment": "Scrolled through the Tangle with Ann course description and teacher bio twice with no price in sight",
+      "shot": "b12-03-course-landing",
+      "severity": 2
+    },
+    {
+      "moment": "The only way to see the Tangle with Ann price at first was to click a 'Pay in US dollars' button that dropped me straight into a payment form with a card number box",
+      "shot": "b12-04-price-found-at-checkout",
+      "severity": 3
+    },
+    {
+      "moment": "Clicking the $38 price on the membership page jumped straight to a checkout asking for card details for a trial marked 'Due Now: Free'",
+      "shot": "b12-07-membership-checkout-trial",
+      "severity": 3
+    },
+    {
+      "moment": "The Power of Spirals course page was very long; I scrolled through testimonials and a section about 'four energies' five times and never reached a price before I gave up on that one",
+      "shot": "b12-09-spirals-long-scroll-no-price",
+      "severity": 3
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The homepage photo of Anna Denning holding her own artwork felt warm and personal, like a real person runs this, not a faceless company",
+      "shot": "b12-01-landing"
+    },
+    {
+      "moment": "Finally finding the clean pricing card for Tangle with Ann, $99 marked down from $159, felt like a genuine little discount and a relief after all that scrolling",
+      "shot": "b12-05-price-at-bottom"
+    },
+    {
+      "moment": "The membership page's final pricing table, Pay Monthly $38 or Annual $375 with 3 months free, laid the choice out plainly once I reached it",
+      "shot": "b12-08-membership-pricing-table"
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "a real named person (Anna Denning) with her own photo and artwork, not a stock-photo storefront",
+      "customer testimonials with names and job titles on the Spirals course page",
+      "plain 'subscriptions can be canceled anytime' wording on the membership",
+      "working social media links (Facebook, Instagram, YouTube, TikTok)"
+    ],
+    "what_it_would_take": "put the price right on the course shelf where I first see the course, and don't ask me for a credit card number before I've even been told plainly what a 'free trial' turns into afterward"
+  },
+  "brand_recall": {
+    "three_words": ["artsy", "spiritual", "pricey-to-find"],
+    "tell_a_friend_one_sentence": "It's a nice-looking online art school by a woman named Anna Denning teaching relaxing drawing courses, but you really have to hunt around the site to find out what anything costs.",
+    "product_remembered": "Tangle with Ann, a Zendala drawing course",
+    "price_remembered": "$99 for that drawing course, and I think $38 a month for the membership"
+  },
+  "would_return": true
+}

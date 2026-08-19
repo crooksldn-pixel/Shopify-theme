@@ -1,0 +1,93 @@
+{
+  "buyer_id": "B10",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online art/drawing courses tied to mindfulness and manifesting (Neurographica, Zentangle-style pattern drawing)",
+    "for_whom": "adults drawn to creative, spiritual/wellness-flavored art practices",
+    "adjectives": ["mystical", "handmade", "calming"],
+    "price_guess": "$50-100 per course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 23,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "course catalog (Courses/store page)",
+      "moment": "I opened the menu and tapped Courses, then scrolled through the tiles for the AM Method certifications, membership, 7 Chakras Drawing, Tangle with Ann/Zendala, and Spirals looking for prices to compare.",
+      "verdict": "got_in_the_way",
+      "shot": "b10-02-course-catalog.png"
+    },
+    {
+      "feature": "7 Chakras Drawing Masterclasses product page",
+      "moment": "I scrolled down about five screens and found a clear, large price: $59.00, crossed out from $159.99, with a short bullet list of what's included.",
+      "verdict": "helped",
+      "shot": "b10-03-chakras-price.png"
+    },
+    {
+      "feature": "Tangle with Ann / Zendala Drawing Course product page",
+      "moment": "This page went on for what felt like forever - teacher bio, what Zendala is, techniques, who it's for - before I finally hit the price at the very bottom: $99, was $159.",
+      "verdict": "got_in_the_way",
+      "shot": "b10-05-zendala-price-clear.png"
+    },
+    {
+      "feature": "currency toggle (Pay in US dollars / Pay in British pounds)",
+      "moment": "On the Zendala page I noticed two separate price boxes, one in dollars and one in pounds, which was a nice touch but not something I needed.",
+      "verdict": "neutral",
+      "shot": ""
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "prices shown right on the course catalog tiles instead of only after opening each page",
+    "a lesson-by-lesson curriculum list on the 7 Chakras page like the Zendala page had",
+    "a side-by-side comparison of the two similar drawing courses"
+  ],
+  "feature_that_most_helped_the_decision": "the price text on each course page, once I finally reached it, was big, bold, and easy to read even zoomed in - $59 vs $99, clearly different",
+  "feature_that_most_hurt_the_decision": "no prices anywhere on the course catalog page, so comparing meant opening both course pages and scrolling through everything else first - one of the two pages was enormously long",
+  "friction": [
+    {
+      "moment": "The course catalog listed six course tiles with no price on any of them - I had to open each one individually just to find a number.",
+      "shot": "b10-02-course-catalog.png",
+      "severity": 2
+    },
+    {
+      "moment": "The Zendala/Tangle with Ann page went on for over 10,000 pixels of scrolling - teacher bio, techniques, who it's for - with the price buried at the very bottom, well past the 7 Chakras page's length.",
+      "shot": "b10-05-zendala-price-clear.png",
+      "severity": 3
+    },
+    {
+      "moment": "I expected the two cheap drawing courses to cost the same like my errand assumed, but they didn't - $59 versus $99, a real $40 gap, and one is even taught by a different named teacher than the site owner.",
+      "shot": "",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The price numbers themselves, once I scrolled to them, were large and high-contrast - easy on my eyes without extra zooming.",
+      "shot": "b10-03-chakras-price.png"
+    },
+    {
+      "moment": "The Zendala page had a 'Who This Course Is For' section that explicitly mentioned beginners, which made me feel like it was written for someone like me.",
+      "shot": ""
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "clear before/after discount pricing shown on both course pages",
+      "a named real teacher with a bio and credentials for the Zendala course",
+      "transparent multi-currency pricing (US dollars and British pounds) shown side by side"
+    ],
+    "what_it_would_take": "put prices on the catalog tiles up front and give both drawing courses the same depth of curriculum detail so I'm comparing like with like"
+  },
+  "brand_recall": {
+    "three_words": ["mystical", "handmade", "calming"],
+    "tell_a_friend_one_sentence": "It's a small artist's site with spiritual-style drawing courses - pretty pictures, but you have to scroll forever through each course page just to find out what it actually costs.",
+    "product_remembered": "7 Chakras Drawing Masterclasses",
+    "price_remembered": "$59"
+  },
+  "would_return": true
+}

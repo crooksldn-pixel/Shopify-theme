@@ -1,0 +1,90 @@
+{
+  "buyer_id": "B14",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online drawing/art courses wrapped in spiritual and energy-healing concepts (manifesting, chakras, neurographica)",
+    "for_whom": "people into mindful, spiritual art and personal growth, not really a general gift-shopping crowd",
+    "adjectives": ["spiritual", "arty", "a little confusing"],
+    "price_guess": "somewhere around $50 to $150 per course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 16,
+    "abandoned_at": "Zendala Drawing Course checkout page (https://www.annadenning.com/offers/YRuFr2r7/checkout), after also checking the 7 Chakras Neurographica checkout (https://www.annadenning.com/offers/PBCsPysJ/checkout)",
+    "abandon_trigger": "no gift option anywhere on the course pages or at checkout; the Zendala checkout spelled out that the access link goes to whatever email is typed in ('We will send the access link to your course to your email... Make sure you enter your email address correctly'), with no way to send it to my mother-in-law instead of me"
+  },
+  "features_used": [
+    {
+      "feature": "course catalog / store page",
+      "moment": "I opened the hamburger menu and tapped Courses to see what drawing courses were on offer.",
+      "verdict": "neutral",
+      "shot": ""
+    },
+    {
+      "feature": "Buy Now button on course landing page",
+      "moment": "I tapped BUY NOW on the 7 Chakras Neurographica Drawing Masterclasses page and it dropped me straight into checkout with no cart or review step.",
+      "verdict": "got_in_the_way",
+      "shot": "b14-02-checkout-price.png"
+    },
+    {
+      "feature": "coupon code field",
+      "moment": "I typed GIFT10 into the Coupon Code box and tapped Apply, hoping for a discount.",
+      "verdict": "neutral",
+      "shot": "b14-03-coupon-invalid.png"
+    },
+    {
+      "feature": "checkout email/name fields",
+      "moment": "I filled in an email address and looked for any note that it could be a gift recipient's email rather than my own, but the Zendala checkout explicitly said access goes to whatever email I enter.",
+      "verdict": "broken",
+      "shot": "b14-05-zendala-price-and-email-note.png"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a 'this is a gift' checkbox or toggle at checkout",
+    "a field to send course access to a different email than the payer's",
+    "a shopping cart or order review step before checkout",
+    "gift wrapping, gift note, or gift receipt option"
+  ],
+  "feature_that_most_helped_the_decision": "the $59 price tag on the 7 Chakras Neurographica Drawing Masterclasses, which fit inside my $60 budget",
+  "feature_that_most_hurt_the_decision": "the checkout email field with an explicit note that access goes to whatever email I type in, with no mention of gifting anywhere",
+  "friction": [
+    {
+      "moment": "BUY NOW skipped straight to checkout with no cart or chance to review what I was buying first",
+      "shot": "b14-02-checkout-price.png",
+      "severity": 2
+    },
+    {
+      "moment": "No gift option, gift note, or 'send to someone else' field anywhere on the course pages or at checkout",
+      "shot": "b14-06-abandon.png",
+      "severity": 4
+    },
+    {
+      "moment": "Checkout text explicitly confirmed the course access link goes to whatever email I type, warning me to make sure it's correct - clearly meant to be my own email, not hers",
+      "shot": "b14-05-zendala-price-and-email-note.png",
+      "severity": 4
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Finding a course at exactly $59, just under my $60 budget",
+      "shot": "b14-02-checkout-price.png"
+    }
+  ],
+  "trust": {
+    "score": 2,
+    "what_earned_it": [
+      "a real named teacher with bio and credentials (Certified Zentangle Teacher)",
+      "an SSL / secure payment badge shown at checkout",
+      "a support email address (anna@annadenning.com) listed in case of problems"
+    ],
+    "what_it_would_take": "an explicit 'send as a gift' option, or at minimum a note saying the course-access email can be different from the person paying"
+  },
+  "brand_recall": {
+    "three_words": ["spiritual", "courses", "confusing"],
+    "tell_a_friend_one_sentence": "It's a woman named Anna Denning selling drawing and 'manifesting' courses online, but I couldn't find any way to buy one as a gift for someone else.",
+    "product_remembered": "7 Chakras Neurographica Drawing Masterclasses",
+    "price_remembered": "$59"
+  },
+  "would_return": false
+}

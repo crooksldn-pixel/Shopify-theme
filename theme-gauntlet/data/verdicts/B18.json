@@ -1,0 +1,79 @@
+{
+ "buyer_id": "B18",
+ "device": "desktop",
+ "five_second": {
+  "sells": "Online art courses and a paid membership built around 'Neuro Art' / manifesting-through-drawing practices",
+  "for_whom": "Women interested in spiritual/mindful art, healing, and manifestation",
+  "adjectives": ["new-agey", "personal", "colorful"],
+  "price_guess": "$30-40/month for the membership",
+  "feels_like": "brand"
+ },
+ "errand": {
+  "completed": false,
+  "steps": 14,
+  "abandoned_at": "https://www.annadenning.com/blog",
+  "abandon_trigger": "The Library nav link (the members area where the live-session schedule would live) dead-ended twice at a Cloudflare 'Attention Required - blocked' error page on the login system (mykajabi.com), and no other page on the site (Membership, Resources, Blog) listed a day, time, or topic for this week's live session."
+ },
+ "features_used": [
+  {
+   "feature": "Neuro Arts Membership sales page",
+   "moment": "I opened the membership page hoping to see this week's live session day/time, but it was all pitch copy, pricing, and past example topics with no current schedule.",
+   "shot": "shots/b18-02-membership-no-schedule.png"
+  },
+  {
+   "feature": "Library nav link / members login",
+   "moment": "I clicked Library twice (direct and from the nav) expecting to see or log into member content, but both times it redirected to a login page on mykajabi.com that Cloudflare blocked outright.",
+   "shot": "shots/b18-03-library-blocked.png"
+  },
+  {
+   "feature": "Resources page",
+   "moment": "I checked Resources thinking it might list session info, but it was only a list of recommended art supplies with Amazon affiliate links.",
+   "shot": ""
+  },
+  {
+   "feature": "Blog",
+   "moment": "I scanned the blog titles and categories for a 'this week's session' style post but found only general wellness and art-technique articles with no dates tied to live sessions.",
+   "shot": "shots/b18-04-abandon-blog.png"
+  }
+ ],
+ "features_looked_for_but_missing": [
+  "A visible weekly schedule or calendar showing this Thursday's session day/time and topic",
+  "Any public, no-login confirmation of session logistics for existing members",
+  "A working members Library/login page"
+ ],
+ "feature_that_most_helped_the_decision": "",
+ "feature_that_most_hurt_the_decision": "Library/login link broken behind a Cloudflare block, the only apparent path to the schedule",
+ "friction": [
+  {
+   "moment": "Membership sales page repeats 'Live Weekly Sessions' as a perk but never states a day, time, or this week's topic anywhere on the page, even after scrolling the entire page.",
+   "shot": "shots/b18-02-membership-no-schedule.png",
+   "severity": 2
+  },
+  {
+   "moment": "Clicking Library (both by direct link and from the nav) sent me to a login page that Cloudflare blocked with an 'Attention Required' error, twice, even after waiting and retrying.",
+   "shot": "shots/b18-03-library-blocked.png",
+   "severity": 4
+  },
+  {
+   "moment": "Resources and Blog pages, the only other places that might reasonably carry an announcement, had nothing related to live session scheduling at all.",
+   "shot": "",
+   "severity": 1
+  }
+ ],
+ "delight": [],
+ "trust": {
+  "score": 2,
+  "what_earned_it": [
+   "Pricing was shown clearly and consistently ($38/mo or $375/yr) on the membership page",
+   "Branding and photos of Anna felt personal and consistent across pages"
+  ],
+  "what_it_would_take": "Post at least the day/time of the weekly live session publicly (even just 'Thursdays, 6pm ET') so members don't have to log in for basic logistics, and fix the members Library login so it doesn't throw a security block error."
+ },
+ "brand_recall": {
+  "three_words": ["spiritual", "cluttered", "unreliable"],
+  "tell_a_friend_one_sentence": "It's a sweet, spiritual drawing/manifesting membership site, but I couldn't even find out when this week's live class was because the members' login page just threw a security error at me.",
+  "product_remembered": "Neuro Arts Membership",
+  "price_remembered": "$38/month"
+ },
+ "would_return": false
+}

@@ -1,0 +1,122 @@
+{
+  "buyer_id": "B08",
+  "device": "mobile",
+  "five_second": {
+    "sells": "online drawing/art courses framed as a mindfulness and manifestation practice (Neurographica, chakras, spirals, Zentangle-style drawing)",
+    "for_whom": "self-development-minded creatives, wellness people looking to add a drawing practice",
+    "adjectives": ["jargon-heavy", "earnest", "lead-gen-forward"],
+    "price_guess": "$100-300 per course",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": true,
+    "steps": 25,
+    "abandoned_at": null,
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "hamburger navigation menu",
+      "moment": "Opened the menu right away to find About Me before looking at any course, which is just how I shop.",
+      "verdict": "helped",
+      "shot": ""
+    },
+    {
+      "feature": "About page",
+      "moment": "Found a full bio for a real named founder, Anna Denning, with a co-author credit (Colette Baron-Reid) and a book published by Hay House, not just vague hype.",
+      "verdict": "helped",
+      "shot": "b08-02-about-page"
+    },
+    {
+      "feature": "social icons (Instagram tap)",
+      "moment": "Tapped the Instagram icon to see if the account was live like I always do, and it threw me onto a broken instagram.com error page instead of showing the account.",
+      "verdict": "broken",
+      "shot": ""
+    },
+    {
+      "feature": "course catalog / store page",
+      "moment": "Scanned the course list to see how many different offerings there were before picking one to dig into.",
+      "verdict": "helped",
+      "shot": ""
+    },
+    {
+      "feature": "Zendala Drawing Course page",
+      "moment": "This course named a completely different, specific teacher (Ann Diane Tai, Certified Zentangle Teacher CZT #11) with a detailed, oddly specific bio about her mother and co-authored books.",
+      "verdict": "helped",
+      "shot": "b08-03-zendala-teacher"
+    },
+    {
+      "feature": "7 Chakras course page",
+      "moment": "Confirmed this course was Anna Denning's own, matching her About page identity, which felt consistent, though the copy here leaned more into vague wellness hype without a price shown.",
+      "verdict": "neutral",
+      "shot": "b08-05-chakras-course-nopricing"
+    },
+    {
+      "feature": "Our Graduates / Certified Facilitators Directory",
+      "moment": "This was the big one: 28 real named facilitators, each with their own Instagram, Facebook, personal website, or email listed individually.",
+      "verdict": "helped",
+      "shot": "b08-04-facilitators-directory"
+    },
+    {
+      "feature": "facilitator personal website link",
+      "moment": "Tapped through to one facilitator's own site (artfromhearts.co.uk) and it was a real, live, matching personal art site, not a dead link.",
+      "verdict": "helped",
+      "shot": ""
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a photo or short video of Anna Denning actually drawing or teaching, to put a face to the bio",
+    "visible pricing on the course pages themselves without clicking Buy/Join",
+    "student reviews attached to real names on the individual course pages"
+  ],
+  "feature_that_most_helped_the_decision": "the Certified Facilitators Directory listing 28 real named people with live personal websites and social links",
+  "feature_that_most_hurt_the_decision": "the Instagram icon leading to a broken off-site error page instead of letting me verify the main account",
+  "friction": [
+    {
+      "moment": "Landing page already had two separate email capture forms visible before I'd learned anything about who teaches here.",
+      "shot": "b08-01-landing",
+      "severity": 2
+    },
+    {
+      "moment": "Tapping the Instagram social icon sent me off-site to an error page (HTTP 429), so I couldn't confirm the account was active myself.",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "The Instagram handle shown in the top nav (@neurographics.art) didn't match the one in the footer (@annadenningart), which made me unsure which was the real account.",
+      "shot": "",
+      "severity": 2
+    },
+    {
+      "moment": "The 7 Chakras course page used breathy wellness language (Energy Boost, Deep Dive) with no visible price, feeling closer to funnel copy than the Zendala page did.",
+      "shot": "b08-05-chakras-course-nopricing",
+      "severity": 2
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The Zendala course teacher bio got specific fast: certification number, her mother's certification number, and the fact they'd co-authored books together in Mandarin Chinese.",
+      "shot": "b08-03-zendala-teacher"
+    },
+    {
+      "moment": "Finding a whole directory of 28 named, individually-linked facilitators was more transparency than I expected from a site like this.",
+      "shot": "b08-04-facilitators-directory"
+    }
+  ],
+  "trust": {
+    "score": 4,
+    "what_earned_it": [
+      "a real named founder with a traditionally published book (Hay House) and a named co-author",
+      "individual course pages crediting specific, differently-named teachers with verifiable-sounding credentials",
+      "a large directory of named facilitators with working personal websites and social links, one of which I verified myself"
+    ],
+    "what_it_would_take": "seeing an actual photo or video of Anna Denning herself drawing or teaching on the site, and having the main Instagram link actually load so I could check it directly"
+  },
+  "brand_recall": {
+    "three_words": ["new-agey", "credentialed", "sprawling"],
+    "tell_a_friend_one_sentence": "It's a spiritual-drawing course site (chakras, manifesting, Zentangle) run by an author named Anna Denning, but unlike most of these, each course actually names its real teacher and there's a whole directory of dozens of named, checkable facilitators.",
+    "product_remembered": "the Zendala Drawing Course, taught by Ann Tai",
+    "price_remembered": ""
+  },
+  "would_return": true
+}

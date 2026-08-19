@@ -1,0 +1,743 @@
+{
+ "n": 20,
+ "completed": 10,
+ "completed_by_intent": {
+  "buy-now": [
+   1,
+   6
+  ],
+  "research": [
+   3,
+   4
+  ],
+  "browse": [
+   3,
+   3
+  ],
+  "gift": [
+   1,
+   3
+  ],
+  "returning": [
+   0,
+   2
+  ],
+  "lookup": [
+   2,
+   2
+  ]
+ },
+ "abandoned": [
+  {
+   "id": "B03",
+   "at": "Standard Certification Full Price checkout page, after entering my email - stopped there per instructions before entering any payment",
+   "trigger": null
+  },
+  {
+   "id": "B04",
+   "at": "checkout page for the Neuro Arts Membership monthly plan, after typing my email but before entering any card details",
+   "trigger": "an undisclosed 3-day trial with a full credit-card form appearing only at checkout, stacked on top of never finding the class day/time and a wall of legal terms right before the pay button"
+  },
+  {
+   "id": "B05",
+   "at": "The Resources page (annadenning.com/resources), on the 'The Book' section",
+   "trigger": "No shopping cart, search box, or Shop section exists anywhere on the site for the book. The only purchase paths are outbound Amazon affiliate links (Buy on Amazon, Kindle Edition, Audiobook), which I won't follow through to completion per my own rule against buying on another site."
+  },
+  {
+   "id": "B06",
+   "at": "the 'Art of Manifesting Method Coaching Certification' course page showing $997-$1997 pricing, after exhausting the homepage course tiles and the full Courses/store list",
+   "trigger": "no course anywhere on the homepage, the hamburger nav, or the full Courses/store catalog was labeled 'NeuroGraphica', 'basics', or 'beginner' - the only prominent, top-listed course card turned out to be a $997-$1997 four-month coaching certification, a total mismatch for the entry-level course my friend described"
+  },
+  {
+   "id": "B09",
+   "at": "https://www.annadenning.com/Art_of_Manifesting_Method_Teachers_training (FAQ/waitlist form section)",
+   "trigger": "Teacher Training page presented a Jan 9, 2026 start date and a June 2026 event as current/open for application, both already months in the past by my visit (Aug 19, 2026); the same page contradicted its own 'by application only' headline by saying further down 'this course is full now', and the only way to get a real next date was to hand over my name and email to a waiting list with no promised answer"
+  },
+  {
+   "id": "B14",
+   "at": "Zendala Drawing Course checkout page (https://www.annadenning.com/offers/YRuFr2r7/checkout), after also checking the 7 Chakras Neurographica checkout (https://www.annadenning.com/offers/PBCsPysJ/checkout)",
+   "trigger": "no gift option anywhere on the course pages or at checkout; the Zendala checkout spelled out that the access link goes to whatever email is typed in ('We will send the access link to your course to your email... Make sure you enter your email address correctly'), with no way to send it to my mother-in-law instead of me"
+  },
+  {
+   "id": "B16",
+   "at": "Resources page, after using the Books category filter and confirming every book link on the site (including the one my sister wants) routes out to Amazon with no on-site cart or checkout",
+   "trigger": "no direct purchase path exists on annadenning.com for the book - it only exists as an Amazon affiliate link inside a general 'Resources and Favorite Drawing Tools' page, so there was nothing left to do here except leave for Amazon, which I won't do inside this errand"
+  },
+  {
+   "id": "B17",
+   "at": "the /login page, right after confirming Forgot Password works - stopped before entering any credentials per session rules (never submit a login)",
+   "trigger": null
+  },
+  {
+   "id": "B18",
+   "at": "https://www.annadenning.com/blog",
+   "trigger": "The Library nav link (the members area where the live-session schedule would live) dead-ended twice at a Cloudflare 'Attention Required - blocked' error page on the login system (mykajabi.com), and no other page on the site (Membership, Resources, Blog) listed a day, time, or topic for this week's live session."
+  }
+ ],
+ "trust_scores": {
+  "B01": 3,
+  "B02": 4,
+  "B03": 3,
+  "B04": 2,
+  "B05": 2,
+  "B06": 2,
+  "B07": 3,
+  "B08": 4,
+  "B09": 2,
+  "B10": 3,
+  "B11": 3,
+  "B12": 3,
+  "B13": 2,
+  "B14": 2,
+  "B15": 4,
+  "B16": 3,
+  "B17": 4,
+  "B18": 2,
+  "B19": 4,
+  "B20": 2
+ },
+ "trust_avg": 2.85,
+ "feels_like": {
+  "template": 3,
+  "brand": 17
+ },
+ "would_return": 11,
+ "five_second_adjectives": {
+  "spiritual": 6,
+  "homemade": 3,
+  "calming": 2,
+  "new-agey": 7,
+  "soft-focus": 1,
+  "funnel-like": 1,
+  "personal": 6,
+  "artsy": 7,
+  "founder-led": 1,
+  "wordy": 1,
+  "mystical": 4,
+  "wellness-focused": 2,
+  "personal-brand-driven": 1,
+  "unproven-looking at first glance": 1,
+  "jargon-heavy": 1,
+  "earnest": 2,
+  "lead-gen-forward": 1,
+  "new-age": 1,
+  "handmade": 1,
+  "dreamy": 2,
+  "soft": 1,
+  "soft-toned": 1,
+  "text-heavy": 1,
+  "arty": 1,
+  "a little confusing": 1,
+  "coursey": 1,
+  "personal-brand": 1,
+  "colorful": 1,
+  "wellness-coachy": 1
+ },
+ "recall_words": {
+  "spiritual": 9,
+  "calming": 3,
+  "homemade": 1,
+  "circular-patterns": 1,
+  "pounds-friendly": 1,
+  "artsy": 8,
+  "personal": 3,
+  "muddled-pricing": 1,
+  "flowery": 1,
+  "uncertain": 1,
+  "roundabout": 2,
+  "mystical": 4,
+  "confusing": 2,
+  "credentialed": 2,
+  "pricey": 1,
+  "new-agey": 2,
+  "sprawling": 1,
+  "arty": 1,
+  "new-age": 1,
+  "date-confusing": 1,
+  "handmade": 1,
+  "soothing": 1,
+  "pricey-to-find": 1,
+  "spendy": 1,
+  "pattern-art": 1,
+  "courses": 1,
+  "trustworthy": 1,
+  "manifesting": 1,
+  "coursey": 1,
+  "wellness-y": 1,
+  "cluttered": 1,
+  "unreliable": 1,
+  "wellness-coachy": 1,
+  "hard-to-reach": 1
+ },
+ "price_guesses": {
+  "B01": "no price visible on the first screen at all; my gut guess before scrolling would",
+  "B02": "no price visible on landing; guessed somewhere $100-$300",
+  "B03": "somewhere between $500 and $1500 for a certification",
+  "B04": "somewhere around $20-50 a month",
+  "B05": "courses/membership in the tens to low hundreds of dollars a month",
+  "B06": "$50-200 per course",
+  "B07": "somewhere in the $50-300 range for a course",
+  "B08": "$100-300 per course",
+  "B09": "a few hundred to a couple thousand dollars for a certification programme",
+  "B10": "$50-100 per course",
+  "B11": "guessing somewhere around $30-80 per course, maybe $20-30/month for the membersh",
+  "B12": "somewhere around $50-150 per course, just a guess since nothing was priced on th",
+  "B13": "$50-150 per course",
+  "B14": "somewhere around $50 to $150 per course",
+  "B15": "£30-100 per course",
+  "B16": "no price visible on this first screen at all - just email signup forms",
+  "B17": "somewhere in the $100-300 range per course, just a guess",
+  "B18": "$30-40/month for the membership",
+  "B19": "unclear from the homepage, but felt like it would land somewhere in the $50-$300",
+  "B20": "Unclear at a glance - guessed somewhere around $100-300 for a course, or a modes"
+ },
+ "severity4": [
+  {
+   "id": "B01",
+   "moment": "Clicked Join Now on the Zendala course and only found out it was $99 (over budget) after reaching the checkout page, three screens in.",
+   "shot": "b01-03-price-shock-99.png"
+  },
+  {
+   "id": "B03",
+   "moment": "The Mentored tier's Split Payment button did nothing but reset me to the top of the page, on two separate attempts",
+   "shot": ""
+  },
+  {
+   "id": "B04",
+   "moment": "Checkout revealed an undisclosed 3-day trial requiring a credit card, never mentioned on the membership page itself.",
+   "shot": "b04-05-checkout-trial-surprise"
+  },
+  {
+   "id": "B05",
+   "moment": "The site's only purchase paths for the book are outbound affiliate links - there is no cart or checkout of its own, so the errand cannot be completed on this site at all.",
+   "shot": "shots/b05-05-abandon-no-onsite-checkout.png"
+  },
+  {
+   "id": "B06",
+   "moment": "no item in the full course catalog matches the 'NeuroGraphica' branding used in the site's own hero text and page title",
+   "shot": "b06-02-courses-list-no-basics.png"
+  },
+  {
+   "id": "B09",
+   "moment": "Teacher Training hero banner implies applications are currently open ('by application only') while the same page later says the course is already full.",
+   "shot": "b09-05-course-full-contradiction"
+  },
+  {
+   "id": "B09",
+   "moment": "January 9, 2026 and June 2026 dates on the Teacher Training page had already passed by my visit (Aug 19, 2026) but were phrased as current or upcoming.",
+   "shot": "b09-04-teacher-training-stale-date"
+  },
+  {
+   "id": "B14",
+   "moment": "No gift option, gift note, or 'send to someone else' field anywhere on the course pages or at checkout",
+   "shot": "b14-06-abandon.png"
+  },
+  {
+   "id": "B14",
+   "moment": "Checkout text explicitly confirmed the course access link goes to whatever email I type, warning me to make sure it's correct - clearly meant to be my own email, not hers",
+   "shot": "b14-05-zendala-price-and-email-note.png"
+  },
+  {
+   "id": "B18",
+   "moment": "Clicking Library (both by direct link and from the nav) sent me to a login page that Cloudflare blocked with an 'Attention Required' error, twice, even after waiting and retrying.",
+   "shot": "shots/b18-03-library-blocked.png"
+  }
+ ],
+ "severity3": [
+  {
+   "id": "B01",
+   "moment": "The /store course catalog listed six courses with descriptions but zero prices anywhere.",
+   "shot": ""
+  },
+  {
+   "id": "B03",
+   "moment": "Both £ and $ prices for the same certification were listed stacked on one page with no toggle, flag, or any indication of which currency act",
+   "shot": "b03-04-pricing-cards"
+  },
+  {
+   "id": "B04",
+   "moment": "Never found what day or time the weekly live class actually happens, despite reading the entire membership page top to bottom.",
+   "shot": ""
+  },
+  {
+   "id": "B04",
+   "moment": "Annual plan advertised as 'Get 3 Months free' but my own math only worked out to about 2 months of real savings.",
+   "shot": "b04-04-pricing-full"
+  },
+  {
+   "id": "B05",
+   "moment": "The 'Buy on Amazon' link led to a bot-check screen on Amazon instead of a product page, and I wasn't willing to shop off-site anyway.",
+   "shot": "shots/b05-03-redirected-to-amazon.png"
+  },
+  {
+   "id": "B06",
+   "moment": "the only 'top' looking, most prominent course card was a $997-$1997 professional coaching certification, not a starter course",
+   "shot": "b06-03-wrong-course-certification-price.png"
+  },
+  {
+   "id": "B07",
+   "moment": "Refund terms are not on any course page, only inside a long general Terms and Conditions page, and the right to cancel is waived once you ac",
+   "shot": "shots/b07-06-refund-terms.png"
+  },
+  {
+   "id": "B07",
+   "moment": "No testimonials or reviews from past students found anywhere on the site.",
+   "shot": "shots/b07-07-no-testimonials-found.png"
+  },
+  {
+   "id": "B09",
+   "moment": "Coaching Certification page listed a start date of '25th of May' with no year given at all.",
+   "shot": "b09-03-startdate-no-year"
+  },
+  {
+   "id": "B10",
+   "moment": "The Zendala/Tangle with Ann page went on for over 10,000 pixels of scrolling - teacher bio, techniques, who it's for - with the price buried",
+   "shot": "b10-05-zendala-price-clear.png"
+  },
+  {
+   "id": "B12",
+   "moment": "Opened the Courses page expecting a shop shelf with prices and found none anywhere on it",
+   "shot": "b12-02-course-catalog"
+  },
+  {
+   "id": "B12",
+   "moment": "The only way to see the Tangle with Ann price at first was to click a 'Pay in US dollars' button that dropped me straight into a payment for",
+   "shot": "b12-04-price-found-at-checkout"
+  },
+  {
+   "id": "B12",
+   "moment": "Clicking the $38 price on the membership page jumped straight to a checkout asking for card details for a trial marked 'Due Now: Free'",
+   "shot": "b12-07-membership-checkout-trial"
+  },
+  {
+   "id": "B12",
+   "moment": "The Power of Spirals course page was very long; I scrolled through testimonials and a section about 'four energies' five times and never rea",
+   "shot": "b12-09-spirals-long-scroll-no-price"
+  },
+  {
+   "id": "B13",
+   "moment": "Pattern Drawing card jumped to a differently-branded 'Tangle With Ann' page with a different named instructor than Anna Denning, making it u",
+   "shot": "b13-05-zendala-course.png"
+  },
+  {
+   "id": "B15",
+   "moment": "The membership presented as a rolling monthly subscription with a 3-day trial rather than a simple one-off gift, and there was no 'gift' opt",
+   "shot": "shots/b15-05-membership-subscription-trap.png"
+  },
+  {
+   "id": "B16",
+   "moment": "No Shop or Store section in the main menu even though I came here specifically to buy something",
+   "shot": "b16-02-menu-no-store"
+  },
+  {
+   "id": "B20",
+   "moment": "Read the full Neuro Arts Membership sales page (well over 10,000 pixels of scrolling) and it never once addressed timezone, exact session ti",
+   "shot": "b20-05-membership-bottom-no-faq"
+  },
+  {
+   "id": "B20",
+   "moment": "Only found a contact email by opening the legal Privacy Policy page - not somewhere a normal shopper would think to look for it",
+   "shot": "b20-03-email-found-in-privacy-policy"
+  }
+ ],
+ "features_broken": [
+  {
+   "id": "B03",
+   "feature": "Split Payment button (Mentored tier)",
+   "moment": "I clicked it twice from two different scroll positions and both times it just snapped back to the top of the course page instead of opening ",
+   "shot": ""
+  },
+  {
+   "id": "B05",
+   "feature": "Buy on Amazon link",
+   "moment": "I clicked through to see if I could actually buy it, and it just dumped me on an Amazon bot-check 'continue shopping' screen, not even a rea",
+   "shot": "shots/b05-03-redirected-to-amazon.png"
+  },
+  {
+   "id": "B07",
+   "feature": "testimonials/reviews search",
+   "moment": "Checked the homepage, the store page and multiple course pages and never found a single quoted student testimonial or star rating anywhere.",
+   "shot": "shots/b07-07-no-testimonials-found.png"
+  },
+  {
+   "id": "B08",
+   "feature": "social icons (Instagram tap)",
+   "moment": "Tapped the Instagram icon to see if the account was live like I always do, and it threw me onto a broken instagram.com error page instead of",
+   "shot": ""
+  },
+  {
+   "id": "B09",
+   "feature": "Teacher Training programme page dates/format section",
+   "moment": "Read the start date and cohort requirements and saw January 9, 2026 and a June 2026 event both presented as if still current.",
+   "shot": "b09-04-teacher-training-stale-date"
+  },
+  {
+   "id": "B09",
+   "feature": "'course is full' notice on the Teacher Training page",
+   "moment": "Found the page contradicts its own open-for-application hero banner by saying, further down, that the course is already full.",
+   "shot": "b09-05-course-full-contradiction"
+  },
+  {
+   "id": "B14",
+   "feature": "checkout email/name fields",
+   "moment": "I filled in an email address and looked for any note that it could be a gift recipient's email rather than my own, but the Zendala checkout ",
+   "shot": "b14-05-zendala-price-and-email-note.png"
+  }
+ ],
+ "features_got_in_way": [
+  {
+   "id": "B01",
+   "feature": "course catalog (/store)"
+  },
+  {
+   "id": "B01",
+   "feature": "course sales page (Tangle with Ann / Zendala)"
+  },
+  {
+   "id": "B01",
+   "feature": "checkout price display"
+  },
+  {
+   "id": "B02",
+   "feature": "checkout country/postcode field"
+  },
+  {
+   "id": "B03",
+   "feature": "investment options pricing tiers"
+  },
+  {
+   "id": "B04",
+   "feature": "membership page pricing boxes (monthly vs annual)"
+  },
+  {
+   "id": "B04",
+   "feature": "long scrolling membership page"
+  },
+  {
+   "id": "B04",
+   "feature": "checkout page (3-day trial + card form)"
+  },
+  {
+   "id": "B04",
+   "feature": "terms and conditions text at checkout"
+  },
+  {
+   "id": "B05",
+   "feature": "main navigation (checked for a Shop/Store link)"
+  },
+  {
+   "id": "B05",
+   "feature": "site search"
+  },
+  {
+   "id": "B06",
+   "feature": "hamburger navigation menu"
+  },
+  {
+   "id": "B06",
+   "feature": "Courses page / full course catalog"
+  },
+  {
+   "id": "B06",
+   "feature": "course detail page (AM Method Coaching Certification)"
+  },
+  {
+   "id": "B07",
+   "feature": "individual course page (Zendala Drawing Course)"
+  },
+  {
+   "id": "B09",
+   "feature": "waitlist sign-up form"
+  },
+  {
+   "id": "B10",
+   "feature": "course catalog (Courses/store page)"
+  },
+  {
+   "id": "B10",
+   "feature": "Tangle with Ann / Zendala Drawing Course product page"
+  },
+  {
+   "id": "B11",
+   "feature": "hamburger menu"
+  },
+  {
+   "id": "B11",
+   "feature": "inline newsletter signup forms"
+  },
+  {
+   "id": "B12",
+   "feature": "course catalog page"
+  },
+  {
+   "id": "B12",
+   "feature": "individual course landing page (Tangle with Ann)"
+  },
+  {
+   "id": "B12",
+   "feature": "'Pay in US dollars' link"
+  },
+  {
+   "id": "B12",
+   "feature": "membership sign-up / trial checkout"
+  },
+  {
+   "id": "B13",
+   "feature": "course card - Sacred Geometry"
+  },
+  {
+   "id": "B13",
+   "feature": "course card - Pattern Drawing (Zentangle-inspired)"
+  },
+  {
+   "id": "B13",
+   "feature": "checkout / price check"
+  },
+  {
+   "id": "B14",
+   "feature": "Buy Now button on course landing page"
+  },
+  {
+   "id": "B15",
+   "feature": "membership subscription checkout"
+  },
+  {
+   "id": "B16",
+   "feature": "Art of Manifesting Method page"
+  },
+  {
+   "id": "B20",
+   "feature": "footer navigation"
+  },
+  {
+   "id": "B20",
+   "feature": "Neuro Arts Membership sales page"
+  }
+ ],
+ "missing": [
+  {
+   "id": "B01",
+   "m": "a visible price on the course catalog list or on each course's own sales page, instead of only at checkout"
+  },
+  {
+   "id": "B01",
+   "m": "student reviews, testimonials, or star ratings on the 7 Chakras Neurographica course page itself"
+  },
+  {
+   "id": "B01",
+   "m": "a short preview video or sample drawing to see what the course actually teaches before paying"
+  },
+  {
+   "id": "B02",
+   "m": "an upfront note that the course is instant digital delivery, not a physical shipment"
+  },
+  {
+   "id": "B02",
+   "m": "student reviews/testimonials specific to the Zendala course itself"
+  },
+  {
+   "id": "B03",
+   "m": "a currency selector or geo-detected single price instead of GBP and USD prices just stacked on the same page"
+  },
+  {
+   "id": "B03",
+   "m": "a visible 'you save' comparison badge on the pricing cards themselves so I don't have to click into checkout t"
+  },
+  {
+   "id": "B04",
+   "m": "a clear day and time for the weekly live class"
+  },
+  {
+   "id": "B04",
+   "m": "an upfront note on the membership page that joining starts a paid trial requiring a card"
+  },
+  {
+   "id": "B04",
+   "m": "a simple side-by-side chart showing exactly how much money the annual plan saves"
+  },
+  {
+   "id": "B05",
+   "m": "a Shop or Store section on the site"
+  },
+  {
+   "id": "B05",
+   "m": "a search box"
+  },
+  {
+   "id": "B05",
+   "m": "an on-site add-to-cart / checkout for the book"
+  },
+  {
+   "id": "B05",
+   "m": "a price for the book shown directly on the site"
+  },
+  {
+   "id": "B06",
+   "m": "a course literally named 'NeuroGraphica' or 'NeuroGraphica Basics/Beginner'"
+  },
+  {
+   "id": "B06",
+   "m": "a 'start here' or skill-level label on the course catalog"
+  },
+  {
+   "id": "B06",
+   "m": "a search bar to search for 'neurographica' directly"
+  },
+  {
+   "id": "B06",
+   "m": "price or level sorting/filtering on the courses page"
+  },
+  {
+   "id": "B07",
+   "m": "quoted student testimonials or reviews"
+  },
+  {
+   "id": "B07",
+   "m": "star ratings or review counts"
+  },
+  {
+   "id": "B07",
+   "m": "a refund policy stated on the course page itself instead of buried in general Terms"
+  },
+  {
+   "id": "B08",
+   "m": "a photo or short video of Anna Denning actually drawing or teaching, to put a face to the bio"
+  },
+  {
+   "id": "B08",
+   "m": "visible pricing on the course pages themselves without clicking Buy/Join"
+  },
+  {
+   "id": "B08",
+   "m": "student reviews attached to real names on the individual course pages"
+  },
+  {
+   "id": "B09",
+   "m": "a clearly dated 'upcoming programmes' or schedule page listing every cohort date in one place"
+  },
+  {
+   "id": "B09",
+   "m": "an explicit next Teacher Training cohort start date"
+  },
+  {
+   "id": "B09",
+   "m": "pricing for the Teacher Training programme itself (only the separate Coaching Certification had prices listed)"
+  },
+  {
+   "id": "B10",
+   "m": "prices shown right on the course catalog tiles instead of only after opening each page"
+  },
+  {
+   "id": "B10",
+   "m": "a lesson-by-lesson curriculum list on the 7 Chakras page like the Zendala page had"
+  },
+  {
+   "id": "B10",
+   "m": "a side-by-side comparison of the two similar drawing courses"
+  },
+  {
+   "id": "B11",
+   "m": "an actual price shown on the homepage course cards"
+  },
+  {
+   "id": "B11",
+   "m": "a real dollar number anywhere before multiple screens of scrolling"
+  },
+  {
+   "id": "B11",
+   "m": "a simple way to save/bookmark a course for later without typing an email"
+  },
+  {
+   "id": "B12",
+   "m": "prices shown right next to each course on the main course list, like price tags in a shop window"
+  },
+  {
+   "id": "B12",
+   "m": "a simple one-page list comparing all the course prices side by side"
+  },
+  {
+   "id": "B13",
+   "m": "a free preview or sample pattern I could try before paying"
+  },
+  {
+   "id": "B13",
+   "m": "a simple price tag on the course card instead of having to enter checkout to see it"
+  },
+  {
+   "id": "B13",
+   "m": "one consistent teacher/brand name across every course page"
+  },
+  {
+   "id": "B14",
+   "m": "a 'this is a gift' checkbox or toggle at checkout"
+  },
+  {
+   "id": "B14",
+   "m": "a field to send course access to a different email than the payer's"
+  },
+  {
+   "id": "B14",
+   "m": "a shopping cart or order review step before checkout"
+  },
+  {
+   "id": "B14",
+   "m": "gift wrapping, gift note, or gift receipt option"
+  },
+  {
+   "id": "B15",
+   "m": "an explicit 'send this as a gift' option with a recipient email and gift message field"
+  },
+  {
+   "id": "B15",
+   "m": "a currency selector visible on the homepage or store page itself, rather than only appearing once you open a s"
+  },
+  {
+   "id": "B16",
+   "m": "a Shop or Store link in the main menu"
+  },
+  {
+   "id": "B16",
+   "m": "an on-site product page or cart for the book"
+  },
+  {
+   "id": "B16",
+   "m": "any price for the book shown on annadenning.com itself"
+  },
+  {
+   "id": "B18",
+   "m": "A visible weekly schedule or calendar showing this Thursday's session day/time and topic"
+  },
+  {
+   "id": "B18",
+   "m": "Any public, no-login confirmation of session logistics for existing members"
+  },
+  {
+   "id": "B18",
+   "m": "A working members Library/login page"
+  },
+  {
+   "id": "B19",
+   "m": "a Spain option among the quick-filter country buttons"
+  },
+  {
+   "id": "B19",
+   "m": "a way to tell which specific method (NeuroGraphica vs Art of Manifesting) each facilitator is certified to tea"
+  },
+  {
+   "id": "B20",
+   "m": "A 'Contact' link in the main navigation or footer"
+  },
+  {
+   "id": "B20",
+   "m": "A live chat bubble"
+  },
+  {
+   "id": "B20",
+   "m": "An FAQ section answering scheduling/timezone questions for the live sessions"
+  },
+  {
+   "id": "B20",
+   "m": "A stated class time or timezone on the membership sales page itself"
+  }
+ ]
+}

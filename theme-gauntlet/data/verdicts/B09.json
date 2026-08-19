@@ -1,0 +1,118 @@
+{
+  "buyer_id": "B09",
+  "device": "desktop",
+  "five_second": {
+    "sells": "online art-based coaching and teacher certification courses (Art of Manifesting Method, NeuroGraphica, Neuro Arts)",
+    "for_whom": "coaches, therapists, healers and creative practitioners who want to add a drawing-based method to their work",
+    "adjectives": ["personal", "new-age", "artsy"],
+    "price_guess": "a few hundred to a couple thousand dollars for a certification programme",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 19,
+    "abandoned_at": "https://www.annadenning.com/Art_of_Manifesting_Method_Teachers_training (FAQ/waitlist form section)",
+    "abandon_trigger": "Teacher Training page presented a Jan 9, 2026 start date and a June 2026 event as current/open for application, both already months in the past by my visit (Aug 19, 2026); the same page contradicted its own 'by application only' headline by saying further down 'this course is full now', and the only way to get a real next date was to hand over my name and email to a waiting list with no promised answer"
+  },
+  "features_used": [
+    {
+      "feature": "main navigation (Art of Manifesting Method / Courses menu)",
+      "verdict": "helped",
+      "moment": "Used the top nav to jump straight to the certification page instead of scrolling the homepage.",
+      "shot": "b09-01-landing"
+    },
+    {
+      "feature": "Coaching Certification page pricing table",
+      "verdict": "neutral",
+      "moment": "Scrolled the AM Method Coaching Certification page and saw the curriculum and requirements, but GBP and USD price tiers were stacked together with no clear currency selector.",
+      "shot": "b09-02-certification-page"
+    },
+    {
+      "feature": "course catalog (Courses page)",
+      "verdict": "helped",
+      "moment": "Found there are two distinct programmes - Coaching Certification and Teachers Training - and realized my errand actually needed the Teachers Training one.",
+      "shot": ""
+    },
+    {
+      "feature": "Teacher Training programme page dates/format section",
+      "verdict": "broken",
+      "moment": "Read the start date and cohort requirements and saw January 9, 2026 and a June 2026 event both presented as if still current.",
+      "shot": "b09-04-teacher-training-stale-date"
+    },
+    {
+      "feature": "'course is full' notice on the Teacher Training page",
+      "verdict": "broken",
+      "moment": "Found the page contradicts its own open-for-application hero banner by saying, further down, that the course is already full.",
+      "shot": "b09-05-course-full-contradiction"
+    },
+    {
+      "feature": "Our Graduates directory",
+      "verdict": "helped",
+      "moment": "Browsed the facilitator directory to check if real graduates exist and found 28 real people worldwide with working personal websites and social profiles.",
+      "shot": "b09-06-graduates-directory"
+    },
+    {
+      "feature": "FAQ accordion",
+      "verdict": "neutral",
+      "moment": "Opened 'Is this course accredited or licensed?' and learned the certification is self-issued by the method's own creators, not a third-party accrediting body.",
+      "shot": "b09-07-faq-accreditation"
+    },
+    {
+      "feature": "waitlist sign-up form",
+      "verdict": "got_in_the_way",
+      "moment": "Realized the only way to learn the real next enrollment date was to submit my name and email to a waiting list, with no guarantee of what I'd get back.",
+      "shot": "b09-08-abandon-waitlist-only"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a clearly dated 'upcoming programmes' or schedule page listing every cohort date in one place",
+    "an explicit next Teacher Training cohort start date",
+    "pricing for the Teacher Training programme itself (only the separate Coaching Certification had prices listed)"
+  ],
+  "feature_that_most_helped_the_decision": "the Our Graduates directory of 28 real, named certified facilitators with working websites, which showed the method has genuine, verifiable practitioners behind it",
+  "feature_that_most_hurt_the_decision": "the Teacher Training page presenting a January 9, 2026 start date and a June 2026 event as current and open for application when both had already passed by my visit date, directly contradicted further down the same page by 'this course is full now'",
+  "friction": [
+    {
+      "moment": "Coaching Certification page stacked GBP and USD pricing together with no obvious currency selector, so it was unclear which price applied to me.",
+      "shot": "b09-02-certification-page",
+      "severity": 2
+    },
+    {
+      "moment": "Coaching Certification page listed a start date of '25th of May' with no year given at all.",
+      "shot": "b09-03-startdate-no-year",
+      "severity": 3
+    },
+    {
+      "moment": "Teacher Training hero banner implies applications are currently open ('by application only') while the same page later says the course is already full.",
+      "shot": "b09-05-course-full-contradiction",
+      "severity": 4
+    },
+    {
+      "moment": "January 9, 2026 and June 2026 dates on the Teacher Training page had already passed by my visit (Aug 19, 2026) but were phrased as current or upcoming.",
+      "shot": "b09-04-teacher-training-stale-date",
+      "severity": 4
+    }
+  ],
+  "delight": [
+    {
+      "moment": "Finding the Our Graduates directory with 28 real, named facilitators and working personal websites and social profiles across many countries - proof the method is really being taught and used, not just marketing copy.",
+      "shot": "b09-06-graduates-directory"
+    }
+  ],
+  "trust": {
+    "score": 2,
+    "what_earned_it": [
+      "a real, named founder (Anna Denning) co-authoring with a known figure (Colette Baron-Reid) and a published Hay House book",
+      "a public directory of 28 real graduates with working websites and socials across multiple countries",
+      "a detailed, specific curriculum breakdown (5 modules, named certification case-study requirements)"
+    ],
+    "what_it_would_take": "Fix the stale and contradictory dates so the page always shows the real next cohort's accurate date, and stop calling a programme 'by application only' in the headline while saying 'course is full' further down the same page - one accurate, dated 'next intake' banner would resolve most of my hesitation."
+  },
+  "brand_recall": {
+    "three_words": ["arty", "new-age", "date-confusing"],
+    "tell_a_friend_one_sentence": "It looks like a legitimate art-based coaching and teacher certification with real graduates worldwide, but the enrollment pages had contradictory, already-past dates so I honestly couldn't tell you if or when you could actually join right now.",
+    "product_remembered": "Art of Manifesting Method Teacher Training",
+    "price_remembered": "997 pounds (roughly $1,397) for the coaching certification tier"
+  },
+  "would_return": false
+}

@@ -1,0 +1,109 @@
+{
+  "buyer_id": "B03",
+  "device": "desktop",
+  "five_second": {
+    "sells": "Online certification courses in a creative, art-based coaching method (Art of Manifesting Method / Neurographica)",
+    "for_whom": "coaches, therapists, healers and creative practitioners wanting a new drawing-based tool for their sessions",
+    "adjectives": ["personal", "artsy", "founder-led"],
+    "price_guess": "somewhere between $500 and $1500 for a certification",
+    "feels_like": "brand"
+  },
+  "errand": {
+    "completed": false,
+    "steps": 23,
+    "abandoned_at": "Standard Certification Full Price checkout page, after entering my email - stopped there per instructions before entering any payment",
+    "abandon_trigger": null
+  },
+  "features_used": [
+    {
+      "feature": "course catalog (Courses nav page)",
+      "moment": "I clicked Courses in the nav and the Art of Manifesting Method Coaching Certification was right at the top of the list",
+      "verdict": "helped",
+      "shot": "b03-02-course-page-top"
+    },
+    {
+      "feature": "investment options pricing tiers",
+      "moment": "I scrolled to the pricing section and found Standard vs Mentored tiers, each shown in both GBP and USD stacked on the same page",
+      "verdict": "got_in_the_way",
+      "shot": "b03-04-pricing-cards"
+    },
+    {
+      "feature": "Full Price button (Standard tier)",
+      "moment": "clicking it took me straight to a clean checkout clearly showing £997.00 GBP as the total",
+      "verdict": "helped",
+      "shot": "b03-06-checkout-full-price-mislabel"
+    },
+    {
+      "feature": "Split Payment button (Standard tier)",
+      "moment": "clicking it opened a checkout showing £282.00 GBP x 4 monthly payments plus a note explaining the installment total is higher than paying in full",
+      "verdict": "helped",
+      "shot": "b03-05-checkout-split-payment"
+    },
+    {
+      "feature": "Split Payment button (Mentored tier)",
+      "moment": "I clicked it twice from two different scroll positions and both times it just snapped back to the top of the course page instead of opening a checkout",
+      "verdict": "broken",
+      "shot": ""
+    },
+    {
+      "feature": "checkout email field",
+      "moment": "I typed my email into the Standard Full Price checkout and it was accepted cleanly with no validation errors",
+      "verdict": "helped",
+      "shot": "b03-07-checkout-final-stop"
+    }
+  ],
+  "features_looked_for_but_missing": [
+    "a currency selector or geo-detected single price instead of GBP and USD prices just stacked on the same page",
+    "a visible 'you save' comparison badge on the pricing cards themselves so I don't have to click into checkout to do the math"
+  ],
+  "feature_that_most_helped_the_decision": "the split-payment checkout page's plain note that installment total is higher than paying in full, which let me directly confirm Full Price (£997) beats Split Payment (4 x £282 = £1128)",
+  "feature_that_most_hurt_the_decision": "the Mentored tier's Split Payment button not opening any checkout at all after two tries",
+  "friction": [
+    {
+      "moment": "Both £ and $ prices for the same certification were listed stacked on one page with no toggle, flag, or any indication of which currency actually applies to me",
+      "shot": "b03-04-pricing-cards",
+      "severity": 3
+    },
+    {
+      "moment": "On the Standard tier's Full Price checkout, the heading correctly says 'Standard Coaching Certification £997' but the bullet list right underneath is labeled 'Mentored Certification Includes' - a mismatched tier label that made me pause and double-check I was buying the right thing",
+      "shot": "b03-06-checkout-full-price-mislabel",
+      "severity": 2
+    },
+    {
+      "moment": "The Mentored tier's Split Payment button did nothing but reset me to the top of the page, on two separate attempts",
+      "shot": "",
+      "severity": 4
+    },
+    {
+      "moment": "The course page lists a start date of '25th of May' with no year, so I can't tell if that date already passed",
+      "shot": "b03-03-investment-options",
+      "severity": 1
+    }
+  ],
+  "delight": [
+    {
+      "moment": "The split-payment checkout page spelled out in plain language that installment payments total slightly more than paying in full, saving me from having to guess or do hidden math",
+      "shot": "b03-05-checkout-split-payment"
+    },
+    {
+      "moment": "The certification page laid out the program structure, modules, teachers and certification requirements in clear, organized language before ever pushing me toward payment",
+      "shot": "b03-02-course-page-top"
+    }
+  ],
+  "trust": {
+    "score": 3,
+    "what_earned_it": [
+      "clear, detailed program curriculum and module breakdown before any pricing was shown",
+      "explicit written disclosure that split payments cost more in total than paying in full",
+      "visible Stripe / SSL secure payment badges at checkout"
+    ],
+    "what_it_would_take": "Fix the broken Split Payment button on the Mentored tier, correct the mismatched 'Mentored Certification Includes' text on the Standard checkout, and replace the stacked GBP/USD prices with one clear currency selector so I know exactly what I'll be charged."
+  },
+  "brand_recall": {
+    "three_words": ["artsy", "personal", "muddled-pricing"],
+    "tell_a_friend_one_sentence": "It's a small, founder-led school teaching an art-based coaching method called the Art of Manifesting Method, with a coaching certification around £997 if you pay in full - just double-check which currency you're actually being charged in and watch for a glitchy button on the pricier tier.",
+    "product_remembered": "Art of Manifesting Method Coaching Certification",
+    "price_remembered": "£997 (or $1397 shown in USD)"
+  },
+  "would_return": true
+}
