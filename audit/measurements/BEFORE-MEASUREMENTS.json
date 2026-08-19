@@ -1,0 +1,17 @@
+{
+  "snapshot": "2026-08-19, before crooks.measurements writes",
+  "had_measurements": {
+    "cb1-wash-jeans": "[{\"size\":\"XS\",\"waist\":\"38cm\",\"inseam\":\"76cm\",\"rise\":\"27cm\",\"hem\":\"19cm\"},{\"size\":\"S\",\"waist\":\"40cm\",\"inseam\":\"78cm\",\"rise\":\"28cm\",\"hem\":\"20cm\"},{\"size\":\"M\",\"waist\":\"42cm\",\"inseam\":\"80cm\",\"rise\":\"29cm\",\"hem\":\"21cm\"},{\"size\":\"L\",\"waist\":\"44cm\",\"inseam\":\"82cm\",\"rise\":\"30cm\",\"hem\":\"22cm\"},{\"size\":\"XL\",\"waist\":\"46cm\",\"inseam\":\"84cm\",\"rise\":\"31cm\",\"hem\":\"23cm\"}]",
+    "cb2-wash-jeans": "identical placeholder to cb1",
+    "v2-baggies": "identical placeholder (NOT touched in this write — no real chart supplied yet)",
+    "evil-clive-tee": "tee placeholder chest 51-63 (NOT touched — no real chart supplied for this tee)"
+  },
+  "had_none": ["crxst-rz-t-shirt", "charcoal-cellblock-crewneck", "charcoal-cellblock-shorts", "cb1-wash-jorts", "cb2-wash-jorts"],
+  "conversion_notes": [
+    "All published values are GARMENT LAID FLAT in cm (the component's stated convention); circumferences from tech packs halved; inches x2.54; rounded to 0.5cm.",
+    "Jeans waist derives from nominal sizes 30-38in on the assumption nominal = actual waistband circumference (denim convention). Flagged to owner.",
+    "Cellblock shorts: waist omitted (elastic drawstring — nominal 28-36in to-fit cannot be stated as a flat measurement); cuff omitted on crewneck (tech pack ambiguous circumference-vs-flat).",
+    "Grey jorts inherit the ZY124 tech pack measured on the blue wash (same style, different wash) — flagged to owner.",
+    "CRX tee chart supplied with explicit units/conventions; crewneck tech pack values in inches despite a cm header (fractions + magnitudes prove inches; chest is circumference)."
+  ]
+}
