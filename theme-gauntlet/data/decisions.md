@@ -86,3 +86,16 @@ the synthesis must not present third-party blocks as site defects. What stands
 regardless: the on-site facts (the members' area requires login; the book has
 no on-site purchase path; the Instagram link's destination is what it is).
 The skeptic seat and chairman weigh these accordingly.
+
+## D12 — Census correction (found in peer review)
+The census recorded the facilitators directory as having "no search box, no
+filters". Buyer B19's live session falsified this: the directory has a working
+search box and country chips (shots/b19-02-directory-found.png). The census
+note is superseded; the scorecard and report carry the corrected fact. Root
+cause: the census probe read the page before its widgets finished appearing.
+
+## D13 — Peer standings applied to synthesis
+Reviewer rankings (lower=better, summed): Seat 5 skeptic 4 (ranked 1st by all
+four reviewers), Seat 4 UX 7, Seat 1 CRO 11, Seat 3 operator 13, Seat 2 brand
+15. Claims killed in review were removed from the report body; the report's
+"Peer-review standings" section lists them for transparency.
