@@ -46,3 +46,50 @@ Store-side values verified by API read-back. Visual check on the staging PDP
 (accordion render + cm/in toggle) needs a fresh share-preview link — the old
 one has expired. The live theme does not render these metafields, so nothing
 appears on crooksldn.com until the redesign publishes.
+
+---
+
+# REVISION 2 — true to size (2026-08-19, owner request)
+
+The laid-flat convention above is SUPERSEDED. Owner verdict: "15.9in as a
+waist measurement is hard to understand" — shoppers compare against garments
+they own, so charts now follow industry standard.
+
+## The new convention
+- **Girths are full circumference**: waist, hip, thigh, chest, leg opening.
+  A shopper who wears a 32 jean reads "32". Flat tech-pack values were
+  doubled; circumference sources kept as-is.
+- **Lengths unchanged**: inseam, length, shoulder, sleeve.
+- **Inch-first legibility**: every stored cm value is chosen so the IN toggle
+  displays a clean industry number (stored cm = inches × 2.54 to 0.1mm; the
+  theme's JS round-trips exactly). Verified for every cell.
+- **Caption updated on the staging theme** (both product templates,
+  `themeFilesUpsert`, settings `measure_caption_cm`/`measure_caption_in`):
+  "True to size — waist, chest and leg measurements are taken around the
+  garment. All measurements in centimetres/inches." The old "Garment laid
+  flat" caption would have lied about the new numbers.
+
+## What each product now shows (inches view)
+- **Jeans + V2 Baggies**: waist 30/32/34/36/38 · inseam 29/30/30.5/31.5/32 ·
+  leg opening 18–22 (flat 9–11in doubled).
+- **Jorts**: waist 30–38 · hip 40–48 · thigh 27.5–31.5 · leg opening 23–27 ·
+  length 21.5–24.6 (ZY124 cm circumferences, rounded ≤0.5cm to land on clean
+  inches; length kept at true cm).
+- **Cellblock shorts**: fits waist 28–36 (the tech pack's to-fit range — now
+  publishable under the circumference convention) · length 19.5–23.5 · leg
+  opening 23–31 (flat doubled).
+- **Crewneck**: chest 43/45/47/49/51 (tech-pack circumference, as printed) ·
+  length 25.7–28.7 · shoulder 18.5–22.5 · sleeve 24.5–26.5.
+- **All four tees**: chest 39.5–47 (the CRX chart's own circumference
+  column, verbatim) · length 26.5–30 · shoulder 19.5–23.5.
+
+## Notes
+- The crewneck and tee charts were ALREADY circumference-based as supplied —
+  this revision publishes them as printed instead of halving them.
+- Rounding: nudges of ≤0.5cm (garment tolerance) were applied to land jorts
+  girths on whole inches; jeans waist follows nominal denim sizing as before.
+- Template upsert diff: ONLY the two caption settings were added; every other
+  template value byte-identical (custody blocks, settings, order untouched).
+- Spotted while editing, not changed: product.json's custody step 4 says
+  crooksldn@gmail.com while product.crooks.json says info@crooksldn.com —
+  the RUN3 B2 email question, now visible inside the theme too.
