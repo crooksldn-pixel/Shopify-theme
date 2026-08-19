@@ -1,0 +1,3 @@
+B02 | mobile | errand: Buy the Zendala / pattern-drawing course
+S1 | expected: land on homepage and see what this shop sells -> did: opened annadenning.com -> got: "Neuro Art School" hero, no prices, sign-up boxes, vague "unlock your creative potential" text, no obvious "Zendala" mention -> felt: a bit unsure, feels like a course-funnel page not a proper shop, wondering where the actual course/price is
+S2 | expected: find Courses menu -> did: clicked hamburger then Courses -> got: store page listing courses including "zendala-drawing-course" link, no prices shown on this list view -> felt: relieved to spot Zendala, a bit annoyed no prices visible yet

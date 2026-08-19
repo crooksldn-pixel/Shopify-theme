@@ -1,0 +1,3 @@
+B01 | mobile | Buy a beginner-friendly calming drawing course tonight for under $70 (neurographica-ish)
+S1 | expected a course shop homepage -> did land on homepage, five-second test -> got 'Neuro Art School' funnel-style landing page, hamburger menu, email signup fields visible immediately, no price anywhere -> felt like a small course-creator funnel page (template feel), calming colors but a little cluttered with social icons up top
+S2 | expected to find course catalog with prices -> did click hamburger menu then Courses -> got to /store page listing 'Featured Courses' (AM Method Coaching Cert, and others below) but no prices visible yet in this view -> felt promising, needs scrolling to see all courses and prices
