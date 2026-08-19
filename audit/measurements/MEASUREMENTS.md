@@ -15,6 +15,7 @@ parses these directly (verified against `crooks-record.js` conversion code).
 | CHARCOAL CELLBLOCK SHORTS | length 49.5–59.5 · hem 29–39.5 | A/B/C diagram chart (inches) |
 | CHARCOAL CELLBLOCK CREWNECK | chest 54.5–65 · length 65.5–73 · shoulder 47–57 · sleeve 62–67.5 | crewneck factory tech pack (inches; chest halved from circumference) — **fills the gap that cost the £50 gift-buyer sale** |
 | CRXST★RZ T-SHIRT | chest 50–59.5 · length 67.5–76 · shoulder 49.5–59.5 | CRX chart (explicit inches; chest halved) — **first data ever on this product** |
+| MONEY CLIVE TEE + archived BROADCAST / 3 CLIVES tees | same CRX table | owner confirmed one chart covers all tees — **replaces the tee placeholder (chest 51–63) on all three** |
 
 ## Honesty decisions (what was deliberately left out)
 
@@ -30,8 +31,8 @@ parses these directly (verified against `crooks-record.js` conversion code).
 - **Grey jorts inherit the blue jorts' tech pack** (ZY124 photos show blue;
   same style/cut per metafields). If the grey is a different pattern, say so
   and it gets its own table.
-- **Not touched**: V2 BAGGIES and the tee placeholders on MONEY CLIVE (and
-  archived tees) still carry invented numbers — no real charts supplied yet.
+- **Not touched**: V2 BAGGIES still carries its invented placeholder — no real
+  chart supplied yet.
   The pink hoodie chart (with the height guide) awaits a product name, and
   the Arc'teryx body chart was **refused** for the windbreaker: another
   brand's body-fit table is not this garment's measurements.
