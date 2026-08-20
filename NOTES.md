@@ -1502,3 +1502,64 @@ through.
 Ticked + partner size chosen + that pair unavailable still leaves ADD TO BAG
 live for the single item. Same class of silent-intent bug as the one fixed
 above, but it predates this change and is not what was asked. Worth fixing next.
+
+---
+
+## 2026-08-20 — "pushed" meant git, not Shopify
+
+George: *"nothing has actually changed?"* He was right, and the fault was mine.
+
+Four commits went to the branch today and I reported each as "pushed". The theme
+had not been touched since 18 August. Git and Shopify are two different
+destinations and I conflated them in every status line I wrote.
+
+Proof, read off the theme before deploying:
+
+| file | local | on theme | deployed |
+|---|---|---|---|
+| `assets/crooks-set.js` | 6,204 | 5,551 | 18 Aug |
+| `assets/crooks-record.js` | 22,170 | 22,031 | 18 Aug |
+| `templates/page.terms.json` | 5,450 | 5,262 | 13 Aug |
+
+### The near-miss that mattered more
+
+Checking `updatedAt` on every file before overwriting caught drift going the
+other way. Two template files had been edited in the **theme editor** since the
+last commit, and the repo knew nothing about it:
+
+- `templates/product.json` — 19 Aug 22:46
+- `templates/product.crooks.json` — 20 Aug 11:32
+
+Both had gained real sizing copy:
+
+    "measure_caption_cm": "True to size — waist, chest and leg measurements
+                           are taken around the garment. All measurements in
+                           centimetres."
+
+A straight `shopify theme push` of the local tree would have **deleted it**.
+Merged both by hand instead — deployed content plus this session's custody edit —
+and verified after upload that the captions and the postage line are both
+present.
+
+This is structural, not bad luck. `templates/*.json` and `config/settings_data.json`
+are written by the theme editor, so the repo is not their source of truth; the
+theme is. Any push of a JSON template must read the deployed copy first.
+`--nodelete` was used throughout, and only named files were pushed — never the
+whole tree.
+
+### Deployment, written down because it was not
+
+- The container had lost both the CLI (`node_modules` empty after a restart) and
+  its credentials. `npm install` restores `@shopify/cli` 4.7.0; auth came back
+  with it.
+- `package.json` already carries the right command:
+  `npm run push` → `--store=5wn03t-nm.myshopify.com --theme=202053779799`.
+- Pushed in two stages, code before templates, per the push-order rule.
+- Verified by MD5, not by the CLI's success banner: all seven code and page
+  files match the local checksums byte for byte; the two product templates were
+  read back in full because Shopify reformats JSON.
+
+The live theme is `#202044309847`, and it is named **"CROOKSLDN — Dev"**. The
+staging theme is `#202053779799`, named "CROOKSLDN — Staging". A tired person
+reading those two names will pick the wrong one. Renaming the live theme to
+something that says *live* is a five-second job worth doing.

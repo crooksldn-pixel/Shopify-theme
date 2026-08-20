@@ -26,7 +26,9 @@
         "provenance_open": false,
         "measure_open": false,
         "custody_open": false,
-        "related_heading": "More from this drop"
+        "related_heading": "More from this drop",
+        "measure_caption_cm": "True to size — waist, chest and leg measurements are taken around the garment. All measurements in centimetres.",
+        "measure_caption_in": "True to size — waist, chest and leg measurements are taken around the garment. All measurements in inches."
       }
     }
   },

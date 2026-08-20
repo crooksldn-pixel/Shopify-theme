@@ -667,7 +667,36 @@ and 200%-zoom checks — the two things proven easiest to break silently.
 
 ---
 
-## 11. How to re-derive everything here
+## 11. Deploying
+
+The repo is not the storefront. Committing changes nothing on Shopify.
+
+    npm install          # the container loses node_modules on restart
+    npm run push         # --store=5wn03t-nm.myshopify.com --theme=202053779799
+
+| theme | id | role |
+|---|---|---|
+| CROOKSLDN — Staging | `202053779799` | unpublished — **the working theme** |
+| CROOKSLDN — Dev | `202044309847` | ⚠️ **MAIN / live storefront**, despite the name |
+
+Rules that apply to every push:
+
+1. Never push without an explicit `--theme` id. The live theme is called "Dev".
+2. Always `--nodelete`, and push named files rather than the whole tree.
+3. **Read `updatedAt` on any `templates/*.json` or `config/settings_data.json`
+   before overwriting it.** The theme editor writes those files, so the theme is
+   their source of truth, not the repo. This has already nearly destroyed
+   hand-written sizing copy once — see NOTES.md 2026-08-20.
+4. Push section schemas before the group or template JSON that persists a new
+   setting, or Shopify silently strips the setting.
+5. Verify by checksum, not by the CLI's success banner: read the files back with
+   `theme(id:) { files { checksumMd5 } }` and compare to `md5sum`.
+
+Publishing remains the owner's command.
+
+---
+
+## 12. How to re-derive everything here
 
 ```bash
 # section inventory: name, settings count, block types
