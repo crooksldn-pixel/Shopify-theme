@@ -123,8 +123,7 @@ picks the size up as `£50.00 · M`.
 **Verdict:** works
 
 **Evidence:** `audit/screens/pdpcore-30-crewneck-size-XL.png`,
-`audit/screens/pdpcore-31-jeans-size-L.png`, `audit/screens/pdpcore-32-jeans-deeplink.png`,
-`audit/screens/pdpcore-21b-jeans-nosize-viewport.png` (the purple mark on XL, unexplained).
+`audit/screens/pdpcore-31-jeans-size-L.png`, `audit/screens/pdpcore-32-jeans-deeplink.png`.
 
 ---
 
@@ -549,53 +548,66 @@ notice.
 
 ## Surprises
 
-- **The two headline products have one photograph each.** `cb1-wash-jeans` at £60 and
-  `charcoal-cellblock-crewneck` at £50 both read `PHOTO 1 OF 1`. Six of twelve products have
-  a single image.
-- **The image masters are ~390 pixels square.** The theme requests `width=1400` and gets a
-  390-px file back, so every product photo on a modern phone is upscaled roughly 2.5×. No
-  amount of theme work fixes this; the originals have to be re-uploaded.
-- **The notify form cannot be completed.** Pressing `NOTIFY ME` raises a blank hCaptcha
-  panel over the phone screen. Two attempts, two sessions, no confirmation, no error, address
-  left sitting in the field.
+- **Seven of twelve products have exactly one photograph** — including `cb1-wash-jeans` at
+  £60 and `charcoal-cellblock-crewneck` at £50, the two the brief names. Nothing in the shop
+  has more than three. Both single-photo garments show one flat cut-out and no second angle.
+- **There is no way to enlarge a photo at all** — not by tapping, double-tapping, hovering or
+  clicking, on either device. Shopify is holding a 2048-px master for these images; the page
+  never lets a shopper near it.
+- **The notify form cannot be completed and never posts.** Pressing `NOTIFY ME` raises a
+  blank hCaptcha panel over the phone screen. Three attempts across two sessions, one of them
+  the first action on a clean page: no confirmation, no error, address left in the field, and
+  nothing sent to `/contact` at all.
 - **The four accordions are not mutually exclusive**, contrary to `SPEC.md §3.5` — and they
-  are not `<details>` elements either.
-- **The sticky bar's appear-on-scroll never happens.** It is on screen from scroll position
-  zero and stays there even when the real `ADD TO BAG` is centre-screen.
-- **The two t-shirts have no `MORE FROM THIS DROP` at all** — no tiles and no heading.
-- **A 4-pixel purple square** marks the low-stock size with no legend anywhere.
+  are not `<details>` elements either. All four sit open at once.
+- **The sticky bar's appear-on-scroll never happens.** The theme correctly marks it hidden
+  while the real `ADD TO BAG` is on screen; a layout rule keeps it visible anyway, so both
+  buttons are on screen together. One CSS line away from the behaviour that was designed.
+- **The two t-shirts have no `MORE FROM THIS DROP` at all** — no tiles and no heading, on the
+  two cheapest and most shareable garments.
+- **`V2 BAGGIES` and `GREY WASH OG JEANS` publish identical measurement tables** — same
+  waist, same inseam, same leg opening at every size, for a pair of wide sweats and a pair of
+  straight jeans.
+- **A 4-pixel purple square** is the only low-stock cue until you select the size, and there
+  is no legend for it anywhere.
 - **A consent banner now covers 43% of a first-visit phone product page**, including the
-  price and the size row. `SPEC.md §10` still records "No cookie banner".
+  title, price and size row. `SPEC.md §10` still records "No cookie banner".
 
 ## Missing
 
-- Any way to enlarge a product photo. No zoom, no lightbox, no tap-to-expand, and no larger
-  master behind the one that is served.
+- Any way to enlarge a product photo — no zoom, no lightbox, no tap-to-expand.
 - Front / detail / on-body photography on the two most expensive garments.
-- Any statement of **when** a restock notification would arrive — the panel promises nothing
-  beyond `TELL ME WHEN THIS SIZE IS BACK`.
+- Any statement of **when** a restock notification would arrive. The whole promise is
+  `TELL ME WHEN THIS SIZE IS BACK`; there is no "we'll email you when it returns", no
+  timeframe, and no word about what happens to the address.
 - Any shop-authored validation message on the notify form. Both errors I saw were Chrome's
-  own bubbles.
-- A returns or "free UK shipping over £20" line anywhere in the buy spine — it exists only
-  inside a closed accordion and in the status bar.
+  own bubbles, in Chrome's typeface, in a rounded white box — the only non-CROOKSLDN pixels
+  on the page.
+- Any acknowledgement at all after a notify submission.
+- A returns line or the "free UK shipping over £20" threshold anywhere in the buy spine — the
+  first lives only inside a closed accordion, the second only in the status bar.
 - Onward navigation from `evil-clive-tee` and `crxst-rz-t-shirt`.
+- Any feedback when the disabled `SELECT A SIZE` button is tapped.
 
 ## Contradictions
 
-- **"Sold out" vs "leaves today."** With `SIZE M IS SOLD OUT` on screen in red, the page
-  still says `Order before 18:00 and it ships today (Mon–Sat)` and
-  `> Ordered now — leaves today`, and the sticky bar still offers `CHECKOUT NOW` next to the
-  greyed `SOLD OUT`.
+- **"Sold out" vs "leaves today."** With `SIZE M IS SOLD OUT` on screen in red, the two lines
+  directly above it still read `Order before 18:00 and it ships today (Mon–Sat)` and
+  `> Ordered now — leaves today`.
 - **The spec vs the page on accordions.** `SPEC.md §3.5`: "all `<details name>` so they are
-  mutually exclusive with no JS". On the page all four stay open together.
+  mutually exclusive with no JS". On the page they are buttons and all four stay open
+  together.
 - **The spec vs the page on the sticky bar.** Built to show "only while the primary control
-  is off-screen"; observed on screen at every scroll position including alongside the primary
-  control.
+  is off-screen"; observed on screen at every scroll position tested, including three where
+  the primary control was plainly visible.
 - **The spec vs the store on cookies.** `SPEC.md §10`: "No cookie banner". There is one, and
   on a phone it covers the price.
-- *(Known, ref: SPEC §10)* The custody step promises `UK 1–2 working days` while a product
-  description elsewhere quotes 9–16 days; confirmed the custody wording is the one shown on
-  the PDP.
+- **Two products, one size chart.** `V2 BAGGIES` and `GREY WASH OG JEANS` — different
+  fabrics, different cuts, identical `WAIST · INSEAM · LEG OPENING` numbers at all five sizes.
+  One of them is wrong and a shopper cannot tell which.
+- *(Checked, no longer present)* The known "9-16 days delivery uk" line does not appear in
+  any accordion on the three products I opened; `ITEM DESCRIPTION` on all three is clean and
+  the custody step's `UK 1–2 working days` stands unchallenged on the PDP.
 
 ## Works and must be protected
 
@@ -609,8 +621,16 @@ notice.
   fiction in the part of the page that takes money — exactly as `§0` and `§9.2` require.
 - **Deep-linkable sizes.** Every size tap writes `?variant=` and the link reopens with that
   size selected and in stock. Shareable, and it survives a reload.
-- **The dispatch line as a live readout, not a countdown.** Correct at 17:0x on a Thursday,
+- **The dispatch line as a live readout, not a countdown.** Correct at 17:38 on a Thursday,
   computed in the shop's timezone, with no manufactured urgency.
 - **`ADD TO BAG` staying on the page**, with the count moving `[0]` → `[1]` and a
   `View bag` link rather than an interstitial drawer.
+- **`SIZE GUIDE`.** One tap, no modal, no PDF, lands the heading at the top of the screen
+  with the panel already open — and the `CM` / `IN` toggle converts correctly (`76.2cm` →
+  `30in`) and rewrites the method line with it.
+- **The gallery's keyboard and touch handling.** Thumbnails are the first three stops in the
+  tab order, labelled `Photo 1 of 3` / `Photo 2 of 3` / `Photo 3 of 3`; arrow keys walk the
+  focused gallery and stop cleanly at both ends; a real phone swipe moves it and the active
+  thumbnail follows. The component is better than the pictures in it.
+- **Low stock stated as a number, not a scare.** `3 LEFT IN SIZE XL`, in neutral grey.
 - **`PHOTO 1 OF n`.** It tells the truth, including when the truth is `1 OF 1`.

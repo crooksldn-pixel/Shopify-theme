@@ -168,7 +168,10 @@ the hem, and reads as cream binding — worse because the shorts have a real
 lighter hem, so the drawn line lands on a real one and thickens it. On
 `CHARCOAL CELLBLOCK CREWNECK` it traces collar, cuffs and hem: a crewneck that
 looks trimmed in cream. On both blue washes it runs down the outseam like white
-piping. Turn it off and all four are plainly what they are. That is a
+piping. Turn it off and all four are plainly what they are. And it does not stop
+at thumbnail size: on the crewneck's own product page, at the size where a
+shopper studies the garment before pressing `ADD TO BAG`, the same cream line
+sits on the collar, both cuffs and the hem and reads as ribbed trim. That is a
 misdescription of the exact attribute a clothing shopper decides on, and because
 it is on by default it is the normal state of the shop.
 
@@ -361,7 +364,8 @@ the shopper picked is silently dropped.
 black one and has to find the colour control again on the product page. Small,
 but it is a promise the card makes and does not keep.
 
-**Evidence:** audit/screens/catalogue-D00-swatch-card.png,
+**Evidence:** audit/screens/catalogue-F08-card8.png (the two chips as they appear,
+under `CRXST★RZ T-SHIRT`), catalogue-D00-swatch-card.png,
 catalogue-D01b-after-swatch-tap.png — tap on the white swatch →
 `/products/evil-clive-tee`, no variant in the address.
 
@@ -501,9 +505,12 @@ catalogue-C01-denim-fold.png
 
 ## Contradictions
 
-- The two colourway cards spell the same thing two ways, in the same register,
-  eight cards apart: `NO. 07 MONEY CLIVE TEE — Colourways: BLACK, WHITE` against
-  `NO. 08 CRXST★RZ T-SHIRT — Colourways: Black, White`.
+- The two colourway cards describe the same two colours two ways in the same
+  register, eight cards apart — `Colourways: BLACK, WHITE` on `NO. 07 MONEY CLIVE
+  TEE` against `Colourways: Black, White` on `NO. 08 CRXST★RZ T-SHIRT`. Only a
+  screen-reader shopper hears it, since that text is not shown on the card; the
+  same split runs through the swatch values themselves (`black`/`white` on one
+  card, `#000000`/`#FFFFFF` on the other).
 - The same product carries two case numbers: `GREY WASH JORTS` is `NO. 06` on the
   homepage register and `NO. 01` on `/collections/denim`.
 - Filtering `/collections/all` to denim leaves the heading reading `ALL` while
