@@ -202,10 +202,15 @@ export async function assertTheme(page) {
 /** Shopify's "You are previewing" bar is not part of the shopper's view. */
 export async function hidePreviewBar(page) {
   try {
+    // #PBarNextFrameWrapper is the live one: a transparent, pointer-events:auto
+    // wrapper fixed across the bottom 68px. It sits on top of the theme's own
+    // sticky buy bar and swallows taps, so leaving it in place makes the sticky
+    // ADD TO BAG look dead when it is not. It only exists on a preview URL.
     await page.addStyleTag({ content:
-      '#preview-bar-iframe,#PreviewBarInjector,#admin-bar-iframe,' +
-      '[id^="preview-bar"],[id^="shopify-preview"],iframe[src*="preview_bar"],' +
-      'iframe[src*="admin_bar"]{display:none !important;height:0 !important;}' });
+      '#PBarNextFrameWrapper,#preview-bar-iframe,#PreviewBarInjector,#admin-bar-iframe,' +
+      '[id^="PBar"],[id^="preview-bar"],[id^="shopify-preview"],iframe[src*="preview_bar"],' +
+      'iframe[src*="admin_bar"]{display:none !important;height:0 !important;' +
+      'pointer-events:none !important;}' });
     // Belt and braces: the bar is sometimes an injected iframe with no stable id.
     await page.evaluate(() => {
       for (const f of document.querySelectorAll('iframe')) {

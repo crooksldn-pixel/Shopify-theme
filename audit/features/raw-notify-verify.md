@@ -137,10 +137,11 @@ Network log at the foot of `out-notifyv1.txt`.
 **Should:** If the notify feature were broken, the breakage would be specific to it.
 
 **Did:** It is not specific to it. I took the same browser to the store's own
-**`/pages/contact`** — a stock Shopify contact form with a Name / Email / Phone / Comment /
-`Submit`, nothing to do with the notify feature — filled it in with the same test address and
-submitted it. **The same blank white 322×492 panel appears, with the same hCaptcha badge, and
-again nothing is posted to `/contact`.**
+**`/pages/contact`** — which the `content-pages` agent has already established is *"Horizon's
+untouched `page.contact` template"*, `CONTACT / Name / Email* / Phone / Comment / Submit`, not a
+line of it written for this build — filled it in with the same test address and submitted it.
+**The same blank white 322×492 panel appears, with the same hCaptcha badge, and again nothing is
+posted to `/contact`.** Two forms, one of them stock platform furniture, one identical failure.
 
 What is actually in that panel, read from inside the cross-origin frame:
 
@@ -267,8 +268,8 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
 
 ## Works and must be protected
 
-- **Sold-out sizes select with an ordinary tap, everywhere.** 9 of 9 conditions — banner up, banner
-  accepted, banner declined, three phone heights. The `aria-disabled` decision in `SPEC.md §9.3`
+- **Sold-out sizes select with an ordinary tap, everywhere.** Ten attempts out of ten — cookie
+  banner up, banner dismissed, three phone heights. The `aria-disabled` decision in `SPEC.md §9.3`
   costs a shopper nothing.
 - **The state change on selecting a sold-out size is unambiguous and in plain English:**
   `SIZE M IS SOLD OUT` in red, the buy button greys to `SOLD OUT`, and the notify panel opens in

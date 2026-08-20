@@ -1,0 +1,25 @@
+
+================ A. CAPTCHA WITH THE AUTOMATION TELLS REMOVED ================
+navigator.webdriver reports: undefined
+notify form visible: true
+t+2500ms {"white":{"w":322,"h":402},"ifr":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","hiddenByHcaptcha":false},{"frame":"challenge","w":320,"h":400,"display":"inline","hiddenByHcaptcha":false}]} challengeFrame: {"body":{"w":320,"h":400},"prompt":{"w":280,"h":36,"txt":"Put the missing piece in the correct place to complete the chain"},"err":{"w":270,"h":16,"txt":"Please try again. ⚠️"},"tiles":0,"firstTile":null}
+t+6000ms {"white":{"w":322,"h":402},"ifr":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","hiddenByHcaptcha":false},{"frame":"challenge","w":320,"h":400,"display":"inline","hiddenByHcaptcha":false}]} challengeFrame: {"body":{"w":320,"h":400},"prompt":{"w":280,"h":36,"txt":"Put the missing piece in the correct place to complete the chain"},"err":{"w":270,"h":16,"txt":"Please try again. ⚠️"},"tiles":0,"firstTile":null}
+SHOT: audit/screens/notifyv-F1-nowebdriver-6s.png
+t+12000ms {"white":{"w":322,"h":402},"ifr":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","hiddenByHcaptcha":false},{"frame":"challenge","w":0,"h":0,"display":"none","hiddenByHcaptcha":true}]} challengeFrame: {"body":{"w":0,"h":0},"prompt":{"w":0,"h":0,"txt":"Put the missing piece in the correct place to complete the chain"},"err":{"w":0,"h":0,"txt":"Please try again.  ⚠️"},"tiles":0,"firstTile":null}
+t+20000ms {"white":{"w":322,"h":402},"ifr":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","hiddenByHcaptcha":false},{"frame":"challenge","w":0,"h":0,"display":"none","hiddenByHcaptcha":true}]} challengeFrame: {"body":{"w":0,"h":0},"prompt":{"w":0,"h":0,"txt":"Put the missing piece in the correct place to complete the chain"},"err":{"w":0,"h":0,"txt":"Please try again.  ⚠️"},"tiles":0,"firstTile":null}
+SHOT: audit/screens/notifyv-F2-nowebdriver-20s.png
+email still in field: "buyer+test@example.com"
+
+================ B. DOES THE PREVIEW BAR SWALLOW TAPS ON THE STICKY BUY BAR? ================
+first in-stock size: Size XS
+sticky bar: {"barClass":"crk-stickybar","bar":{"y":775,"h":69},"addBtn":{"cx":189,"cy":810,"txt":"Add to bag"}}
+element on top of the sticky ADD TO BAG: DIV#PBarNextFrameWrapper
+tap on sticky "Add to bag" — bag count 0 -> 0
+SHOT: audit/screens/notifyv-G1-sticky-tap-with-previewbar.png
+PBarNextFrameWrapper: hidden
+element on top now: BUTTON.crk-btn
+same pixel with the preview bar hidden — bag count 0 -> 1
+SHOT: audit/screens/notifyv-G2-sticky-tap-previewbar-hidden.png
+
+================ CONTACT TRAFFIC ================
+(NONE)

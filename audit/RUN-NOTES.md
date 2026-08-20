@@ -85,6 +85,24 @@ line with no `crooks.css`. The audit is conducted entirely through the browser
 against the deployed staging theme, as the brief requires. Deliverables land on
 the designated branch regardless.
 
+## One preview artefact that must not become a finding
+
+Shopify's preview bar renders as `DIV#PBarNextFrameWrapper` — transparent,
+`pointer-events: auto`, fixed across the bottom **68px** of the viewport. On a
+390×844 phone that lands exactly on top of the theme's own sticky buy bar, so
+the sticky `ADD TO BAG` and `CHECKOUT NOW` swallow taps and appear dead.
+
+**They are not dead.** The wrapper exists only because this audit runs against a
+`shopifypreview.com` URL; a shopper on the published store never has it. Any
+note reporting an untappable sticky buy button is reporting the preview bar.
+
+The harness now hides it along with the older preview-bar ids. Two earlier
+observations were traced to it and should be read with this in mind: the
+"blocked click" on a sold-out size, and the sticky bar "swallowing every tap"
+in one corner. What is **not** explained by it, and stands: the sticky bar
+failing to hide when the real buy button is on screen, and the price it displays
+being wrong while the set toggle is on.
+
 ## The store was edited while the audit ran
 
 Persona 01 caught a product being renamed mid-journey: `GREY WASH OG JEANS` in
