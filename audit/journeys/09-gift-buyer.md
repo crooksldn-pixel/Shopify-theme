@@ -55,9 +55,9 @@
 
 ### Step 8 — Opened MENU, in case it was hiding in there
 **Did:** Clicked `MENU` in the header.
-**Got:** SHOP → ALL / NEW / TEES / DENIM / SWEATS / TRACKSUITS / ACCESSORIES, then TRACKING, QUESTIONS, TERMS, Contact, and a panel at the bottom for `PLAY CASE:001 NOW`.
+**Got:** A panel slid in from the right: `SHOP` → ALL / NEW / TEES / DENIM / SWEATS / TRACKSUITS / ACCESSORIES, then TRACKING, QUESTIONS, TERMS, CONTACT — and below all of that, taking up the whole bottom of the panel, a little animated pixel game of a thief moving round a prison collecting coins. (`09-45-menu-drawer.png`, `09-46-menu-drawer-full.png`)
 **Expected:** A gift card entry under SHOP.
-**Felt:** Same answer. Seven collections, none of them gifts. The game gets more room in this menu than anything to do with buying.
+**Felt:** Same answer, twelve links, none of them gifts. The game gets more physical space in this menu than anything to do with buying, which is a choice. It did make me smile, briefly, before I remembered what I was doing.
 **Next:** continued
 
 ### Step 9 — Gave up browsing and used the search box

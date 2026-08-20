@@ -1,0 +1,13 @@
+before, scrollY 336
+MEASUREMENTS row top (css px from top of screen): 794.109375
+shot audit/screens/03-05b-accordion-stack.png
+after tap, scrollY 336
+table rows on screen: [
+  { t: 'SIZE\tWAIST\tINSEAM\tLEG OPENING', top: 997, visible: false },
+  { t: 'XS\t76.2cm\t73.7cm\t45.7cm', top: 1031, visible: false },
+  { t: 'S\t81.3cm\t76.2cm\t48.3cm', top: 1068, visible: false },
+  { t: 'M\t86.4cm\t77.5cm\t50.8cm', top: 1106, visible: false },
+  { t: 'L\t91.4cm\t80.0cm\t53.3cm', top: 1143, visible: false },
+  { t: 'XL\t96.5cm\t81.3cm\t55.9cm', top: 1180, visible: false }
+]
+shot audit/screens/03-06-measurements-tapped.png

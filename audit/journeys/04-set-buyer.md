@@ -66,11 +66,11 @@ and the buy button below still reading `SELECT A SIZE`, greyed out. (`audit/scre
 **Felt:** Deflated, and confused about which of its two messages to believe. Ten seconds ago it said `Pick a Cellblock Shorts size`; I did exactly that and it went red at me. I'd also been looking at `CHARCOAL CELLBLOCK SHORTS £45.00 AVAILABLE` about ninety seconds earlier, on this shop's own catalogue page. My honest reaction out loud: *"they're not, though — I literally just saw them."*
 **Next:** hesitated
 
-### Step 8 — Did what it told me to do: picked another size
+### Step 8 — Picked another size. And another. And another.
 **Did:** Tapped `L`. Then `XL`. Then `S`.
-**Got:** The same sentence with a different letter in it, every single time — `Cellblock Shorts sold out in L — pick another size`, `…in XL…`, `…in S…`. All five sizes. (`audit/screens/04-09-shorts-L.png`, `audit/screens/04-10-shorts-S.png`)
-**Expected:** One of five to work.
-**Felt:** This is the bit that annoyed me. The message gives me an instruction — pick another size — and there is no other size. I obeyed it four times and it kept saying the same thing. At that point you stop believing the store and start believing something's broken, and either way you stop shopping. Nothing on the screen mentioned that the problem was the size row *above* the tick box, which I hadn't touched.
+**Got:** The same sentence with a different letter in it, every single time — `Cellblock Shorts sold out in L — pick another size`, `…in XL…`, `…in S…`. Four sizes tried, four refusals. I didn't bother with XS. (`audit/screens/04-09-shorts-L.png`, `audit/screens/04-10-shorts-S.png`)
+**Expected:** One of them to work.
+**Felt:** This is the bit that annoyed me. The message gives me an instruction — pick another size — and every other size says the same thing. I obeyed it three times running and got nowhere. At that point you stop believing the store and start believing something's broken, and either way you stop shopping. Nothing on the screen suggested the problem was the size row *above* the tick box, which I hadn't touched.
 **Next:** hesitated
 
 ### Step 9 — Unticked it, thinking I'd got myself into a mess
