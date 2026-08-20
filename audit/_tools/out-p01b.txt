@@ -1,0 +1,389 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+[  4.7s] ALL CONTROLS
+[  4.7s]     {"tag":"BUTTON","t":"Manage preferences","cls":"shopify-pc__banner__btn-manage-prefs","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"Accept","cls":"shopify-pc__banner__btn-accept","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"Decline","cls":"shopify-pc__banner__btn-decline","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"LIGHT MODE","cls":"crk-header__link","aria":null,"exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"MENU","cls":"crk-header__link","aria":null,"exp":"false","pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"CLOSE","cls":"crk-header__link","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"XS","cls":"crk-size","aria":"Size XS","exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"S","cls":"crk-size","aria":"Size S","exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"M","cls":"crk-size","aria":"Size M","exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"L","cls":"crk-size","aria":"Size L","exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"XL","cls":"crk-size","aria":"Size XL","exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"SIZE GUIDE","cls":"crk-textbtn","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"SELECT A SIZE","cls":"crk-btn","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"Notify me","cls":"crk-btn","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"SPECIFICATION +","cls":"crk-section-head","aria":null,"exp":"false","pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"ITEM DESCRIPTION +","cls":"crk-section-head","aria":null,"exp":"false","pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"MEASUREMENTS +","cls":"crk-section-head","aria":null,"exp":"false","pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"CM","cls":"crk-unit","aria":null,"exp":null,"pressed":"true","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"IN","cls":"crk-unit","aria":null,"exp":null,"pressed":"false","dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"CHAIN OF CUSTODY — SHIPPING & RETURNS +","cls":"crk-section-head","aria":null,"exp":"false","pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"SELECT A SIZE","cls":"crk-btn","aria":null,"exp":null,"pressed":null,"dis":null}
+[  4.7s]     {"tag":"BUTTON","t":"CHECKOUT NOW","cls":"crk-btn crk-btn--now","aria":null,"exp":null,"pressed":null,"dis":null}
+[  5.5s] declined cookies
+[  5.5s] size buttons found: 5
+[  7.3s] SHOT audit/screens/01-06-size-wrong.png
+[  7.3s] AFTER TAPPING S >>>
+[  7.3s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · S
+ADD TO BAG
+CHECKOUT NOW
+[  7.3s] STICKY AFTER S GREY WASH OG JEANS £60.00 · S ADD TO BAG CHECKOUT NOW
+[  7.3s] PRESSED STATE ["XS:false","S:true","M:false","L:false","XL:false"]
+[  8.7s] SHOT audit/screens/01-07-size-mine.png
+[  8.7s] AFTER TAPPING M >>>
+[  8.7s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW
+[  8.7s] STICKY AFTER M GREY WASH OG JEANS £60.00 · M ADD TO BAG CHECKOUT NOW
+[  8.7s] PRESSED STATE ["XS:false","S:false","M:true","L:false","XL:false"]
+[  8.7s] STOCK LINE IN STOCK
+[  8.7s] BUY GEOMETRY {"addToBag":{"text":"ADD TO BAG","top":926,"bottom":978},"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"scrollY":0,"vh":844}
+[  8.7s] accordion control for SPECIFICATION count= 1
+[ 10.2s] SHOT audit/screens/01-acc-specification.png
+[ 10.2s] TEXT AFTER OPENING SPECIFICATION >>>
+[ 10.2s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
+−
+FABRIC
+14oz denim
+CUT
+OG straight, mid rise
+ORIGIN
+Made in Portugal
+CARE
+Cold wash inside out. Hang dry.
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW
+[ 10.2s] accordion control for ITEM DESCRIPTION count= 1
+[ 11.7s] SHOT audit/screens/01-acc-item.png
+[ 11.7s] TEXT AFTER OPENING ITEM DESCRIPTION >>>
+[ 11.7s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
+−
+FABRIC
+14oz denim
+CUT
+OG straight, mid rise
+ORIGIN
+Made in Portugal
+CARE
+Cold wash inside out. Hang dry.
+ITEM DESCRIPTION
+−
+
+OG jeans — grey wash, for the record.
+
+14oz denim, OG straight cut, mid rise. Structured, not baggy.
+
+Made in Portugal.
+
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW
+[ 11.7s] accordion control for MEASUREMENTS count= 1
+[ 14.1s] SHOT audit/screens/01-acc-measurements.png
+[ 14.1s] TEXT AFTER OPENING MEASUREMENTS >>>
+[ 14.1s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
+−
+FABRIC
+14oz denim
+CUT
+OG straight, mid rise
+ORIGIN
+Made in Portugal
+CARE
+Cold wash inside out. Hang dry.
+ITEM DESCRIPTION
+−
+
+OG jeans — grey wash, for the record.
+
+14oz denim, OG straight cut, mid rise. Structured, not baggy.
+
+Made in Portugal.
+
+MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW
+[ 14.1s] accordion control for CHAIN OF CUSTODY count= 1
+[ 15.6s] SHOT audit/screens/01-acc-chain.png
+[ 15.6s] TEXT AFTER OPENING CHAIN OF CUSTODY >>>
+[ 15.6s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
+−
+FABRIC
+14oz denim
+CUT
+OG straight, mid rise
+ORIGIN
+Made in Portugal
+CARE
+Cold wash inside out. Hang dry.
+ITEM DESCRIPTION
+−
+
+OG jeans — grey wash, for the record.
+
+14oz denim, OG straight cut, mid rise. Structured, not baggy.
+
+Made in Portugal.
+
+MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+CHAIN OF CUSTODY — SHIPPING & RETURNS
+−
+01 LOGGED
+
+Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day.
+
+02 DISPATCHED
+
+Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70.
+
+03 IN TRANSIT
+
+Tracking issued by email. UK 1–2 working days. International 7–14 working days.
+
+04 DELIVERED
+
+You have 14 days from delivery to return unworn goods with tags attached. Return postage is yours unless we sent the wrong thing or it arrived faulty. Start a return by email: crooksldn@gmail.com.
+
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW
+[ 16.9s] SHOT audit/screens/01-14-accordions-open.png
+[ 16.9s] DELIVERY MENTIONS ["Order before 18:00 and it ships today (Mon–Sat)","CHAIN OF CUSTODY — SHIPPING & RETURNS","Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day.","02 DISPATCHED","Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70.","Tracking issued by email. UK 1–2 working days. International 7–14 working days.","04 DELIVERED","You have 14 days from delivery to return unworn goods with tags attached. Return postage is yours unless we sent the wrong thing or it arrived faulty. Start a return by email: crooksldn@gmail.com.","SHIPPING"]

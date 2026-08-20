@@ -1,0 +1,20 @@
+identity {"ok":true,"gb":true}
+normal reduce? false
+
+18-n2 BOOT-LINE SAMPLES (2 distinct)
+     25ms  
+    482ms  crk-boot__line|visible|op1|> 12 PRODUCTS AVAILABLE TO PURCHASE
+
+18-n3 BOOT-LINE SAMPLES (2 distinct)
+     25ms  
+    449ms  crk-boot__line|visible|op1|> 12 PRODUCTS AVAILABLE TO PURCHASE
+
+identity2 {"ok":true,"gb":true} reduce? true
+
+18-r2 BOOT-LINE SAMPLES (2 distinct)
+     25ms  
+    204ms  crk-boot__line|visible|op1|> 12 PRODUCTS AVAILABLE TO PURCHASE
+
+18-r3 BOOT-LINE SAMPLES (2 distinct)
+     25ms  
+    307ms  crk-boot__line|visible|op1|> 12 PRODUCTS AVAILABLE TO PURCHASE

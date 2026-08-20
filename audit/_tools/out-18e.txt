@@ -22,3 +22,40 @@ BOOT TIMELINE 2
   t+14s  "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"  [{"t":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISP","op":"1","d":"block"},{"t":"12 PRODUCTS CURRENTLY ONLINE","op":"1","d":"none"}]
   t+22s  "12 PRODUCTS CURRENTLY ONLINE"  [{"t":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISP","op":"1","d":"none"},{"t":"12 PRODUCTS CURRENTLY ONLINE","op":"1","d":"block"}]
   t+30s  "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"  [{"t":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISP","op":"1","d":"block"},{"t":"12 PRODUCTS CURRENTLY ONLINE","op":"1","d":"none"}]
+  t+38s  "12 PRODUCTS CURRENTLY ONLINE"  [{"t":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISP","op":"1","d":"none"},{"t":"12 PRODUCTS CURRENTLY ONLINE","op":"1","d":"block"}]
+distinct ticker states in 42s: 6
+
+
+========== MENU control diagnostic ==========
+MENU CANDIDATES [
+ {
+  "tag": "BUTTON",
+  "cls": "crk-header__link",
+  "text": "MENU",
+  "aria": null,
+  "role": null,
+  "expanded": "false",
+  "hiddenAncestor": false,
+  "inertAncestor": false,
+  "box": [
+   321,
+   86,
+   50,
+   44
+  ]
+ }
+]
+
+
+========== NORMAL — drawer board ==========
+menu locator count 1 role count 1
+DRAWER @90ms {"x":0,"w":390,"op":"1","tr":"none","trans":"all"}
+DRAWER settled {"x":0,"w":390,"op":"1","tr":"none"} ms 1410
+SHOT audit/screens/18-n-case-panel.png
+BOARD HASHES ["1935266528:53248","93054767:53248","345802986:53248","1394327045:53248","1373511073:53248","1307314437:53248"] moving? true
+board frame md5s 509fcd0839ad ad8714c7b750 76fee239c308
+
+
+========== NORMAL — size guide scroll ==========
+SIZE-GUIDE from 575 -> 50ms:593 120ms:708 220ms:962 350ms:1247 500ms:1294 800ms:1294 1300ms:1294
+scroll-behavior smooth
