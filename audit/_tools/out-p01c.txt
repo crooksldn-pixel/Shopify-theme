@@ -328,3 +328,273 @@ CHECKOUT NOW
 0 | { "@context": "https://schema.org", "@type": "WebSite", "@id": "https:\/\/7chao1
 0 | window['ShopifyForms'] = { ...window['ShopifyForms'], currentPageType: "product"
 [  9.6s] BAG COUNT BEFORE 0
+[ 17.6s] add tap failed locator.click: Timeout 8000ms exceeded.
+Call log:
+[2m  - wa
+[ 20.1s] URL AFTER ADD https://7chao18p5etruwy5-100410786135.shopifypreview.com/products/cb1-wash-jeans?variant=53639819297111
+[ 20.5s] SHOT audit/screens/01-11-added.png
+[ 20.5s] BAG COUNT AFTER 0
+[ 20.5s] WHAT CHANGED ON SCREEN
+[ 20.5s] 0 | Cookie consentWe and our partners, including Shopify, use cookies and other technologies t
+0 | Cookie consent
+0 | We and our partners, including Shopify, use cookies and other technologies to personalize 
+0 | Privacy Policy
+0 | Manage preferences
+0 | Accept
+0 | Decline
+0 | 12 PRODUCTS CURRENTLY ONLINE
+0 | <div class="crk-header__nofallback"> <ul><li><a href="/collections/frontpage">SHOP</a></li
+0 | MENU CLOSE SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES TRACKING QUESTIONS TERMS Contact
+0 | MENU CLOSE
+0 | MENU
+0 | CLOSE
+0 | SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES TRACKING QUESTIONS TERMS Contact
+0 | SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES
+0 | SHOP
+0 | ALL
+0 | NEW
+0 | TEES
+0 | DENIM
+0 | SWEATS
+0 | TRACKSUITS
+0 | ACCESSORIES
+0 | TRACKING
+0 | QUESTIONS
+0 | TERMS
+0 | Contact
+0 | PLAY CASE:001 NOW
+0 | CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins 
+0 | ACCOUNT BAG [0]
+0 | ACCOUNT
+0 | BAG [0]
+0 | [0]
+0 | // Inline header height and menu style calculations to prevent layout shift // Note: Updat
+-459 | ← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL 
+0 | { "@context": "https://schema.org", "@type": "ProductGroup", "@id": "https:\/\/7chao18p5et
+0 | { "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [ { "@ty
+-392 | PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE Order before 1
+40 | GREY WASH OG JEANS
+76 | £60.00
+102 | SIZE XS S M L XL
+102 | SIZE
+126 | XS
+126 | S
+126 | M
+126 | L
+126 | XL
+186 | IN STOCK
+214 | SIZE GUIDE
+0 | <p class="crk-micro" style="margin-top: 8px;">CHOOSE A SIZE:</p> <ul class="crk-sizes crk-
+266 | Order before 18:00 and it ships today (Mon–Sat)
+308 | Ordered now — leaves tomorrow
+328 | ADD TO BAG
+380 | More payment options
+444 | More payment options
+0 | #more-payment-options-link{cursor:pointer}#more-payment-options-link[aria-disabled=true]{c
+0 | Tell me when this size is back Notify me
+0 | Tell me when this size is back
+0 | Notify me
+511 | SPECIFICATION + ITEM DESCRIPTION + MEASUREMENTS + CHAIN OF CUSTODY — SHIPPING & RETURNS + 
+511 | SPECIFICATION +
+512 | SPECIFICATION +
+526 | SPECIFICATION
+526 | +
+0 | Fabric14oz denimCutOG straight, mid riseOriginMade in PortugalCareCold wash inside out. Ha
+0 | Fabric
+0 | 14oz denim
+0 | Cut
+0 | OG straight, mid rise
+0 | Origin
+0 | Made in Portugal
+0 | Care
+0 | Cold wash inside out. Hang dry.
+563 | ITEM DESCRIPTION +
+577 | ITEM DESCRIPTION
+577 | +
+0 | OG jeans — grey wash, for the record.14oz denim, OG straight cut, mid rise. Structured, no
+0 | OG jeans — grey wash, for the record.
+0 | 14oz denim, OG straight cut, mid rise. Structured, not baggy.
+0 | Made in Portugal.
+614 | MEASUREMENTS +
+628 | MEASUREMENTS
+628 | +
+0 | CM IN True to size — waist, chest and leg measurements are taken around the garment. All m
+0 | CM IN
+0 | CM
+0 | IN
+0 | True to size — waist, chest and leg measurements are taken around the garment. All measure
+0 | sizewaistinseamleg opening
+0 | size
+0 | waist
+0 | inseam
+0 | leg opening
+0 | XS
+0 | 76.2cm
+0 | 73.7cm
+0 | 45.7cm
+0 | S
+0 | 81.3cm
+0 | 48.3cm
+0 | M
+0 | 86.4cm
+0 | 77.5cm
+0 | 50.8cm
+0 | L
+0 | 91.4cm
+0 | 80.0cm
+0 | 53.3cm
+0 | XL
+0 | 96.5cm
+0 | 55.9cm
+665 | CHAIN OF CUSTODY — SHIPPING & RETURNS +
+679 | CHAIN OF CUSTODY — SHIPPING & RETURNS
+690 | +
+0 | 01 Logged Orders placed before 18:00 are dispatched the same day, Monday to Saturday. Afte
+0 | 01 Logged
+0 | Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, t
+0 | 02 Dispatched Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked
+0 | 02 Dispatched
+0 | Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70.
+0 | 03 In transit Tracking issued by email. UK 1–2 working days. International 7–14 working da
+0 | 03 In transit
+0 | Tracking issued by email. UK 1–2 working days. International 7–14 working days.
+0 | 04 Delivered You have 14 days from delivery to return unworn goods with tags attached. Ret
+0 | 04 Delivered
+0 | You have 14 days from delivery to return unworn goods with tags attached. Return postage i
+770 | MORE FROM THIS DROP BLUE WASH OG JEANS £60.00 BLUE WASH JORTS £50.00 GREY WASH JORTS £50.0
+770 | MORE FROM THIS DROP
+775 | GREY WASH OG JEANS £60.00 · M ADD TO BAG CHECKOUT NOW
+791 | GREY WASH OG JEANS £60.00 · M
+791 | GREY WASH OG JEANS
+809 | £60.00 · M
+788 | ADD TO BAG CHECKOUT NOW
+788 | ADD TO BAG
+788 | CHECKOUT NOW
+0 | { "@context": "https://schema.org", "@type": "Organization", "@id": "https:\/\/7chao18p5et
+0 | { "@context": "https://schema.org", "@type": "WebSite", "@id": "https:\/\/7chao18p5etruwy5
+0 | window['ShopifyForms'] = { ...window['ShopifyForms'], currentPageType: "product" };
+[ 20.5s] ANY DRAWER / CONFIRMATION? [{"cls":"crk-stickybar","top":775,"h":69,"t":"GREY WASH OG JEANS £60.00 · M ADD TO BAG CHECKOUT NOW"}]
+[ 22.1s] SHOT audit/screens/01-12-size-guide.png
+[ 22.1s] AFTER SIZE GUIDE — scrollY 1212
+[ 22.1s] 0 | Cookie consentWe and our partners, including Shopify, use cookies and other tech
+0 | Cookie consent
+0 | We and our partners, including Shopify, use cookies and other technologies to pe
+0 | Privacy Policy
+0 | Manage preferences
+0 | Accept
+0 | Decline
+0 | 12 PRODUCTS CURRENTLY ONLINE
+0 | <div class="crk-header__nofallback"> <ul><li><a href="/collections/frontpage">SH
+0 | MENU CLOSE SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES TRACKING QUESTIONS TER
+0 | MENU CLOSE
+0 | MENU
+0 | CLOSE
+0 | SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES TRACKING QUESTIONS TERMS Contact
+0 | SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES
+0 | SHOP
+0 | ALL
+0 | NEW
+0 | TEES
+0 | DENIM
+0 | SWEATS
+0 | TRACKSUITS
+0 | ACCESSORIES
+0 | TRACKING
+0 | QUESTIONS
+0 | TERMS
+0 | Contact
+0 | PLAY CASE:001 NOW
+0 | CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collect
+0 | ACCOUNT BAG [0]
+0 | ACCOUNT
+0 | BAG [0]
+0 | [0]
+0 | // Inline header height and menu style calculations to prevent layout shift // N
+-1073 | ← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS
+0 | { "@context": "https://schema.org", "@type": "ProductGroup", "@id": "https:\/\/7
+0 | { "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement"
+0 | <p class="crk-micro" style="margin-top: 8px;">CHOOSE A SIZE:</p> <ul class="crk-
+0 | #more-payment-options-link{cursor:pointer}#more-payment-options-link[aria-disabl
+0 | Tell me when this size is back Notify me
+0 | Tell me when this size is back
+0 | Notify me
+-103 | SPECIFICATION + ITEM DESCRIPTION + MEASUREMENTS − CM IN TRUE TO SIZE — WAIST, CH
+0 | Fabric14oz denimCutOG straight, mid riseOriginMade in PortugalCareCold wash insi
+0 | Fabric
+0 | 14oz denim
+0 | Cut
+0 | OG straight, mid rise
+0 | Origin
+0 | Made in Portugal
+0 | Care
+0 | Cold wash inside out. Hang dry.
+0 | OG jeans — grey wash, for the record.14oz denim, OG straight cut, mid rise. Stru
+0 | OG jeans — grey wash, for the record.
+0 | 14oz denim, OG straight cut, mid rise. Structured, not baggy.
+0 | Made in Portugal.
+0 | MEASUREMENTS − CM IN TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN 
+0 | MEASUREMENTS −
+14 | MEASUREMENTS
+14 | −
+50 | CM IN TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARM
+50 | CM IN
+50 | CM
+50 | IN
+106 | TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. A
+203 | SIZE WAIST INSEAM LEG OPENING
+203 | SIZE
+203 | WAIST
+203 | INSEAM
+203 | LEG OPENING
+237 | XS
+237 | 76.2cm
+237 | 73.7cm
+237 | 45.7cm
+274 | S
+274 | 81.3cm
+274 | 76.2cm
+274 | 48.3cm
+311 | M
+311 | 86.4cm
+311 | 77.5cm
+311 | 50.8cm
+348 | L
+348 | 91.4cm
+348 | 80.0cm
+348 | 53.3cm
+386 | XL
+386 | 96.5cm
+386 | 81.3cm
+386 | 55.9cm
+444 | CHAIN OF CUSTODY — SHIPPING & RETURNS +
+458 | CHAIN OF CUSTODY — SHIPPING & RETURNS
+469 | +
+0 | 01 Logged Orders placed before 18:00 are dispatched the same day, Monday to Satu
+0 | 01 Logged
+0 | Orders placed before 18:00 are dispatched the same day, Monday to Saturday. Afte
+0 | 02 Dispatched Shipped with Royal Mail Tracked. Free UK shipping over £20, and fr
+0 | 02 Dispatched
+0 | Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 
+0 | 03 In transit Tracking issued by email. UK 1–2 working days. International 7–14 
+0 | 03 In transit
+0 | Tracking issued by email. UK 1–2 working days. International 7–14 working days.
+0 | 04 Delivered You have 14 days from delivery to return unworn goods with tags att
+0 | 04 Delivered
+0 | You have 14 days from delivery to return unworn goods with tags attached. Return
+549 | MORE FROM THIS DROP BLUE WASH OG JEANS £60.00 BLUE WASH JORTS £50.00 GREY WASH J
+549 | MORE FROM THIS DROP
+702 | BLUE WASH OG JEANS
+747 | £60.00
+702 | BLUE WASH JORTS
+747 | £50.00
+703 | GREY WASH JORTS
+775 | GREY WASH OG JEANS £60.00 · M ADD TO BAG CHECKOUT NOW
+791 | GREY WASH OG JEANS £60.00 · M
+791 | GREY WASH OG JEANS
+809 | £60.00 · M
+788 | ADD TO BAG CHECKOUT NOW
+788 | ADD TO BAG
+788 | CHECKOUT NOW
+0 | { "@context": "https://schema.org", "@type": "Organization", "@id": "https:\/\/7
+0 | { "@context": "https://schema.org", "@type": "WebSite", "@id": "https:\/\/7chao1
+0 | window['ShopifyForms'] = { ...window['ShopifyForms'], currentPageType: "product"

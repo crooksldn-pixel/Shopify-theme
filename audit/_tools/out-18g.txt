@@ -1,0 +1,49 @@
+identity {"ok":true,"gb":true}
+
+
+========== REDUCED — rapid hero ==========
+18-r shot 0 at ~115ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-r shot 1 at ~347ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-r shot 2 at ~458ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-r shot 3 at ~543ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-r shot 4 at ~679ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-r shot 5 at ~862ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+
+
+========== REDUCED — catalogue toggles ==========
+images before [{"src":"cellcrew.webp","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-charcoal-cellblock-short","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-charcoal-cellblock-short","op":"1","vis":"visible","w":0,"h":0,"complete":false,"nat":0},{"src":"crooksldn-blue-wash-baggy-jeans_e4","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-blue-wash-baggy-jeans_64","op":"1","vis":"visible","w":0,"h":0,"complete":false,"nat":0},{"src":"crooksldn-blue-wash-denim-jorts.pn","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-grey-wash-baggy-jeans.pn","op":"1","vis"
+SHOT audit/screens/18-30-cat-flat.png
+images after ON MODEL [{"src":"cellcrew.webp","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-charcoal-cellblock-short","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-charcoal-cellblock-short","op":"1","vis":"visible","w":0,"h":0,"complete":false,"nat":0},{"src":"crooksldn-blue-wash-baggy-jeans_e4","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-blue-wash-baggy-jeans_64","op":"1","vis":"visible","w":0,"h":0,"complete":false,"nat":0},{"src":"crooksldn-blue-wash-denim-jorts.pn","op":"1","vis":"visible","w":152,"h":152,"complete":true,"nat":195},{"src":"crooksldn-grey-wash-baggy-jeans.pn","op":"1","vis"
+SHOT audit/screens/18-31-cat-onmodel.png
+after T-SHIRT filter ALL
+2 ITEMS
+FLAT
+ON MODEL
+ALL
+T-SHIRT
+DENIM
+SWEATS
+ACCESSORIES
+NO. 07
+T-SHIRT
+MONEY CLIVE TEE
+Colourways: BLACK, WHITE
+£25.00
+AVAILABLE
+NO. 08
+T-SHIRT
+CRXST★RZ T-SHIRT
+Colourways: Black, White
+£25.00
+AVAILABLE
+DROPPED 03.08
+SHOT audit/screens/18-32-cat-tees.png
+invisible in view []
+
+
+========== REDUCED — PDP gallery, colourway, sticky bar ==========
+gallery imgs [{"src":"5dfb353c-2a5a-49cc-8935-bef883e307","op":"1","vis":"visible","w":332,"h":332,"complete":true,"nat":390},{"src":"6ad9fbd2-a04a-4e57-8a99-c242e0811f","op":"1","vis":"visible","w":0,"h":0,"complete":false,"nat":0},{"src":"5dfb353c-2a5a-49cc-8935-bef883e307","op":"1","vis":"visible","w":54,"h":54,"complete":true,"nat":390},{"src":"6ad9fbd2-a04a-4e57-8a99-c242e0811f","op":"1","vis":"visible","w":54,"h":54,"complete":true,"nat":390}]
+SHOT audit/screens/18-33-tee-photo1.png
+PDP CONTROLS ["Photo 1 of 2","Photo 2 of 2","XS","S","M","L","XL","BLACK","WHITE","SIZE GUIDE","SELECT A SIZE","Notify me","SPECIFICATION\n+","ITEM DESCRIPTION\n+","MEASUREMENTS\n+","CM","IN","CHAIN OF CUSTODY — SHIPPING & RETURNS\n+","CHECKOUT NOW"]
+after swipe: ← CATALOGUE | PRODUCT 07 / 12 | T-SHIRT | PHOTO 1 OF 2 | MONEY CLIVE TEE | £25.00 | SIZE | XS | S | M | L | XL | C
+SHOT audit/screens/18-34-tee-after-swipe.png
