@@ -2040,3 +2040,43 @@ ten-wins-in-a-row check is Stage 5 and needs a real device.
 
 Checkpoint `681ebf00`. **Not deployed** — Base44 checkpoints commit rather than
 publish, so it needs Publish in the editor, same as the last one.
+
+### Stage 1 — the offer is theme HTML; the game loads on demand
+
+The structural fix for the black box. The popup now paints its own offer —
+`CROOKSLDN: THE GETAWAY`, the honest gate line ("code sent by text"), RUN IT
+and NOT NOW — as plain theme HTML with its own inline CSS. No iframe exists
+until RUN IT is pressed, so everyone who dismisses pays nothing for the game at
+all. The app then opens on `?screen=game`, added to `Home.jsx`, so the offer is
+not shown twice.
+
+Deliberately not styled from `crooks.css`: this has to paint in the same frame
+the overlay does, and waiting on a stylesheet would defeat the point.
+
+Trigger rules now: consent answered, no menu or cart drawer open, homepage only
+(already gated in `theme.liquid`). NOT NOW snoozes 14 days; a win or the
+register hand-off suppresses for good; a bare close still spends nothing.
+`preconnect` on shell render, `prefetch` on RUN IT hover or touchstart.
+
+Message contract with the app, origin-checked: `getaway:close`,
+`getaway:close {target:'register'}`, `getaway:height`, and the old
+`crooks-popup-close` still honoured.
+
+### Two real bugs the tests caught, both mine
+
+1. **A detached iframe never loads.** I created the frame and only inserted it
+   into the sheet on its own `load` event — which cannot fire, because a frame
+   outside the document does not fetch. The holding line would have sat there
+   forever. The frame is now attached immediately and hidden behind the holding
+   line until it loads.
+2. **`focus({ preventScroll: true })` can strand focus off-screen.** The
+   register hand-off scrolled with `behavior:'smooth'` and then suppressed the
+   focus scroll. Smooth scrolling silently does nothing in some conditions —
+   headless is one, and the diagnostic showed it exactly: `scrollY=0` with the
+   focused field 2,529px down the page. Focus now scrolls as the guarantee and
+   the smooth scroll is presentation only; reduced motion gets an instant jump.
+   That second one would have shipped as a real accessibility failure.
+
+24 assertions against the real snippet, extracted from the `.liquid` at test
+time. Verified on the deployed page: the offer is in the HTML, `RUN IT` is
+there, and the app URL appears **zero** times as a loaded frame.

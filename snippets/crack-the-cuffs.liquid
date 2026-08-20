@@ -1,38 +1,38 @@
 {%- comment -%}
-  Crack the Cuffs — first-visit discount popup.
-  Embeds the Base44 game in an iframe. Discount hand-off + code generation are
-  handled entirely by the Base44 app (Shop the Drop uses Shopify's native
-  /discount/{code} route via target="_top") — the theme only owns the overlay.
+  CROOKSLDN: THE GETAWAY — first-visit discount popup.
 
-  - Shows once per browser via localStorage flag `crooksldn_ctc_seen`.
-  - Fires ~3s after load. Append ?ctc=1 to any URL to force it (QA).
-  - Closes via overlay X, backdrop tap, Esc, or the app's getaway:close message.
-    The app also draws its own X inside the frame and posts the same message.
-    getaway:close with target 'register' means the visitor missed and chose the
-    signup instead, so we close and take them to REGISTER AS INFORMANT.
+  The offer is native theme HTML and paints instantly. The Base44 game is only
+  fetched once someone presses RUN IT, which means the large majority who
+  dismiss never pay for it at all — previously every visitor waited several
+  seconds in front of a dimmed box for an iframe they were about to close.
 
-  Four things the twenty-journey audit found, fixed here. All of them are the
-  overlay's fault, not the game's:
+  The app then starts on the game itself via ?screen=game, so the offer is not
+  shown twice.
 
-  1. FOCUS. It claimed role="dialog" aria-modal="true" and then did nothing to
-     honour it — no focus move, no trap, no restore, and the close X sat after
-     the iframe in DOM order, so a keyboard or screen-reader user tabbed into a
-     cross-origin iframe with no announced way out (journeys 15, 16).
-  2. THE ONE ATTEMPT. markSeen() fired the moment the popup opened, so anyone
-     who shut it reflexively burned their only go and could never come back to
-     it (18). It is now only spent on a real look — see SEEN_AFTER_MS.
-  3. THE EMPTY BOX. The overlay was attached before the iframe had loaded, so
-     the first 4–8 seconds were a dimmed void with nothing in it (13, 19). It
-     now waits for the frame, with a timeout so a slow app still gets shown.
-  4. THE COOKIE BANNER. It stacked on top of the consent banner, making the
-     banner the thing you had to fight past first (02, 18, 20). It now waits
-     for the banner to be answered.
+  Message contract with the app (window.postMessage):
+    getaway:close                       shut the popup
+    getaway:close  target: 'register'   they missed and chose the signup
+    getaway:height { height: <px> }     app asking for a taller frame
+    crooks-popup-close                  the previous app; still honoured
 
-  The app itself was replaced on 2026-08-20. The previous build gated the prize
-  behind a phone number and then an email, and its reveal button was disabled
-  while the field was empty, so pressing it did nothing at all. The current app
-  asks for neither: it mints against an anonymous player id, times out after 5s
-  rather than hanging, and honours prefers-reduced-motion itself.
+  The app must NOT send X-Frame-Options, or the browser refuses to render it
+  here and the overlay is empty. That is a per-app toggle in the Base44 editor:
+  Dashboard -> Security -> settings icon -> Security Headers -> "Prevent
+  Embedding", which must stay OFF. Check with
+  `curl -sI <url> | grep -i x-frame-options` before changing APP_URL.
+
+  What the twenty-journey audit found, and where it went:
+
+  1. FOCUS. It claimed role="dialog" aria-modal="true" and honoured none of it
+     (15, 16). The shell now owns focus: it moves in, cycles, Escape closes,
+     focus returns, and the rest of the page is aria-hidden throughout.
+  2. THE ONE ATTEMPT. markSeen() fired on open, so a reflex close burned the
+     only go (18). NOT NOW now suppresses for 14 days; a win suppresses for
+     good; a bare close spends nothing.
+  3. THE EMPTY BOX (13, 19). There is no box to be empty — the offer is theme
+     HTML. The frame only appears after RUN IT, behind a holding line.
+  4. THE COOKIE BANNER (02, 18, 20). Still waits for consent to be answered,
+     and now also stays away while the menu drawer or cart drawer is open.
 {%- endcomment -%}
 <style>
   .ctc-overlay {
@@ -49,17 +49,92 @@
     opacity: 0;
     transition: opacity 0.2s ease;
   }
-  .ctc-overlay[data-open] {
-    opacity: 1;
-  }
-  .ctc-frame {
+  .ctc-overlay[data-open] { opacity: 1 }
+
+  .ctc-sheet {
     width: 100%;
     max-width: 440px;
     height: 90vh;
     max-height: 680px;
-    border: 0;
-    background: transparent;
+    display: flex;
+    flex-direction: column;
+    background: #0b0a0e;
+    border: 1px solid rgba(244, 241, 234, 0.14);
+    color: #f4f1ea;
+    overflow: hidden;
   }
+
+  {%- comment -%}
+    The offer, in theme HTML. Deliberately not a component and not styled from
+    crooks.css: this has to paint in the same frame the overlay does, and a
+    stylesheet that has not arrived yet would defeat the entire point.
+  {%- endcomment -%}
+  .ctc-offer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 28px 24px;
+    gap: 22px;
+  }
+  .ctc-title {
+    font-family: 'VT323', 'CRX Mono', ui-monospace, monospace;
+    font-size: 42px;
+    line-height: 0.95;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .ctc-copy {
+    font-family: 'CRX Mono', ui-monospace, monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0;
+    max-width: 300px;
+    color: rgba(244, 241, 234, 0.75);
+  }
+  .ctc-small {
+    font-family: 'CRX Mono', ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 290px;
+    color: rgba(244, 241, 234, 0.45);
+  }
+  .ctc-actions { width: 100%; display: flex; flex-direction: column; gap: 10px }
+  .ctc-btn {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    font-family: 'CRX Mono', ui-monospace, monospace;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #f4f1ea;
+    background: #2b1b3d;
+    border: 1px solid #4b276e;
+    border-radius: 0;
+    cursor: pointer;
+  }
+  .ctc-btn:hover { border-color: #a77ac7 }
+  .ctc-btn--quiet { background: transparent; border-color: rgba(244, 241, 234, 0.22); color: rgba(244, 241, 234, 0.7) }
+  .ctc-btn--quiet:hover { color: #f4f1ea; border-color: #a77ac7 }
+  .ctc-btn:focus-visible { outline: 2px solid #a77ac7; outline-offset: 2px }
+
+  .ctc-frame { width: 100%; flex: 1; border: 0; background: transparent; display: block }
+  .ctc-holding {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'CRX Mono', ui-monospace, monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 234, 0.45);
+  }
+
   .ctc-close {
     position: fixed;
     top: 12px;
@@ -78,138 +153,144 @@
     cursor: pointer;
     z-index: 2147483647;
   }
-  .ctc-close:hover {
-    background: rgba(244, 241, 234, 0.12);
-  }
-  .ctc-close:focus-visible {
-    outline: 2px solid #a77ac7;
-    outline-offset: 2px;
-  }
+  .ctc-close:hover { background: rgba(244, 241, 234, 0.12) }
+  .ctc-close:focus-visible { outline: 2px solid #a77ac7; outline-offset: 2px }
+
   @media screen and (max-width: 749px) {
-    .ctc-overlay {
-      padding: 10px;
-    }
-    .ctc-frame {
-      max-width: 100%;
-      height: 100%;
-      max-height: none;
-    }
+    .ctc-overlay { padding: 0 }
+    .ctc-sheet { max-width: 100%; height: 100%; max-height: none; border: 0 }
     {%- comment -%}
-      The app draws its own close control at the top right of its card, which on
-      a phone is the full width of the screen. Ours moves left so there are not
-      two overlapping tap targets. It stays rather than being removed: it is the
-      one way out the parent document controls, and the only one a screen reader
-      can reach without entering a cross-origin frame.
+      The app draws its own close control top-right inside the frame; on a phone
+      that is the full width of the screen. Ours moves left so there are not two
+      overlapping tap targets. It stays rather than being removed: it is the one
+      way out the parent document controls, and the only one a screen reader can
+      reach without entering a cross-origin frame.
     {%- endcomment -%}
-    .ctc-close {
-      right: auto;
-      left: 10px;
-    }
+    .ctc-close { right: auto; left: 10px }
+    .ctc-title { font-size: 38px }
   }
   {%- comment -%}
     Landscape on a phone left roughly 300px of height for a 680px game, so the
-    controls sat below the fold with nothing to scroll (journey 13). Give the
-    frame the full height it can have and let the overlay scroll.
+    controls sat below the fold with nothing to scroll (journey 13).
   {%- endcomment -%}
   @media screen and (max-height: 500px) and (orientation: landscape) {
-    .ctc-overlay {
-      align-items: flex-start;
-      overflow-y: auto;
-      padding: 8px;
-    }
-    .ctc-frame {
-      height: 460px;
-      max-height: none;
-      max-width: 520px;
-    }
-    .ctc-close {
-      top: 6px;
-      right: 8px;
-      width: 36px;
-      height: 36px;
-      font-size: 20px;
-    }
+    .ctc-overlay { align-items: flex-start; overflow-y: auto; padding: 8px }
+    .ctc-sheet { height: auto; min-height: 440px; max-height: none; max-width: 520px }
+    .ctc-offer { padding: 18px 20px; gap: 14px }
+    .ctc-title { font-size: 30px }
+    .ctc-close { top: 6px; right: 8px; width: 36px; height: 36px; font-size: 20px }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ctc-overlay {
-      transition: none;
-    }
+    .ctc-overlay { transition: none }
   }
 </style>
 <script>
   (function () {
-    /* The app must not send X-Frame-Options, or the browser refuses to render
-       it here at all and the overlay shows an empty box. That is a per-app
-       toggle in the Base44 editor: Dashboard -> Security -> settings icon ->
-       Security Headers -> "Prevent Embedding", which must stay OFF. Check with
-       `curl -sI <url> | grep -i x-frame-options` before changing this line. */
     var APP_URL = 'https://crackthecuffs.base44.app';
-    var FLAG = 'crooksldn_ctc_seen';
+    var APP_ORIGIN = 'https://crackthecuffs.base44.app';
+    var SEEN = 'crooksldn_ctc_seen';      /* set on a win: never ask again */
+    var SNOOZE = 'crooksldn_ctc_snooze';  /* NOT NOW: a timestamp, 14 days */
+    var SNOOZE_DAYS = 14;
     var DELAY = 3000;
-    /* The one attempt is only spent once the popup has been on screen long
-       enough to be a look rather than a reflex. Shut it faster than this and it
-       is still waiting next time. */
-    var SEEN_AFTER_MS = 8000;
-    /* Consent banners, so the popup never lands on top of one. Shopify's native
-       banner first; the rest are the common app banners. */
     var CONSENT = '#shopify-pc__banner, .shopify-pc__banner, #cookie-banner, .cookie-banner, [id*="cookie-consent"]';
     var CONSENT_WAIT_MS = 30000;
-    var FRAME_WAIT_MS = 6000;
+    var BUSY = '[data-crk-drawer][aria-hidden="false"], cart-drawer-component[open], dialog[open]';
     var opened = false;
 
-    function isForced() {
-      try { return new URLSearchParams(window.location.search).get('ctc') === '1'; }
-      catch (e) { return false; }
+    function qs(name) {
+      try { return new URLSearchParams(window.location.search).get(name); }
+      catch (e) { return null; }
     }
-    function hasSeen() {
-      try { return window.localStorage.getItem(FLAG) === '1'; } catch (e) { return false; }
-    }
-    function markSeen() {
-      try { window.localStorage.setItem(FLAG, '1'); } catch (e) {}
+    function isForced() { return qs('ctc') === '1'; }
+
+    function get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+    function set(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
+
+    function hasWon() { return get(SEEN) === '1'; }
+    function isSnoozed() {
+      var t = parseInt(get(SNOOZE), 10);
+      if (!t) return false;
+      return (Date.now() - t) < SNOOZE_DAYS * 86400000;
     }
 
-    function consentShowing() {
+    function visible(sel) {
       try {
-        var nodes = document.querySelectorAll(CONSENT);
+        var nodes = document.querySelectorAll(sel);
         for (var i = 0; i < nodes.length; i++) {
-          var n = nodes[i];
-          if (n.offsetParent !== null || n.getClientRects().length) return true;
+          if (nodes[i].offsetParent !== null || nodes[i].getClientRects().length) return true;
         }
       } catch (e) {}
       return false;
     }
 
+    /* Never interrupt a shopper who is mid-task. The template gate in
+       theme.liquid already keeps this to the homepage; this covers the states
+       that are not a template — an open menu or cart drawer. */
+    function busy() { return visible(BUSY); }
+
     function open() {
       if (opened) return;
       opened = true;
 
-      var openedAt = Date.now();
       var returnFocusTo = document.activeElement;
 
       var overlay = document.createElement('div');
       overlay.className = 'ctc-overlay';
       overlay.setAttribute('role', 'dialog');
       overlay.setAttribute('aria-modal', 'true');
-      overlay.setAttribute('aria-label', 'Crack the Cuffs');
+      overlay.setAttribute('aria-label', 'CROOKSLDN: The Getaway');
 
       var closeBtn = document.createElement('button');
       closeBtn.className = 'ctc-close';
       closeBtn.type = 'button';
-      closeBtn.setAttribute('aria-label', 'Close Crack the Cuffs');
+      closeBtn.setAttribute('aria-label', 'Close');
       closeBtn.innerHTML = '×';
 
-      var frame = document.createElement('iframe');
-      frame.className = 'ctc-frame';
-      frame.title = 'Crack the Cuffs';
-      frame.setAttribute('allow', 'clipboard-write');
+      var sheet = document.createElement('div');
+      sheet.className = 'ctc-sheet';
 
-      /* Close first in DOM order, so the first Tab inside the dialog reaches the
-         way out rather than disappearing into a cross-origin iframe. */
+      /* ---- the offer, painted immediately ---- */
+      var offer = document.createElement('div');
+      offer.className = 'ctc-offer';
+
+      var h = document.createElement('h2');
+      h.className = 'ctc-title';
+      h.textContent = 'CROOKSLDN: THE GETAWAY';
+
+      var copy = document.createElement('p');
+      copy.className = 'ctc-copy';
+      copy.textContent = 'Crack the cuffs. 10% off your first order — code sent by text. Attempts unlimited.';
+
+      var actions = document.createElement('div');
+      actions.className = 'ctc-actions';
+
+      var run = document.createElement('button');
+      run.className = 'ctc-btn';
+      run.type = 'button';
+      run.textContent = 'RUN IT';
+
+      var not = document.createElement('button');
+      not.className = 'ctc-btn ctc-btn--quiet';
+      not.type = 'button';
+      not.textContent = 'NOT NOW';
+
+      var small = document.createElement('p');
+      small.className = 'ctc-small';
+      small.textContent = 'One code per player. Code expires 20 minutes after you win.';
+
+      actions.appendChild(run);
+      actions.appendChild(not);
+      offer.appendChild(h);
+      offer.appendChild(copy);
+      offer.appendChild(actions);
+      offer.appendChild(small);
+
+      /* Close first in DOM order, so the first Tab reaches the way out rather
+         than disappearing into a cross-origin frame. */
       overlay.appendChild(closeBtn);
-      overlay.appendChild(frame);
+      sheet.appendChild(offer);
+      overlay.appendChild(sheet);
 
-      /* Everything behind the dialog is hidden from assistive tech for as long
-         as it is up, which is what aria-modal is supposed to mean. */
       var hidden = [];
       function hideBackground() {
         var kids = document.body.children;
@@ -227,12 +308,10 @@
       }
 
       var prevOverflow = document.documentElement.style.overflow;
+      var frame = null;
 
       function close() {
         if (!overlay.parentNode) return;
-        /* Spend the one attempt only on a real look, or when the app itself
-           says the visitor is done. */
-        if (Date.now() - openedAt >= SEEN_AFTER_MS) markSeen();
         overlay.parentNode.removeChild(overlay);
         showBackground();
         document.documentElement.style.overflow = prevOverflow;
@@ -243,37 +322,40 @@
         }
       }
 
+      /* Tab cycles the controls that exist right now: the close button plus
+         either the two offer buttons or the frame. */
+      function stops() {
+        var list = [closeBtn];
+        if (frame) list.push(frame);
+        else { list.push(run); list.push(not); }
+        return list;
+      }
       function onKey(e) {
         if (e.key === 'Escape') { close(); return; }
         if (e.key !== 'Tab') return;
-        /* Two stops inside the dialog: the close button and the iframe. Keep
-           Tab between them rather than letting it walk the page behind. */
-        var stops = [closeBtn, frame];
-        var i = stops.indexOf(document.activeElement);
+        var list = stops();
+        var i = list.indexOf(document.activeElement);
         e.preventDefault();
-        var next = e.shiftKey
-          ? stops[(i <= 0 ? stops.length : i) - 1]
-          : stops[(i + 1) % stops.length];
+        var next = e.shiftKey ? list[(i <= 0 ? list.length : i) - 1] : list[(i + 1) % list.length];
         try { next.focus(); } catch (err) {}
       }
 
       function onMsg(e) {
-        if (!e || !e.data) return;
-        /* getaway:close is the current app; crooks-popup-close was the previous
-           one, kept so swapping back needs no theme change.
-
-           Deliberately NOT markSeen() on a bare close: the app posts this from
-           its own X on every screen, so it means "shut this", not "finished".
-           Treating it as completion would put back exactly the bug where a
-           reflex close burned the one attempt. close() applies the same
-           SEEN_AFTER_MS rule as every other way out. */
+        if (e.origin !== APP_ORIGIN) return;
+        if (!e.data) return;
         var t = e.data.type;
+
+        if (t === 'getaway:height') {
+          var px = parseInt(e.data.height, 10);
+          if (frame && px > 0) frame.style.height = px + 'px';
+          return;
+        }
         if (t !== 'getaway:close' && t !== 'crooks-popup-close') return;
 
-        /* Except here. Choosing the signup after missing is real engagement,
-           and it is the one hand-off the app asks us to complete. */
+        /* Choosing the signup after missing is real engagement, and it is the
+           one hand-off the app asks us to complete. */
         if (e.data.target === 'register') {
-          markSeen();
+          set(SEEN, '1');
           close();
           sendToRegister();
           return;
@@ -283,56 +365,96 @@
 
       /* The popup only renders on the homepage, so the intake section is always
          on this page — no anchor or navigation needed. Focus follows the scroll
-         so a keyboard or screen-reader user lands on the field, not just near it. */
+         so a keyboard or screen-reader user lands on the field, not near it. */
       function sendToRegister() {
         var intake = document.querySelector('[data-crk-section="informant-intake"]');
         if (!intake) return;
-        /* Reduced motion gets a jump, not a glide. Journey 18 rated this the
-           calmest streetwear site she had used, on the strength of there being
-           no animation anywhere; a smooth scroll is still an animation. */
-        var calm = false;
-        try {
-          calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        } catch (err) { calm = false; }
-        try {
-          intake.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
-        } catch (err2) {
-          intake.scrollIntoView();
-        }
+        var reduce = false;
+        try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+        try { intake.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }
+        catch (err) { intake.scrollIntoView(); }
         var field = intake.querySelector('input[type="tel"], input[type="email"], input');
-        if (field && field.focus) {
-          window.setTimeout(function () { try { field.focus({ preventScroll: true }); } catch (e2) {} }, 400);
-        }
+        if (!field || !field.focus) return;
+        /* focus() WITHOUT preventScroll, deliberately. The smooth scroll above
+           is presentation and can silently do nothing — it does in headless,
+           and it does under some reduced-motion and older-browser conditions.
+           If that happens and we suppress the focus scroll too, the shopper is
+           left at the top of the page with focus on a field 2,500px below,
+           which is worse than no hand-off at all. Letting focus scroll is the
+           guarantee; the smooth scroll just makes it pleasant when it works. */
+        window.setTimeout(function () {
+          try { field.focus(); } catch (e2) {}
+        }, reduce ? 0 : 400);
       }
 
-      /* Do not show a dimmed void while the app loads. Wait for the frame, but
-         never wait forever — a slow app still gets its chance. */
-      var shown = false;
-      function show() {
-        if (shown) return;
-        shown = true;
-        document.body.appendChild(overlay);
-        hideBackground();
-        document.documentElement.style.overflow = 'hidden';
-        requestAnimationFrame(function () { overlay.setAttribute('data-open', ''); });
-        try { closeBtn.focus(); } catch (e) {}
+      function runIt() {
+        if (frame) return;
+        var holding = document.createElement('div');
+        holding.className = 'ctc-holding';
+        holding.textContent = 'OPENING THE LOCK-UP…';
+        sheet.replaceChild(holding, offer);
+
+        frame = document.createElement('iframe');
+        frame.className = 'ctc-frame';
+        frame.title = 'Crack the Cuffs';
+        frame.setAttribute('allow', 'clipboard-write');
+        /* In the document from the start, or it never fetches — a detached
+           iframe does not load, so swapping it in on its own load event is a
+           wait that never ends. It is hidden behind the holding line instead. */
+        frame.style.display = 'none';
+        sheet.appendChild(frame);
+        frame.addEventListener('load', function () {
+          frame.style.display = 'block';
+          if (holding.parentNode) holding.parentNode.removeChild(holding);
+          try { frame.focus(); } catch (e) {}
+        });
+        frame.src = APP_URL + '?screen=game';
       }
 
-      frame.addEventListener('load', show);
-      window.setTimeout(show, FRAME_WAIT_MS);
-      frame.src = APP_URL;
+      run.addEventListener('click', runIt);
+      /* Fetch the app the moment intent shows, so the tap has a head start. */
+      run.addEventListener('mouseenter', prefetch);
+      run.addEventListener('touchstart', prefetch, { passive: true });
 
+      not.addEventListener('click', function () {
+        set(SNOOZE, String(Date.now()));
+        close();
+      });
       closeBtn.addEventListener('click', close);
       overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
       document.addEventListener('keydown', onKey, true);
       window.addEventListener('message', onMsg);
+
+      document.body.appendChild(overlay);
+      hideBackground();
+      document.documentElement.style.overflow = 'hidden';
+      requestAnimationFrame(function () { overlay.setAttribute('data-open', ''); });
+      try { closeBtn.focus(); } catch (e) {}
     }
 
-    function whenConsentAnswered(done) {
-      if (!consentShowing()) { done(); return; }
-      var gaveUpAt = Date.now() + CONSENT_WAIT_MS;
+    var prefetched = false;
+    function prefetch() {
+      if (prefetched) return;
+      prefetched = true;
+      var l = document.createElement('link');
+      l.rel = 'prefetch';
+      l.href = APP_URL + '?screen=game';
+      document.head.appendChild(l);
+    }
+
+    function preconnect() {
+      var l = document.createElement('link');
+      l.rel = 'preconnect';
+      l.href = APP_ORIGIN;
+      l.crossOrigin = '';
+      document.head.appendChild(l);
+    }
+
+    function whenClear(done) {
+      if (!visible(CONSENT) && !busy()) { done(); return; }
+      var giveUpAt = Date.now() + CONSENT_WAIT_MS;
       var poll = window.setInterval(function () {
-        if (!consentShowing() || Date.now() > gaveUpAt) {
+        if ((!visible(CONSENT) && !busy()) || Date.now() > giveUpAt) {
           window.clearInterval(poll);
           done();
         }
@@ -340,11 +462,10 @@
     }
 
     function schedule() {
-      if (isForced()) { open(); return; }
-      if (hasSeen()) return;
-      window.setTimeout(function () {
-        whenConsentAnswered(open);
-      }, DELAY);
+      if (isForced()) { preconnect(); open(); return; }
+      if (hasWon() || isSnoozed()) return;
+      preconnect();
+      window.setTimeout(function () { whenClear(open); }, DELAY);
     }
 
     if (document.readyState === 'loading') {
