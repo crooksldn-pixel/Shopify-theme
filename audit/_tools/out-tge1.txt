@@ -1,0 +1,219 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+--- 1 COLD PDP LANDING status=200 throttled=false felt=4820ms {"url":"/products/charcoal-cellblock-crewneck","title":"CHARCOAL CELLBLOCK CREWNECK – CROOKSLDN","bag":"[0]","h1":"CHARCOAL CELLBLOCK CREWNECK","theme":null,"imgs":4,"broken":0,"textLen":855,"carriage":"","sizes":"XS,S,M,L,XL,XS,S,M,L,XL","addBtn":0,"price":"£50.00"}
+audit/screens/tge-1-cold-pdp-top.png
+audit/screens/tge-1-cold-pdp-full.png
+1 cold PDP text:
+← CATALOGUE
+PRODUCT 01 / 12
+SWEATS
+PHOTO 1 OF 1
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves today
+
+Cop the full fit — add the matching Cellblock Shorts. Save £10.
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+V2 BAGGIES
+£60.00
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+SELECT A SIZE
+CHECKOUT NOW
+1 cold add-to-bag -> {"url":"/products/charcoal-cellblock-crewneck?variant=53936235282775","title":"CHARCOAL CELLBLOCK CREWNECK – CROOKSLDN","bag":"[1]","h1":"CHARCOAL CELLBLOCK CREWNECK","theme":null,"imgs":4,"broken":0,"textLen":869,"carriage":"","sizes":"XS,S,M,L,XL,XS,S,M,L,XL","addBtn":2,"price":"£50.00"}
+audit/screens/tge-1-cold-added.png
+
+--- 2 RELOAD home: identical=true felt=4746ms
+   before={"url":"/","title":"CROOKSLDN","bag":"[1]","h1":"CROOKSLDN","theme":null,"imgs":14,"broken":0,"textLen":1798,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+   after ={"url":"/","title":"CROOKSLDN","bag":"[1]","h1":"CROOKSLDN","theme":null,"imgs":14,"broken":0,"textLen":1798,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+
+--- 2 RELOAD collection: identical=true felt=3582ms
+   before={"url":"/collections/all","title":"ALL – CROOKSLDN","bag":"[1]","h1":"ALL","theme":null,"imgs":13,"broken":0,"textLen":1171,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+   after ={"url":"/collections/all","title":"ALL – CROOKSLDN","bag":"[1]","h1":"ALL","theme":null,"imgs":13,"broken":0,"textLen":1171,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+
+--- 2 RELOAD product: identical=true felt=3653ms
+   before={"url":"/products/cb1-wash-jeans","title":"GREY WASH OG JEANS – CROOKSLDN","bag":"[1]","h1":"GREY WASH OG JEANS","theme":null,"imgs":5,"broken":0,"textLen":854,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"XS,S,M,L,XL","addBtn":0,"price":"£60.00"}
+   after ={"url":"/products/cb1-wash-jeans","title":"GREY WASH OG JEANS – CROOKSLDN","bag":"[1]","h1":"GREY WASH OG JEANS","theme":null,"imgs":5,"broken":0,"textLen":854,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"XS,S,M,L,XL","addBtn":0,"price":"£60.00"}
+
+--- 2 RELOAD cart: identical=true felt=4565ms
+   before={"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[1]","h1":"Cart\n1","theme":null,"imgs":9,"broken":0,"textLen":1009,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£50.00"}
+   after ={"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[1]","h1":"Cart\n1","theme":null,"imgs":9,"broken":0,"textLen":1009,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£50.00"}
+
+--- 2 RELOAD search: identical=true felt=4643ms
+   before={"url":"/search?q=jeans","title":"Search: 4 results found for \"jeans\" – CROOKSLDN","bag":"[1]","h1":"(none)","theme":null,"imgs":5,"broken":0,"textLen":670,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£60.00"}
+   after ={"url":"/search?q=jeans","title":"Search: 4 results found for \"jeans\" – CROOKSLDN","bag":"[1]","h1":"(none)","theme":null,"imgs":5,"broken":0,"textLen":670,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£60.00"}
+
+--- 3 trail loaded, at {"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[1]","h1":"Cart\n1","theme":null,"imgs":9,"broken":0,"textLen":1009,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£50.00"}
+3 BACK 1 (3376ms): {"url":"/search?q=jeans","title":"Search: 4 results found for \"jeans\" – CROOKSLDN","bag":"[1]","h1":"(none)","theme":null,"imgs":5,"broken":0,"textLen":670,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£60.00"}
+audit/screens/tge-3-back-1.png
+3 BACK 2 (2858ms): {"url":"/products/cb1-wash-jeans","title":"GREY WASH OG JEANS – CROOKSLDN","bag":"[1]","h1":"GREY WASH OG JEANS","theme":null,"imgs":5,"broken":0,"textLen":854,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"XS,S,M,L,XL","addBtn":0,"price":"£60.00"}
+audit/screens/tge-3-back-2.png
+3 BACK 3 (2969ms): {"url":"/collections/all","title":"ALL – CROOKSLDN","bag":"[1]","h1":"ALL","theme":null,"imgs":13,"broken":0,"textLen":1171,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+audit/screens/tge-3-back-3.png
+3 BACK 4 (2879ms): {"url":"/","title":"CROOKSLDN","bag":"[1]","h1":"CROOKSLDN","theme":null,"imgs":14,"broken":0,"textLen":1798,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+audit/screens/tge-3-back-4.png
+3 BACK 5 (3081ms): {"url":"/search?q=jeans","title":"Search: 4 results found for \"jeans\" – CROOKSLDN","bag":"[1]","h1":"(none)","theme":null,"imgs":5,"broken":0,"textLen":670,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£60.00"}
+audit/screens/tge-3-back-5.png
+3 FWD 1 (2743ms): {"url":"/","title":"CROOKSLDN","bag":"[1]","h1":"CROOKSLDN","theme":null,"imgs":14,"broken":0,"textLen":1798,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+3 FWD 2 (2974ms): {"url":"/collections/all","title":"ALL – CROOKSLDN","bag":"[1]","h1":"ALL","theme":null,"imgs":13,"broken":0,"textLen":1171,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£50.00"}
+3 FWD 3 (2828ms): {"url":"/products/cb1-wash-jeans","title":"GREY WASH OG JEANS – CROOKSLDN","bag":"[1]","h1":"GREY WASH OG JEANS","theme":null,"imgs":5,"broken":0,"textLen":854,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"XS,S,M,L,XL","addBtn":0,"price":"£60.00"}
+3 FWD 4 (3047ms): {"url":"/search?q=jeans","title":"Search: 4 results found for \"jeans\" – CROOKSLDN","bag":"[1]","h1":"(none)","theme":null,"imgs":5,"broken":0,"textLen":670,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"£60.00"}
+3 FWD 5 (2877ms): {"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[1]","h1":"Cart\n1","theme":null,"imgs":9,"broken":0,"textLen":1009,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£50.00"}
+audit/screens/tge-3-forward-end.png
+
+--- 4 tab2 /cart before: {"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[1]","h1":"Cart\n1","theme":null,"imgs":9,"broken":0,"textLen":1009,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£50.00"}
+4 tab2 cart text:
+£20.00 to free Tracked 24
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Complete the set — add the Cellblock Shorts, save £10.
+
+Cart
+1
+1
+
+Cart total £50.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+CHARCOAL CELLBLOCK CREWNECK
+
+Size:
+M
+Price
+£50.00
+Decrease quantity
+Increase quantity
+Remove
+£50.00
+Discount
+Estimated total
+£50.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH OG JEANS
+
+BLUE WASH OG JEANS
+
+£60.00
+BLUE WASH JORTS
+
+BLUE WASH JORTS
+
+£50.00
+audit/screens/tge-4-tab2-cart-before.png
+4 tab2 switched theme: {"theme":"light","ss":"light"}
+4 tab1 added: {"url":"/products/charcoal-cellblock-shorts?variant=53936234955095","title":"CHARCOAL CELLBLOCK SHORTS – CROOKSLDN","bag":"[2]","h1":"CHARCOAL CELLBLOCK SHORTS","theme":null,"imgs":7,"broken":0,"textLen":930,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"XS,S,M,L,XL,XS,S,M,L,XL","addBtn":2,"price":"£45.00"}
+audit/screens/tge-4-tab1-added.png
+4 tab2 WITHOUT reload (stale): {"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[1]","h1":"Cart\n1","theme":"light","imgs":9,"broken":0,"textLen":1008,"carriage":"£20.00 to free Tracked 24\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£50.00"}
+audit/screens/tge-4-tab2-stale.png
+4 tab2 AFTER reload: {"url":"/cart","title":"Your Shopping Cart – CROOKSLDN","bag":"[2]","h1":"Cart\n2","theme":"light","imgs":10,"broken":0,"textLen":1052,"carriage":"Free Tracked 24 — unlocked\n\nTRACKED 48 FREE\nTRACKED 24 FREE","sizes":"","addBtn":0,"price":"Price\n£45.00"}
+4 tab2 cart text after reload:
+Free Tracked 24 — unlocked
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Cart
+2
+2
+
+Cart total £95.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+CHARCOAL CELLBLOCK SHORTS
+
+Size:
+L
+Price
+£45.00
+Decrease quantity
+Increase quantity
+Remove
+£45.00
+
+CHARCOAL CELLBLOCK CREWNECK
+
+Size:
+M
+Price
+£50.00
+Decrease quantity
+Increase quantity
+Remove
+£50.00
+Discount
+Estimated total
+£95.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH OG JEANS
+
+BLUE WASH OG JEANS
+
+£60.00
+BLUE WASH JORTS
+
+BLUE WASH JORTS
+
+£50.00
+audit/screens/tge-4-tab2-after-reload.png
+4 tab3 (brand new tab) theme: {"theme":null,"ss":null,"bag":"[2]"}
+audit/screens/tge-4-tab3-new-tab.png

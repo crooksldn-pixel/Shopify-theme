@@ -36,8 +36,8 @@ to learn it worked. Small, but it lands at exactly the moment the shopper is dec
 this shop can be trusted with £60.
 **Evidence:** `audit/screens/pdp-sizing-jeans-measurements-closed.png`,
 `audit/screens/pdp-sizing-jeans-measurements-open.png` (open, showing only `MEASUREMENTS −`
-above the cookie sheet), `audit/screens/pdp-sizing-crew-measurements-cm.png`,
-`audit/screens/pdp-sizing-baggies-measurements-cm.png`.
+above the cookie sheet), `audit/screens/pdp-sizing-baggies-measurements-cm.png`,
+`audit/screens/pdp-sizing-crew-sizeguide-after.png`.
 
 ---
 
@@ -88,12 +88,16 @@ Two problems, both visible without leaving the page:
    the three a shopper measures wrong: shoulder seam-to-seam or across the back? Length from
    the high point of the shoulder, or from the collar seam?
 2. It contradicts the shop's own sizing answer on `QUESTIONS`, which is two taps away in the
-   footer of the same product page. See **Contradictions**.
+   footer of the same product page — that page says `Everything is measured with the garment
+   laid flat`. See **Contradictions**.
+
+Also worth saying: `TRUE TO SIZE` is a fit claim, not a method. On the two products whose
+tables are identical it cannot be true of both.
 
 **Verdict:** partly
 **Evidence:** `audit/screens/pdp-sizing-jeans-measurements-open.png`,
-`audit/screens/pdp-sizing-crew-measurements-cm.png` (identical caption over a table with no
-waist and no leg).
+`audit/screens/pdp-sizing-crew-sizeguide-after.png` (identical caption over a table with no
+waist and no leg), `audit/screens/pdp-sizing-faq-sizing-onscreen.png`.
 
 ---
 
@@ -127,10 +131,11 @@ that is **identical to the millimetre** to `GREY WASH OG JEANS`, described as
 | XL | `96.5cm 81.3cm 55.9cm` | `96.5cm 81.3cm 55.9cm` |
 
 Same waist, same inseam, same leg opening, on two garments the shop itself describes as
-opposites. Both were read off the screen, one after the other, in the same session. The
-pattern repeats across the catalogue: `BLUE WASH OG JEANS` carries the jeans' table too, the
-two jorts share one table, and both tees share one — so nine of the fourteen products are
-running four tables between them.
+opposites. Both were read off the screen, one after the other, in the same session, in both
+units. The pattern repeats across the rest of the catalogue (read from the store's own product
+data rather than page by page): `BLUE WASH OG JEANS` carries that same jeans table, the two
+jorts share one table, and the two tees share one — nine products carry measurements, and
+seven of those nine are running three tables between them.
 
 A shopper's read: *the leg opening of a "wide, full-length" sweat cannot be the same as the
 leg opening of a jean the same shop calls "structured, not baggy". One of these numbers is
@@ -227,13 +232,20 @@ shopper looks. International is worse: `Shipping internationally? add your items
 your shipping is calculated at checkout based on item weight and location.` — no number
 anywhere before the cart.
 
+And whether you get the number at all depends on which footer link you pick. Two rows above
+`SHIPPING` sits `QUESTIONS`, whose `HOW MUCH IS SHIPPING?` answer reads:
+`Free on UK orders over £20. Over £70 you get Royal Mail Tracked 24 free. Below £20 it is
+calculated at checkout before you pay.` — the same shop, the same question, one tap apart,
+telling the shopper there is no price to be had until checkout.
+
 **Verdict:** partly
 **Shopper cost:** a shopper under £20 has to leave the product page and read a policy page to
-learn that postage is £3. The accordion is titled `SHIPPING & RETURNS` and mentions money
-twice without ever giving the price.
+learn that postage is £3 — and if they tap `QUESTIONS` instead of `SHIPPING` they are told to
+go to checkout to find out. The accordion titled `SHIPPING & RETURNS` mentions money twice
+without ever giving the price.
 **Evidence:** `audit/screens/pdp-sizing-ship-01-pdp-closed.png`,
 `audit/screens/pdp-sizing-ship-02-custody.png`, `audit/screens/pdp-sizing-ship-03-footer.png`,
-`audit/screens/pdp-sizing-ship-04-policy.png`.
+`audit/screens/pdp-sizing-ship-04-policy.png`, `audit/screens/pdp-sizing-faq-sizing.png`.
 
 ---
 
@@ -262,11 +274,16 @@ who pays the postage are underneath it until you dismiss it or scroll.
 > SL8 5AS.`
 
 Checked against each other: **these two agree.** Same window (14 days from delivery), same
-condition (unworn, tags on), same answer on who pays (you, unless it was our fault). The one
-thing the product page does not say is that an **exchange** is possible at all — the custody
-step only offers "return", while the policy offers "return or exchange" and says the swap
-itself is free and the outbound leg is covered. For a shopper who is unsure between two sizes
-that is the single most reassuring sentence on the site, and it is not on the product page.
+condition (unworn, tags on), same answer on who pays (you, unless it was our fault). The FAQ's
+`CAN I RETURN SOMETHING?` says the same thing again — `Return postage is yours — change of
+mind, wrong size, a swap, any reason of your own.` Three surfaces, one story.
+
+The one thing the product page does not say is that an **exchange** is possible at all — the
+custody step only offers "return", while the policy offers "return or exchange" and the FAQ's
+`DO YOU DO EXCHANGES?` answers `Yes. You pay the postage sending the original back to us.
+There is no fee for the swap itself, and we cover the postage sending the new size out to
+you.` For a shopper hovering between M and L, that is the single most reassuring sentence on
+the site, and it is two taps away from the moment they need it.
 
 Note for the record: this clears open item **O5** — the live Refund policy no longer says
 "Size swaps are free within the UK"; it now spells out that return postage is the customer's.
@@ -303,7 +320,7 @@ banner", so this is new since that list was written)
   shopper order the wrong size *by following the site's own instructions*.
 - **`V2 BAGGIES` and `GREY WASH OG JEANS` publish identical measurements to the millimetre**,
   while their descriptions call them opposites ("wide… hang straight" vs "Structured, not
-  baggy"). Nine of the fourteen products share four tables between them.
+  baggy"). Nine products carry a table; seven of them are running three tables between them.
 - **The cm column's decimals are conversion residue, not precision.** Every value in every
   table is a round inch figure multiplied by 2.54 — `76.2 = 30in`, `86.4 = 34in`,
   `50.8 = 20in`. The centimetre view is the one that looks forensic, and it is the one that
@@ -312,9 +329,15 @@ banner", so this is new since that list was written)
   it scrolls the heading to the top of the screen; tapping the accordion on a first visit
   opens the table underneath the cookie sheet and looks like nothing happened.
 - **The postage prices £3 and £4.99 exist** and are well written — but only on the Shipping
-  policy page, never in the accordion called `SHIPPING & RETURNS`.
+  policy page, never in the accordion called `SHIPPING & RETURNS`, and the `QUESTIONS` page
+  actively tells shoppers the price does not exist until checkout.
+- **The crewneck's `SLEEVE` column is cut off by the edge of the phone** — `62.2cr`, `63.5cr`
+  — with nothing but the sliced digits to say the table can be dragged sideways.
+- **`QUESTIONS` offers something the product page never does:** `If the piece you want is not
+  listed yet, message us and we will measure it for you.` That is a real answer to size
+  anxiety, buried at the bottom of an FAQ answer.
 - **A cookie consent sheet now exists** and eats the bottom 43% of the phone screen, including
-  the sticky buy bar.
+  the sticky buy bar and the second half of the returns sentence.
 
 ## Missing
 
@@ -326,8 +349,11 @@ banner", so this is new since that list was written)
   screen explains "waist, chest and leg" on a crewneck that has none of those columns.
 - Any per-product method or fit note — one caption is doing duty for jeans, sweatpants,
   crewnecks and tees.
-- A "which size am I" prompt of any kind. The Contact page tells shoppers to *"message us your
-  usual fit and we'll point you to the right one"*; the product page never offers it.
+- Any sign that a four- or five-column table scrolls sideways.
+- A "which size am I" prompt of any kind at the point of decision. The FAQ says
+  `message us and we will measure it for you` and the Contact page says `message us your usual
+  fit and we'll point you to the right one` — the product page, where the shopper is actually
+  stuck, offers neither.
 
 ## Contradictions
 
@@ -349,14 +375,32 @@ answering how sizing works:
 own jeans flat, measures 43cm across the waistband and compares it with the `86.4cm` on the M
 row will conclude the M is twice their size and buy down — or, believing the FAQ, will read
 `86.4cm` as a flat measurement and expect a 68in waist. Either way they order the wrong thing,
-having done exactly what they were told.
+having done exactly what they were told. Both sentences are on screen in
+`audit/screens/pdp-sizing-jeans-measurements-open.png` and
+`audit/screens/pdp-sizing-faq-sizing-onscreen.png`.
 
-**2. Jeans vs baggies, quoted above** — `Structured, not baggy` and `wide, full-length …
+**2. What shipping costs under £20.**
+
+`QUESTIONS` → `HOW MUCH IS SHIPPING?`:
+
+> `Free on UK orders over £20. Over £70 you get Royal Mail Tracked 24 free. Below £20 it is
+> calculated at checkout before you pay.`
+
+Shipping policy, linked two rows below it in the same footer:
+
+> `What it costs. Free UK shipping over £20, and free Tracked 24 over £70. Under that:
+> standard £3, Tracked 24 £4.99.`
+
+One says there is no price before checkout; the other prints the price. A shopper who wanted
+the number and asked the obvious question is sent away empty-handed.
+
+**3. Jeans vs baggies, quoted above** — `Structured, not baggy` and `wide, full-length …
 heavy enough to hang straight`, with the same `45.7 / 48.3 / 50.8 / 53.3 / 55.9` leg openings.
 
-*(Not a contradiction, checked and clear: custody step 04 and the Refund policy agree on the
-14 days, the tags, and who pays return postage. The old "size swaps are free within the UK"
-line from open item O5 is gone.)*
+*(Checked and clear, no contradiction: custody step 04, the Refund policy and the FAQ's
+`CAN I RETURN SOMETHING?` all agree — 14 days from delivery, unworn with tags, return postage
+is the customer's unless the item was faulty or wrongly sent. The old "size swaps are free
+within the UK" line from open item O5 is gone from the live Refund policy.)*
 
 ## Works and must be protected
 

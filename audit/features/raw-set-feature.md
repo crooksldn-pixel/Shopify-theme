@@ -371,8 +371,11 @@ charcoal crewneck and shorts… £85 against £95 bought separately") is inside 
 There are no `SPECIFICATION` or `MEASUREMENTS` accordions on this page at all, so
 a shopper choosing two sizes has no measurements for either garment.
 
-`Sets` is in no menu. The only routes to this page are the collection URL typed
-by hand, search, or a search engine.
+`Sets` is in no menu — `SHOP` lists ALL / NEW / TEES / DENIM / SWEATS /
+TRACKSUITS / ACCESSORIES and nothing else. Search does find it: `/search?q=set`
+returns `NO. 01 CELLBLOCK SET £85.00 AVAILABLE DROPPED 18.08` at the top of three
+results, and `cellblock` returns it third. So the set exists for anyone who
+already knows to look for it, and for nobody who is browsing.
 
 **Verdict:** partly
 
@@ -477,26 +480,30 @@ adding: not restated. The proof exists on exactly one screen.
 
 ## Surprises
 
-1. **The store tells shoppers the shorts are sold out when they are not.** Tick
+1. **A cart line that says "save £10" leads to a £95 cart.** Following
+   `Complete the set — add the Cellblock Shorts, save £10.` and doing the obvious
+   thing on the page it opens produces `Estimated total £95.00 GBP`,
+   `total_discount: 0`, and no mention of the set anywhere.
+2. **The store tells shoppers the shorts are sold out when they are not.** Tick
    the box before choosing your own size, pick any shorts size, and you get
    `Cellblock Shorts sold out in <SIZE> — pick another size` in red. All five
    sizes, every time — there were 19 shorts in M and 30 in S at the time. The
    panel is reporting "no size chosen yet" as "out of stock".
-2. **The cart never confirms the £10.** `SPEC §3.13`'s bundle-in-cart state does
+3. **The cart never confirms the £10.** `SPEC §3.13`'s bundle-in-cart state does
    not render at all, and the line item does not restate `£95`. After the button
    is pressed, the saving is never mentioned again.
-3. **The sticky bar shows £50.00 above a button that charges £85** — and the
+4. **The sticky bar shows £50.00 above a button that charges £85** — and the
    sticky bar is the control a phone shopper actually uses.
-4. **The set panel drops the pence.** `£95` and `£85` in a store that writes
+5. **The set panel drops the pence.** `£95` and `£85` in a store that writes
    `£50.00`, `£45.00` and `£85.00` everywhere else, including in the cart the
    button leads to.
-5. **`/products/cellblock-set` is public and reachable** (`/collections/sets`,
+6. **`/products/cellblock-set` is public and reachable** (`/collections/sets`,
    linked from no menu) with a bare `SIZE` row for the crewneck, a crewneck-only
    hero image, no measurements and no size guide for either garment.
-6. **A shopper picking a shorts size has no access to the shorts' measurements**
+7. **A shopper picking a shorts size has no access to the shorts' measurements**
    without leaving the page; the thumbnail in the offer is not a link.
-7. **`Added — 1 in bag` / `BAG [1]`** after buying two garments.
-8. The panel's only stock sentence is a negative one. When the pairing is
+8. **`Added — 1 in bag` / `BAG [1]`** after buying two garments.
+9. The panel's only stock sentence is a negative one. When the pairing is
    genuinely fine, the stock line is blank — including for the pairings with only
    four sets left.
 
@@ -508,10 +515,13 @@ adding: not restated. The proof exists on exactly one screen.
 - Any restatement of the saving in the cart — no struck `£95`, no "saved £10".
 - Measurements or a size guide for the partner garment, at the moment its size is
   being asked for.
-- Any route to browse sets: `Sets` is in no menu, and the crewneck and shorts
-  pages never link to `CELLBLOCK SET`.
+- Any route to *browse* sets: `Sets` is in no menu, and the crewneck and shorts
+  pages never link to `CELLBLOCK SET`. Search finds it; browsing never will.
 - Any statement that this is **two garments** — "the full fit" is doing that job
   alone until the cart.
+- Any offer to convert two separate halves already in the cart into the £85 set.
+  With `CHARCOAL CELLBLOCK CREWNECK - M` and `CHARCOAL CELLBLOCK SHORTS - L`
+  sitting in the cart in matching sizes at £95.00, the store says nothing.
 
 ## Contradictions
 

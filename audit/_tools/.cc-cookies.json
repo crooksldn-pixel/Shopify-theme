@@ -1,0 +1,246 @@
+[
+ {
+  "name": "localization",
+  "value": "GB",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1818779687.269402,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "cart_currency",
+  "value": "GBP",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1788453292.293977,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "cf_clearance",
+  "value": "iWc1TNR0U0isjA7QLfD9fafIMhFWb6NzIsNkiJ1i_7w-1787243517-1.2.1.1-iYFrOcMDVIjygBMWyvIOIEISKBRTl2k8EHXSJh86lSb4vMJ07cGE5HopPBB_BeVFLIg3C7gTB2hkx._6gmYfyfKzyHqGDUsKk5eLf8rpLQt1dAj.70b.zkof7Djho7u30xgi0kSdMTSxX3fdVJp.6Yqh13_TL5qjgiyb6Hu0BZ7ynZlYd.yR5Wdp0xvgZpM56EVyj07fb23Zo1o.RXMMHHh4Jw.sv2TqsUqS_11Ob4AMLT9ul6UxkcbN4_eRnT8clSbTBRPGSIwS7sxHLlrSz62aspmQmP6.KylL3fIzTniOPA.iox4ZiygxnMNHaNjyo6pYh2eeNplHo7mXNJbqbxeUtaYAywn.u_1hINnS4aeTKmL.tmkJ.nefFDNFm8A4sHpH3WZukvhcT3eQgtXUwdRQe5d0kYUowmdhSyYAeJTwcVp4aT.eEi_dEQS3k5DY1Q7JTbDL7GAZ7D8K.F7QeTxYZdDQSFHQOfj7nT.yihyEtnaVvScNNemTZC3FG.6YcTT2ziu536IZUL_deaW8mA",
+  "domain": ".shopifypreview.com",
+  "path": "/",
+  "expires": 1818779517.194188,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "None",
+  "partitionKey": "https://shopifypreview.com",
+  "_crHasCrossSiteAncestor": false
+ },
+ {
+  "name": "cf_chl_rc_ni",
+  "value": "1",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1787247117,
+  "httpOnly": false,
+  "secure": true,
+  "sameSite": "None",
+  "partitionKey": "https://shopifypreview.com",
+  "_crHasCrossSiteAncestor": false
+ },
+ {
+  "name": "_shopify_y",
+  "value": "b7454ac6-b2af-42a1-af38-c632cdfeb5d3",
+  "domain": ".shopifypreview.com",
+  "path": "/",
+  "expires": 1818801292.294101,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_s",
+  "value": "83122fbf-004e-428d-a7d3-2329302fb2ce",
+  "domain": ".shopifypreview.com",
+  "path": "/",
+  "expires": 1787245492.294144,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_analytics",
+  "value": ":AaAgA9_vAAEAo_HQArX0hXT3Dj093-ctFxuZlM7Gb7pc4hg_GI22zWKMZXOO1BcJU6YtoLt1br7G_u74LOE8sI9cxPz5atmrXl5zwAM9QLwKN3gsrlqUcxzH8FkcEZmOEk-y8mPRFVOydmlQaSj8DH9Cd4Jb3ZkCCY086e6tz56MhuEDa3tizAh5Ak4LEBEar7rwsnQlRgv8nSOwaqyUILrh4H5_5fI:",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1818779519.574938,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_marketing",
+  "value": ":AaAgA9_vAAEAsXD1J-IMJky2EHh5g57d_neHcH9oJcKMTrT7Htq-eK6rqRwkTFOyijvv2Kwls_RdtSRurKVQqD6XqaL8lI8CYFDFPT5eMPro_zhPk5asPmZTbcrD0diSmvt2:",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1818779519.574994,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "omnisendSessionID",
+  "value": "bS0m74Ta6iR8L4-20260820163206",
+  "domain": ".7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1787245490,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "__cf_bm",
+  "value": ".nQTgixV8VrnYNWtYeoEWv4siMvmDX.JTD2KgRna6z0-1787243530.706929-1.0.1.1-ntgTPM7ShIFl7vZkcJT_E_kJJ.SDoGswLVGdmQFLEsFQk83EaE7ICaJWlfUsN1A8m58kIFGjaFECX31J4DNzZoBQTM2hI3L_6Eg.fCBM8ZwSM_Pjz8Yf0n9ihqYU4kwy",
+  "domain": ".hcaptcha.com",
+  "path": "/",
+  "expires": 1787245330.176444,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "None"
+ },
+ {
+  "name": "cart",
+  "value": "hWNFsa0qnfIvELZQkSO1nWOh%3Fkey%3Dfaec81a6bd1531e9eee64af4ffaeaa7d",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1795109677.932399,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "NID",
+  "value": "534=ChOdX9qeSgrIFg4G96uWPOPSaTiPsbI_JaGl78x-5BoBtOLySxfXANeJgBiYjj6MZ9kuX3LecGVbVsdr4HkUE-SkbWy9lr11TnGVSS7UwGRvCLvMWIk_YWonjmHIaTB5syGAfh8n44VEsKzX12GKpi-gIhy3UOUhGC9WHes4bwU",
+  "domain": ".google.com",
+  "path": "/",
+  "expires": 1803054765.094113,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "None"
+ },
+ {
+  "name": "_shopify_y",
+  "value": "d290f355-15e3-44cb-8f29-ab05de5e858b",
+  "domain": ".crooksldn.com",
+  "path": "/",
+  "expires": 1818801185.506254,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_s",
+  "value": "8a85c906-0f4b-4246-a58c-589e7033b8dc",
+  "domain": ".crooksldn.com",
+  "path": "/",
+  "expires": 1787245385.506293,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "cart",
+  "value": "hWNFsa5ZR5dHm7bcNOrzJe1D%3Fkey%3Df7b6feedc00eafa69d39ce2ea7f9a3f4",
+  "domain": "crooksldn.com",
+  "path": "/",
+  "expires": 1795109582.585821,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "cart_currency",
+  "value": "GBP",
+  "domain": "crooksldn.com",
+  "path": "/",
+  "expires": 1795109582.585861,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_analytics",
+  "value": ":AaAgBNYqAAEAVpdZfXUB25B2Xh7j53kj4qHeLf2QuQF4OREEeDMK5PlxU2je_b2vhlEBu-lqn9INdEXfCgoGhV1aqNDg4qy4O03q84M1j3bGPj20Q51gkfRnEStBc2gjdJ7_-Up_1epBY20lZjZbSK7C9gRe9cz8CS957BJ1OMMIy063shyylKDThyaDFaanwMAazIw6bWjfu3qGViboc18Gyb9KuXRHGq-99xcJt_cEoGtUJnccT8iovuW8gVKO51BhBBE_sokrlKCgpxqhFw3X41ooMDE6fe1sCaon7G1KUzn5mosUv5hts9dWg-9wZw7etYxz4R7JyOk4G3UhAz_xrZwA2N8vP2ZGKvpZ6jMegFP0DmAlrfhGOv_RgIBpfA5SXO6XXjvB4GEMkoivStue:",
+  "domain": "crooksldn.com",
+  "path": "/",
+  "expires": 1818779585.000646,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_marketing",
+  "value": ":AaAgBNYrAAEAbw6L4lcU-0H2icfkugaN9h7Fmxn-zQYC6Fp8LCjrOD7wus6h1xXPb9dC_ruqc4fD-LamQYSNU0x769WI-vi65nLB8JtklLf4rdFWslTyMYL3dIPE6GdbvxYM:",
+  "domain": "crooksldn.com",
+  "path": "/",
+  "expires": 1818779587.09664,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shop_app_essential",
+  "value": ":AaAgBO1MAAEA8hRcyRtVGiB31h6D254FcbA0jjP5X7V-pS2qqVxd-xB2Lezfut_Se9XVVoua3cXVy49b40YDvEXWswCWohatg_ApUrqvruOC7XwGOT_PDrgP6JCzHJcj_cbdzKdLzTSlRJV6oU0r_35d8ZqrVAo9PfuOYIQRRQFvu7CPFcJ6KQCjx1swfHKHnm4dm1lHD06IqwxI:",
+  "domain": ".shop.app",
+  "path": "/",
+  "expires": 1818779588.809287,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "None"
+ },
+ {
+  "name": "_fbp",
+  "value": "fb.1.1787243589646.249716134607601575",
+  "domain": ".crooksldn.com",
+  "path": "/",
+  "expires": 1795019589,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_essential",
+  "value": ":AaAgBNYkAAEARbtu0Zwl5ghD_I8l6xXho-LyhmNey-R86MkZ81kMxZGglvjFx7Dt4qmAtaUHVsHMm2RKpbHEctA842KV2F98LX8IgbWSIZTNIx-Du1XahUijbU-fLdLZm9e3A-VZ8c4Uu_xSB484ExCOhK5-bN36H0452uwOfPfUUt8-kwZICTv23i3tq6CATavxdGjXmpf7gy8TMpTxPtBA7hZ2h7nI_2UbAAdbYkP1M1vUA7nBtMaeK1UccsTQU37BamRkNOGM_4cJhX6ZJqAu_p8DunKJCbSkvJyrVUwJytIQPedFkxiP0MMQ97OHP7Z7ffFy-4ZkPt8HdsMVL9o44h7xRDhAN_K5-_bSwxzOF_W-Tz9pSlxPF9sANi8B4cTR6-K-6D1hU8hFE8zChLFzzZzwMBBw1thZDgCFbTk2Hh3uPn0Je7B0sG_-tkt5Ct0mZta6BLSXn_06rBGVBRDvdolFTHKy9h0CNZ98EE3Zv62tBjMZdbht-wo695zH8R78ZFYLarxZnqJccM6rUym35JAeN_FgPrb7-PBnepS_qW8qmZcaojMv2aVrehPm5YXiOF3GskQcviSSB1RJyG3ooDYgwDu94taRueoCZtNvLEIGRkvrsPNNpXEAZN9mRdYGjzn5kZYzU-c2YKl4SHwjb2Htncbrgu1oMhboRMfG9EymmSuD1u5defsa_LVAfN_WHBIupNUQmfgnW_WuGV89vF9Cf6zMmCUuvsOJ9DxN8OkHBFXZgQlfCcKQoqWdr-KrrFYu02mHZDShHytQgl6sLRhizGZ0yXLtKuRjYSjTkppY1bCYTF7I6fm2kxz3RBqlSE5eIItytrVOzymoRBpc6VbSm-l_VdAmlZtwhKmh5T8lJXT8ehdfm9iN:",
+  "domain": "crooksldn.com",
+  "path": "/",
+  "expires": 1818779608.142249,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "__cf_bm",
+  "value": "m1mWg6ZAcU8On.hQR3nNMTSE6M7iuwFpExUPguhrJ4U-1787243620.7730014-1.0.1.1-2ON2c_661r5In8hx6LoFhQUBC0VSVV2NWMbpvojTO9A19uVohKgPJRQNEHLy0rpZzxMNEULJ_KNHPQt_udZyRWDwkTza7PLjYNYhSQE22qZjV0PGV_HzqzDHRakNgllL",
+  "domain": ".omnisnippet1.com",
+  "path": "/",
+  "expires": 1787245420.289091,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "None"
+ },
+ {
+  "name": "omnisendShopifyCart",
+  "value": "{\"54377205825879\":1}",
+  "domain": ".7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": -1,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "_shopify_essential",
+  "value": ":AaAgA9_aAAEApj80SU7WoHM7yNzovZ8T6ND-qguf4GHnxbDrUsjoDz2USgTrWpmAtzW3HRakbKH8yZZuUeRZnTWrVsvSxYUZ9WUKH4HT2y-F2z8hLXvGOcko6GoqLNkKTweeH4MBcx86alO3Ig0vZlwxtXFhNBatSQBA_l0MgUR9Md2QRRhpvCno9FFizbsyqnlLgBXoUMyn7F9zKvbgLNIMo39gPosb-vDw05r4XgfPThiVEDLhU2JPBe96kOb-RbBUrY4_qVOFaLhE2PaaRGbxa78QkM3tW0TpWbENNIghKRWTAvc0elrGorMXNRaXUrj2lTLDb_eI8PKSZ1SWUoer3ymx-MT5-Vb0mA5JDHidN309oLPPeArkPbh01dXeoWNvT-EN283Hm0S8P-ZDvuwYVb6V7WOXTCXw4IDfRDjvtL8O-J2hXmqAp837lUe4l4bpAWe5_PGkqzTISOO32r-QlQ0RF7nqO2yBAyVXh9yJnbsniLoIPrFNAkEu5Az_8h1GmWtOswhjxiOwyYLTFcTDVi5gSLaJERoJ5_MMCq-W6nzvZYVoI97q9eCWNDCJJxFmd7mBQRHGDIB9SwvW0eDNxqyXOMJtIfXVI3HTL21F1LHtoa8uWPRdkbo2I7clnLI2seEBcnd5LWKW01FzpwLDfOoqI_PRb5qyZ92vYmMO58D5oWHlsPzOiQgJYGdx12EbObfYm04nbVI-XkWs4WNBCxcho6dnou8BYIVJZDOUvZH5OGskxQzxAMe-9UOtnfijtCi24DWxRU-YbXk7E_HMgzN4G0C5B_89Oo5tDMeP:",
+  "domain": "7chao18p5etruwy5-100410786135.shopifypreview.com",
+  "path": "/",
+  "expires": 1818779690.501567,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+ }
+]
