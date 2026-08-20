@@ -103,7 +103,7 @@ and the buy button changed to `ADD THE FULL FIT — £85`. (`audit/screens/04-25
 **Did:** £50 on this page, £45 on the shorts page I'd just come from. 95. Set is 85. Saving is a tenner.
 **Got:** It checks out.
 **Expected:** —
-**Felt:** It's right, and I could only check it because I'd been to the shorts page by accident. The offer itself never says the shorts are £45. `Save £10` is unverifiable from inside the thing that says it. On the other hand `£95` struck through is doing the honest version of that job, so I ended up believing it.
+**Felt:** It's right, and I could only check it because I'd gone to the shorts page to call the store's bluff. The offer itself never says the shorts are £45. `Save £10` is unverifiable from inside the thing that says it. On the other hand `£95` struck through is doing the honest version of that job, so I ended up believing it.
 **Next:** continued
 
 ### Step 13 — Noticed the page still says £50.00
@@ -174,19 +174,19 @@ with a quantity of `1`, a line total `£85.00`, a `Discount` row, and `Estimated
 **Got:** CROOKSLDN's checkout, `Order summary`, `Total price £85.00`. I didn't type anything in. (`audit/screens/04-31-checkout.png`)
 **Expected:** £85.00, and hoped for it.
 **Felt:** Relieved. The button said £85, the cart said £85, the checkout says £85. Whatever the page was doing with `£50.00` in two places, the money is consistent where it counts. That's what settled it for me.
-**Next:** continued — abandoned at the payment step, as agreed
+**Next:** continued — then closed it there, without entering a thing
 
 ---
 
 ## Outcome
 
-**Bought / didn't:** Yes — the set, £85, crewneck M and shorts L, one line, and I'd have paid. But it's a near miss dressed as a win: on my first honest attempt at this, the store told me the shorts were sold out in every size, and a normal person stops there. I only got to £85 because I refused to believe it and went to check.
+**Bought / didn't:** Yes — the set, £85, crewneck M and shorts L, one line, and I'd have paid. But it's a near miss dressed as a win: on my first honest attempt at this, the store told me the shorts were sold out in every size I tried, and a normal person stops there. I only got to £85 because I refused to believe it and went to check.
 
 **Total time:** About nine minutes. Four of them were spent being told no.
 
-**Worst moment:** `Cellblock Shorts sold out in M — pick another size`, in red, followed by the same sentence for L, XL and S. Out loud: *"they're not, though — I literally just saw them."* It's a false out-of-stock on the thing the shop is actively trying to sell me, and the shop walked me into it: the panel's own first instruction is `Pick a Cellblock Shorts size`, and picking one is what produces the red line. Then the red line's instruction — pick another size — can't be obeyed either, because all five say the same thing. Two instructions, both from the store, and following either one gets you nowhere.
+**Worst moment:** `Cellblock Shorts sold out in M — pick another size`, in red, followed by the same sentence for L, XL and S. Out loud: *"they're not, though — I literally just saw them."* It's a false out-of-stock on the thing the shop is actively trying to sell me, and the shop walked me into it: the panel's own first instruction is `Pick a Cellblock Shorts size`, and picking one is what produces the red line. Then the red line's instruction — pick another size — can't be obeyed either: I tried three more and got the same sentence with a different letter each time. Two instructions, both from the store, and following either one gets you nowhere.
 
-**Best moment:** The cart line. `CELLBLOCK SET` / `CHARCOAL CELLBLOCK CREWNECK - M` / `CHARCOAL CELLBLOCK SHORTS - L` / `£85.00`. Both garments, both sizes, in full, one line, no guessing. Runner-up: `£95` struck through with `£85 for the set` — three words that explain the entire proposition better than the offer line does.
+**Best moment:** The cart line. `CELLBLOCK SET` / `CHARCOAL CELLBLOCK CREWNECK - M` / `CHARCOAL CELLBLOCK SHORTS - L` / `£85.00`. Both garments, both sizes, in full, one line, no guessing. Runner-up: `£95` struck through with `£85 for the set` — and specifically the words *for the set*, which are the only place in the whole shop that says out loud what the £85 actually buys.
 
 **Would they come back?** Yes, for the shop. It looks like nothing else and it doesn't nag me. But I'd approach that tick box with my guard up, and if a mate asked I'd tell them "pick your size first or it'll tell you it's sold out" — which is a sentence no shop wants passed around about it.
 

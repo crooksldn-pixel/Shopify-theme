@@ -1,0 +1,13 @@
+identity {"ok":true,"gb":true}
+
+
+========== REDUCED MOTION ==========
+reduce? true
+18-r nav 200 https://7chao18p5etruwy5-100410786135.shopifypreview.com/
+SHOT audit/screens/18-r-01-arrive.png
+18-r BOOT-LINE TIMELINE
+   60ms  
+  379ms  > 12 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREETS™ C
+18-r FRAME BUTTONS [{"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","bs":["Privacy Policy","Manage preferences","Accept","Decline","Skip to content","CATALOGUE","SEARCH","BAG\n [0]","LIGHT MODE","MENU","CLOSE","SHOP","ALL","NEW","TEES","DENIM","SWEATS","TRACKSUITS","ACCESSORIES","TRACKING","QUESTIONS","TERMS","Contact","PLAY CASE:001 NOW\n          CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below.","ACCOUNT","BAG [0]","CATALOGUE","FLAT","ON MODEL","OUTLINE"]},{"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/web","bs":["Return to the previous page."]},{"url":"https://cdn.shopify.com/shopifycloud/preview-bar/index.html","bs":["CROOKSLDN — StagingDraft","View as","Copy link","Hide bar"]},{"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/ser","bs":["Return to the previous page."]}
+18-r clicked Decline
+SHOT audit/screens/18-r-02-clear.png
