@@ -311,6 +311,71 @@
             endif
           endif
 
+          comment
+            Partial sold-out. product.available is true while a single variant
+            remains, so a piece with three of five sizes gone still read
+            AVAILABLE — persona 06: the blanket label "conveys zero information
+            and reads as a broken promise".
+
+            Counted per size VALUE, not per variant: a tee is size x colour, so
+            M is still available while only M/BLACK is gone. Scoped to an option
+            actually named like a size, so the socks' "Quantity" and one-size
+            pieces are left alone rather than told they have options left.
+          endcomment
+          assign crk_size_pos = 0
+          assign crk_size_vals = null
+          for opt in product.options_with_values
+            assign crk_opt_name = opt.name | downcase
+            if crk_opt_name contains 'size'
+              assign crk_size_pos = forloop.index
+              assign crk_size_vals = opt.values
+              break
+            endif
+          endfor
+
+          assign crk_sizes_total = 0
+          assign crk_sizes_left = 0
+          if crk_size_vals and product.available
+            assign crk_sizes_total = crk_size_vals.size
+            for val in crk_size_vals
+              assign crk_val_ok = false
+              for v in product.variants
+                unless v.available
+                  continue
+                endunless
+                if crk_size_pos == 1
+                  assign crk_vv = v.option1
+                elsif crk_size_pos == 2
+                  assign crk_vv = v.option2
+                else
+                  assign crk_vv = v.option3
+                endif
+                if crk_vv == val
+                  assign crk_val_ok = true
+                  break
+                endif
+              endfor
+              if crk_val_ok
+                assign crk_sizes_left = crk_sizes_left | plus: 1
+              endif
+            endfor
+          endif
+
+          assign crk_partial = false
+          if crk_sizes_total > 1 and crk_sizes_left > 0 and crk_sizes_left < crk_sizes_total
+            assign crk_partial = true
+          endif
+
+          comment
+            Formatted here, not in the output tag: chaining filters inside {{ }}
+            is the precedence trap this codebase has hit four times.
+          endcomment
+          assign crk_sizes_line = ''
+          if crk_partial and section.settings.sizes_left_label != blank
+            assign crk_sizes_line = section.settings.sizes_left_label | replace: '[n]', crk_sizes_left
+            assign crk_sizes_line = crk_sizes_line | replace: '[m]', crk_sizes_total
+          endif
+
           assign crk_filed = false
           if product.published_at and section.settings.filed_days > 0
             assign crk_now_s = 'now' | date: '%s' | times: 1
@@ -453,6 +518,8 @@
                   {{ section.settings.sold_out_label }}
                 {%- elsif crk_low -%}
                   {{ section.settings.low_stock_label }}
+                {%- elsif crk_sizes_line != blank -%}
+                  {{ crk_sizes_line }}
                 {%- else -%}
                   {{ section.settings.available_label }}
                 {%- endif -%}
@@ -576,6 +643,7 @@
     { "type": "text", "id": "colourways_sr_label", "label": "Colourways label (screen readers)", "default": "Colourways" },
     { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
     { "type": "text", "id": "low_stock_label", "label": "Low stock label", "default": "LOW STOCK" },
+    { "type": "text", "id": "sizes_left_label", "label": "Some sizes gone label", "info": "Shown when a piece is still buyable but not in every size. [n] is how many sizes are left, [m] how many there are. Leave blank to show the available label instead.", "default": "[n] OF [m] SIZES LEFT" },
     { "type": "range", "id": "low_stock_threshold", "label": "Low stock at or below", "unit": "u", "min": 0, "max": 20, "step": 1, "default": 3 },
     { "type": "text", "id": "filed_label", "label": "Drop date label", "info": "Use [date]. Shown BELOW the stock status, never instead of it. Leave empty to hide the date.", "default": "DROPPED [date]" },
     { "type": "text", "id": "filed_format", "label": "Filing date format", "info": "Liquid date format. %d.%m gives 08.08.", "default": "%d.%m" },

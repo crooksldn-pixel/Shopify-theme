@@ -1714,3 +1714,53 @@ which made it look like a product bug rather than a test bug. And a fixed
 advances past timers while real network fetches still take wall-clock time.
 Polling for the overlay fixed it. Both cost a cycle each; neither was in the
 product.
+
+---
+
+## 2026-08-20 — Audit A4: cards that said AVAILABLE with three sizes gone
+
+Personas 01 and 06 both hit V2 BAGGIES, found three of five sizes gone only on
+the PDP, and left. Persona 06 on the card label: *"conveys zero information and
+reads as a broken promise."*
+
+`product.available` is true while a single variant remains, so the card had no
+way to say "yes, but probably not in your size". Added a fourth status state,
+below SOLD OUT and LOW STOCK, above AVAILABLE. New setting `sizes_left_label`,
+default `[n] OF [m] SIZES LEFT`.
+
+Two things it deliberately does not do:
+
+- **Counts size VALUES, not variants.** A tee is size x colour, so M/BLACK
+  selling out does not mean M has gone. Counting variants would have reported
+  nine of ten on a product where every size is still buyable.
+- **Only for an option actually named like a size.** The socks' option is
+  "Quantity" and the duffle's has one value; both keep AVAILABLE rather than
+  being told they have options left.
+
+This is an addition to the register format, not a replacement — KEEP.md §7 and
+the round-2 addendum both protect that slot, and the same mistake (a state
+replacing availability rather than joining it) was already made once with the
+FILED date.
+
+### Verified against the deployed page, not a fixture
+
+Computed the truth from the Admin API first — exactly one product in `all`
+should change — then fetched the staging collection page and read the rendered
+labels back:
+
+    CHARCOAL CELLBLOCK CREWNECK   AVAILABLE
+    ...
+    V2 BAGGIES                    2 OF 5 SIZES LEFT
+    BLACK/BLUE MOTIONTEC SOCKS    AVAILABLE
+    LARGE DUFFLE BAG              AVAILABLE
+
+CRXST★RZ T-SHIRT is the useful case: its Size is option 2, not 1, and it still
+reads correctly.
+
+Fetching a preview theme needs `-L` with a cookie jar; `?preview_theme_id=` 302s
+and sets a cookie, so a plain curl returns 0 bytes.
+
+**Noticed while verifying:** the storefront now renders **12** products, not 14.
+3 CLIVES TEE and BROADCAST TEE have been archived since this morning. That makes
+the register header's stale "14 ITEMS" — audit A7 — wrong on the shelf as well
+as wrong under filtering.
