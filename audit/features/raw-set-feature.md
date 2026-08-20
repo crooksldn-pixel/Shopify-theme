@@ -417,3 +417,79 @@ order.
 **Does £85 obviously beat £50 + £45?** Only inside the open panel, and only for
 about as long as it takes to press the button. Before ticking: not stated. After
 adding: not restated. The proof exists on exactly one screen.
+
+---
+
+## Surprises
+
+1. **The store tells shoppers the shorts are sold out when they are not.** Tick
+   the box before choosing your own size, pick any shorts size, and you get
+   `Cellblock Shorts sold out in <SIZE> — pick another size` in red. All five
+   sizes, every time — there were 19 shorts in M and 30 in S at the time. The
+   panel is reporting "no size chosen yet" as "out of stock".
+2. **The cart never confirms the £10.** `SPEC §3.13`'s bundle-in-cart state does
+   not render at all, and the line item does not restate `£95`. After the button
+   is pressed, the saving is never mentioned again.
+3. **The sticky bar shows £50.00 above a button that charges £85** — and the
+   sticky bar is the control a phone shopper actually uses.
+4. **The set panel drops the pence.** `£95` and `£85` in a store that writes
+   `£50.00`, `£45.00` and `£85.00` everywhere else, including in the cart the
+   button leads to.
+5. **`/products/cellblock-set` is public and reachable** (`/collections/sets`,
+   linked from no menu) with a bare `SIZE` row for the crewneck, a crewneck-only
+   hero image, no measurements and no size guide for either garment.
+6. **A shopper picking a shorts size has no access to the shorts' measurements**
+   without leaving the page; the thumbnail in the offer is not a link.
+7. **`Added — 1 in bag` / `BAG [1]`** after buying two garments.
+8. The panel's only stock sentence is a negative one. When the pairing is
+   genuinely fine, the stock line is blank — including for the pairings with only
+   four sets left.
+
+## Missing
+
+- The total (`£85`) in the collapsed line — the number that would make a shopper
+  open the control is the one thing the control does not say until it is opened.
+- The partner's price (`£45`) anywhere in the offer, so "Save £10" can be checked.
+- Any restatement of the saving in the cart — no struck `£95`, no "saved £10".
+- Measurements or a size guide for the partner garment, at the moment its size is
+  being asked for.
+- Any route to browse sets: `Sets` is in no menu, and the crewneck and shorts
+  pages never link to `CELLBLOCK SET`.
+- Any statement that this is **two garments** — "the full fit" is doing that job
+  alone until the cart.
+
+## Contradictions
+
+- `Cellblock Shorts sold out in M — pick another size` — while the same page's
+  `MORE FROM THIS DROP` row shows `CHARCOAL CELLBLOCK SHORTS £45.00`, and the
+  shorts page sells M perfectly happily.
+- Sticky bar `CHARCOAL CELLBLOCK CREWNECK` / `£50.00 · M` — versus the button
+  immediately above it, `ADD THE FULL FIT — £85`, for two garments in sizes M
+  and L.
+- Panel prices `£95` / `£85` — versus `£50.00` on the same screen and `£85.00`
+  in the cart it leads to.
+- `SPEC §5`: ticking reveals "live partner stock" — versus a stock line that is
+  empty for every buyable pairing, including 4-unit ones.
+- `SPEC §3.13`: "the bundle in the cart → the saving confirmed in words" —
+  versus no such section on the cart page at all.
+
+## Works and must be protected
+
+- **One line item, `£85.00`, reading `CELLBLOCK SET` /
+  `CHARCOAL CELLBLOCK CREWNECK - M` / `CHARCOAL CELLBLOCK SHORTS - L`.** This is
+  the best thing in the feature and the hardest part to get right. Do not let a
+  cart redesign flatten those component lines into `M / L`.
+- **The partner size row is headed with the partner's name**
+  (`CELLBLOCK SHORTS SIZE` / `CELLBLOCK CREWNECK SIZE`), not "Size".
+- **Untick restores everything** — button, variant id, price, and the shopper's
+  own size selection, exactly as it was.
+- **The mapping is right from both directions** — shorts S + crewneck XL from the
+  shorts page produced the bundle's `XL / S`, with the sizes on the correct
+  garments in the cart.
+- **`£95` struck, `£85 for the set`** — the arithmetic shown, in words that say
+  what the £85 buys.
+- **On the shorts side the button itself becomes the instruction**
+  (`Pick a Cellblock Crewneck size`, disabled). That is the pattern the crewneck
+  side needs when a shopper ticks first.
+- **No modal, no popup, no countdown, no "customers also bought".** One quiet
+  line that stays collapsed. The restraint is the reason the offer is credible.
