@@ -444,6 +444,26 @@ only two sections on the homepage that argue for a purchase.
 `audit/screens/homepage-92-duplicate.png`, `audit/screens/hdr-d05-ctc-overlay.png`,
 `audit/screens/status-bar-x-msg1.png`
 
+### 2.27b The skip link — the first tab stop on every page — has no visible text
+
+**Should:** The first thing a keyboard shopper reaches on any page should say what it does.
+
+**Did:** It renders as a **blank cream rectangle with no text in it** — an empty outlined box on
+the cart. Verified focused on the homepage, a product page and the cart.
+
+**Why this was missed until now, and why it matters:** the skip link's *accessible name* is
+correct, so it passes every automated check and it passed the screen-reader journey, which is why
+`SPEC.md §9.10` lists landmarks and a skip link as sound. Only the **visible label** is missing.
+That makes it invisible to a screen-reader audit and invisible to an automated one — it is
+catchable only by a sighted person navigating with a keyboard, which is exactly the gap between
+personas 15 and 16 and the reason both were run.
+
+**Shopper cost:** the first control a keyboard user meets on this site is an unlabelled box. They
+either press it blind or tab past the one control built to save them fourteen presses.
+
+**Evidence:** `audit/screens/15-50-skip-link-focused-home.png`,
+`audit/screens/15-51-skip-link-focused-product.png`, `audit/screens/15-52-skip-link-focused-cart.png`
+
 ### 2.28 Known-item impacts (not discoveries — tags only)
 
 - **Cookie sheet (known: "No cookie banner").** There is one, and it owns the bottom 359px of
@@ -905,9 +925,17 @@ reason, not because it is nice.
   the opposite — that Tab pins to `CLOSE` and the fourteen links between are unreachable — and it
   reported it twice. The keyboard persona could not reproduce that across four opens on two pages
   in two sessions, and an independent tiebreaker driving real Tab keypresses confirms the trap
-  behaves. The screen-reader observation is treated as a harness artefact of driving focus
-  programmatically rather than by key press. **Nobody should "fix" this.** Evidence:
-  `audit/screens/tiebreak-trap.png`, plus `15-46`…`15-49`.
+  behaves. **Nobody should "fix" this.** Evidence: `audit/screens/tiebreak-trap.png`, plus
+  `15-46`…`15-49`.
+  The disagreement is not just adjudicated, it is explained, and both explanations are worth
+  keeping because the next audit will hit them too:
+  1. **There are two controls named `BAG`** — the header's `BAG [n]` and the drawer's own
+     `BAG [0]` in its footer. Shift-Tab off `CLOSE` correctly wraps to the *drawer's* one, which
+     by accessible name alone is indistinguishable from having escaped the panel.
+  2. **The first-visit overlay pins Tab in a three-control loop** (`RUN IT` → `NOT NOW` → `×`)
+     and makes `MENU` unreachable while it is up. That looks exactly like "Tab is stuck on a
+     Close button". It wrecked three of the keyboard persona's own runs before they identified
+     it, and it is the most likely source of the screen-reader reading.
   **Why:** it is the difference between the drawer being a navigation route and a dead end for a
   keyboard-only shopper, and it is already right.
 - **Deep-linkable sizes.** Every size tap writes `?variant=`, and pasting that address into a
