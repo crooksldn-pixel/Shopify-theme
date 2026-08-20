@@ -149,11 +149,13 @@ What is actually in that panel, read from inside the cross-origin frame:
   challenge artwork `…/challenge/image_label_binary` → **200**. Nothing is network-blocked.
 - A real challenge arrived: inside the challenge frame the prompt reads
   `Tap on each animal that lives up in trees` and there are **18 challenge tiles**.
-- It was never laid out (the frame's own `<body>` measures 0×0) and it carries hCaptcha's own
-  error text: `Please try again.  ⚠️`.
+- It was never laid out. For the first three seconds the challenge frame is there at full size
+  (320×490) and paints nothing — the frame's own `<body>` measures **0×0** — and it carries
+  hCaptcha's own error text: `Please try again.  ⚠️`.
 - At t+6s **hCaptcha's own script** adds `display: none !important` to its challenge iframe,
   leaving only its white container — which is hCaptcha/Shopify's element (`z-index: 2147483647`),
-  not a theme element. That is where the blank white box comes from.
+  not a theme element. That is where the blank white box comes from, and it stays for as long as
+  you care to wait.
 
 So the blank panel is hCaptcha declining to run its challenge for this client and hiding itself,
 on both forms on this store. The distinction the brief asks for: this is *"a captcha refuses an
@@ -202,9 +204,10 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
 
 1. **The 30-second click timeout at any scroll position.** Sold-out size buttons carry
    `aria-disabled="true"` — deliberately, per `SPEC.md §9.3`, so they stay in the tab order.
-   Playwright 1.62 treats `aria-disabled="true"` as *disabled*, so `locator.click()` sits in
-   `waiting for element to be visible and enabled` until it times out. The call log names the
-   attribute on the element it resolved. A finger has no such check; a `touchscreen.tap` at the
+   Playwright 1.62 treats `aria-disabled="true"` as *disabled*, so `locator.click()` resolves the
+   element, prints its `aria-disabled="true"` in the call log, and then repeats its actionability
+   wait (`waiting for element to be visible and enabled`) until it times out — at any scroll
+   position, which is exactly the symptom reported. A finger has no such check; a `touchscreen.tap` at the
    same coordinates selects the size instantly. The blocked click was the test tool honouring an
    accessibility attribute, not the page rejecting a tap.
 2. **The "bare `DIV` directly under `BODY`" at `elementFromPoint`.** It is
@@ -213,11 +216,11 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
    of `body` with no class (hence "bare DIV"). It exists only because the audit runs on a
    `shopifypreview.com` URL; a shopper on the published store never has it. `scrollIntoViewIfNeeded`
    parks a target at the very edge of the screen, which is precisely inside that 68px strip.
-   Above that strip, at 60% / 75% / 92% of screen height, the only other thing that ever covers
-   the size row is the **cookie consent banner** (`section#shopify-pc__banner`, fixed,
-   `z-index: 2000000`, opaque `rgb(31,31,31)`, 390×359 — the bottom 43% of an 844 screen), which
-   is visible, dismissible and scrollable past. With the size row anywhere in the top half of the
-   screen, nothing intercepts at all.
+   The only other thing that ever covers the size row — measured at 60% and 75% of screen height —
+   is the **cookie consent banner** (`section#shopify-pc__banner`, fixed, `z-index: 2000000`,
+   opaque `rgb(31,31,31)`, 390×359, i.e. everything below y=485 on an 844 screen), and that one is
+   visible, dismissible and scrollable past. With the size row in the top half of the screen,
+   measured repeatedly, nothing intercepts at all.
 3. **The no-JS cross-check did not run.** `session({ js: false })` wedges in this harness (no
    output in 13 minutes, killed), and a later retry hit the store's bot protection
    (`429` + a Cloudflare challenge token). So the one test that would have bypassed the captcha

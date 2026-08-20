@@ -85,6 +85,25 @@ line with no `crooks.css`. The audit is conducted entirely through the browser
 against the deployed staging theme, as the brief requires. Deliverables land on
 the designated branch regardless.
 
+## The store was edited while the audit ran
+
+Persona 01 caught a product being renamed mid-journey: `GREY WASH OG JEANS` in
+the timed screenshots at 18:27, `GREY WASH YARD JEANS` by the time the
+add-to-bag confirmation was captured minutes later. Same handle, same £60.
+
+Nothing in this audit touched the store — it is read-only throughout — so this
+is someone editing in admin during the run. Two consequences worth knowing:
+
+- **Product names quoted in journeys are true as at the moment of the
+  screenshot**, and a name may not match what is live now.
+- **Stock levels moved during the run too**, which is why one agent reports the
+  catalogue as 12 products and another as 13, and why "nothing is currently
+  sold out" in the register was true for the catalogue pass and not for the
+  sold-out journey, which found `V2 BAGGIES` at `2 OF 5 SIZES LEFT`.
+
+Neither affects a finding. Both are recorded so a discrepancy between two
+journeys is read as the store moving, not as an agent being careless.
+
 ## Hard limits observed
 
 No order placed · no card details · no real personal data (test values only) ·

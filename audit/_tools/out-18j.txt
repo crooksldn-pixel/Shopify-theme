@@ -1,0 +1,119 @@
+identity {"ok":true,"gb":true}
+picked M
+after size only — buy control says: {"btn":"SELECT A SIZE","hint":["Select Colour","Select a size","Select a size"]}
+SHOT audit/screens/18-70-size-only.png
+picked BLACK
+SHOT audit/screens/18-71-size-and-colour.png
+ADD TO BAG count 1
+t+150ms {"head":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","buy":["ADD TO BAG","CHECKOUT NOW"],"pop":[" /      /      /        /         MENU /          /           CLOSE /          /        /        /          /           "," /        /         MENU /          /           CLOSE /          /        /        /          /               SHOPALLNEW"," /         MENU /          /           CLOSE /          /       "],"anim":[]}
+t+400ms {"head":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","buy":["ADD TO BAG","CHECKOUT NOW"],"pop":[" /      /      /        /         MENU /          /           CLOSE /          /        /        /          /           "," /        /         MENU /          /           CLOSE /          /        /        /          /               SHOPALLNEW"," /         MENU /          /           CLOSE /          /       "],"anim":[]}
+t+900ms {"head":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","buy":["ADD TO BAG","ADD TO BAG","CHECKOUT NOW"],"pop":[" /      /      /        /         MENU /          /           CLOSE /          /        /        /          /           "," /        /         MENU /          /           CLOSE /          /        /        /          /               SHOPALLNEW"," /         MENU /          /           CLOSE /          /       "],"anim":[]}
+t+1600ms {"head":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","buy":["ADD TO BAG","ADD TO BAG","CHECKOUT NOW"],"pop":[" /      /      /        /         MENU /          /           CLOSE /          /        /        /          /           "," /        /         MENU /          /           CLOSE /          /        /        /          /               SHOPALLNEW"," /         MENU /          /           CLOSE /          /       "],"anim":[]}
+t+2600ms {"head":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","buy":["ADD TO BAG","ADD TO BAG","CHECKOUT NOW"],"pop":[" /      /      /        /         MENU /          /           CLOSE /          /        /        /          /           "," /        /         MENU /          /           CLOSE /          /        /        /          /               SHOPALLNEW"," /         MENU /          /           CLOSE /          /       "],"anim":[]}
+SHOT audit/screens/18-73-after-add.png
+page after add
+← CATALOGUE
+PRODUCT 07 / 12
+T-SHIRT
+PHOTO 1 OF 2
+MONEY CLIVE TEE
+£25.00
+SIZE
+XS
+S
+M
+L
+XL
+COLOUR
+BLACK
+WHITE
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+
+Added — 1 in bag View bag
+
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MONEY CLIVE TEE
+£25.00 · M · BLACK
+ADD TO BAG
+CHECKOUT NOW
+header after
+CATALOGUE
+SEARCH
+BAG
+ [1]
+LIGHT MODE
+MENU
+CART
+£45.00 to free Tracked 24
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Cart
+1
+1
+
+Cart total £25.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+MONEY CLIVE TEE
+
+Size:
+M,  
+Colour:
+BLACK
+Price
+£25.00
+Decrease quantity
+Increase quantity
+Remove
+£25.00
+Discount
+Estimated total
+£25.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH YARD JEANS
+
+BLUE WASH YARD JEANS
+
+£60.00
+BLUE WASH YARD JORTS
+
+BLUE WASH YARD JORTS
+
+£50.00
+SHOT audit/screens/18-74-cart.png
