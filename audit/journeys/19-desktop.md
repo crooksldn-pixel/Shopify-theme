@@ -220,7 +220,7 @@ There's also the better part of seven hundred pixels of nothing in the middle of
 
 **At no point were the real `ADD TO BAG` and a floating copy of it on screen together.** That is the correct answer and it's the opposite of what most shops do to a laptop.
 
-The only thing I'd note: once the panel has scrolled off there is nothing at all — no price, no size, no button — from the specification down to the bottom of the page. On this site it doesn't matter, because the whole page is under three screens tall and one flick of the wheel puts the button back. On a longer page it would. `19-36-scrolled-bottom.png`
+The only thing I'd note: once the panel has scrolled off there is nothing at all — no price, no size, no button — from the specification down to the bottom of the page. On this site it doesn't matter, because with all four panels open the page is only about three screens tall and one flick of the wheel puts the button back. On a longer page it would. `19-36-scrolled-bottom.png`
 
 ### 4. Are the photographs big enough for a 1440 screen — can you see the fabric?
 

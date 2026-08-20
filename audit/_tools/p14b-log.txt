@@ -40,3 +40,50 @@ pass 0 {"ctc":false,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"h":4
 cookie sheet box [0,407,360,393] hero button box [16,411,132,48]
 audit/screens/14-cookie-over-cta.png
 Decline at [175,705]
+after Decline: audit/screens/14-cookie-declined.png
+pass 1 {"ctc":true,"consentBox":null,"heroCat":[16,411,132,48],"h":4927}
+the black sheet is up: audit/screens/14-overlay.png
+close button at [32,34]
+after closing it: audit/screens/14-overlay-closed.png
+pass 2 {"ctc":false,"consentBox":null,"heroCat":[16,411,132,48],"h":4927}
+
+===== SCROLLING THE REGISTER WHILE IT IS STILL FILLING IN =====
+  +0ms {"y":513,"h":4927,"painted":11,"total":31,"cards":[["NO. 01 SWEATS CHARCOAL CEL",292,291],["NO. 02 SWEATS CHARCOAL CEL",292,291],["NO. 03 DENIM BLUE WASH YAR",584,274],["NO. 04 DENIM BLUE WASH YAR",584,274]]}
+  +1200ms {"y":700,"h":4927,"painted":13,"total":31,"cards":[["NO. 01 SWEATS CHARCOAL CEL",105,291],["NO. 02 SWEATS CHARCOAL CEL",105,291],["NO. 03 DENIM BLUE WASH YAR",397,274],["NO. 04 DENIM BLUE WASH YAR",397,274]]}
+  +2400ms {"y":700,"h":4927,"painted":13,"total":31,"cards":[["NO. 01 SWEATS CHARCOAL CEL",105,291],["NO. 02 SWEATS CHARCOAL CEL",105,291],["NO. 03 DENIM BLUE WASH YAR",397,274],["NO. 04 DENIM BLUE WASH YAR",397,274]]}
+  +4000ms {"y":700,"h":4927,"painted":13,"total":31,"cards":[["NO. 01 SWEATS CHARCOAL CEL",105,291],["NO. 02 SWEATS CHARCOAL CEL",105,291],["NO. 03 DENIM BLUE WASH YAR",397,274],["NO. 04 DENIM BLUE WASH YAR",397,274]]}
+audit/screens/14-register-filling.png
+
+
+===== PRODUCT PAGE, AND THE BUTTON THAT CHANGES ITS MIND =====
+first sight of a buy button: {"at":2895,"add":["ADD TO BAG",[104,744,109,44]],"sel":["SELECT A SIZE",[33,922,294,52]],"rs":"loading"}
+shot the instant ADD TO BAG appeared: audit/screens/14-pdp-earlyadd.png
+thumb going for ADD TO BAG at (159,766) — seen at 2895ms
+WHAT IS THERE 700ms LATER (t=6253ms): {"tag":"BUTTON","text":"SELECT A SIZE","dis":"","aria":null}
+audit/screens/14-pdp-thumb-landed.png
+after that tap: audit/screens/14-pdp-after-tap.png
+bag count now: BAG [0]
+READABLE: "← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH YARD JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves tomorrow SELECT A SIZE SPECIFICATION + ITEM DESCRIPTION + MEASUREMENTS + CHAIN OF CUSTODY — SHIPPING & RETURNS + MORE FROM THIS DROP BLUE WASH YARD JEANS £60.00 BLUE WASH YARD JORTS £50.00 GREY WASH YARD JORTS £50.00 GREY WASH YARD JEANS £60.00 SELECT A SIZE CHECKOUT NOW"
+PDP NAV {"at":7587,"status":200}
+
+===== DOING IT PROPERLY: SIZE, THEN BAG =====
+size M after scrolling it into the middle of the screen: {"rect":[154,742,52,52],"vh":800}
+re-read [154,374,52,52]
+what is under the M I can see: {"tag":"BUTTON","text":"M"}
+after tapping M: audit/screens/14-size-m.png
+size row [["XS","false"],["S","false"],["M","true"],["L","false"],["XL","false"]]
+buy button now: ["ADD TO BAG","ADD TO BAG","CHECKOUT NOW"]
+tapped ADD TO BAG, clicked = true
+  +1s: audit/screens/14-bag-1s.png
+    {"bag":"BAG [1]","buttons":["ADD TO BAG","ADD TO BAG"]}
+  +4s: audit/screens/14-bag-4s.png
+    {"bag":"BAG [1]","buttons":["ADD TO BAG","ADD TO BAG"]}
+  +8s: audit/screens/14-bag-8s.png
+    {"bag":"BAG [1]","buttons":["ADD TO BAG","ADD TO BAG"]}
+
+===== THE BAG =====
+  t=28ms {"rs":"complete","chars":809,"imgs":5,"painted":5,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":null,"add":["ADD TO BAG",[33,576,294,52]],"sel":null,"ships":null,"h":2585,"y":368,"tick":"12 PRODUCTS CURRENTLY ONLINE"}
+  t=1005ms {"rs":"loading","chars":0,"imgs":0,"painted":0,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":null,"add":null,"sel":null,"ships":null,"h":800,"y":0,"tick":null}
+
+### MARK 3s [14-bag] shutter 3000->8122ms  audit/screens/14-bag-3s.png
+     {"rs":"interactive","chars":970,"imgs":9,"painted":5,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":null,"add":null,"sel":null,"ships":null,"h":2660,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 12 PRODUCTS CURRENTLY ONL"}
