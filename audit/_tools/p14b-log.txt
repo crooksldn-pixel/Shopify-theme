@@ -1,0 +1,42 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+handshake identity {"crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+flag right after handshake: null
+
+
+===== ARRIVAL ON A PHONE THAT HAS NEVER BEEN HERE =====
+  t=973ms {"rs":"loading","chars":0,"imgs":0,"painted":0,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":null,"add":null,"sel":null,"ships":null,"h":800,"y":0,"tick":null}
+  t=1846ms {"rs":"interactive","chars":1779,"imgs":31,"painted":1,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 12 PRODUCTS CURRENTLY ONL"}
+
+### MARK 3s [14-arrive] shutter 3001->3378ms  audit/screens/14-arrive-3s.png
+     {"rs":"interactive","chars":1779,"imgs":31,"painted":1,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 12 PRODUCTS CURRENTLY ONL"}
+  t=4262ms {"rs":"interactive","chars":1779,"imgs":31,"painted":5,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH 12 PRODUCTS CURRENTLY ONL"}
+  t=4879ms {"rs":"interactive","chars":1714,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":null,"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+  t=5091ms {"rs":"interactive","chars":2038,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+
+### MARK 5s [14-arrive] shutter 5093->5924ms  audit/screens/14-arrive-5s.png
+     {"rs":"interactive","chars":2054,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+  t=6015ms {"rs":"interactive","chars":2055,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+  t=6448ms {"rs":"interactive","chars":2069,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+  t=8110ms {"rs":"complete","chars":2069,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4618,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+  t=9459ms {"rs":"complete","chars":2069,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4829,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+
+### MARK 10s [14-arrive] shutter 10001->10215ms  audit/screens/14-arrive-10s.png
+     {"rs":"complete","chars":2069,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4829,"y":0,"tick":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"}
+
+===== THUMB TEST ON THE HOMEPAGE =====
+what I lined my thumb up on at 11914 ms: {"label":"CATALOGUE","rect":[16,411,132.09375,48]}
+aiming at (82,435)
+shot of what I was aiming at: audit/screens/14-thumb-aim.png
+WHAT MY THUMB ACTUALLY LANDED ON at 13699 ms: {"tag":"H2","cls":"","text":"COOKIE CONSENT","href":null}
+shot at the moment of landing: audit/screens/14-thumb-landed.png
+url https://7chao18p5etruwy5-100410786135.shopifypreview.com/ -> https://7chao18p5etruwy5-100410786135.shopifypreview.com/
+after the tap: audit/screens/14-thumb-after.png
+READABLE: "COOKIE CONSENT We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy Manage preferences Accept Decline Skip to content 12 PRODUCTS CURRENTLY ONLINE CATALOGUE SEARCH BAG [0] LIGHT MODE MENU > 12 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREETS™ CATALOGUE CATALOGUE 12 ITEMS FLAT ON MODEL OUTLINE ALL T-SHIRT DENIM SWEATS ACCESSORIES NO. 01 SWEATS CHARCOAL CELLBLOCK CREWNECK £50.00 AVAILABLE NO. 02 SWEATS CHARCOAL CELLBLOCK SHORTS £45.00 AVAILABLE NO. 03 DENIM BLUE WASH YARD "
+NAV {"ok":true,"status":200,"at":7362}
+state now {"rs":"complete","chars":2033,"imgs":31,"painted":11,"ctc":false,"ctcSeen":null,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"add":null,"sel":null,"ships":[16,2642,328,64],"h":4927,"y":0,"tick":"12 PRODUCTS CURRENTLY ONLINE"}
+
+===== CLEARING WHATEVER IS ON TOP =====
+pass 0 {"ctc":false,"consentBox":[0,407,360,393],"heroCat":[16,411,132,48],"h":4927}
+cookie sheet box [0,407,360,393] hero button box [16,411,132,48]
+audit/screens/14-cookie-over-cta.png
+Decline at [175,705]

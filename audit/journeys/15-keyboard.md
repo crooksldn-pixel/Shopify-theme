@@ -76,7 +76,7 @@ a blank white rectangle at the top-left (1) → the handcuffs logo (2) → `CATA
 
 ### Step 11 — Went back to find out what that first white box was
 **Did:** Shift-Tabbed back to stop 1 and looked at it properly, then did the same on the product page and the cart.
-**Got:** A cream rectangle about 145px wide in the top-left corner **with nothing written in it.** On the cart page it's an empty outlined box instead — same thing, no words. It's the shop's skip link (Enter takes you past the header to the content), but the label is the same colour as the panel it's printed on, so there is nothing to read on any page I visited.
+**Got:** A cream rectangle about two words wide in the top-left corner **with nothing written in it.** On the cart page it's an empty outlined box instead — same thing, no words. It's the shop's skip link (Enter takes you past the header to the content), but the label is the same colour as the panel it's printed on, so there is nothing to read on any page I visited.
 **Expected:** To read the words "Skip to content", which is the entire point of a skip link — it exists to be seen.
 **Felt:** This one annoyed me more than it should. The first thing I meet on every page of this shop is a blank white box, and the only way to find out what it does is to press Enter and see where I end up. I'd have said: *"What am I about to activate?"* It isn't fatal — I just tab past it — but it's the one bit of the keyboard experience that's actively unreadable, and it's the very first thing.
 **Next:** continued · *Evidence:* `audit/screens/15-50-skip-link-focused-home.png`, `audit/screens/15-52-skip-link-focused-pdp.png` (solid cream, no text), `audit/screens/15-51-skip-link-focused-cart.png` (empty outlined box) — in all three the skip link is the focused element
@@ -120,7 +120,8 @@ a blank white rectangle at the top-left (1) → the handcuffs logo (2) → `CATA
 ### Step 17 — Menu → denim
 **Did:** Enter on MENU again, Tab five times to `DENIM`, Enter.
 **Got:** `/collections/denim`, `DENIM` / `4 ITEMS`. Focus dropped to nothing on the new page, as it does everywhere.
-**Felt:** Six presses from a closed menu to a category. Fine.
+**Expected:** To arrive somewhere near the top of the results rather than nowhere at all.
+**Felt:** Six presses from a closed menu to a category. Fine. Landing with no focus is normal everywhere on the web, so I don't hold it against them — it just means every page costs me seven Tabs before I'm past the header again.
 **Next:** continued · *Evidence:* `audit/screens/15-10-denim-focused.png`, `audit/screens/15-11-denim-collection.png`
 
 ### Step 18 — Collection to a product
@@ -132,7 +133,7 @@ a blank white rectangle at the top-left (1) → the handcuffs logo (2) → `CATA
 
 ### Step 19 — The size row
 **Did:** Tabbed down the product page counting.
-**Got:** Ten stops to the first size: header (7), `← CATALOGUE` (8), the photographs as **one** stop announced `Evidence photographs` (9), then `XS` (10). Every size is its own stop — `XS S M L XL` — each with a lavender ring. Then I tried the arrow keys on a hunch: **ArrowRight moved me along the row without selecting anything.** Space selected the one I was on, and did not scroll the page.
+**Got:** Ten stops to the first size: header (7), `← CATALOGUE` (8), the photographs as **one** stop with a ring round the whole picture (9), then `XS` (10). Every size is its own stop — `XS S M L XL` — each with a lavender ring. Then I tried the arrow keys on a hunch: **ArrowRight moved me along the row without selecting anything.** Space selected the one I was on, and did not scroll the page.
 **Expected:** To have to Tab five times and pray Space didn't scroll me to the footer.
 **Felt:** Both idioms work — arrows to browse, Space or Enter to pick. That's the mark of somebody who tested it. And the gallery being one stop instead of six saved me real effort.
 **Next:** continued · *Evidence:* `audit/screens/15-14-size-focused.png`, `audit/screens/15-21-space-selects-xs.png`
@@ -203,4 +204,4 @@ Two things might explain the disagreement, and both are worth checking before an
 1. **There are two links called "BAG".** The panel has its own `ACCOUNT` and `BAG [0]` in its footer (at 1115,840 on a 1440×900 screen) as well as the header's `BAG [n]` (at 1031,36). Shift-Tab off `CLOSE` correctly wraps to the **panel's** BAG. By name alone that is indistinguishable from escaping to the header's.
 2. **The `CROOKSLDN: THE GETAWAY` overlay pins Tab in a three-control loop** — `RUN IT` → `NOT NOW` → `×` (aria-label `Close`, and on other visits `Close Crack the Cuffs`). While it is up, `MENU` cannot be reached at all: I hit this four times and each time it looked exactly like "Tab is stuck on a Close button." Three of my own runs were wrecked by it before I worked out what it was. If the screen-reader run met that overlay, it would read as a drawer that pins to CLOSE.
 
-If both runs are sound, the disagreement is real and worth a third opinion. My evidence says the trap behaves: `audit/screens/15-46-drawer-open-fresh.png`, `15-47-after-two-shift-tabs.png`, `15-48-after-12-tabs.png`, `15-49-escape-returns-focus.png`, `15-34-drawer-pdp-tabbed.png`, `15-35-drawer-link-used.png`.
+If both runs are sound, the disagreement is real and worth a third opinion. My evidence says the trap behaves: `audit/screens/15-46-drawer-open-fresh.png`, `audit/screens/15-47-after-two-shift-tabs.png`, `audit/screens/15-48-after-12-tabs.png`, `audit/screens/15-49-escape-returns-focus.png`, `audit/screens/15-34-drawer-pdp-tabbed.png`, `audit/screens/15-35-drawer-link-used.png`, `audit/screens/15-08-drawer-open.png`.

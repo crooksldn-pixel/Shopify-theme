@@ -105,9 +105,14 @@ being wrong while the set toggle is on.
 
 ## The store was edited while the audit ran
 
-Persona 01 caught a product being renamed mid-journey: `GREY WASH OG JEANS` in
-the timed screenshots at 18:27, `GREY WASH YARD JEANS` by the time the
-add-to-bag confirmation was captured minutes later. Same handle, same £60.
+Two products were renamed mid-run, by two different agents, an hour apart:
+
+- `/products/cb1-wash-jeans` — `GREY WASH OG JEANS` at 18:27, `GREY WASH YARD
+  JEANS` by about 19:00. Same handle, same £60.
+- `/products/v2-baggies` — `V2 BAGGIES` at 17:05, `GREY CONVICT SWEATS` by
+  18:10, **while its own description still opens "V2 Baggies — wide,
+  full-length sweats…"**. That mismatch is live on the storefront now and was
+  created during the audit, not found by it.
 
 Nothing in this audit touched the store — it is read-only throughout — so this
 is someone editing in admin during the run. Two consequences worth knowing:

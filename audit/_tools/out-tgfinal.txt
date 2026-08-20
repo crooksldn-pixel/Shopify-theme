@@ -1,0 +1,372 @@
+
+
+=========== A. NO THEME JAVASCRIPT (all external .js blocked) =========== {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+A home loaded in 3527ms, blocked 67 scripts
+A home counts: {"productLinks":12,"images":31,"imagesShown":14,"prices":13,"theme":null,"outline":null,"bodyBg":"rgb(11, 10, 14)","statusBar":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH\n\n12 PRODUCTS CURRENTLY ONLINE","hero":"CROOKSLDN"}
+audit/screens/tgj-home-nojs.png
+audit/screens/tgj-home-nojs-full.png
+A home text:
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+12 PRODUCTS CURRENTLY ONLINE
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+LIGHT MODE
+MENU
+
+> 12 PRODUCTS AVAILABLE TO PURCHASE
+
+CROOKSLDN
+
+OWN THE STREETS™
+
+CATALOGUE
+CATALOGUE
+12 ITEMS
+FLAT
+ON MODEL
+OUTLINE
+ALL
+T-SHIRT
+DENIM
+SWEATS
+ACCESSORIES
+NO. 01
+SWEATS
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+AVAILABLE
+NO. 02
+SWEATS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+AVAILABLE
+NO. 03
+DENIM
+BLUE WASH YARD JEANS
+£60.00
+AVAILABLE
+NO. 04
+DENIM
+BLUE WASH YARD JORTS
+£50.00
+AVAILABLE
+NO. 05
+DENIM
+GREY WASH YARD JEANS
+£60.00
+AVAILABLE
+NO. 06
+DENIM
+GREY WASH YARD JORTS
+£50.00
+AVAILABLE
+NO. 07
+T-SHIRT
+MONEY CLIVE TEE
+Colourways: BLACK, WHITE
+£25.00
+AVAILABLE
+NO. 08
+T-SHIRT
+CRXST★RZ T-SHIRT
+Colourways: Black, White
+£25.00
+AVAILABLE
+DROPPED 03.08
+NO. 09
+SWEATS
+GREY CONVICT SWEATS
+£60.00
+2 OF 5 SIZES LEFT
+NO. 10
+ACCESSORIES
+BLACK/BLUE MOTIONTEC™ SOCKS
+£6.00
+AVAILABLE
+NO. 11
+ACCESSORIES
+WHITE/RED MOTIONTEC™ SOCKS
+£6.00
+AVAILABLE
+NO. 12
+ACCESSORIES
+BALLISTIC NYLON DUFFLE
+£18.00
+AVAILABLE
+
+PROPERTY BAG
+
+EVERY ORDER SHIPS LIKE THIS
+
+Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for.
+
+01
+EVIDENCE TAG
+Numbered, seized by CROOKS LDN, QR to verify.
+02
+SECURITY SEAL
+Pull-tight, stamped with the cuffs.
+03
+CUFF KEYRING *
+Miniature cuffs, on the ring.
+
+* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY.
+
+REGISTER AS INFORMANT
+
+A MENU click: locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('b
+A theme toggle click: locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[
+A OUTLINE click: locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[
+A filter DENIM click: locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('b
+audit/screens/tgj-home-nojs-after-clicks.png
+
+A PDP: {
+ "hasForm": true,
+ "action": "/cart/add",
+ "fields": [
+  {
+   "tag": "INPUT",
+   "type": "hidden",
+   "name": "form_type",
+   "value": "product",
+   "text": "",
+   "checked": false
+  },
+  {
+   "tag": "INPUT",
+   "type": "hidden",
+   "name": "utf8",
+   "value": "✓",
+   "text": "",
+   "checked": false
+  },
+  {
+   "tag": "INPUT",
+   "type": "hidden",
+   "name": "id",
+   "value": "",
+   "text": "",
+   "checked": false
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "XS"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "S"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "M"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "L"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "XL"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "SIZE GUIDE"
+  },
+  {
+   "tag": "INPUT",
+   "type": "checkbox",
+   "name": "",
+   "value": "on",
+   "text": "",
+   "checked": false
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "XS"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "S"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "M"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "L"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "button",
+   "name": "",
+   "value": "",
+   "text": "XL"
+  },
+  {
+   "tag": "BUTTON",
+   "type": "submit",
+   "name": "add",
+   "value": "",
+   "text": "SELECT A SIZE"
+  },
+  {
+   "tag": "INPUT",
+   "type": "hidden",
+   "name": "product-id",
+   "value": "10967989944663",
+   "text": "",
+   "checked": false
+  },
+  {
+   "tag": "INPUT",
+   "type": "hidden",
+   "name": "section-id",
+   "value": "template--305998997097",
+   "text": "",
+   "checked": false
+  }
+ ],
+ "sizes": [
+  "XS(BUTTON,button,pressed=false)",
+  "S(BUTTON,button,pressed=false)",
+  "M(BUTTON,button,pressed=false)",
+  "L(BUTTON,button,pressed=false)",
+  "XL(BUTTON,button,pressed=false)",
+  "XS(BUTTON,button,pressed=false)",
+  "S(BUTTON,button,pressed=false)",
+  "M(BUTTON,button,pressed=false)",
+  "L(BUTTON,button,pressed=false)",
+  "XL(BUTTON,button,pressed=false)"
+ ],
+ "price": "£50.00",
+ "images": 4,
+ "details": [],
+ "buttons": [
+  "LIGHT MODE",
+  "MENU",
+  "CLOSE",
+  "XS",
+audit/screens/tgj-pdp-nojs.png
+audit/screens/tgj-pdp-nojs-full.png
+A PDP text:
+← CATALOGUE
+PRODUCT 01 / 12
+SWEATS
+PHOTO 1 OF 1
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select a size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Cop the full fit — add the matching Cellblock Shorts. Save £10.
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+GREY CONVICT SWEATS
+£60.00
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+ADD TO BAG
+CHECKOUT NOW
+A accordion: locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('s
+A after size click: {"url":"6135.shopifypreview.com/products/charcoal-cellblock-crewneck","pressed":"XS=false S=false M=false L=false XL=false XS=false S=false M=false L=false XL=false","idInput":"","buyLabels":["SELECT A SIZE","ADD TO BAG","CHECKOUT NOW"]}
+audit/screens/tgj-pdp-size-nojs.png
+A buy click: locator.click: Timeout 8000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /ADD TO BAG|SELECT A S
+
+A /cart:
+Your cart is empty
+
+Have an account? Log in to check out faster.
+
+Continue shopping
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH YARD JEANS
+
+BLUE WASH YARD JEANS
+
+£60.00
+BLUE WASH YARD JORTS
+
+BLUE WASH YARD JORTS
+
+£50.00
+audit/screens/tgj-cart-nojs.png
