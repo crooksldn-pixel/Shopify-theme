@@ -1630,3 +1630,87 @@ clearing, no second add when the item is already held, exactly one add when it
 is not, and all three controls dead on a sold-out size. Plus the existing 41
 no-autoselect assertions re-run green. Deployed to 202053779799 and verified by
 checksum.
+
+---
+
+## 2026-08-20 — Audit A2/A3: the Crack the Cuffs popup
+
+### A3 — "REVEAL MY CODE does nothing" is not what is happening
+
+The audit calls this worst moment #1 and says *"the shop takes two pieces of
+contact data and gives nothing back."* Inspected the Base44 app directly
+(`Crack the Cuffs`, appId `6a2967eacd8fe987405353d2`). The finding is wrong in
+its diagnosis, and wrong in a way that matters.
+
+**The backend works.** `base44/functions/issueDiscount/entry.ts` mints codes and
+has been doing so all along. Most recent real lead:
+`baily.coggin@yahoo.com` / `ESCP-WK72VV` / 15% at **13:19 UTC on 18 August** —
+the day of the audit — with `code_failed: false`. Every `code_failed: true`
+record in the table is a `cracktest*@crooksldn.com` or `test*@` address from
+20 July or earlier, i.e. development.
+
+**No path in the client is silent.** It handles success, `already_played`,
+`code_failed` and a catch. `LOADING` renders a spinner reading "Forging your
+code…". `RewardDisplay`'s `code_failed` branch renders a "Check Your Email"
+fallback. There is no branch that shows nothing.
+
+**And nothing was captured.** A `Lead` is written even when code generation
+fails — that is the whole point of the `code_failed` column. There is **no Lead
+from the audit's evening session**; the last one is 13:19 that afternoon. So the
+function never completed during the audit, and the two pieces of contact data
+the audit says were taken were not taken either. Less bad ethically than the
+audit states. Equally bad commercially.
+
+The failure is therefore upstream of the backend, in the call itself. Prime
+suspect: `base44.functions.invoke` failing inside a **cross-site iframe** —
+third-party cookie and storage partitioning would break an authenticated SDK
+call embedded in crooksldn.com while leaving it working when the app is opened
+first-party at crack-cuff-codes.base44.app. That fits every observation,
+including why real customers still got codes.
+
+Not reproducible from here: Chromium in this container has no external network
+(curl does, via the proxy). Settling it needs one live play with the network tab
+open, or permission to invoke the function directly — which mints a real
+discount code and creates a real customer, so it is not mine to do unasked.
+
+### A2 — what the overlay actually gets wrong
+
+Twelve of twenty journeys complained about this popup. The game is not the
+problem (11: *"genuinely fun"*). Four defects, all in
+`snippets/crack-the-cuffs.liquid`, all fixed:
+
+1. **It lied about being a dialog.** `role="dialog" aria-modal="true"` with no
+   focus move, no trap, no restore, and the close X *after* the iframe in DOM
+   order — so a keyboard or screen-reader user tabbed straight into a
+   cross-origin iframe with no announced way out (15, 16). Close button is now
+   first in the DOM, focus moves to it, Tab cycles between it and the frame,
+   Escape closes, focus returns to whatever had it, and everything else in
+   `<body>` is `aria-hidden` while the dialog is up.
+2. **The one attempt was spent on opening.** `markSeen()` fired at open, so
+   anyone who shut it reflexively lost their only go for good (18). Now spent
+   only after `SEEN_AFTER_MS` (8s) on screen, or when the app itself says the
+   visitor is done.
+3. **An empty dimmed box for 4–8 seconds** (13, 19) — the overlay was attached
+   before the iframe had loaded. Now waits for the frame's `load`, with a 6s
+   timeout so a slow app still gets shown.
+4. **It stacked on the cookie banner** (02, 18, 20). Now waits for a consent
+   banner to be answered, polling up to 30s before giving up and showing anyway.
+
+Also gave landscape its own layout — 460px frame, scrollable overlay, smaller
+close target — because at ~300px of height the controls sat below the fold with
+nothing to scroll (13).
+
+Verified with 16 assertions in headless Chromium against the real snippet (the
+script is extracted from the `.liquid` at test time so the test cannot drift
+from what ships): banner gating, deferred show with the frame confirmed loaded,
+DOM order, focus move, Tab and Shift+Tab cycling, background `aria-hidden`,
+Escape, focus restore, scroll-lock release, and the attempt surviving a fast
+close.
+
+Two false starts worth recording: a `sed`-style patch left an unclosed `try`, so
+the test file was a syntax error and silently never ran — the popup still opened,
+which made it look like a product bug rather than a test bug. And a fixed
+`await wait(3000)` raced the iframe load, because Chromium's virtual time
+advances past timers while real network fetches still take wall-clock time.
+Polling for the overlay fixed it. Both cost a cycle each; neither was in the
+product.

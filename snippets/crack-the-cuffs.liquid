@@ -4,10 +4,29 @@
   handled entirely by the Base44 app (Shop the Drop uses Shopify's native
   /discount/{code} route via target="_top") — the theme only owns the overlay.
 
-  - Shows once per browser via localStorage flag `crooksldn_ctc_seen`
-    (set as soon as it is shown, so it never re-nags).
+  - Shows once per browser via localStorage flag `crooksldn_ctc_seen`.
   - Fires ~3s after load. Append ?ctc=1 to any URL to force it (QA).
   - Closes via overlay X, backdrop tap, Esc, or the app's crooks-popup-close message.
+
+  Four things the twenty-journey audit found, fixed here. All of them are the
+  overlay's fault, not the game's:
+
+  1. FOCUS. It claimed role="dialog" aria-modal="true" and then did nothing to
+     honour it — no focus move, no trap, no restore, and the close X sat after
+     the iframe in DOM order, so a keyboard or screen-reader user tabbed into a
+     cross-origin iframe with no announced way out (journeys 15, 16).
+  2. THE ONE ATTEMPT. markSeen() fired the moment the popup opened, so anyone
+     who shut it reflexively burned their only go and could never come back to
+     it (18). It is now only spent on a real look — see SEEN_AFTER_MS.
+  3. THE EMPTY BOX. The overlay was attached before the iframe had loaded, so
+     the first 4–8 seconds were a dimmed void with nothing in it (13, 19). It
+     now waits for the frame, with a timeout so a slow app still gets shown.
+  4. THE COOKIE BANNER. It stacked on top of the consent banner, making the
+     banner the thing you had to fight past first (02, 18, 20). It now waits
+     for the banner to be answered.
+
+  Still the app's, not ours, and reported separately: the reveal step, the
+  date format, and asking for a phone number before naming the prize.
 {%- endcomment -%}
 <style>
   .ctc-overlay {
@@ -56,6 +75,10 @@
   .ctc-close:hover {
     background: rgba(244, 241, 234, 0.12);
   }
+  .ctc-close:focus-visible {
+    outline: 2px solid #a77ac7;
+    outline-offset: 2px;
+  }
   @media screen and (max-width: 749px) {
     .ctc-overlay {
       padding: 10px;
@@ -64,6 +87,30 @@
       max-width: 100%;
       height: 100%;
       max-height: none;
+    }
+  }
+  {%- comment -%}
+    Landscape on a phone left roughly 300px of height for a 680px game, so the
+    controls sat below the fold with nothing to scroll (journey 13). Give the
+    frame the full height it can have and let the overlay scroll.
+  {%- endcomment -%}
+  @media screen and (max-height: 500px) and (orientation: landscape) {
+    .ctc-overlay {
+      align-items: flex-start;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .ctc-frame {
+      height: 460px;
+      max-height: none;
+      max-width: 520px;
+    }
+    .ctc-close {
+      top: 6px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      font-size: 20px;
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -77,6 +124,15 @@
     var APP_URL = 'https://crack-cuff-codes.base44.app';
     var FLAG = 'crooksldn_ctc_seen';
     var DELAY = 3000;
+    /* The one attempt is only spent once the popup has been on screen long
+       enough to be a look rather than a reflex. Shut it faster than this and it
+       is still waiting next time. */
+    var SEEN_AFTER_MS = 8000;
+    /* Consent banners, so the popup never lands on top of one. Shopify's native
+       banner first; the rest are the common app banners. */
+    var CONSENT = '#shopify-pc__banner, .shopify-pc__banner, #cookie-banner, .cookie-banner, [id*="cookie-consent"]';
+    var CONSENT_WAIT_MS = 30000;
+    var FRAME_WAIT_MS = 6000;
     var opened = false;
 
     function isForced() {
@@ -90,10 +146,23 @@
       try { window.localStorage.setItem(FLAG, '1'); } catch (e) {}
     }
 
+    function consentShowing() {
+      try {
+        var nodes = document.querySelectorAll(CONSENT);
+        for (var i = 0; i < nodes.length; i++) {
+          var n = nodes[i];
+          if (n.offsetParent !== null || n.getClientRects().length) return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
     function open() {
       if (opened) return;
       opened = true;
-      markSeen();
+
+      var openedAt = Date.now();
+      var returnFocusTo = document.activeElement;
 
       var overlay = document.createElement('div');
       overlay.className = 'ctc-overlay';
@@ -101,47 +170,118 @@
       overlay.setAttribute('aria-modal', 'true');
       overlay.setAttribute('aria-label', 'Crack the Cuffs');
 
-      var frame = document.createElement('iframe');
-      frame.className = 'ctc-frame';
-      frame.src = APP_URL;
-      frame.title = 'Crack the Cuffs';
-      frame.setAttribute('allow', 'clipboard-write');
-
       var closeBtn = document.createElement('button');
       closeBtn.className = 'ctc-close';
       closeBtn.type = 'button';
-      closeBtn.setAttribute('aria-label', 'Close');
+      closeBtn.setAttribute('aria-label', 'Close Crack the Cuffs');
       closeBtn.innerHTML = '×';
 
-      overlay.appendChild(frame);
+      var frame = document.createElement('iframe');
+      frame.className = 'ctc-frame';
+      frame.title = 'Crack the Cuffs';
+      frame.setAttribute('allow', 'clipboard-write');
+
+      /* Close first in DOM order, so the first Tab inside the dialog reaches the
+         way out rather than disappearing into a cross-origin iframe. */
       overlay.appendChild(closeBtn);
-      document.body.appendChild(overlay);
+      overlay.appendChild(frame);
+
+      /* Everything behind the dialog is hidden from assistive tech for as long
+         as it is up, which is what aria-modal is supposed to mean. */
+      var hidden = [];
+      function hideBackground() {
+        var kids = document.body.children;
+        for (var i = 0; i < kids.length; i++) {
+          var k = kids[i];
+          if (k === overlay) continue;
+          if (k.getAttribute('aria-hidden') === 'true') continue;
+          k.setAttribute('aria-hidden', 'true');
+          hidden.push(k);
+        }
+      }
+      function showBackground() {
+        for (var i = 0; i < hidden.length; i++) hidden[i].removeAttribute('aria-hidden');
+        hidden = [];
+      }
 
       var prevOverflow = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = 'hidden';
-      requestAnimationFrame(function () { overlay.setAttribute('data-open', ''); });
 
       function close() {
         if (!overlay.parentNode) return;
+        /* Spend the one attempt only on a real look, or when the app itself
+           says the visitor is done. */
+        if (Date.now() - openedAt >= SEEN_AFTER_MS) markSeen();
         overlay.parentNode.removeChild(overlay);
+        showBackground();
         document.documentElement.style.overflow = prevOverflow;
-        document.removeEventListener('keydown', onKey);
+        document.removeEventListener('keydown', onKey, true);
         window.removeEventListener('message', onMsg);
+        if (returnFocusTo && returnFocusTo.focus) {
+          try { returnFocusTo.focus(); } catch (e) {}
+        }
       }
-      function onKey(e) { if (e.key === 'Escape') close(); }
+
+      function onKey(e) {
+        if (e.key === 'Escape') { close(); return; }
+        if (e.key !== 'Tab') return;
+        /* Two stops inside the dialog: the close button and the iframe. Keep
+           Tab between them rather than letting it walk the page behind. */
+        var stops = [closeBtn, frame];
+        var i = stops.indexOf(document.activeElement);
+        e.preventDefault();
+        var next = e.shiftKey
+          ? stops[(i <= 0 ? stops.length : i) - 1]
+          : stops[(i + 1) % stops.length];
+        try { next.focus(); } catch (err) {}
+      }
+
       function onMsg(e) {
-        if (e && e.data && e.data.type === 'crooks-popup-close') close();
+        if (!e || !e.data) return;
+        /* The app says the visitor has finished with it, so the attempt is
+           spent however long it took. */
+        if (e.data.type === 'crooks-popup-close') { markSeen(); close(); }
       }
+
+      /* Do not show a dimmed void while the app loads. Wait for the frame, but
+         never wait forever — a slow app still gets its chance. */
+      var shown = false;
+      function show() {
+        if (shown) return;
+        shown = true;
+        document.body.appendChild(overlay);
+        hideBackground();
+        document.documentElement.style.overflow = 'hidden';
+        requestAnimationFrame(function () { overlay.setAttribute('data-open', ''); });
+        try { closeBtn.focus(); } catch (e) {}
+      }
+
+      frame.addEventListener('load', show);
+      window.setTimeout(show, FRAME_WAIT_MS);
+      frame.src = APP_URL;
 
       closeBtn.addEventListener('click', close);
       overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
-      document.addEventListener('keydown', onKey);
+      document.addEventListener('keydown', onKey, true);
       window.addEventListener('message', onMsg);
     }
 
+    function whenConsentAnswered(done) {
+      if (!consentShowing()) { done(); return; }
+      var gaveUpAt = Date.now() + CONSENT_WAIT_MS;
+      var poll = window.setInterval(function () {
+        if (!consentShowing() || Date.now() > gaveUpAt) {
+          window.clearInterval(poll);
+          done();
+        }
+      }, 400);
+    }
+
     function schedule() {
-      if (!isForced() && hasSeen()) return;
-      window.setTimeout(open, isForced() ? 0 : DELAY);
+      if (isForced()) { open(); return; }
+      if (hasSeen()) return;
+      window.setTimeout(function () {
+        whenConsentAnswered(open);
+      }, DELAY);
     }
 
     if (document.readyState === 'loading') {
