@@ -1,0 +1,375 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+--- 0 cookie banner: {"text":"COOKIE CONSENT\n\nWe and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy\n\nManage preferences\nAccept\nDecline","rect":{"x":0,"y":484.59375,"width":390,"height":359.40625,"top":484.59375,"right":390,"bottom":844,"left":0}}
+audit/screens/toggles-edge-00-home-dark-cookiebanner.png
+0 dismissed: true
+--- 1 toggle placement: {"text":"LIGHT MODE","rect":{"x":210.125,"y":86,"width":107.171875,"height":44,"top":86,"right":317.296875,"bottom":130,"left":210.125},"inHeader":true,"inDrawer":false,"parentCls":"crk-header__actions","aboveFold":true}
+audit/screens/toggles-edge-01-header-dark.png
+--- 1b first-Tab (dark): {"text":"","color":"rgb(221, 215, 201)","bg":"rgba(10, 10, 10, 0.9)","outline":"rgb(221, 215, 201) 1px","rect":[10,10,370,824]}
+audit/screens/tg-skiplink-dark.png
+--- 2 size buttons: [{"t":"LIGHT MODE","al":null,"ap":"false","cls":"crk-header__link"},{"t":"XS","al":"Size XS","ap":"false","cls":"crk-size"},{"t":"S","al":"Size S","ap":"false","cls":"crk-size"},{"t":"M","al":"Size M","ap":"false","cls":"crk-size"},{"t":"L","al":"Size L","ap":"false","cls":"crk-size"},{"t":"XL","al":"Size XL","ap":"false","cls":"crk-size"},{"t":"CM","al":null,"ap":"true","cls":"crk-unit"},{"t":"IN","al":null,"ap":"false","cls":"crk-unit"}]
+2 added; header now:  [1]
+--- 3 before toggle: {"theme":null,"outline":null,"ssTheme":null,"ssOutline":"on","btn":"LIGHT MODE/pressed=false","bodyBg":"rgb(11, 10, 14)","mainBg":"rgb(11, 10, 14)","scrollY":530}
+3 after toggle: {"theme":"light","outline":null,"ssTheme":"light","ssOutline":"on","btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","mainBg":"rgb(250, 250, 251)","scrollY":0}
+audit/screens/toggles-edge-03-pdp-light-top.png
+--- 1b first-Tab (light): {"text":"MENU","color":"rgb(22, 21, 26)","bg":"rgb(250, 250, 251)","outline":"rgb(92, 52, 128) 2px","rect":[312,86,50,44]}
+audit/screens/tg-skiplink-light.png
+
+===== home / status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (0): []
+audit/screens/tg-home-light.png
+  LIGHT text:
+Skip to content
+12 PRODUCTS CURRENTLY ONLINE
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+£10.00 to free Tracked 24
+TRACKED 48 FREE
+TRACKED 24 FREE
+> 12 PRODUCTS AVAILABLE TO PURCHASE
+CROOKSLDN
+OWN THE STREETS™
+CATALOGUE
+CATALOGUE
+12 ITEMS
+FLAT
+ON MODEL
+OUTLINE
+ALL
+T-SHIRT
+DENIM
+SWEATS
+ACCESSORIES
+NO. 01
+SWEATS
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+AVAILABLE
+NO. 02
+SWEATS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+AVAILABLE
+NO. 03
+DENIM
+BLUE WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 04
+DENIM
+BLUE WASH JORTS
+£50.00
+AVAILABLE
+NO. 05
+DENIM
+GREY WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 06
+DENIM
+GREY WASH JORTS
+£50.00
+AVAILABLE
+NO. 07
+T-SHIRT
+MONEY CLIVE TEE
+Colourways: BLACK, WHITE
+£25.00
+AVAILABLE
+NO. 08
+T-SHIRT
+CRXST★RZ T-
+  DARK low-contrast (1): [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary","y":0}]
+audit/screens/tg-home-dark.png
+
+===== product /products/cb1-wash-jeans status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (0): []
+audit/screens/tg-product-light.png
+  LIGHT text:
+Skip to content
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+£10.00 to free Tracked 24
+TRACKED 48 FREE
+TRACKED 24 FREE
+← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+Select Size
+SIZE GUIDE
+Order before 18:00 and it ships today (Mon–Sat)
+Ordered now — leaves today
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+  DARK low-contrast (1): [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary","y":0}]
+audit/screens/tg-product-dark.png
+
+===== collection /collections/all status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (0): []
+audit/screens/tg-collection-light.png
+  LIGHT text:
+Skip to content
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+£10.00 to free Tracked 24
+TRACKED 48 FREE
+TRACKED 24 FREE
+ALL
+12 ITEMS
+FLAT
+ON MODEL
+ALL
+T-SHIRT
+DENIM
+SWEATS
+ACCESSORIES
+NO. 01
+SWEATS
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+AVAILABLE
+NO. 02
+SWEATS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+AVAILABLE
+NO. 03
+DENIM
+BLUE WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 04
+DENIM
+BLUE WASH JORTS
+£50.00
+AVAILABLE
+NO. 05
+DENIM
+GREY WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 06
+DENIM
+GREY WASH JORTS
+£50.00
+AVAILABLE
+NO. 07
+T-SHIRT
+MONEY CLIVE TEE
+Colourways: BLACK, WHITE
+£25.00
+AVAILABLE
+NO. 08
+T-SHIRT
+CRXST★RZ T-SHIRT
+Colourways: Black, White
+£25.00
+AVAILABLE
+DRO
+  DARK low-contrast (1): [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary","y":0}]
+audit/screens/tg-collection-dark.png
+
+===== cart /cart status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (0): []
+audit/screens/tg-cart-light.png
+  LIGHT text:
+Skip to content
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+£10.00 to free Tracked 24
+TRACKED 48 FREE
+TRACKED 24 FREE
+Cart
+1
+1
+Cart total £60.00 GBP
+Product image
+Product information
+Quantity
+Product total
+GREY WASH OG JEANS
+Size:
+M
+Price
+£60.00
+Decrease quantity
+Increase quantity
+Remove
+£60.00
+Discount
+Estimated total
+£60.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+BLUE WASH OG JEANS
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+BLUE WASH JORTS
+£50.00
+
+  DARK low-contrast (0): []
+audit/screens/tg-cart-dark.png
+
+===== search /search?q=jeans status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (1): [{"text":"SEARCH","ratio":1.38,"color":"rgb(221, 215, 201)","bg":"rgb(250,250,251)","px":"13px","cls":"crk-btn crk-btn--fill crk-query__go","y":411}]
+audit/screens/tg-search-light.png
+  LIGHT text:
+Skip to content
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+£10.00 to free Tracked 24
+TRACKED 48 FREE
+TRACKED 24 FREE
+SEARCH
+SEARCH BY ITEM, CATEGORY OR COLOUR
+SEARCH: JEANS
+4 RESULTS
+NO. 01
+DENIM
+GREY WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 02
+DENIM
+BLUE WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 03
+DENIM
+GREY WASH JORTS
+£50.00
+AVAILABLE
+NO. 04
+DENIM
+BLUE WASH JORTS
+£50.00
+AVAILABLE
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLDN: The Getaway
+EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026
+  DARK low-contrast (1): [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary","y":0}]
+audit/screens/tg-search-dark.png
+
+===== faq /pages/faq status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (0): []
+audit/screens/tg-faq-light.png
+  LIGHT text:
+Skip to content
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+ENQUIRIES
+COMMONLY ASKED QUESTIONS
+The things people ask us most. If your answer is not here, message us and we will answer it — and it will probably end up on this page.
+DELIVERY
+WHEN WILL MY ORDER BE DISPATCHED?
+HOW LONG DOES DELIVERY TAKE?
+HOW MUCH IS SHIPPING?
+DO YOU SHIP INTERNATIONALLY?
+HOW DO I TRACK MY ORDER?
+TRACKING SAYS DELIVERED BUT I HAVE NOTHING.
+SIZING
+HOW DO I KNOW WHAT SIZE TO BUY?
+DO YOU DO EXCHANGES?
+RETURNS AND REFUNDS
+CAN I RETURN SOMETHING?
+WHEN WILL I GET MY REFUND?
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHO
+  DARK low-contrast (5): [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary","y":0},{"text":"tracking page","ratio":2.12,"color":"rgb(92, 52, 128)","bg":"rgb(11,10,14)","px":"13px","cls":"","y":777},{"text":"the returns centre","ratio":2.12,"color":"rgb(92, 52, 128)","bg":"rgb(11,10,14)","px":"13px","cls":"","y":1020},{"text":"Start your return here","ratio":2.12,"color":"rgb(92, 52, 128)","bg":"rgb(11,10,14)","px":"13px","cls":"","y":1002},{"text":"terms page","ratio":2.12,"color":"rgb(92, 52, 128)","bg":"rgb(11,10,14)","px":"13px","cls":"","y":1189}]
+audit/screens/tg-faq-dark.png
+FATAL page.evaluate: TypeError: Cannot read properties of null (reading 'click')
+    at eval (eval at evaluate (:311:30), <anonymous>:1:56)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)

@@ -114,16 +114,31 @@ your own size, or ask for it.
 
 > `Cellblock Shorts sold out in M — pick another size`
 
-The shorts in M were not sold out. There were **19** of them. The message fires
-for a shorts size whenever no crewneck size has been chosen yet, because the
-lookup for "crewneck ? + shorts M" finds no pairing and the panel falls back to
-its sold-out copy. Doing what it tells you — picking another size — produces the
-same sentence with a different letter in it, for every size in the row.
+The shorts in M were not sold out. There were **19** of them. I swept the whole
+row with no crewneck size chosen and got the same sentence five times:
+
+> `Cellblock Shorts sold out in XS — pick another size`
+> `Cellblock Shorts sold out in S — pick another size`
+> `Cellblock Shorts sold out in M — pick another size`
+> `Cellblock Shorts sold out in L — pick another size`
+> `Cellblock Shorts sold out in XL — pick another size`
+
+So the instruction it gives — pick another size — cannot be obeyed. Every size in
+the row is "sold out" until you touch a control the message never mentions.
 
 While that sentence is on screen the buy button reads `SELECT A SIZE` and is
-dead, so the shopper is holding two contradictory instructions ("this size is
-gone" / "choose a size") and neither of them says the true one: *choose your own
-size first*.
+dead, so the shopper holds two contradictory instructions ("this size is gone" /
+"choose a size") and neither states the true one: *choose your own size first*.
+
+It does recover — going back up and picking a crewneck size clears the message
+and the button becomes `ADD THE FULL FIT — £85`. Nothing on screen suggests that
+is the way out.
+
+The shorts page already contains the right sentence for this situation: when a
+size is chosen on that page and the partner's is not, the buy button becomes
+`Pick a Cellblock Crewneck size`. The crewneck page needs the same words when the
+shopper picks the partner's size first, instead of the sold-out sentence — copy
+that already exists, no new component, nothing outside the design law.
 
 **Verdict:** broken
 
