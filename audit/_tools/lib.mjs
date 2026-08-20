@@ -1,0 +1,166 @@
+/**
+ * CROOKSLDN behavioural audit — shared browser harness.
+ *
+ * Every script in this audit MUST use `session()` to open the site.
+ * It guarantees three things that the audit is worthless without:
+ *   1. the Shopify preview cookie (else you silently audit the LIVE theme)
+ *   2. the GB market (else prices come back in USD and the carriage bar,
+ *      which is gated to country_code GB, never renders)
+ *   3. a theme-identity assertion on .crk-root + theme id 202053779799
+ */
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
+
+export const PREVIEW = 'https://7chao18p5etruwy5-100410786135.shopifypreview.com';
+export const PREVIEW_HOST = '7chao18p5etruwy5-100410786135.shopifypreview.com';
+export const EXPECTED_THEME_ID = 202053779799;
+export const EXEC = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+export const SHOTS = 'audit/screens';
+
+// The egress proxy cannot complete Chromium's TLS 1.3 handshake; capping the
+// client at TLS 1.2 is the only reason any of this reaches the network.
+const PROXY = process.env.HTTPS_PROXY || process.env.https_proxy || null;
+const ARGS = ['--no-sandbox', '--disable-dev-shm-usage', '--ssl-version-max=tls1.2'];
+
+export const DEVICES = {
+  mobile: {
+    viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  },
+  mobileLandscape: {
+    viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  },
+  androidSlow: {
+    viewport: { width: 360, height: 800 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  },
+  desktop: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, isMobile: false, hasTouch: false },
+};
+
+const GB_COOKIES = [
+  { name: 'localization', value: 'GB', domain: PREVIEW_HOST, path: '/' },
+  { name: 'cart_currency', value: 'GBP', domain: PREVIEW_HOST, path: '/' },
+];
+
+export async function launch(opts = {}) {
+  return chromium.launch({ executablePath: EXEC, args: ARGS, ...(PROXY ? { proxy: { server: PROXY } } : {}), ...opts });
+}
+
+/**
+ * Open a fully-prepared shopping session.
+ * @param {object} o
+ * @param {string} o.device      key of DEVICES (default 'mobile')
+ * @param {boolean} o.slow       Slow-4G + 4x CPU throttle
+ * @param {boolean} o.reducedMotion
+ * @param {number} o.zoom        page zoom factor, e.g. 2 for 200%
+ * @param {boolean} o.js         set false to shop with JavaScript disabled
+ * @param {string} o.colorScheme 'dark' | 'light'
+ * @returns {{browser, context, page, identity, close}}
+ */
+export async function session(o = {}) {
+  const dev = DEVICES[o.device || 'mobile'];
+  const browser = await launch();
+  const ctxOpts = {
+    ...dev,
+    locale: 'en-GB',
+    timezoneId: 'Europe/London',
+    javaScriptEnabled: o.js === false ? false : true,
+    ...(o.reducedMotion ? { reducedMotion: 'reduce' } : {}),
+    ...(o.colorScheme ? { colorScheme: o.colorScheme } : {}),
+  };
+  const context = await browser.newContext(ctxOpts);
+  await context.addCookies(GB_COOKIES);
+  const page = await context.newPage();
+  if (o.slow) await throttle(page);
+  if (o.zoom) await page.addInitScript(z => {
+    document.addEventListener('DOMContentLoaded', () => { document.body.style.zoom = z; });
+  }, o.zoom);
+
+  const identity = await enterPreview(page);
+  if (!identity.ok) {
+    await browser.close();
+    throw new Error('THEME ASSERTION FAILED — refusing to audit. ' + JSON.stringify(identity));
+  }
+  return { browser, context, page, identity, close: () => browser.close() };
+}
+
+/** Slow 4G + 4x CPU, via CDP. */
+export async function throttle(page, { down = 1_600_000 / 8, up = 750_000 / 8, latency = 150, cpu = 4 } = {}) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', { offline: false, downloadThroughput: down, uploadThroughput: up, latency });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpu });
+  return cdp;
+}
+
+/** First navigation in any context. Establishes the preview cookie. */
+export async function enterPreview(page, { settle = 3500 } = {}) {
+  const resp = await page.goto(PREVIEW, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.waitForTimeout(settle);
+  await hidePreviewBar(page);
+  const id = await assertTheme(page);
+  return { status: resp?.status(), ...id };
+}
+
+/** Theme identity. Run-integrity only — never a finding, never in the report. */
+export async function assertTheme(page) {
+  const r = await page.evaluate(() => ({
+    crkRoot: !!document.querySelector('.crk-root'),
+    themeId: window.Shopify?.theme?.id ?? null,
+    themeName: window.Shopify?.theme?.name ?? null,
+    themeRole: window.Shopify?.theme?.role ?? null,
+    currency: window.Shopify?.currency?.active ?? null,
+    country: window.Shopify?.country ?? null,
+  })).catch(() => ({}));
+  r.ok = r.crkRoot === true && r.themeId === EXPECTED_THEME_ID;
+  r.gb = r.currency === 'GBP' && r.country === 'GB';
+  return r;
+}
+
+/** Shopify's "You are previewing" bar is not part of the shopper's view. */
+export async function hidePreviewBar(page) {
+  try {
+    await page.addStyleTag({ content: '#preview-bar-iframe,#PreviewBarInjector{display:none !important;}' });
+  } catch { /* JS-disabled contexts */ }
+}
+
+/** Navigate anywhere within the previewed store, re-asserting identity. */
+export async function go(page, pathOrUrl, { settle = 2500, assert = true } = {}) {
+  const url = pathOrUrl.startsWith('http') ? pathOrUrl : PREVIEW + pathOrUrl;
+  const resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.waitForTimeout(settle);
+  await hidePreviewBar(page);
+  const id = assert ? await assertTheme(page) : {};
+  return { status: resp?.status(), url: page.url(), ...id };
+}
+
+let counter = 0;
+/** Screenshot. Name them <persona-or-area>-<step>. */
+export async function shot(page, name, { full = false } = {}) {
+  fs.mkdirSync(SHOTS, { recursive: true });
+  const safe = String(name).replace(/[^a-z0-9._-]/gi, '-') || `shot${++counter}`;
+  const file = path.join(SHOTS, `${safe}.png`);
+  try {
+    await hidePreviewBar(page);
+    await page.screenshot({ path: file, fullPage: full, timeout: 30000 });
+  } catch (e) { return `SHOT-FAILED:${e.message.slice(0, 80)}`; }
+  return file;
+}
+
+/** What a shopper can actually read on screen right now. */
+export async function visibleText(page, sel = 'body') {
+  return page.evaluate(s => (document.querySelector(s)?.innerText || '').replace(/\n{3,}/g, '\n\n').trim(), sel);
+}
+
+export function write(file, content) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content);
+  return file;
+}
+export function append(file, line) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, line + '\n');
+}
+export const sleep = ms => new Promise(r => setTimeout(r, ms));

@@ -3,3 +3,7 @@ node_modules/
 .env
 .DS_Store
 *.log
+
+# Audit: per-agent throwaway probe scripts. Only the shared harness is kept.
+audit/_tools/*.mjs
+!audit/_tools/lib.mjs
