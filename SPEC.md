@@ -626,6 +626,17 @@ and 200%-zoom checks — the two things proven easiest to break silently.
 
 **Decisions waiting on the owner**
 
+- **O5** — the live Refund policy in admin still reads *"Size swaps are free
+  within the UK"*, which the Terms and Questions pages no longer say. The
+  corrected text has been handed over to paste into Settings → Policies; this
+  connection lacks the `write_legal_policies` scope to do it directly.
+- **O6** — `templates/product.crooks.json` is unused but claims *"Free UK
+  shipping on every order"* and *"Dispatch within 24 hours"*, both false.
+  Correct it or delete it before anyone assigns that template suffix.
+- **O7** — Terms c6 and FAQ q10 say original shipping charges are not refunded
+  on a change-of-mind return. UK CCR 2013 requires refunding the basic
+  outbound rate. Pre-existing, deliberately left alone, needs a legal eye.
+
 - **O1** — `10CROOKS` stacks on the £85 set (§5).
 - **O2** — wishlist / "Only X in stock" from app `bestpush-101` (§7).
 - **O3** — the catalogue's `Outline` toggle is still present pending an

@@ -21,28 +21,28 @@
           "type": "clause",
           "settings": {
             "title": "Returns",
-            "body": "<p>You have 14 days from delivery to tell us you want to return something, and 14 days from then to post it back.</p><p><strong>Start your return here: <a href=\"https://5wn03tnm.aftership.com\">the returns centre</a>.</strong> It takes your order number and email, and issues the return so we can match the parcel to you.</p><p>Items must be unworn, unwashed, and have their tags attached. Return postage is paid by you unless the item was faulty or we sent the wrong thing.</p><p>Returns go to: Oairo UK Office, Bourne End Business Park, Bourne End, Buckinghamshire, SL8 5AS, United Kingdom.</p>"
+            "body": "<p>You have 14 days from delivery to tell us you want to return something, and 14 days from then to post it back.</p><p><strong>Start your return here: <a href=\"https://5wn03tnm.aftership.com\">the returns centre</a>.</strong> It takes your order number and email, and issues the return so we can match the parcel to you.</p><p>Items must be unworn, unwashed, and have their tags attached.</p><p>Return postage is paid by you. That covers a change of mind, the wrong size, a swap, or any other reason of your own. We only cover return postage when the item was faulty or we sent the wrong thing.</p><p>Returns go to: Oairo UK Office, Bourne End Business Park, Bourne End, Buckinghamshire, SL8 5AS, United Kingdom.</p>"
           }
         },
         "c4": {
           "type": "clause",
           "settings": {
             "title": "Size swaps",
-            "body": "<p>UK size swaps are free: we do not charge a fee for the exchange, and we cover the postage sending the new size out to you. You cover the postage sending the original back.</p><p>Request the swap through <a href=\"https://5wn03tnm.aftership.com\">the returns centre</a> and say which size you want. Swaps depend on that size being in stock — if it is not, we refund you instead.</p>"
+            "body": "<p>You pay the postage sending the original back to us. We do not charge a fee for the swap itself, and we cover the postage sending the new size out to you.</p><p>Request the swap through <a href=\"https://5wn03tnm.aftership.com\">the returns centre</a> and say which size you want. Swaps depend on that size being in stock — if it is not, we refund you instead.</p>"
           }
         },
         "c5": {
           "type": "clause",
           "settings": {
             "title": "Faults and wrong items",
-            "body": "<p>If we sent the wrong item, or it arrived faulty or damaged, that is on us. Message us with your order number and a photo and we will refund or replace it in full, postage included.</p><p>For transit damage, tell us within 48 hours of delivery so we can raise it with the courier while the claim is still open.</p>"
+            "body": "<p>If we sent the wrong item, or it arrived faulty or damaged, that is on us. Message us with your order number and a photo and we will refund or replace it in full, and we cover the postage both ways.</p><p>For transit damage, tell us within 48 hours of delivery so we can raise it with the courier while the claim is still open.</p>"
           }
         },
         "c6": {
           "type": "clause",
           "settings": {
             "title": "Refunds",
-            "body": "<p>Approved refunds go back to your original payment method within 5–7 days of us receiving the item.</p><p>Original shipping charges are not refunded unless the item was faulty or wrongly sent. Items marked final sale are labelled as such on the product page and cannot be returned.</p><p>None of this affects your statutory rights.</p>"
+            "body": "<p>Approved refunds go back to your original payment method within 5–7 days of us receiving the item.</p><p>Original shipping charges are not refunded unless the item was faulty or wrongly sent, and neither is the postage you paid to send something back to us. Items marked final sale are labelled as such on the product page and cannot be returned.</p><p>None of this affects your statutory rights.</p>"
           }
         },
         "c7": {
@@ -83,7 +83,7 @@
         "heading": "TERMS",
         "standfirst": "How buying from us actually works — carriage, dispatch, returns and refunds, in plain English. The full legal texts are linked at the bottom.",
         "revised_label": "LAST REVISED",
-        "revised": "13.08.2026",
+        "revised": "20.08.2026",
         "show_index": true,
         "index_label": "Clause index",
         "legal_note": "THE FULL LEGAL TEXTS:"

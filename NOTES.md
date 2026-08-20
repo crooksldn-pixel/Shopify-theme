@@ -1311,3 +1311,71 @@ dead and corrected on the live template earlier. Fixed at the same time, so
 adding a fresh Exhibit Record can no longer reintroduce it.
 
 This is a deliberate decision, not drift. The next audit should not re-flag it.
+
+---
+
+## 2026-08-20 — Change-of-mind returns: postage is the customer's
+
+George: *"any change of mind returns postage is handled by the customer, not by
+us. so that is size change, returns, refund, exchanges etc. anything that is due
+to our error is covered by us."*
+
+One fork was put to him before editing, because the two readings are materially
+different money. He answered: *"they pay to return to us, free to go back out to
+them."*
+
+So the settled position is:
+
+| Reason | Return leg | Replacement going out |
+|---|---|---|
+| Change of mind, wrong size, swap | **customer** | **us** (no fee for the swap either) |
+| Faulty, damaged, or we sent the wrong thing | **us** | **us** |
+
+Substantively this is what the store already did — the live Refund policy has
+said *"return postage is covered by the customer"* since before the redesign.
+What changed is the **framing**: `UK size swaps are free` was the headline
+claim, and a shopper reads that as free returns. Every surface now leads with
+the customer's obligation and states the exception.
+
+Edited:
+
+- `templates/page.terms.json` — clauses Returns (c3), Size swaps (c4), Faults
+  (c5), Refunds (c6); `revised` 13.08.2026 → 20.08.2026
+- `templates/page.faq.json` — q8 exchanges, q9 returns, q10 refunds, q11 faults
+- `templates/product.json` + the section preset in
+  `sections/crooks-exhibit-record.liquid` — custody step 04
+- `templates/product.crooks.json` — the unused legacy template carried the same
+  returns line
+
+Two stale things were swept while in the same sentences, both the class of bug
+the 2026-08-18 entry describes (a preset default outliving the corrected
+persisted value): `info@crooksldn.com` in the legacy custody step and in the
+`crooks-footer-log` preset. The address is now gone from the theme entirely.
+What renders in the footer was already correct.
+
+### The live Refund policy was NOT changed
+
+George approved updating it directly. The attempt failed — this connection
+lacks the `write_legal_policies` scope:
+
+    Access denied for shopPolicyUpdate field.
+    Required access: `write_legal_policies` access scope.
+
+Re-read afterwards to confirm the mutation wrote nothing. It did not; the live
+body is byte-identical to before. The corrected text was handed over for
+pasting into Settings → Policies instead.
+
+### Two things flagged, not changed
+
+1. **`templates/product.crooks.json` is a landmine.** Unused today (no product
+   carries the `crooks` suffix), but it still claims *"Free UK shipping on every
+   order"* — false, it is over £20 — and *"Dispatch within 24 hours"*, which
+   contradicts the 18:00 cutoff. If anyone ever assigns that suffix those go
+   out. Out of scope for this change; should be either corrected or deleted.
+2. **UK Consumer Contracts Regulations 2013.** For a change-of-mind cancellation
+   the trader must refund the *original outbound* delivery charge at the basic
+   rate; only the return leg can be pushed to the customer. Both the Terms page
+   and the FAQ say *"Original shipping charges are not refunded unless the item
+   was faulty or wrongly sent."* That sentence predates this change and was left
+   alone, but it is the one line here that a trading-standards complaint would
+   land on. George's call, and worth an actual solicitor's eye rather than mine.
