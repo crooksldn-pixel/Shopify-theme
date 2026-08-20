@@ -140,3 +140,121 @@ Call log:
 [2m  - waiting for getByRole(
 [ 16.5s] AFTER WRONG SIZE {"scrollY":1000,"docH":2556,"vh":844,"h1":{"text":"GREY WASH OG JEANS","top":-362},"price":{"text":"£60.00","top":-326,"bottom":-300},"productNo":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"stock":null,"dispatch":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"addToBag":null,"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"sizes":[{"t":"XS","top":-276,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":-276,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":-276,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":-276,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":-276,"disabled":null,"pressed":"false","label":"Size XL"}],"accordions":[],"images":4}
 [ 16.8s] SHOT audit/screens/01-06-size-wrong.png
+[ 21.8s] size tap failed locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for getByRole(
+[ 22.7s] AFTER MY SIZE {"scrollY":1000,"docH":2556,"vh":844,"h1":{"text":"GREY WASH OG JEANS","top":-362},"price":{"text":"£60.00","top":-326,"bottom":-300},"productNo":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"stock":null,"dispatch":{"text":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","top":-1001,"bottom":-972},"addToBag":null,"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"sizes":[{"t":"XS","top":-276,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":-276,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":-276,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":-276,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":-276,"disabled":null,"pressed":"false","label":"Size XL"}],"accordions":[],"images":4}
+[ 23.1s] SHOT audit/screens/01-07-size-mine.png
+[ 23.1s] BUY SPINE TEXT AFTER SIZE >>>
+[ 23.1s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+[ 23.7s] ACCORDIONS []
+[ 23.7s] NO CHAIN OF CUSTODY ACCORDION FOUND
+[ 23.7s] === 90-SECOND MARK REFERENCE: everything after this is past budget ===
+[ 24.4s] STICKY / FIXED MID-PAGE [{"id":"","cls":"crk-stickybar","pos":"fixed","z":"40","top":775,"bottom":844,"height":69,"pct":8,"text":"GREY WASH OG JEANS £60.00 SELECT A SIZE CHECKOUT NOW","buttons":["SELECT A SIZE","CHECKOUT NOW"]}]
+[ 24.6s] SHOT audit/screens/01-11-sticky-bar.png
+[ 26.0s] SHOT audit/screens/01-12-footer.png
+[ 26.0s] FOOTER TEXT >>>
+[ 26.0s] SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLDN: The Getaway
+
+EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026
+[ 26.0s] FULL MAIN TEXT >>>
+[ 26.0s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+[ 27.0s] SHOT(full page) audit/screens/01-13-whole-page.png
+[ 27.0s] PROOF SCAN {"reviews":null,"instagram":"INSTAGRAM","contact":"CONTACT","returns":"RETURNS","delivery":null,"company":null,"links":["Privacy Policy","Skip to content","CATALOGUE","SEARCH","BAG\n [0]","SHOP","ALL","NEW","TEES","DENIM","SWEATS","TRACKSUITS","ACCESSORIES","TRACKING","QUESTIONS","TERMS","Contact","PLAY CASE:001 NOW\n          CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below.","ACCOUNT","BAG [0]","← CATALOGUE","More payment options","BLUE WASH OG JEANS\n£60.00","BLUE WASH JORTS\n£50.00","GREY WASH JORTS\n£50.00","NEW","TEES","DENIM","SWEATS","ACCESSORIES","QUESTIONS","TERMS","SHIPPING","REFUNDS","TRACK ORDER","INSTAGRAM","TIKTOK","EMAIL","Play CROOKSLDN: The Getaway"]}
