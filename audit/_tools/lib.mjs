@@ -55,7 +55,10 @@ export async function launch(opts = {}) {
  * this environment's egress policy blocks, so pages hung forever.
  * ------------------------------------------------------------------ */
 const LOCK_DIR = 'audit/_tools/.slots';
-const MAX_BROWSERS = 3;
+// 12 tripped the store's bot protection; 3 was verified safe. 4 for the feature
+// census, which judges behaviour not speed. Phase 2 drops back to 3 because the
+// persona journeys report felt slowness, and persona 14 runs alone.
+const MAX_BROWSERS = Number(process.env.CRK_MAX_BROWSERS || 4);
 const SLOT_STALE_MS = 8 * 60 * 1000;
 
 function tryClaim(i) {
@@ -199,7 +202,17 @@ export async function assertTheme(page) {
 /** Shopify's "You are previewing" bar is not part of the shopper's view. */
 export async function hidePreviewBar(page) {
   try {
-    await page.addStyleTag({ content: '#preview-bar-iframe,#PreviewBarInjector{display:none !important;}' });
+    await page.addStyleTag({ content:
+      '#preview-bar-iframe,#PreviewBarInjector,#admin-bar-iframe,' +
+      '[id^="preview-bar"],[id^="shopify-preview"],iframe[src*="preview_bar"],' +
+      'iframe[src*="admin_bar"]{display:none !important;height:0 !important;}' });
+    // Belt and braces: the bar is sometimes an injected iframe with no stable id.
+    await page.evaluate(() => {
+      for (const f of document.querySelectorAll('iframe')) {
+        const s = (f.getAttribute('src') || '') + ' ' + (f.id || '') + ' ' + (f.className || '');
+        if (/preview|admin_bar|adminbar/i.test(s)) f.style.setProperty('display', 'none', 'important');
+      }
+    });
   } catch { /* JS-disabled contexts */ }
 }
 

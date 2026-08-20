@@ -7,3 +7,5 @@ node_modules/
 # Audit: per-agent throwaway probe scripts. Only the shared harness is kept.
 audit/_tools/*.mjs
 !audit/_tools/lib.mjs
+audit/_tools/*.cjs
+audit/_tools/.slots/
