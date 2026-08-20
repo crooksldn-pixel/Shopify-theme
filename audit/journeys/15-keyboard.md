@@ -68,27 +68,34 @@
 
 ### Step 10 — Tabbing the header
 **Did:** Tab from the top of the page.
-**Got:** Seven stops and every single one visibly focused with a 2px lavender box:
-`Skip to content` (1, cream ring, appears out of nowhere at the top-left) → the handcuffs logo (2) → `CATALOGUE` (3) → `SEARCH` (4) → `BAG [0]` (5) → `LIGHT MODE` (6) → `MENU` (7).
+**Got:** Seven stops, and from stop 2 onwards every one of them wore a clear 2px lavender box:
+a blank white rectangle at the top-left (1) → the handcuffs logo (2) → `CATALOGUE` (3) → `SEARCH` (4) → `BAG [0]` (5) → `LIGHT MODE` (6) → `MENU` (7).
 **Expected:** Fifteen stops of social icons and a search box. Got seven.
 **Felt:** **This is the best-behaved header I've tabbed through in months.** Short, in a sensible order, and I could see myself the whole way. The logo has no name on it, so stop 2 is a ring round a picture with nothing said about it, but I knew where I was from the position.
 **Next:** continued · *Evidence:* `audit/screens/15-07-menu-focused.png`
 
-### Step 11 — Hit the wrong key and repainted the shop
+### Step 11 — Went back to find out what that first white box was
+**Did:** Shift-Tabbed back to stop 1 and looked at it properly, then did the same on the product page and the cart.
+**Got:** A cream rectangle about 145px wide in the top-left corner **with nothing written in it.** On the cart page it's an empty outlined box instead — same thing, no words. It's the shop's skip link (Enter takes you past the header to the content), but the label is the same colour as the panel it's printed on, so there is nothing to read on any page I visited.
+**Expected:** To read the words "Skip to content", which is the entire point of a skip link — it exists to be seen.
+**Felt:** This one annoyed me more than it should. The first thing I meet on every page of this shop is a blank white box, and the only way to find out what it does is to press Enter and see where I end up. I'd have said: *"What am I about to activate?"* It isn't fatal — I just tab past it — but it's the one bit of the keyboard experience that's actively unreadable, and it's the very first thing.
+**Next:** continued · *Evidence:* `audit/screens/15-50-skip-link-focused-home.png`, `audit/screens/15-52-skip-link-focused-pdp.png` (solid cream, no text), `audit/screens/15-51-skip-link-focused-cart.png` (empty outlined box) — in all three the skip link is the focused element
+
+### Step 12 — Hit the wrong key and repainted the shop
 **Did:** Pressed Enter one stop early, on `LIGHT MODE`.
 **Got:** The whole site flipped to light. The button became `DARK MODE`. The focus ring went from lavender to a darker purple — still perfectly visible.
 **Expected:** The menu.
 **Felt:** My fault, and easily undone. Worth knowing that the one control sitting between my bag and my menu repaints the entire shop.
 **Next:** went back (Enter again, back to dark)
 
-### Step 12 — Opened MENU
+### Step 13 — Opened MENU
 **Did:** Enter on `MENU`.
 **Got:** A panel slid in from the right. **Focus moved into it**, onto `CLOSE` at the top of the panel, ringed.
 **Expected:** To be left behind the panel hunting for it. That's the usual.
 **Felt:** It put me inside. That's the whole game for me and this one got it right.
 **Next:** continued · *Evidence:* `audit/screens/15-46-drawer-open-fresh.png`
 
-### Step 13 — Tabbed through the menu
+### Step 14 — Tabbed through the menu
 **Did:** Tab twelve times.
 **Got:** Twelve different links, in the order they're drawn, all ringed, none of them behind the panel:
 `SHOP` `ALL` `NEW` `TEES` `DENIM` `SWEATS` `TRACKSUITS` `ACCESSORIES` `TRACKING` `QUESTIONS` `TERMS` `CONTACT`. Keep going and you get `PLAY CASE:001 NOW`, `ACCOUNT`, `BAG [0]`, `CLOSE`, and then it comes round to `SHOP` again — **16 controls, cycling, and not one press escaped to the page behind.**
@@ -96,62 +103,62 @@
 **Felt:** Genuinely good. I could read the menu with my hands.
 **Next:** continued · *Evidence:* `audit/screens/15-48-after-12-tabs.png`
 
-### Step 14 — Went backwards from the top of the menu
+### Step 15 — Went backwards from the top of the menu
 **Did:** Shift-Tab straight off `CLOSE`.
 **Got:** `BAG [0]` — **the menu's own bag link, down in the panel's footer**, then `ACCOUNT` above it. Still inside. The panel stayed open.
 **Expected:** To be spat out into the header.
 **Felt:** It wrapped round to the bottom of the menu, which is right. Worth saying out loud: the menu has its *own* `ACCOUNT` and `BAG [0]` at the bottom, and the header has a `BAG [n]` too. Going backwards off CLOSE lands you on a thing called "BAG" that is *not* the header's — same name, different place.
 **Next:** continued · *Evidence:* `audit/screens/15-47-after-two-shift-tabs.png`
 
-### Step 15 — Escaped out of the menu
+### Step 16 — Escaped out of the menu
 **Did:** Escape.
 **Got:** Panel closed, and focus was **put back on the `MENU` button** with its ring on.
 **Expected:** To be dumped at the top of the document and have to tab the header again.
 **Felt:** Correct, and rare. Whoever built this menu has done this before.
 **Next:** continued · *Evidence:* `audit/screens/15-49-escape-returns-focus.png`
 
-### Step 16 — Menu → denim
+### Step 17 — Menu → denim
 **Did:** Enter on MENU again, Tab five times to `DENIM`, Enter.
 **Got:** `/collections/denim`, `DENIM` / `4 ITEMS`. Focus dropped to nothing on the new page, as it does everywhere.
 **Felt:** Six presses from a closed menu to a category. Fine.
 **Next:** continued · *Evidence:* `audit/screens/15-10-denim-focused.png`, `audit/screens/15-11-denim-collection.png`
 
-### Step 17 — Collection to a product
+### Step 18 — Collection to a product
 **Did:** Tab down the collection page.
 **Got:** Seven header stops, then `FLAT` (8) and `ON MODEL` (9) — the picture toggles — then the first product at stop 10: one ring round the whole card, reading `NO. 01 DENIM GREY WASH JORTS £50.00 AVAILABLE`. Enter took me to it.
 **Expected:** Each card to be three or four stops — image, title, price. It's one. Good.
 **Felt:** Ten presses to the first item is fair. And the card is one ring, not four — that's twelve products I can skim instead of forty-eight stops I have to sit through.
 **Next:** continued · *Evidence:* `audit/screens/15-12-product-card-focused.png`
 
-### Step 18 — The size row
+### Step 19 — The size row
 **Did:** Tabbed down the product page counting.
 **Got:** Ten stops to the first size: header (7), `← CATALOGUE` (8), the photographs as **one** stop announced `Evidence photographs` (9), then `XS` (10). Every size is its own stop — `XS S M L XL` — each with a lavender ring. Then I tried the arrow keys on a hunch: **ArrowRight moved me along the row without selecting anything.** Space selected the one I was on, and did not scroll the page.
 **Expected:** To have to Tab five times and pray Space didn't scroll me to the footer.
 **Felt:** Both idioms work — arrows to browse, Space or Enter to pick. That's the mark of somebody who tested it. And the gallery being one stop instead of six saved me real effort.
 **Next:** continued · *Evidence:* `audit/screens/15-14-size-focused.png`, `audit/screens/15-21-space-selects-xs.png`
 
-### Step 19 — Picked L
+### Step 20 — Picked L
 **Did:** Tab to `L`, Enter.
 **Got:** `L` filled in purple with a light border; the other four stayed hollow. The line under the row changed from `SELECT A SIZE` to `IN STOCK`, and the buy button changed from `SELECT A SIZE` to `ADD TO BAG`.
 **Expected:** To have to guess what I'd selected.
 **Felt:** I can tell selected from focused at a glance — one is filled, the other is a ring round the outside. That distinction is the thing most shops get wrong and this one doesn't.
 **Next:** continued · *Evidence:* `audit/screens/15-15-size-chosen.png`
 
-### Step 20 — Added to bag
+### Step 21 — Added to bag
 **Did:** Three more Tabs — `XL`, `SIZE GUIDE`, `ADD TO BAG` — and Enter.
 **Got:** `BAG [0]` became `BAG [1]` up in the header, and a small line appeared under the buttons: `> Added — 1 in bag  View bag`. **And my focus was gone** — no ring anywhere on the page.
 **Expected:** To be left on the button I'd just pressed.
 **Felt:** The confirmation is real, it's in plain English, and it's *small* — one line of purple text under a big blue Shop Pay button. The worse bit is losing my place: the ring vanished and for a second I didn't know if the press had registered. The bag counter is what told me, not the message.
 **Next:** continued · *Evidence:* `audit/screens/15-16-add-focused.png`, `audit/screens/15-17-after-add.png`
 
-### Step 21 — Found the way to the cart
+### Step 22 — Found the way to the cart
 **Did:** Pressed Tab to see where I'd been left.
 **Got:** It picked up from where I was: `Buy with Shop` (1), `More payment options` (2), `View bag` (3) — ringed and underlined. Enter took me to `/cart`.
 **Expected:** To have to Shift-Tab all the way back up to the header bag. (That way round is 12 presses; forwards it's 3.)
 **Felt:** Better than I feared. The confirmation link is right in the path, which is the correct place for it.
 **Next:** continued · *Evidence:* `audit/screens/15-23-forward-from-add.png`
 
-### Step 22 — The cart, and where I stopped
+### Step 23 — The cart, and where I stopped
 **Did:** Tabbed the cart page to the checkout button.
 **Got:** Fifteen stops: the seven header ones, the product thumbnail (8) and its title (9) — two stops for the same jorts — `Quantity` (10), `Increase quantity` (11), `Remove` (12), `Discount` (13), the Shop Pay `?` (14), and `Check out` at 15. Above it all: `£20.00 to free Tracked 24`, `TRACKED 48 FREE`, `TRACKED 24 FREE`.
 **Expected:** Worse.

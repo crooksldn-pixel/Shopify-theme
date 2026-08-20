@@ -1,9 +1,0 @@
-file:///home/user/Shopify-theme/audit/_tools/lib.mjs:132
-    throw new Error('THEME ASSERTION FAILED — refusing to audit. ' + JSON.stringify(identity));
-          ^
-
-Error: THEME ASSERTION FAILED — refusing to audit. {"status":429,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/?__cf_chl_rt_tk=TwkG467yeiL07L9y12k0xBZyjmh1SFSnlCjQzD9awaQ-1787246963-1.0.1.1-QZ7YRG1HWDCC6pni5LnWr9ON3Hfm6DI4WtXq9FnQtps","throttled":true,"crkRoot":false,"themeId":null,"themeName":null,"themeRole":null,"currency":null,"country":null,"ok":false,"gb":false}
-    at session (file:///home/user/Shopify-theme/audit/_tools/lib.mjs:132:11)
-    at async file:///home/user/Shopify-theme/audit/_tools/notifyv4.mjs:14:11
-
-Node.js v22.22.2

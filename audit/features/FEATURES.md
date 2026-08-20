@@ -896,6 +896,20 @@ reason, not because it is nice.
   sticky bar's `CHECKOUT NOW` beside it is greyed and genuinely inert — it reads as dead, not as a
   trap. **Why:** better than most shops manage, and the two problems around it (the dispatch line
   and the clipped button) are faults *on top of* it, not faults in it.
+- **The menu drawer's focus trap — tested three times, and it works.** Opening the drawer and
+  pressing Tab twenty times cycles sixteen controls (`SHOP ALL NEW TEES DENIM SWEATS TRACKSUITS
+  ACCESSORIES TRACKING QUESTIONS TERMS Contact PLAY CASE:001 NOW ACCOUNT BAG CLOSE`) and wraps back
+  to `SHOP` on the seventeenth. **Zero presses land outside the panel.** Shift-Tab stays inside,
+  and Escape closes it and returns focus to `MENU`.
+  **This one nearly became a false finding, so the record matters.** The screen-reader run reported
+  the opposite — that Tab pins to `CLOSE` and the fourteen links between are unreachable — and it
+  reported it twice. The keyboard persona could not reproduce that across four opens on two pages
+  in two sessions, and an independent tiebreaker driving real Tab keypresses confirms the trap
+  behaves. The screen-reader observation is treated as a harness artefact of driving focus
+  programmatically rather than by key press. **Nobody should "fix" this.** Evidence:
+  `audit/screens/tiebreak-trap.png`, plus `15-46`…`15-49`.
+  **Why:** it is the difference between the drawer being a navigation route and a dead end for a
+  keyboard-only shopper, and it is already right.
 - **Deep-linkable sizes.** Every size tap writes `?variant=`, and pasting that address into a
   fresh page comes back with the size selected, `IN STOCK`, and `ADD TO BAG` live. **Why:** it is
   what makes a size shareable in a DM, which is how this brand's traffic moves.

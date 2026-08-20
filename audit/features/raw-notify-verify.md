@@ -14,8 +14,8 @@ Five browser runs: `audit/_tools/notifyv1.mjs`, `notifyv2.mjs`, `notifyv3.mjs` (
 **Claim A is right about the shopper-facing behaviour. Claim B is wrong — it is an artefact of
 the test harness, not of the site.**
 
-- A real thumb selects a sold-out size perfectly — **ten attempts out of ten**, with the cookie
-  banner up and with it dismissed, on three phone heights. Claim B's "the size will not select"
+- A real thumb selects a sold-out size perfectly — **thirteen taps, thirteen selections**, with
+  the cookie banner up and with it dismissed, on three phone heights. Claim B's "the size will not select"
   does not reproduce for a shopper even once.
 - Claim A's blank white hCaptcha panel reproduces **exactly**, every time, and nothing is ever
   posted to `/contact`.
@@ -53,10 +53,11 @@ shows, verbatim:
 - `TELL ME WHEN THIS SIZE IS BACK`, a field placeheld `email address`, a purple `NOTIFY ME`
 - sticky bar: `V2 BAGGIES` `£60.00 · M` `SOLD OUT` `CHECKOUT NOW`
 
-Tried ten times over: with the **cookie banner still up and untouched**, and with it **accepted**,
-at **390×844**, **390×667** and **412×915**. Every single attempt selected the size and opened the
-notify form. In each case `document.elementFromPoint` at the button's centre returns the size
-button itself — nothing of the theme's is over it.
+Tried it **thirteen times across three sessions** — with the **cookie banner still up and
+untouched**, and with it **accepted**, at **390×844**, **390×667** and **412×915**. Thirteen taps,
+thirteen selections, no forced clicks anywhere and no fallback ever needed. In each case
+`document.elementFromPoint` at the button's centre returns the size button itself — nothing of the
+theme's is over it.
 
 Two honest caveats on coverage. **Decline** could not be exercised: once consent is recorded the
 banner does not come back for the rest of the session, and clearing that cookie would have taken
@@ -64,7 +65,7 @@ the theme-preview cookie with it. Since the banner leaves the page in both cases
 works both with it up and with it gone, that cell is unlikely to differ. And the tap must land in
 the **upper half of the screen**: with the banner up, anything below y≈485 of an 844 screen is
 behind the banner (see the last entry) — but the buy panel scrolls there naturally, which is how
-all ten attempts were done.
+every one of those taps was made.
 
 **Verdict:** works
 
@@ -116,8 +117,9 @@ form markup dump in `out-notifyv1.txt` §3.
 panel, 322×492 on a 390-wide screen**, drops over the middle of the page, greying the product
 behind it, with the words `Protected by hCaptcha` and the hCaptcha badge in the bottom-right
 corner. It contains nothing. No checkbox, no image tiles, no text, no close control. I watched it
-at t+1.5s, 3s, 6s, 10s, 16s and 24s — identical and empty at every sample. Repeated across three
-separate submissions in two sessions.
+at t+1.5s, 3s, 6s, 10s, 16s and 24s — identical and empty at every sample. Four submissions across
+three sessions behaved identically (three from the notify panel, one from the shop's own contact
+page), including one after the product had been renamed under me mid-audit.
 
 **Nothing is posted.** Watching every request with telemetry filtered out (`monorail`, `otlp`,
 `error-analytics`, `collect`, `graphql`, web pixels), **there was no request to `/contact` of any
@@ -297,13 +299,17 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
   needs re-checking before publication.
 - **`SOLD OUT` beside `CHECKOUT NOW`.** The sticky bar reads `V2 BAGGIES £60.00 · M SOLD OUT
   CHECKOUT NOW` — one half of the bar says the size cannot be bought while the other half still
-  offers to take the shopper to checkout. (Confirmed inert by `pdp-core`; it still reads as an
-  offer.)
+  offers to take the shopper to checkout. `pdp-core` recorded it as pressed-and-inert; on the
+  evidence above that press never reached the page, so *whether it is inert is currently unknown*.
+- **The title and the description name two different garments.** The product is now titled
+  `GREY CONVICT SWEATS` and its `ITEM DESCRIPTION` still opens
+  `V2 Baggies — wide, full-length sweats in 500gsm cotton, heavy enough to hang straight.`
+  A shopper who opens the accordion is told they are looking at a different product.
 
 ## Works and must be protected
 
-- **Sold-out sizes select with an ordinary tap, everywhere.** Ten attempts out of ten — cookie
-  banner up, banner dismissed, three phone heights. The `aria-disabled` decision in `SPEC.md §9.3`
+- **Sold-out sizes select with an ordinary tap, everywhere.** Thirteen taps, thirteen selections —
+  cookie banner up, banner dismissed, three phone heights. The `aria-disabled` decision in `SPEC.md §9.3`
   costs a shopper nothing.
 - **The state change on selecting a sold-out size is unambiguous and in plain English:**
   `SIZE M IS SOLD OUT` in red, the buy button greys to `SOLD OUT`, and the notify panel opens in
