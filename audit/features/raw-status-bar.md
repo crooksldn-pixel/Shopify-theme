@@ -128,7 +128,8 @@ guaranteed to be covered up.
 ### Where it sits, and what it costs
 **Should:** Sit above the header without doing damage.
 **Did:** It occupies 28px at the very top: 3.3% of a portrait phone screen, 7.2% of a
-landscape one. It is not sticky — scroll 700px and both it and the header are gone, so
+landscape one. It is not sticky — less than a screen's worth of scrolling (I checked at
+700px and again at 900px) takes both it and the header off the top for good, so
 the shipping promise exists only in the first screenful and never comes back. On the
 catalogue the first product card starts at 376px on a portrait phone; the ticker is 28
 of those 376, so it is not what keeps product off the fold. On a landscape phone the
@@ -145,11 +146,12 @@ fill the top, and the cookie sheet takes the rest, leaving no product visible at
 
 It is 9px type — the bottom of this theme's type scale — in `rgb(138,131,119)` on
 `rgb(14,12,19)`, letter-spaced, above the logo, in the strip every shopper alive has
-been trained to treat as a marketing banner. The nav directly beneath it is 20px and
-the prices are 22px. Half of its airtime goes to `12 PRODUCTS CURRENTLY ONLINE`, which
-on the homepage duplicates the boot line four inches below it (`> 12 PRODUCTS AVAILABLE
-TO PURCHASE`) and on the catalogue duplicates the register header (`12 ITEMS`). That
-half is pure decoration: it tells a shopper something already on their screen, twice.
+been trained to treat as a marketing banner. Measured on the same page, the header links
+beneath it compute to 20px and the card prices to 22px. Half of its airtime goes to
+`12 PRODUCTS CURRENTLY ONLINE`, which on the homepage duplicates the boot line about
+200px below it (`> 12 PRODUCTS AVAILABLE TO PURCHASE`) and on the catalogue duplicates
+the register header (`12 ITEMS`) in the very same frame. That half is pure decoration:
+it tells a shopper something already on their screen.
 
 The other half is not decoration at all. `FREE UK SHIPPING OVER £20 — ORDER BY 18:00
 FOR SAME-DAY DISPATCH` is the only place on the shopping path where the free-delivery

@@ -337,10 +337,11 @@ read-only Admin `deliveryProfiles` query.
 - **0.19 of a screenful is exactly the difference between seeing a product on the homepage
   and not.** First card 757px with no bar, 917px with it, on a 390×844 phone. Empty bag: two
   products on the landing screen. One item in the bag: none.
-- **The homepage's only always-on shipping statement rotates itself off screen.** The status
-  bar alternates `FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH` with
-  `12 PRODUCTS CURRENTLY ONLINE`. Combined with the empty-cart gate, a first-time visitor can
-  browse the whole homepage and never be told about free shipping at all.
+- **The store's only always-on shipping statement rotates itself off screen** — caught in the
+  act in `carriage-43-pdp-top-stale-bar-after-add.png`, where the top line reads
+  `12 PRODUCTS CURRENTLY ONLINE` instead of `FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR
+  SAME-DAY DISPATCH`. Combined with the empty-cart gate, a first-time visitor can browse the
+  whole homepage and never be told about free shipping at all.
 - **The £70 tier is invisible until you have already spent £20.** No always-on copy anywhere
   in the chrome mentions Tracked 24 — the status bar names only the £20 line, and the £70
   line lives in a closed accordion and in Terms/FAQ.

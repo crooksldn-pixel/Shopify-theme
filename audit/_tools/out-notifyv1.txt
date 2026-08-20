@@ -1,0 +1,1212 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+================ 0. WHICH SIZES ARE ACTUALLY SOLD OUT (/products/v2-baggies.js) ================
+[
+ "XS: available=true inv=undefined",
+ "S: available=true inv=undefined",
+ "M: available=false inv=undefined",
+ "L: available=false inv=undefined",
+ "XL: available=false inv=undefined"
+]
+
+================ 1. WHAT SITS OVER THE SIZE ROW — banner left alone, fresh load ================
+consent buttons on page: {"found":["Accept","Decline"],"action":"left alone"}
+size M scrolled to: {"cx":195,"cy":364,"top":338,"vh":844}
+DIAG-1 (alone): {
+ "point": {
+  "cx": 195,
+  "cy": 364
+ },
+ "viewport": {
+  "w": 390,
+  "h": 844
+ },
+ "button": {
+  "tag": "BUTTON",
+  "id": null,
+  "cls": "crk-size",
+  "parent": "DIV",
+  "rect": {
+   "x": 166,
+   "y": 338,
+   "w": 58,
+   "h": 52
+  },
+  "position": "relative",
+  "zIndex": "auto",
+  "opacity": "1",
+  "bg": "rgb(14, 12, 19)",
+  "pe": "auto",
+  "vis": "visible",
+  "display": "block",
+  "attrs": [
+   "type=button",
+   "class=crk-size",
+   "data-crk-opt=0",
+   "data-value=M",
+   "data-selected=false",
+   "data-low=false",
+   "aria-pressed=false",
+   "aria-label=Size M"
+  ]
+ },
+ "buttonIsHit": true,
+ "topElement": {
+  "tag": "BUTTON",
+  "id": null,
+  "cls": "crk-size",
+  "parent": "DIV",
+  "rect": {
+   "x": 166,
+   "y": 338,
+   "w": 58,
+   "h": 52
+  },
+  "position": "relative",
+  "zIndex": "auto",
+  "opacity": "1",
+  "bg": "rgb(14, 12, 19)",
+  "pe": "auto",
+  "vis": "visible",
+  "display": "block",
+  "attrs": [
+   "type=button",
+   "class=crk-size",
+   "data-crk-opt=0",
+   "data-value=M",
+   "data-selected=false",
+   "data-low=false",
+   "aria-pressed=false",
+   "aria-label=Size M"
+  ]
+ },
+ "stack": [
+  {
+   "tag": "BUTTON",
+   "id": null,
+   "cls": "crk-size",
+   "parent": "DIV",
+   "rect": {
+    "x": 166,
+    "y": 338,
+    "w": 58,
+    "h": 52
+   },
+   "position": "relative",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(14, 12, 19)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "type=button",
+    "class=crk-size",
+    "data-crk-opt=0",
+    "data-value=M",
+    "data-selected=false",
+    "data-low=false",
+    "aria-pressed=false",
+    "aria-label=Size M"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-sizes",
+   "parent": "DIV",
+   "rect": {
+    "x": 33,
+    "y": 338,
+    "w": 324,
+    "h": 52
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "flex",
+   "attrs": [
+    "class=crk-sizes",
+    "role=group",
+    "aria-label=Size"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-optgroup",
+   "parent": "FORM#[object HTMLInputElement]",
+   "rect": {
+    "x": 33,
+    "y": 314,
+    "w": 324,
+    "h": 76
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-optgroup",
+    "data-crk-optgroup=0",
+    "data-crk-optname=Size"
+   ]
+  },
+  {
+   "tag": "FORM",
+   "id": "ref: <Node>",
+   "cls": "shopify-product-form",
+   "parent": "DIV",
+   "rect": {
+    "x": 33,
+    "y": 314,
+    "w": 324,
+    "h": 278
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "method=post",
+    "action=/cart/add",
+    "id=crk-product-form",
+    "accept-charset=UTF-8",
+    "class=shopify-product-form",
+    "enctype=multipart/form-data"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-panel crk-panel-record crk-panel-sticky",
+   "parent": "DIV",
+   "rect": {
+    "x": 16,
+    "y": 235,
+    "w": 358,
+    "h": 374
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(14, 12, 19)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-panel crk-panel-record crk-panel-sti"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-grid",
+   "parent": "DIV",
+   "rect": {
+    "x": 16,
+    "y": -252,
+    "w": 358,
+    "h": 861
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "flex",
+   "attrs": [
+    "class=crk-grid"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-wrap",
+   "parent": "DIV",
+   "rect": {
+    "x": 0,
+    "y": -319,
+    "w": 390,
+    "h": 1495
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-wrap"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-root crk-record",
+   "parent": "SECTION#shopify-section-template--30599899709783__main",
+   "rect": {
+    "x": 0,
+    "y": -319,
+    "w": 390,
+    "h": 1495
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(11, 10, 14)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-root crk-record",
+    "data-crk-section=exhibit-record",
+    "data-crk-label-add=Add to bag",
+    "data-crk-label-select=Select a size",
+    "data-crk-label-sold=SOLD OUT",
+    "data-crk-label-instock=IN STOCK",
+    "data-crk-label-low=[n] LEFT IN SIZE [size]",
+    "data-crk-label-soldsize=SIZE [size] IS SOLD OUT"
+   ]
+  }
+ ],
+ "bigLayers": [
+  {
+   "tag": "SECTION",
+   "id": "shopify-pc__banner",
+   "cls": "shopify-pc__banner__dialog",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 485,
+    "w": 390,
+    "h": 359
+   },
+   "position": "fixed",
+   "zIndex": "2000000",
+   "opacity": "1",
+   "bg": "rgb(31, 31, 31)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-pc__banner",
+    "class=shopify-pc__banner__dialog",
+    "role=alertdialog",
+    "aria-modal=false",
+    "aria-labelledby=shopify-pc__banner__body-title"
+   ]
+  },
+  {
+   "tag": "IMG",
+   "id": null,
+   "cls": "crk-main-img crk-product-image",
+   "parent": "DIV",
+   "rect": {
+    "x": 29,
+    "y": -239,
+    "w": 332,
+    "h": 332
+   },
+   "position": "absolute",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "src=//7chao18p5etruwy5-100410786135.shopifyp",
+    "alt=V2 BAGGIES",
+    "srcset=//7chao18p5etruwy5-100410786135.shopifyp",
+    "width=1400",
+    "height=1400",
+    "loading=eager",
+    "sizes=(min-width: 960px) 55vw, 100vw",
+    "class=crk-main-img crk-product-image"
+   ]
+  }
+ ],
+ "bodyChildren": [
+  {
+   "tag": "SECTION",
+   "id": "shopify-pc__banner",
+   "cls": "shopify-pc__banner__dialog",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 485,
+    "w": 390,
+    "h": 359
+   },
+   "position": "fixed",
+   "zIndex": "2000000",
+   "opacity": "1",
+   "bg": "rgb(31, 31, 31)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-pc__banner",
+    "class=shopify-pc__banner__dialog",
+    "role=alertdialog",
+    "aria-modal=false",
+    "aria-labelledby=shopify-pc__banner__body-title"
+   ]
+  },
+  {
+   "tag": "A",
+   "id": null,
+   "cls": "skip-to-content-link button-secondary",
+   "parent": "BODY",
+   "rect": {
+    "x": -99999,
+    "y": -458,
+    "w": 129,
+    "h": 54
+   },
+   "position": "absolute",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "grid",
+   "attrs": [
+    "class=skip-to-content-link button-secondary",
+    "href=#MainContent"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "header-group",
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": -458,
+    "w": 390,
+    "h": 139
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=header-group"
+   ]
+  },
+  {
+   "tag": "SCRIPT",
+   "id": null,
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "none",
+   "attrs": []
+  },
+  {
+   "tag": "MAIN",
+   "id": "MainContent",
+   "cls": "content-for-layout",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": -319,
+    "w": 390,
+    "h": 1495
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(11, 10, 14)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "flex",
+   "attrs": [
+    "id=MainContent",
+    "class=content-for-layout",
+    "role=main",
+    "data-page-transition-enabled=false",
+    "data-product-transition=false",
+    "data-template=product"
+   ]
+  },
+  {
+   "tag": "FOOTER",
+   "id": null,
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 1176,
+    "w": 390,
+    "h": 926
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": []
+  },
+  {
+   "tag": "DIV",
+   "id": "shopify-block-AMkdPR1kzUnJkYjB1T__13047258039897440615",
+   "cls": "shopify-block shopify-app-block",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 2102,
+    "w": 390,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-block-AMkdPR1kzUnJkYjB1T__130472",
+    "class=shopify-block shopify-app-block"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "shopify-block-AZFd6aGFnS21FS1hVa__13768625480086291342",
+   "cls": "shopify-block shopify-app-block",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 2102,
+    "w": 390,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-block-AZFd6aGFnS21FS1hVa__137686",
+    "class=shopify-block shopify-app-block"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "shopify-block-AYkpjcWFINkF3RWlJV__1513253815146976218",
+   "cls": "shopify-block shopify-app-block",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 2102,
+    "w": 390,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-block-AYkpjcWFINkF3RWlJV__151325",
+    "class=shopify-block shopify-app-block"
+   ]
+  },
+  {
+   "tag": "SCRIPT",
+   "id": null,
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "none",
+   "attrs": [
+    "src=https://cdn.shopify.com/storefront/stand",
+    "type=module",
+    "data-source-attribution=shopify.standard_actions"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "PBarNextFrameWrapper",
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 776,
+    "w": 390,
+    "h": 68
+   },
+   "position": "fixed",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=PBarNextFrameWrapper",
+    "popover=manual",
+    "style=height: calc(68px + env(safe-area-inset-"
+   ]
+  },
+  {
+   "tag": "LINK",
+   "id": null,
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "none",
+   "attrs": [
+    "rel=stylesheet",
+    "media=all",
+    "href=https://cdn.shopify.com/extensions/01a01"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "web-pixels-manager-sandbox-container",
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+   },
+   "position": "fixed",
+   "zIndex": "-100",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "hidden",
+   "display": "block",
+   "attrs": [
+    "tabindex=-1",
+    "aria-hidden=true",
+    "id=web-pixels-manager-sandbox-container",
+    "data-shopify-privacy=exclude",
+    "style=height: 0px !important; width: 0px !impo"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "omnisend-dynamic-container",
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 2102,
+    "w": 390,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=omnisend-dynamic-container",
+    "style=overflow: hidden; height: 0px;"
+   ]
+  }
+ ],
+ "scrollY": 458
+}
+SHOT: audit/screens/notifyv-01-sizerow-alone.png
+
+================ 1b. REPRODUCING THE BLOCKED CLICK — button near the bottom of the screen ================
+after scrollIntoViewIfNeeded — button rect: {"x":166,"y":338,"w":58,"h":52} buttonIsHit: true
+TOP ELEMENT AT ITS CENTRE: {
+ "tag": "BUTTON",
+ "id": null,
+ "cls": "crk-size",
+ "parent": "DIV",
+ "rect": {
+  "x": 166,
+  "y": 338,
+  "w": 58,
+  "h": 52
+ },
+ "position": "relative",
+ "zIndex": "auto",
+ "opacity": "1",
+ "bg": "rgb(14, 12, 19)",
+ "pe": "auto",
+ "vis": "visible",
+ "display": "block",
+ "attrs": [
+  "type=button",
+  "class=crk-size",
+  "data-crk-opt=0",
+  "data-value=M",
+  "data-selected=false",
+  "data-low=false",
+  "aria-pressed=false",
+  "aria-label=Size M"
+ ]
+}
+ANCESTRY OF THAT TOP ELEMENT: [
+ "BUTTON.crk-size [58x52 @166,338 pos=relative z=auto op=1 bg=rgb(14, 12, 19) pe=auto]",
+ "DIV.crk-sizes [324x52 @33,338 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto]",
+ "DIV.crk-optgroup [324x76 @33,314 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto]",
+ "FORM#[object HTMLInputElement].shopify-product-form [324x278 @33,314 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto]",
+ "DIV.crk-panel.crk-panel-record.crk-panel-sticky [358x374 @16,235 pos=static z=auto op=1 bg=rgb(14, 12, 19) pe=auto]",
+ "DIV.crk-grid [358x861 @16,-252 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto]",
+ "DIV.crk-wrap [390x1495 @0,-319 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto]",
+ "DIV.crk-root.crk-record [390x1495 @0,-319 pos=static z=auto op=1 bg=rgb(11, 10, 14) pe=auto]"
+]
+PLAYWRIGHT CLICK AT THAT POSITION: FAILED — locator.click: Timeout 8000ms exceeded. / Call log: / [2m  - waiting for locator('button[aria-label="Size M"]')[22m / [2m    - locator resolved to <button type="button" data-value="M" class="crk-size" data-crk-opt="0" data-low="false" aria-label="Size M" aria-pressed="false" aria-disabled="true" data-selected="false">M</button>[22m / [2m  - attempting click action[22m / [2m    2 × waiting f
+SHOT: audit/screens/notifyv-01b-button-at-screen-edge.png
+
+================ 2. REAL-SHOPPER TAP MATRIX ================
+
+--- condition: banner left alone / 390x844
+consent: {"found":["Accept","Decline"],"action":"left alone"}
+button centre at {"cx":195,"cy":364,"top":338,"vh":844}
+RESULT: {
+ "condition": "banner left alone / 390x844",
+ "consent": "left alone",
+ "tapWorked": true,
+ "clickWorked": null,
+ "tapErr": null,
+ "pwInterceptError": null,
+ "buttonIsHit": true,
+ "topElement": {
+  "tag": "BUTTON",
+  "id": null,
+  "cls": "crk-size",
+  "parent": "DIV",
+  "rect": {
+   "x": 166,
+   "y": 338,
+   "w": 58,
+   "h": 52
+  },
+  "position": "relative",
+  "zIndex": "auto",
+  "opacity": "1",
+  "bg": "rgb(84, 37, 120)",
+  "pe": "auto",
+  "vis": "visible",
+  "display": "block",
+  "attrs": [
+   "type=button",
+   "class=crk-size",
+   "data-crk-opt=0",
+   "data-value=M",
+   "data-selected=true",
+   "data-low=false",
+   "aria-pressed=true",
+   "aria-label=Size M"
+  ]
+ },
+ "endState": {
+  "pressed": [
+   "Size M",
+   "CM"
+  ],
+  "lines": [
+   "SIZE M IS SOLD OUT",
+   "SOLD OUT",
+   "TELL ME WHEN THIS SIZE IS BACK",
+   "NOTIFY ME",
+   "SOLD OUT"
+  ],
+  "emailInDom": true,
+  "emailVisible": true,
+  "url": "https://7chao18p5etruwy5-100410786135.shopifypreview.com/products/v2-baggies"
+ }
+}
+SHOT: audit/screens/notifyv-02-banner-left-alone-390x844.png
+>>> notify form reached under: banner left alone / 390x844
+
+================ 2b. SUMMARY OF TAP MATRIX ================
+[
+ {
+  "c": "banner left alone / 390x844",
+  "tap": true,
+  "click": null,
+  "hit": true,
+  "pressed": [
+   "Size M",
+   "CM"
+  ],
+  "email": true
+ }
+]
+
+================ 3. NOTIFY FORM — reach it, read it, submit it ================
+state with M chosen: {
+ "pressed": [
+  "Size M",
+  "CM"
+ ],
+ "lines": [
+  "SIZE M IS SOLD OUT",
+  "SOLD OUT",
+  "TELL ME WHEN THIS SIZE IS BACK",
+  "NOTIFY ME",
+  "SOLD OUT"
+ ],
+ "emailInDom": true,
+ "emailVisible": true,
+ "url": "https://7chao18p5etruwy5-100410786135.shopifypreview.com/products/v2-baggies"
+}
+MAIN TEXT:
+← CATALOGUE
+PRODUCT 09 / 12
+SWEATS
+PHOTO 1 OF 2
+V2 BAGGIES
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+SIZE M IS SOLD OUT
+
+SIZE GUIDE
+SOLD OUT
+TELL ME WHEN THIS SIZE IS BACK
+NOTIFY ME
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+V2 BAGGIES
+£60.00 · M
+SOLD OUT
+CHECKOUT NOW
+SHOT: audit/screens/notifyv-03-notify-form.png
+FORM: {
+ "action": "/contact#contact_form",
+ "method": "post",
+ "id": "contact_form",
+ "cls": "crk-notify",
+ "hidden": [
+  "form_type=contact",
+  "utf8=✓",
+  "contact[subject]=Restock request",
+  "contact[product]=v2-baggies",
+  "contact[product_url]=https://7chao18p5etruwy5-100410786135.shopifypreview.com/pro",
+  "contact[variant]=M"
+ ],
+ "fields": [
+  "INPUT[hidden] name=form_type ",
+  "INPUT[hidden] name=utf8 ",
+  "INPUT[hidden] name=contact[subject] ",
+  "INPUT[hidden] name=contact[product] ",
+  "INPUT[hidden] name=contact[product_url] ",
+  "INPUT[hidden] name=contact[variant] ",
+  "INPUT[email] name=contact[email] ",
+  "BUTTON[submit] name= Notify me"
+ ],
+ "textInForm": "TELL ME WHEN THIS SIZE IS BACK | NOTIFY ME",
+ "captchaMarkupInForm": false
+}
+SHOT: audit/screens/notifyv-04-email-typed.png
+NOTIFY ME box: {"x":50,"y":624.1875,"width":290,"height":52}
+NOTIFY ME box after centring: {"x":50,"y":396.1875,"width":290,"height":52}
+SHOT: audit/screens/notifyv-05-after-submit-3s.png
+SHOT: audit/screens/notifyv-06-after-submit-12s.png
+waited ms: 12649
+
+================ 4. CAPTCHA — is it a real challenge or a blank panel? ================
+CAPTCHA DOM: {
+ "frames": [
+  {
+   "src": "https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html#frame=checkbox-i",
+   "title": null,
+   "w": 0,
+   "h": 0,
+   "x": 0,
+   "y": 0,
+   "vis": "visible",
+   "op": "1",
+   "display": "none"
+  },
+  {
+   "src": "https://cdn.shopify.com/shopifycloud/preview-bar/index.html",
+   "title": null,
+   "w": 0,
+   "h": 0,
+   "x": 0,
+   "y": 0,
+   "vis": "visible",
+   "op": "1",
+   "display": "none"
+  },
+  {
+   "src": "https://7chao18p5etruwy5-100410786135.shopifypreview.com/web-pixels@2d9dfbe8w1156b718pbb247b16m64115e31/custom/web-pixel",
+   "title": null,
+   "w": 0,
+   "h": 0,
+   "x": 0,
+   "y": 0,
+   "vis": "hidden",
+   "op": "1",
+   "display": "none"
+  },
+  {
+   "src": "https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html#frame=challenge&",
+   "title": "hCaptcha challenge",
+   "w": 0,
+   "h": 0,
+   "x": 0,
+   "y": 0,
+   "vis": "visible",
+   "op": "1",
+   "display": "none"
+  }
+ ],
+ "overlays": [
+  {
+   "id": "header-group",
+   "cls": "",
+   "w": 390,
+   "h": 139,
+   "x": 0,
+   "y": -728,
+   "pos": "static",
+   "z": "auto",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 2,
+   "txt": "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH\n\nCATALOGUE\nSEAR"
+  },
+  {
+   "id": "shopify-block-AYkpjcWFINkF3RWlJV__1513253815146976218",
+   "cls": "shopify-block shopify-app-block",
+   "w": 390,
+   "h": 0,
+   "x": 0,
+   "y": 1975,
+   "pos": "static",
+   "z": "auto",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 0,
+   "txt": ""
+  },
+  {
+   "id": "shopify-block-AMkdPR1kzUnJkYjB1T__13047258039897440615",
+   "cls": "shopify-block shopify-app-block",
+   "w": 390,
+   "h": 0,
+   "x": 0,
+   "y": 1975,
+   "pos": "static",
+   "z": "auto",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 1,
+   "txt": ""
+  },
+  {
+   "id": "shopify-block-AZFd6aGFnS21FS1hVa__13768625480086291342",
+   "cls": "shopify-block shopify-app-block",
+   "w": 390,
+   "h": 0,
+   "x": 0,
+   "y": 1975,
+   "pos": "static",
+   "z": "auto",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 1,
+   "txt": ""
+  },
+  {
+   "id": "PBarNextFrameWrapper",
+   "cls": "",
+   "w": 390,
+   "h": 68,
+   "x": 0,
+   "y": 776,
+   "pos": "fixed",
+   "z": "auto",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 1,
+   "txt": ""
+  },
+  {
+   "id": "web-pixels-manager-sandbox-container",
+   "cls": "",
+   "w": 0,
+   "h": 0,
+   "x": 0,
+   "y": 0,
+   "pos": "fixed",
+   "z": "-100",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 1,
+   "txt": ""
+  },
+  {
+   "id": "omnisend-dynamic-container",
+   "cls": "",
+   "w": 390,
+   "h": 0,
+   "x": 0,
+   "y": 1975,
+   "pos": "static",
+   "z": "auto",
+   "bg": "rgba(0, 0, 0, 0)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 2,
+   "txt": ""
+  },
+  {
+   "id": null,
+   "cls": "",
+   "w": 322,
+   "h": 492,
+   "x": 35,
+   "y": 177,
+   "pos": "absolute",
+   "z": "2147483647",
+   "bg": "rgb(255, 255, 255)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 3,
+   "txt": ""
+  },
+  {
+   "id": "shop-hcaptcha-badge-container",
+   "cls": "",
+   "w": 216,
+   "h": 55,
+   "x": 334,
+   "y": 769,
+   "pos": "fixed",
+   "z": "9999",
+   "bg": "rgb(255, 255, 255)",
+   "op": "1",
+   "pe": "auto",
+   "kids": 2,
+   "txt": "Protected by hCaptcha\nPrivacy\nTerms"
+  }
+ ],
+ "bodyText": "COOKIE CONSENT | We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy | Manage preferences | Accept | Decline | Skip to content | FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-D"
+}
+INSIDE CAPTCHA FRAMES: [
+ {
+  "url": "https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html#frame=challenge&",
+  "title": "hCaptcha",
+  "bodyChars": 907053,
+  "visibleText": " |     /* { \"version\": \"1\", \"hash\": \"MEQCIFJ19q8BZ6Jf3YkQ/xwHtHzC9MC/t7ODdv8/4SiyqIgGAiBeP6EBi5GqDm4yww+AwQ5u6EgEfkVoKFZkjbbJLBF5/g==\" } */ | /* https://hcaptcha.com/license */ | !function(){\"use stri",
+  "checkboxPresent": false,
+  "checkboxBox": null,
+  "imgs": 17,
+  "elements": 502
+ },
+ {
+  "url": "https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html#frame=checkbox-i",
+  "title": "hCaptcha",
+  "bodyChars": 606004,
+  "visibleText": " |     /* { \"version\": \"1\", \"hash\": \"MEQCIFJ19q8BZ6Jf3YkQ/xwHtHzC9MC/t7ODdv8/4SiyqIgGAiBeP6EBi5GqDm4yww+AwQ5u6EgEfkVoKFZkjbbJLBF5/g==\" } */ | /* https://hcaptcha.com/license */ | !function(){\"use stri",
+  "checkboxPresent": false,
+  "checkboxBox": null,
+  "imgs": 0,
+  "elements": 9
+ }
+]
+could not click hCaptcha checkbox: locator.click: Timeout 6000ms exceeded.
+SHOT: audit/screens/notifyv-08-final.png
+FINAL PAGE TEXT:
+COOKIE CONSENT
+
+We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy
+
+Manage preferences
+Accept
+Decline
+Skip to content
+
+12 PRODUCTS CURRENTLY ONLINE
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+LIGHT MODE
+MENU
+← CATALOGUE
+PRODUCT 09 / 12
+SWEATS
+PHOTO 1 OF 2
+V2 BAGGIES
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+SIZE M IS SOLD OUT
+
+SIZE GUIDE
+SOLD OUT
+TELL ME WHEN THIS SIZE IS BACK
+NOTIFY ME
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+V2 BAGGIES
+£60.00 · M
+SOLD OUT
+CHECKOUT NOW
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLDN: The Getaway
+
+EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026
+
+Protected by hCaptcha
+Privacy
+Terms
+email still in field: "buyer+test@example.com"
+
+================ NETWORK ================
+NON-TELEMETRY POSTS: POST https://7chao18p5etruwy5-100410786135.shopifypreview.com/.well-known/shopify/fec/produce
+  POST https://api.hcaptcha.com/checksiteconfig?v=1dab630d2576352c6ab33820f3c19d7400cd0955&host=7chao18p5etruwy5-100410786135.shopifyprev
+  POST https://api.hcaptcha.com/authenticate
+  POST https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  POST https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  POST https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+/contact TRAFFIC: (NONE)
+HCAPTCHA TRAFFIC: RESP 200 https://js.hcaptcha.com/1/api.js?render=explicit&onload=hcaptchaOnLoad&recaptchacompat=off
+  REQ GET https://d7b7e11e7c1d.w.hcaptcha.com/logo.png
+  REQ GET https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html
+  REQ GET https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html
+  REQ GET https://cdn.shopify.com/shopifycloud/storefront-forms-hcaptcha/ce_storefront_forms_captcha_hcaptcha.v1.5.2.iif
+  RESP 200 https://cdn.shopify.com/shopifycloud/storefront-forms-hcaptcha/ce_storefront_forms_captcha_hcaptcha.v1.5.2.iif
+  REQ GET https://js.hcaptcha.com/1/api.js?render=explicit&recaptchacompat=off&onload=__shopify_hcap_load_5mxehnyq
+  RESP 200 https://js.hcaptcha.com/1/api.js?render=explicit&recaptchacompat=off&onload=__shopify_hcap_load_5mxehnyq
+  REQ GET https://1653a6bc69b6.w.hcaptcha.com/logo.png
+  REQ GET https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html
+  REQ GET https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html
+  RESP 200 https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html
+  RESP 200 https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/static/hcaptcha.html
+  REQ GET https://f019075a3e52.w.hcaptcha.com/logo.png
+  REQ POST https://api.hcaptcha.com/checksiteconfig?v=1dab630d2576352c6ab33820f3c19d7400cd0955&host=7chao18p5etruwy5-1004
+  RESP 200 https://1653a6bc69b6.w.hcaptcha.com/logo.png
+  RESP 200 https://api.hcaptcha.com/checksiteconfig?v=1dab630d2576352c6ab33820f3c19d7400cd0955&host=7chao18p5etruwy5-1004
+  REQ GET https://newassets.hcaptcha.com/c/3935fdd0183e7153c3e2bba5127d68791573ebde390efca2f27eecd4603a0bdd/hsl.js
+  RESP 200 https://newassets.hcaptcha.com/c/3935fdd0183e7153c3e2bba5127d68791573ebde390efca2f27eecd4603a0bdd/hsl.js
+  REQ POST https://api.hcaptcha.com/authenticate
+  RESP 200 https://f019075a3e52.w.hcaptcha.com/logo.png
+  RESP 401 https://api.hcaptcha.com/authenticate
+  REQ POST https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  RESP 200 https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  REQ POST https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  RESP 200 https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  REQ POST https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  RESP 200 https://api.hcaptcha.com/getcaptcha/f06e6c50-85a8-45c8-87d0-21a2b65856fe
+  REQ GET https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/challenge/image_label_binar
+  RESP 200 https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd0955/challenge/image_label_binar

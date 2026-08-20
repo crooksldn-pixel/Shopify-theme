@@ -144,16 +144,22 @@ Three things a shopper meets on the way:
   offers a choice that isn't one, and neither label matches the heading you land
   on in the first case.
 - **`TRACKSUITS` reads `1 ITEMS`.**
-- **`ACCOUNT` leaves the store's design entirely** — it redirects to
-  `friendsof.crooksldn.com/authentication/oauth/authorize?…`, a Shopify-hosted
-  sign-in page titled `Sign in - CROOKSLDN` with no CROOKSLDN header, no drawer
-  and no link back. The only way back to the shop is the browser's Back button.
+- **`ACCOUNT` leaves the store's design entirely.** It redirects off-domain to
+  `friendsof.crooksldn.com/authentication/…` and lands on a Shopify-hosted page
+  titled `Sign in - CROOKSLDN`: white background, a generic bold sans `CROOKSLDN`
+  centred at the top, `Sign in`, `Sign in or create an account`, a rounded
+  blurple `Continue with shop` button, an `Email` field, and
+  `By continuing, you agree to our Terms of service`. No CROOKSLDN header, no
+  drawer, no mono, no black — and no link back to the shop. This is Shopify's
+  hosted account surface and cannot be styled from the theme, but it is what
+  two taps from the menu actually delivers, and it is the sharpest break with
+  the design law a shopper can reach.
 
 **Verdict:** works, with the three notes above
 
 **Evidence:** `audit/screens/hdr-a07-drawer-first-seen.png`,
 `audit/screens/hdr-d12-shop-tab-after-play.png` (drawer foot showing
-`ACCOUNT BAG [0]`)
+`ACCOUNT BAG [0]`), `audit/screens/hdr-e11-account.png` (the sign-in page)
 
 ---
 
@@ -301,8 +307,9 @@ plays and wants to buy has to know to close a tab. And the CTA sends people
 somewhere to go.
 
 **Evidence:** `audit/screens/hdr-d12-shop-tab-after-play.png` (shop tab intact,
-drawer still open) and `audit/screens/hdr-d13-case001-landing.png` (the
-destination and its three controls).
+drawer still open), `audit/screens/hdr-d13-case001-landing.png` (the destination
+and its three controls) and `audit/screens/hdr-e09-game-play.png` (the briefing
+screen behind `CLEARANCE ACCEPTED`, still no board art visible).
 
 ---
 
@@ -488,7 +495,9 @@ too.
 
 **Evidence:** `audit/screens/hdr-d15-bag-0.png`, `audit/screens/hdr-d16-bag-1.png`,
 `audit/screens/hdr-d17-bag-9.png` (identical row) and
-`audit/screens/hdr-d18-bag-103.png` — `MENU` alone on its own line.
+`audit/screens/hdr-d18-bag-103.png` — `MENU` alone on its own line. Measured
+twice in two separate browser sessions with identical numbers
+(`audit/screens/hdr-e12-bag-0.png` … `audit/screens/hdr-e15-bag-103.png`).
 
 ---
 
