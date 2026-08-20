@@ -1,0 +1,13 @@
+identity {"ok":true,"gb":true}
+
+
+========== REDUCED — arrive, consent, overlay ==========
+18-r BOOT [[50,""],[479,"> 12 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREET"]]
+declined? true
+SHOT audit/screens/18-20-overlay.png
+OVERLAY {"c":"ctc-overlay","op":"1","trans":"none","anim":"none 0s ease 0s 1 normal none running","text":"× / CROOKSLDN: THE GETAWAY / Crack the cuffs. 10% off your first order — code sent by text. Attempts unlimited. / RUN IT / NOT NOW / One code per player. Code expires 20 minutes after you win."}
+IFRAMES ["https://7chao18p5etruwy5-100410786135.shopifypreview.com/web-pixels@2d9dfbe8w115","https://cdn.shopify.com/shopifycloud/preview-bar/index.html","https://newassets.hcaptcha.com/captcha/v1/1dab630d2576352c6ab33820f3c19d7400cd09"]
+
+
+========== REDUCED — tap RUN IT ==========
+tapped RUN IT? true
