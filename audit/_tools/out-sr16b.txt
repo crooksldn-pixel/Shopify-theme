@@ -1,0 +1,1142 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+==============================================================================
+1. HOMEPAGE + COOKIE BANNER
+==============================================================================
+
+-- LIVE-REGION EVENTS [homepage 3.5s] : 0
+cookie banner AX: null
+focus on load: {"tag":"body","role":null,"label":null,"text":"COOKIE CONSENT We and our partners, including Shopify, use c","cls":"page-width-narrow card-hover-effect-none","inDialog":false}
+first 6 tab stops from the top: [
+ "a \"Privacy Policy\"",
+ "button \"Manage preferences\"",
+ "button \"Accept\"",
+ "button \"Decline\"",
+ "a \"Skip to content\"",
+ "a \"\""
+]
+
+-- LIVE-REGION EVENTS [cookie accepted] : 0
+banner still present? 0
+audit/screens/16-home-after-consent.png
+
+==============================================================================
+2. DRAWER
+==============================================================================
+MENU AX before: {"role":"button","name":"MENU","ignored":false,"invalid":"false","focusable":true,"expanded":false}
+MENU aria-expanded after: true
+focus after open: {"tag":"button","role":null,"label":null,"text":"CLOSE","cls":"crk-header__link","inDialog":true}
+
+-- LIVE-REGION EVENTS [drawer opened] : 0
+
+## DRAWER META: {
+  "role": "dialog",
+  "modal": "true",
+  "label": "Main menu",
+  "labelledby": null,
+  "hidden": false,
+  "ariaHidden": null,
+  "bodyOverflow": "hidden",
+  "siblings": [
+    "section.shopify-pc__banner__dialog aria-hidden=true",
+    "a.skip-to-content-link aria-hidden=true",
+    "div. aria-hidden=null",
+    "script. aria-hidden=true",
+    "main.content-for-layout aria-hidden=true",
+    "footer. aria-hidden=true",
+    "style. aria-hidden=true",
+    "script. aria-hidden=true",
+    "div.shopify-block aria-hidden=true",
+    "div.shopify-block aria-hidden=true",
+    "div.shopify-block aria-hidden=true",
+    "script. aria-hidden=true",
+    "div. aria-hidden=true",
+    "link. aria-hidden=true",
+    "shop-cart-sync. aria-hidden=true",
+    "div. aria-hidden=true",
+    "div. aria-hidden=true"
+  ]
+}
+
+## WHOLE-PAGE AX TREE WHILE THE DRAWER IS OPEN (what is left readable)
+RootWebArea "CROOKSLDN" [focused=true]
+              paragraph .crk-status__msg
+                StaticText "12 PRODUCTS CURRENTLY ONLINE"
+          banner .crk-root
+              link "CROOKSLDN" .crk-header__logo
+                image "CROOKSLDN"
+                link "CATALOGUE" .crk-header__link
+                  StaticText "CATALOGUE"
+                link "SEARCH" .crk-header__link
+                  StaticText "SEARCH"
+                link "BAG [0]" .crk-header__link
+                  StaticText "BAG"
+                    StaticText "[0]"
+                button "LIGHT MODE" .crk-header__link
+                  StaticText "LIGHT MODE"
+                button "CLOSE" [expanded=true] .crk-header__link
+                  StaticText "CLOSE"
+            dialog "Main menu" [modal=true] .crk-drawer
+                  paragraph .crk-eyebrow
+                    StaticText "MENU"
+                  button "CLOSE" [focused=true] .crk-header__link
+                    StaticText "CLOSE"
+                navigation "Main menu" .crk-drawer__nav
+                  list
+                    listitem [level=1] .crk-drawer__item
+                      link "SHOP" .crk-drawer__link
+                        StaticText "SHOP"
+                      list .crk-drawer__sub
+                        listitem [level=2]
+                          link "ALL" .crk-drawer__link
+                            StaticText "ALL"
+                        listitem [level=2]
+                          link "NEW" .crk-drawer__link
+                            StaticText "NEW"
+                        listitem [level=2]
+                          link "TEES" .crk-drawer__link
+                            StaticText "TEES"
+                        listitem [level=2]
+                          link "DENIM" .crk-drawer__link
+                            StaticText "DENIM"
+                        listitem [level=2]
+                          link "SWEATS" .crk-drawer__link
+                            StaticText "SWEATS"
+                        listitem [level=2]
+                          link "TRACKSUITS" .crk-drawer__link
+                            StaticText "TRACKSUITS"
+                        listitem [level=2]
+                          link "ACCESSORIES" .crk-drawer__link
+                            StaticText "ACCESSORIES"
+                    listitem [level=1] .crk-drawer__item
+                      link "TRACKING" .crk-drawer__link
+                        StaticText "TRACKING"
+                    listitem [level=1] .crk-drawer__item
+                      link "QUESTIONS" .crk-drawer__link
+                        StaticText "QUESTIONS"
+                    listitem [level=1] .crk-drawer__item
+                      link "TERMS" .crk-drawer__link
+                        StaticText "TERMS"
+                    listitem [level=1] .crk-drawer__item
+                      link "CONTACT" .crk-drawer__link
+                        StaticText "CONTACT"
+                link "PLAY CASE:001 NOW CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below." .crk-drawer__case
+                    StaticText "PLAY CASE:001 NOW"
+                    StaticText "CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below."
+                  link "ACCOUNT" .crk-header__link
+                    StaticText "ACCOUNT"
+                  link "BAG [0]" .crk-header__link
+                    StaticText "BAG"
+                      StaticText "[0]"
+audit/screens/16-drawer.png
+
+## 20 TAB STOPS INSIDE THE DRAWER:
+   1. button "CLOSE" inDialog=true
+   2. button "CLOSE" inDialog=true
+   3. button "CLOSE" inDialog=true
+   4. button "CLOSE" inDialog=true
+   5. button "CLOSE" inDialog=true
+   6. button "CLOSE" inDialog=true
+   7. button "CLOSE" inDialog=true
+   8. button "CLOSE" inDialog=true
+   9. button "CLOSE" inDialog=true
+   10. button "CLOSE" inDialog=true
+   11. button "CLOSE" inDialog=true
+   12. button "CLOSE" inDialog=true
+   13. button "CLOSE" inDialog=true
+   14. button "CLOSE" inDialog=true
+   15. button "CLOSE" inDialog=true
+   16. button "CLOSE" inDialog=true
+   17. button "CLOSE" inDialog=true
+   18. button "CLOSE" inDialog=true
+   19. button "CLOSE" inDialog=true
+   20. button "CLOSE" inDialog=true
+
+## DRAWER LINKS: [
+  {
+    "name": "SHOP",
+    "href": "/collections/frontpage"
+  },
+  {
+    "name": "ALL",
+    "href": "/collections/all"
+  },
+  {
+    "name": "NEW",
+    "href": "/collections/new"
+  },
+  {
+    "name": "TEES",
+    "href": "/collections/tees"
+  },
+  {
+    "name": "DENIM",
+    "href": "/collections/denim"
+  },
+  {
+    "name": "SWEATS",
+    "href": "/collections/sweats"
+  },
+  {
+    "name": "TRACKSUITS",
+    "href": "/collections/tracksuits"
+  },
+  {
+    "name": "ACCESSORIES",
+    "href": "/collections/accessories"
+  },
+  {
+    "name": "TRACKING",
+    "href": "/pages/tracking"
+  },
+  {
+    "name": "QUESTIONS",
+    "href": "/pages/faq"
+  },
+  {
+    "name": "TERMS",
+    "href": "/pages/terms"
+  },
+  {
+    "name": "CONTACT",
+    "href": "/pages/contact"
+  },
+  {
+    "name": "PLAY CASE:001 NOW CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below.",
+    "href": "https://crooks-case-break.base44.app"
+  },
+  {
+    "name": "ACCOUNT",
+    "href": "/account"
+  },
+  {
+    "name": "BAG [0]",
+    "href": "/cart"
+  }
+]
+
+==============================================================================
+3. CATALOGUE -> PRODUCT
+==============================================================================
+following drawer link: {"name":"DENIM","href":"/collections/denim"}
+now at: https://7chao18p5etruwy5-100410786135.shopifypreview.com/collections/denim
+h1 here: ["DENIM"]
+drawer closed? aria-hidden restored: ["a=null","div=null","script=null","main=null","footer=null","div=null","div=null","div=null","script=null","div=true","div=null","link=null","shop-cart-sync=null","div=null"]
+## PRODUCT LINKS AS ANNOUNCED:
+[
+  {
+    "name": "NO. 01 DENIM GREY WASH JORTS £50.00 AVAILABLE",
+    "href": "/products/cb2-wash-jorts"
+  },
+  {
+    "name": "NO. 02 DENIM BLUE WASH JORTS £50.00 AVAILABLE",
+    "href": "/products/cb1-wash-jorts"
+  },
+  {
+    "name": "NO. 03 DENIM BLUE WASH OG JEANS £60.00 AVAILABLE",
+    "href": "/products/cb2-wash-jeans"
+  },
+  {
+    "name": "NO. 04 DENIM GREY WASH OG JEANS £60.00 AVAILABLE",
+    "href": "/products/cb1-wash-jeans"
+  }
+]
+audit/screens/16-catalogue.png
+choosing: {"name":"NO. 03 DENIM BLUE WASH OG JEANS £60.00 AVAILABLE","href":"/products/cb2-wash-jeans"}
+
+==============================================================================
+4. PRODUCT
+==============================================================================
+
+## SKELETON [product]
+   {
+     "title": "BLUE WASH OG JEANS – CROOKSLDN",
+     "h1": [
+       "BLUE WASH OG JEANS"
+     ],
+     "h1count": 1,
+     "headingOutline": [
+       "H1: BLUE WASH OG JEANS",
+       "H2: SPECIFICATION +",
+       "H2: ITEM DESCRIPTION +",
+       "H2: MEASUREMENTS +",
+       "H2: CHAIN OF CUSTODY — SHIPPING & RETURNS +",
+       "H2: MORE FROM THIS DROP",
+       "H2: SHOP",
+       "H2: INFORMATION",
+       "H2: CONTACT",
+       "H2: GAME"
+     ],
+     "landmarks": {
+       "header": 2,
+       "nav": 1,
+       "main": 1,
+       "footer": 1
+     },
+     "liveRegions": [
+       {
+         "tag": "p",
+         "live": "polite",
+         "atomic": null,
+         "cls": "crk-stockline",
+         "text": "Select Size"
+       },
+       {
+         "tag": "p",
+         "live": "polite",
+         "atomic": null,
+         "cls": "crk-stockline crk-added",
+         "text": ""
+       }
+     ]
+   }
+
+## PRODUCT AX TREE
+RootWebArea "BLUE WASH OG JEANS – CROOKSLDN" [focused=true]
+      link "Skip to content" .skip-to-content-link
+        StaticText "Skip to content"
+              paragraph .crk-status__msg
+                StaticText "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+          banner .crk-root
+              link "CROOKSLDN" .crk-header__logo
+                image "CROOKSLDN"
+                link "CATALOGUE" .crk-header__link
+                  StaticText "CATALOGUE"
+                link "SEARCH" .crk-header__link
+                  StaticText "SEARCH"
+                link "BAG [0]" .crk-header__link
+                  StaticText "BAG"
+                    StaticText "[0]"
+                button "LIGHT MODE" .crk-header__link
+                  StaticText "LIGHT MODE"
+                button "MENU" .crk-header__link
+                  StaticText "MENU"
+      main .content-for-layout
+              sectionheader .crk-meta
+                link "← CATALOGUE" .crk-label
+                  StaticText "← CATALOGUE"
+                  StaticText "PRODUCT 03 / 12"
+                  StaticText "DENIM"
+                  group "Evidence photographs" .crk-tray
+                      image "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets" .crk-main-img
+                    button "Photo 1 of 2" .crk-thumb
+                    button "Photo 2 of 2" .crk-thumb
+                  heading "BLUE WASH OG JEANS" [level=1] .crk-display
+                    StaticText "BLUE WASH OG JEANS"
+                    StaticText "£60.00"
+                        StaticText "SIZE"
+                      group "Size" .crk-sizes
+                        button "Size XS" .crk-size
+                          StaticText "XS"
+                        button "Size S" .crk-size
+                          StaticText "S"
+                        button "Size M" .crk-size
+                          StaticText "M"
+                        button "Size L" .crk-size
+                          StaticText "L"
+                        button "Size XL" .crk-size
+                          StaticText "XL"
+                    paragraph [live=polite relevant=additions text] .crk-stockline
+                      StaticText "Select Size"
+                    button "SIZE GUIDE" .crk-textbtn
+                      StaticText "SIZE GUIDE"
+                    paragraph .crk-stockline
+                      StaticText "Order before 18:00 and it ships today (Mon–Sat)"
+                    paragraph .crk-stockline
+                        StaticText ">"
+                      StaticText "Ordered now — leaves today"
+                    button "SELECT A SIZE" [disabled=true] .crk-btn
+                      StaticText "SELECT A SIZE"
+                    heading "SPECIFICATION" [level=2] .crk-display
+                      button "SPECIFICATION" .crk-section-head
+                          StaticText "SPECIFICATION"
+                    heading "ITEM DESCRIPTION" [level=2] .crk-display
+                      button "ITEM DESCRIPTION" .crk-section-head
+                          StaticText "ITEM DESCRIPTION"
+                    heading "MEASUREMENTS" [level=2] .crk-display
+                      button "MEASUREMENTS" .crk-section-head
+                          StaticText "MEASUREMENTS"
+                    heading "CHAIN OF CUSTODY — SHIPPING & RETURNS" [level=2] .crk-display
+                      button "CHAIN OF CUSTODY — SHIPPING & RETURNS" .crk-section-head
+                          StaticText "CHAIN OF CUSTODY — SHIPPING & RETURNS"
+                  heading "MORE FROM THIS DROP" [level=2] .crk-display
+                    StaticText "MORE FROM THIS DROP"
+                    link "BLUE WASH JORTS BLUE WASH JORTS £50.00" .crk-related-item
+                        image "BLUE WASH JORTS"
+                        StaticText "BLUE WASH JORTS"
+                        StaticText "£50.00"
+                    link "GREY WASH OG JEANS GREY WASH OG JEANS £60.00" .crk-related-item
+                        image "GREY WASH OG JEANS"
+                        StaticText "GREY WASH OG JEANS"
+                        StaticText "£60.00"
+                    link "GREY WASH JORTS GREY WASH JORTS £50.00" .crk-related-item
+                        image "GREY WASH JORTS"
+                        StaticText "GREY WASH JORTS"
+                        StaticText "£50.00"
+      contentinfo
+                heading "SHOP" [level=2] .crk-eyebrow
+                  StaticText "SHOP"
+                list
+                  listitem [level=1]
+                    link "NEW"
+                      StaticText "NEW"
+                  listitem [level=1]
+                    link "TEES"
+                      StaticText "TEES"
+                  listitem [level=1]
+                    link "DENIM"
+                      StaticText "DENIM"
+                  listitem [level=1]
+                    link "SWEATS"
+                      StaticText "SWEATS"
+                  listitem [level=1]
+                    link "ACCESSORIES"
+                      StaticText "ACCESSORIES"
+                heading "INFORMATION" [level=2] .crk-eyebrow
+                  StaticText "INFORMATION"
+                list
+                  listitem [level=1]
+                    link "QUESTIONS"
+                      StaticText "QUESTIONS"
+                  listitem [level=1]
+                    link "TERMS"
+                      StaticText "TERMS"
+                  listitem [level=1]
+                    link "SHIPPING"
+                      StaticText "SHIPPING"
+                  listitem [level=1]
+                    link "REFUNDS"
+                      StaticText "REFUNDS"
+                  listitem [level=1]
+                    link "TRACK ORDER"
+                      StaticText "TRACK ORDER"
+                heading "CONTACT" [level=2] .crk-eyebrow
+                  StaticText "CONTACT"
+                list
+                  listitem [level=1]
+                    link "INSTAGRAM"
+                      StaticText "INSTAGRAM"
+                  listitem [level=1]
+                    link "TIKTOK"
+                      StaticText "TIKTOK"
+                  listitem [level=1]
+                    link "EMAIL"
+                      StaticText "EMAIL"
+                heading "GAME" [level=2] .crk-eyebrow
+                  StaticText "GAME"
+                list
+                  listitem [level=1]
+                    link "Play CROOKSLDN: The Getaway"
+                      StaticText "Play CROOKSLDN: The Getaway"
+            paragraph .crk-footer__base
+              StaticText "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026"
+      group
+audit/screens/16-product.png
+
+## PRODUCT VISIBLE TEXT
+← CATALOGUE
+PRODUCT 03 / 12
+DENIM
+PHOTO 1 OF 2
+BLUE WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves today
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+GREY WASH JORTS
+£50.00
+
+## SIZE ROW: {
+  "wrapper": {
+    "tag": "div",
+    "role": null,
+    "label": null,
+    "labelledby": null,
+    "labelledbyText": null,
+    "cls": "crk-header__actions",
+    "legend": null,
+    "precedingText": ""
+  },
+  "grandparent": {
+    "tag": "div",
+    "role": null,
+    "label": null,
+    "labelledby": null,
+    "labelledbyText": null,
+    "cls": "crk-header__bar",
+    "legend": null,
+    "precedingText": ""
+  },
+  "greatgrand": {
+    "tag": "header",
+    "role": null,
+    "label": null,
+    "labelledby": null,
+    "labelledbyText": null,
+    "cls": "crk-root crk-header",
+    "legend": null,
+    "precedingText": ""
+  },
+  "buttons": [
+    {
+      "text": "LIGHT MODE",
+      "ariaLabel": null,
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "XS",
+      "ariaLabel": "Size XS",
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "S",
+      "ariaLabel": "Size S",
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "M",
+      "ariaLabel": "Size M",
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "L",
+      "ariaLabel": "Size L",
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "XL",
+      "ariaLabel": "Size XL",
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "CM",
+      "ariaLabel": null,
+      "pressed": "true",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    },
+    {
+      "text": "IN",
+      "ariaLabel": null,
+      "pressed": "false",
+      "ariaDisabled": null,
+      "role": null,
+      "describedby": null,
+      "title": null
+    }
+  ]
+}
+
+## SIZE-ROW ARIA SNAPSHOT:
+- link "CATALOGUE":
+  - /url: /collections/all
+- link "SEARCH":
+  - /url: /search
+- link "BAG [0]":
+  - /url: /cart
+- button "LIGHT MODE"
+- button "MENU"
+
+## PRICE/STOCK/SR-ONLY: {
+  "price": [
+    "£60.00"
+  ],
+  "stock": [
+    "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
+    "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
+    "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH",
+    "12 PRODUCTS CURRENTLY ONLINE",
+    "Select Size",
+    "Order before 18:00 and it ships today (Mon–Sat)"
+  ],
+  "srOnly": [
+    "CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below."
+  ]
+}
+
+==============================================================================
+5. CHOOSING A SIZE
+==============================================================================
+BEFORE: LIGHT MODE=false | Size XS=false | Size S=false | Size M=false | Size L=false | Size XL=false | CM=true | IN=false
+aria-pressed buttons on the PDP: 8
+AX of focused size (before): {"role":"button","name":"Size XS","ignored":false,"invalid":"false","focusable":true,"focused":true,"pressed":"false"}
+AFTER choosing: LIGHT MODE=false | Size XS=true | Size S=false | Size M=false | Size L=false | Size XL=false | CM=true | IN=false
+AX of that size (after): {"role":"button","name":"Size XS","ignored":false,"invalid":"false","focusable":true,"focused":true,"pressed":"true"}
+
+-- LIVE-REGION EVENTS [size chosen] : 0
+buy area text now: "← CATALOGUE\nPRODUCT 03 / 12\nDENIM\nPHOTO 1 OF 2\nBLUE WASH OG JEANS\n£60.00\nSIZE\nXS\nS\nM\nL\nXL\n\nIN STOCK\n\nSIZE GUIDE\n\nOrder before 18:00 and it ships today (Mon–Sat)\n\nOrdered now — leaves today\n\nADD TO BAG\nMore payment options\nSPECIFICATION\n+\nITEM DESCRIPTION\n+\nMEASUREMENTS\n+\nCHAIN OF CUSTODY — SHIPPING & RETURNS\n+\nMORE FROM THIS DROP\nBLUE WASH JORTS\n£50.00\nGREY WASH OG JEANS\n£60.00\nGREY WASH JORTS\n£50.00"
+audit/screens/16-size-chosen.png
+AFTER changing my mind: DARK MODE=true | Size XS=true | Size S=false | Size M=false | Size L=false | Size XL=false | CM=true | IN=false
+
+-- LIVE-REGION EVENTS [size changed] : 0
+a sold-out size at index: -1
+
+## STICKY BAR: [
+  {
+    "cls": "crk-panel crk-panel-record crk-panel-sticky",
+    "ariaHidden": null,
+    "live": null,
+    "text": "BLUE WASH OG JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves today ADD TO BAG More paymen"
+  },
+  {
+    "cls": "crk-sticky-spacer",
+    "ariaHidden": "true",
+    "live": null,
+    "text": ""
+  },
+  {
+    "cls": "crk-stickybar",
+    "ariaHidden": null,
+    "live": null,
+    "text": "BLUE WASH OG JEANS £60.00 · XS Add to bag Checkout now"
+  }
+]
+
+==============================================================================
+6. ACCORDIONS
+==============================================================================
+BEFORE: []
+summaries: 0
+
+## CONTROL NAME AUDIT [product]
+   interactive elements in DOM: 63 | exposed to a screen reader: 40 | ignored/hidden: 23
+   >>> exposed controls WITHOUT an accessible name: 0
+   --- every exposed control, as announced ---
+     link         "Skip to content"
+     link         "CROOKSLDN"
+     link         "CATALOGUE"
+     link         "SEARCH"
+     link         "BAG  [0]"
+     button       "DARK MODE"  aria-pressed=true
+     button       "MENU"  aria-expanded=false
+     link         "← CATALOGUE"
+     group        "Evidence photographs"
+     button       "Photo 1 of 2"
+     button       "Photo 2 of 2"
+     button       "Size XS"  aria-pressed=true
+     button       "Size S"  aria-pressed=false
+     button       "Size M"  aria-pressed=false
+     button       "Size L"  aria-pressed=false
+     button       "Size XL"  aria-pressed=false
+     button       "SIZE GUIDE"
+     button       "ADD TO BAG"
+     link         "More payment options"
+     button       "SPECIFICATION"  aria-expanded=false
+     button       "ITEM DESCRIPTION"  aria-expanded=false
+     button       "MEASUREMENTS"  aria-expanded=false
+     button       "CHAIN OF CUSTODY — SHIPPING & RETURNS"  aria-expanded=false
+     link         "BLUE WASH JORTS BLUE WASH JORTS £50.00"
+     link         "GREY WASH OG JEANS GREY WASH OG JEANS £60.00"
+     link         "GREY WASH JORTS GREY WASH JORTS £50.00"
+     link         "NEW"
+     link         "TEES"
+     link         "DENIM"
+     link         "SWEATS"
+     link         "ACCESSORIES"
+     link         "QUESTIONS"
+     link         "TERMS"
+     link         "SHIPPING"
+     link         "REFUNDS"
+     link         "TRACK ORDER"
+     link         "INSTAGRAM"
+     link         "TIKTOK"
+     link         "EMAIL"
+     link         "Play CROOKSLDN: The Getaway"
+
+==============================================================================
+7. ADD TO BAG
+==============================================================================
+bag control BEFORE: "BAG [0]"
+ADD button AX: {"role":"button","name":"ADD TO BAG","ignored":false,"invalid":"false","focusable":true}
+focused: {"tag":"button","role":null,"label":null,"text":"ADD TO BAG","cls":"crk-btn","inDialog":false}
+   t+422ms live events queued = 0 | url=cb2-wash-jeans?variant=5363982
+   t+926ms live events queued = 0 | url=cb2-wash-jeans?variant=5363982
+   t+1534ms live events queued = 0 | url=cb2-wash-jeans?variant=5363982
+   t+2538ms live events queued = 0 | url=cb2-wash-jeans?variant=5363982
+   t+4044ms live events queued = 0 | url=cb2-wash-jeans?variant=5363982
+   t+6054ms live events queued = 0 | url=cb2-wash-jeans?variant=5363982
+
+-- LIVE-REGION EVENTS [ADD TO BAG] : 0
+focus after add: {"tag":"body","role":null,"label":null,"text":"Skip to content 12 PRODUCTS CURRENTLY ONLINE CATALOGUE SEARC","cls":"page-width-narrow card-hover-effect-none","inDialog":false}
+bag control AFTER: "BAG [1]"
+ADD button label now: "ADD TO BAG"
+dialogs after add: [{"id":"crk-drawer","displayed":false,"text":" MENU CLOSE SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES TRACKING QU"}]
+audit/screens/16-added.png
+HEADER TEXT AFTER ADD: "CATALOGUE\nSEARCH\nBAG\n [1]\nDARK MODE\nMENU"
+MAIN TEXT AFTER ADD:
+← CATALOGUE
+PRODUCT 03 / 12
+DENIM
+PHOTO 1 OF 2
+BLUE WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves today
+
+ADD TO BAG
+More payment options
+
+Added — 1 in bag View bag
+
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+GREY WASH JORTS
+£50.00
+
+## FULL PAGE AX DIFF-ISH: header subtree
+- banner:
+  - link "CROOKSLDN":
+    - /url: /
+    - img "CROOKSLDN"
+  - link "CATALOGUE":
+    - /url: /collections/all
+  - link "SEARCH":
+    - /url: /search
+  - link "BAG [1]":
+    - /url: /cart
+  - button "DARK MODE" [pressed]
+  - button "MENU"
+
+==============================================================================
+8. CART
+==============================================================================
+
+## SKELETON [cart]
+   {
+     "title": "Your Shopping Cart – CROOKSLDN",
+     "h1": [
+       "Cart 1"
+     ],
+     "h1count": 1,
+     "headingOutline": [
+       "H1: Cart 1",
+       "H3: You may also like",
+       "H3: CHARCOAL CELLBLOCK CREWNECK",
+       "H3: CHARCOAL CELLBLOCK SHORTS",
+       "H3: BLUE WASH OG JEANS",
+       "H3: BLUE WASH JORTS",
+       "H2: SHOP",
+       "H2: INFORMATION",
+       "H2: CONTACT",
+       "H2: GAME"
+     ],
+     "landmarks": {
+       "header": 1,
+       "nav": 1,
+       "main": 1,
+       "footer": 1
+     },
+     "liveRegions": [
+       {
+         "tag": "p",
+         "live": "polite",
+         "atomic": null,
+         "cls": "crk-carriage__msg crk-data",
+         "text": "£10.00 to free Tracked 24"
+       },
+       {
+         "tag": "input",
+         "live": "polite",
+         "atomic": null,
+         "cls": "",
+         "text": ""
+       },
+       {
+         "tag": "div",
+         "live": "alert",
+         "atomic": null,
+         "cls": "cart-item__error",
+         "text": ""
+       },
+       {
+         "tag": "div",
+         "live": "alert",
+         "atomic": null,
+         "cls": "cart-discount__error hidden",
+         "text": "Discount code cannot be applied to your cart Shipping discounts are shown at checkout after adding an address"
+       },
+       {
+         "tag": "span",
+         "live": "status",
+         "atomic": null,
+         "cls": "cart-totals__item cart-totals__total",
+         "text": "Estimated total £60.00 GBP"
+       }
+     ]
+   }
+
+## CART AX TREE
+RootWebArea "Your Shopping Cart – CROOKSLDN" [focused=true]
+      link "Skip to content" .skip-to-content-link
+        StaticText "Skip to content"
+              paragraph .crk-status__msg
+                StaticText "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+          banner .crk-root
+              link "CROOKSLDN" .crk-header__logo
+                image "CROOKSLDN"
+                link "CATALOGUE" .crk-header__link
+                  StaticText "CATALOGUE"
+                link "SEARCH" .crk-header__link
+                  StaticText "SEARCH"
+                link "BAG [1]" .crk-header__link
+                  StaticText "BAG"
+                    StaticText "[1]"
+                button "DARK MODE" [pressed=true] .crk-header__link
+                  StaticText "DARK MODE"
+                button "MENU" .crk-header__link
+                  StaticText "MENU"
+      main .content-for-layout
+              paragraph [live=polite relevant=additions text] .crk-carriage__msg
+                  StaticText ">"
+                StaticText "£10.00 to free Tracked 24"
+              progressbar "Progress toward free carriage" .crk-carriage__track
+                    StaticText "✓"
+                  StaticText "TRACKED 48 FREE"
+                  StaticText "TRACKED 24 FREE"
+                    heading "Cart" [level=1] .h4
+                      StaticText "Cart"
+                        paragraph .visually-hidden
+                          StaticText "Cart total"
+                          StaticText "£60.00 GBP"
+                        table .cart-items__table
+                          rowgroup .visually-hidden
+                            row .cart-items__table-row
+                              columnheader "Product image"
+                                StaticText "Product image"
+                              columnheader "Product information"
+                                StaticText "Product information"
+                              columnheader "Quantity"
+                                StaticText "Quantity"
+                              columnheader "Product total"
+                                StaticText "Product total"
+                          rowgroup
+                            row .cart-items__table-row
+                              cell "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets" .cart-items__media
+                                link "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets" .cart-items__media-container
+                                  image "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets" .cart-items__media-image
+                              cell "BLUE WASH OG JEANS Size: XS Price £60.00" .cart-items__details
+                                  paragraph
+                                    link "BLUE WASH OG JEANS" .cart-items__title
+                                      StaticText "BLUE WASH OG JEANS"
+                                  DescriptionList .cart-items__variants
+                                    term "Size:" .visually-hidden
+                                      StaticText "Size:"
+                                    definition
+                                      StaticText "XS"
+                                      StaticText "Price"
+                                    StaticText "£60.00"
+                              cell "Decrease quantity 1 Increase quantity Remove BLUE WASH OG JEANS - XS" .cart-items__quantity
+                                      button "Decrease quantity" [disabled=true] .button
+                                          StaticText "Decrease quantity"
+                                      spinbutton "Quantity" [live=polite relevant=additions text]
+                                            StaticText "1"
+                                      button "Increase quantity" .button
+                                          StaticText "Increase quantity"
+                                  button "Remove BLUE WASH OG JEANS - XS" .button
+                                      StaticText "Remove"
+                              cell "£60.00 £60.00" .cart-items__price
+                                  StaticText "£60.00"
+                                    StaticText "£60.00"
+                            group .details
+                                DisclosureTriangle "Discount" .cart-discount__summary
+                                    StaticText "Discount"
+                          status [live=polite atomic=true relevant=additions text] .cart-totals__item
+                              StaticText "Estimated total"
+                              StaticText "£60.00 GBP"
+                                StaticText "£60.00 GBP"
+                                paragraph
+                                  StaticText "Pay in 3 interest-free instalments of"
+                                  StaticText "£20.00"
+                                  StaticText "with"
+                                    image "Shop"
+                                  button "Learn more about Shop Pay Installments"
+                              StaticText "Duties and taxes included. Shipping is calculated at checkout."
+                        button "Check out" .cart__checkout-button
+                            StaticText "Check out"
+                              heading "Express checkout" [level=2]
+                                StaticText "Express checkout"
+                                        button "Shop"
+                                              image "Shop"
+                                      button "Google Pay"
+                                        image
+                    heading "You may also like" [level=3]
+                      StaticText "You may also like"
+                  link "View all" .
+                    StaticText "View all"
+                  link "CHARCOAL CELLBLOCK CREWNECK" .product-card__link
+                      StaticText "CHARCOAL CELLBLOCK CREWNECK"
+                      link "CHARCOAL CELLBLOCK CREWNECK" .contents
+                                  image "CHARCOAL CELLBLOCK CREWNECK" .product-media__image
+                    link "CHARCOAL CELLBLOCK CREWNECK" .contents
+                        heading "CHARCOAL CELLBLOCK CREWNECK" [level=3]
+                          StaticText "CHARCOAL CELLBLOCK CREWNECK"
+                          StaticText "£50.00"
+                  link "CHARCOAL CELLBLOCK SHORTS" .product-card__link
+                      StaticText "CHARCOAL CELLBLOCK SHORTS"
+                      link "CHARCOAL CELLBLOCK SHORTS" .contents
+                              button "Previous slide" .
+                              button "Next slide" .
+                                  image "CROOKSLDN charcoal Cellblock shorts in heavyweight fabric with a relaxed fit and 3D embroidered detail" .product-media__image
+                    link "CHARCOAL CELLBLOCK SHORTS" .contents
+                        heading "CHARCOAL CELLBLOCK SHORTS" [level=3]
+                          StaticText "CHARCOAL CELLBLOCK SHORTS"
+                          StaticText "£45.00"
+                  link "BLUE WASH OG JEANS" .product-card__link
+                      StaticText "BLUE WASH OG JEANS"
+                      link "BLUE WASH OG JEANS" .contents
+                                  image "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets" .product-media__image
+                    link "BLUE WASH OG JEANS" .contents
+                        heading "BLUE WASH OG JEANS" [level=3]
+                          StaticText "BLUE WASH OG JEANS"
+                          StaticText "£60.00"
+                  link "BLUE WASH JORTS" .product-card__link
+                      StaticText "BLUE WASH JORTS"
+                      link "BLUE WASH JORTS" .contents
+                                  image "CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets" .product-media__image
+                    link "BLUE WASH JORTS" .contents
+                        heading "BLUE WASH JORTS" [level=3]
+                          StaticText "BLUE WASH JORTS"
+                          StaticText "£50.00"
+      contentinfo
+                heading "SHOP" [level=2] .crk-eyebrow
+                  StaticText "SHOP"
+                list
+                  listitem [level=1]
+                    link "NEW"
+                      StaticText "NEW"
+                  listitem [level=1]
+                    link "TEES"
+                      StaticText "TEES"
+                  listitem [level=1]
+                    link "DENIM"
+                      StaticText "DENIM"
+                  listitem [level=1]
+                    link "SWEATS"
+                      StaticText "SWEATS"
+                  listitem [level=1]
+                    link "ACCESSORIES"
+                      StaticText "ACCESSORIES"
+                heading "INFORMATION" [level=2] .crk-eyebrow
+                  StaticText "INFORMATION"
+                list
+                  listitem [level=1]
+                    link "QUESTIONS"
+                      StaticText "QUESTIONS"
+                  listitem [level=1]
+                    link "TERMS"
+                      StaticText "TERMS"
+                  listitem [level=1]
+                    link "SHIPPING"
+                      StaticText "SHIPPING"
+                  listitem [level=1]
+                    link "REFUNDS"
+                      StaticText "REFUNDS"
+                  listitem [level=1]
+                    link "TRACK ORDER"
+                      StaticText "TRACK ORDER"
+                heading "CONTACT" [level=2] .crk-eyebrow
+                  StaticText "CONTACT"
+                list
+                  listitem [level=1]
+                    link "INSTAGRAM"
+                      StaticText "INSTAGRAM"
+                  listitem [level=1]
+                    link "TIKTOK"
+                      StaticText "TIKTOK"
+                  listitem [level=1]
+                    link "EMAIL"
+                      StaticText "EMAIL"
+                heading "GAME" [level=2] .crk-eyebrow
+                  StaticText "GAME"
+                list
+                  listitem [level=1]
+                    link "Play CROOKSLDN: The Getaway"
+                      StaticText "Play CROOKSLDN: The Getaway"
+            paragraph .crk-footer__base
+              StaticText "EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026"
+      group
+
+## CART TEXT
+£10.00 to free Tracked 24
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Cart
+1
+1
+
+Cart total £60.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+BLUE WASH OG JEANS
+
+Size:
+XS
+Price
+£60.00
+Decrease quantity
+Increase quantity
+Remove
+£60.00
+Discount
+Estimated total
+£60.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH OG JEANS
+
+BLUE WASH OG JEANS
+
+£60.00
+BLUE WASH JORTS
+
+BLUE WASH JORTS
+
+£50.00
+audit/screens/16-cart.png
+
+## CONTROL NAME AUDIT [cart]
+   interactive elements in DOM: 62 | exposed to a screen reader: 38 | ignored/hidden: 24
+   >>> exposed controls WITHOUT an accessible name: 2
+   UNNAMED -> <input type=text class="cart-discount__input" href=""> axRole=null innerText=""
+   UNNAMED -> <button type=submit class="button cart-discount__button" href=""> axRole=null innerText=""
+   --- every exposed control, as announced ---
+     link         "Skip to content"
+     link         "CROOKSLDN"
+     link         "CATALOGUE"
+     link         "SEARCH"
+     link         "BAG  [1]"
+     button       "DARK MODE"  aria-pressed=true
+     button       "MENU"  aria-expanded=false
+     link         "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets"
+     link         "BLUE WASH OG JEANS"
+     button       "Decrease quantity"
+     spinbutton   "Quantity"
+     button       "Increase quantity"
+     button       "Remove BLUE WASH OG JEANS - XS"
+     DisclosureTriangle "Discount"
+     input        "null"
+     button       "null"
+     button       "Check out"
+     link         "View all"
+     link         "CHARCOAL CELLBLOCK CREWNECK"
+     link         "CHARCOAL CELLBLOCK SHORTS"
+     button       "Previous slide"
+     button       "Next slide"
+     link         "BLUE WASH OG JEANS"
+     link         "BLUE WASH JORTS"
+     link         "NEW"
+     link         "TEES"
+     link         "DENIM"
+     link         "SWEATS"
+     link         "ACCESSORIES"
+     link         "QUESTIONS"
+     link         "TERMS"
+     link         "SHIPPING"
+     link         "REFUNDS"
+     link         "TRACK ORDER"
+     link         "INSTAGRAM"
+     link         "TIKTOK"
+     link         "EMAIL"
+     link         "Play CROOKSLDN: The Getaway"
+
+## QTY FIELD AX: {"role":"spinbutton","name":"Quantity","ignored":false,"live":"polite","atomic":false,"relevant":"additions text","invalid":"false","focusable":true,"editable":"plaintext","settable":true,"required":false,"valuemin":1,"valuemax":0,"valuetext":"1"}
+
+-- LIVE-REGION EVENTS [quantity -> 2] : 0
+cart text after:
+
+audit/screens/16-cart-qty.png
+
+## REMOVE CONTROLS: []

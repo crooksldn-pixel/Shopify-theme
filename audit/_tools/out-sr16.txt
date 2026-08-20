@@ -1,0 +1,361 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+==============================================================================
+1. HOMEPAGE — arriving cold
+==============================================================================
+
+-- LIVE-REGION EVENTS [homepage, first 4.5s] : 0
+
+## PAGE SKELETON [homepage]
+   {
+     "title": "CROOKSLDN",
+     "lang": "en",
+     "h1": [
+       "CROOKSLDN"
+     ],
+     "headingOutline": [
+       "H2: COOKIE CONSENT",
+       "H1: CROOKSLDN",
+       "H2: CATALOGUE",
+       "H2: EVERY ORDER SHIPS LIKE THIS",
+       "H2: REGISTER AS INFORMANT",
+       "H2: SHOP",
+       "H2: INFORMATION",
+       "H2: CONTACT",
+       "H2: GAME"
+     ],
+     "landmarks": {
+       "header": 3,
+       "banner": 0,
+       "nav": 1,
+       "main": 1,
+       "footer": 1,
+       "contentinfo": 0,
+       "search": 0
+     },
+     "firstLinks": [
+       "Skip to content -> #MainContent",
+       "CATALOGUE -> #products"
+     ],
+     "liveRegions": [
+       {
+         "tag": "span",
+         "live": "polite",
+         "atomic": null,
+         "cls": "crk-log__count crk-micro",
+         "text": "12 ITEMS"
+       }
+     ]
+   }
+
+## HOMEPAGE AX TREE (first 220 nodes)
+RootWebArea "CROOKSLDN" [focused=true]
+      alertdialog "COOKIE CONSENT" .shopify-pc__banner__dialog
+            heading "COOKIE CONSENT" [level=2]
+              StaticText "COOKIE CONSENT"
+            paragraph
+              StaticText "We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our"
+              link "Privacy Policy"
+                StaticText "Privacy Policy"
+            button "Manage preferences" .shopify-pc__banner__btn-manage-prefs
+              StaticText "Manage preferences"
+            button "Accept" .shopify-pc__banner__btn-accept
+              StaticText "Accept"
+            button "Decline" .shopify-pc__banner__btn-decline
+              StaticText "Decline"
+      link "Skip to content" .skip-to-content-link
+        StaticText "Skip to content"
+              paragraph .crk-status__msg
+                StaticText "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+          banner .crk-root
+              link "CROOKSLDN" .crk-header__logo
+                image "CROOKSLDN"
+                link "CATALOGUE" .crk-header__link
+                  StaticText "CATALOGUE"
+                link "SEARCH" .crk-header__link
+                  StaticText "SEARCH"
+                link "BAG [0]" .crk-header__link
+                  StaticText "BAG"
+                    StaticText "[0]"
+                button "LIGHT MODE" .crk-header__link
+                  StaticText "LIGHT MODE"
+                button "MENU" .crk-header__link
+                  StaticText "MENU"
+      main .content-for-layout
+                  paragraph .crk-boot__line
+                    StaticText "> 12 PRODUCTS AVAILABLE TO PURCHASE"
+                  heading "CROOKSLDN" [level=1] .crk-h1
+                    StaticText "CROOKSLDN"
+                  paragraph .crk-hero__tag
+                    StaticText "OWN THE STREETS™"
+                    link "CATALOGUE" .crk-btn
+                      StaticText "CATALOGUE"
+              sectionheader .crk-log__head
+                heading "CATALOGUE" [level=2] .crk-h2
+                  StaticText "CATALOGUE"
+                  StaticText "12"
+                  StaticText "ITEMS"
+              group "Choose how products are shown" .crk-views
+                button "> FLAT" [pressed=true] .crk-filter
+                    StaticText ">"
+                  StaticText "FLAT"
+                button "ON MODEL" .crk-filter
+                  StaticText "ON MODEL"
+              group "Product image outline" .crk-views
+                button "> OUTLINE" [pressed=true] .crk-filter
+                    StaticText ">"
+                  StaticText "OUTLINE"
+              group "Filter exhibits" .crk-filters
+                button "> ALL" [pressed=true] .crk-filter
+                    StaticText ">"
+                  StaticText "ALL"
+                button "T-SHIRT" .crk-filter
+                  StaticText "T-SHIRT"
+                button "DENIM" .crk-filter
+                  StaticText "DENIM"
+                button "SWEATS" .crk-filter
+                  StaticText "SWEATS"
+                button "ACCESSORIES" .crk-filter
+                  StaticText "ACCESSORIES"
+              list .crk-log__grid
+                listitem [level=1] .crk-log__cell
+                  link "NO. 01 SWEATS CHARCOAL CELLBLOCK CREWNECK CHARCOAL CELLBLOCK CREWNECK £50.00 AVAILABLE" .crk-card
+                        StaticText "NO. 01"
+                        StaticText "SWEATS"
+                      image "CHARCOAL CELLBLOCK CREWNECK" .crk-card__img
+                      StaticText "CHARCOAL CELLBLOCK CREWNECK"
+                        StaticText "£50.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 02 SWEATS CROOKSLDN charcoal Cellblock shorts in heavyweight fabric with a relaxed fit and 3D embroidered detail CHARCOAL CELLBLOCK SHORTS £45.00 AVAILABLE" .crk-card
+                        StaticText "NO. 02"
+                        StaticText "SWEATS"
+                      image "CROOKSLDN charcoal Cellblock shorts in heavyweight fabric with a relaxed fit and 3D embroidered detail" .crk-card__img
+                      StaticText "CHARCOAL CELLBLOCK SHORTS"
+                        StaticText "£45.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 03 DENIM CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets BLUE WASH OG JEANS £60.00 AVAILABLE" .crk-card
+                        StaticText "NO. 03"
+                        StaticText "DENIM"
+                      image "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets" .crk-card__img
+                      StaticText "BLUE WASH OG JEANS"
+                        StaticText "£60.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 04 DENIM CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets BLUE WASH JORTS £50.00 AVAILABLE" .crk-card
+                        StaticText "NO. 04"
+                        StaticText "DENIM"
+                      image "CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets" .crk-card__img
+                      StaticText "BLUE WASH JORTS"
+                        StaticText "£50.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 05 DENIM CROOKSLDN grey wash heavyweight denim jeans with baggy fit and handcuff graphic on back pockets GREY WASH OG JEANS £60.00 AVAILABLE" .crk-card
+                        StaticText "NO. 05"
+                        StaticText "DENIM"
+                      image "CROOKSLDN grey wash heavyweight denim jeans with baggy fit and handcuff graphic on back pockets" .crk-card__img
+                      StaticText "GREY WASH OG JEANS"
+                        StaticText "£60.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 06 DENIM CROOKSLDN grey wash baggy denim jorts featuring white handcuff graphic print on the back pockets GREY WASH JORTS £50.00 AVAILABLE" .crk-card
+                        StaticText "NO. 06"
+                        StaticText "DENIM"
+                      image "CROOKSLDN grey wash baggy denim jorts featuring white handcuff graphic print on the back pockets" .crk-card__img
+                      StaticText "GREY WASH JORTS"
+                        StaticText "£50.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 07 T-SHIRT MONEY CLIVE TEE MONEY CLIVE TEE Colourways: BLACK, WHITE £25.00 AVAILABLE" .crk-card
+                        StaticText "NO. 07"
+                        StaticText "T-SHIRT"
+                      image "MONEY CLIVE TEE" .crk-card__img
+                      StaticText "MONEY CLIVE TEE"
+                      StaticText "Colourways: BLACK, WHITE"
+                        StaticText "£25.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 08 T-SHIRT CRXST★RZ T-SHIRT CRXST★RZ T-SHIRT Colourways: Black, White £25.00 AVAILABLE DROPPED 03.08" .crk-card
+                        StaticText "NO. 08"
+                        StaticText "T-SHIRT"
+                      image "CRXST★RZ T-SHIRT" .crk-card__img
+                      StaticText "CRXST★RZ T-SHIRT"
+                      StaticText "Colourways: Black, White"
+                        StaticText "£25.00"
+                        StaticText "AVAILABLE"
+                      StaticText "DROPPED 03.08"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 09 SWEATS V2 BAGGIES V2 BAGGIES £60.00 2 OF 5 SIZES LEFT" .crk-card
+                        StaticText "NO. 09"
+                        StaticText "SWEATS"
+                      image "V2 BAGGIES" .crk-card__img
+                      StaticText "V2 BAGGIES"
+                        StaticText "£60.00"
+                        StaticText "2 OF 5 SIZES LEFT"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 10 ACCESSORIES BLACK/BLUE MOTIONTEC SOCKS BLACK/BLUE MOTIONTEC™ SOCKS £6.00 AVAILABLE" .crk-card
+                        StaticText "NO. 10"
+                        StaticText "ACCESSORIES"
+                      image "BLACK/BLUE MOTIONTEC SOCKS" .crk-card__img
+                      StaticText "BLACK/BLUE MOTIONTEC™ SOCKS"
+                        StaticText "£6.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 11 ACCESSORIES CROOKSLDN white and red MotionTec performance socks with grey accents and small handcuff logo detail WHITE/RED MOTIONTEC™ SOCKS £6.00 AVAILABLE" .crk-card
+                        StaticText "NO. 11"
+                        StaticText "ACCESSORIES"
+                      image "CROOKSLDN white and red MotionTec performance socks with grey accents and small handcuff logo detail" .crk-card__img
+                      StaticText "WHITE/RED MOTIONTEC™ SOCKS"
+                        StaticText "£6.00"
+                        StaticText "AVAILABLE"
+                listitem [level=1] .crk-log__cell
+                  link "NO. 12 ACCESSORIES CROOKSLDN large black duffle bag with white circular logo print and zippered front pocket LARGE DUFFLE BAG £18.00 AVAILABLE" .crk-card
+                        StaticText "NO. 12"
+                        StaticText "ACCESSORIES"
+                      image "CROOKSLDN large black duffle bag with white circular logo print and zippered front pocket" .crk-card__img
+                      StaticText "LARGE DUFFLE BAG"
+                        StaticText "£18.00"
+                        StaticText "AVAILABLE"
+              sectionheader .crk-pack__head
+                paragraph .crk-eyebrow
+                  StaticText "PROPERTY BAG"
+                heading "EVERY ORDER SHIPS LIKE THIS" [level=2] .crk-h2
+                  StaticText "EVERY ORDER SHIPS LIKE THIS"
+                paragraph .crk-pack__body
+                  StaticText "Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for."
+              figure .crk-pack__figure
+                image "CROOKSLDN packaging laid out on black and marked with numbered evidence tents: an evidence tag, a pull-tight security seal, and a handcuff keyring." .crk-pack__img
+              list .crk-pack__list
+                listitem [level=1] .crk-pack__item
+                    StaticText "EVIDENCE TAG"
+                    StaticText "Numbered, seized by CROOKS LDN, QR to verify."
+                listitem [level=1] .crk-pack__item
+                    StaticText "SECURITY SEAL"
+                    StaticText "Pull-tight, stamped with the cuffs."
+                listitem [level=1] .crk-pack__item
+                    StaticText "CUFF KEYRING"
+                    StaticText "Miniature cuffs, on the ring."
+              paragraph .crk-micro
+                StaticText "* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY."
+                heading "REGISTER AS INFORMANT" [level=2] .crk-h2
+                  StaticText "REGISTER AS INFORMANT"
+                paragraph .crk-intake__sub
+                  StaticText "Drops go to the register before they go public. One message per drop, nothing else."
+                paragraph .crk-intake__small
+                  StaticText "One text per drop. Reply STOP to leave the register at any time. We do not sell it."
+      contentinfo
+                heading "SHOP" [level=2] .crk-eyebrow
+                  StaticText "SHOP"
+                list
+                  listitem [level=1]
+                    link "NEW"
+                      StaticText "NEW"
+                  listitem [level=1]
+                    link "TEES"
+                      StaticText "TEES"
+                  listitem [level=1]
+                    link "DENIM"
+                      StaticText "DENIM"
+                  listitem [level=1]
+                    link "SWEATS"
+                      StaticText "SWEATS"
+                  listitem [level=1]
+                    link "ACCESSORIES"
+                      StaticText "ACCESSORIES"
+                heading "INFORMATION" [level=2] .crk-eyebrow
+                  StaticText "INFORMATION"
+                list
+                  listitem [level=1]
+                    link "QUESTIONS"
+                      StaticText "QUESTIONS"
+
+## FOCUS AFTER LOAD: {"tag":"body","role":null,"label":null,"text":"COOKIE CONSENT We and our partners, including Shopify, use c","cls":"page-width-narrow card-hover-effect-none","inDialog":false}
+
+## DIALOG-ROLE ELEMENTS ON HOMEPAGE: [
+  {
+    "tag": "section",
+    "role": "alertdialog",
+    "modal": "false",
+    "label": "shopify-pc__banner__body-title",
+    "displayed": true,
+    "text": "COOKIE CONSENT We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these p"
+  },
+  {
+    "tag": "div",
+    "role": "dialog",
+    "modal": "true",
+    "label": "Main menu",
+    "displayed": false,
+    "text": "MENU CLOSE SHOPALLNEWTEESDENIMSWEATSTRACKSUITSACCESSORIES TRACKING QUESTIONS TERMS Contact PLAY CASE:001 NOW CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling of"
+  }
+]
+
+## COOKIE / OVERLAY TEXT: "COOKIE CONSENT\n\nWe and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy\n\nManage preferences\nAccept\nDecline\nSkip to content\n\nFREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH\n\nCATALOGUE\nSEARCH\nBAG\n [0]\nLIGHT MODE\nMENU\n\n> 12 PRODUCTS AVAILABLE TO PURCHASE\n\nCROOKSLDN\n\nOWN THE STREETS™\n\nCATALOGUE\nCATALOGUE\n12 ITEMS\nFLAT\nON MODEL\nOUTLINE\nALL\nT-SHIRT\nDENIM\nSWEATS\nACCESSORIES"
+audit/screens/16-home.png
+
+## CONTROL NAME AUDIT [homepage]
+   interactive elements in DOM: 62 | exposed to a screen reader: 46 | ignored/hidden: 16
+   >>> exposed controls WITHOUT an accessible name: 0
+   --- every exposed control, as announced ---
+     link         "Privacy Policy"
+     button       "Manage preferences"
+     button       "Accept"
+     button       "Decline"
+     link         "Skip to content"
+     link         "CROOKSLDN"
+     link         "CATALOGUE"
+     link         "SEARCH"
+     link         "BAG  [0]"
+     button       "LIGHT MODE"  aria-pressed=false
+     button       "MENU"  aria-expanded=false
+     link         "CATALOGUE"
+     button       "> FLAT"  aria-pressed=true
+     button       "ON MODEL"  aria-pressed=false
+     button       "> OUTLINE"  aria-pressed=true
+     button       "> ALL"  aria-pressed=true
+     button       "T-SHIRT"  aria-pressed=false
+     button       "DENIM"  aria-pressed=false
+     button       "SWEATS"  aria-pressed=false
+     button       "ACCESSORIES"  aria-pressed=false
+     link         "NO. 01 SWEATS CHARCOAL CELLBLOCK CREWNECK CHARCOAL CELLBLOCK CREWNECK £50.00 AVAILABLE"
+     link         "NO. 02 SWEATS CROOKSLDN charcoal Cellblock shorts in heavyweight fabric with a relaxed fit and 3D embroidered detail CHARCOAL CELLBLOCK SHORTS £45.00 AVAILABLE"
+     link         "NO. 03 DENIM CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets BLUE WASH OG JEANS £60.00 AVAILABLE"
+     link         "NO. 04 DENIM CROOKSLDN blue wash denim jorts with baggy fit and white embroidered handcuff artwork on back pockets BLUE WASH JORTS £50.00 AVAILABLE"
+     link         "NO. 05 DENIM CROOKSLDN grey wash heavyweight denim jeans with baggy fit and handcuff graphic on back pockets GREY WASH OG JEANS £60.00 AVAILABLE"
+     link         "NO. 06 DENIM CROOKSLDN grey wash baggy denim jorts featuring white handcuff graphic print on the back pockets GREY WASH JORTS £50.00 AVAILABLE"
+     link         "NO. 07 T-SHIRT MONEY CLIVE TEE MONEY CLIVE TEE Colourways: BLACK, WHITE £25.00 AVAILABLE"
+     link         "NO. 08 T-SHIRT CRXST★RZ T-SHIRT CRXST★RZ T-SHIRT Colourways: Black, White £25.00 AVAILABLE DROPPED 03.08"
+     link         "NO. 09 SWEATS V2 BAGGIES V2 BAGGIES £60.00 2 OF 5 SIZES LEFT"
+     link         "NO. 10 ACCESSORIES BLACK/BLUE MOTIONTEC SOCKS BLACK/BLUE MOTIONTEC™ SOCKS £6.00 AVAILABLE"
+     link         "NO. 11 ACCESSORIES CROOKSLDN white and red MotionTec performance socks with grey accents and small handcuff logo detail WHITE/RED MOTIONTEC™ SOCKS £6.00 AVAILABLE"
+     link         "NO. 12 ACCESSORIES CROOKSLDN large black duffle bag with white circular logo print and zippered front pocket LARGE DUFFLE BAG £18.00 AVAILABLE"
+     link         "NEW"
+     link         "TEES"
+     link         "DENIM"
+     link         "SWEATS"
+     link         "ACCESSORIES"
+     link         "QUESTIONS"
+     link         "TERMS"
+     link         "SHIPPING"
+     link         "REFUNDS"
+     link         "TRACK ORDER"
+     link         "INSTAGRAM"
+     link         "TIKTOK"
+     link         "EMAIL"
+     link         "Play CROOKSLDN: The Getaway"
+
+==============================================================================
+2. DRAWER — opened from the keyboard
+==============================================================================
+MENU button AX: {"role":"button","name":"MENU","ignored":false,"invalid":"false","focusable":true,"expanded":false}
+menu attrs: expanded=false controls=crk-drawer haspopup=null
+SCRIPT ERROR: locator.getAttribute: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /menu/i }).first()[22m
+
+locator.getAttribute: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /menu/i }).first()[22m
+
+    at /home/user/Shopify-theme/audit/_tools/sr16.mjs:130:53

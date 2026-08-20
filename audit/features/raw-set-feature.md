@@ -21,8 +21,10 @@ between the dispatch line and the buy button:
 
 Nothing else. It names the other garment and the saving. It never says the shorts
 cost £45, never says the pair costs £85, and never says a shorts size will be
-needed. The £50 above it is the only price on screen, so the shopper's arithmetic
-from this line alone is "£50, plus an unknown, minus £10".
+needed. The `£50.00` above it is the only price anywhere near it — the shorts'
+`£45.00` exists further down the page, in `MORE FROM THIS DROP`, well below the
+buy controls — so the arithmetic available from this line is "£50, plus an
+unknown, minus £10".
 
 **Verdict:** partly
 
