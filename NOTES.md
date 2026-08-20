@@ -1977,3 +1977,21 @@ frame. The checksum and app-id checks confirmed *which* app was being pointed at
 they could not confirm the browser would agree to render it. A fetch of the
 headers would have caught it in one line, and that is now part of the routine
 for any embedded third-party surface.
+
+### Same day — Prevent Embedding turned off, new app back in
+
+George flipped the toggle. `crackthecuffs.base44.app` now sends no
+`x-frame-options`, so the theme points at it again. One line changed; the
+message handler already accepted both apps' close messages.
+
+Verified three ways this time, header first:
+
+    1. x-frame-options            none - frameable
+    2. functional appId served    6a870f45e91e53c2e754ebd0 (the new app)
+    3. deployed staging homepage  APP_URL = crackthecuffs.base44.app
+                                  old app referenced 0 times
+                                  getaway:close listened for
+
+The comment at `APP_URL` now carries the dependency and the one-line check
+(`curl -sI <url> | grep -i x-frame-options`) rather than a temporary note, so
+the constraint survives the next person changing that line.
