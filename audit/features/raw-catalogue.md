@@ -45,12 +45,12 @@ catalogue-B20-filter-accessories.png, catalogue-D41-cold-load-filtered.png
 
 **Should:** a filtered register shows the products and nothing else.
 
-**Did:** the grid's 1px rules are made by letting a purple ground show between
-the cards. When a filter leaves a count that does not fill the last row, that
-ground shows through the empty slot as a **solid lavender rectangle the exact
-size of a product card**. Tapping `SWEATS` (3 items) or `ACCESSORIES` (3 items)
-on a phone produces one; on a 1440px screen the grid is four across, so
-`ACCESSORIES` leaves the same slab and `T-SHIRT` (2 items) leaves two slots of it.
+**Did:** when a filter leaves a count that does not fill the last row of the
+grid, the unfilled slot comes up as a **solid lavender rectangle the exact size
+of a product card** — the same colour as the thin rules between the cards,
+except a card wide and a card tall. Tapping `SWEATS` (3 items) or `ACCESSORIES`
+(3 items) on a phone produces one; on a 1440px screen, where the grid runs four
+across, `ACCESSORIES` leaves the same slab standing beside the duffle bag.
 
 Nothing else on the site is a solid block of colour that size. It reads as a
 product whose image failed, or as something withheld.
@@ -156,9 +156,9 @@ register. O3 says the aesthetic call is pending; this is the call, judged as a
 shopper deciding whether to buy rather than as taste.
 
 **What it is:** a 1px cream (`rgb(221, 215, 201)`) keyline drawn right around the
-product cut-out — four stacked drop-shadows, one per direction. It is **on by
-default** (`data-crk-outline-default="on"`, button starts `aria-pressed="true"`)
-and it applies to the product page's main image too, not only the register.
+product cut-out. It is **on by default** — `> OUTLINE` is already lit when the
+homepage loads, before anyone touches it — and it applies to the product page's
+main image too, not only to the register.
 
 **Did:** three things a shopper would notice.
 
@@ -250,8 +250,8 @@ count reading `4 ITEMS`. Opening `BLUE WASH OG JEANS` and pressing the browser's
 Back button returned to `…/collections/all?cat=DENIM` with `> DENIM` still lit,
 still four cards, still `4 ITEMS`. Nothing had to be re-tapped.
 
-One small loss: the page comes back scrolled to the top (`window.scrollY === 0`),
-not to the card that was opened.
+One small loss: the page comes back at the very top of the list, not at the card
+that was opened.
 
 **Verdict:** works
 
@@ -266,11 +266,11 @@ catalogue-C11-product-opened.png, catalogue-C12-after-back.png (after Back —
 **Should:** the choice persists.
 
 **Did:** it persists everywhere and survives Back. Turning `OUTLINE` off on the
-homepage set `crk-outline = off` in session storage and stamped
-`data-crk-outline="off"` on the page; from there `/collections/all`, the
-`CHARCOAL CELLBLOCK CREWNECK` product page, and a browser Back to the collection
-all rendered with the outline off. Returning to the homepage the button was still
-`aria-pressed="false"` and the cards were still plain.
+homepage carried through to `/collections/all`, to the `CHARCOAL CELLBLOCK
+CREWNECK` product page, and back to the collection with the browser's Back
+button — every card plain on each. Returning to the homepage, the `OUTLINE`
+button was still unlit and the cards were still plain. The setting is held for
+the browsing session, so it lasts as long as the shopping trip.
 
 **Verdict:** works
 

@@ -73,7 +73,7 @@ confirmation. It is fast and quiet: 900ms after the tap the row has folded to
 nothing and the page has already become the empty-cart page. There is **no undo,
 no "removed" message and no toast** — the only thing announced to a screen
 reader afterwards was the carriage bar's `£20.00 to free Tracked 48`. The word
-"undo" does not exist anywhere in the theme.
+"undo" appears in none of the theme's English strings.
 **Verdict:** works (removal) · undo **absent**
 **Shopper cost:** a misplaced tap on the bin costs the item and the size choice,
 and the only way back is to find the product again.
@@ -116,11 +116,11 @@ cc-86-payment-step.png (the rates, finally)
 
 **Should:** be findable and behave.
 **Did:** it is a closed accordion labelled `Discount` with a `+`, sitting under
-the last line item. Opening it gives a field placeheld `Discount code` and a
-purple `Apply`. `10CROOKS` on a normal £155 cart produced, immediately and
+the last line item. Opening it gives a field holding the placeholder `Discount
+code` and a purple `Apply`. `10CROOKS` on a normal £155 cart produced, immediately and
 cleanly: `Subtotal £155.00` / `10CROOKS  −£15.50` / `Estimated total £139.50
 GBP`, plus a removable `10CROOKS ×` pill. The `Subtotal` row only appears once a
-discount exists. Removing the pill restored £155.00.
+discount exists. Tapping the pill's `×` takes the code back off.
 **Verdict:** works
 **Evidence:** audit/screens/cc-89-10crooks-normal-full.png, cc-97-discount-open.png
 
@@ -142,7 +142,7 @@ survives a reload. So the shopper is charged **£76.50 for a set the product pag
 promised at £85**, and the saving against buying the two garments separately is
 £18.50, not the £10 the page states. Known as **O1** — recorded here only for
 what a shopper sees.
-**Verdict:** works as coded, contradicts the copy
+**Verdict:** partly — the mechanism works, the price contradicts the copy
 **Shopper cost:** none to the shopper (they gain £8.50); the loss is the
 merchant's, and the set's whole pricing story stops being true the moment a
 public code is in play.
@@ -159,7 +159,7 @@ from the carriage bar to `Cart`; there is no `SET SAVING APPLIED` line, no `£95
 no mention of £10 anywhere. The *other* state works perfectly — with only the
 shorts in the cart the line `Complete the set — add the Cellblock Crewneck, save
 £10.` appears above the cart title and links to the crewneck.
-**Verdict:** broken (one of the section's two states never appears)
+**Verdict:** broken — one of the section's two states never appears
 **Shopper cost:** the shopper who just took the offer sees `£85.00` with nothing
 to confirm they saved anything — the moment the bundle is supposed to pay off is
 silent. And with `10CROOKS` applied, the only saving the cart ever names is the
@@ -205,9 +205,9 @@ code`, `Name on card`, `Use shipping address as billing address`, then `Klarna`
 and `Shop Pay — Pay in full or in installments`. **Stopped there; nothing
 submitted, no card details entered.**
 
-After forty minutes of black screens, mono type and evidence-log language, the
-last screen before paying is an ordinary blue-and-white Shopify form. It reads as
-a handoff to a third party. Nothing on it is wrong — it is fast, honest and
+Coming from black screens, mono type and evidence-log language, the last screen
+before paying is an ordinary blue-and-white Shopify form. It reads as a handoff
+to a third party. Nothing on it is wrong — it is fast, honest and
 familiar, and the shipping options match what the cart promised — but the shop
 you were in stops existing at that click.
 **Verdict:** works (functionally) · the brand ends at the door

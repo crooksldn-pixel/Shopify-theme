@@ -6,7 +6,7 @@ JEANS, £60), **`charcoal-cellblock-crewneck`** (£50), **`v2-baggies`** (£60 �
 product in the shop with sold-out sizes), plus `charcoal-cellblock-shorts` (£45) and sweeps
 across all twelve products where a count was needed.
 
-Clock during the run: **Thursday 20 August 2026, 16:47–17:35 British Summer Time.**
+Clock during the run: **Thursday 20 August 2026, 16:47–17:40 British Summer Time.**
 
 ---
 
@@ -16,7 +16,8 @@ Clock during the run: **Thursday 20 August 2026, 16:47–17:35 British Summer Ti
 at enough resolution, that a stranger can decide what it is made of.
 
 **Did:** The gallery is a single large square photo, a line reading `PHOTO 1 OF 3`, and a row
-of thumbnails underneath. It is clean and it reads well. Two things are wrong with it.
+of thumbnails underneath. It is clean, it reads well, and the controls all work (see the next
+entry). Two things are wrong with what it is showing.
 
 **First, the photo counts.** Read off the on-screen `PHOTO 1 OF n` counter on all twelve
 products:
@@ -84,16 +85,23 @@ the sizes — so a keyboard shopper meets the photographs before anything else.
 `PHOTO 2 OF 3` → `PHOTO 3 OF 3` and `ArrowLeft` walked it back, stopping cleanly at both
 ends rather than wrapping.
 
-The main photo is **not** a horizontal scroller — the track is exactly as wide as its frame —
-so dragging it with a mouse moves nothing; the theme listens for a real touch gesture
-instead. Where a product has only one photo no thumbnail row renders at all, and
-`PHOTO 1 OF 1` is the only cue that there is nothing more to see. That is honest, if bleak.
+**Swiping** works on a phone. A real left swipe across the shorts' photo took it
+`PHOTO 1 OF 3` → `2 OF 3` → `3 OF 3`, a right swipe went back to `2 OF 3`, and it stops at
+the last photo rather than wrapping round. The thumbnail highlight follows the swipe. Tap
+targets on the thumbnails are 64×64 — comfortably thumb-sized.
+
+Two notes. The main photo is not a horizontal scroller, so a *mouse drag* on desktop moves
+nothing (that is the right call — mouse users have the arrow keys and the thumbnails). And
+where a product has only one photo, no thumbnail row renders at all and `PHOTO 1 OF 1` is
+the only cue that there is nothing more to see. Honest, if bleak.
 
 **Verdict:** works
 
-**Evidence:** `audit/screens/pdpcore-102-desktop-shorts-gallery.png`,
-`audit/screens/pdpcore-80-gal-charcoal-cellblock-shorts.png`,
-`audit/screens/pdpcore-81-shorts-photo1.png`.
+**Evidence:** `audit/screens/pdpcore-120-swipe-left1.png`,
+`audit/screens/pdpcore-120-swipe-left2.png`, `audit/screens/pdpcore-121-swipe-right.png`,
+`audit/screens/pdpcore-130-thumbtap-1.png`,
+`audit/screens/pdpcore-102-desktop-shorts-gallery.png`,
+`audit/screens/pdpcore-80-gal-charcoal-cellblock-shorts.png`.
 
 ---
 
@@ -238,26 +246,30 @@ highlight on the size row, no focus jump, the bag count stayed `[0]`. Same for t
 bar's copy of it.
 
 So the answer to "what exactly are you told" is: **nothing new**. What is already on screen
-is the button's own label `SELECT A SIZE`, and a small grey line reading `Select Size`
-(sentence case, colour `rgb(138,131,119)` — dimmer than the body text) sitting **168 pixels
-above** the button, immediately under the size row.
+is the button's own label `SELECT A SIZE`, and a small line reading `Select Size` —
+sentence case, and a dimmer grey than the body text around it — sitting **168 pixels above**
+the button, immediately under the size row.
 
 Where does the eye go? Nowhere. The tap produces no event to follow. The message *is* near
-the size row, which is the right place for it — but it was already there before the tap and
+the size row, which is the right place for it — but it was already there before the tap, and
 it does not change, flash, or move when you press. A shopper who has just tapped a dead
-button typically taps it again.
+button taps it again.
+
+Keyboard shoppers get a better deal by accident: because the button is genuinely disabled,
+tabbing down the page steps `SIZE GUIDE` → the set checkbox → `SPECIFICATION`, skipping the
+buy button entirely. It is never reachable until it is real.
 
 **Verdict:** partly — it is honest and it cannot mis-sell, but a tap on it is a completely
 silent event.
 
 **Shopper cost:** Small but real: a second and third tap on a dead control before the eye
-travels back up to the size squares. A one-word change — making the grey `Select Size` line
-flash or the size row outline on the dead tap — would close it, and needs no new colour,
-radius or shadow.
+travels back up to the size squares. Flashing the existing grey `Select Size` line, or
+outlining the size row, on the dead tap would close it — no new colour, no radius, no shadow,
+no new string.
 
-**Evidence:** `audit/screens/pdpcore-20-jeans-before-nosize-press.png`,
-`audit/screens/pdpcore-21-jeans-after-nosize-press.png` and
-`audit/screens/pdpcore-21b-jeans-nosize-viewport.png` — before and after are the same frame.
+**Evidence:** `audit/screens/pdpcore-21-jeans-after-nosize-press.png` and
+`audit/screens/pdpcore-21b-jeans-nosize-viewport.png` — taken immediately after the tap; the
+`SELECT A SIZE` button and the grey `Select Size` line are exactly as they were before it.
 
 ---
 
@@ -334,9 +346,8 @@ the one thing most size guides leave out.
 
 **Did:** On `cb1-wash-jeans`, XL carries a **4×4-pixel purple square** in its top-right
 corner and nothing else — no legend, no key, no tooltip anywhere on the page. Selecting XL
-reveals what it meant: the stock line reads **`3 LEFT IN SIZE XL`**, and it is rendered in
-the same dim grey (`rgb(138,131,119)`) as the neutral `Select Size` text, not in the red used
-for sold out. That restraint is right and is exactly what §9.7 asks for — it is a real
+reveals what it meant: the stock line reads **`3 LEFT IN SIZE XL`**, in the same quiet grey
+as the neutral `Select Size` text rather than the red used for sold out. That restraint is right and is exactly what §9.7 asks for — it is a real
 number from real inventory, not a counter. But a shopper who never taps XL never learns that
 the mark means anything, and four pixels is below the threshold at which anyone notices.
 
@@ -448,16 +459,21 @@ on screen at the same time**), `audit/screens/pdpcore-140-sticky-doubled.png`,
 **Should:** Related products that are actually related, and never the product you are already
 looking at.
 
-**Did:** **The product never lists itself.** I checked the tray on all twelve products and
-compared every link against the page's own path: zero self-links. The heading text seen in a
-casual read — the jeans page appears to end with `GREY WASH OG JEANS £60.00` right after the
-related tray — is the **sticky bar**, not a fourth related tile. That is a real trap for the
-eye and worth knowing, but it is not a self-listing.
+**Did:** **The product never lists itself.** I opened the tray on all twelve products and
+compared every tile's link against the page's own path: zero self-links, everywhere.
 
-The relations themselves are sound: they follow the collection. `cb1-wash-jeans` → the other
-three denim pieces; `charcoal-cellblock-crewneck` → `charcoal-cellblock-shorts` and
-`V2 BAGGIES` (both SWEATS); `white-socks` → `black-socks` and `LARGE DUFFLE BAG`
-(accessories).
+It looks like it does, though, and that is worth knowing. Read the jeans page from the top
+and it appears to end `…GREY WASH JORTS £50.00 / GREY WASH OG JEANS £60.00` — the product's
+own name and price, immediately after the related tray. That last line is the **sticky bar**
+sitting over the bottom of the tray, not a fourth tile. On a phone the bar covers the first
+related tile at exactly the moment the shopper reaches the tray, so the section reads as one
+tile short and one self-reference long.
+
+The relations themselves are sound — they follow the collection. `cb1-wash-jeans` → the
+other three denim pieces (`BLUE WASH OG JEANS`, `BLUE WASH JORTS`, `GREY WASH JORTS`);
+`charcoal-cellblock-crewneck` → `CHARCOAL CELLBLOCK SHORTS` and `V2 BAGGIES` (both SWEATS);
+`white-socks` → `BLACK/BLUE MOTIONTEC™ SOCKS` and `LARGE DUFFLE BAG` (accessories). Two or
+three tiles each; nothing random, nothing from a different category.
 
 **But two products have no related tray at all.** On **`evil-clive-tee`** and
 **`crxst-rz-t-shirt`** — the two t-shirts, £25 each — there are zero tiles and the
@@ -528,7 +544,9 @@ behind the banner.** They have to deal with the banner before they can see what 
 costs.
 
 Getting rid of it is one tap on `Accept` or `Decline`; it goes immediately, does not come
-back on the next page, and does not reappear later in the session.
+back on the next page, and does not reappear later in the session. On desktop the same banner
+takes 155 px of a 900-px window — 17% — and lands on empty space below the buy panel, so this
+is a phone problem specifically.
 
 This is not in the theme — it is Shopify's own privacy banner, and `SPEC.md §10` still lists
 "No cookie banner" as an open item, so it has appeared since that file was written.
@@ -542,7 +560,8 @@ notice.
 
 **Evidence:** `audit/screens/pdpcore-01-first-visit-banner.png`,
 `audit/screens/pdpcore-02-banner-over-buybox.png`,
-`audit/screens/pdpcore-03-after-accept.png` (one tap and it is gone).
+`audit/screens/pdpcore-03-after-accept.png` (one tap and it is gone),
+`audit/screens/pdpcore-100-desktop-banner.png` (the desktop version, for contrast).
 
 ---
 

@@ -157,24 +157,33 @@ The honest response to that message is to give up on the set.
 **Should:** the sticky bottom bar repeats product, price, selected size and both
 actions (`SPEC §3.5`).
 
-**Did:** with the set on and a valid pair chosen the sticky bar reads
+**Did:** the bar's action does relabel — it carries `ADD THE FULL FIT — £85`
+correctly. Everything to the left of it does not. Scrolled past the buy area with
+the set on and crewneck M + shorts L chosen, the bar reads:
 
 > `CHARCOAL CELLBLOCK CREWNECK` / `£50.00 · M` / `ADD THE FULL FIT — £85` /
 > `CHECKOUT NOW`
 
-`£50.00` sits directly above a button that charges `£85`. The bar's product name
-is still the crewneck alone. The page's own price line at the top of the record
-also stays `£50.00` for as long as the set is on.
+`£50.00` for a purchase that charges £85, and one size where two were chosen.
+The page's own price line at the top of the record also stays `£50.00` for as
+long as the set is on.
+
+On a 390px phone it is worse than wrong, it is mangled: the longer button label
+squeezes the text column until the product name truncates to `CH…` and the price
+wraps and clips into `£50.0` on one line and `· M` on the next — a cut-off price
+sitting against a button charging a different one.
 
 **Verdict:** partly
 
 **Shopper cost:** the sticky bar is the control most likely to be used on a
 phone, because it follows you down the page while the panel scrolls away. It is
 the one surface that states a price and a size for the thing you are about to
-buy, and while the set is on it states the wrong price and only half the sizes.
+buy, and while the set is on it states the wrong price, half the sizes, and a
+clipped product name.
 
-**Evidence:** `audit/screens/set-11b-about-to-add-viewport.png` plus the read-back
-of `.crk-stickybar`
+**Evidence:** `audit/screens/set-42-stickybar-visible.png`,
+`audit/screens/set-43-stickybar-element.png` — `CH…` / `£50.0` / `· M` /
+`ADD THE FULL FIT — £85` / `CHECKOUT NOW`
 
 ---
 
@@ -489,6 +498,11 @@ adding: not restated. The proof exists on exactly one screen.
   `ADD THE FULL FIT — £85` and shows no price of its own. Whether it carries the
   bundle or the single crewneck was not tested, because testing it means entering
   a Shop Pay checkout.
+- **The sticky bar's `CHECKOUT NOW` with the set on.** Whether it carries the £85
+  bundle or the £50 crewneck into checkout is unknown: in the preview, Shopify's
+  own preview bar sits over that corner of the screen and swallowed every tap.
+  Given the bar's label says `£50.00 · M`, this is the one remaining path worth
+  confirming on a real theme.
 - **The £135 combination.** Ticking the toggle on the shorts page while the
   standalone crewneck is already in the cart should produce a £50 crewneck line
   plus an £85 SET line. Both halves of that were observed separately; the
@@ -510,8 +524,10 @@ adding: not restated. The proof exists on exactly one screen.
 3. **The cart never confirms the £10.** `SPEC §3.13`'s bundle-in-cart state does
    not render at all, and the line item does not restate `£95`. After the button
    is pressed, the saving is never mentioned again.
-4. **The sticky bar shows £50.00 above a button that charges £85** — and the
-   sticky bar is the control a phone shopper actually uses.
+4. **The sticky bar shows £50.00 next to a button that charges £85** — and on a
+   phone the set's longer button label squeezes that text until it reads
+   `CH…` / `£50.0` / `· M`. The sticky bar is the control a phone shopper
+   actually uses.
 5. **The set panel drops the pence.** `£95` and `£85` in a store that writes
    `£50.00`, `£45.00` and `£85.00` everywhere else, including in the cart the
    button leads to.
@@ -547,8 +563,8 @@ adding: not restated. The proof exists on exactly one screen.
   `MORE FROM THIS DROP` row shows `CHARCOAL CELLBLOCK SHORTS £45.00`, and the
   shorts page sells M perfectly happily.
 - Sticky bar `CHARCOAL CELLBLOCK CREWNECK` / `£50.00 · M` — versus the button
-  immediately above it, `ADD THE FULL FIT — £85`, for two garments in sizes M
-  and L.
+  beside it in the same bar, `ADD THE FULL FIT — £85`, for two garments in sizes
+  M and L.
 - Panel prices `£95` / `£85` — versus `£50.00` on the same screen and `£85.00`
   in the cart it leads to.
 - `SPEC §5`: ticking reveals "live partner stock" — versus a stock line that is
