@@ -45,20 +45,25 @@ Then another rule and the buy button, which said `SELECT A SIZE` and was dead. (
 
 ### Step 6 — Ticked the box before choosing my own size
 **Did:** Tapped the tick box. Deliberately, before touching the `SIZE` row — the offer is what caught my eye, so the offer is what I opened.
-**Got:** The box filled in purple and a second size row unfolded, headed `CELLBLOCK SHORTS SIZE`, with `XS S M L XL`. Under it, `FREE UK TRACKED 24 INCLUDED`. No prices yet. The buy button still said `SELECT A SIZE`. (`audit/screens/04-07-ticked-no-own-size.png`)
+**Got:** The box filled in purple and a second size row unfolded, headed `CELLBLOCK SHORTS SIZE`, with `XS S M L XL`. Under the row, two lines:
+
+> `Pick a Cellblock Shorts size`
+> `FREE UK TRACKED 24 INCLUDED`
+
+No prices anywhere. The buy button still said `SELECT A SIZE`. (`audit/screens/04-07-ticked-no-own-size.png`)
 **Expected:** A price. The whole reason I opened it was to find out what the pair costs.
-**Felt:** The row heading is genuinely good — `CELLBLOCK SHORTS SIZE`, not just "Size", so I'm never confused about whose legs I'm measuring. But I've now opened the offer and I *still* don't know the total. It's asking me for another decision before it's given me the number.
+**Felt:** The row heading is genuinely good — `CELLBLOCK SHORTS SIZE`, not just "Size", so I'm never confused about whose legs I'm measuring. And the store has given me a clear instruction: pick a shorts size. Fine, I'll pick a shorts size. What I still don't have, having opened the offer, is the total. It wants another decision out of me before it gives me the number.
 **Next:** continued
 
-### Step 7 — Picked M for the shorts, and the store told me they were gone
-**Did:** Tapped `M` in the shorts row. I'm an M.
+### Step 7 — Did what it told me to do, and the store told me they were gone
+**Did:** Tapped `M` in the shorts row, as instructed. I'm an M.
 **Got:** A line in red, right under the row:
 
 > `Cellblock Shorts sold out in M — pick another size`
 
 and the buy button below still reading `SELECT A SIZE`, greyed out. (`audit/screens/04-08-shorts-M.png`, `audit/screens/04-22-false-soldout-viewport.png`)
-**Expected:** A price, or "M added".
-**Felt:** Deflated. I'd been looking at `CHARCOAL CELLBLOCK SHORTS £45.00 AVAILABLE` about ninety seconds earlier, on this shop's own catalogue page. Now the same shop is telling me in red that they're gone in my size. My honest reaction out loud: *"they're not, though — I literally just saw them."*
+**Expected:** A price, or "M added". It had just told me to pick a shorts size and I'd picked one.
+**Felt:** Deflated, and confused about which of its two messages to believe. Ten seconds ago it said `Pick a Cellblock Shorts size`; I did exactly that and it went red at me. I'd also been looking at `CHARCOAL CELLBLOCK SHORTS £45.00 AVAILABLE` about ninety seconds earlier, on this shop's own catalogue page. My honest reaction out loud: *"they're not, though — I literally just saw them."*
 **Next:** hesitated
 
 ### Step 8 — Did what it told me to do: picked another size
@@ -179,13 +184,13 @@ with a quantity of `1`, a line total `£85.00`, a `Discount` row, and `Estimated
 
 **Total time:** About nine minutes. Four of them were spent being told no.
 
-**Worst moment:** `Cellblock Shorts sold out in M — pick another size`, in red, followed by the same sentence for L, XL and S. Out loud: *"they're not, though — I literally just saw them."* It's a false out-of-stock on the thing the shop is actively trying to sell me, triggered by nothing worse than opening the offer before picking my size — which is the natural order when the offer is what caught your eye. And the instruction it gives can't be obeyed: there is no other size.
+**Worst moment:** `Cellblock Shorts sold out in M — pick another size`, in red, followed by the same sentence for L, XL and S. Out loud: *"they're not, though — I literally just saw them."* It's a false out-of-stock on the thing the shop is actively trying to sell me, and the shop walked me into it: the panel's own first instruction is `Pick a Cellblock Shorts size`, and picking one is what produces the red line. Then the red line's instruction — pick another size — can't be obeyed either, because all five say the same thing. Two instructions, both from the store, and following either one gets you nowhere.
 
 **Best moment:** The cart line. `CELLBLOCK SET` / `CHARCOAL CELLBLOCK CREWNECK - M` / `CHARCOAL CELLBLOCK SHORTS - L` / `£85.00`. Both garments, both sizes, in full, one line, no guessing. Runner-up: `£95` struck through with `£85 for the set` — three words that explain the entire proposition better than the offer line does.
 
 **Would they come back?** Yes, for the shop. It looks like nothing else and it doesn't nag me. But I'd approach that tick box with my guard up, and if a mate asked I'd tell them "pick your size first or it'll tell you it's sold out" — which is a sentence no shop wants passed around about it.
 
-**One thing that would have changed the outcome:** Put the total in the collapsed line and never say sold out for a size that isn't. `Cop the full fit — add the matching Cellblock Shorts. £85 for both, save £10.` would have told me what I was opening before I opened it — and when I tick it before choosing my own size, the panel should say what the shorts' own page already says in the same situation (`Pick a Cellblock Crewneck size`), not tell me a garment sitting in stock is gone.
+**One thing that would have changed the outcome:** Put the total in the collapsed line, and never say sold out for a size that isn't. `Cop the full fit — add the matching Cellblock Shorts. £85 for both, save £10.` would have told me what I was opening before I opened it. And when I've ticked the box but not chosen my own size, the panel should ask me for *my* size — it already knows how to write that sentence, because `Pick a Cellblock Shorts size` is sitting right there — instead of telling me a garment that's in stock is gone.
 
 ---
 
