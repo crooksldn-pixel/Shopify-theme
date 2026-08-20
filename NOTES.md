@@ -1810,3 +1810,63 @@ and cleared, ALL clearing the param rather than storing "ALL", the hash
 surviving, restore-on-load, and an unknown category degrading safely. Then
 confirmed on the deployed page: header reads `12 ITEMS` against 12 rendered
 cards, with filters ALL / T-SHIRT / DENIM / SWEATS / ACCESSORIES.
+
+---
+
+## 2026-08-20 — A3 root cause: a disabled button with an unreachable error
+
+George pasted the live console. The decisive line was not what I expected:
+
+    crack-cuff-codes.base44.app/api/apps/6a2967.../entities/User/me
+      Failed to load resource: the server responded with a status of 401
+
+**My earlier hypothesis was wrong and is withdrawn.** I said the prime suspect
+was `localStorage` partitioning in a cross-site iframe starving the SDK of its
+bearer token. That 401 is the SDK's anonymous "who am I" call, which legitimately
+401s for a logged-out visitor. And every successful lead in the table belongs to
+an ordinary gmail/yahoo shopper who has no Base44 account — so `issueDiscount`
+must already be invokable anonymously. Auth was never the blocker.
+
+### What it actually is
+
+`EmailStep.jsx:93` and `PhoneStep.jsx:78` both rendered their submit button as:
+
+    <Button type="submit" disabled={!valid}
+      className="... disabled:opacity-30 disabled:cursor-not-allowed">
+
+and both `handleSubmit` functions open with:
+
+    if (!valid) { setError('Enter a valid email to receive your code'); return; }
+
+**A disabled button never fires submit, so that error can never appear.** Leave
+the email empty, press "Reveal my code", and nothing happens: no code, no error,
+no spinner, and no network request — which is exactly why there is no Lead from
+the audit's session, and exactly what persona 17 described.
+
+Compounding it: nothing marked the email as required, while the only visible
+"Optional" label sat beside the date of birth. The audit's *"step 2, reads
+optional, isn't"* was the shopper reading the screen correctly.
+
+The error message was written. It was just walled off behind the thing that
+would have shown it.
+
+### Fixed
+
+Removed `disabled={!valid}` from both buttons so the existing validation is
+reachable, and added `Required — your code is emailed to you` under the email
+field. Nothing else touched: not the game, the tiers, the discount logic or the
+backend. `npm run build` clean, checkpoint `03f7f8eb`.
+
+**Not yet live.** A checkpoint commits, it does not deploy — the public bundle
+at crack-cuff-codes.base44.app is still `index-BZt26T72.js` three minutes on.
+Publishing from the Base44 editor is the owner's step. Deliberately did not use
+`edit_base44_app` to force a build: it hands the change to the AI builder as a
+prompt, which could rewrite a two-line fix into something else.
+
+### Method note
+
+This is the second finding in this audit whose stated diagnosis did not survive
+contact with the code — the first being "the shop takes two pieces of contact
+data and gives nothing back", when in fact it captured nothing at all. Both were
+accurate about the *symptom* and wrong about the *cause*. Reading the source and
+the data before acting on the recommendation has now paid for itself twice.
