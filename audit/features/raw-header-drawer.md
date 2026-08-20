@@ -58,13 +58,13 @@ scrolls past twelve category links and a video game, and only then finds
 **Did:** the row is set at two different sizes, and the split follows whether
 something happens to be a link or a button:
 
-| Control | Element | Rendered size | Weight |
+| Control | Is it a link or a button? | Rendered size | Weight |
 |---|---|---|---|
-| `CATALOGUE` | `<a>` | **9px** | 500 |
-| `SEARCH` | `<a>` | **9px** | 500 |
-| `BAG [0]` | `<a>` | **9px** | 500 |
-| `LIGHT MODE` | `<button>` | **13px** | 400 |
-| `MENU` | `<button>` | **13px** | 400 |
+| `CATALOGUE` | link | **9px** | 500 |
+| `SEARCH` | link | **9px** | 500 |
+| `BAG [0]` | link | **9px** | 500 |
+| `LIGHT MODE` | button | **13px** | 400 |
+| `MENU` | button | **13px** | 400 |
 
 Same typeface, 44% bigger, one notch lighter — sitting side by side in the same
 44px-tall row. `MENU` and `LIGHT MODE` visibly loom over `CATALOGUE` and
@@ -91,11 +91,10 @@ same row; also `audit/screens/hdr-e02-drawer-head.png` for the drawer's
 **Should:** `MENU` opens a modal drawer; the trigger relabels to `CLOSE`; focus
 moves in; the page behind locks.
 
-**Did:** all of that. Tapping `MENU` opens a full-width panel; the header
-trigger relabels to `CLOSE`; focus lands on the drawer's own `CLOSE` button;
-`document.body` gets the scroll lock; the dialog carries
-`role="dialog" aria-modal="true" aria-label="Main menu"`. The panel is
-`390px` wide on a `390px` screen — it covers the whole screen.
+**Did:** all of that. Tapping `MENU` opens a panel; the header trigger relabels
+to `CLOSE`; the keyboard lands on the drawer's own `CLOSE` button; the page
+behind stops scrolling and cannot be reached by Tab. The panel is `390px` wide
+on a `390px` screen — it covers the whole screen.
 
 Read top to bottom, as first seen:
 
@@ -328,8 +327,8 @@ field of black:
 
 The hero occupies 321px of the 844px first screen and roughly half of that is
 empty — the column the board used to fill has collapsed, and nothing moved in.
-There is exactly one `<canvas>` left on the homepage and it belongs to the
-drawer, not the page. **Nothing on the homepage carries the board's weight.**
+The only board left anywhere in the page belongs to the drawer, not the
+homepage. **Nothing on the homepage carries the board's weight.**
 The first screen is now a wordmark, a tagline and a purple button; the only
 motion above the fold is the one-line status ticker rotating between
 `FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH` and
@@ -406,10 +405,9 @@ and no further — `QUESTIONS`, `TERMS`, `CONTACT`, the CASE 001 board, the
 drawer to the bottom does not help: the banner is fixed, so the board slides up
 under it and only its top 90px is ever visible. I hit-tested the
 `PLAY CASE:001 NOW` button in that state: it is nominally on screen at `y=702`,
-and the thing that actually receives the tap is
-`div.shopify-pc__banner__btns` — the banner's `Accept`/`Decline` row. **A
-first-time visitor who finds the board and taps Play gets the cookie banner
-instead.**
+and the thing that actually receives the tap is the banner's
+`Accept`/`Decline` row. **A first-time visitor who finds the board and taps
+Play gets the cookie banner instead.**
 
 **t ≈ 9s after answering the banner.** A second full-screen interruption:
 **`CRACK THE CUFFS`**. It blacks out the whole page behind a 90%-opaque scrim
@@ -535,7 +533,7 @@ Things the owner probably does not know:
    `PLAY CASE:001 NOW`, `ACCOUNT` and `BAG` are all behind cookie text.
 2. **Tapping `PLAY CASE:001 NOW` on a first visit presses `Accept` on the cookie
    banner instead.** I hit-tested it: the button is nominally on screen and the
-   element that receives the tap is `div.shopify-pc__banner__btns`.
+   element that receives the tap is the banner's `Accept`/`Decline` row.
 3. **There is no tap-outside-to-close on a phone.** The panel is exactly as wide
    as the screen, so the scrim is 100% covered. I swept every point of it.
    The feature exists only on desktop, where nobody needs it.
@@ -544,8 +542,9 @@ Things the owner probably does not know:
 5. **The crack-the-cuffs overlay does not fire at 3 seconds.** It waits for the
    cookie banner to be answered and then shows about 9 seconds later — roughly 6
    of which are a completely black screen with a single `×` while the app loads.
-6. **The header row is set at two sizes**: `<a>` controls at 9px/500,
-   `<button>` controls at 13px/400, side by side.
+6. **The header row is set at two sizes.** The three that happen to be links
+   render at 9px; the two that happen to be buttons render at 13px, side by
+   side in the same row.
 7. **The wordmark never renders.** The header shows only the handcuffs mark, so
    on every page except the homepage nothing above the fold says CROOKSLDN.
 8. **The board itself is excellent and nobody will see it** — it moves smoothly,
