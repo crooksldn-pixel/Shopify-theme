@@ -1,0 +1,105 @@
+identity {"ok":true,"gb":true}
+declined cookies
+
+
+========== size row + SIZE GUIDE glide ==========
+SHOT audit/screens/18-60-size-row.png
+glide 575 -> 708 (shot) 1167 -> settled 1294
+SHOT audit/screens/18-62-measurements.png
+
+
+========== back up to the sizes ==========
+scroll-back at 120ms: 1193 target 575
+scroll-back settled: 575 ms 1028
+
+
+========== pick a size ==========
+SIZE BUTTON NAMES [{"t":"XS","aria":"Size XS","dis":null},{"t":"S","aria":"Size S","dis":null},{"t":"M","aria":"Size M","dis":null},{"t":"L","aria":"Size L","dis":null},{"t":"XL","aria":"Size XL","dis":null},{"t":"BLACK","aria":"Colour BLACK","dis":null},{"t":"WHITE","aria":"Colour WHITE","dis":null},{"t":"CM","aria":null,"dis":null}]
+picked M
+picked? true
+SHOT audit/screens/18-63-size-picked.png
+PDP now
+← CATALOGUE
+PRODUCT 07 / 12
+T-SHIRT
+PHOTO 1 OF 2
+MONEY CLIVE TEE
+£25.00
+SIZE
+XS
+S
+M
+L
+XL
+COLOUR
+BLACK
+WHITE
+
+Select Colour
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	CHEST	LENGTH	SHOULDER
+XS	100.3cm	67.3cm	49.5cm
+S	105.4cm	69.8cm	52.1cm
+M	110.5cm	72.4cm	54.6cm
+L	115.6cm	74.9cm	57.1cm
+XL	119.4cm	76.2cm	59.7cm
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MONEY CLIVE TEE
+£25.00
+SELECT A SIZE
+CHECKOUT NOW
+pressed state ["XS:false","S:false","M:true","L:false","XL:false","BLACK:false","WHITE:false","CM:true","IN:false"]
+
+
+========== add to bag — what tells me it worked? ==========
+header before "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+ADD TO BAG count 0
+
+
+========== cart ==========
+CART
+Your cart is empty
+
+Have an account? Log in to check out faster.
+
+Continue shopping
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH YARD JEANS
+
+BLUE WASH YARD JEANS
+
+£60.00
+BLUE WASH YARD JORTS
+
+BLUE WASH YARD JORTS
+
+£50.00
+SHOT audit/screens/18-66-cart.png

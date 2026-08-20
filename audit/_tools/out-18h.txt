@@ -7,3 +7,10 @@ round 1 clicked RUN IT in https://crackthecuffs.base44.app/?screen=game
 round 1 frame text "TAP TO STOP / 3 / TAP / 3 / TAP / 3 / TAP / 0/3 LOCKED / Tap each tumbler to lock it. No timer — take your time."
 round 2 frame text "TAP TO STOP / 7 / TAP / 7 / TAP / 7 / TAP / 0/3 LOCKED / Tap each tumbler to lock it. No timer — take your time."
 round 2 no RUN IT found
+PLAY FRAME md5s ccefedcd4d 51f6150745 fca91b4c1d 93f30a7e88 72e0b2525e f6ee4fe7eb 5f26433218 ccefedcd4d
+distinct frames 7 of 8
+GAME TEXT NOW "TAP TO STOP / 9 / TAP / 9 / TAP / 9 / TAP / 0/3 LOCKED / Tap each tumbler to lock it. No timer — take your time."
+GAME BUTTONS ["9\nTAP","9\nTAP","9\nTAP"]
+GAME reduce-aware? true
+GAME animated elements { n: 4, sample: [ 'none/0.15s' ] }
+SHOT audit/screens/18-53-game-final.png

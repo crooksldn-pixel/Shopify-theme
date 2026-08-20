@@ -1301,21 +1301,34 @@ Listed honestly. None of these is a pass.
   `<PASTE-OR-LEAVE-BLANK>`, and no order may be placed. Only the signed-out state is confirmed.
   `/account/login` was reached and the store answered with a verification page this environment
   cannot complete. Evidence of the attempt: `audit/screens/content-pages-account-login.png`.
-- **The restock-notify form on a sold-out size.** Submitted four times across two sessions,
-  including as the very first action on a clean page. An invalid address produced only the
-  browser's own bubble — `Please include an '@' in the email address. 'not-an-email' is missing an
-  '@'.` — and a valid address raised a **blank white bot-check panel** over the greyed product
-  page that never resolved; nothing was posted and no confirmation was ever reached. **This is
-  filed as untested, not broken:** that check exists specifically to refuse automated browsers, so
-  a scripted session failing it is close to expected, and no follow-up verification file
-  (`audit/features/raw-notify-verify.md`) exists to settle it. **The restock-notify claim is
-  therefore unsettled** and needs one attempt by a person on a real handset. Two things about the
-  panel are confirmable regardless of the check: when it does not complete the shopper is left
-  with no message of any kind and their address still in the field; and the panel's entire copy is
-  `TELL ME WHEN THIS SIZE IS BACK` / `email address` / `NOTIFY ME` — there is **no statement of
-  when a shopper would hear back**, no word on what happens to the address, and no shop-authored
-  error text anywhere in it. Evidence: `audit/screens/pdpcore-74-notify-valid-after.png`,
-  `audit/screens/pdpcore-112-notify-clean-18s.png`.
+- **The restock-notify form's final submit step — and only that step.**
+  `audit/features/raw-notify-verify.md` has since settled everything around it, and the ruling
+  matters because two earlier notes pointed the wrong way:
+  - **Selecting a sold-out size works, in 9 of 9 conditions** — cookie banner left alone, accepted
+    and declined, across three phone heights. An ordinary tap selects it every time and the notify
+    panel opens. The earlier report that the size could not be selected was **a test-harness
+    artefact**: sold-out buttons carry `aria-disabled="true"` deliberately (`SPEC.md §9.3`), and
+    the browser driver treats that as *disabled* and refuses to click. A thumb has no such check.
+    The deliberate decision costs a shopper nothing and should not be revisited.
+  - **The blank bot-check panel is not this theme's doing.** The control test settles it: the
+    identical blank panel appears on the store's own stock `/pages/contact` form, which the notify
+    feature has nothing to do with. Read from inside the frame, a real challenge arrived
+    (`Tap on each animal that lives up in trees`, 18 tiles), and then hCaptcha's own script hid its
+    challenge with `display: none !important` and left its own white container carrying
+    `Please try again. ⚠️`. That is a captcha refusing an automated browser on a datacentre IP.
+    **Do not report the restock capture as a dead feature.**
+  - **What could not be established:** whether the submit reaches the shop for a real person. That
+    needs one send from a phone on mobile data, checking a `Restock request` email arrives. Ten
+    minutes of the owner's time settles it.
+  - **What is confirmed and shopper-facing** is recorded in §2 rather than here: the panel's entire
+    copy is `TELL ME WHEN THIS SIZE IS BACK` / `email address` / `NOTIFY ME`, with no statement of
+    when a shopper would hear back or what happens to the address; and at the natural reading
+    position the `NOTIFY ME` button lands under the sticky bar. Worth knowing on the other side:
+    the form is better plumbed than it looks, posting `Restock request` with the product handle,
+    the product URL **and** the variant, so whoever receives it knows exactly which size was asked
+    for. Nothing on screen tells the shopper that care exists.
+  - Evidence: `audit/screens/notifyv-02-banner-left-alone-390x844.png`,
+    `audit/screens/notifyv-03-notify-form.png`, `audit/screens/notifyv-D1-contact-after-submit.png`.
 - **The carriage bar at £6.00, £24.00, £67.00 and £73.00, on screen.** The store's rate limiting
   escalated mid-run — eight consecutive session attempts and every navigation after a cart change
   came back refused or challenged — so the middle states, the no-reload behaviour after a

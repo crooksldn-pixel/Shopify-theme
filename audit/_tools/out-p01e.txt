@@ -1,0 +1,139 @@
+sticky ADD TO BAG box {"x":134.15625,"y":788,"width":109.203125,"height":44}
+STACK AT THAT POINT [
+ {
+  "tag": "DIV",
+  "id": "PBarNextFrameWrapper",
+  "cls": "",
+  "pos": "fixed",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   0,
+   776,
+   390,
+   68
+  ],
+  "chain": "DIV#PBarNextFrameWrapper < BODY.page-width-narrow.card-hover-effect-none < HTML"
+ },
+ {
+  "tag": "BUTTON",
+  "id": "",
+  "cls": "crk-btn",
+  "pos": "static",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   134,
+   788,
+   109,
+   44
+  ],
+  "chain": "BUTTON.crk-btn < DIV.crk-buybar__actions < DIV.crk-stickybar < DIV.crk-root.crk-record < SECTION#shopify-section-template--30599899709783__main.shopify-section"
+ },
+ {
+  "tag": "DIV",
+  "id": "",
+  "cls": "crk-buybar__actions",
+  "pos": "static",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   134,
+   788,
+   240,
+   44
+  ],
+  "chain": "DIV.crk-buybar__actions < DIV.crk-stickybar < DIV.crk-root.crk-record < SECTION#shopify-section-template--30599899709783__main.shopify-section < MAIN#MainContent.content-for-layout"
+ },
+ {
+  "tag": "DIV",
+  "id": "",
+  "cls": "crk-stickybar",
+  "pos": "fixed",
+  "z": "40",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   0,
+   775,
+   390,
+   69
+  ],
+  "chain": "DIV.crk-stickybar < DIV.crk-root.crk-record < SECTION#shopify-section-template--30599899709783__main.shopify-section < MAIN#MainContent.content-for-layout < BODY.page-width-narrow.card-hover-effect-none"
+ },
+ {
+  "tag": "FORM",
+  "id": "ref: <Node>",
+  "cls": "shopify-product-form",
+  "pos": "static",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   33,
+   700,
+   324,
+   360
+  ],
+  "chain": "FORM#[object HTMLInputElement].shopify-product-form < DIV.crk-panel.crk-panel-record.crk-panel-sticky < DIV.crk-grid < DIV.crk-wrap < DIV.crk-root.crk-record"
+ },
+ {
+  "tag": "DIV",
+  "id": "",
+  "cls": "crk-panel crk-panel-record crk-panel-sticky",
+  "pos": "static",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   16,
+   621,
+   358,
+   456
+  ],
+  "chain": "DIV.crk-panel.crk-panel-record.crk-panel-sticky < DIV.crk-grid < DIV.crk-wrap < DIV.crk-root.crk-record < SECTION#shopify-section-template--30599899709783__main.shopify-section"
+ },
+ {
+  "tag": "DIV",
+  "id": "",
+  "cls": "crk-grid",
+  "pos": "static",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   16,
+   206,
+   358,
+   871
+  ],
+  "chain": "DIV.crk-grid < DIV.crk-wrap < DIV.crk-root.crk-record < SECTION#shopify-section-template--30599899709783__main.shopify-section < MAIN#MainContent.content-for-layout"
+ },
+ {
+  "tag": "DIV",
+  "id": "",
+  "cls": "crk-wrap",
+  "pos": "static",
+  "z": "auto",
+  "pe": "auto",
+  "opacity": "1",
+  "rect": [
+   0,
+   139,
+   390,
+   1484
+  ],
+  "chain": "DIV.crk-wrap < DIV.crk-root.crk-record < SECTION#shopify-section-template--30599899709783__main.shopify-section < MAIN#MainContent.content-for-layout < BODY.page-width-narrow.card-hover-effect-none"
+ }
+]
+ALL ADD TO BAG BUTTONS [{"text":"\"ADD TO BAG\"","inSticky":false,"form":"/cart/add","y":926,"h":52},{"text":"\"ADD TO BAG\"","inSticky":true,"form":null,"y":788,"h":44}]
+main add count 1
+CART AFTER MAIN CLICK {"count":1,"items":["GREY WASH YARD JEANS - M / M x1"],"total":6000}
+HEADER NOW CATALOGUE SEARCH BAG [1] LIGHT MODE MENU
+CONFIRMATION TEXT NEAR BUTTON GREY WASH YARD JEANS £60.00 SIZE XS S M L XL IN STOCK SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves tomorrow ADD TO BAG More payment options Added — 1 in bag View bag
+SHOT audit/screens/01-16-added-confirmation.png
+CART AFTER STICKY TAP {"count":1}
+SHOT audit/screens/01-17-sticky-retry.png
