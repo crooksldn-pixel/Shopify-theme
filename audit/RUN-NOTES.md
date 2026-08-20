@@ -85,6 +85,29 @@ line with no `crooks.css`. The audit is conducted entirely through the browser
 against the deployed staging theme, as the brief requires. Deliverables land on
 the designated branch regardless.
 
+## The repo checkout is not the deployed theme — and it fooled three agents
+
+This working directory sits on `claude/theme-gauntlet-v2-buyers-1ebhak`, a
+month-old Horizon line. The staging theme actually under audit lives on
+`claude/crooksldn-theme-init-bnen7a`. Both contain a file called
+`snippets/crack-the-cuffs.liquid`, and **they are different files**:
+
+| | local checkout | deployed staging theme |
+|---|---|---|
+| lines | 157 | 293 |
+| `border-radius` / `box-shadow` | **4 occurrences** (`8px`, `999px`, `6px`, a shadow) | **zero** |
+
+One advisor reported the first-visit overlay as "the only design-law breach on
+the site", and two independent reviewers confirmed it. All three had read the
+**local** file. The deployed overlay is clean — round 2 brought it into
+compliance and it has stayed there. The rounded corners shoppers actually saw
+are inside the cross-origin Base44 iframe, which the theme cannot style.
+
+**Consequence for anyone acting on this audit:** read theme code with
+`git show origin/claude/crooksldn-theme-init-bnen7a:<path>`, never from the
+working tree. A fix applied to the local copy would edit a file that is not
+deployed and change nothing a shopper sees.
+
 ## One preview artefact that must not become a finding
 
 Shopify's preview bar renders as `DIV#PBarNextFrameWrapper` — transparent,
