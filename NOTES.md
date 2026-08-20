@@ -1995,3 +1995,48 @@ Verified three ways this time, header first:
 The comment at `APP_URL` now carries the dependency and the one-line check
 (`curl -sI <url> | grep -i x-frame-options`) rather than a temporary note, so
 the constraint survives the next person changing that line.
+
+---
+
+## 2026-08-20 — Getaway refinement plan: Stage 3 done
+
+George supplied a six-stage plan for the popup. Decisions taken up front:
+**keep the 20-minute code countdown** (and surface it on the cart page for
+urgency), and **Omnisend** as the SMS sender for Stage 4.
+
+### Stage 3 — both bugs were one expression
+
+`WinScreen.jsx` treated expiry as two states derived from a number:
+
+    const [remaining, setRemaining] = useState(() => {
+      if (!codeExpiresAt) return 0;              // <- not loaded yet == zero
+      ...
+    });
+    const isExpired = remaining <= 0;            // <- therefore expired
+
+That single line produced both reported faults:
+
+- **The "expired" flash.** Until the mint response lands, `codeExpiresAt` is
+  `''`, so `remaining` is 0 and the screen says CODE EXPIRED. Worse than a
+  flash for a returning winner whose saved win predates the field — for them it
+  says it permanently, and the copy button stays disabled.
+- **The gibberish line.** An unparseable timestamp makes `getTime()` NaN;
+  `Math.max(0, Math.floor(NaN))` is NaN, `NaN <= 0` is false, so it skips the
+  expired branch and renders **"Expires in NaN:NaN"**.
+
+Now three-state: `null` means unknown, and nothing is rendered at all — not a
+placeholder, not a zero. The expired branch is unreachable until a real
+timestamp has parsed. Copy stays enabled while unknown, because we hold a real
+code and blocking the copy would cost a sale over a display detail.
+
+`OfferScreen`'s `formatDropDate` was already correct — it returns `''` for
+empty or malformed input and the render is guarded — so it needed nothing.
+Stage 3 tasks 2 and 3 were already satisfied there.
+
+Verified: `npm run build` clean, and the derivation was re-run standalone over
+every input the component can receive — empty, undefined, unparseable, valid,
+nearly-expired, genuinely expired. 6/6. That is logic-level; the throttled
+ten-wins-in-a-row check is Stage 5 and needs a real device.
+
+Checkpoint `681ebf00`. **Not deployed** — Base44 checkpoints commit rather than
+publish, so it needs Publish in the editor, same as the last one.
