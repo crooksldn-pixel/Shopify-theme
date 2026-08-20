@@ -182,6 +182,27 @@ visible, while the accordion tap opens the table under the cookie sheet.
 
 ---
 
+### The fourth column falls off the screen (crewneck)
+
+**Should:** if a table has four measurements, a shopper should be able to read all four.
+
+**Did:** on the crewneck the table is `SIZE / CHEST / LENGTH / SHOULDER / SLEEVE` and the
+`SLEEVE` column is cut by the right edge of the phone — the numbers are sliced mid-character:
+`62.2cr`, `63.5cr`, `64.8cr`. The table scrolls sideways on its own, but nothing says so
+beyond the clipped digits: no arrow, no fade, no second row of the numbers. Sleeve length is
+the measurement people buying a heavy crewneck actually check.
+
+The jeans and the baggies (three columns) fit the screen with room to spare, so this only
+bites on the products with four or five measurements.
+
+**Verdict:** partly
+**Shopper cost:** a shopper who does not think to drag the table sideways reads three of the
+four numbers and assumes that is all there is.
+**Evidence:** `audit/screens/pdp-sizing-crew-sizeguide-after.png` — `SLEEVE` header truncated,
+values reading `62.2cr / 63.5cr / 64.8cr / 66.0cr / 67.3cr` at the screen edge.
+
+---
+
 ### Shipping cost, from the product page only
 
 **Should:** a shopper should be able to find out what postage costs before committing.
@@ -226,6 +247,10 @@ twice without ever giving the price.
 > `You have 14 days from delivery to return unworn goods with tags attached. Return postage is
 > yours unless we sent the wrong thing or it arrived faulty. Start a return by email:
 > crooksldn@gmail.com.`
+
+On a first visit, though, that is not what you read: the cookie sheet cuts the step off after
+`You have 14 days from delivery to return unworn goods with tags` — the words that tell you
+who pays the postage are underneath it until you dismiss it or scroll.
 
 **2 taps** more reaches the full policy through the footer link labelled `REFUNDS`:
 

@@ -272,6 +272,46 @@ The link points at `/products/charcoal-cellblock-shorts`.
 
 ---
 
+### Following that offer does not save £10
+
+**Should:** a link that says "save £10" should end in a cart £10 cheaper than the
+alternative.
+
+**Did:** I did exactly what the line says. Crewneck M in the cart (£50.00), tapped
+`Complete the set — add the Cellblock Shorts, save £10.`, landed on
+`/products/charcoal-cellblock-shorts`, picked a size and pressed the button —
+which on that page reads `Add to bag`. Result:
+
+> `Cart 2` · `CHARCOAL CELLBLOCK SHORTS  Size: L  £45.00`
+> `CHARCOAL CELLBLOCK CREWNECK  Size: M  £50.00`
+> `Estimated total £95.00 GBP`
+
+`total_discount: 0`. **£95.00, not £85.00.** The £10 the link promised is not
+applied, not offered, and not mentioned — with both halves sitting in the cart in
+matching sizes, the set section does not render at all, so nothing says "these
+two are £85 together".
+
+The landing page does carry the toggle (`Cop the full fit — add the matching
+Cellblock Crewneck. Save £10.`), but using it there adds a **£85 SET line on top
+of the £50 crewneck already in the cart** — £135, with two crewnecks — so the
+only route to the advertised price is: tick the toggle, choose a crewneck size,
+add the set, then delete the crewneck you already had. Nothing anywhere says so.
+*(The £135 end-state is the arithmetic consequence of the two behaviours I did
+test — the toggle adds a separate £85 SET line, and the standalone crewneck line
+stays — I did not run that combination itself.)*
+
+**Verdict:** broken
+
+**Shopper cost:** the store makes a specific money promise, links to a page, and
+the obvious action on that page charges £95. A shopper who trusts the link pays
+£10 more than the store just told them they would. This is the one finding here
+that could reach a complaint.
+
+**Evidence:** `audit/screens/set-34-followed-offer-landing.png`,
+`audit/screens/set-35-cart-after-following-offer.png`, and the read-back above
+
+---
+
 ### The shorts side (the partner product)
 
 **Should:** identical behaviour from the partner's page.
