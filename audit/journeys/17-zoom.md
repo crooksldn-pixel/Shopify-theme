@@ -92,7 +92,7 @@
 **Did:** Pressed `SIZE GUIDE`.
 **Got:** It jumped me to `MEASUREMENTS` with the panel open: five columns, `SIZE · CHEST · LENGTH · SHOULDER · SLEEVE`, my row highlighted — `M · 119.4cm · 69.2cm · 52.1cm · 64.8cm`. Last column ends 107px inside the screen edge. (`audit/screens/17-10-table-cm.png`)
 **Expected:** To lose `SLEEVE` off the right, like I lose the last column of most tables.
-**Felt:** Nothing cut off, nothing to drag, and my row is shaded so I don't lose my place tracking across it. I tried pulling it sideways anyway out of habit and it didn't budge, because it doesn't need to. (`audit/screens/17-11-table-after-swipe.png`, identical to the shot before it.)
+**Felt:** Nothing cut off, nothing to drag, and my row is shaded so I don't lose my place tracking across it. I tried pulling it sideways anyway out of habit and it didn't budge, because it doesn't need to. (`audit/screens/17-11-table-after-swipe.png` — the same picture as before I pulled it.)
 **Next:** continued
 
 ### Step 14 — Switched it to inches
@@ -161,7 +161,7 @@
 
 - **The header.** Six controls on one line, no wrap, no overlap, no overflow, `MENU` finishing 48px inside the edge. Words instead of icons is worth more at 200% than at any other size.
 - **The size row.** All five boxes on one line, 90px of clearance to the right, no scroller, selection shown as a filled block rather than a thin border, and `IN STOCK` in plain words once a size is chosen.
-- **Both measurements tables.** Crewneck (`SIZE · CHEST · LENGTH · SHOULDER · SLEEVE`) and denim (`SIZE · WAIST · INSEAM · LEG OPENING`) both end 107px inside the right edge in cm *and* in inches. **The reported "column clipped at the screen edge with no sign it scrolls" did not reproduce at 200% on either product** — nothing is cut off, and the wrapper is set to scroll if it ever needs to. The cm/inch switch rewrites the caption as well as the numbers.
+- **Both measurements tables.** Crewneck (`SIZE · CHEST · LENGTH · SHOULDER · SLEEVE`) and denim (`SIZE · WAIST · INSEAM · LEG OPENING`) both end 107px inside the right edge in cm *and* in inches. **The reported "column clipped at the screen edge with no sign it scrolls" did not reproduce at 200% on either product** — nothing is cut off, and pulling the table sideways changes nothing because there is nothing out there to reach. The cm/inch switch rewrites the caption as well as the numbers.
 - **No horizontal scrolling anywhere.** Homepage, catalogue, product, bag, checkout: page width never exceeds the window and nothing sticks out past the right edge on any of them.
 - **The menu drawer scrolls.** It looks cut off, but the wheel and the Tab key both reach `TRACKING`, `QUESTIONS`, `TERMS`, `CONTACT`, `PLAY CASE:001 NOW`, `ACCOUNT` and `BAG`. Escape closes it and returns to the `MENU` button.
 - **Light mode.** Pressing `LIGHT MODE` gives black text on white at full size, the toggle relabels itself `DARK MODE`, and the size table is just as intact. (`audit/screens/17-20-light-pdp.png`, `audit/screens/17-21-light-measurements.png`) For anyone who zooms, a working high-contrast switch in the header is a feature, not a novelty — I only found it after I'd finished shopping, and I'd have used it from the start.
