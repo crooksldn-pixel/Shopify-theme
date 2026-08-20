@@ -1942,3 +1942,38 @@ The new app captures **no email and no phone at all**. That is a real commercial
 trade — the two gates existed to build the SMS and email list. REGISTER AS
 INFORMANT is now the only place the list grows, which is the honest version, and
 the app hands off to it on a miss. Flagged to George as a decision, not a defect.
+
+### Same day — the new app cannot be framed
+
+George's console:
+
+    Refused to display 'https://crackthecuffs.base44.app/' in a frame
+    because it set 'X-Frame-Options' to 'deny'.
+
+Confirmed, and it is per-app rather than platform-wide:
+
+    crackthecuffs.base44.app    x-frame-options: DENY
+    crack-cuff-codes.base44.app (no framing headers)
+
+It is a toggle in the Base44 app editor — Dashboard, Security, the settings
+icon, Security Headers, **Prevent Embedding**. On for the new app, off for the
+old one. Nothing in the repo controls it; `base44/config.jsonc` is identical
+between the two.
+
+**Reverted the theme to the old app for now.** A popup that works but has the
+old gates beats an empty dimmed box on a preview George is actively testing.
+The revert is one line, and nothing else had to change: the message handler
+already accepts both `getaway:close` and `crooks-popup-close`, so pointing
+`APP_URL` back at the new app is the entire journey forward once the toggle is
+off. That is written into the file at the constant, not just here.
+
+Also worth knowing: the new app's `shopify-embed/README.md` was copied from the
+old app and is stale — it still documents `crooks-popup-close` and the phone to
+email lead capture, neither of which the new app does. It should not be trusted
+as the integration spec.
+
+This is why the embed was verified by app id but not by actually loading it in a
+frame. The checksum and app-id checks confirmed *which* app was being pointed at;
+they could not confirm the browser would agree to render it. A fetch of the
+headers would have caught it in one line, and that is now part of the routine
+for any embedded third-party surface.

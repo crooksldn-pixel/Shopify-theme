@@ -138,7 +138,23 @@
 </style>
 <script>
   (function () {
-    var APP_URL = 'https://crackthecuffs.base44.app';
+    /* TEMPORARILY POINTED BACK AT THE OLD APP.
+
+       The new build (crackthecuffs.base44.app) is the one we want — no phone or
+       email gate, a 5s mint timeout with a retry, and it honours reduced motion
+       itself. But it serves `X-Frame-Options: DENY`, so a browser refuses to
+       render it in a frame at all and the overlay shows an empty box. The old
+       app sends no framing header, which is why it embeds.
+
+       That is a per-app toggle, not a code change:
+         Base44 Dashboard -> Security -> settings icon -> Security Headers
+         -> turn OFF "Prevent Embedding"
+
+       Once it is off, this one line goes back to:
+         https://crackthecuffs.base44.app
+       Nothing else needs touching — the message handler below already accepts
+       both apps' close messages. */
+    var APP_URL = 'https://crack-cuff-codes.base44.app';
     var FLAG = 'crooksldn_ctc_seen';
     var DELAY = 3000;
     /* The one attempt is only spent once the popup has been on screen long
