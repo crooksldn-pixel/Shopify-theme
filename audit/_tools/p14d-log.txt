@@ -1,1 +1,18 @@
 identity {"crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+===== TAPPING THE ADD TO BAG THAT IS THERE AT THREE SECONDS =====
+live ADD TO BAG found: {"cx":159,"cy":766,"text":"ADD TO BAG","at":2692}
+what it looks like: audit/screens/14-live-add.png
+tapped it at 5208 ms
+  t=6010ms {"bag":"BAG [0]","btns":[["SELECT A SIZE",true],["SELECT A SIZE",true]],"sticky":"GREY CONVICT SWEATS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Order"}
+    audit/screens/14-live-add-6s.png
+  t=7716ms {"bag":"BAG [0]","btns":[["SELECT A SIZE",true],["SELECT A SIZE",true]],"sticky":"GREY CONVICT SWEATS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Order"}
+    audit/screens/14-live-add-8s.png
+  t=11029ms {"bag":"BAG [0]","btns":[["SELECT A SIZE",true],["SELECT A SIZE",true]],"sticky":"GREY CONVICT SWEATS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Order"}
+    audit/screens/14-live-add-11s.png
+  t=16229ms {"bag":"BAG [0]","btns":[["SELECT A SIZE",true],["SELECT A SIZE",true]],"sticky":"GREY CONVICT SWEATS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Order"}
+    audit/screens/14-live-add-16s.png
+READABLE: "← CATALOGUE PRODUCT 09 / 12 SWEATS PHOTO 1 OF 2 GREY CONVICT SWEATS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves tomorrow SELECT A SIZE SPECIFICATION + ITEM DESCRIPTION + MEASUREMENTS + CHAIN OF CUSTODY — SHIPPING & RETURNS + MORE FROM THIS DROP CHARCOAL CELLBLOCK CREWNECK £50.00 CHARCOAL CELLBLOCK SHORTS £45.00 GREY CONVICT SWEATS £60.00 SELECT A SIZE CHECKOUT NOW"
+what is actually in the bag: {"count":0,"items":[]}
+
+===== DONE =====
