@@ -1,0 +1,83 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+--- 0 cookie banner: {"text":"COOKIE CONSENT\n\nWe and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy\n\nManage preferences\nAccept\nDecline","rect":{"x":0,"y":484.59375,"width":390,"height":359.40625,"top":484.59375,"right":390,"bottom":844,"left":0}}
+audit/screens/toggles-edge-00-home-dark-cookiebanner.png
+0 dismissed: true
+--- 1 toggle placement: {"text":"LIGHT MODE","rect":{"x":210.125,"y":86,"width":107.171875,"height":44,"top":86,"right":317.296875,"bottom":130,"left":210.125},"inHeader":true,"inDrawer":false,"parentCls":"crk-header__actions","aboveFold":true}
+audit/screens/toggles-edge-01-header-dark.png
+--- 2 size buttons: [{"t":"LIGHT MODE","al":null,"ap":"false","cls":"crk-header__link"},{"t":"XS","al":"Size XS","ap":"false","cls":"crk-size"},{"t":"S","al":"Size S","ap":"false","cls":"crk-size"},{"t":"M","al":"Size M","ap":"false","cls":"crk-size"},{"t":"L","al":"Size L","ap":"false","cls":"crk-size"},{"t":"XL","al":"Size XL","ap":"false","cls":"crk-size"},{"t":"CM","al":null,"ap":"true","cls":"crk-unit"},{"t":"IN","al":null,"ap":"false","cls":"crk-unit"}]
+2 added; header now:  [1]
+--- 3 before toggle: {"theme":null,"outline":null,"ssTheme":null,"ssOutline":"on","btn":"LIGHT MODE/pressed=false","bodyBg":"rgb(11, 10, 14)","mainBg":"rgb(11, 10, 14)","scrollY":530}
+3 after toggle: {"theme":"light","outline":null,"ssTheme":"light","ssOutline":"on","btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","mainBg":"rgb(250, 250, 251)","scrollY":0}
+audit/screens/toggles-edge-03-pdp-light-top.png
+
+===== home / status=200 throttled=false LIGHT theme=light bodyBg=rgb(250, 250, 251) mainBg=rgb(250, 250, 251) =====
+  LIGHT low-contrast (0): []
+audit/screens/tg-home-light.png
+  LIGHT text:
+Skip to content
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+CATALOGUE
+SEARCH
+BAG
+ [1]
+DARK MODE
+MENU
+£10.00 to free Tracked 24
+TRACKED 48 FREE
+TRACKED 24 FREE
+> 12 PRODUCTS AVAILABLE TO PURCHASE
+CROOKSLDN
+OWN THE STREETS™
+CATALOGUE
+CATALOGUE
+12 ITEMS
+FLAT
+ON MODEL
+OUTLINE
+ALL
+T-SHIRT
+DENIM
+SWEATS
+ACCESSORIES
+NO. 01
+SWEATS
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+AVAILABLE
+NO. 02
+SWEATS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+AVAILABLE
+NO. 03
+DENIM
+BLUE WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 04
+DENIM
+BLUE WASH JORTS
+£50.00
+AVAILABLE
+NO. 05
+DENIM
+GREY WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 06
+DENIM
+GREY WASH JORTS
+£50.00
+AVAILABLE
+NO. 07
+T-SHIRT
+MONEY CLIVE TEE
+Colourways: BLACK, WHITE
+£25.00
+
+  DARK low-contrast (1): [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary","y":0}]
+audit/screens/tg-home-dark.png
+FATAL locator.click: Timeout 15000ms exceeded.
+Call log:
+[2m  - waiting for locator('[data-crk-theme-toggle]').first()[22m
+[2m    - locator resolved to <button type="button" aria-pressed="false" class="crk-header__link" data-crk-theme-toggle="" data-crk-to-dark="DARK MODE" data-crk-to-light="LIGHT MODE

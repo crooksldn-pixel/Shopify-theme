@@ -213,3 +213,207 @@ someone who just bought two garments.
 `audit/screens/set-13b-cart-viewport.png`, `audit/screens/set-12-after-add.png`
 
 ---
+
+### The set section on /cart, with the set in the cart
+
+**Should:** `SPEC §3.13` — "the bundle in the cart → the saving confirmed in
+words."
+
+**Did:** nothing renders. With `CELLBLOCK SET` in the cart, the `set-cart`
+section is not present in the page at all — no wrapper, no text. The cart runs
+straight from the carriage bar to `Cart`. The line item itself does not restate
+the saving either, so between pressing `ADD THE FULL FIT — £85` and paying,
+**the £10 is never mentioned again.**
+
+**Verdict:** absent
+
+**Shopper cost:** the saving is the entire reason to buy the set, and the cart —
+the screen where people check they got what they thought — never confirms it. A
+shopper reconsidering at the cart has `£85.00` and no reminder that the parts
+come to £95.
+
+**Evidence:** `audit/screens/set-20-cart-shorts-side.png` — the cart with the set
+in it, no set section; compare `audit/screens/set-16b-cart-one-half-viewport.png`
+where the offer state does render
+
+---
+
+### One half in the cart — the offer for the other half
+
+**Should:** `SPEC §3.13` — one half of a set in the cart → a single line offering
+the other.
+
+**Did:** it renders, above the cart heading, as an underlined accent-coloured
+link:
+
+> `Complete the set — add the Cellblock Shorts, save £10.`
+
+The link points at `/products/charcoal-cellblock-shorts`.
+
+**Verdict:** works as a line of copy — but see the next entry for where it leads.
+
+**Evidence:** `audit/screens/set-16b-cart-one-half-viewport.png`,
+`audit/screens/set-17-cart-offer-other-half.png`
+
+---
+
+### The shorts side (the partner product)
+
+**Should:** identical behaviour from the partner's page.
+
+**Did:** a mirror image, and slightly better behaved than the crewneck side.
+Collapsed line:
+
+> `Cop the full fit — add the matching Cellblock Crewneck. Save £10.`
+
+Ticked with a shorts size already chosen, the size row is headed
+`CELLBLOCK CREWNECK SIZE` and — this is the good bit — **the buy button itself
+becomes the instruction**:
+
+> `Pick a Cellblock Crewneck size`
+
+disabled, with the same words on the stock line. That is exactly the guidance the
+crewneck side fails to give when a shopper ticks first. It appears here only
+because the shopper's own size was already chosen.
+
+Shorts S + crewneck XL produced `£95` / `£85 for the set` /
+`ADD THE FULL FIT — £85`, hidden variant `54377206514007`, which is the bundle's
+`XL / S`. The cart then read:
+
+> `CELLBLOCK SET`
+> `CHARCOAL CELLBLOCK CREWNECK - XL`
+> `CHARCOAL CELLBLOCK SHORTS - S`
+> `£85.00`
+
+The sizes are attached to the right garments from either direction. One line,
+`item_count: 1`, `total_price: 8500`.
+
+**Verdict:** works
+
+**Evidence:** `audit/screens/set-18-shorts-collapsed.png`,
+`audit/screens/set-19-shorts-S-crew-XL.png`,
+`audit/screens/set-20-cart-shorts-side.png`
+
+---
+
+### The bundle's own product page
+
+**Should:** not specified — but `/products/cellblock-set` is published, sits in
+the `Sets` collection, and a shopper can reach it.
+
+**Did:** `/collections/sets` renders `SETS` / `1 ITEMS` / `NO. 01` /
+`CELLBLOCK SET` / `£85.00` / `AVAILABLE` / `DROPPED 18.08`, and the product page
+loads with **two size rows**:
+
+> `SIZE`  XS S M L XL
+> `CHARCOAL CELLBLOCK SHORTS (SIZE)`  XS S M L XL
+
+The second row names its garment. The first is bare `SIZE`. Nothing else on the
+visible page says what the two garments are — the hero image is the crewneck
+alone, and the only sentence that explains the product ("The full Cellblock fit —
+charcoal crewneck and shorts… £85 against £95 bought separately") is inside the
+`ITEM DESCRIPTION` accordion, which is closed by default (deliberate, `SPEC §9.4`).
+There are no `SPECIFICATION` or `MEASUREMENTS` accordions on this page at all, so
+a shopper choosing two sizes has no measurements for either garment.
+
+`Sets` is in no menu. The only routes to this page are the collection URL typed
+by hand, search, or a search engine.
+
+**Verdict:** partly
+
+**Shopper cost:** a shopper who arrives here — the one page in the store actually
+called a SET — must guess that the first `SIZE` row is the crewneck, with the
+struck-through pricing and the "save £10" framing that the PDP toggle gives them
+nowhere in sight.
+
+**Evidence:** `audit/screens/set-25-bundle-pdp.png`,
+`audit/screens/set-26-sets-collection.png`
+
+---
+
+### Desktop
+
+**Did:** identical at 1440×900 — same copy, same panel, same
+`ADD THE FULL FIT — £85`, same restore on untick. No layout difference worth a
+shopper's attention.
+
+**Verdict:** works
+
+**Evidence:** `audit/screens/set-27-desktop-collapsed.png`,
+`audit/screens/set-28-desktop-open.png`
+
+---
+
+### No measurements for the garment you are being asked to size
+
+**Should:** not specified — but the panel asks a shopper to choose a size for a
+garment they are not looking at.
+
+**Did:** the accordions on the crewneck page are `SPECIFICATION`,
+`ITEM DESCRIPTION`, `MEASUREMENTS`, `CHAIN OF CUSTODY` — all four about the
+crewneck, and `SIZE GUIDE` scrolls to the crewneck's measurements. The shorts'
+measurements (`fits waist`, `length`, `leg opening`) exist as data on the shorts
+product, and are not reachable from the panel. There is no link to the shorts
+page from inside the offer either — the thumbnail is not a link.
+
+**Verdict:** partly
+
+**Shopper cost:** a shopper who knows they are an M on top and an L on the bottom
+is fine. Anyone else is guessing a size for an unseen garment, on a set that is
+one line item and therefore, on a change of mind, one thing to send back rather
+than two.
+
+**Evidence:** `audit/screens/set-06b-own-M-partner-L-viewport.png`,
+`audit/screens/set-23b-false-soldout-viewport.png` — accordion titles visible
+below the panel
+
+---
+
+## JUDGEMENT — would a stranger understand it?
+
+**Would they understand they are buying two garments for £85?** Once they tick
+it, yes — but only once they tick it, and only if they tick it in the right
+order.
+
+**Where the wording helps, specifically:**
+
+- `Cop the full fit — add the matching Cellblock Shorts. Save £10.` names the
+  other garment in full and states the saving. No jargon, no fiction, no
+  countdown. It reads like a shop assistant, which is the point.
+- The revealed size row is headed `CELLBLOCK SHORTS SIZE`, not "Size". That one
+  decision removes the commonest bundle confusion outright — you are never in
+  doubt whose size you are picking. It works identically in reverse
+  (`CELLBLOCK CREWNECK SIZE` on the shorts page).
+- `£95` struck through followed by `£85 for the set` does the arithmetic for the
+  shopper and, crucially, the words "for the set" say that the £85 covers both.
+  This is the one place the whole proposition is stated properly.
+- `ADD THE FULL FIT — £85` puts the price on the control that charges it.
+- The cart line spells out `CHARCOAL CELLBLOCK CREWNECK - M` and
+  `CHARCOAL CELLBLOCK SHORTS - L` under `CELLBLOCK SET`. Nobody could misread
+  that.
+
+**Where it leaves them guessing:**
+
+- **The collapsed line never says £85.** A shopper deciding whether this offer is
+  worth opening knows only "£50, plus something, minus £10". The two numbers that
+  make the case — £95 and £85 — are both behind the tick. "Save £10" without a
+  total is the weakest possible version of a strong offer.
+- **It never says the shorts are £45**, so "Save £10" cannot be checked. The £45
+  does appear further down the page in `MORE FROM THIS DROP`, but not in the
+  offer.
+- **The page argues with itself at the moment of purchase.** The price at the top
+  stays `£50.00` and the sticky bar reads `£50.00 · M` while the button says
+  `ADD THE FULL FIT — £85`. The shopper is being asked to trust the button over
+  the two prices around it.
+- **"The full fit" is brand language, not a description.** Nowhere does the offer
+  say "two garments" or "2 items". A shopper who does not read "fit" as "outfit"
+  has only the thumbnail to go on.
+- **Order of operations is punished, not explained.** Tick before choosing your
+  own size and the store tells you, in red, that the shorts are sold out in every
+  size. That is the single most damaging sentence in the feature.
+- **The saving evaporates after the PDP.** No £95, no "you saved £10" in the cart
+  — the confirmation state that `SPEC §3.13` promises does not render at all.
+
+**Does £85 obviously beat £50 + £45?** Only inside the open panel, and only for
+about as long as it takes to press the button. Before ticking: not stated. After
+adding: not restated. The proof exists on exactly one screen.
