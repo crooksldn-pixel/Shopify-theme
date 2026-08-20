@@ -120,10 +120,6 @@ button relabels from `SELECT A SIZE` to `ADD TO BAG`, and Shopify's wallet row
 (`Buy with Shop` / `More payment options`) only appears once a size is chosen. The sticky bar
 picks the size up as `£50.00 · M`.
 
-One quiet thing: on `cb1-wash-jeans` the **XL button carries a 4-pixel purple square** in its
-top-right corner with no legend anywhere on the page. It means low stock — selecting XL is
-what surfaces the wording. Nobody will read a 4px dot as "nearly gone".
-
 **Verdict:** works
 
 **Evidence:** `audit/screens/pdpcore-30-crewneck-size-XL.png`,
@@ -154,20 +150,18 @@ the two lines above it still read `Order before 18:00 and it ships today (Mon–
 `> Ordered now — leaves today`. The page is simultaneously telling the shopper this size
 cannot be bought and that ordering now gets it out the door today.
 
-**(2) The sticky bar still offers `CHECKOUT NOW`.** The inline button correctly greys to
-`SOLD OUT`, but the bar pinned to the bottom of the screen keeps a live-looking
-`CHECKOUT NOW` beside it.
+**(2) The sticky bar physically clips the `NOTIFY ME` button.** With M selected and the
+notify panel open, the purple `NOTIFY ME` button runs from y=724 to y=776 on an 844-px
+screen and the sticky bar starts at y=775 — its bottom edge disappears under the bar. The
+one control the page wants pressed in this state is the one being sat on by furniture.
 
-**(3) The sticky bar physically covers the `NOTIFY ME` button.** With M selected and the
-notify panel open, the purple `NOTIFY ME` button's lower edge runs underneath the sticky bar.
-It is visibly clipped in the screenshot. The one control the page wants the shopper to press
-in this state is the one partly hidden by furniture.
+*(Checked and cleared: the sticky bar's `CHECKOUT NOW` beside `SOLD OUT` is greyed and inert —
+pressing it does nothing and adds nothing to the bag. It reads as dead rather than as a trap.)*
 
 **Verdict:** partly
 
 **Shopper cost:** The shopper is told "sold out" and "leaves today" in the same eyeful, and
-the button they need is half-covered by a bar advertising checkout for the thing they cannot
-buy.
+the button they need is clipped by the bar.
 
 **Evidence:** `audit/screens/pdpcore-11-baggies-soldout-M.png` (all of the above in one
 frame — `SIZE M IS SOLD OUT`, `SOLD OUT`, `TELL ME WHEN THIS SIZE IS BACK`, and the sticky
@@ -198,11 +192,14 @@ error, invalid or problem wording returns nothing.
 
 **Valid address (`buyer+test@example.com`).** Pressing `NOTIFY ME` throws up a **blank white
 hCaptcha panel covering most of the phone screen**, greying out the product behind it, with
-an hCaptcha badge in the bottom-right corner. In this audit environment the challenge itself
-never rendered — the box stayed empty — so I could not complete it. I waited, retried on a
-clean session, and got the same panel. **I never reached a confirmation of any kind.** After
-the attempt the page is unchanged: the same `SIZE L IS SOLD OUT`, the same open panel, my
-address still sitting in the field, no thank-you, no error, no e-mail promised.
+an hCaptcha badge in the bottom-right corner and the words `Protected by hCaptcha` at the
+foot of the page. In this audit environment the challenge itself never rendered — the box
+stayed empty — so I could not complete it. I tried it on a fresh session as the first thing I
+did on the page, waited eighteen seconds, and got the same empty panel. **The form never
+posted anything**: I watched the traffic and nothing left the browser for `/contact` at all,
+only Shopify's own telemetry. **I never reached a confirmation of any kind.** The page is
+unchanged afterwards: the same `SIZE XL IS SOLD OUT`, the same open panel, my address still
+sitting in the field, no thank-you, no error, no e-mail promised.
 
 **What am I promised, and when will I hear back?** The panel's entire copy is
 `TELL ME WHEN THIS SIZE IS BACK` / `email address` / `NOTIFY ME`. That is it. There is **no
@@ -223,7 +220,10 @@ error), `audit/screens/pdpcore-72-notify-empty.png`,
 `audit/screens/pdpcore-73-notify-valid-typed.png`,
 `audit/screens/pdpcore-74-notify-valid-after.png` (**the blank white hCaptcha panel over the
 greyed product page, hCaptcha badge bottom-right**),
-`audit/screens/pdpcore-74b-notify-valid-after-full.png`.
+`audit/screens/pdpcore-74b-notify-valid-after-full.png`,
+`audit/screens/pdpcore-111-notify-clean-after.png` and
+`audit/screens/pdpcore-112-notify-clean-18s.png` (clean session, first action on the page,
+eighteen seconds later — nothing has happened).
 
 ---
 
@@ -277,16 +277,25 @@ opened MEASUREMENTS       -> SPECIFICATION=true | ITEM DESCRIPTION=true  | MEASU
 opened CHAIN OF CUSTODY   -> SPECIFICATION=true | ITEM DESCRIPTION=true  | MEASUREMENTS=true  | CHAIN OF CUSTODY=true
 ```
 
-All four end up open at once. They do default closed, and each one does open on the first
-tap, so nothing is unreachable — but a shopper who opens all four (which is exactly what
-someone deciding on a £60 purchase does) pushes `MORE FROM THIS DROP` a long way down the
-page and has to scroll back up past four open panels to reach the size row again.
+All four end up open at once. They do default closed, each opens on the first tap and closes
+again on a second, so nothing is unreachable or stuck — but a shopper who opens all four
+(exactly what someone deciding on a £60 purchase does) pushes `MORE FROM THIS DROP` a long
+way down the page and has to scroll back up past four open panels to reach the size row.
 
-Contents are real and good. `SPECIFICATION` on the jeans: `FABRIC 14oz denim / CUT OG
-straight, mid rise / ORIGIN Made in Portugal / CARE Cold wash inside out. Hang dry.`
-`MEASUREMENTS` carries a `CM` / `IN` toggle, the method line
-`TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL
-MEASUREMENTS IN CENTIMETRES.` and a five-row table.
+Contents are real and specific, and different per product. `SPECIFICATION` on the jeans:
+`FABRIC 14oz denim / CUT OG straight, mid rise / ORIGIN Made in Portugal / CARE Cold wash
+inside out. Hang dry.` On the crewneck: `450gsm brushed fleece / Relaxed / Made in Portugal /
+Cold wash. Do not tumble dry.` On the baggies: `500gsm cotton / Wide, full length`. No
+lorem, no filler.
+
+**One data problem inside them.** `V2 BAGGIES` (£60 wide sweatpants) and `GREY WASH OG JEANS`
+(£60 straight denim) publish **byte-identical measurement tables** — the same
+`XS 76.2 / 73.7 / 45.7` through `XL 96.5 / 81.3 / 55.9`, under the same column headings
+`WAIST · INSEAM · LEG OPENING`. Two garments in different fabrics and different cuts cannot
+have the same leg opening at every size. The crewneck's table is genuinely its own
+(`CHEST · LENGTH · SHOULDER · SLEEVE`), so this is per-product data, not a broken component.
+*(This is the placeholder-measurements item already on the known list — recording it here
+because a shopper sizing the baggies is reading the jeans' numbers.)*
 
 **Verdict:** partly — they work, they are not exclusive, and the spec says they should be.
 
@@ -294,7 +303,48 @@ MEASUREMENTS IN CENTIMETRES.` and a five-row table.
 `audit/screens/pdpcore-40-acc-item-description.png`,
 `audit/screens/pdpcore-40-acc-measurements.png`,
 `audit/screens/pdpcore-40-acc-chain-of-custody.png` — the last one shows all four panels open
-simultaneously.
+simultaneously; `audit/screens/pdpcore-153-accordions-all-open.png`.
+
+---
+
+### `SIZE GUIDE` and the cm / inch toggle
+
+**Should:** One tap, no modal, no PDF — and numbers a shopper can act on.
+
+**Did:** Tapping `SIZE GUIDE` scrolled from 328 to 1212 and parked the `MEASUREMENTS`
+heading at the very top of the screen with the panel already open. No modal, no overlay, no
+download, nothing to dismiss — and the back-scroll to the size row is a short one because the
+heading is at the top rather than the bottom. This is the best-executed control on the page.
+
+The `CM` / `IN` toggle inside it works and converts honestly: `XS 76.2cm / 73.7cm / 45.7cm`
+becomes `XS 30in / 29in / 18in`, and the method line rewrites itself from `…ALL MEASUREMENTS
+IN CENTIMETRES.` to `…ALL MEASUREMENTS IN INCHES.` The method is stated —
+`TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT` — which is
+the one thing most size guides leave out.
+
+**Verdict:** works
+
+**Evidence:** `audit/screens/pdpcore-151-sizeguide.png`,
+`audit/screens/pdpcore-152-measurements-inches.png`.
+
+---
+
+### Low stock
+
+**Should:** Tell the truth about scarcity without inventing it.
+
+**Did:** On `cb1-wash-jeans`, XL carries a **4×4-pixel purple square** in its top-right
+corner and nothing else — no legend, no key, no tooltip anywhere on the page. Selecting XL
+reveals what it meant: the stock line reads **`3 LEFT IN SIZE XL`**, and it is rendered in
+the same dim grey (`rgb(138,131,119)`) as the neutral `Select Size` text, not in the red used
+for sold out. That restraint is right and is exactly what §9.7 asks for — it is a real
+number from real inventory, not a counter. But a shopper who never taps XL never learns that
+the mark means anything, and four pixels is below the threshold at which anyone notices.
+
+**Verdict:** partly
+
+**Evidence:** `audit/screens/pdpcore-150-lowstock-xl.png`,
+`audit/screens/pdpcore-101-desktop-jeans.png` (the unexplained mark on XL, nothing selected).
 
 ---
 
@@ -358,11 +408,17 @@ size is sold out, so `SIZE M IS SOLD OUT` and `Ordered now — leaves today` app
 which by design appears "only while the primary control is off-screen".
 
 **Did:** **It never goes away.** I traced it down the crewneck page at scroll positions 0,
-150, 300, 500, 800, 1200, 1800 and the page bottom: at every one of them it is pinned at
-`top: 775` of an 844-px screen, 69 px tall, fully opaque. It is already there before the
-shopper has scrolled at all, and it is still there when the real `ADD TO BAG` button is in
-the middle of the screen — the screenshot of a successful add shows the inline `ADD TO BAG`
-and the sticky `ADD TO BAG` on screen together.
+150, 300, 500, 800, 900, 1100, 1200, 1300, 1600, 1800 and the page bottom: at every single
+one it is pinned at `top: 775` of an 844-px screen, 69 px tall, fully opaque. It is already
+there before the shopper has scrolled at all.
+
+The give-away is that the page *knows* it should be hiding. At scroll 500, 900 and 1100 the
+real `ADD TO BAG` button is plainly on screen (its top at y=567, y=167, y=-33) and the theme
+correctly marks the bar as hidden — and the bar stays visible anyway, because its own layout
+rule outranks the hide. So the shopper gets both buttons at once: the screenshot of a
+successful add shows the inline `ADD TO BAG` mid-screen and the sticky `ADD TO BAG` at the
+foot of the same screen. This is a one-line CSS fix and the behaviour it restores is already
+written.
 
 It does carry the selected size correctly:
 `CHARCOAL CELLBLOCK CREWNECK  £50.00 · M   ADD TO BAG   CHECKOUT NOW`, and after an add it
@@ -382,7 +438,8 @@ already visible, and it clips the notify form's only control.
 
 **Evidence:** `audit/screens/pdpcore-50-sticky-with-size.png` (`£50.00 · M` carried),
 `audit/screens/pdpcore-90-added-to-bag.png` (**inline `ADD TO BAG` and sticky `ADD TO BAG`
-on screen at the same time**), `audit/screens/pdpcore-51-sticky-page-bottom.png`,
+on screen at the same time**), `audit/screens/pdpcore-140-sticky-doubled.png`,
+`audit/screens/pdpcore-51-sticky-page-bottom.png`,
 `audit/screens/pdpcore-11-baggies-soldout-M.png` (bar clipping `NOTIFY ME`).
 
 ---

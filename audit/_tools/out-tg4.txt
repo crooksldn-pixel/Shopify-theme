@@ -1,0 +1,264 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+===== terms /pages/terms status=200 arrivedTheme=null toggleInDom=true =====
+  LIGHT state {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","scrollY":0}
+  LIGHT low-contrast: []
+audit/screens/tg-terms-light.png
+  LIGHT text:
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+DARK MODE
+MENU
+
+STANDING ORDERS
+
+TERMS
+
+How buying from us actually works — carriage, dispatch, returns and refunds, in plain English. The full legal texts are linked at the bottom.
+
+LAST REVISED 20.08.2026
+
+01
+CARRIAGE
+02
+DISPATCH
+03
+RETURNS
+04
+SIZE SWAPS
+05
+FAULTS AND WRONG ITEMS
+06
+REFUNDS
+07
+LOST PARCELS
+08
+ORDERS WE CANCEL
+09
+CONTACT
+
+01
+
+CARRIAGE
+
+UK shipping is free on orders over £20, and free Royal Mail Tracked 24 over £70. Below £20 it is charged at checkout before you pay.
+
+O
+  DARK low-contrast: [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary"}]
+audit/screens/tg-terms-dark.png
+  left in light
+
+===== tracking /pages/tracking status=200 arrivedTheme=light toggleInDom=true =====
+  LIGHT state {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","scrollY":0}
+  LIGHT low-contrast: []
+audit/screens/tg-tracking-light.png
+  LIGHT text:
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+DARK MODE
+MENU
+
+CROOKSLDN PROPERTY TRANSFER NETWORK
+
+> CHAIN OF CUSTODY DATABASE ONLINE
+
+IDENTIFICATION REQUIRED
+
+Order records are released to the account they were filed under. Sign in to view the chain of custody for your orders.
+
+SIGN IN
+
+NO ACCOUNT? THE TRACKING LINK IN YOUR DISPATCH EMAIL OPENS YOUR ORDER WITHOUT ONE.
+
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLDN: The Getaway
+
+EVI
+  DARK low-contrast: [{"text":"Skip to content","ratio":1,"color":"rgb(10, 10, 10)","bg":"rgb(11,10,14)","px":"14px","cls":"skip-to-content-link button-secondary"}]
+audit/screens/tg-tracking-dark.png
+  left in light
+
+===== policy /policies/refund-policy status=200 arrivedTheme=light toggleInDom=true =====
+  LIGHT state {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(244, 241, 234)","scrollY":0}
+  LIGHT low-contrast: []
+audit/screens/tg-policy-light.png
+  LIGHT text:
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+DARK MODE
+MENU
+REFUND POLICY
+
+Returns & Refunds
+We want you in the right fit. If something's not right, we'll sort it.
+
+Changed your mind or wrong size? You have 14 days from delivery to return or exchange any unworn item with tags on. Return postage is paid by you — that covers a change of mind, the wrong size, a swap, or any other reason of your own. There is no fee for a UK size swap itself, and we cover the postage sending the new size out to you. For returns please return to: Oairo
+  DARK low-contrast: []
+audit/screens/tg-policy-dark.png
+  left in light
+
+===== 404 /pages/no-such-page-xyz status=404 arrivedTheme=light toggleInDom=true =====
+  LIGHT state {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(244, 241, 234)","scrollY":0}
+  LIGHT low-contrast: []
+audit/screens/tg-404-light.png
+  LIGHT text:
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+DARK MODE
+MENU
+PAGE NOT FOUND
+
+The link may be incorrect, or the page has been removed.
+
+Continue shopping
+
+Discover something new
+
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH OG JEANS
+
+BLUE WASH OG JEANS
+
+£60.00
+BLUE WASH JORTS
+
+BLUE WASH JORTS
+
+£50.00
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLD
+  DARK low-contrast: []
+audit/screens/tg-404-dark.png
+  left in light
+
+===== contact /pages/contact status=200 arrivedTheme=light toggleInDom=true =====
+  LIGHT state {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(244, 241, 234)","scrollY":0}
+  LIGHT low-contrast: []
+audit/screens/tg-contact-light.png
+  LIGHT text:
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+DARK MODE
+MENU
+CONTACT
+Name
+Email*
+Phone
+Comment
+Submit
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLDN: The Getaway
+
+EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026
+  DARK low-contrast: []
+audit/screens/tg-contact-dark.png
+  left in light
+
+--- B persist home: {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","scrollY":0}
+B persist collection: {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","scrollY":0}
+B persist product: {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","scrollY":0}
+audit/screens/tg-flash-0-at319ms.png
+audit/screens/tg-flash-1-at772ms.png
+audit/screens/tg-flash-2-at1840ms.png
+--- C flash probe: {"atStart":null,"ss":"light","firstFrame":"light","firstFrameBg":"rgb(244, 241, 234)","firstFrameT":570} {"theme":"light","outlineAttr":null,"ssTheme":"light","ssOutline":"on","toggleInDom":true,"btn":"DARK MODE/pressed=true","bodyBg":"rgb(250, 250, 251)","scrollY":0}
+audit/screens/tg-flash-reload-0-at320ms.png
+audit/screens/tg-flash-reload-1-at1495ms.png
+C after reload: {"atStart":null,"ss":"light","firstFrame":"light","firstFrameBg":"rgb(244, 241, 234)","firstFrameT":603}
+
+--- D light SEARCH button: {"text":"SEARCH","color":"rgb(221, 215, 201)","bg":"rgba(0, 0, 0, 0)","border":"0px rgb(221, 215, 201)","cls":"crk-btn crk-btn--fill crk-query__go","rect":{"x":16,"y":251,"w":132,"h":48}}
+audit/screens/tg-search-button-light-closeup.png
+D dark SEARCH button: {"color":"rgb(221, 215, 201)","bg":"rgba(0, 0, 0, 0)","border":"0px rgb(221, 215, 201)"}
+audit/screens/tg-search-button-dark-closeup.png
+
+--- E outline button count: 1 theme: light
+FATAL page.evaluate: ReferenceError: lab is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:8:14)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)

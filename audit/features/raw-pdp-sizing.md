@@ -115,7 +115,10 @@ Two tells exist, and both require the shopper to go looking:
 **Tell one — press `IN`.** The ladder resolves to `30 / 32 / 34 / 36 / 38` waist and
 `18 / 19 / 20 / 21 / 22` leg opening: exactly two inches per size and exactly one inch per
 size, five sizes in a row. Real grading is linear too, so this alone proves nothing — but it
-is the same generic ladder any size chart generator emits.
+is the same generic ladder any size chart generator emits. The crewneck shows the same hand
+from the other side: its chest is `43 / 45 / 47 / 49 / 51in` dead round, while its length in
+inches comes out ragged — `25.7 / 26.5 / 27.2 / 28 / 28.7in` — because in centimetres it was
+stepped by exactly 1.9cm a size. Somebody chose a step; nobody measured five crewnecks.
 
 **Tell two — open two products.** `V2 BAGGIES`, described on its own page as
 *"wide, full-length sweats in 500gsm cotton, heavy enough to hang straight"*, carries a table
@@ -197,8 +200,8 @@ visible, while the accordion tap opens the table under the cookie sheet.
 beyond the clipped digits: no arrow, no fade, no second row of the numbers. Sleeve length is
 the measurement people buying a heavy crewneck actually check.
 
-The jeans and the baggies (three columns) fit the screen with room to spare, so this only
-bites on the products with four or five measurements.
+The jeans and the baggies (three measurements) fit the screen with room to spare, so this only
+bites on the products carrying four or five.
 
 **Verdict:** partly
 **Shopper cost:** a shopper who does not think to drag the table sideways reads three of the

@@ -478,6 +478,24 @@ adding: not restated. The proof exists on exactly one screen.
 
 ---
 
+## Not tested — recorded so nobody assumes it passed
+
+- **With JavaScript off.** The preview host answered a JavaScript-disabled
+  context with `Your connection needs to be verified before you can proceed /
+  Enable JavaScript and cookies to continue` instead of the store, so the
+  no-JS behaviour of the toggle could not be observed at all. That is the
+  preview URL's bot protection, not the theme.
+- **`Buy with Shop`.** The express button sits directly under
+  `ADD THE FULL FIT — £85` and shows no price of its own. Whether it carries the
+  bundle or the single crewneck was not tested, because testing it means entering
+  a Shop Pay checkout.
+- **The £135 combination.** Ticking the toggle on the shorts page while the
+  standalone crewneck is already in the cart should produce a £50 crewneck line
+  plus an £85 SET line. Both halves of that were observed separately; the
+  combination itself was not run.
+
+---
+
 ## Surprises
 
 1. **A cart line that says "save £10" leads to a £95 cart.** Following
