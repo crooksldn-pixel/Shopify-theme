@@ -1,0 +1,5 @@
+identity {"crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+===== THE TAP THAT MISSES =====
+the purple CATALOGUE button was clear and mine to tap at {"cx":82,"cy":435,"clear":true,"topText":"CATALOGUE","at":1556}
+what I was looking at: audit/screens/14-tap-aim.png
