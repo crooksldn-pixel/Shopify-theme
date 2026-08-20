@@ -58,7 +58,7 @@ const LOCK_DIR = 'audit/_tools/.slots';
 // 12 tripped the store's bot protection; 3 was verified safe. 4 for the feature
 // census, which judges behaviour not speed. Phase 2 drops back to 3 because the
 // persona journeys report felt slowness, and persona 14 runs alone.
-const MAX_BROWSERS = Number(process.env.CRK_MAX_BROWSERS || 6);
+const MAX_BROWSERS = Number(process.env.CRK_MAX_BROWSERS || 3);
 const SLOT_STALE_MS = 8 * 60 * 1000;
 
 function tryClaim(i) {

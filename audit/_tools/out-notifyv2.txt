@@ -1,0 +1,179 @@
+
+================ A. WHAT INTERCEPTS A TAP WHEN THE SIZE ROW SITS LOW ON THE SCREEN ================
+
+-- banner LEFT ALONE, M centre at y=822/844 (92%) — button is hit target: false
+[
+ "DIV#PBarNextFrameWrapper [390x68 @0,776 pos=fixed z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=BODY",
+ "BODY.page-width-narrow.card-hover-effect-none [390x2648 @0,0 pos=static z=auto op=1 bg=rgb(11, 10, 14) pe=auto] parent=HTML",
+ "HTML [390x2648 @0,0 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=none"
+]
+
+-- banner LEFT ALONE, M centre at y=659/844 (75%) — button is hit target: false
+[
+ "DIV.shopify-pc__banner__wrapper [326x295 @32,517 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=SECTION#shopify-pc__banner",
+ "SECTION#shopify-pc__banner.shopify-pc__banner__dialog [390x359 @0,485 pos=fixed z=2000000 op=1 bg=rgb(31, 31, 31) pe=auto] parent=BODY",
+ "BODY.page-width-narrow.card-hover-effect-none [390x2560 @0,-163 pos=static z=auto op=1 bg=rgb(11, 10, 14) pe=auto] parent=HTML",
+ "HTML [390x2560 @0,-163 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=none"
+]
+
+-- banner LEFT ALONE, M centre at y=533/844 (60%) — button is hit target: false
+[
+ "DIV.shopify-pc__banner__body [326x142 @32,517 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=DIV",
+ "DIV.shopify-pc__banner__wrapper [326x295 @32,517 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=SECTION#shopify-pc__banner",
+ "SECTION#shopify-pc__banner.shopify-pc__banner__dialog [390x359 @0,485 pos=fixed z=2000000 op=1 bg=rgb(31, 31, 31) pe=auto] parent=BODY",
+ "BODY.page-width-narrow.card-hover-effect-none [390x2560 @0,-289 pos=static z=auto op=1 bg=rgb(11, 10, 14) pe=auto] parent=HTML",
+ "HTML [390x2560 @0,-289 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=none"
+]
+SHOT: audit/screens/notifyv-A1-banner-over-sizes.png
+
+>> now ACCEPT the banner and repeat at the very bottom
+consent: accept pressed
+
+-- banner ACCEPTED, M centre at y=822/844 (96%) — button is hit target: false
+[
+ "DIV#PBarNextFrameWrapper [390x68 @0,776 pos=fixed z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=BODY",
+ "BODY.page-width-narrow.card-hover-effect-none [390x2648 @0,0 pos=static z=auto op=1 bg=rgb(11, 10, 14) pe=auto] parent=HTML",
+ "HTML [390x2648 @0,0 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=none"
+]
+
+-- banner ACCEPTED, M centre at y=822/844 (92%) — button is hit target: false
+[
+ "DIV#PBarNextFrameWrapper [390x68 @0,776 pos=fixed z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=BODY",
+ "BODY.page-width-narrow.card-hover-effect-none [390x2648 @0,0 pos=static z=auto op=1 bg=rgb(11, 10, 14) pe=auto] parent=HTML",
+ "HTML [390x2648 @0,0 pos=static z=auto op=1 bg=rgba(0, 0, 0, 0) pe=auto] parent=none"
+]
+SHOT: audit/screens/notifyv-A2-stickybar-over-sizes.png
+
+================ B. CONSENT x VIEWPORT MATRIX — can a thumb pick sold-out M? ================
+{"viewport":"390x844","banner":"left alone","tapped":"y=364","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"390x844","banner":"no accept button","tapped":"y=364","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"390x844","banner":"no decline button","tapped":"y=364","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"390x667","banner":"left alone","tapped":"y=293","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"390x667","banner":"no accept button","tapped":"y=293","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"390x667","banner":"no decline button","tapped":"y=293","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"412x915","banner":"left alone","tapped":"y=392","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"412x915","banner":"no accept button","tapped":"y=392","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+{"viewport":"412x915","banner":"no decline button","tapped":"y=392","selected":["Size M"],"soldOutLine":true,"notifyFormVisible":true}
+SHOT: audit/screens/notifyv-B-last-matrix-cell.png
+
+MATRIX RESULT: 9/9 combinations reached the notify form with a plain thumb tap
+
+================ C. CAPTCHA TIMELINE AFTER PRESSING NOTIFY ME ================
+state: {"pressed":["Size M"],"sold":true,"notifyVisible":true}
+NOTIFY ME at {"x":50,"y":396.1875,"width":290,"height":52}
+t+1500ms {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2036,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":320,"h":490,"display":"inline","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":["NOTIFY ME"]}
+t+3000ms {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2036,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":320,"h":490,"display":"inline","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":["NOTIFY ME"]}
+SHOT: audit/screens/notifyv-C1-panel-3s.png
+t+6000ms {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2062,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px; display: none !important;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":["NOTIFY ME"]}
+t+10000ms {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2062,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px; display: none !important;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":["NOTIFY ME"]}
+t+16000ms {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2062,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px; display: none !important;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":["NOTIFY ME"]}
+t+24000ms {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2062,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px; display: none !important;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":["NOTIFY ME"]}
+SHOT: audit/screens/notifyv-C2-panel-24s.png
+
+INSIDE hCaptcha frame "challenge": {
+ "bodyDisplay": "block",
+ "bodyRect": {
+  "w": 0,
+  "h": 0
+ },
+ "challengeContainer": {
+  "w": 0,
+  "h": 0,
+  "disp": "block",
+  "txt": "Tap on each animal that lives up in treesPlease select an image to report."
+ },
+ "prompt": {
+  "w": 0,
+  "h": 0,
+  "disp": "table",
+  "txt": "Tap on each animal that lives up in trees"
+ },
+ "errorText": {
+  "w": 0,
+  "h": 0,
+  "disp": "table",
+  "txt": "Please try again.  ⚠️"
+ },
+ "taskImages": 18,
+ "checkbox": null,
+ "visibleWords": [
+  "/* https://hcaptcha.com/license */"
+ ]
+}
+
+INSIDE hCaptcha frame "checkbox-invisible": {
+ "bodyDisplay": "block",
+ "bodyRect": {
+  "w": 0,
+  "h": 0
+ },
+ "challengeContainer": null,
+ "prompt": null,
+ "errorText": null,
+ "taskImages": 0,
+ "checkbox": null,
+ "visibleWords": [
+  "/* https://hcaptcha.com/license */"
+ ]
+}
+FINAL: email still in field: "buyer+test@example.com"
+MAIN TEXT NOW:
+← CATALOGUE
+PRODUCT 09 / 12
+SWEATS
+PHOTO 1 OF 2
+V2 BAGGIES
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+SIZE M IS SOLD OUT
+
+SIZE GUIDE
+SOLD OUT
+TELL ME WHEN THIS SIZE IS BACK
+NOTIFY ME
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+V2 BAGGIES
+£60.00 · M
+SOLD OUT
+CHECKOUT NOW
+
+================ D. CONTROL — the shop's own contact form, same store, same captcha ================
+footer CONTACT link: /pages/contact
+contact page status 200 https://7chao18p5etruwy5-100410786135.shopifypreview.com/pages/contact
+contact form: {"action":"/contact#ContactForm-AT2lTVTFaQXlYdVo2U__contact_form_UwiCkQ","fields":["INPUT[hidden] name=form_type","INPUT[hidden] name=utf8","INPUT[hidden] name=contact[id]","INPUT[text] name=contact[name]","INPUT[email] name=contact[email]","INPUT[tel] name=contact[phone]","TEXTAREA[textarea] name=contact[body]","BUTTON[submit] name="]}
+SHOT: audit/screens/notifyv-D1-contact-after-submit.png
+contact page probe: {"whitePanel":{"w":322,"h":492,"kids":3,"innerHTMLLen":2062,"text":""},"iframes":[{"frame":"checkbox-invisible","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"display: none;","parentDisplay":"block","parentInline":""},{"frame":"challenge","w":0,"h":0,"display":"none","vis":"visible","op":"1","inlineStyle":"border: 0px; z-index: 2000000000; position: relative; width: 320px; height: 490px; display: none !important;","parentDisplay":"block","parentInline":"position: relative; z-index: 1; width: 320px; height: 490px;"}],"pageMsg":[]}
+SHOT: audit/screens/notifyv-D2-contact-14s.png
+contact page text now:
+CONTACT
+Name
+Email*
+Phone
+Comment
+Submit
+new /contact traffic during control test: []
+
+================ NETWORK ================
+NON-TELEMETRY POSTS: (NONE)
+/contact TRAFFIC: REQ GET https://7chao18p5etruwy5-100410786135.shopifypreview.com/pages/contact
+  RESP 200 https://7chao18p5etruwy5-100410786135.shopifypreview.com/pages/contact
+  REQ GET https://7chao18p5etruwy5-100410786135.shopifypreview.com/web-pixels@2d9dfbe8w1156b718pbb247b16m64115e31/custom/web-pixel
+  RESP 404 https://7chao18p5etruwy5-100410786135.shopifypreview.com/web-pixels@2d9dfbe8w1156b718pbb247b16m64115e31/custom/web-pixel

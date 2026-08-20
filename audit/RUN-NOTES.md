@@ -54,10 +54,21 @@ page sat waiting on it. `curl` to the same URL kept returning 200 the whole
 time, which is what made it look like the agents were stuck rather than
 throttled.
 
-The harness now: caps browsers at 3 across all agent processes via a lock
-directory; aborts requests to the challenge host so they fail fast instead of
-hanging; retries 429/503/challenge pages with exponential backoff; and paces
-navigations with a little jitter. Sessions queue rather than pile on.
+The harness now: caps browsers across all agent processes via a lock directory;
+aborts requests to the challenge host so they fail fast instead of hanging;
+retries 429/503/challenge pages with exponential backoff; and paces navigations
+with a little jitter. Sessions queue rather than pile on.
+
+The cap was run at 4–6 during the feature census, which judges behaviour rather
+than speed, and dropped back to 3 for the persona journeys. Personas 01 (the
+90-second cold click), 07 (fastest path, taps counted) and 14 (congested 4G) all
+report felt duration, so they were held back and run in a quiet window rather
+than against a machine carrying a dozen other browsers. Persona 14 runs alone.
+
+**How to read any timing in this audit.** Durations are what a shopper would
+have *felt* in that session, on the profile named in the journey header. They
+are not benchmarks and no page-speed metric was collected — that was ruled out
+by the brief and the numbers already live in `SPEC.md`.
 
 **4. No test login was supplied.** The `Test login:` field arrived as the
 literal placeholder `<PASTE-OR-LEAVE-BLANK>`. Persona 20 therefore documents the

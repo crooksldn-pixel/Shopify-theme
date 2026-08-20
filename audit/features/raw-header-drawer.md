@@ -37,7 +37,7 @@ Two things the brief expected in the header are not in it:
   but on a collection page, a product page, the cart, Questions or Terms the
   only thing naming the shop above the fold is a pair of handcuffs.
 - **`ACCOUNT` is not in the header.** It is in the drawer's foot at `y=1044` in
-  an 844-tall viewport — 200px below the fold of an already-opened drawer.
+  an 844px-tall screen — 200px below the fold of an already-opened drawer.
 
 **Verdict:** partly
 
@@ -95,7 +95,7 @@ moves in; the page behind locks.
 trigger relabels to `CLOSE`; focus lands on the drawer's own `CLOSE` button;
 `document.body` gets the scroll lock; the dialog carries
 `role="dialog" aria-modal="true" aria-label="Main menu"`. The panel is
-`390px` wide on a `390px` screen — it covers the whole viewport.
+`390px` wide on a `390px` screen — it covers the whole screen.
 
 Read top to bottom, as first seen:
 
@@ -240,12 +240,12 @@ first drawer open.
 
 **Did:** exactly that, and it is genuinely good. `crooks-board.js` is **not**
 requested until the drawer is first opened (0 requests before, 1 after), and the
-board then animates: a pixel alley/cell grid in brick and purple, a thief moving
-a fixed route, a helmeted officer patrolling below in hi-vis, gold `£` coins
-being collected, an exit lit at the top right. Sampling the whole canvas ten
-times over four seconds gave ten different frames, and the page was running a
-full 61 frames per second. Two screenshots 3.4 seconds apart show the thief
-moved from mid-board to the top-left corner and a coin was collected.
+board then animates, smoothly and without stutter: a pixel alley/cell grid in
+brick and purple, a thief moving a fixed route, a helmeted officer patrolling
+below in hi-vis, gold `£` coins being collected, an exit lit at the top right.
+Sampling the whole canvas ten times over four seconds gave ten different
+frames — it is genuinely moving, not a still. Two screenshots 3.4 seconds apart
+show the thief moved from mid-board to the top-left corner and a coin was gone.
 
 **Verdict:** works — and is the single best-crafted thing in this area
 
@@ -346,7 +346,7 @@ certainly not.**
    somewhere*, and the first eight things in it are the eight places they wanted.
 3. The panel is the **thirteenth** item in the drawer — twelve menu links come
    first. Measured: the drawer's full content is 1104px tall in an 844px
-   viewport, so it scrolls by 260px. The board's art starts at `y=658`, so on
+   screen, so it scrolls by 260px. The board's art starts at `y=658`, so on
    opening you see only its top third, cut off by the bottom edge. **The
    `PLAY CASE:001 NOW` button sits at `y=962` — 118px below the fold. Yes, you
    have to scroll.** It is a short scroll, but it is one a shopper has no reason
@@ -360,15 +360,16 @@ certainly not.**
 **Verdict:** partly (the board works; its discoverability does not)
 
 **Shopper cost:** the best-made thing on the site is now three deliberate actions
-deep — open a menu you only open to leave, scroll past everything you came for,
-and notice a panel with no heading on it. The drawer panel has no label above the
-art: there is no `CASE 001` text a shopper can read, only the picture and the
-button. First-time visitors will not see it.
+deep — open a menu you only open in order to leave, scroll past everything you
+came for, and notice an unlabelled picture. Meanwhile the homepage, which used
+to open with something moving, opens with three lines of text. A first-time
+visitor will not see the board; a returning one has no reason to go looking.
 
 **Evidence:** `audit/screens/hdr-a06-home-fold.png` (the whole first screen, no
-board), `audit/screens/hdr-a07-drawer-first-seen.png` (the drawer as first seen —
-the panel is not on it), `audit/screens/hdr-d09-board-t0.png` (the board panel,
-reached only after scrolling).
+board), `audit/screens/hdr-a07-drawer-first-seen.png` and
+`audit/screens/hdr-e03-drawer-first-seen-clean.png` (the drawer as first seen —
+the panel is on neither), `audit/screens/hdr-e04-case-panel-clean.png` (the
+board panel, reached only after scrolling).
 
 ---
 
@@ -380,7 +381,7 @@ reached only after scrolling).
 
 **First look, ~1.2s in.** The page has painted — status bar, header, hero,
 catalogue grid — and a **`COOKIE CONSENT`** panel is already on it, fixed to the
-bottom of the screen at `y=485` in an 844px viewport: **43% of the first
+bottom of the screen at `y=485` on an 844px-tall screen: **43% of the first
 screen**. It was there at my first observation and at every observation after
 it, so effectively it is part of the arrival, not something that lands later.
 It reads, in full:
@@ -536,7 +537,7 @@ Things the owner probably does not know:
    banner instead.** I hit-tested it: the button is nominally on screen and the
    element that receives the tap is `div.shopify-pc__banner__btns`.
 3. **There is no tap-outside-to-close on a phone.** The panel is exactly as wide
-   as the viewport, so the scrim is 100% covered. I swept every point of it.
+   as the screen, so the scrim is 100% covered. I swept every point of it.
    The feature exists only on desktop, where nobody needs it.
 4. **Browser Back on a first visit lands on `about:blank`** — the drawer does not
    push history, so Back exits the site rather than closing the menu.
@@ -547,8 +548,12 @@ Things the owner probably does not know:
    `<button>` controls at 13px/400, side by side.
 7. **The wordmark never renders.** The header shows only the handcuffs mark, so
    on every page except the homepage nothing above the fold says CROOKSLDN.
-8. **The board itself is excellent and nobody will see it** — 61fps, loads only
-   on first drawer open, and sits thirteenth in a menu, below the fold.
+8. **The board itself is excellent and nobody will see it** — it moves smoothly,
+   it costs nothing until the menu is first opened, and it sits thirteenth in
+   that menu, below the fold.
+9. **The `BAG [n]` reserve is one character short.** It holds the row perfectly
+   still from 0 to 99 and then, at three digits, wraps the header onto a third
+   line and moves `MENU` from the top-right corner to the far left.
 
 ## Missing
 
@@ -582,15 +587,18 @@ Expected as a shopper, could not find:
   `/collections/frontpage`, whose heading reads `PRODUCTS` — so the menu word,
   the URL and the page heading are three different names for one thing, sitting
   directly above a second link to the same twelve items.
-- **The header count is reserved so it "never reflows the row"** — and at
-  `[103]` it reflows the row, moving `MENU` to a new line.
+- **The menu says `CATALOGUE` in the header and `ALL` in the drawer for the same
+  destination** (`/collections/all`), while the drawer's `SHOP` goes to a
+  different URL that shows the same twelve products under the heading
+  `PRODUCTS`. Three words, two URLs, one set of stock.
+- **`TRACKSUITS` in the menu leads to a page reading `1 ITEMS`.**
 
 ## Works and must be protected
 
 - **The board.** Loaded only on first drawer open (0 requests before, 1 after),
-  animates at 61fps, art is detailed and on-brand — brickwork, barred windows,
-  a helmeted officer in hi-vis, gold `£` coins. It is the best thing in this
-  area and the pause guards do not get in a shopper's way.
+  moves smoothly, and the art is detailed and on-brand — brickwork, barred
+  windows, a helmeted officer in hi-vis, gold `£` coins. It is the best thing in
+  this area and its pause guards never got in my way as a shopper.
 - **The count's reserved slot and tabular figures.** 0 → 1 → 9 moves nothing by
   a single pixel. Keep it; just widen it by one character.
 - **Escape and focus return.** Escape closes the drawer and puts a clearly
