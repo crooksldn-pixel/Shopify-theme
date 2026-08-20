@@ -1563,3 +1563,70 @@ The live theme is `#202044309847`, and it is named **"CROOKSLDN — Dev"**. The
 staging theme is `#202053779799`, named "CROOKSLDN — Staging". A tired person
 reading those two names will pick the wrong one. Renaming the live theme to
 something that says *live* is a five-second job worth doing.
+
+---
+
+## 2026-08-20 — Audit A1: the buy path
+
+Three findings from the twenty-journey audit, all on the same code path.
+
+**Already dead before starting.** Three findings the 20 Aug deploy had killed
+and which should not be re-fixed: XS silently preselected on every apparel PDP
+(7 journeys), the set's silent size-mirroring (04), and the FAQ's "Start your
+return here" pointing at the terms page rather than the portal (09).
+
+### CHECKOUT NOW charged the £6 shopper £12 (worst moment #2)
+
+`sNow.addEventListener('click', addToBag('checkout'))` — an unconditional add.
+ADD TO BAG then CHECKOUT NOW put the item in twice. Persona 14 reached the till
+at £12 for £6 socks and left.
+
+CHECKOUT NOW is an express lane, not a second ADD TO BAG. It now reads `/cart.js`
+first and only adds what the cart is missing. Server truth rather than page
+state, so it also holds for an item added on an earlier visit. On a cart read
+failure it falls through to the old behaviour, because `/cart/add.js` is almost
+certainly unreachable too and failing loudly beats dropping someone into an
+empty checkout.
+
+### Silent add-to-bag (7 journeys, direct cause of three double-adds)
+
+Two separate gaps:
+
+- **No acknowledgement of the tap.** Persona 14's first tap did nothing visible
+  for 30 seconds on slow 4G and nearly ended the session there. The tapped
+  control now changes to `Adding…` and disables synchronously, before any
+  network work starts. New setting `label_adding`.
+- **The confirmation was below the fold.** `say()` writes under the main button;
+  when the tap came from the sticky bar that is off-screen, and the header's BAG
+  count has scrolled away. The sticky bar's own meta line now flashes the
+  confirmation. Not aria-live — the line under the button already announces, and
+  two live regions would say it twice.
+
+### CHECKOUT NOW looked live beside SOLD OUT (01, 06)
+
+It was correctly `disabled`; it just did not look it. `.crk-btn--now` paints
+`background: none`, so the shared `:disabled` rule was swapping a background
+that is not there and only the text dimmed. Added `opacity: 0.5`.
+
+### Two bugs the tests caught
+
+Both mine, both introduced by this change, neither findable statically:
+
+1. `settle()` re-renders after the request settles, and `render()` rewrites the
+   sticky meta line — so the confirmation was being wiped a microtask after it
+   was set. The flash is now queued and applied after `settle()`.
+2. Navigating to checkout still ran `settle()` on the page being left, and
+   `render()` calls `replaceState` — which was building the URL as
+   `u.pathname + u.search`, **dropping the fragment**. The test caught the hash
+   disappearing. Fixed by not re-rendering once committed to leaving, and by
+   preserving `u.hash`. That second one is a latent bug well beyond this change:
+   any in-page anchor died on the next size change.
+
+### Verified
+
+16 new assertions on a fixture with a stubbed cart, counting real `/cart/add.js`
+calls: pending label, single add, confirmation placement, stale-confirmation
+clearing, no second add when the item is already held, exactly one add when it
+is not, and all three controls dead on a sold-out size. Plus the existing 41
+no-autoselect assertions re-run green. Deployed to 202053779799 and verified by
+checksum.

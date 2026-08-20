@@ -36,13 +36,15 @@
       soldSize: root.getAttribute('data-crk-label-soldsize') || 'SIZE [size] IS SOLD OUT',
       added: root.getAttribute('data-crk-label-added') || 'Added — [n] in bag',
       addError: root.getAttribute('data-crk-label-adderror') || 'Could not add that. Refresh and try again.',
-      viewBag: root.getAttribute('data-crk-label-viewbag') || 'View bag'
+      viewBag: root.getAttribute('data-crk-label-viewbag') || 'View bag',
+      adding: root.getAttribute('data-crk-label-adding') || 'Adding\u2026'
     };
     var LOW = parseInt(root.getAttribute('data-crk-low-threshold'), 10) || 3;
 
     var addedLine = root.querySelector('[data-crk-added]');
     var buyNowBox = root.querySelector('[data-crk-buynow]');
     var cartUrl = root.getAttribute('data-crk-cart-url') || '/cart';
+    var checkoutUrl = root.getAttribute('data-crk-checkout-url') || '/checkout';
 
     /* ---- add to bag without leaving the page ----
      * Progressive enhancement: the form still posts normally if this never runs,
@@ -68,12 +70,60 @@
       addedLine.hidden = false;
     }
 
+    /* The add confirmation has to appear where the thumb was. `say()` writes to
+       the line under the main button, which is below the fold when the tap came
+       from the sticky bar - and the header's BAG count has scrolled away by then.
+       Seven journeys called the add silent, and it caused three double-adds.
+       This flashes the sticky bar's own meta line. Deliberately not aria-live:
+       the line under the button already announces, and two live regions would
+       say it twice. */
+    var flash = null;
+    function clearStickyFlash() {
+      if (!flash) return;
+      clearTimeout(flash.timer);
+      stickyMeta.removeAttribute('data-crk-flash');
+      flash = null;
+    }
+    function stickySay(msg) {
+      if (!stickyMeta) return;
+      var original = flash ? flash.text : stickyMeta.textContent;
+      clearStickyFlash();
+      stickyMeta.textContent = msg;
+      stickyMeta.setAttribute('data-crk-flash', 'true');
+      flash = { text: original, timer: setTimeout(function () {
+        if (!flash) return;
+        stickyMeta.textContent = flash.text;
+        stickyMeta.removeAttribute('data-crk-flash');
+        flash = null;
+      }, 2600) };
+    }
+
+    /* Restore the buy state after a request settles. render() re-derives it from
+       the current selection (and lets the set toggle have its say); a
+       single-variant product has no render loop, so it is set directly. */
+    function settle() {
+      if (nOpts) render();
+      else setBuy(L.add, false);
+    }
+
+    /* A tap that did nothing visible for 30 seconds nearly lost persona 14 on
+       slow 4G. The label changes on the tapped control immediately, before any
+       network work starts. */
+    function markPending(el) {
+      if (!el) return;
+      el.disabled = true;
+      el.textContent = L.adding;
+    }
+
     var adding = false;
-    function addToBag(then) {
+    var queued = null;
+    var leaving = false;
+    function addToBag(then, origin) {
       if (adding || !form) return;
       var id = idInput && idInput.value;
       if (!id) return;
       adding = true;
+      markPending(origin);
       var body = new FormData(form);
       fetch('/cart/add.js', {
         method: 'POST', body: body, credentials: 'same-origin',
@@ -91,18 +141,58 @@
             .then(function (r) { return r.json(); })
             .then(function (cart) {
               setCartCount(cart.item_count);
-              if (then === 'checkout') { window.location.href = '/checkout'; return; }
-              say(L.added.replace('[n]', cart.item_count), false, cart.item_count);
+              if (then === 'checkout') { leaving = true; window.location.assign(checkoutUrl); return; }
+              var msg = L.added.replace('[n]', cart.item_count);
+              say(msg, false, cart.item_count);
+              /* Held until after settle(), which re-derives the buy state and
+                 rewrites the sticky meta line as a side effect. Flashing here
+                 would be overwritten a microtask later. */
+              queued = msg;
             });
         })
         .catch(function () { say(L.addError, true); })
-        .then(function () { adding = false; });
+        .then(function () {
+          adding = false;
+          if (leaving) return;
+          settle();
+          if (queued) { stickySay(queued); queued = null; }
+        });
+    }
+
+    /* CHECKOUT NOW is an express lane, not a second ADD TO BAG. It used to post
+       /cart/add unconditionally, so ADD TO BAG followed by CHECKOUT NOW put the
+       item in twice - persona 14 reached the till at 12 for 6 socks and left.
+       Ask the cart what it already holds; only add what is missing.
+
+       Server truth, not page state, so it also holds for an item added on an
+       earlier visit. If the cart cannot be read we fall through to the old
+       behaviour: /cart/add.js is almost certainly unreachable too, and it fails
+       loudly rather than dropping the shopper into an empty checkout. */
+    function checkoutNow(origin) {
+      if (adding || !form) return;
+      var id = idInput && idInput.value;
+      if (!id) return;
+      adding = true;
+      markPending(origin);
+      fetch('/cart.js', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (cart) {
+          var held = false;
+          var items = (cart && cart.items) || [];
+          for (var i = 0; i < items.length; i++) {
+            if (String(items[i].id) === String(id)) { held = true; break; }
+          }
+          adding = false;
+          if (held) { leaving = true; window.location.assign(checkoutUrl); return; }
+          addToBag('checkout', origin);
+        })
+        .catch(function () { adding = false; addToBag('checkout', origin); });
     }
 
     if (form) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
-        addToBag();
+        addToBag(null, buyBtn);
       });
     }
 
@@ -258,6 +348,7 @@
       if (idInput) idInput.value = (v && v.available) ? v.id : '';
       if (priceEl && v && v.price) priceEl.textContent = v.price;
       if (stickyMeta && v && v.price) {
+        clearStickyFlash();
         var chosen = selected.filter(function (x) { return x; }).join(' · ');
         stickyMeta.textContent = v.price + (chosen ? ' · ' + chosen : '');
       }
@@ -316,7 +407,7 @@
         try {
           var u = new URL(window.location.href);
           u.searchParams.set('variant', v.id);
-          window.history.replaceState(null, '', u.pathname + u.search);
+          window.history.replaceState(null, '', u.pathname + u.search + u.hash);
         } catch (e) { /* older browser */ }
       }
 
@@ -356,9 +447,9 @@
     }
 
     var sAdd = root.querySelector('[data-crk-sticky-add]');
-    if (sAdd) sAdd.addEventListener('click', function () { addToBag(); });
+    if (sAdd) sAdd.addEventListener('click', function () { addToBag(null, sAdd); });
     var sNow = root.querySelector('[data-crk-sticky-now]');
-    if (sNow) sNow.addEventListener('click', function () { addToBag('checkout'); });
+    if (sNow) sNow.addEventListener('click', function () { checkoutNow(sNow); });
 
     if (nOpts) render();
     else renderDispatch(false);
