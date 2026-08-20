@@ -97,7 +97,7 @@
 
 ### Step 14 — Opened the bag
 **Did:** Tapped `BAG [3]`.
-**Got:** `> Free Tracked 24 — unlocked` with both ticks, then `Cart 3`, then three rows, each with a photo, a variant line, a price, a `− 1 +` box and a bin:
+**Got:** `> Free Tracked 24 — unlocked` with both ticks, then `Cart 3`, then `Cart total £91.00 GBP`, then three rows, each with a photo, a variant line, a price, a `− 1 +` box and a bin:
 `WHITE/RED MOTIONTEC™ SOCKS / 1pc / £6.00`
 `BLUE WASH OG JEANS / M / £60.00`
 `MONEY CLIVE TEE / M,  BLACK / £25.00`
@@ -110,7 +110,7 @@ then `Discount`, `Estimated total £91.00 GBP`, `Duties and taxes included. Ship
 **Did:** Changed my mind — I want the tee in L. Looked for a size control on the cart row.
 **Got:** Nothing. The row has a photo, the words `Size: M, Colour: BLACK` as plain text, a quantity stepper, and a bin. No dropdown, no "edit", no link back to the product. The only way out of M is the bin.
 **Expected:** Tap the size, change it to L.
-**Felt:** This is the single most irritating thing in the whole trip, and it's the most ordinary thing a person does. Getting the size wrong is not an edge case — it's the normal reason anyone opens their bag again. To fix a letter I have to delete the line, remember which product it was, find it, pick the size, pick the colour again, and add it back. Nothing about it is hard, it's just four minutes of being treated like I'd changed my mind about the whole shirt.
+**Felt:** This is the single most irritating thing in the whole trip, and it's the most ordinary thing a person does. Getting the size wrong is not an edge case — it's the normal reason anyone opens their bag again. To fix a letter I have to delete the line, remember which product it was, find it, pick the size, pick the colour again, and add it back. Nothing about it is hard — it's about fifteen seconds and four taps — but it treats a wrong letter as though I'd changed my mind about the whole shirt, and it walks me past the broken bag count on the way.
 **Next:** continued
 
 ### Step 16 — Binned the tee, and the header stopped telling the truth
@@ -166,7 +166,7 @@ Worth saying: the shipping bar never once tempted me into spending more, in eith
 
 ### Step 23 — Checkout, and stopped there
 **Did:** Tapped `Check out`. Waited.
-**Got:** About nine seconds of waiting, then a completely different website: white, blue links, rounded boxes, a `CROOKSLDN` wordmark in a normal sans-serif at the top. `Order summary` with `£91.00` beside it. `Express checkout`, `OR`, `Contact`, `Email or mobile phone number` with `Keep me updated.` already ticked for me, then `Delivery`, `Country/Region — United Kingdom`, name and address fields. (`audit/screens/08-28-checkout.png`, `08-29-checkout-full.png`)
+**Got:** A pause, then a completely different website: white, blue links, rounded boxes, a `CROOKSLDN` wordmark in a normal sans-serif at the top. `Order summary` with `£91.00` beside it. `Express checkout`, `OR`, `Contact`, `Email or mobile phone number` with `Keep me updated.` already ticked for me, then `Delivery`, `Country/Region — United Kingdom`, name and address fields. (`audit/screens/08-28-checkout.png`, `08-29-checkout-full.png`)
 **Expected:** The £91, and a form.
 **Felt:** Two things. The £91.00 is right at the top and matches, which is the only thing I actually needed. But everything the last ten minutes built — the black, the mono, the evidence-log thing — is gone at the door, and it goes from "small London label with a strong idea" to "a Shopify store" in one tap. It's still trustworthy, it's just not *theirs* any more. And the marketing tick-box being pre-ticked is a small cheek on a site that has otherwise been notably straight with me.
 **Next:** stopped here deliberately — nothing entered, nothing submitted
