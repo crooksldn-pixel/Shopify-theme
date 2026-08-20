@@ -1,3 +1,22 @@
 identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
 [  6.9s] bag before 0
 [  6.9s] in-page ADD TO BAG count 0
+[ 67.3s] in-page ADD TO BAG box null
+[ 77.3s] in-page click threw: locator.click: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for locator('form[action*="/cart/add"] button, main b
+[ 77.3s] click took ms 10001
+[ 79.8s] bag after in-page add 0
+[ 80.3s] SHOT audit/screens/01-13-added-inpage.png
+[ 80.3s] FIXED THINGS NOW [{"cls":"crk-stickybar","top":775,"h":69,"t":"GREY WASH YARD JEANS £60.00 · M ADD TO BAG CHECKOUT NOW"}]
+[ 80.3s] BUTTON LABEL NOW ["ADD TO BAG :: crk-btn","ADD TO BAG :: crk-btn"]
+[ 80.7s] CART STATE {"count":0,"total":0,"items":[]}
+[ 86.3s] sticky ADD TO BAG box {"x":134.15625,"y":788,"width":109.203125,"height":44}
+[ 86.3s] what is at that point? {"tag":"DIV","cls":"","t":""}
+[ 86.3s] touch tap took ms 7
+[ 88.8s] bag after sticky tap 0
+[ 89.3s] SHOT audit/screens/01-14-added-sticky.png
+[ 89.3s] FIXED THINGS NOW [{"cls":"crk-stickybar","top":775,"h":69,"t":"GREY WASH YARD JEANS £60.00 · M ADD TO BAG CHECKOUT NOW"}]
+[ 89.6s] CART STATE {"count":0,"total":0,"items":[]}
+[ 89.6s] HEADER TEXT CATALOGUE SEARCH BAG [0] LIGHT MODE MENU
+[ 90.0s] SHOT audit/screens/01-15-header-after-add.png

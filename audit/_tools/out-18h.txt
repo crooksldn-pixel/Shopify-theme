@@ -1,0 +1,9 @@
+identity {"ok":true,"gb":true}
+SHOT audit/screens/18-50-overlay.png
+game frame? undefined
+round 0 clicked RUN IT in https://7chao18p5etruwy5-100410786135.shopifyprevi
+round 0 frame text " /   CRACK THE CUFFS.10% off your first order if you do. Three tumblers. Click each one at the right moment.Run ItNot NowOne code per player. Attempts unlimited. Code expires in 20 minutes. /   / "
+round 1 clicked RUN IT in https://crackthecuffs.base44.app/?screen=game
+round 1 frame text "TAP TO STOP / 3 / TAP / 3 / TAP / 3 / TAP / 0/3 LOCKED / Tap each tumbler to lock it. No timer — take your time."
+round 2 frame text "TAP TO STOP / 7 / TAP / 7 / TAP / 7 / TAP / 0/3 LOCKED / Tap each tumbler to lock it. No timer — take your time."
+round 2 no RUN IT found
