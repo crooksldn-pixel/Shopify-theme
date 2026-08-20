@@ -85,9 +85,41 @@
     var buttons = root.querySelectorAll('.crk-filter[data-crk-filter]');
     var cells = root.querySelectorAll('.crk-log__cell');
     var empty = root.querySelector('.crk-log__empty');
+    var count = root.querySelector('[data-crk-count]');
     if (!buttons.length || !cells.length) return;
 
-    function apply(cat) {
+    /* The chosen category lives in the URL so it survives leaving the page.
+       Filter to DENIM, open a piece, press Back, and the register used to come
+       back showing everything — which punishes the exact comparison behaviour
+       the numbered list invites. replaceState rather than pushState: the filter
+       is a view of one page, not a place, so it should not cost a Back press
+       each time it changes. The hash is preserved, because dropping it is how
+       in-page anchors quietly died elsewhere in this codebase. */
+    var PARAM = 'cat';
+
+    function knownCategory(cat) {
+      if (!cat) return false;
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].getAttribute('data-crk-filter') === cat) return true;
+      }
+      return false;
+    }
+
+    function readParam() {
+      try { return new URLSearchParams(window.location.search).get(PARAM); }
+      catch (e) { return null; }
+    }
+
+    function writeParam(cat) {
+      try {
+        var u = new URL(window.location.href);
+        if (!cat || cat === 'ALL') u.searchParams.delete(PARAM);
+        else u.searchParams.set(PARAM, cat);
+        window.history.replaceState(null, '', u.pathname + u.search + u.hash);
+      } catch (e) { /* older browser: filtering still works, it just will not persist */ }
+    }
+
+    function apply(cat, remember) {
       var shown = 0;
       for (var i = 0; i < cells.length; i++) {
         var match = cat === 'ALL' || cells[i].getAttribute('data-crk-category') === cat;
@@ -99,14 +131,20 @@
         buttons[b].setAttribute('aria-pressed', on ? 'true' : 'false');
       }
       if (empty) empty.hidden = shown !== 0;
+      // The header counted the whole register whatever was on screen.
+      if (count) count.textContent = shown;
+      if (remember) writeParam(cat);
     }
 
     for (var b = 0; b < buttons.length; b++) {
       buttons[b].addEventListener('click', function (e) {
-        apply(e.currentTarget.getAttribute('data-crk-filter'));
+        apply(e.currentTarget.getAttribute('data-crk-filter'), true);
       });
     }
     if (empty) empty.hidden = true;
+
+    var restore = readParam();
+    if (knownCategory(restore)) apply(restore, false);
   }
 
   /* ---------- catalogue view mode: PRODUCT / MODEL ---------- */

@@ -1761,6 +1761,52 @@ Fetching a preview theme needs `-L` with a cookie jar; `?preview_theme_id=` 302s
 and sets a cookie, so a plain curl returns 0 bytes.
 
 **Noticed while verifying:** the storefront now renders **12** products, not 14.
-3 CLIVES TEE and BROADCAST TEE have been archived since this morning. That makes
-the register header's stale "14 ITEMS" — audit A7 — wrong on the shelf as well
-as wrong under filtering.
+3 CLIVES TEE and BROADCAST TEE were archived at some point today.
+
+---
+
+## 2026-08-20 — Audit A7: the register forgets, and miscounts
+
+Two findings, one initialiser.
+
+### The count ignored the filter
+
+*"'14 ITEMS' header never updates when filters narrow the register"* (19 +
+homepage agent). The number itself was never wrong — it counts the products
+actually rendered, and reads 12 today because two tees were archived this
+morning. It simply took no notice of filtering, so DENIM showed two cards under
+a header claiming twelve.
+
+The number is now its own element with `data-crk-count`, and `apply()` already
+had the figure — it was computing `shown` to decide whether to reveal the empty
+state and then throwing it away. The label stays in Liquid so it does not have
+to exist twice.
+
+### The filter reset on Back
+
+*"punishes exactly the comparison behaviour the register invites"* (10, 19 +
+Phase 1). Filter to DENIM, open a piece, press Back, and everything is showing
+again.
+
+The category now lives in the URL as `?cat=`. `replaceState`, not `pushState`:
+the filter is a view of one page rather than a place, so it should not cost a
+Back press every time it changes — and the URL the shopper leaves from already
+carries the filter, which is the whole point. The fragment is preserved, because
+dropping it is precisely how in-page anchors died in `crooks-record.js` earlier
+today.
+
+`cat` rather than `filter` deliberately: Shopify's own faceted filtering uses
+`filter.*` parameters, and a bare `filter` sitting next to them is asking for a
+collision later.
+
+An unknown `?cat=` value is ignored rather than hiding everything — a stale or
+hand-edited link shows the full register instead of an apparently empty shop.
+
+### Verified
+
+22 assertions across three separate page loads — clean, `?cat=DENIM`, and
+`?cat=BOGUS` — covering the count following the filter, the URL being written
+and cleared, ALL clearing the param rather than storing "ALL", the hash
+surviving, restore-on-load, and an unknown category degrading safely. Then
+confirmed on the deployed page: header reads `12 ITEMS` against 12 rendered
+cards, with filters ALL / T-SHIRT / DENIM / SWEATS / ACCESSORIES.

@@ -125,7 +125,11 @@
         <p class="crk-eyebrow">{{ section.settings.subheading }}</p>
       {%- endif -%}
       {%- if crk_show_count -%}
-        <span class="crk-log__count crk-micro">{{ crk_total }} {{ section.settings.count_label }}</span>
+        {%- comment -%}
+          The number is its own element so the filter can rewrite it without
+          the label having to exist twice — once here and once in JS.
+        {%- endcomment -%}
+        <span class="crk-log__count crk-micro" aria-live="polite"><span data-crk-count>{{ crk_total }}</span> {{ section.settings.count_label }}</span>
       {%- endif -%}
     </header>
 
