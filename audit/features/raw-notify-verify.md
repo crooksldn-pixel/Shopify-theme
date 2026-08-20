@@ -5,9 +5,9 @@ Scope: settle the conflict between the `pdp-core` census (Claim A) and the follo
 BACK`. Product under test `/products/v2-baggies`; `/products/v2-baggies.js` confirms
 **XS available, S available, M / L / XL `available=false`** — the sold-out sizes are genuine.
 
-Four browser runs: `audit/_tools/notifyv1.mjs`, `notifyv2.mjs`, `notifyv3.mjs` (no-JS, wedged —
-see the last entry), `notifyv4.mjs`. Raw logs `audit/_tools/out-notifyv1.txt`, `out-notifyv2.txt`,
-`out-notifyv4.txt`.
+Five browser runs: `audit/_tools/notifyv1.mjs`, `notifyv2.mjs`, `notifyv3.mjs` (no-JS, wedged),
+`notifyv4.mjs` (bot-blocked, `429`), `notifyv5.mjs`. Raw logs `out-notifyv1.txt`,
+`out-notifyv2.txt`, `out-notifyv5.txt` in `audit/_tools/`.
 
 ## Ruling
 
@@ -19,13 +19,17 @@ the test harness, not of the site.**
   does not reproduce for a shopper even once.
 - Claim A's blank white hCaptcha panel reproduces **exactly**, every time, and nothing is ever
   posted to `/contact`.
-- But the blank panel is **not the theme's doing and is very probably not shopper-facing**: the
-  identical blank panel, from the identical hCaptcha code, appears on this store's own stock
-  `/pages/contact` form, which the theme's notify feature has nothing to do with. hCaptcha
-  fetched a real challenge (prompt string and 18 challenge tiles are inside the frame), then
-  hCaptcha's own script set `display: none !important` on its challenge frame and left its own
-  white container on screen, with the internal error `Please try again.  ⚠️`. That is a captcha
-  refusing an automated browser on a datacentre IP, which is not a shopper fault.
+- But the blank panel is **not the theme's doing and is very probably not shopper-facing**. Three
+  things say so. (i) The identical blank panel appears on this store's own **stock, untouched
+  `/pages/contact` form** — the theme's notify feature has nothing to do with that one. (ii) A
+  real challenge is fetched every time — the prompt string is sitting inside the frame
+  (`Tap on each animal that lives up in trees`; on another run `Put the missing piece in the
+  correct place to complete the chain`) — alongside hCaptcha's own error `Please try again.  ⚠️`,
+  and it is **hCaptcha's own script** that then hides its challenge frame with
+  `display: none !important`, leaving its own white container behind. (iii) Removing the browser's
+  automation tells changed hCaptcha's behaviour — the challenge frame laid out at full size
+  instead of collapsing — which is not something a page's markup can influence. That is a captcha
+  refusing an automated browser on a datacentre IP.
 - So the honest position on the feature: **selection works, the form is real and correctly
   addressed, and I could not prove the submit path either works or fails for a human.** It
   should not be reported as a dead restock-capture feature. It should be reported as untested at
