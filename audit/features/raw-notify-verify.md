@@ -14,8 +14,8 @@ see the last entry), `notifyv4.mjs`. Raw logs `audit/_tools/out-notifyv1.txt`, `
 **Claim A is right about the shopper-facing behaviour. Claim B is wrong — it is an artefact of
 the test harness, not of the site.**
 
-- A real thumb selects a sold-out size perfectly, in **9 of 9** conditions tried (cookie banner
-  left alone / accepted / declined × three phone heights). Claim B's "the size will not select"
+- A real thumb selects a sold-out size perfectly — **ten attempts out of ten**, with the cookie
+  banner up and with it dismissed, on three phone heights. Claim B's "the size will not select"
   does not reproduce for a shopper even once.
 - Claim A's blank white hCaptcha panel reproduces **exactly**, every time, and nothing is ever
   posted to `/contact`.
@@ -29,8 +29,8 @@ the test harness, not of the site.**
 - So the honest position on the feature: **selection works, the form is real and correctly
   addressed, and I could not prove the submit path either works or fails for a human.** It
   should not be reported as a dead restock-capture feature. It should be reported as untested at
-  the last step, plus two things that *are* real and shopper-facing (below): the panel promises
-  the shopper nothing, and the `NOTIFY ME` button is clipped by the sticky bar.
+  the last step, plus the one thing that *is* real and shopper-facing (below): the panel takes an
+  address and promises the shopper nothing whatsoever in return.
 
 ---
 
