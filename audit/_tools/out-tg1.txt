@@ -1,0 +1,121 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+--- A: initial state on PDP {"theme":null,"outline":null,"ssTheme":null,"ssOutline":"on","lsTheme":null,"htmlBg":"rgba(0, 0, 0, 0)","bodyBg":"rgb(11, 10, 14)","scrollY":0}
+A: add-to-bag failed: locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /^M$/ }).first()[22m
+--- B: theme-ish controls on PDP (drawer closed): [
+ {
+  "tag": "BUTTON",
+  "text": "LIGHT MODE",
+  "aria": null,
+  "pressed": "false",
+  "cls": "crk-header__link",
+  "data": "data-crk-theme-toggle=\"\" data-crk-to-light=\"LIGHT MODE\" data-crk-to-dark=\"DARK MODE\"",
+  "visible": true
+ }
+]
+B: drawer opened. controls now: [
+ {
+  "tag": "BUTTON",
+  "text": "LIGHT MODE",
+  "aria": null,
+  "pressed": "false",
+  "cls": "crk-header__link",
+  "data": "data-crk-theme-toggle=\"\" data-crk-to-light=\"LIGHT MODE\" data-crk-to-dark=\"DARK MODE\"",
+  "visible": true
+ }
+]
+B: drawer visible text:
+MENU
+
+CLOSE
+SHOP
+ALL
+NEW
+TEES
+DENIM
+SWEATS
+TRACKSUITS
+ACCESSORIES
+TRACKING
+QUESTIONS
+TERMS
+CONTACT
+PLAY CASE:001 NOW
+CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below.
+ACCOUNTBAG
+ [0]
+audit/screens/toggles-edge-B-drawer-dark.png
+FATAL locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('[data-crk-theme-toggle]').first()[22m
+[2m    - locator resolved to <button type="button" aria-pressed="false" class="crk-header__link" data-crk-theme-toggle="" data-crk-to-dark="DARK MODE" data-crk-to-light="LIGHT MODE">LIGHT MODE</button>[22m
+[2m  - attempting click action[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is visible, enabled and stable[22m
+[2m      - scrolling into view if needed[22m
+[2m      - done scrolling[22m
+[2m      - <a class="crk-drawer__link" href="/collections/frontpage">SHOP</a> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m    - retrying click action[22m
+[2m    - waiting 20ms[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is visible, enabled and stable[22m
+[2m      - scrolling into view if needed[22m
+[2m      - done scrolling[22m
+[2m      - <a class="crk-drawer__link" href="/collections/frontpage">SHOP</a> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m    - retrying click action[22m
+[2m      - waiting 100ms[22m
+[2m    - waiting for element to be visible, enabled and stable[22m
+[2m    - element is not stable[22m
+[2m  12 × retrying click action[22m
+[2m       - waiting 500ms[22m
+[2m       - waiting for element to be visible, enabled and stable[22m
+[2m       - element is visible, enabled and stable[22m
+[2m       - scrolling into view if needed[22m
+[2m       - done scrolling[22m
+[2m       - <div class="crk-drawer__head">…</div> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m     - retrying click action[22m
+[2m       - waiting 500ms[22m
+[2m       - waiting for element to be visible, enabled and stable[22m
+[2m       - element is visible, enabled and stable[22m
+[2m       - scrolling into view if needed[22m
+[2m       - done scrolling[22m
+[2m       - <a class="crk-drawer__link" href="/collections/frontpage">SHOP</a> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m     - retrying click action[22m
+[2m       - waiting 500ms[22m
+[2m       - waiting for element to be visible, enabled and stable[22m
+[2m       - element is visible, enabled and stable[22m
+[2m       - scrolling into view if needed[22m
+[2m       - done scrolling[22m
+[2m       - <a class="crk-drawer__link" href="/collections/frontpage">SHOP</a> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m     - retrying click action[22m
+[2m       - waiting 500ms[22m
+[2m       - waiting for element to be visible, enabled and stable[22m
+[2m       - element is visible, enabled and stable[22m
+[2m       - scrolling into view if needed[22m
+[2m       - done scrolling[22m
+[2m       - <div class="crk-drawer__head">…</div> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m  - retrying click action[22m
+[2m    - waiting 500ms[22m
+[2m    - waiting for element to be visible, enabled and stable[22m
+[2m    - element is visible, enabled and stable[22m
+[2m    - scrolling into view if needed[22m
+[2m    - done scrolling[22m
+[2m    - <div class="crk-drawer__head">…</div> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m  - retrying click action[22m
+[2m    - waiting 500ms[22m
+[2m    - waiting for element to be visible, enabled and stable[22m
+[2m    - element is visible, enabled and stable[22m
+[2m    - scrolling into view if needed[22m
+[2m    - done scrolling[22m
+[2m    - <a class="crk-drawer__link" href="/collections/frontpage">SHOP</a> from <div role="dialog" id="crk-drawer" aria-modal="true" class="crk-drawer" data-crk-drawer="" aria-label="Main menu">…</div> subtree intercepts pointer events[22m
+[2m  - retrying click action[22m
+[2m    - waiting 500ms[22m
+ locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('[data-crk-theme-toggle]').first()[22m
+[2m    - locator resolved to <button type="button" aria-pressed="false" class="crk-header__link" data-crk-theme-toggle="" data-crk-to-dark="DARK MODE" data-crk-to-light="LIGHT MODE">LIGHT MODE</button>[22m
+[2m  - attempting click action[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is visible, enabled and stable[22m
+[2m     
