@@ -3,3 +3,19 @@ identity {"crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Stagi
 ===== THE TAP THAT MISSES =====
 the purple CATALOGUE button was clear and mine to tap at {"cx":82,"cy":435,"clear":true,"topText":"CATALOGUE","at":1556}
 what I was looking at: audit/screens/14-tap-aim.png
+at 3690 ms my thumb arrived on: {"tag":"A","text":"CATALOGUE","href":"#products"}
+what was there when it arrived: audit/screens/14-tap-landed.png
+url now https://7chao18p5etruwy5-100410786135.shopifypreview.com/#products
+after the tap: audit/screens/14-tap-after.png
+same spot, second look: {"tag":"H2","text":"COOKIE CONSENT","href":null}
+
+===== THE BUTTON THAT CHANGES ITS MIND =====
+  t=2746ms  buttons: [["SELECT A SIZE",994,true],["ADD TO BAG",744,false]] readyState interactive
+  >>> screenshot of the live-looking ADD TO BAG: audit/screens/14-btn-add.png
+  t=5500ms  buttons: [["SELECT A SIZE",1016,true],["SELECT A SIZE",744,true]] readyState interactive
+  >>> it has turned into SELECT A SIZE: audit/screens/14-btn-select.png
+first ADD TO BAG at 2746 ms; sequence: 2746ms [["SELECT A SIZE",994,true],["ADD TO BAG",744,false]] | 5500ms [["SELECT A SIZE",1016,true],["SELECT A SIZE",744,true]]
+final: audit/screens/14-btn-final.png
+READABLE: "← CATALOGUE PRODUCT 09 / 12 SWEATS PHOTO 1 OF 2 GREY CONVICT SWEATS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order before 18:00 and it ships today (Mon–Sat) Ordered now — leaves tomorrow SELECT A SIZE SPECIFICATION + ITEM DESCRIPTION + MEASUREMENTS + CHAIN OF CUSTODY — SHIPPING & RETURNS + MORE FROM THIS DROP CHARCOAL CELLBLOCK CREWNECK £50.00 CHARCOAL CELLBLOCK SHORTS £45.00 GREY CONVICT SWEATS £60.00 SELECT A SIZE CHECKOUT NOW"
+
+===== DONE =====
