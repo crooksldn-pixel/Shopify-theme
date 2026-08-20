@@ -378,12 +378,12 @@ reached only after scrolling).
 
 **Did:** on a fresh browser profile, in this order:
 
-**t = 0 – 1.2s.** The page paints: status bar, header, hero, catalogue grid.
-Nothing is covering anything.
-
-**t ≈ 1.2s.** A **`COOKIE CONSENT`** panel arrives, fixed to the bottom of the
-screen at `y=485` in an 844px viewport — **43% of the first screen**. It reads,
-in full:
+**First look, ~1.2s in.** The page has painted — status bar, header, hero,
+catalogue grid — and a **`COOKIE CONSENT`** panel is already on it, fixed to the
+bottom of the screen at `y=485` in an 844px viewport: **43% of the first
+screen**. It was there at my first observation and at every observation after
+it, so effectively it is part of the arrival, not something that lands later.
+It reads, in full:
 
 > `COOKIE CONSENT`
 > `We and our partners, including Shopify, use cookies and other technologies to

@@ -1,1 +1,155 @@
 identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+========== 1 RETURNS CLAUSE ==========
+opened CHAIN OF CUSTODY — SHIPPING & RETURNS
+−
+shot audit/screens/03-09-custody-returns.png
+CUSTODY: CHAIN OF CUSTODY — SHIPPING & RETURNS
+−
+01 LOGGED
+
+Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day.
+
+02 DISPATCHED
+
+Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70.
+
+03 IN TRANSIT
+
+Tracking issued by email. UK 1–2 working days. International 7–14 working days.
+
+04 DELIVERED
+
+You have 14 days from delivery to return unworn goods with tags attached. Return postage is yours unless we sent the wrong thing or it arrived faulty. Start a return by email: crooksldn@gmail.com.
+
+========== 2 UNIT PERSISTENCE ==========
+units on jeans after choosing IN: cm=false in=true
+units on the OTHER jeans after arriving: cm=true in=false
+BLUE WASH OG JEANS table as it arrives: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+shot audit/screens/03-21-other-jeans-measurements.png
+BLUE DESC: ITEM DESCRIPTION
+−
+
+OG jeans — blue wash, for the record.
+
+14oz denim, OG straight cut, mid rise. Structured, not baggy.
+
+Made in Portugal.
+
+========== 3 FAQ EXCHANGES ==========
+opened DO YOU DO EXCHANGES?
+shot audit/screens/03-22-faq-exchanges.png
+EXCHANGES ANSWER: DO YOU DO EXCHANGES?
+
+Yes. You pay the postage sending the original back to us. There is no fee for the swap itself, and we cover the postage sending the new size out to you. Start it in the returns centre and say which size you want — swaps depend on that size being in stock, and if it is not we refund you instead.
+
+RETURNS AND REFUNDS
+CAN I RETURN SOMETHING?
+WHEN WILL I GET MY REFUND?
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHODS DO YOU TAKE?
+DO I NEED AN ACCOUNT TO ORDER?
+CAN I CHANGE OR CANCEL MY ORDER?
+
+Still stuck? Email crooksldn@gmail.com or DM @crooksldn with your order number. We reply within 1–2 working days. The full trading terms are on t
+opened CAN I RETURN SOMETHING?
+RETURN ANSWER: CAN I RETURN SOMETHING?
+
+Yes. Start your return here — it takes your order number and email. You have 14 days from delivery to tell us, and 14 days from then to post it back, unworn and with tags attached. Return postage is yours — change of mind, wrong size, a swap, any reason of your own. We only cover it if the item was faulty or we sent the wrong thing.
+
+Full detail is on the terms page.
+
+WHEN WILL I GET MY REFUND?
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHODS DO YOU TAKE?
+DO I NEED AN ACCOUNT TO ORDER?
+CAN I CHANGE OR CANCEL MY ORDER?
+
+Still stuck? Email crooksldn@gmail.com or DM @crooksldn with your order number. We reply within 1–2 working days
+shot audit/screens/03-23-faq-returns.png
+opened HOW DO I KNOW WHAT SIZE TO BUY?
+SIZE ANSWER: HOW DO I KNOW WHAT SIZE TO BUY?
+
+Where a piece has been measured, its product page carries a measurements table — tap SIZE GUIDE next to the size buttons. Everything is measured with the garment laid flat, and you can switch the table between centimetres and inches.
+
+If the piece you want is not listed yet, message us and we will measure it for you.
+
+DO YOU DO EXCHANGES?
+RETURNS AND REFUNDS
+CAN I RETURN SOMETHING?
+WHEN WILL I GET MY REFUND?
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHODS DO YOU TAKE?
+DO I NEED AN ACCOUNT TO ORDER?
+CAN I CHANGE OR CANCEL MY ORDER?
+
+Still stuck? Email crooksldn@gmail.com or DM @crooksldn with your order number. We reply w
+shot audit/screens/03-17-faq-sizing.png
+
+========== 4 CONTACT ==========
+CONTACT: CONTACT
+Name
+Email*
+Phone
+Comment
+Submit
+shot audit/screens/03-24-contact.png
+
+========== 5 DECISION ==========
+shot audit/screens/03-25-size-m.png
+MAIN: ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+shot audit/screens/03-26-final-look.png
+bag count:  [0]
