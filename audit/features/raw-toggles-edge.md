@@ -160,6 +160,12 @@ reload it agreed exactly: `Cart 2`, and the carriage line changed to
 `Check out` believing there is one item in the bag when the server has two)
 **Evidence:** audit/screens/tge-4-tab2-stale.png, audit/screens/tge-4-tab2-after-reload.png
 
+### JavaScript off, 200% zoom, landscape
+**Status at time of filing:** the batched run covering these three was still queued behind the
+store's bot protection (three consecutive `429`s on session entry across ~40 minutes; the
+harness backs off rather than hammering). Results are appended below as they land; anything
+still blank here was **not tested**.
+
 ---
 
 ## Surprises
