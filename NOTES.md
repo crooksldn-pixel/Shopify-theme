@@ -1379,3 +1379,35 @@ pasting into Settings → Policies instead.
    was faulty or wrongly sent."* That sentence predates this change and was left
    alone, but it is the one line here that a trading-standards complaint would
    land on. George's call, and worth an actual solicitor's eye rather than mine.
+
+### 2026-08-20 (later) — `templates/product.crooks.json` corrected
+
+George: *"fix"*, on the landmine flagged in the entry above.
+
+The file was older than the flagged lines suggested. Everything in it predated
+the jargon cleanup and the shipping-copy pass:
+
+| | was | now |
+|---|---|---|
+| custody 01 | "Dispatch within 24 hours" | the real 18:00 cutoff, Mon–Sat |
+| custody 02 | **"Free UK shipping on every order"** — false | over £20, Tracked 24 over £70 |
+| custody labels | `LOGGED` / `DISPATCHED` / `IN TRANSIT` / `DELIVERED` | sentence case, matching the live template |
+| `collection` | `frontpage` (23 products) | `all` (14) — this is the denominator in `PRODUCT 09 / 14` |
+| `back_label` | `← RETURN TO LOG` | `← Catalogue` |
+| `exhibit_word` | `EXHIBIT` | `PRODUCT` |
+| `photo_label` / `gallery_label` | shouty | sentence case |
+| `show_wash` | set — **the setting no longer exists in the schema** | removed |
+| `case_word`, `show_texture`, `related_heading` | absent | present |
+| carriage bar | absent | added, so the template is a usable twin |
+
+Verified by diffing the parsed JSON against `product.json`: order, main settings,
+all four custody blocks and the carriage section now compare equal, and neither
+template carries a setting id the schema does not declare.
+
+**The deeper problem is not fixed.** This file is a redundant duplicate —
+`product.json` already renders `crooks-exhibit-record` for every product, and no
+product carries the `crooks` suffix. Its only failure mode is drift, and
+correcting a duplicate is precisely what guarantees the next drift: every copy
+change now has to be made in two places or this file goes stale again, exactly
+as it did here. Deleting it removes the class of bug. Left in place because the
+instruction was "fix", and deletion is the owner's call under §0.

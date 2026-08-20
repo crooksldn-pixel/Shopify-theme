@@ -102,8 +102,9 @@ Order is render order. `crooks-*` entries are ours; unprefixed entries are Horiz
 
 **Alternate templates kept as fallbacks, currently unreferenced by any product or
 collection:** `product.horizon.json`, `collection.horizon.json`,
-`search.horizon.json`. `product.crooks.json` is a second Crooks PDP template
-(same section, fewer persisted settings) available as a `template_suffix`.
+`search.horizon.json`. `product.crooks.json` is a second Crooks PDP template,
+now byte-identical in settings and custody copy to `product.json`, available as
+a `template_suffix`. Nothing uses it.
 
 **Sections that exist but are in no template** — dormant, not dead:
 `crooks-board-test` (the canvas board's isolated harness),
@@ -630,9 +631,10 @@ and 200%-zoom checks — the two things proven easiest to break silently.
   within the UK"*, which the Terms and Questions pages no longer say. The
   corrected text has been handed over to paste into Settings → Policies; this
   connection lacks the `write_legal_policies` scope to do it directly.
-- **O6** — `templates/product.crooks.json` is unused but claims *"Free UK
-  shipping on every order"* and *"Dispatch within 24 hours"*, both false.
-  Correct it or delete it before anyone assigns that template suffix.
+- **O6** — `templates/product.crooks.json` carried false shipping and dispatch
+  claims; corrected 2026-08-20 to be a faithful twin of `product.json`. It is
+  still a redundant duplicate whose only failure mode is drift — deleting it
+  would remove the class of bug entirely. Owner's call.
 - **O7** — Terms c6 and FAQ q10 say original shipping charges are not refunded
   on a change-of-mind return. UK CCR 2013 requires refunding the basic
   outbound rate. Pre-existing, deliberately left alone, needs a legal eye.

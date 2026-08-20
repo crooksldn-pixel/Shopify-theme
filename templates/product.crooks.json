@@ -1,28 +1,34 @@
 {
   "sections": {
+    "carriage": {
+      "type": "crooks-cart-progress",
+      "settings": {}
+    },
     "main": {
       "type": "crooks-exhibit-record",
       "blocks": {
-        "s1": { "type": "custody_step", "settings": { "label": "LOGGED", "body": "Orders are logged same day. Dispatch within 24 hours, Monday to Saturday." } },
-        "s2": { "type": "custody_step", "settings": { "label": "DISPATCHED", "body": "Shipped with Royal Mail Tracked. Free UK shipping on every order." } },
-        "s3": { "type": "custody_step", "settings": { "label": "IN TRANSIT", "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days." } },
-        "s4": { "type": "custody_step", "settings": { "label": "DELIVERED", "body": "You have 14 days from delivery to return unworn goods with tags attached. Return postage is yours unless we sent the wrong thing or it arrived faulty. Start a return by email: crooksldn@gmail.com." } }
+        "s1": { "type": "custody_step", "settings": { "label": "Logged", "body": "Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day." } },
+        "s2": { "type": "custody_step", "settings": { "label": "Dispatched", "body": "Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70." } },
+        "s3": { "type": "custody_step", "settings": { "label": "In transit", "body": "Tracking issued by email. UK 1–2 working days. International 7–14 working days." } },
+        "s4": { "type": "custody_step", "settings": { "label": "Delivered", "body": "You have 14 days from delivery to return unworn goods with tags attached. Return postage is yours unless we sent the wrong thing or it arrived faulty. Start a return by email: crooksldn@gmail.com." } }
       },
       "block_order": ["s1", "s2", "s3", "s4"],
       "settings": {
-        "collection": "frontpage",
-        "back_label": "← RETURN TO LOG",
-        "exhibit_word": "EXHIBIT",
-        "photo_label": "PHOTO [i] OF [n]",
-        "gallery_label": "EVIDENCE PHOTOGRAPHY",
+        "collection": "all",
+        "back_label": "← Catalogue",
+        "exhibit_word": "PRODUCT",
+        "case_word": "CASE",
+        "show_texture": true,
+        "photo_label": "Photo [i] of [n]",
+        "gallery_label": "Evidence photographs",
         "low_stock_threshold": 3,
         "spec_open": false,
         "provenance_open": false,
         "measure_open": false,
         "custody_open": false,
-        "show_wash": true
+        "related_heading": "More from this drop"
       }
     }
   },
-  "order": ["main"]
+  "order": ["carriage", "main"]
 }
