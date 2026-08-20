@@ -18,8 +18,8 @@ That is the complete cycle. It repeats every 16 seconds, on every page I opened
 ### Rotation, and how the cadence feels
 **Should:** Rotate between the configured messages.
 **Did:** It rotates. I watched the bar for 46 seconds without touching anything and
-timed six flips: `7952, 7999, 7999, 8000, 8000` ms apart — eight seconds a line,
-sixteen seconds for the whole loop. The swap is instant, no fade, no slide: one
+timed the gaps between changes: `7952, 7999, 7999, 8000, 8000` ms — eight seconds a
+line, sixteen seconds for the whole loop. The swap is instant, no fade, no slide: one
 line is replaced by the other between blinks. With only two messages, a shopper
 who glances up twice in half a minute sees the same two sentences.
 
@@ -48,7 +48,7 @@ in the register, is only reachable through the set toggle on a product page, and
 page carries no `PRODUCT n / N` line at all — so nothing on screen contradicts "12".
 The number is right against everything a shopper can see and count.
 **Verdict:** works
-**Evidence:** audit/screens/status-bar-x-pdp-top.png (ticker + `PRODUCT 05 / 12` in one frame), audit/screens/status-bar-x-h-landscape.png (`ALL … 12 ITEMS`), audit/screens/status-bar-x-pdp-index.png (`PRODUCT 01 / 12`), audit/screens/status-bar-x-set-pdp.png (`CELLBLOCK SET £85.00`, no index line)
+**Evidence:** audit/screens/status-bar-x-count-vs-register.png (`12 PRODUCTS CURRENTLY ONLINE` in the bar and `12 ITEMS` in the register, one frame), audit/screens/status-bar-x-pdp-top.png (ticker + `PRODUCT 05 / 12` in one frame), audit/screens/status-bar-x-pdp-index.png (`PRODUCT 01 / 12`), audit/screens/status-bar-x-set-pdp.png (`CELLBLOCK SET £85.00`, no index line)
 
 ### Pause on hover
 **Should:** Rotation stops while the pointer is on the bar.
@@ -135,7 +135,7 @@ of those 376, so it is not what keeps product off the fold. On a landscape phone
 picture is worse but not mainly its fault: bar, header and the `ALL / 12 ITEMS` band
 fill the top, and the cookie sheet takes the rest, leaving no product visible at all.
 **Verdict:** works (the vertical cost is real but small)
-**Evidence:** audit/screens/status-bar-x-h-landscape.png (nothing purchasable above the fold), audit/screens/status-bar-x-scrolled.png (bar and header gone after a short scroll), audit/screens/status-bar-x-collection-all.png
+**Evidence:** audit/screens/status-bar-x-h-landscape.png (nothing purchasable above the fold), audit/screens/status-bar-x-scrolled-clean.png and audit/screens/status-bar-x-scrolled-clean-9s.png (bar and header gone after a 900px scroll, and still gone nine seconds later), audit/screens/status-bar-x-collection-all.png (bar and `12 ITEMS` on the catalogue)
 
 ---
 
@@ -180,7 +180,7 @@ promise.
 - **The `[count]` line is redundant on both pages it appears on.** `12 PRODUCTS CURRENTLY
   ONLINE` sits ~280px above `> 12 PRODUCTS AVAILABLE TO PURCHASE` on the homepage and
   above `12 ITEMS` on the catalogue. Half the ticker's airtime restates what is already
-  on screen. (audit/screens/status-bar-x-home-top.png, audit/screens/status-bar-x-h-landscape.png)
+  on screen. (audit/screens/status-bar-x-count-vs-register.png, audit/screens/status-bar-x-home-top.png)
 - **The `£20` free-shipping threshold exists nowhere else on the shopping path.** Not on
   the product page, not inside the opened `CHAIN OF CUSTODY — SHIPPING & RETURNS`
   accordion, not on the empty cart page. (audit/screens/status-bar-x-pdp-custody-open.png,

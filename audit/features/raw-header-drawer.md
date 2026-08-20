@@ -276,12 +276,22 @@ button, nothing. On a phone, closing that tab is the only route home, and a
 shopper who arrived by tapping the panel may not realise a second tab was
 opened.
 
-**On O4 (art and destination out of step): a shopper would not notice on
-arrival.** The landing screen is a title card with no game art on it, so there
-is nothing on screen to compare with the board they just tapped. What is
-visible, if anyone looks, is a version number: the game footer says
-`EVIDENCE TERMINAL v0.1` while the shop's own footer says
-`EVIDENCE TERMINAL v0.2`. That is the only tell above the fold.
+**On O4 (art and destination out of step) — would a shopper actually notice?
+No.** I followed it through. The destination's first screen is a title card with
+no game art on it at all; pressing `START CASE` gives a second text screen, a
+briefing panel, before any board appears. So there is nothing on screen to
+compare with the picture they just tapped until they are two screens deep and
+have stopped thinking about it.
+
+Two small tells exist for anyone who looks:
+
+- The game footer reads `EVIDENCE TERMINAL v0.1 // CROOKS UK`; the shop's own
+  footer reads `EVIDENCE TERMINAL v0.2`.
+- The drawer's board draws gold **£ coins**, and its own description calls them
+  coins — while the game's briefing says `> Recover 3 evidence packages.`
+
+Neither costs a sale and neither is likely to be spotted. As a shopper-facing
+problem, O4 is not one.
 
 **Verdict:** works, with no way back
 

@@ -1,0 +1,312 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+ACC MARKUP: <section class="crk-section" id="crk-custody">
+            <h2 class="crk-display crk-h" style="margin: 0;">
+              <button type="button" class="crk-section-head" data-crk-accordion="" aria-expanded="false" aria-controls="crk-custody-body">
+                <span class="crk-display crk-h">Chain of custody — shipping &amp; returns</span>
+                <span class="crk-display crk-h" aria-hidden="true" data-crk-accordion-icon="">+</span>
+              </button>
+            </h2>
+            <div class="crk-section-body" id="crk-custody-body" hidden="">
+              <ol class="crk-custody"><li>
+                    <span class="crk-label">01 Logged</span>
+                    <p class="c
+
+========== 1 JEANS ACCORDIONS [+12.5s] ==========
+clicked ^SPECIFICATION BUTTON.crk-section-head
+clicked ^ITEM DESCRIPTION BUTTON.crk-section-head
+clicked ^CHAIN OF CUSTODY BUTTON.crk-section-head
+JEANS SPEC: SPECIFICATION
+−
+FABRIC
+14oz denim
+CUT
+OG straight, mid rise
+ORIGIN
+Made in Portugal
+CARE
+Cold wash inside out. Hang dry.
+JEANS DESC: ITEM DESCRIPTION
+−
+
+OG jeans — grey wash, for the record.
+
+14oz denim, OG straight cut, mid rise. Structured, not baggy.
+
+Made in Portugal.
+JEANS CUSTODY: CHAIN OF CUSTODY — SHIPPING & RETURNS
+−
+01 LOGGED
+
+Orders placed before 18:00 are dispatched the same day, Monday to Saturday. After 18:00, the next dispatch day.
+
+02 DISPATCHED
+
+Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70.
+
+03 IN TRANSIT
+
+Tracking issued by email. UK 1–2 working days. International 7–14 working days.
+
+04 DELIVERED
+
+You have 14 days from delivery to return unworn goods with tags attached. Return postage is yours unless we sent the wrong thing or it arrived faulty. Start a return by email: crooksldn@gmail.com.
+shot audit/screens/03-09-custody-returns.png
+shot audit/screens/03-09b-custody-returns-2.png
+
+========== 2 V2 BAGGIES [+16.5s] ==========
+BAGGIES CM: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+shot audit/screens/03-12-baggies-measurements.png
+unit in: <button type="button" class="crk-unit" data-crk-unit="in" data-selected="true" aria-pressed="true">IN</button>
+BAGGIES IN: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN INCHES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	30in	29in	18in
+S	32in	30in	19in
+M	34in	30.5in	20in
+L	36in	31.5in	21in
+XL	38in	32in	22in
+shot audit/screens/03-13-baggies-inches.png
+clicked ^ITEM DESCRIPTION BUTTON.crk-section-head
+clicked ^SPECIFICATION BUTTON.crk-section-head
+BAGGIES DESC: ITEM DESCRIPTION
+−
+
+V2 Baggies — wide, full-length sweats in 500gsm cotton, heavy enough to hang straight.
+
+Made in Portugal.
+BAGGIES SPEC: SPECIFICATION
+−
+FABRIC
+500gsm cotton
+CUT
+Wide, full length
+ORIGIN
+Made in Portugal
+CARE
+Cold wash. Hang dry.
+
+========== 3 CELLBLOCK SHORTS [+26.1s] ==========
+SHORTS CM: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	FITS WAIST	LENGTH	LEG OPENING
+XS	71.1cm	49.5cm	58.4cm
+S	76.2cm	52.1cm	63.5cm
+M	81.3cm	54.6cm	68.6cm
+L	86.4cm	57.1cm	73.7cm
+XL	91.4cm	59.7cm	78.7cm
+shot audit/screens/03-14-sweat-shorts-measurements.png
+unit in: <button type="button" class="crk-unit" data-crk-unit="in" data-selected="true" aria-pressed="true">IN</button>
+SHORTS IN: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN INCHES.
+SIZE	FITS WAIST	LENGTH	LEG OPENING
+XS	28in	19.5in	23in
+S	30in	20.5in	25in
+M	32in	21.5in	27in
+L	34in	22.5in	29in
+XL	36in	23.5in	31in
+shot audit/screens/03-15-sweat-shorts-inches.png
+clicked desc BUTTON.crk-section-head
+SHORTS DESC: ITEM DESCRIPTION
+−
+
+Cellblock shorts in charcoal — 450gsm brushed fleece, relaxed cut finishing above the knee, 3D embroidery.
+
+Pairs with the Cellblock Crewneck; sold together as the Cellblock Set.
+
+Made in Portugal.
+
+========== 4 CELLBLOCK CREWNECK [+35.3s] ==========
+CREW CM: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	CHEST	LENGTH	SHOULDER	SLEEVE
+XS	109.2cm	65.4cm	47.0cm	62.2cm
+S	114.3cm	67.3cm	49.5cm	63.5cm
+M	119.4cm	69.2cm	52.1cm	64.8cm
+L	124.5cm	71.1cm	54.6cm	66.0cm
+XL	129.5cm	73.0cm	57.1cm	67.3cm
+shot audit/screens/03-16-crewneck-measurements.png
+unit in: <button type="button" class="crk-unit" data-crk-unit="in" data-selected="true" aria-pressed="true">IN</button>
+CREW IN: MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN INCHES.
+SIZE	CHEST	LENGTH	SHOULDER	SLEEVE
+XS	43in	25.7in	18.5in	24.5in
+S	45in	26.5in	19.5in	25in
+M	47in	27.2in	20.5in	25.5in
+L	49in	28in	21.5in	26in
+XL	51in	28.7in	22.5in	26.5in
+
+========== 5 FAQ [+45.0s] ==========
+FAQ HEADINGS: ENQUIRIES
+
+COMMONLY ASKED QUESTIONS
+
+The things people ask us most. If your answer is not here, message us and we will answer it — and it will probably end up on this page.
+
+DELIVERY
+WHEN WILL MY ORDER BE DISPATCHED?
+HOW LONG DOES DELIVERY TAKE?
+HOW MUCH IS SHIPPING?
+DO YOU SHIP INTERNATIONALLY?
+HOW DO I TRACK MY ORDER?
+TRACKING SAYS DELIVERED BUT I HAVE NOTHING.
+SIZING
+HOW DO I KNOW WHAT SIZE TO BUY?
+DO YOU DO EXCHANGES?
+RETURNS AND REFUNDS
+CAN I RETURN SOMETHING?
+WHEN WILL I GET MY REFUND?
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHODS DO YOU TAKE?
+DO I NEED AN ACCOUNT TO ORDER?
+CAN I CHANGE OR CANCEL MY ORDER?
+
+Still stuck? Email crooksldn@gmail.com or DM @crooksldn with your order number. We reply within 1–2 working days. The full trading terms are on the terms page.
+clicked size q SUMMARY.crk-faq__q
+FAQ AFTER SIZE CLICK: ENQUIRIES
+
+COMMONLY ASKED QUESTIONS
+
+The things people ask us most. If your answer is not here, message us and we will answer it — and it will probably end up on this page.
+
+DELIVERY
+WHEN WILL MY ORDER BE DISPATCHED?
+HOW LONG DOES DELIVERY TAKE?
+HOW MUCH IS SHIPPING?
+DO YOU SHIP INTERNATIONALLY?
+HOW DO I TRACK MY ORDER?
+TRACKING SAYS DELIVERED BUT I HAVE NOTHING.
+SIZING
+HOW DO I KNOW WHAT SIZE TO BUY?
+
+Where a piece has been measured, its product page carries a measurements table — tap SIZE GUIDE next to the size buttons. Everything is measured with the garment laid flat, and you can switch the table between centimetres and inches.
+
+If the piece you want is not listed yet, message us and we will measure it for you.
+
+DO YOU DO EXCHANGES?
+RETURNS AND REFUNDS
+CAN I RETURN SOMETHING?
+WHEN WILL I GET MY REFUND?
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHODS DO YOU TAKE?
+DO I NEED AN ACCOUNT TO ORDER?
+CAN I CHANGE OR CANCEL MY ORDER?
+
+Still stuck? Email crooksldn@gmail.com or DM @crooksldn with your order number. We reply within 1–2 working days. The full trading terms are on the terms page.
+shot audit/screens/03-17-faq-sizing.png
+clicked returns q SUMMARY.crk-faq__q
+FAQ AFTER RETURNS CLICK: ENQUIRIES
+
+COMMONLY ASKED QUESTIONS
+
+The things people ask us most. If your answer is not here, message us and we will answer it — and it will probably end up on this page.
+
+DELIVERY
+WHEN WILL MY ORDER BE DISPATCHED?
+HOW LONG DOES DELIVERY TAKE?
+HOW MUCH IS SHIPPING?
+DO YOU SHIP INTERNATIONALLY?
+HOW DO I TRACK MY ORDER?
+TRACKING SAYS DELIVERED BUT I HAVE NOTHING.
+SIZING
+HOW DO I KNOW WHAT SIZE TO BUY?
+DO YOU DO EXCHANGES?
+RETURNS AND REFUNDS
+CAN I RETURN SOMETHING?
+WHEN WILL I GET MY REFUND?
+
+Within 5–7 days of us receiving the item, back to the payment method you used. Original shipping charges are not refunded unless the item was faulty or wrongly sent, and neither is the postage you paid to send it back.
+
+MY ITEM IS FAULTY OR YOU SENT THE WRONG THING.
+ORDERS AND PAYMENT
+WHAT PAYMENT METHODS DO YOU TAKE?
+DO I NEED AN ACCOUNT TO ORDER?
+CAN I CHANGE OR CANCEL MY ORDER?
+
+Still stuck? Email crooksldn@gmail.com or DM @crooksldn with your order number. We reply within 1–2 working days. The full trading terms are on the terms page.
+shot full audit/screens/03-18-faq-full.png
+
+========== 6 REFUND POLICY [+54.9s] ==========
+REFUND: COOKIE CONSENT
+
+We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy
+
+Manage preferences
+Accept
+Decline
+Skip to content
+
+FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+LIGHT MODE
+MENU
+REFUND POLICY
+
+Returns & Refunds
+We want you in the right fit. If something's not right, we'll sort it.
+
+Changed your mind or wrong size? You have 14 days from delivery to return or exchange any unworn item with tags on. Return postage is paid by you — that covers a change of mind, the wrong size, a swap, or any other reason of your own. There is no fee for a UK size swap itself, and we cover the postage sending the new size out to you. For returns please return to: Oairo Uk Office, Bourne end Business Park, Bourne End, Buckinghamshire, United Kingdom, SL8 5AS.
+
+Faulty or wrong item? That's on us. Message us within 14 days and we'll refund or replace it in full, and we cover the postage both ways. A quick photo helps us fix it fast.
+
+How: email crooksldn@gmail.com or DM @crooksldn with your order number. We reply within 1–2 working days; approved refunds land on your original payment method within 5–7 days.
+
+Shipping: Free UK shipping over £20 (free Tracked 24 over £70). UK delivery 1–2 working days, international 7–14. Tracking sent by email.
+
+Items marked final sale are clearly labelled and can't be returned. This doesn't affect your statutory rights.
+
+SHOP
+NEW
+TEES
+DENIM
+SWEATS
+ACCESSORIES
+INFORMATION
+QUESTIONS
+TERMS
+SHIPPING
+REFUNDS
+TRACK ORDER
+CONTACT
+INSTAGRAM
+TIKTOK
+EMAIL
+GAME
+Play CROOKSLDN: The Getaway
+
+EVIDENCE TERMINAL V0.2 // CROOKSLDN // OWN THE STREETS™ // © 2026
+shot audit/screens/03-19-refund-policy.png
+
+========== 7 DECIDE [+60.9s] ==========
+shot audit/screens/03-20-back-at-jeans.png
+TOTAL [+70.0s]
