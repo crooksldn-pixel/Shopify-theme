@@ -472,9 +472,9 @@ catalogue-C01-denim-fold.png
 - **Real model photography is already on the store and the toggle ignores it.**
   `BLUE WASH OG JEANS` has a model shot as its second image; it shows on hover in
   `FLAT` and is not what `ON MODEL` uses.
-- **Filtering to a category with an odd count leaves a solid lavender slab the
-  size of a card** in the grid — visible on `SWEATS` and `ACCESSORIES` on a phone,
-  and on `T-SHIRT` and `ACCESSORIES` on desktop.
+- **Filtering to a category whose count does not fill the last row leaves a solid
+  lavender slab the size of a card** in the grid — seen on `SWEATS` and
+  `ACCESSORIES` on a phone, and on `ACCESSORIES` on a 1440px screen.
 - **The Denim collection's description is written and stored and the theme has
   nowhere to put it.** So does every other collection description, written or
   not.
