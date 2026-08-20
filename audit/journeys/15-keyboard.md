@@ -171,15 +171,17 @@ a blank white rectangle at the top-left (1) → the handcuffs logo (2) → `CATA
 
 **Bought / didn't:** Got to a filled cart with `Check out` under my finger and stopped there deliberately. Nothing on the route from the homepage to the cart was impossible by keyboard — which, for me, is a pass most shops don't get.
 
-**Total time:** About four minutes end to end. Roughly **52 key presses from landing to a full bag**, and **15 more** to reach `Check out`. Two of the first four presses were spent on things that weren't the shop.
+**Total time:** About four minutes end to end. Counted out: **48 key presses from landing to a full bag** (4 for the cookie banner, 1 Escape for the game, 8 to open the menu, 6 to a category, 11 to a product, 14 to the size, 4 to `ADD TO BAG`), **4 more** to reach the cart, **15 more** to reach `Check out`. Five of the first thirteen presses were spent on things that weren't the shop.
 
 **Worst moment:** The `CROOKSLDN: THE GETAWAY` sheet. It arrives on its own, it takes the whole screen, and while it's up Tab does nothing but cycle `RUN IT` → `NOT NOW` → `×` for as long as you press it. I'd have said out loud: *"I haven't seen a single item yet and I'm already trapped in an advert."* And the offer's own instruction — *"Click each one at the right moment"* — tells me the 10% isn't available to me before I've tried. **(Untested: whether the game itself can be played by keyboard. I read the word "click" and pressed NOT NOW.)**
 
 **Best moment:** The MENU panel. Focus went into it, sixteen controls cycled inside it, Shift-Tab wrapped round to the bottom instead of falling out, Escape closed it and **put me back on the MENU button**. Then the size row, where the arrow keys moved me along without selecting and the selected size is filled while the focused one is ringed. Both of those are things people build wrong constantly.
 
-**Would they come back?** Yes. Once the two pop-ups are behind you the shop itself is one of the better keyboard experiences I've had this year — a seven-stop header, a product card that's one stop instead of four, a gallery that's one stop instead of six, plain-English buy controls, and a ring I can see on essentially everything.
+**Would they come back?** Yes. Once the two pop-ups are behind you the shop itself is one of the better keyboard experiences I've had this year — a seven-stop header, a product card that's one stop instead of four, a gallery that's one stop instead of six, plain-English buy controls, and a ring I can see on essentially everything except the very first box.
 
 **One thing that would have changed the outcome:** Don't let the discount pop-up take the screen before I've seen a product — or at minimum, make its offer claimable without a mouse. Everything else on the route I could do; that one thing is the only place the shop actively told me it wasn't built for me.
+
+**Nothing on the route was impossible.** For the record, because the difference matters: home → menu → product → size → bag → cart is completable by keyboard end to end, and I did it. What was *awkward* — recoverable, but it cost me: the consent dialog you can only leave by Escape or by finding its × (34 Tabs got me nowhere); the game overlay that owns the whole screen until Escape or `NOT NOW`; focus being dropped to nothing after the cookie banner, after `ADD TO BAG`, and on every page load; and the two dimmest rings on the site sitting on `Remove` and `Check out`. What is *unreadable*: the skip link on every page. What is genuinely **out of reach**: the 10% discount, by the offer's own instruction to click. I never established whether the game behind it can be played on a keyboard — that is the one thing I could not test and somebody should.
 
 ---
 

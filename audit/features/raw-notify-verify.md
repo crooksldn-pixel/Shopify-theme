@@ -302,9 +302,10 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
   offers to take the shopper to checkout. `pdp-core` recorded it as pressed-and-inert; on the
   evidence above that press never reached the page, so *whether it is inert is currently unknown*.
 - **The title and the description name two different garments.** The product is now titled
-  `GREY CONVICT SWEATS` and its `ITEM DESCRIPTION` still opens
+  `GREY CONVICT SWEATS`, and the description it carries (`/products/v2-baggies.js`, the text the
+  `ITEM DESCRIPTION` accordion renders) still opens
   `V2 Baggies — wide, full-length sweats in 500gsm cotton, heavy enough to hang straight.`
-  A shopper who opens the accordion is told they are looking at a different product.
+  A shopper who opens that accordion is told they are looking at a different product.
 
 ## Works and must be protected
 
