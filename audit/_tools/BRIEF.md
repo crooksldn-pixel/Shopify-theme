@@ -5,13 +5,19 @@ Working dir: `/home/user/Shopify-theme`. Read `audit/_tools/README.md` for the b
 
 ## Work efficiently
 
-You are one of twelve agents running at once on a 4-core box. **Write ONE script that
-performs many checks in a single browser run**, print plenty of `visibleText` and take your
-screenshots as you go. Do not launch a fresh browser per check. Aim to be done in a handful
-of script runs, not thirty. If a check fails twice, record what happened and move on — a
-recorded "could not get this to work as a shopper" is a legitimate finding.
+Several agents run at once and **only 3 browsers may touch the store at a time** — a disk
+lock enforces it, because heavier traffic trips the store's bot protection and every page
+then hangs. So:
 
-Never run more than one browser at a time inside your own script.
+- **Write ONE script that performs many checks in a single browser run.** Print plenty of
+  `visibleText`, take your screenshots as you go, and put the most valuable checks first so
+  a slow run still yields evidence. Do not launch a fresh browser per check.
+- `session()` can sit for one to three minutes waiting for a slot. **That is the queue, not
+  a hang.** Give your `node` runs a Bash timeout of 600000 ms and do not kill and retry.
+- Always `await s.close()` in a `finally` — it releases the slot for everyone else.
+- Never open a second `session()` while one is open; you would deadlock against yourself.
+- If a check fails twice, record what happened and move on. A recorded "I could not get
+  this to work as a shopper" is a legitimate finding, not a failure.
 
 ## The three rules that govern everything
 

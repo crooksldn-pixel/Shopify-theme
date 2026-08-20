@@ -48,6 +48,38 @@ export async function launch(opts = {}) {
   return chromium.launch({ executablePath: EXEC, args: ARGS, ...(PROXY ? { proxy: { server: PROXY } } : {}), ...opts });
 }
 
+/* ------------------------------------------------------------------ *
+ * Politeness. Many agents run at once, each in its own node process,
+ * so the cap has to live on disk. Twelve browsers at once tripped the
+ * store's bot protection: 429s, plus a Cloudflare challenge frame that
+ * this environment's egress policy blocks, so pages hung forever.
+ * ------------------------------------------------------------------ */
+const LOCK_DIR = 'audit/_tools/.slots';
+const MAX_BROWSERS = 3;
+const SLOT_STALE_MS = 8 * 60 * 1000;
+
+function tryClaim(i) {
+  const p = path.join(LOCK_DIR, 'slot-' + i);
+  try { fs.mkdirSync(p, { recursive: false }); fs.writeFileSync(path.join(p, 'pid'), String(process.pid)); return p; }
+  catch {
+    try { // reap a slot whose owner died or wedged
+      if (Date.now() - fs.statSync(p).mtimeMs > SLOT_STALE_MS) { fs.rmSync(p, { recursive: true, force: true }); }
+    } catch {}
+    return null;
+  }
+}
+
+async function acquireSlot() {
+  fs.mkdirSync(LOCK_DIR, { recursive: true });
+  for (let attempt = 0; attempt < 400; attempt++) {
+    for (let i = 0; i < MAX_BROWSERS; i++) { const p = tryClaim(i); if (p) return p; }
+    await sleep(1500 + Math.random() * 1500);
+  }
+  throw new Error('Could not get a browser slot in ~10 minutes — too many sessions queued.');
+}
+
+function releaseSlot(p) { try { fs.rmSync(p, { recursive: true, force: true }); } catch {} }
+
 /**
  * Open a fully-prepared shopping session.
  * @param {object} o
@@ -61,6 +93,7 @@ export async function launch(opts = {}) {
  */
 export async function session(o = {}) {
   const dev = DEVICES[o.device || 'mobile'];
+  const slot = await acquireSlot();
   const browser = await launch();
   const ctxOpts = {
     ...dev,
@@ -73,17 +106,62 @@ export async function session(o = {}) {
   const context = await browser.newContext(ctxOpts);
   await context.addCookies(GB_COOKIES);
   const page = await context.newPage();
+
+  // The bot-challenge host is blocked by this environment's egress policy, so a
+  // challenge frame never resolves and the page waits on it forever. Fail it fast.
+  try {
+    await context.route('**://*.challenges.cloudflare.com/**', r => r.abort());
+    await context.route('**://challenges.cloudflare.com/**', r => r.abort());
+  } catch { /* JS-disabled contexts */ }
   if (o.slow) await throttle(page);
   if (o.zoom) await page.addInitScript(z => {
     document.addEventListener('DOMContentLoaded', () => { document.body.style.zoom = z; });
   }, o.zoom);
 
-  const identity = await enterPreview(page);
+  let identity;
+  try {
+    identity = await enterPreview(page);
+  } catch (e) { releaseSlot(slot); await browser.close(); throw e; }
+
   if (!identity.ok) {
+    releaseSlot(slot);
     await browser.close();
     throw new Error('THEME ASSERTION FAILED — refusing to audit. ' + JSON.stringify(identity));
   }
-  return { browser, context, page, identity, close: () => browser.close() };
+  let closed = false;
+  const close = async () => {
+    if (closed) return; closed = true;
+    releaseSlot(slot);
+    await browser.close().catch(() => {});
+  };
+  process.once('exit', () => releaseSlot(slot));
+  return { browser, context, page, identity, close };
+}
+
+/**
+ * Navigate with backoff. The store answers 429 under load and can serve a bot
+ * challenge instead of the page; both are transient and both need waiting out,
+ * not retrying immediately.
+ */
+async function navigate(page, url, { settle, tries = 5 } = {}) {
+  let wait = 4000;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    await sleep(250 + Math.random() * 600);           // human-ish pacing
+    let resp, status = 0;
+    try {
+      resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      status = resp?.status() ?? 0;
+    } catch (e) {
+      if (attempt === tries) throw e;
+      await sleep(wait); wait *= 2; continue;
+    }
+    const challenged = status === 429 || status === 503 ||
+      await page.evaluate(() => /just a moment|attention required|checking your browser/i
+        .test(document.title + ' ' + (document.body?.innerText || '').slice(0, 400))).catch(() => false);
+    if (!challenged) { await sleep(settle); return { status, url: page.url() }; }
+    if (attempt === tries) return { status, url: page.url(), throttled: true };
+    await sleep(wait); wait *= 2;
+  }
 }
 
 /** Slow 4G + 4x CPU, via CDP. */
@@ -97,11 +175,10 @@ export async function throttle(page, { down = 1_600_000 / 8, up = 750_000 / 8, l
 
 /** First navigation in any context. Establishes the preview cookie. */
 export async function enterPreview(page, { settle = 3500 } = {}) {
-  const resp = await page.goto(PREVIEW, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await page.waitForTimeout(settle);
+  const r = await navigate(page, PREVIEW, { settle });
   await hidePreviewBar(page);
   const id = await assertTheme(page);
-  return { status: resp?.status(), ...id };
+  return { ...r, ...id };
 }
 
 /** Theme identity. Run-integrity only — never a finding, never in the report. */
@@ -129,11 +206,10 @@ export async function hidePreviewBar(page) {
 /** Navigate anywhere within the previewed store, re-asserting identity. */
 export async function go(page, pathOrUrl, { settle = 2500, assert = true } = {}) {
   const url = pathOrUrl.startsWith('http') ? pathOrUrl : PREVIEW + pathOrUrl;
-  const resp = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await page.waitForTimeout(settle);
+  const r = await navigate(page, url, { settle });
   await hidePreviewBar(page);
   const id = assert ? await assertTheme(page) : {};
-  return { status: resp?.status(), url: page.url(), ...id };
+  return { ...r, ...id };
 }
 
 let counter = 0;

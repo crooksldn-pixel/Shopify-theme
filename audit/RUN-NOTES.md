@@ -38,10 +38,26 @@ before first navigation returns the real UK storefront — £50.00 / £45.00 /
 *(The US view is separately interesting and is logged as an observation in
 `FEATURES.md`, not as a persona.)*
 
-**3. Browser concurrency is capped at 2–3 sessions.** This box has 4 cores. This
-audit reports felt slowness, so machine contention would contaminate the very
-observations it exists to collect. Sessions run few-at-a-time; persona 14 (slow
-connection) runs alone.
+**3. Browser concurrency is capped at 3, enforced by a lock on disk.** Two
+reasons, one of which cost an hour before it was understood.
+
+The first is fidelity: this box has 4 cores and this audit reports *felt*
+slowness, so machine contention would fake the very observations it exists to
+collect. Persona 14 (slow connection) runs alone.
+
+The second is the store. Running twelve browsers at once tripped its bot
+protection. Two symptoms arrived together: HTTP 429s, and — more confusing —
+pages that simply hung forever. The hang was a Cloudflare challenge frame:
+the storefront started serving a challenge, and this session's egress policy
+blocks `challenges.cloudflare.com`, so the frame could never resolve and every
+page sat waiting on it. `curl` to the same URL kept returning 200 the whole
+time, which is what made it look like the agents were stuck rather than
+throttled.
+
+The harness now: caps browsers at 3 across all agent processes via a lock
+directory; aborts requests to the challenge host so they fail fast instead of
+hanging; retries 429/503/challenge pages with exponential backoff; and paces
+navigations with a little jitter. Sessions queue rather than pile on.
 
 **4. No test login was supplied.** The `Test login:` field arrived as the
 literal placeholder `<PASTE-OR-LEAVE-BLANK>`. Persona 20 therefore documents the

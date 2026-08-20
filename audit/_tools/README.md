@@ -53,12 +53,30 @@ console.log(await visibleText(page, 'main'));
 await s.close();
 ```
 
+## Browser access is queued — this is normal, not a hang
+
+At most **3 browsers** touch the store at once, across every agent, enforced by a
+lock on disk. Twelve at once tripped the store's bot protection: 429s plus a
+Cloudflare challenge frame that this environment's egress policy blocks, so pages
+hung indefinitely.
+
+Consequences for you:
+
+- `session()` may sit for **one to three minutes** waiting for a free slot. That
+  is the queue, not a crash. Give your `node` runs a generous Bash timeout
+  (600000 ms is sensible) and do not kill and retry — that just loses your place.
+- `go()` retries 429s and challenge pages by itself with backoff. If it gives up
+  it returns `throttled: true` rather than throwing; check for it if a page looks
+  empty.
+- **Always `await s.close()` in a `finally`.** It releases the slot. A script that
+  exits without closing blocks everyone else until the lock goes stale.
+- Do the most valuable checks first in each script, so a slow run still produces
+  evidence.
+
 ## Things that bite
 
-- **One browser per script.** Always `await s.close()` in a `finally`, or the
-  process hangs.
-- **Keep it to 1–2 browsers at a time.** 4 cores. This audit reports *felt*
-  speed; contention would fake it.
+- **One browser per script.** Never open a second `session()` while the first is
+  open — you will deadlock against your own slot.
 - Selectors: prefer `getByRole` / `getByText`. Theme classes are all `crk-*`.
   Sizes are buttons; accordions are `<details>`; the set toggle is a checkbox.
 - After a click that changes the page, `await sleep(600..1200)` — this theme
