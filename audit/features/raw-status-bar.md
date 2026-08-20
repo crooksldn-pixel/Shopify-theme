@@ -180,7 +180,7 @@ promise.
 ## Surprises
 
 - **The `[count]` line is redundant on both pages it appears on.** `12 PRODUCTS CURRENTLY
-  ONLINE` sits ~280px above `> 12 PRODUCTS AVAILABLE TO PURCHASE` on the homepage and
+  ONLINE` sits about 200px above `> 12 PRODUCTS AVAILABLE TO PURCHASE` on the homepage and
   above `12 ITEMS` on the catalogue. Half the ticker's airtime restates what is already
   on screen. (audit/screens/status-bar-x-count-vs-register.png, audit/screens/status-bar-x-home-top.png)
 - **The `£20` free-shipping threshold exists nowhere else on the shopping path.** Not on
@@ -222,9 +222,11 @@ promise.
   has a live page a shopper can reach and buy from but appears in no register and carries
   no `PRODUCT n / N` line. Nothing on screen contradicts itself — but "currently online"
   is not literally true of the catalogue. (audit/screens/status-bar-x-set-pdp.png)
-- Ticker (`SAME-DAY DISPATCH`) against the known V2 BAGGIES / jeans description claim of
-  `9-16 days delivery uk` — already on the known list, flagged here only because the two
-  sit on the same screen as each other on those product pages.
+- The ticker's `SAME-DAY DISPATCH` is the loudest delivery claim on the site and it sits
+  on the same pages as the known `9-16 days delivery uk` description text. That text is
+  already on the known list and I did not re-read it, so this is a pointer, not a new
+  finding: whoever fixes the description should know the top of every one of those pages
+  is promising same-day dispatch while they do it.
 
 ## Works and must be protected
 

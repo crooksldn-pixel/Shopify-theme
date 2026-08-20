@@ -79,9 +79,10 @@ while the `CLOSE` button beside it is 13px, and the drawer's own `ACCOUNT` and
 people built it. It is the kind of detail that quietly withdraws the "this is
 not a Shopify store" claim.
 
-**Evidence:** `audit/screens/hdr-a05-header-bar.png` and
+**Evidence:** `audit/screens/hdr-e01-header-row.png` and
 `audit/screens/hdr-a12-after-escape.png` — compare `SEARCH` with `MENU` in the
-same row.
+same row; also `audit/screens/hdr-e02-drawer-head.png` for the drawer's
+`MENU` (10px) beside `CLOSE` (13px).
 
 ---
 
