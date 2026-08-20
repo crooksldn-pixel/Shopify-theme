@@ -1,11 +1,35 @@
+audit/screens/tg-outline-dark-default.png
+C outline [dark-toggled]: {"btn":"OUTLINE/pressed=false","attr":"off","ss":"off","theme":null,"cards":[{"src":"cellcrew.webp?v=17857703","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(14, 12, 19)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(14, 12, 19)","parentFilter":"none"}]}
+audit/screens/tg-outline-dark-toggled.png
+=== no-JS follow-up === {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+C outline [light-default]: {"btn":"OUTLINE/pressed=true","attr":null,"ss":"on","theme":"light","cards":[{"src":"cellcrew.webp?v=17857703","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"}]}
+audit/screens/tg-outline-light-default.png
+1 with JS — accordions: {"detailsCount":0,"accordionTags":["DIV.crk-stack","SECTION.crk-section","H2.crk-display crk-h"],"idInput":"","submitLabel":"SELECT A SIZE"}
+C outline [light-toggled]: {"btn":"OUTLINE/pressed=false","attr":"off","ss":"off","theme":"light","cards":[{"src":"cellcrew.webp?v=17857703","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"}]}
+audit/screens/tg-outline-light-toggled.png
+2 scripts blocked (70) — state: {"detailsCount":0,"idInput":"","submitLabel":"SELECT A SIZE","sizePressed":"XS=false S=false M=false L=false XL=false XS=false S=false M=false L=false XL=false"}
+3 after activating size M: {"clicked":true,"pressed":"XS=false S=false M=false L=false XL=false XS=false S=false M=false L=false XL=false","idInput":"","url":""}
+audit/screens/tgj2-size-clicked-noJS.png
+4 accordion activate: {"heads":["BUTTON:SPECIFICATION\n+","BUTTON:ITEM DESCRIPTION\n+","BUTTON:MEASUREMENTS\n+","BUTTON:CHAIN OF CUSTODY — SHIPPIN"],"textBefore":865,"textAfter":865}
+audit/screens/tgj2-accordions-noJS.png
 
+C mid-scroll before: {"scrollY":2412,"docH":4888,"centre":"CROOKSLDN: THE GETAWAY\n\nCrack the cuffs. 10% off your f","toggleTop":-2326,"toggleInViewport":false}
+audit/screens/tg-midscroll-before.png
+5 after native submit: navigated=true url=https://7chao18p5etruwy5-100410786135.shopifypreview.com/cart/add
+5 what the shopper now sees:
+Something went wrong.
 
-=========== A. NO THEME JAVASCRIPT (all external .js blocked) =========== {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
-A home loaded in 3527ms, blocked 67 scripts
-A home counts: {"productLinks":12,"images":31,"imagesShown":14,"prices":13,"theme":null,"outline":null,"bodyBg":"rgb(11, 10, 14)","statusBar":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH\n\n12 PRODUCTS CURRENTLY ONLINE","hero":"CROOKSLDN"}
-audit/screens/tgj-home-nojs.png
-audit/screens/tgj-home-nojs-full.png
-A home text:
+What happened?
+Cart Error: Cannot find variant
+What can I do?
+Return to the previous page.
+Request ID: a146b2fa-1a00-470a-8176-748b2db5b39b-1787249032
+audit/screens/tgj2-after-submit-noJS.png
+C mid-scroll after: {"scrollY":86,"docH":4888,"centre":"CROOKSLDN: THE GETAWAY\n\nCrack the cuffs. 10% off your f","toggleTop":0,"toggleInViewport":true}
+audit/screens/tg-midscroll-after.png
+6 variant URL, no JS: {"idInput":"53936235282775","submitLabel":"ADD TO BAG","pressed":"XS=false S=false M=true L=false XL=false XS=false S=false M=false L=false XL=false"}
+6 after submit from variant URL: navigated=true url=https://7chao18p5etruwy5-100410786135.shopifypreview.com/cart
+6 page:
 Skip to content
 
 FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
@@ -15,338 +39,91 @@ FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
 CATALOGUE
 SEARCH
 BAG
- [0]
+ [1]
 LIGHT MODE
 MENU
 
-> 12 PRODUCTS AVAILABLE TO PURCHASE
+£20.00 to free Tracked 24
 
-CROOKSLDN
+TRACKED 48 FREE
+TRACKED 24 FREE
 
-OWN THE STREETS™
+Complete the set — add the Cellblock Shorts, save £10.
 
-CATALOGUE
-CATALOGUE
-12 ITEMS
-FLAT
-ON MODEL
-OUTLINE
-ALL
-T-SHIRT
-DENIM
-SWEATS
-ACCESSORIES
-NO. 01
-SWEATS
+Cart
+1
+1
+
+Cart total £50.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
 CHARCOAL CELLBLOCK CREWNECK
-£50.00
-AVAILABLE
-NO. 02
-SWEATS
-CHARCOAL CELLBLOCK SHORTS
-£45.00
-AVAILABLE
-NO. 03
-DENIM
-BLUE WASH YARD JEANS
-£60.00
-AVAILABLE
-NO. 04
-DENIM
-BLUE WASH YARD JORTS
-£50.00
-AVAILABLE
-NO. 05
-DENIM
-GREY WASH YARD JEANS
-£60.00
-AVAILABLE
-NO. 06
-DENIM
-GREY WASH YARD JORTS
-£50.00
-AVAILABLE
-NO. 07
-T-SHIRT
-MONEY CLIVE TEE
-Colourways: BLACK, WHITE
-£25.00
-AVAILABLE
-NO. 08
-T-SHIRT
-CRXST★RZ T-SHIRT
-Colourways: Black, White
-£25.00
-AVAILABLE
-DROPPED 03.08
-NO. 09
-SWEATS
-GREY CONVICT SWEATS
-£60.00
-2 OF 5 SIZES LEFT
-NO. 10
-ACCESSORIES
-BLACK/BLUE MOTIONTEC™ SOCKS
-£6.00
-AVAILABLE
-NO. 11
-ACCESSORIES
-WHITE/RED MOTIONTEC™ SOCKS
-£6.00
-AVAILABLE
-NO. 12
-ACCESSORIES
-BALLISTIC NYLON DUFFLE
-£18.00
-AVAILABLE
 
-PROPERTY BAG
-
-EVERY ORDER SHIPS LIKE THIS
-
-Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for.
-
-01
-EVIDENCE TAG
-Numbered, seized by CROOKS LDN, QR to verify.
-02
-SECURITY SEAL
-Pull-tight, stamped with the cuffs.
-03
-CUFF KEYRING *
-Miniature cuffs, on the ring.
-
-* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONLY.
-
-REGISTER AS INFORMANT
-
-A MENU click: locator.click: Timeout 5000ms exceeded.
-Call log:
-[2m  - waiting for locator('b
-A theme toggle click: locator.click: Timeout 5000ms exceeded.
-Call log:
-[2m  - waiting for locator('[
-A OUTLINE click: locator.click: Timeout 5000ms exceeded.
-Call log:
-[2m  - waiting for locator('[
-A filter DENIM click: locator.click: Timeout 5000ms exceeded.
-Call log:
-[2m  - waiting for locator('b
-audit/screens/tgj-home-nojs-after-clicks.png
-
-A PDP: {
- "hasForm": true,
- "action": "/cart/add",
- "fields": [
-  {
-   "tag": "INPUT",
-   "type": "hidden",
-   "name": "form_type",
-   "value": "product",
-   "text": "",
-   "checked": false
-  },
-  {
-   "tag": "INPUT",
-   "type": "hidden",
-   "name": "utf8",
-   "value": "✓",
-   "text": "",
-   "checked": false
-  },
-  {
-   "tag": "INPUT",
-   "type": "hidden",
-   "name": "id",
-   "value": "",
-   "text": "",
-   "checked": false
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "XS"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "S"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "M"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "L"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "XL"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "SIZE GUIDE"
-  },
-  {
-   "tag": "INPUT",
-   "type": "checkbox",
-   "name": "",
-   "value": "on",
-   "text": "",
-   "checked": false
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "XS"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "S"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "M"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "L"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "button",
-   "name": "",
-   "value": "",
-   "text": "XL"
-  },
-  {
-   "tag": "BUTTON",
-   "type": "submit",
-   "name": "add",
-   "value": "",
-   "text": "SELECT A SIZE"
-  },
-  {
-   "tag": "INPUT",
-   "type": "hidden",
-   "name": "product-id",
-   "value": "10967989944663",
-   "text": "",
-   "checked": false
-  },
-  {
-   "tag": "INPUT",
-   "type": "hidden",
-   "name": "section-id",
-   "value": "template--305998997097",
-   "text": "",
-   "checked": false
-  }
- ],
- "sizes": [
-  "XS(BUTTON,button,pressed=false)",
-  "S(BUTTON,button,pressed=false)",
-  "M(BUTTON,button,pressed=false)",
-  "L(BUTTON,button,pressed=false)",
-  "XL(BUTTON,button,pressed=false)",
-  "XS(BUTTON,button,pressed=false)",
-  "S(BUTTON,button,pressed=false)",
-  "M(BUTTON,button,pressed=false)",
-  "L(BUTTON,button,pressed=false)",
-  "XL(BUTTON,button,pressed=false)"
- ],
- "price": "£50.00",
- "images": 4,
- "details": [],
- "buttons": [
-  "LIGHT MODE",
-  "MENU",
-  "CLOSE",
-  "XS",
-audit/screens/tgj-pdp-nojs.png
-audit/screens/tgj-pdp-nojs-full.png
-A PDP text:
-← CATALOGUE
-PRODUCT 01 / 12
-SWEATS
-PHOTO 1 OF 1
-CHARCOAL CELLBLOCK CREWNECK
-£50.00
-SIZE
-XS
-S
+Size:
 M
-L
-XL
-
-Select a size
-
-SIZE GUIDE
-
-Order before 18:00 and it ships today (Mon–Sat)
-
-Cop the full fit — add the matching Cellblock Shorts. Save £10.
-SELECT A SIZE
-SPECIFICATION
-+
-ITEM DESCRIPTION
-+
-MEASUREMENTS
-+
-CHAIN OF CUSTODY — SHIPPING & RETURNS
-+
-MORE FROM THIS DROP
-CHARCOAL CELLBLOCK SHORTS
-£45.00
-GREY CONVICT SWEATS
-£60.00
-CHARCOAL CELLBLOCK CREWNECK
+Price
 £50.00
-ADD TO BAG
-CHECKOUT NOW
-A accordion: locator.click: Timeout 5000ms exceeded.
-Call log:
-[2m  - waiting for locator('s
-A after size click: {"url":"6135.shopifypreview.com/products/charcoal-cellblock-crewneck","pressed":"XS=false S=false M=false L=false XL=false XS=false S=false M=false L=false XL=false","idInput":"","buyLabels":["SELECT A SIZE","ADD TO BAG","CHECKOUT NOW"]}
-audit/screens/tgj-pdp-size-nojs.png
-A buy click: locator.click: Timeout 8000ms exceeded.
-Call log:
-[2m  - waiting for getByRole('button', { name: /ADD TO BAG|SELECT A S
+Decrease quantity
+Increase quantity
+Remove
+£50.00
+Discount
+Estimated total
+£50.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
 
-A /cart:
-Your cart is empty
+CHARCOAL CELLBLOCK CREWNECK
 
-Have an account? Log in to check out faster.
+£50.00
+CHARCOAL CELLBLOCK SHORTS
 
-Continue shopping
+CHARCOAL 
+audit/screens/tgj2-variant-submit-noJS.png
+
+
+=========== D. LANDSCAPE 844x390 =========== {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+6 cart after:
+£20.00 to free Tracked 24
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Complete the set — add the Cellblock Shorts, save £10.
+
+Cart
+1
+1
+
+Cart total £50.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+CHARCOAL CELLBLOCK CREWNECK
+
+Size:
+M
+Price
+£50.00
+Decrease quantity
+Increase quantity
+Remove
+£50.00
+Discount
+Estimated total
+£50.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
 You may also like
 View all
 CHARCOAL CELLBLOCK CREWNECK
@@ -369,4 +146,179 @@ BLUE WASH YARD JORTS
 BLUE WASH YARD JORTS
 
 £50.00
-audit/screens/tgj-cart-nojs.png
+
+D home layout: {"vw":844,"vh":390,"overflowX":0,"docH":5764,"controls":[]}
+audit/screens/tgj2-cart-noJS.png
+audit/screens/tgl-home-landscape.png
+
+D product layout: {"vw":844,"vh":390,"overflowX":0,"docH":2515,"controls":[]}
+audit/screens/tgl-product-landscape.png
+
+
+=========== B. 200% ZOOM =========== {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+D cart layout: {"vw":844,"vh":390,"overflowX":0,"docH":1161,"controls":[]}
+audit/screens/tgl-cart-landscape.png
+B home layout: {"vw":390,"vh":844,"overflowX":0,"docH":11339,"controls":[{"label":"","covered":"ctc-title","offRight":false,"rect":[20,72,96,88]},{"label":"CATALOGUE","covered":"ctc-title","offRight":false,"rect":[20,172,147,88]},{"label":"SEARCH","covered":"ctc-title","offRight":false,"rect":[175,172,107,88]},{"label":"BAG\n [0]","covered":"ctc-offer","offRight":false,"rect":[20,268,123,88]},{"label":"LIGHT MODE","covered":"ctc-offer","offRight":false,"rect":[151,268,214,88]},{"label":"MENU","covered":"ctc-copy","offRight":false,"rect":[20,364,100,88]},{"label":"T-SHIRT","covered":null,"offRight":true,"rect":[231,1837,230,88]},{"label":"DENIM","covered":null,"offRight":true,"rect":[477,1837,183,88]},{"label":"SWEATS","covered":null,"offRight":true,"rect":[675,1837,206,88]},{"label":"ACCESSORIES","covered":null,"offRight":true,"rect":[897,1837,325,88]}]}
+audit/screens/tgz-home-zoom2.png
+D add-to-bag box: {"x":45,"y":458.15625,"width":754,"height":52}
+B pdp layout: {"vw":390,"vh":844,"overflowX":0,"docH":5776,"controls":[{"label":"CHECKOUT NOW","covered":null,"offRight":true,"rect":[331,732,245,88]}]}
+audit/screens/tgz-pdp-zoom2.png
+D added, bag = [1]
+audit/screens/tgl-added-landscape.png
+audit/screens/tgz-pdp-zoom2-full.png
+B size M box: {"x":175.59375,"y":1480.390625,"width":38.796875,"height":104}
+D drawer: {"scrollable":false,"scrollH":390,"clientH":390,"offscreen":["TRACKING","QUESTIONS","TERMS","CONTACT","PLAY CASE:001 ","ACCOUNT","BAG\n [1]"],"total":16}
+audit/screens/tgz-pdp-size-zoom2.png
+B add box: {"x":66,"y":1247.625,"width":258,"height":104}
+audit/screens/tgl-drawer-landscape.png
+D light: {"theme":"light","bg":"rgb(250, 250, 251)"}
+audit/screens/tgl-light-landscape.png
+
+=== TGFINAL2 COMPLETE ===
+B added, bag = [1]
+audit/screens/tgz-added-zoom2.png
+B cart layout: {"vw":608,"vh":1316,"overflowX":0,"docH":5603,"controls":[]}
+B cart text:
+£20.00 to free Tracked 24
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Complete the set — add the Cellblock Shorts, save £10.
+
+Cart
+1
+1
+
+Cart total £50.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+CHARCOAL CELLBLOCK CREWNECK
+
+Size:
+M
+Price
+£50.00
+Decrease quantity
+Increase quantity
+Remove
+£50.00
+Discount
+Estimated total
+£50.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH YARD JEANS
+
+BLUE WASH
+audit/screens/tgz-cart-zoom2.png
+B checkout box: {"x":32,"y":2211.859375,"width":326,"height":104}
+B checkout url: https://crooksldn.com/checkouts/cn/hWNFsjNjCLRpkeCjZzCsRfpz/en-gb?_r=AQAB6EM5lTE
+B checkout text:
+Skip to content
+CROOKSLDN
+Navigate to Online Store
+Order summary
+Total price
+
+£50.00
+
+CROOKSLDN Checkout
+Express checkout
+
+OR
+
+Express checkout loaded
+Contact
+Sign in
+Email or mobile phone number
+Keep me updated.
+Delivery
+Country/Region
+United Kingdom
+Afghanistan
+Åland Islands
+Albania
+Algeria
+Andorra
+Angola
+Anguilla
+Antigua & Barbuda
+Argentina
+Armenia
+Aruba
+Ascension Island
+Australia
+Austria
+Azerbaijan
+Bahamas
+Bahrain
+Bangladesh
+Barbados
+Belarus
+Belgium
+Belize
+Benin
+Bermuda
+Bhutan
+Bolivia
+Bosnia
+audit/screens/tgz-checkout-zoom2.png
+
+
+=========== C. OUTLINE / MID-SCROLL / FLASH =========== {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+audit/screens/tg-darkflash-0-at298ms.png
+audit/screens/tg-darkflash-1-at731ms.png
+audit/screens/tg-darkflash-2-at1856ms.png
+C dark cold load settled: {"theme":null,"bg":"rgb(11, 10, 14)"}
+C outline [dark-default]: {"btn":"OUTLINE/pressed=true","attr":null,"ss":"on","theme":null,"cards":[{"src":"cellcrew.webp?v=17857703","filter":"drop-shadow(rgb(221, 215, 201) 1px 0px 0px) drop-shadow(rgb(221, 215, 201) -1px 0px 0px) drop-shadow(rgb(221, 215, 201) 0px 1px 0px) drop-shadow(rgb(221, 215, 201) 0px -1px 0px)","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(14, 12, 19)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"drop-shadow(rgb(221, 215, 201) 1px 0px 0px) drop-shadow(rgb(221, 215, 201) -1px 0px 0px) drop-shadow(rgb(221, 215, 201) 0px 1px 0px) drop-shadow(rgb(221, 215, 201) 0px -1px 0px)","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(14, 12, 19)","parentFilter":"none"}]}
+audit/screens/tg-outline-dark-default.png
+C outline [dark-toggled]: {"btn":"OUTLINE/pressed=false","attr":"off","ss":"off","theme":null,"cards":[{"src":"cellcrew.webp?v=17857703","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(14, 12, 19)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(14, 12, 19)","parentFilter":"none"}]}
+audit/screens/tg-outline-dark-toggled.png
+C outline [light-default]: {"btn":"OUTLINE/pressed=true","attr":null,"ss":"on","theme":"light","cards":[{"src":"cellcrew.webp?v=17857703","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"}]}
+audit/screens/tg-outline-light-default.png
+C outline [light-toggled]: {"btn":"OUTLINE/pressed=false","attr":"off","ss":"off","theme":"light","cards":[{"src":"cellcrew.webp?v=17857703","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"},{"src":"crooksldn-charcoal-cellb","filter":"none","mix":"normal","bg":"rgba(0, 0, 0, 0)","parentBg":"rgb(255, 255, 255)","parentFilter":"none"}]}
+audit/screens/tg-outline-light-toggled.png
+
+C mid-scroll before: {"scrollY":2426,"docH":4888,"centre":"CROOKSLDN: THE GETAWAY\n\nCrack the cuffs. 10% off your f","toggleTop":-2340,"toggleInViewport":false}
+audit/screens/tg-midscroll-before.png
+C mid-scroll after: {"scrollY":86,"docH":4888,"centre":"CROOKSLDN: THE GETAWAY\n\nCrack the cuffs. 10% off your f","toggleTop":0,"toggleInViewport":true}
+audit/screens/tg-midscroll-after.png
+
+
+=========== D. LANDSCAPE 844x390 =========== {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+D home layout: {"vw":844,"vh":390,"overflowX":0,"docH":5764,"controls":[]}
+audit/screens/tgl-home-landscape.png
+
+D product layout: {"vw":844,"vh":390,"overflowX":0,"docH":2515,"controls":[]}
+audit/screens/tgl-product-landscape.png
+
+D cart layout: {"vw":844,"vh":390,"overflowX":0,"docH":1161,"controls":[]}
+audit/screens/tgl-cart-landscape.png
+D add-to-bag box: {"x":45,"y":458.15625,"width":754,"height":52}
+D added, bag = [1]
+audit/screens/tgl-added-landscape.png
+D drawer: {"scrollable":false,"scrollH":390,"clientH":390,"offscreen":["TRACKING","QUESTIONS","TERMS","CONTACT","PLAY CASE:001 ","ACCOUNT","BAG\n [1]"],"total":16}
+audit/screens/tgl-drawer-landscape.png
+D light: {"theme":"light","bg":"rgb(250, 250, 251)"}
+audit/screens/tgl-light-landscape.png
+
+=== TGFINAL2 COMPLETE ===
