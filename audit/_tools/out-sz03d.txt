@@ -1,0 +1,149 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+SIZE BUTTONS: [
+  { t: 'XS', label: 'Size XS', pressed: 'false', dis: null },
+  { t: 'S', label: 'Size S', pressed: 'false', dis: null },
+  { t: 'M', label: 'Size M', pressed: 'false', dis: null },
+  { t: 'L', label: 'Size L', pressed: 'false', dis: null },
+  { t: 'XL', label: 'Size XL', pressed: 'false', dis: null }
+]
+clicked size: Size M
+AFTER M: ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW
+shot audit/screens/03-25-size-m.png
+shot sticky audit/screens/03-25b-sticky-bar.png
+XL: {"label":"Size XL","dis":null,"html":"<button type=\"button\" class=\"crk-size\" data-crk-opt=\"0\" data-value=\"XL\" data-selected=\"true\" data-low=\"true\" aria-pressed=\"true\" aria-label=\"Size XL\">XL</button>"}
+AFTER XL: ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+3 LEFT IN SIZE XL
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · XL
+ADD TO BAG
+CHECKOUT NOW
+shot audit/screens/03-27-xl.png
+shot audit/screens/03-26-final-look.png
+FINAL: ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00 · M
+ADD TO BAG
+CHECKOUT NOW

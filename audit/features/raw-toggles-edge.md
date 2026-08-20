@@ -61,6 +61,29 @@ to guess that pressing Enter works, or that the blank gap is clickable.
 audit/screens/tg-search-dark.png (same button legible). Computed: `color rgb(221,215,201)`,
 `background rgba(0, 0, 0, 0)`, `border 0px`.
 
+### The `Outline` toggle in LIGHT mode (audit question Q3)
+**Should:** a control called `OUTLINE` visibly changes how product images look.
+**Did:** the treatment is a **white keyline drawn around the garment**, and it is **on by
+default** — a brand-new session already has `crk-outline = on` in storage without anyone
+pressing anything. On the dark ground it does real work: the grey jeans, the jorts and the
+black tees on the homepage register are separated from the near-black card by a bright white
+halo (audit/screens/tg-home-dark.png, cards NO. 05–08). Switch to light mode and the *same*
+cards, in the *same* outline state, show **no halo at all** — a white line on a
+`rgb(250,250,251)` ground is invisible (audit/screens/tg-home-light.png, identical cards).
+So in light mode the `OUTLINE` button is a control whose only visible effect is that its own
+label changes state. Two further facts a shopper meets: the button exists **only on the
+homepage register** — `/collections/all` offers `FLAT` / `ON MODEL` and no `OUTLINE` — and
+the default state is on, so nobody chose the treatment they are looking at.
+**Verdict:** partly (works in dark, inert in light)
+**Shopper cost:** in light mode, pressing `OUTLINE` appears to do nothing. That is worse than
+the toggle not being there: the shopper concludes the site is broken rather than that the
+setting does not apply. It is also the one control on the page that is pure styling, so the
+"is this site working?" doubt it creates is paid for nothing.
+**Evidence:** audit/screens/tg-home-dark.png vs audit/screens/tg-home-light.png (same cards,
+same outline state, halo present/absent); audit/screens/tge-1-cold-pdp-top.png (a cold-landed
+PDP already carries the keyline). Related known item **O3** — the toggle is pending an
+aesthetic decision; this is what it does to a shopper in light mode meanwhile.
+
 ### Prose links in dark mode (the default) are the dimmest text on the page
 **Should:** a link inside a paragraph is at least as readable as the paragraph.
 **Did:** on `/pages/faq`, in **dark**, the closing paragraph's links —

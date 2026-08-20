@@ -425,9 +425,11 @@ black:
 > `One code per player. Attempts unlimited. Code expires in 20 minutes.`
 > `(this drop closes 15.09)`
 
-There are now **two `×` close controls on screen at once** — the theme's, at the
-top-left of the overlay, and the app's own, inside the panel. Escape closes it.
-So does the theme's `×`. It fires once per browser profile.
+There are now **two `×` close controls on screen at once** — the theme's, a 44px
+button at the top-left labelled `Close Crack the Cuffs`, and the app's own,
+inside the panel. I closed it with Escape, which worked immediately; there is
+also `NOT NOW` inside the panel. Afterwards the "seen" flag was set, so it does
+not come back for that browser profile.
 
 **Did the crack-the-cuffs overlay appear? Yes** — but not at the advertised ~3s.
 It waits for the cookie banner to be answered first, then takes another ~9
