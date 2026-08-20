@@ -162,12 +162,20 @@ What is actually in that panel, read from inside the cross-origin frame:
   not a theme element. That is where the blank white box comes from, and it stays for as long as
   you care to wait.
 
-So the blank panel is hCaptcha declining to run its challenge for this client and hiding itself,
-on both forms on this store. The distinction the brief asks for: this is *"a captcha refuses an
-automated browser"*, **not** *"the panel renders blank and no one can complete it"*. I cannot
-prove the second is false from inside an automated browser on a datacentre IP — but every
-attributable piece of evidence points at the first, and a fault that also hits the platform's own
-stock contact form is not a fault in this theme's restock capture.
+Then I removed the browser's obvious automation tells (`navigator.webdriver` and friends) and did
+the whole journey again. **hCaptcha behaved differently** — it served a different challenge type
+(`Put the missing piece in the correct place to complete the chain`) and this time the challenge
+frame *did* lay out at its full 320×400 instead of collapsing to nothing, for about ten seconds,
+before hCaptcha hid it again with the same `Please try again.  ⚠️`. A page's markup cannot make
+hCaptcha change its mind about which challenge to serve; only the client's reputation can. The
+panel still painted white on screen — which in a headless browser tells you as much about the
+renderer as about the site.
+
+So the distinction the brief asks for: this is *"a captcha refuses an automated browser"*,
+**not** *"the panel renders blank and no one can complete it"*. I cannot prove the second is false
+from inside an automated browser on a datacentre IP — but every attributable piece of evidence
+points at the first, and a failure that also hits the platform's own untouched contact form is not
+a failure of this theme's restock capture.
 
 **Verdict:** not a theme defect on the evidence available
 
@@ -177,7 +185,9 @@ worth the owner's ten minutes: send the form once from a phone on mobile data an
 
 **Evidence:** `audit/screens/notifyv-D1-contact-after-submit.png` and
 `audit/screens/notifyv-D2-contact-14s.png` (the identical blank panel over the shop's own contact
-page), captcha timeline and frame contents in `out-notifyv2.txt` §C and §D.
+page), `audit/screens/notifyv-F1-nowebdriver-6s.png` and `notifyv-F2-nowebdriver-20s.png` (the
+automation-tells-removed attempt); captcha timeline and frame contents in `out-notifyv2.txt`
+§C and §D and `out-notifyv5.txt` §A.
 
 ---
 
@@ -226,7 +236,19 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
    opaque `rgb(31,31,31)`, 390×359, i.e. everything below y=485 on an 844 screen), and that one is
    visible, dismissible and scrollable past. With the size row in the top half of the screen,
    measured repeatedly, nothing intercepts at all.
-3. **The no-JS cross-check did not run.** `session({ js: false })` wedges in this harness (no
+3. **That same preview-bar strip eats every tap on the theme's sticky buy bar — which means some
+   existing audit findings about that bar are wrong.** Proved it directly on
+   `/products/cb1-wash-jeans` with an in-stock size chosen: the theme's bar is
+   `div.crk-stickybar` at y=775, height 69 — the *same* 68px strip. `elementFromPoint` on its
+   `ADD TO BAG` returns `DIV#PBarNextFrameWrapper`, and tapping it moves the bag count **0 → 0**.
+   Hide the preview wrapper, tap the identical pixel, and the bag count goes **0 → 1** with the
+   page showing `> Added — 1 in bag  View bag`. The sticky bar is not dead; the preview furniture
+   is on top of it. Any finding of the form *"the sticky bar's button does nothing"* — including
+   `pdp-core`'s "checked and cleared: the sticky bar's `CHECKOUT NOW` is inert" — needs re-testing
+   with `#PBarNextFrameWrapper` hidden before it goes in a report.
+   Evidence: `audit/screens/notifyv-G1-sticky-tap-with-previewbar.png` (tapped, nothing),
+   `audit/screens/notifyv-G2-sticky-tap-previewbar-hidden.png` (same pixel, `> Added — 1 in bag`).
+4. **The no-JS cross-check did not run.** `session({ js: false })` wedges in this harness (no
    output in 13 minutes, killed), and a later retry hit the store's bot protection
    (`429` + a Cloudflare challenge token). So the one test that would have bypassed the captcha
    entirely — a native form post with the captcha script absent — is **not** in this report.
@@ -244,6 +266,14 @@ Recorded only so this conflict is not re-opened. Neither cause exists for a shop
   Any future check of this store that uses a real browser driver will report sold-out sizes as
   unclickable. They are not. (The deliberate behaviour in `SPEC.md §9.3` is correct — this is a
   warning about the tooling, not a request to change it.)
+- **The audit's own preview bar has been silently eating taps on the sticky buy bar.** Same pixel,
+  same page: preview bar present → nothing; preview bar hidden → `> Added — 1 in bag`. Every
+  conclusion any agent has drawn about the sticky bar being inert needs re-checking. This is a
+  message for the audit team, not for the owner.
+- **The product at `/products/v2-baggies` was renamed during this audit.** At 17:05 today it
+  rendered as `V2 BAGGIES`; by 18:10 the same handle renders as `GREY CONVICT SWEATS`
+  (`/products/v2-baggies.js` → `"title":"GREY CONVICT SWEATS"`). Somebody is editing the store
+  while it is being audited — worth knowing before two agents' screenshots are compared.
 - The cookie consent banner covers the bottom 43% of the phone screen and lands squarely over the
   buy panel on first arrival at a product — already filed by the `toggles-edge` agent; noted here
   only because it is the thing a shopper meets between the size row and the notify panel.
