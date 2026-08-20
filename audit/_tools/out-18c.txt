@@ -11,3 +11,15 @@ SHOT audit/screens/18-r-01-arrive.png
 18-r FRAME BUTTONS [{"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","bs":["Privacy Policy","Manage preferences","Accept","Decline","Skip to content","CATALOGUE","SEARCH","BAG\n [0]","LIGHT MODE","MENU","CLOSE","SHOP","ALL","NEW","TEES","DENIM","SWEATS","TRACKSUITS","ACCESSORIES","TRACKING","QUESTIONS","TERMS","Contact","PLAY CASE:001 NOW\n          CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below.","ACCOUNT","BAG [0]","CATALOGUE","FLAT","ON MODEL","OUTLINE"]},{"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/web","bs":["Return to the previous page."]},{"url":"https://cdn.shopify.com/shopifycloud/preview-bar/index.html","bs":["CROOKSLDN — StagingDraft","View as","Copy link","Hide bar"]},{"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/ser","bs":["Return to the previous page."]}
 18-r clicked Decline
 SHOT audit/screens/18-r-02-clear.png
+18-r TICKER CHANGES
+   0.4s  FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH ~ 12 PRODUCTS CURRENTLY ONLINE
+     4s  FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH
+   8.8s  
+18-r ticker strips written
+18-r menu count 0
+FATAL locator.click: Timeout 15000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /^MENU$/i }).first()[22m
+
+    at run (/home/user/Shopify-theme/audit/_tools/rm18c.mjs:91:14)
+    at async file:///home/user/Shopify-theme/audit/_tools/rm18c.mjs:143:3
