@@ -47,3 +47,30 @@ SHOT audit/screens/18-33-tee-photo1.png
 PDP CONTROLS ["Photo 1 of 2","Photo 2 of 2","XS","S","M","L","XL","BLACK","WHITE","SIZE GUIDE","SELECT A SIZE","Notify me","SPECIFICATION\n+","ITEM DESCRIPTION\n+","MEASUREMENTS\n+","CM","IN","CHAIN OF CUSTODY — SHIPPING & RETURNS\n+","CHECKOUT NOW"]
 after swipe: ← CATALOGUE | PRODUCT 07 / 12 | T-SHIRT | PHOTO 1 OF 2 | MONEY CLIVE TEE | £25.00 | SIZE | XS | S | M | L | XL | C
 SHOT audit/screens/18-34-tee-after-swipe.png
+colourway failed locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for getByRole(
+size failed locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for getByRole(
+SHOT audit/screens/18-37-tee-sticky.png
+sticky text ["COOKIE CONSENT / We and our partners, including Shopify, use cookies and other technologies to personalize your experien","MONEY CLIVE TEE / £25.00 / SELECT A SIZE / CHECKOUT NOW",""]
+
+
+========== REDUCED — drawer from the homepage ==========
+css locator count 1 role count 1
+aria-hidden on main? { main: null, body: null, ctc: false, ctcDisplay: null }
+SHOT audit/screens/18-38-drawer-120ms.png
+SHOT audit/screens/18-39-drawer-open.png
+SHOT audit/screens/18-40-case-panel.png
+BOARD HASHES (reduced, homepage) [2085883779,2085883779,2085883779,2085883779] moving? false
+
+
+========== NORMAL — rapid hero for comparison ==========
+identity2 {"ok":true,"gb":true}
+18-n shot 0 at ~377ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-n shot 1 at ~483ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-n shot 2 at ~592ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-n shot 3 at ~735ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-n shot 4 at ~905ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
+18-n shot 5 at ~1029ms after DOM ready | line={"t":"> 12 PRODUCTS AVAILABLE TO PURCHASE","w":358,"vis":"visible","op":"1","clip":"none","anim":"none","kids":0}
