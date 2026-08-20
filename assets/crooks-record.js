@@ -3,7 +3,9 @@
  * Ported from THE EXHIBIT RECORD prototype. Vanilla ES2019, data-* config only.
  *
  * Progressive enhancement — with JS disabled the page still sells:
- *   - the server-selected variant is already in the form's hidden id input
+ *   - a deep-linked ?variant= is already in the form's hidden id input; a cold
+ *     landing has no size chosen, which is deliberate, and the <noscript> size
+ *     links below are how a no-JS shopper chooses one
  *   - accordion bodies are visible (the [hidden] is removed by JS setup only
  *     for the ones meant to start closed, so no-JS shows everything)
  *   - <noscript> renders ?variant= links for every size

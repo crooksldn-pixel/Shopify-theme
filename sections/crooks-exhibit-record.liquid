@@ -3,7 +3,30 @@
 <script src="{{ 'crooks-set.js' | asset_url }}" defer></script>
 
 {%- liquid
-  assign crk_var = product.selected_or_first_available_variant
+  comment
+    No size is chosen for the shopper. `selected_or_first_available_variant`
+    picks the first in-stock variant on their behalf, and a size rendered as
+    already-selected reads as a decision they made — so ADD TO BAG can post a
+    size nobody chose. `selected_variant` is nil unless ?variant= is in the URL,
+    which keeps shared links, the no-JS size links below and the browser Back
+    button working while leaving a cold landing unselected.
+
+    A product with exactly one variant is not a choice, so it stays selected.
+  endcomment
+  assign crk_var = product.selected_variant
+  if product.variants.size == 1
+    assign crk_var = product.variants.first
+  endif
+
+  comment
+    Filter precedence: `money` is formatted into a variable first. Chaining it
+    inside the output tag is the trap this codebase has hit four times.
+  endcomment
+  assign crk_price_display = product.price | money
+  if crk_var
+    assign crk_price_display = crk_var.price | money
+  endif
+
   assign crk_col = collections[section.settings.collection]
 
   assign crk_index = 0
@@ -144,7 +167,7 @@
       {%- comment -%} ---------- record panel ---------- {%- endcomment -%}
       <div class="crk-panel crk-panel-record crk-panel-sticky">
         <h1 class="crk-display crk-title">{% render 'crooks-title', product: product %}</h1>
-        <div class="crk-display crk-price" style="margin-top: 4px;" data-crk-price>{{ crk_var.price | money }}</div>
+        <div class="crk-display crk-price" style="margin-top: 4px;" data-crk-price>{{ crk_price_display }}</div>
 
         {%- if product.available -%}
           {%- form 'product', product, id: 'crk-product-form' -%}
@@ -225,12 +248,14 @@
               {%- endfor -%}
 
               {%- comment -%}
-                The size buttons are pre-selected server-side from crk_var, so a stock line
-                hardcoded to "Select a size" contradicted the size the page was already
-                showing as chosen — and was wrong for anyone landing on ?variant=<sold out>.
-                Mirror the JS states here so the pre-JS render is variant-accurate.
+                Mirrors the JS states so the pre-JS render is accurate in all three
+                cases: nothing chosen yet (the cold landing), a chosen size that is
+                sold out (?variant=<sold out>, or the Back button), and a chosen size
+                that is buyable. crooks-record.js reads the selection back out of
+                these buttons on init, so leaving them all unselected here is what
+                makes the shopper's first choice their own.
               {%- endcomment -%}
-              <p class="crk-stockline" data-crk-stockline data-out="{% if crk_var.available %}false{% else %}true{% endif %}" aria-live="polite">
+              <p class="crk-stockline" data-crk-stockline data-out="{% if crk_var and crk_var.available == false %}true{% else %}false{% endif %}" aria-live="polite">
                 {%- if crk_var == blank -%}
                   {{ section.settings.label_select }}
                 {%- elsif crk_var.available == false -%}
@@ -285,9 +310,9 @@
               JS re-evaluates on every size change; this covers the pre-JS render.
             {%- endcomment -%}
             {%- if crk_mto and section.settings.made_to_order_text != blank -%}
-              <p class="crk-stockline" data-crk-delivery{% unless crk_var.available %} hidden{% endunless %}>{{ section.settings.made_to_order_text }}</p>
+              <p class="crk-stockline" data-crk-delivery{% if crk_var and crk_var.available == false %} hidden{% endif %}>{{ section.settings.made_to_order_text }}</p>
             {%- elsif section.settings.in_stock_text != blank -%}
-              <p class="crk-stockline" data-crk-delivery{% unless crk_var.available %} hidden{% endunless %}>{{ section.settings.in_stock_text }}</p>
+              <p class="crk-stockline" data-crk-delivery{% if crk_var and crk_var.available == false %} hidden{% endif %}>{{ section.settings.in_stock_text }}</p>
 
               {%- comment -%}
                 Dispatch state readout. Deliberately NOT a countdown: a ticking clock is
@@ -364,7 +389,7 @@
               in the buy panel. It disappears by itself when the variant is unbuyable.
             {%- endcomment -%}
             {%- if section.settings.show_dynamic_checkout -%}
-              <div class="crk-buynow" data-crk-buynow>{{ form | payment_button }}</div>
+              <div class="crk-buynow" data-crk-buynow{% unless crk_var.available %} hidden{% endunless %}>{{ form | payment_button }}</div>
             {%- endif -%}
 
             {%- comment -%}
@@ -383,7 +408,7 @@
             because HTML forbids nested forms, and starts hidden unless the variant the
             server selected is itself unavailable, so it is correct before JS runs.
           {%- endcomment -%}
-          <div class="crk-notifypanel" data-crk-notify-panel{% if crk_var.available %} hidden{% endif %}>
+          <div class="crk-notifypanel" data-crk-notify-panel{% unless crk_var and crk_var.available == false %} hidden{% endunless %}>
             {%- form 'contact', class: 'crk-notify' -%}
               <input type="hidden" name="contact[subject]" value="{{ section.settings.notify_subject | escape }}">
               <input type="hidden" name="contact[product]" value="{{ product.handle }}">
@@ -627,7 +652,7 @@
         <div class="crk-display" style="font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
           {% render 'crooks-title', product: product %}
         </div>
-        <div class="crk-data crk-dim" data-crk-sticky-meta>{{ crk_var.price | money }}</div>
+        <div class="crk-data crk-dim" data-crk-sticky-meta>{{ crk_price_display }}</div>
       </div>
       {%- comment -%}
         Two actions, mirroring the panel. The bar sits outside the product form, so
@@ -715,6 +740,7 @@
     { "type": "paragraph", "content": "Shown only on products carrying the crooks.set_partner, set_bundle, set_partner_option and set_short_name metafields. Placeholders: [partner] the other garment, [saving] the amount saved, [price] the set price, [size] the chosen size. Amounts are formatted by Shopify in the shopper's currency." },
     { "type": "text", "id": "set_collapsed_text", "label": "Collapsed row", "default": "Cop the full fit — add the matching [partner]. Save [saving]." },
     { "type": "text", "id": "set_partner_size_label", "label": "Second size label", "default": "[partner] size" },
+    { "type": "text", "id": "set_pick_text", "label": "Second size not chosen yet", "info": "Shown in the set panel, and on the button, while the box is ticked but no second size has been picked. [partner] is replaced with the other item's name.", "default": "Pick a [partner] size" },
     { "type": "text", "id": "set_sold_text", "label": "Partner sold out", "default": "[partner] sold out in [size] — pick another size" },
     { "type": "text", "id": "set_price_label", "label": "Set price line", "default": "[price] for the set" },
     { "type": "text", "id": "set_shipping_text", "label": "Shipping line", "default": "Free UK Tracked 24 included" },

@@ -1411,3 +1411,94 @@ correcting a duplicate is precisely what guarantees the next drift: every copy
 change now has to be made in two places or this file goes stale again, exactly
 as it did here. Deleting it removes the class of bug. Left in place because the
 instruction was "fix", and deletion is the owner's call under §0.
+
+---
+
+## 2026-08-20 — Nothing is chosen on the shopper's behalf
+
+George: *"can you stop size being autoselected when first clicking a product,
+and also if item is in a bundle, stop it from autoselecting the same size"*
+
+Two separate guesses, same principle: a pre-pressed button is indistinguishable
+from a choice the shopper made, so the wrong size gets bought and nobody can
+tell whose mistake it was. That got more expensive the same day — change-of-mind
+return postage is now the customer's.
+
+### 1. The PDP no longer picks a size
+
+`sections/crooks-exhibit-record.liquid` opened with
+`product.selected_or_first_available_variant`, which picks the first in-stock
+variant. Now:
+
+    assign crk_var = product.selected_variant
+    if product.variants.size == 1
+      assign crk_var = product.variants.first
+    endif
+
+`selected_variant` is Shopify's deep-link accessor — nil unless `?variant=` is
+in the URL ([confirmed against the Support product variants doc]). So shared
+links, the `<noscript>` size links and the Back button all still land
+pre-selected; only a cold landing is blank. A product with exactly one variant
+is not a choice, so it stays selected.
+
+**No JS change was needed for this.** `crooks-record.js` reads the selection
+back out of the buttons' `data-selected` on init and already had a complete
+`!complete` state — `Select a size`, disabled button, wallet hidden, notify
+panel suppressed. Rendering every button unselected is the whole fix.
+
+Five knock-on renders had to follow, because each was written assuming a
+variant always existed:
+
+| | was | now |
+|---|---|---|
+| price | `crk_var.price` → blank | falls back to `product.price`, formatted into a variable first |
+| stock line `data-out` | `true` when nil → styled sold-out | `true` only for a chosen size that is gone |
+| delivery line | hidden when nil | hidden only for a chosen size that is gone |
+| wallet row | always rendered | hidden until a size is chosen |
+| notify panel | `{% if crk_var.available %} hidden` → nil is falsy, so **the restock form showed on every cold landing** | shown only for a chosen size that is gone |
+
+### 2. The set toggle no longer matches the first size
+
+`assets/crooks-set.js` carried `if (!touched && mainSize) partnerSize = mainSize;`
+in the render hook and again in the checkbox handler. Both gone, along with the
+`touched` flag they existed to guard.
+
+Removing the guess created a state that did not exist before — ticked, main size
+chosen, partner size not — and it needed two things:
+
+- a third panel state. Previously `paint()` was binary: sellable, or the
+  sold-out line. With no partner size the sold-out branch rendered
+  *"sold out in  — pick another size"* against an empty size. Now the panel
+  prompts in black rather than reporting a fault in red.
+- **the button must not stay on ADD TO BAG.** `current()` returns null, the hook
+  used to `return` and leave the record's own state, and the record's state for
+  a chosen main size is a live ADD TO BAG for the single item. Ticking the box
+  and pressing it would have bought one thing to someone who asked for two.
+  The button now states what is missing and is disabled.
+
+New setting `set_pick_text` (default `Pick a [partner] size`), passed to JS as
+`data-crk-set-pick` with `[partner]` already substituted in Liquid.
+
+### Verified, not assumed
+
+A fixture mirroring the new markup (5 sizes, L sold out, S low, a 25-variant
+bundle with XL gone) driven in headless Chromium against the real
+`crooks-record.js` and `crooks-set.js`: **41 assertions, 41 passing.** Covers the
+cold landing, picking a size, picking a sold-out size, ticking the set, picking a
+partner size, changing the main size afterwards, a sold-out partner size, and
+unticking.
+
+The run caught a bug I had just written: removing `var touched` left the
+assignment `touched = true` in the click handler, and under `'use strict'` that
+throws a ReferenceError, so **every partner-size click died silently.** Nine
+assertions failed on it. It would not have shown up in any static check —
+`node --check` passes, the file parses, the listener is attached, and the throw
+only happens on click. That is the second time this session a test has paid for
+itself; it is the argument for building the fixture rather than reasoning it
+through.
+
+### Left alone
+
+Ticked + partner size chosen + that pair unavailable still leaves ADD TO BAG
+live for the single item. Same class of silent-intent bug as the one fixed
+above, but it predates this change and is not what was asked. Worth fixing next.

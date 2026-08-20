@@ -69,6 +69,7 @@
     data-crk-set-size-index="{{ crk_size_index }}"
     data-crk-set-cta="{{ section.settings.set_cta | escape }}"
     data-crk-set-sold="{{ section.settings.set_sold_text | replace: '[partner]', crk_partner_name | escape }}"
+    data-crk-set-pick="{{ section.settings.set_pick_text | replace: '[partner]', crk_partner_name | escape }}"
   >
     <label class="crk-set__row" for="crk-set-toggle">
       <input class="crk-check" id="crk-set-toggle" type="checkbox" data-crk-set-check>
@@ -94,6 +95,11 @@
       <p class="crk-eyebrow crk-set__label" id="crk-set-size-label">
         {{ section.settings.set_partner_size_label | replace: '[partner]', crk_partner_name }}
       </p>
+      {%- comment -%}
+        Every size renders unselected. The second garment is a second decision:
+        matching it to the first is a guess, and a guess rendered as a chosen
+        button is indistinguishable from the shopper's own choice.
+      {%- endcomment -%}
       <div class="crk-sizes crk-set__sizes" role="group" aria-labelledby="crk-set-size-label" data-crk-set-sizes>
         {%- for opt in crk_partner.options_with_values -%}
           {%- assign crk_opt_name = opt.name | downcase -%}

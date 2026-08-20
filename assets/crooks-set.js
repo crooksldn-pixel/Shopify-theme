@@ -30,6 +30,7 @@
 
   var SIZE_INDEX = parseInt(set.getAttribute('data-crk-set-size-index'), 10) || 0;
   var SOLD_TPL = set.getAttribute('data-crk-set-sold') || '';
+  var PICK_TPL = set.getAttribute('data-crk-set-pick') || '';
 
   var variants = [];
   var nodes = set.querySelectorAll('[data-crk-set-variants] li');
@@ -48,9 +49,13 @@
   if (!variants.length) return;
 
   var sizeBtns = sizesBox ? sizesBox.querySelectorAll('[data-crk-set-size]') : [];
-  var partnerSize = null;   // null until the shopper's main size is known
+  /* partnerSize stays null until the shopper picks one themselves. It is never
+     seeded from the main size: someone buying a crewneck in L is not thereby
+     buying shorts in L, and a pre-pressed button is indistinguishable from a
+     choice they made. The wrong-size exchange it causes is one we now charge
+     them postage for, which makes the guess worse than it was. */
+  var partnerSize = null;
   var mainSize = null;
-  var touched = false;      // true once the shopper picks a partner size themselves
 
   function find(main, partner) {
     for (var i = 0; i < variants.length; i++) {
@@ -100,14 +105,19 @@
       if (stockLine) { stockLine.textContent = ''; stockLine.hidden = true; }
       if (wasEl) wasEl.textContent = v.was;
       if (nowEl) nowEl.textContent = v.now;
+      return;
+    }
+    if (wasEl) wasEl.textContent = '';
+    if (nowEl) nowEl.textContent = '';
+    if (!stockLine) return;
+    stockLine.hidden = false;
+    if (!partnerSize) {
+      // Waiting on a choice, not reporting a fault: no red.
+      stockLine.setAttribute('data-out', 'false');
+      stockLine.textContent = PICK_TPL;
     } else {
-      if (stockLine) {
-        stockLine.hidden = false;
-        stockLine.setAttribute('data-out', 'true');
-        stockLine.textContent = SOLD_TPL.replace('[size]', partnerSize || '');
-      }
-      if (wasEl) wasEl.textContent = '';
-      if (nowEl) nowEl.textContent = '';
+      stockLine.setAttribute('data-out', 'true');
+      stockLine.textContent = SOLD_TPL.replace('[size]', partnerSize);
     }
   }
 
@@ -117,19 +127,26 @@
     var nextMain = state.selected[SIZE_INDEX] || null;
     if (nextMain !== mainSize) {
       mainSize = nextMain;
-      // Match the main size until the shopper says otherwise — never assume it.
-      if (!touched && mainSize) partnerSize = mainSize;
       paint();
     }
 
     var v = current();
-    if (!v) return;                      // leave the record's own state alone
+    if (!v) {
+      /* The box is ticked and a main size is chosen, but the set is not
+         specified yet. Leaving the record's own ADD TO BAG enabled here would
+         quietly sell one item to someone who asked for two, so the button
+         states what is missing instead. Every other case is the record's to
+         own and is left alone. */
+      if (check.checked && mainSize && !partnerSize && PICK_TPL) {
+        state.setBuy(PICK_TPL, true);
+      }
+      return;
+    }
     if (state.idInput) state.idInput.value = v.id;
     state.setBuy(v.cta, false);
   };
 
   check.addEventListener('change', function () {
-    if (check.checked && !partnerSize && mainSize) partnerSize = mainSize;
     paint();
     // Re-ask the record to settle the buy state, which re-enters the hook.
     root.dispatchEvent(new CustomEvent('crk:rerender'));
@@ -138,7 +155,6 @@
   for (var b = 0; b < sizeBtns.length; b++) {
     (function (btn) {
       btn.addEventListener('click', function () {
-        touched = true;
         partnerSize = btn.getAttribute('data-crk-set-size');
         paint();
         root.dispatchEvent(new CustomEvent('crk:rerender'));
