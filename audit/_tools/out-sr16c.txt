@@ -1,0 +1,548 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+==============================================================================
+A. DRAWER — does Tab move?
+==============================================================================
+focus on open: {"tag":"button","name":"CLOSE","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-close=\"\"> CLOSE </button>"}
+  Tab 1: {"tag":"button","name":"CLOSE","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-close=\"\"> CLOSE </button>"}
+  Tab 2: {"tag":"button","name":"CLOSE","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-close=\"\"> CLOSE </button>"}
+  Tab 3: {"tag":"button","name":"CLOSE","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-close=\"\"> CLOSE </button>"}
+  Tab 4: {"tag":"button","name":"CLOSE","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-close=\"\"> CLOSE </button>"}
+  Tab 5: {"tag":"button","name":"CLOSE","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-close=\"\"> CLOSE </button>"}
+  Shift+Tab: {"tag":"a","name":"BAG [0]","cls":"crk-header__link","html":"<a class=\"crk-header__link\" href=\"/cart\"> BAG<span data-crk-cart-count=\"\">&nbsp;[0]</span> </a>"}
+  manually focused first drawer link: {"tag":"a","name":"SHOP","cls":"crk-drawer__link","html":"<a class=\"crk-drawer__link\" href=\"/collections/frontpage\">SHOP</a>"}
+  Tab from there: {"tag":"a","name":"SHOP","cls":"crk-drawer__link","html":"<a class=\"crk-drawer__link\" href=\"/collections/frontpage\">SHOP</a>"}
+  Tab again: {"tag":"a","name":"SHOP","cls":"crk-drawer__link","html":"<a class=\"crk-drawer__link\" href=\"/collections/frontpage\">SHOP</a>"}
+  focusable elements the drawer contains: 16
+  #crk-drawer inert? {"inert":false,"tabindex":null,"display":"flex","visibility":"visible"}
+  after Escape, focus: {"tag":"button","name":"MENU","cls":"crk-header__link","html":"<button class=\"crk-header__link\" type=\"button\" data-crk-drawer-open=\"\" data-crk-label-open=\"MENU\" data-crk-lab"}
+
+==============================================================================
+B. PDP — the announcement chain
+==============================================================================
+
+-- LIVE-REGION TIMELINE [product loaded] : 3
+   +   611ms REGION APPEARS R1 .crk-stockline live=polite hidden=false bornAt=610ms "Select a size"
+   +   611ms REGION APPEARS R2 .crk-stockline crk-added live=polite hidden=true bornAt=611ms ""
+   +  1886ms TEXT CHANGES   R1 .crk-stockline live=polite hidden=false bornAt=610ms was="Select a size" -> "Select Size"
+stamped: [{"stamp":"S0","cls":"crk-stockline","live":"polite","text":"Select Size"},{"stamp":"S1","cls":"crk-stockline crk-added","live":"polite","text":""}]
+
+-- choosing SIZE M by keyboard
+
+-- LIVE-REGION TIMELINE [after choosing Size M] : 1
+   +  6201ms TEXT CHANGES   R1 .crk-stockline live=polite hidden=false bornAt=610ms was="Select Size" -> "IN STOCK"
+stamps still present after size choice: [{"stamp":"S0","cls":"crk-stockline","text":"IN STOCK"},{"stamp":"S1","cls":"crk-stockline crk-added","text":""}]
+AX of the stock line now: {"role":"paragraph","name":"","ignored":false,"live":"polite","atomic":false,"relevant":"additions text"}
+size buttons: Size XS=false | Size S=false | Size M=true | Size L=false | Size XL=false
+focus still on the size button? {"tag":"button","name":"Size M","cls":"crk-size","html":"<button type=\"button\" class=\"crk-size\" data-crk-opt=\"0\" data-value=\"M\" data-selected=\"true\" data-low=\"false\" a"}
+
+-- ADD TO BAG by keyboard
+focused: {"tag":"button","name":"ADD TO BAG","cls":"crk-btn","html":"<button type=\"submit\" name=\"add\" class=\"crk-btn\" data-crk-buy=\"\">Add to bag</button>"}
+
+-- LIVE-REGION TIMELINE [after ADD TO BAG] : 1
+   +  9201ms TEXT CHANGES   R2 .crk-stockline crk-added live=polite hidden=false bornAt=611ms was="" -> "Added — 1 in bag View bag"
+stamps after add: [{"stamp":"S0","cls":"crk-stockline","hidden":false,"text":"IN STOCK"},{"stamp":"S1","cls":"crk-stockline crk-added","hidden":false,"text":"Added — 1 in bag View bag"}]
+focus after add: {"tag":"body","name":"Skip to content 12 PRODUCTS CURRENTLY ON","cls":"page-width-narrow card-hover-effect-none","html":"<body class=\"page-width-narrow card-hover-effect-none\"> <a class=\"skip-to-content-link button-secondary\" href="}
+bag link name: "BAG [1]"
+AX of the confirmation: {"role":"paragraph","name":"","ignored":false,"live":"polite","atomic":false,"relevant":"additions text"}
+confirmation subtree: - paragraph:
+  - text: "> Added — 1 in bag"
+  - link "View bag":
+    - /url: /cart
+audit/screens/16-added-confirm.png
+  Tab 1 after add: {"tag":"shop-pay-wallet-button","name":"","cls":"","html":"<shop-pay-wallet-button access-token=\"cee74aacc83730a0d9df0f7808db850a\" buyer-country=\"GB\" buyer-currency=\"GBP"}
+  Tab 2 after add: {"tag":"a","name":"More payment options","cls":"shopify-payment-button__more-options","html":"<a class=\"shopify-payment-button__more-options\" id=\"more-payment-options-link\" href=\"#\">More payment options</"}
+  Tab 3 after add: {"tag":"a","name":"View bag","cls":"crk-added__link","html":"<a href=\"/cart\" class=\"crk-added__link\">View bag</a>"}
+confirmation 6s later: {"text":"Added — 1 in bag View bag","display":"block"}
+
+-- LIVE-REGION TIMELINE [6s after add] : 0
+
+==============================================================================
+C. ACCORDIONS
+==============================================================================
+accordion controls: 4
+markup: [
+  {
+    "tag": "button",
+    "name": "SPECIFICATION +",
+    "expanded": "false",
+    "controls": "crk-specification-body",
+    "inHeading": "H2",
+    "panelHidden": true
+  },
+  {
+    "tag": "button",
+    "name": "ITEM DESCRIPTION +",
+    "expanded": "false",
+    "controls": "crk-provenance-body",
+    "inHeading": "H2",
+    "panelHidden": true
+  },
+  {
+    "tag": "button",
+    "name": "MEASUREMENTS +",
+    "expanded": "false",
+    "controls": "crk-measurements-body",
+    "inHeading": "H2",
+    "panelHidden": true
+  },
+  {
+    "tag": "button",
+    "name": "CHAIN OF CUSTODY — SHIPPING & RETURNS +",
+    "expanded": "false",
+    "controls": "crk-custody-body",
+    "inHeading": "H2",
+    "panelHidden": true
+  }
+]
+AX (closed): {"role":"button","name":"SPECIFICATION","ignored":false,"invalid":"false","focusable":true,"expanded":false}
+AX of MEASUREMENTS after Enter: {"role":"button","name":"MEASUREMENTS","ignored":false,"invalid":"false","focusable":true,"focused":true,"expanded":true,"controls":"crk-measurements-body"}
+states: ["SPECIFICATION +=false","ITEM DESCRIPTION +=false","MEASUREMENTS −=true","CHAIN OF CUSTODY — SHIPPIN=false"]
+
+-- LIVE-REGION TIMELINE [accordion opened] : 0
+panel content now readable:
+← CATALOGUE
+PRODUCT 03 / 12
+DENIM
+PHOTO 1 OF 2
+BLUE WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+IN STOCK
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+ADD TO BAG
+More payment options
+
+Added — 1 in bag View bag
+
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+GREY WASH JORTS
+£50.00
+audit/screens/16-accordion.png
+
+ARIA SNAPSHOT of the open panel:
+- heading "Measurements" [level=2]:
+  - button "Measurements" [expanded]
+- group "Measurement units":
+  - button "CM" [pressed]
+  - button "IN"
+- region "Measurements table":
+  - table "True to size — waist, chest and leg measurements are taken around the garment. All measurements in centimetres.":
+    - caption: True to size — waist, chest and leg measurements are taken around the garment. All measurements in centimetres.
+    - rowgroup:
+      - row "size waist inseam leg opening":
+        - columnheader "size"
+        - columnheader "waist"
+        - columnheader "inseam"
+        - columnheader "leg opening"
+    - rowgroup:
+      - row "XS 76.2cm 73.7cm 45.7cm":
+        - rowheader "XS"
+        - cell "76.2cm"
+        - cell "73.7cm"
+        - cell "45.7cm"
+      - row "S 81.3cm 76.2cm 48.3cm":
+        - rowheader "S"
+        - cell "81.3cm"
+        - cell "76.2cm"
+        - cell "48.3cm"
+      - row "M 86.4cm 77.5cm 50.8cm":
+        - rowheader "M"
+        - cell "86.4cm"
+        - cell "77.5cm"
+        - cell "50.8cm"
+      - row "L 91.4cm 80.0cm 53.3cm":
+        - rowheader "L"
+        - cell "91.4cm"
+        - cell "80.0cm"
+        - cell "53.3cm"
+      - row "XL 96.5cm 81.3cm 55.9cm":
+        - rowheader "XL"
+        - cell "96.5cm"
+        - cell "81.3cm"
+        - cell "55.9cm"
+after opening a second: ["SPECIFICATION +=false","ITEM DESCRIPTION +=false","MEASUREMENTS −=true","CHAIN OF CUSTODY — SHIPPIN=true"]
+
+-- LIVE-REGION TIMELINE [second accordion] : 0
+audit/screens/16-accordion-2.png
+cm/inch toggle: [{"text":"CM","label":null,"pressed":"true"},{"text":"IN","label":null,"pressed":"false"}]
+SIZE GUIDE button AX: {"role":"button","name":"SIZE GUIDE","ignored":false,"invalid":"false","focusable":true}
+
+==============================================================================
+D. STICKY BAR
+==============================================================================
+{
+  "ariaHidden": null,
+  "display": "none",
+  "visibility": "visible",
+  "transform": "none",
+  "controls": [
+    {
+      "text": "Add to bag",
+      "label": null
+    },
+    {
+      "text": "Checkout now",
+      "label": null
+    }
+  ]
+}
+after scrolling: {"ariaHidden":null,"display":"none","text":"BLUE WASH OG JEANS £60.00 · M Add to bag Checkout now"}
+duplicate ADD TO BAG in the tree? [{"cls":"crk-btn","hiddenAncestor":false,"display":"block"},{"cls":"crk-btn","hiddenAncestor":false,"display":"block"}]
+
+## CONTROL NAME AUDIT [product (scrolled, sticky bar showing)]
+   interactive elements in DOM: 64 | exposed to a screen reader: 44 | ignored/hidden: 20
+   >>> exposed controls WITHOUT an accessible name: 0
+   --- every exposed control, as announced ---
+     link         "Skip to content"
+     link         "CROOKSLDN"
+     link         "CATALOGUE"
+     link         "SEARCH"
+     link         "BAG  [1]"
+     button       "LIGHT MODE"  aria-pressed=false
+     button       "MENU"  aria-expanded=false
+     link         "← CATALOGUE"
+     group        "Evidence photographs"
+     button       "Photo 1 of 2"
+     button       "Photo 2 of 2"
+     button       "Size XS"  aria-pressed=false
+     button       "Size S"  aria-pressed=false
+     button       "Size M"  aria-pressed=true
+     button       "Size L"  aria-pressed=false
+     button       "Size XL"  aria-pressed=false
+     button       "SIZE GUIDE"
+     button       "ADD TO BAG"
+     link         "More payment options"
+     link         "View bag"
+     button       "SPECIFICATION"  aria-expanded=false
+     button       "ITEM DESCRIPTION"  aria-expanded=false
+     button       "MEASUREMENTS"  aria-expanded=true
+     button       "CM"  aria-pressed=true
+     button       "IN"  aria-pressed=false
+     region       "Measurements table"
+     button       "CHAIN OF CUSTODY — SHIPPING & RETURNS"  aria-expanded=true
+     link         "BLUE WASH JORTS BLUE WASH JORTS £50.00"
+     link         "GREY WASH OG JEANS GREY WASH OG JEANS £60.00"
+     link         "GREY WASH JORTS GREY WASH JORTS £50.00"
+     link         "NEW"
+     link         "TEES"
+     link         "DENIM"
+     link         "SWEATS"
+     link         "ACCESSORIES"
+     link         "QUESTIONS"
+     link         "TERMS"
+     link         "SHIPPING"
+     link         "REFUNDS"
+     link         "TRACK ORDER"
+     link         "INSTAGRAM"
+     link         "TIKTOK"
+     link         "EMAIL"
+     link         "Play CROOKSLDN: The Getaway"
+
+==============================================================================
+E. SOLD-OUT SIZES + NOTIFY FORM
+==============================================================================
+sizes: [
+  {
+    "label": "Size XS",
+    "text": "XS",
+    "pressed": "false",
+    "ariaDisabled": null,
+    "disabledProp": false,
+    "describedby": null,
+    "title": null
+  },
+  {
+    "label": "Size S",
+    "text": "S",
+    "pressed": "false",
+    "ariaDisabled": null,
+    "disabledProp": false,
+    "describedby": null,
+    "title": null
+  },
+  {
+    "label": "Size M",
+    "text": "M",
+    "pressed": "false",
+    "ariaDisabled": "true",
+    "disabledProp": false,
+    "describedby": null,
+    "title": null
+  },
+  {
+    "label": "Size L",
+    "text": "L",
+    "pressed": "false",
+    "ariaDisabled": "true",
+    "disabledProp": false,
+    "describedby": null,
+    "title": null
+  },
+  {
+    "label": "Size XL",
+    "text": "XL",
+    "pressed": "false",
+    "ariaDisabled": "true",
+    "disabledProp": false,
+    "describedby": null,
+    "title": null
+  }
+]
+AX of a sold-out size: {"role":"button","name":"Size M","ignored":false,"disabled":true,"invalid":"false","focusable":true,"pressed":"false"}
+AX of an available size: {"role":"button","name":"Size XS","ignored":false,"invalid":"false","focusable":true,"pressed":"false"}
+
+-- LIVE-REGION TIMELINE [sold-out size chosen] : 5
+   +   809ms REGION APPEARS R1 .crk-carriage__msg crk-data live=polite hidden=false bornAt=809ms "£10.00 to free Tracked 24"
+   +   829ms REGION APPEARS R2 .crk-stockline live=polite hidden=false bornAt=829ms "Select a size"
+   +   829ms REGION APPEARS R3 .crk-stockline crk-added live=polite hidden=true bornAt=829ms ""
+   +  3061ms TEXT CHANGES   R2 .crk-stockline live=polite hidden=false bornAt=829ms was="Select a size" -> "Select Size"
+   +  7401ms TEXT CHANGES   R2 .crk-stockline live=polite hidden=false bornAt=829ms was="Select Size" -> "SIZE M IS SOLD OUT"
+what the buy area says now:
+£10.00 to free Tracked 24
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+← CATALOGUE
+PRODUCT 09 / 12
+SWEATS
+PHOTO 1 OF 2
+V2 BAGGIES
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+SIZE M IS SOLD OUT
+
+SIZE GUIDE
+SOLD OUT
+TELL ME WHEN THIS SIZE IS BACK
+NOTIFY ME
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+notify email field AX: {"role":"textbox","name":"TELL ME WHEN THIS SIZE IS BACK","ignored":false,"invalid":"false","focusable":true,"editable":"plaintext","settable":true,"multiline":false,"readonly":false,"required":true}
+notify form controls: [{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"button","type":"button","label":"Size XS","id":"","labelFor":null,"placeholder":null,"text":"XS"},{"tag":"button","type":"button","label":"Size S","id":"","labelFor":null,"placeholder":null,"text":"S"},{"tag":"button","type":"button","label":"Size M","id":"","labelFor":null,"placeholder":null,"text":"M"},{"tag":"button","type":"button","label":"Size L","id":"","labelFor":null,"placeholder":null,"text":"L"},{"tag":"button","type":"button","label":"Size XL","id":"","labelFor":null,"placeholder":null,"text":"XL"},{"tag":"button","type":"button","label":null,"id":"","labelFor":null,"placeholder":null,"text":"SIZE GUIDE"},{"tag":"button","type":"submit","label":null,"id":"","labelFor":null,"placeholder":null,"text":"SOLD OUT"},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"hidden","label":null,"id":"","labelFor":null,"placeholder":null,"text":""},{"tag":"input","type":"email","label":null,"id":"crk-notify-variant-email","labelFor":"TELL ME WHEN THIS SIZE IS BACK","placeholder":"email address","text":""},{"tag":"button","type":"submit","label":null,"id":"","labelFor":null,"placeholder":null,"text":"NOTIFY ME"}]
+audit/screens/16-soldout.png
+stock line AX: {"role":"paragraph","name":"","ignored":false,"live":"polite","atomic":false,"relevant":"additions text"}
+
+## CONTROL NAME AUDIT [product with sold-out sizes]
+   interactive elements in DOM: 62 | exposed to a screen reader: 40 | ignored/hidden: 22
+   >>> exposed controls WITHOUT an accessible name: 0
+   --- every exposed control, as announced ---
+     link         "Skip to content"
+     link         "CROOKSLDN"
+     link         "CATALOGUE"
+     link         "SEARCH"
+     link         "BAG  [1]"
+     button       "LIGHT MODE"  aria-pressed=false
+     button       "MENU"  aria-expanded=false
+     link         "← CATALOGUE"
+     group        "Evidence photographs"
+     button       "Photo 1 of 2"
+     button       "Photo 2 of 2"
+     button       "Size XS"  aria-pressed=false
+     button       "Size S"  aria-pressed=false
+     button       "Size M"  aria-pressed=true  aria-disabled=true
+     button       "Size L"  aria-pressed=false  aria-disabled=true
+     button       "Size XL"  aria-pressed=false  aria-disabled=true
+     button       "SIZE GUIDE"
+     button       "SOLD OUT"
+     textbox      "TELL ME WHEN THIS SIZE IS BACK"
+     button       "NOTIFY ME"
+     button       "SPECIFICATION"  aria-expanded=false
+     button       "ITEM DESCRIPTION"  aria-expanded=false
+     button       "MEASUREMENTS"  aria-expanded=false
+     button       "CHAIN OF CUSTODY — SHIPPING & RETURNS"  aria-expanded=false
+     link         "CHARCOAL CELLBLOCK CREWNECK CHARCOAL CELLBLOCK CREWNECK £50.00"
+     link         "CHARCOAL CELLBLOCK SHORTS CHARCOAL CELLBLOCK SHORTS £45.00"
+     link         "NEW"
+     link         "TEES"
+     link         "DENIM"
+     link         "SWEATS"
+     link         "ACCESSORIES"
+     link         "QUESTIONS"
+     link         "TERMS"
+     link         "SHIPPING"
+     link         "REFUNDS"
+     link         "TRACK ORDER"
+     link         "INSTAGRAM"
+     link         "TIKTOK"
+     link         "EMAIL"
+     link         "Play CROOKSLDN: The Getaway"
+
+==============================================================================
+F. CART DISCOUNT FIELD
+==============================================================================
+discount disclosure AX: {"role":"DisclosureTriangle","name":"Discount","ignored":false,"focusable":true,"expanded":false}
+before opening — input in tree? {"found":false}
+after opening — input AX: {"role":"textbox","name":"Apply a discount code","ignored":false,"invalid":"false","focusable":true,"editable":"plaintext","settable":true,"multiline":false,"readonly":false,"required":true}
+after opening — button AX: {"role":"button","name":"Apply","ignored":false,"invalid":"false","focusable":true}
+discount markup: [{"tag":"input","type":"text","id":"cart-discount","name":"discount","placeholder":"Discount code","ariaLabel":null,"labelFor":"Apply a discount code","innerText":"","title":null},{"tag":"button","type":"submit","id":"","name":null,"placeholder":null,"ariaLabel":null,"labelFor":null,"innerText":"Apply","title":null}]
+audit/screens/16-cart-discount.png
+
+## CONTROL NAME AUDIT [cart (discount box open)]
+   interactive elements in DOM: 62 | exposed to a screen reader: 38 | ignored/hidden: 24
+   >>> exposed controls WITHOUT an accessible name: 0
+   --- every exposed control, as announced ---
+     link         "Skip to content"
+     link         "CROOKSLDN"
+     link         "CATALOGUE"
+     link         "SEARCH"
+     link         "BAG  [1]"
+     button       "LIGHT MODE"  aria-pressed=false
+     button       "MENU"  aria-expanded=false
+     link         "CROOKSLDN blue wash heavyweight denim jeans with baggy fit and white handcuff embroidery on back pockets"
+     link         "BLUE WASH OG JEANS"
+     button       "Decrease quantity"
+     spinbutton   "Quantity"
+     button       "Increase quantity"
+     button       "Remove BLUE WASH OG JEANS - M"
+     DisclosureTriangle "Discount"
+     textbox      "Apply a discount code"
+     button       "Apply"
+     button       "Check out"
+     link         "View all"
+     link         "CHARCOAL CELLBLOCK CREWNECK"
+     link         "CHARCOAL CELLBLOCK SHORTS"
+     button       "Previous slide"
+     button       "Next slide"
+     link         "BLUE WASH OG JEANS"
+     link         "BLUE WASH JORTS"
+     link         "NEW"
+     link         "TEES"
+     link         "DENIM"
+     link         "SWEATS"
+     link         "ACCESSORIES"
+     link         "QUESTIONS"
+     link         "TERMS"
+     link         "SHIPPING"
+     link         "REFUNDS"
+     link         "TRACK ORDER"
+     link         "INSTAGRAM"
+     link         "TIKTOK"
+     link         "EMAIL"
+     link         "Play CROOKSLDN: The Getaway"
+
+==============================================================================
+G. CART QUANTITY
+==============================================================================
+
+-- LIVE-REGION TIMELINE [cart loaded] : 5
+   +  1168ms REGION APPEARS R1 .crk-carriage__msg crk-data live=polite hidden=false bornAt=1161ms "£10.00 to free Tracked 24"
+   +  1168ms REGION APPEARS R2 .input live=polite hidden=false bornAt=1161ms ""
+   +  1168ms REGION APPEARS R3 .cart-item__error live=alert hidden=false bornAt=1162ms ""
+   +  1168ms REGION APPEARS R4 .cart-discount__error hidden live=alert hidden=true bornAt=1168ms "Discount code cannot be applied to your cart Shipping discounts are shown at checkout afte"
+   +  1168ms REGION APPEARS R5 .cart-totals__item cart-totals__total live=status hidden=false bornAt=1168ms "Estimated total £60.00 GBP"
+
+-- LIVE-REGION TIMELINE [increase quantity] : 2
+   + 10658ms TEXT CHANGES   R5 .cart-totals__item cart-totals__total live=status hidden=false bornAt=1168ms was="Estimated total £60.00 GBP" -> "Estimated total £120.00 GBP"
+   + 11003ms TEXT CHANGES   R1 .crk-carriage__msg crk-data live=polite hidden=false bornAt=1161ms was="£10.00 to free Tracked 24" -> "Free Tracked 24 — unlocked"
+cart text now:
+Free Tracked 24 — unlocked
+
+TRACKED 48 FREE
+TRACKED 24 FREE
+
+Cart
+2
+2
+
+Cart total £120.00 GBP
+
+Product image
+Product information
+Quantity
+Product total
+
+BLUE WASH OG JEANS
+
+Size:
+M
+Price
+£60.00
+Decrease quantity
+Increase quantity
+Remove
+£120.00
+Discount
+Apply a discount code
+Apply
+Estimated total
+£120.00 GBP
+Duties and taxes included. Shipping is calculated at checkout.
+Check out
+You may also like
+View all
+CHARCOAL CELLBLOCK CREWNECK
+
+CHARCOAL CELLBLOCK CREWNECK
+
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+
+CHARCOAL CELLBLOCK SHORTS
+
+£45.00
+BLUE WASH OG JEANS
+
+BLUE WASH OG JEANS
+
+£60.00
+BLUE WASH JORTS
+
+BLUE WASH JORTS
+
+£50.00
+bag link: "BAG [1]"
+audit/screens/16-cart-qty.png
+focus after quantity change: {"tag":"button","name":"Increase quantity","cls":"button quantity-plus button-unstyled","html":"<button class=\"button quantity-plus button-unstyled\" type=\"button\" name=\"plus\" on:click=\"/increaseQuantity\" re"}
+remove control AX: {"role":"button","name":"Remove BLUE WASH OG JEANS - M","ignored":false,"invalid":"false","focusable":true}

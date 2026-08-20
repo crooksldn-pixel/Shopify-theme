@@ -1,0 +1,457 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+================ 0. WHICH SIZES ARE ACTUALLY SOLD OUT (/products/v2-baggies.js) ================
+[
+ "XS: available=true inv=undefined",
+ "S: available=true inv=undefined",
+ "M: available=false inv=undefined",
+ "L: available=false inv=undefined",
+ "XL: available=false inv=undefined"
+]
+
+================ 1. WHAT SITS OVER THE SIZE ROW — banner left alone, fresh load ================
+consent buttons on page: {"found":["Accept","Decline"],"action":"left alone"}
+size M scrolled to: {"cx":195,"cy":364,"top":338,"vh":844}
+DIAG-1 (alone): {
+ "point": {
+  "cx": 195,
+  "cy": 364
+ },
+ "viewport": {
+  "w": 390,
+  "h": 844
+ },
+ "button": {
+  "tag": "BUTTON",
+  "id": null,
+  "cls": "crk-size",
+  "parent": "DIV",
+  "rect": {
+   "x": 166,
+   "y": 338,
+   "w": 58,
+   "h": 52
+  },
+  "position": "relative",
+  "zIndex": "auto",
+  "opacity": "1",
+  "bg": "rgb(14, 12, 19)",
+  "pe": "auto",
+  "vis": "visible",
+  "display": "block",
+  "attrs": [
+   "type=button",
+   "class=crk-size",
+   "data-crk-opt=0",
+   "data-value=M",
+   "data-selected=false",
+   "data-low=false",
+   "aria-pressed=false",
+   "aria-label=Size M"
+  ]
+ },
+ "buttonIsHit": true,
+ "topElement": {
+  "tag": "BUTTON",
+  "id": null,
+  "cls": "crk-size",
+  "parent": "DIV",
+  "rect": {
+   "x": 166,
+   "y": 338,
+   "w": 58,
+   "h": 52
+  },
+  "position": "relative",
+  "zIndex": "auto",
+  "opacity": "1",
+  "bg": "rgb(14, 12, 19)",
+  "pe": "auto",
+  "vis": "visible",
+  "display": "block",
+  "attrs": [
+   "type=button",
+   "class=crk-size",
+   "data-crk-opt=0",
+   "data-value=M",
+   "data-selected=false",
+   "data-low=false",
+   "aria-pressed=false",
+   "aria-label=Size M"
+  ]
+ },
+ "stack": [
+  {
+   "tag": "BUTTON",
+   "id": null,
+   "cls": "crk-size",
+   "parent": "DIV",
+   "rect": {
+    "x": 166,
+    "y": 338,
+    "w": 58,
+    "h": 52
+   },
+   "position": "relative",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(14, 12, 19)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "type=button",
+    "class=crk-size",
+    "data-crk-opt=0",
+    "data-value=M",
+    "data-selected=false",
+    "data-low=false",
+    "aria-pressed=false",
+    "aria-label=Size M"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-sizes",
+   "parent": "DIV",
+   "rect": {
+    "x": 33,
+    "y": 338,
+    "w": 324,
+    "h": 52
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "flex",
+   "attrs": [
+    "class=crk-sizes",
+    "role=group",
+    "aria-label=Size"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-optgroup",
+   "parent": "FORM#[object HTMLInputElement]",
+   "rect": {
+    "x": 33,
+    "y": 314,
+    "w": 324,
+    "h": 76
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-optgroup",
+    "data-crk-optgroup=0",
+    "data-crk-optname=Size"
+   ]
+  },
+  {
+   "tag": "FORM",
+   "id": "ref: <Node>",
+   "cls": "shopify-product-form",
+   "parent": "DIV",
+   "rect": {
+    "x": 33,
+    "y": 314,
+    "w": 324,
+    "h": 278
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "method=post",
+    "action=/cart/add",
+    "id=crk-product-form",
+    "accept-charset=UTF-8",
+    "class=shopify-product-form",
+    "enctype=multipart/form-data"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-panel crk-panel-record crk-panel-sticky",
+   "parent": "DIV",
+   "rect": {
+    "x": 16,
+    "y": 235,
+    "w": 358,
+    "h": 374
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(14, 12, 19)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-panel crk-panel-record crk-panel-sti"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-grid",
+   "parent": "DIV",
+   "rect": {
+    "x": 16,
+    "y": -252,
+    "w": 358,
+    "h": 861
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "flex",
+   "attrs": [
+    "class=crk-grid"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-wrap",
+   "parent": "DIV",
+   "rect": {
+    "x": 0,
+    "y": -319,
+    "w": 390,
+    "h": 1495
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-wrap"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": null,
+   "cls": "crk-root crk-record",
+   "parent": "SECTION#shopify-section-template--30599899709783__main",
+   "rect": {
+    "x": 0,
+    "y": -319,
+    "w": 390,
+    "h": 1495
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(11, 10, 14)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "class=crk-root crk-record",
+    "data-crk-section=exhibit-record",
+    "data-crk-label-add=Add to bag",
+    "data-crk-label-select=Select a size",
+    "data-crk-label-sold=SOLD OUT",
+    "data-crk-label-instock=IN STOCK",
+    "data-crk-label-low=[n] LEFT IN SIZE [size]",
+    "data-crk-label-soldsize=SIZE [size] IS SOLD OUT"
+   ]
+  }
+ ],
+ "bigLayers": [
+  {
+   "tag": "SECTION",
+   "id": "shopify-pc__banner",
+   "cls": "shopify-pc__banner__dialog",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 485,
+    "w": 390,
+    "h": 359
+   },
+   "position": "fixed",
+   "zIndex": "2000000",
+   "opacity": "1",
+   "bg": "rgb(31, 31, 31)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-pc__banner",
+    "class=shopify-pc__banner__dialog",
+    "role=alertdialog",
+    "aria-modal=false",
+    "aria-labelledby=shopify-pc__banner__body-title"
+   ]
+  },
+  {
+   "tag": "IMG",
+   "id": null,
+   "cls": "crk-main-img crk-product-image",
+   "parent": "DIV",
+   "rect": {
+    "x": 29,
+    "y": -239,
+    "w": 332,
+    "h": 332
+   },
+   "position": "absolute",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "src=//7chao18p5etruwy5-100410786135.shopifyp",
+    "alt=V2 BAGGIES",
+    "srcset=//7chao18p5etruwy5-100410786135.shopifyp",
+    "width=1400",
+    "height=1400",
+    "loading=eager",
+    "sizes=(min-width: 960px) 55vw, 100vw",
+    "class=crk-main-img crk-product-image"
+   ]
+  }
+ ],
+ "bodyChildren": [
+  {
+   "tag": "SECTION",
+   "id": "shopify-pc__banner",
+   "cls": "shopify-pc__banner__dialog",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 485,
+    "w": 390,
+    "h": 359
+   },
+   "position": "fixed",
+   "zIndex": "2000000",
+   "opacity": "1",
+   "bg": "rgb(31, 31, 31)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=shopify-pc__banner",
+    "class=shopify-pc__banner__dialog",
+    "role=alertdialog",
+    "aria-modal=false",
+    "aria-labelledby=shopify-pc__banner__body-title"
+   ]
+  },
+  {
+   "tag": "A",
+   "id": null,
+   "cls": "skip-to-content-link button-secondary",
+   "parent": "BODY",
+   "rect": {
+    "x": -99999,
+    "y": -458,
+    "w": 129,
+    "h": 54
+   },
+   "position": "absolute",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "grid",
+   "attrs": [
+    "class=skip-to-content-link button-secondary",
+    "href=#MainContent"
+   ]
+  },
+  {
+   "tag": "DIV",
+   "id": "header-group",
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": -458,
+    "w": 390,
+    "h": 139
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "block",
+   "attrs": [
+    "id=header-group"
+   ]
+  },
+  {
+   "tag": "SCRIPT",
+   "id": null,
+   "cls": null,
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "none",
+   "attrs": []
+  },
+  {
+   "tag": "MAIN",
+   "id": "MainContent",
+   "cls": "content-for-layout",
+   "parent": "BODY",
+   "rect": {
+    "x": 0,
+    "y": -319,
+    "w": 390,
+    "h": 1495
+   },
+   "position": "static",
+   "zIndex": "auto",
+   "opacity": "1",
+   "bg": "rgb(11, 10, 14)",
+   "pe": "auto",
+   "vis": "visible",
+   "display": "flex",
+   "attrs": [
+    "id=MainContent",
+    "class=content-for-layout",
+    "role=main",
+    "data-page-transition-enabled=false",
+    "data-product-transition=false",
+   

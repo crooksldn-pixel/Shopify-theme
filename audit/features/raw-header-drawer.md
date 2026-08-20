@@ -106,7 +106,9 @@ Read top to bottom, as first seen:
 
 **Verdict:** works
 
-**Evidence:** `audit/screens/hdr-a07-drawer-first-seen.png`
+**Evidence:** the drawer as first seen on a genuine first visit, cookie banner
+and all: `audit/screens/hdr-a07-drawer-first-seen.png`. The same drawer once
+the banner has been answered: `audit/screens/hdr-e03-drawer-first-seen-clean.png`.
 
 ---
 
@@ -240,9 +242,12 @@ moved from mid-board to the top-left corner and a coin was collected.
 
 **Verdict:** works — and is the single best-crafted thing in this area
 
-**Evidence:** `audit/screens/hdr-d09-board-t0.png` and
-`audit/screens/hdr-d11-board-t3400.png` (same panel, 3.4s apart, everything
-moved).
+**Evidence:** the board panel in full —
+`audit/screens/hdr-e04-case-panel-clean.png` (board, `PLAY CASE:001 NOW`, and
+the `ACCOUNT BAG [0]` foot beneath it). Movement:
+`audit/screens/hdr-d09-board-t0.png` and
+`audit/screens/hdr-d11-board-t3400.png` — same panel 3.4s apart, thief moved
+from mid-board to the top-left, a coin gone, the officer shifted left.
 
 ---
 

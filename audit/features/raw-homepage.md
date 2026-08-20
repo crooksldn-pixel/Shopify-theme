@@ -404,8 +404,10 @@ intake, once arriving while the form was being filled in. It is a discount offer
 the two sections that do the selling. (The overlay itself belongs to the
 drawer/game area; recorded here because it is what a homepage shopper meets.)
 
-**Evidence:** `audit/screens/homepage-95-ctc-overlay.png`,
-`audit/screens/homepage-84-packaging-manifest.png` and
+**Evidence:** `audit/screens/homepage-95-ctc-overlay.png` — caught at 38.9s as it
+dims the page and fades in over the hero, with no interaction;
+`audit/screens/homepage-58-bad-email.png` — the panel in full, with the copy
+quoted above; `audit/screens/homepage-84-packaging-manifest.png` and
 `audit/screens/homepage-92-duplicate.png` — the same overlay sitting over the
 packaging manifest and over the intake mid-form.
 
@@ -438,6 +440,9 @@ Both lines are facts, not urgency theatre.
 - **The phone field is labelled `NUMBA`** while its own error message calls it
   `Phone number`.
 - **`+44 1234` is accepted exactly like a real number** — no shape check at all.
+- **The field is pre-filled `+44`, so typing a UK mobile the normal way
+  (`07700900123`) produces `+44 07700 900123`** — country code plus trunk zero —
+  and nothing objects.
 - **There is a cookie notice**, contradicting the standing brief's known-items
   list, and it owns 43% of the landing screen and hides the entire first product
   row on arrival.

@@ -1,0 +1,400 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+
+========== 1 HOME COLD [+6.5s] ==========
+shot audit/screens/03-01-home-cold.png
+BODY: COOKIE CONSENT
+
+We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy
+
+Manage preferences
+Accept
+Decline
+Skip to content
+
+12 PRODUCTS CURRENTLY ONLINE
+
+CATALOGUE
+SEARCH
+BAG
+ [0]
+LIGHT MODE
+MENU
+
+> 12 PRODUCTS AVAILABLE TO PURCHASE
+
+CROOKSLDN
+
+OWN THE STREETS™
+
+CATALOGUE
+CATALOGUE
+12 ITEMS
+FLAT
+ON MODEL
+OUTLINE
+ALL
+T-SHIRT
+DENIM
+SWEATS
+ACCESSORIES
+NO. 01
+SWEATS
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+AVAILABLE
+NO. 02
+SWEATS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+AVAILABLE
+NO. 03
+DENIM
+BLUE WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 04
+DENIM
+BLUE WASH JORTS
+£50.00
+AVAILABLE
+NO. 05
+DENIM
+GREY WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 06
+DENIM
+GREY WASH JORTS
+£50.00
+AVAILABLE
+NO. 07
+T-SHIRT
+MONEY CLIVE TEE
+Colourways: BLACK, WHITE
+£25.00
+AVAILABLE
+NO. 08
+T-SHIRT
+CRXST★RZ T-SHIRT
+Colourways: Black, White
+£25.00
+AVAILABLE
+DROPPED 03.08
+NO. 09
+SWEATS
+V2 BAGGIES
+£60.00
+2 OF 5 SIZES LEFT
+NO. 10
+ACCESSORIES
+BLACK/BLUE MOTIONTEC™ SOCKS
+£6.00
+AVAILABLE
+NO. 11
+ACCESSORIES
+WHITE/RED MOTIONTEC™ SOCKS
+£6.00
+AVAILABLE
+NO. 12
+ACCESSORIES
+LARGE DUFFLE BAG
+£18.00
+AVAILABLE
+
+PROPERTY BAG
+
+EVERY ORDER SHIPS LIKE THIS
+
+Sealed, tagged and numbered before it leaves us. Nothing here is an extra you pay for.
+
+01
+EVIDENCE TAG
+Numbered, seized by CROOKS LDN, QR to verify.
+02
+SECURITY SEAL
+Pull-tight, stamped with the cuffs.
+03
+CUFF KEYRING *
+Miniature cuffs, on the ring.
+
+* CONTRABAND 03 SHIPS WITH SWEAT BOTTOMS ONL
+OVERLAYS: []
+
+========== 2 DISMISS [+10.9s] ==========
+clicked Decline
+shot audit/screens/03-02-home-clear.png
+
+========== 3 CATALOGUE [+13.1s] ==========
+DENIM: DENIM
+4 ITEMS
+FLAT
+ON MODEL
+NO. 01
+DENIM
+GREY WASH JORTS
+£50.00
+AVAILABLE
+NO. 02
+DENIM
+BLUE WASH JORTS
+£50.00
+AVAILABLE
+NO. 03
+DENIM
+BLUE WASH OG JEANS
+£60.00
+AVAILABLE
+NO. 04
+DENIM
+GREY WASH OG JEANS
+£60.00
+AVAILABLE
+shot audit/screens/03-03-denim.png
+PRODUCT LINKS: /products/cb2-wash-jorts :: NO. 01 | DENIM | GREY WASH JORTS | £50.00 | AVAILABLE
+/products/cb1-wash-jorts :: NO. 02 | DENIM | BLUE WASH JORTS | £50.00 | AVAILABLE
+/products/cb2-wash-jeans :: NO. 03 | DENIM | BLUE WASH OG JEANS | £60.00 | AVAILABLE
+/products/cb1-wash-jeans :: NO. 04 | DENIM | GREY WASH OG JEANS | £60.00 | AVAILABLE
+
+========== 4 JEANS PDP [+18.0s] ==========
+JEANS MAIN: ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+shot audit/screens/03-04-jeans-top.png
+ACCORDIONS: []
+shot full audit/screens/03-04b-jeans-full.png
+
+========== 5 TAP MEASUREMENTS ACCORDION [+24.4s] ==========
+shot audit/screens/03-05-size-row.png
+shot audit/screens/03-06-measurements-tapped.png
+MEAS BLOCK: null
+scrollY after accordion tap 412
+
+========== 6 SIZE GUIDE [+26.6s] ==========
+size guide clicked: true
+scrollY after size guide 1130
+shot audit/screens/03-07-measurements.png
+JEANS CM: null
+
+========== 7 UNIT TOGGLE [+29.9s] ==========
+unit controls: [
+  { text: 'CM', pressed: 'true', cls: 'crk-unit' },
+  { text: 'IN', pressed: 'false', cls: 'crk-unit' }
+]
+clicked IN: <button type="button" class="crk-unit" data-crk-unit="in" data-selected="true" aria-pressed="true">IN</button>
+shot audit/screens/03-08-measurements-inches.png
+JEANS IN: null
+clicked CM: <button type="button" class="crk-unit" data-crk-unit="cm" data-selected="true" aria-pressed="true">CM</button>
+back to cm: undefined
+
+========== 8 CUSTODY + RETURNS [+31.9s] ==========
+shot audit/screens/03-09-custody-returns.png
+CUSTODY: null
+
+========== 9 DESCRIPTION [+33.7s] ==========
+DESC: {}
+shot audit/screens/03-10-description.png
+
+========== 10 PICK A SIZE [+34.8s] ==========
+shot audit/screens/03-11-size-m-selected.png
+BUY AREA: ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
+−
+CM
+IN
+TRUE TO SIZE — WAIST, CHEST AND LEG MEASUREMENTS ARE TAKEN AROUND THE GARMENT. ALL MEASUREMENTS IN CENTIMETRES.
+SIZE	WAIST	INSEAM	LEG OPENING
+XS	76.2cm	73.7cm	45.7cm
+S	81.3cm	76.2cm	48.3cm
+M	86.4cm	77.5cm	50.8cm
+L	91.4cm	80.0cm	53.3cm
+XL	96.5cm	81.3cm	55.9cm
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+
+========== 11 V2 BAGGIES [+36.6s] ==========
+BAGGIES MAIN: ← CATALOGUE
+PRODUCT 09 / 12
+SWEATS
+PHOTO 1 OF 2
+V2 BAGGIES
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+V2 BAGGIES
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+shot audit/screens/03-12-baggies-measurements.png
+BAGGIES CM: null
+clicked IN: <button type="button" class="crk-unit" data-crk-unit="in" data-selected="true" aria-pressed="true">IN</button>
+shot audit/screens/03-13-baggies-inches.png
+BAGGIES IN: null
+BAGGIES DESC: null
+
+========== 12 SWEATS [+44.1s] ==========
+SWEAT LINKS: /products/charcoal-cellblock-shorts
+/products/charcoal-cellblock-crewneck
+/products/v2-baggies
+SWEATS TEXT: SWEATS
+3 ITEMS
+FLAT
+ON MODEL
+NO. 01
+SWEATS
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+AVAILABLE
+NO. 02
+SWEATS
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+AVAILABLE
+NO. 03
+SWEATS
+V2 BAGGIES
+£60.00
+2 OF 5 SIZES LEFT
+chose /products/charcoal-cellblock-shorts
+SWEAT MAIN: ← CATALOGUE
+PRODUCT 02 / 12
+SWEATS
+PHOTO 1 OF 3
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+Cop the full fit — add the matching Cellblock Crewneck. Save £10.
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+CHARCOAL CELLBLOCK CREWNECK
+£50.00
+V2 BAGGIES
+£60.00
+CHARCOAL CELLBLOCK SHORTS
+£45.00
+SELECT A SIZE
+CHECKOUT NOW
+shot audit/screens/03-14-sweat-measurements.png
+SWEAT CM: null
