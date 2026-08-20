@@ -25,3 +25,15 @@ SHOT audit/screens/18-22-after-overlay.png
 
 
 ========== REDUCED — ticker with a clear screen ==========
+18-r TICKER STATES (1 distinct over 42s)
+  t+0s  barText="FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"  top=0  leaves=[{"t":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","op":"1","d":"block","v":"visible","h":29,"hid":null},{"t":"12 PRODUCTS CURRENTLY ONLINE","op":"1","d":"none","v":"visible","h":0,"hid":null}]
+
+
+========== REDUCED — drawer board ==========
+18-r menu count 0
+FATAL locator.click: Timeout 15000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /^MENU$/i }).first()[22m
+
+    at boardWatch (/home/user/Shopify-theme/audit/_tools/rm18d.mjs:68:14)
+    at async file:///home/user/Shopify-theme/audit/_tools/rm18d.mjs:178:3

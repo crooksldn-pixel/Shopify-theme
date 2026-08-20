@@ -1,0 +1,142 @@
+identity {"status":200,"url":"https://7chao18p5etruwy5-100410786135.shopifypreview.com/","crkRoot":true,"themeId":202053779799,"themeName":"CROOKSLDN — Staging","themeRole":"unpublished","currency":"GBP","country":"GB","ok":true,"gb":true}
+[  2.3s] nav status 200 https://7chao18p5etruwy5-100410786135.shopifypreview.com/products/cb1-wash-jeans throttled=false
+[  2.3s] TITLE PAINTED: "GREY WASH OG JEANS"
+[  2.3s] PRICE PAINTED
+[  2.3s] FIRST PRODUCT PHOTO PAINTED
+[  2.4s] CONSENT SHEET APPEARED
+[  2.4s] paint summary {"title":"2.3","price":"2.3","photo":"2.3","consent":"2.4"}
+[  3.4s] SHOT audit/screens/01-01-landing.png
+[  3.4s] FIXED OVERLAYS ON LANDING [{"id":"shopify-pc__banner","cls":"shopify-pc__banner__dialog","pos":"fixed","z":"2000000","top":485,"bottom":844,"height":359,"pct":43,"text":"COOKIE CONSENT We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy Manage preferences Accept Decline","buttons":["Privacy Policy","Manage preferences","Accept","Decline"]},{"id":"","cls":"crk-stickybar","pos":"fixed","z":"40","top":775,"bottom":844,"height":69,"pct":8,"text":"GREY WASH OG JEANS £60.00 SELECT A SIZE CHECKOUT NOW","buttons":["SELECT A SIZE","CHECKOUT NOW"]}]
+[  3.4s] SPINE ON LANDING {"scrollY":0,"docH":2556,"vh":844,"h1":{"text":"GREY WASH OG JEANS","top":638},"price":{"text":"£60.00","top":674,"bottom":700},"productNo":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":139,"bottom":1630},"stock":null,"dispatch":{"text":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","top":-1,"bottom":28},"addToBag":null,"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"sizes":[{"t":"XS","top":724,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":724,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":724,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":724,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":724,"disabled":null,"pressed":"false","label":"Size XL"}],"accordions":[],"images":4}
+[  3.4s] READABLE ON LANDING (y, text, covered?)
+[  3.4s]     visible -1 "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+[  3.4s]     visible 0 "Skip to content"
+[  3.4s]     visible 0 "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH CATALOGUE SEARCH BAG [0] "
+[  3.4s]     visible 28 "CATALOGUE SEARCH BAG [0] LIGHT MODE MENU"
+[  3.4s]     visible 86 "CATALOGUE"
+[  3.4s]     visible 86 "SEARCH"
+[  3.4s]     visible 86 "BAG [0]"
+[  3.4s]     visible 86 "LIGHT MODE"
+[  3.4s]     visible 86 "MENU"
+[  3.4s]     visible 101 "[0]"
+[  3.4s]     visible 139 "← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL "
+[  3.4s]     visible 151 "PRODUCT 05 / 12"
+[  3.4s]     visible 152 "DENIM"
+[  3.4s]     visible 154 "← CATALOGUE"
+[  3.4s]     visible 206 "PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order befor"
+[  3.4s]     visible 206 "PHOTO 1 OF 1"
+[  3.4s]     visible 485 "COOKIE CONSENT We and our partners, including Shopify, use cookies and other technologies "
+[  3.4s]     visible 517 "COOKIE CONSENT"
+[  3.4s]     visible 540 "We and our partners, including Shopify, use cookies and other technologies to personalize "
+[  3.4s]     visible 638 "GREY WASH OG JEANS"
+[  3.4s]     visible 639 "Privacy Policy"
+[  3.4s]     visible 674 "£60.00"
+[  3.4s]     visible 683 "Accept"
+[  3.4s]     visible 700 "SIZE XS S M L XL"
+[  3.4s]     visible 700 "SIZE"
+[  3.4s]     visible 724 "XS"
+[  3.4s]     visible 724 "S"
+[  3.4s]     visible 724 "M"
+[  3.4s]     visible 724 "L"
+[  3.4s]     visible 724 "XL"
+[  3.4s]     visible 732 "Decline"
+[  3.4s]     visible 775 "GREY WASH OG JEANS £60.00 SELECT A SIZE CHECKOUT NOW"
+[  3.4s]     visible 780 "Manage preferences"
+[  3.4s]     visible 784 "Select Size"
+[  3.4s]     visible 788 "SELECT A SIZE CHECKOUT NOW"
+[  3.4s]     visible 788 "SELECT A SIZE"
+[  3.4s]     visible 788 "CHECKOUT NOW"
+[  3.4s]     visible 791 "GREY WASH OG JEANS £60.00"
+[  3.4s]     visible 812 "SIZE GUIDE"
+[  6.4s] CONSENT EXACT TEXT >>> COOKIE CONSENT We and our partners, including Shopify, use cookies and other technologies to personalize your experience, show you ads, and perform analytics, and we will not use cookies or other technologies for these purposes unless you accept them. Learn more in our Privacy Policy Manage preferences Accept Decline
+[  6.4s] CONSENT BUTTONS ["Privacy Policy","Manage preferences","Accept","Decline"]
+[  6.4s] CONSENT GEOMETRY {"top":485,"height":359,"pctOfScreen":43}
+[  6.8s] SHOT audit/screens/01-02-consent-sheet.png
+[  6.9s] TAPPED "Decline"
+[  8.2s] SHOT audit/screens/01-03-consent-gone.png
+[  8.2s] OVERLAYS AFTER DISMISS [{"id":"","cls":"crk-stickybar","pos":"fixed","z":"40","top":775,"bottom":844,"height":69,"pct":8,"text":"GREY WASH OG JEANS £60.00 SELECT A SIZE CHECKOUT NOW","buttons":["SELECT A SIZE","CHECKOUT NOW"]}]
+[  8.2s] READABLE AFTER DISMISS
+[  8.2s]     visible -1 "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+[  8.2s]     visible 0 "Skip to content"
+[  8.2s]     visible 0 "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH CATALOGUE SEARCH BAG [0] "
+[  8.2s]     visible 28 "CATALOGUE SEARCH BAG [0] LIGHT MODE MENU"
+[  8.2s]     visible 86 "CATALOGUE"
+[  8.2s]     visible 86 "SEARCH"
+[  8.2s]     visible 86 "BAG [0]"
+[  8.2s]     visible 86 "LIGHT MODE"
+[  8.2s]     visible 86 "MENU"
+[  8.2s]     visible 101 "[0]"
+[  8.2s]     visible 139 "← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL "
+[  8.2s]     visible 151 "PRODUCT 05 / 12"
+[  8.2s]     visible 152 "DENIM"
+[  8.2s]     visible 154 "← CATALOGUE"
+[  8.2s]     visible 206 "PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUIDE Order befor"
+[  8.2s]     visible 206 "PHOTO 1 OF 1"
+[  8.2s]     visible 638 "GREY WASH OG JEANS"
+[  8.2s]     visible 674 "£60.00"
+[  8.2s]     visible 700 "SIZE XS S M L XL"
+[  8.2s]     visible 700 "SIZE"
+[  8.2s]     visible 724 "XS"
+[  8.2s]     visible 724 "S"
+[  8.2s]     visible 724 "M"
+[  8.2s]     visible 724 "L"
+[  8.2s]     visible 724 "XL"
+[  8.2s]     visible 775 "GREY WASH OG JEANS £60.00 SELECT A SIZE CHECKOUT NOW"
+[  8.2s]     visible 784 "Select Size"
+[  8.2s]     visible 788 "SELECT A SIZE CHECKOUT NOW"
+[  8.2s]     visible 788 "SELECT A SIZE"
+[  8.2s]     visible 788 "CHECKOUT NOW"
+[  8.2s]     visible 791 "GREY WASH OG JEANS £60.00"
+[  8.2s]     visible 812 "SIZE GUIDE"
+[  9.4s] AFTER FIRST FLICK {"scrollY":500,"docH":2468,"vh":844,"h1":{"text":"GREY WASH OG JEANS","top":138},"price":{"text":"£60.00","top":174,"bottom":200},"productNo":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-361,"bottom":1042},"stock":null,"dispatch":{"text":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH","top":-501,"bottom":-472},"addToBag":null,"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"sizes":[{"t":"XS","top":224,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":224,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":224,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":224,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":224,"disabled":null,"pressed":"false","label":"Size XL"}],"accordions":[],"images":4}
+[  9.7s] SHOT audit/screens/01-04-first-flick.png
+[ 10.2s] AFTER SECOND FLICK {"scrollY":1000,"docH":2556,"vh":844,"h1":{"text":"GREY WASH OG JEANS","top":-362},"price":{"text":"£60.00","top":-326,"bottom":-300},"productNo":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"stock":null,"dispatch":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"addToBag":null,"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"sizes":[{"t":"XS","top":-276,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":-276,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":-276,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":-276,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":-276,"disabled":null,"pressed":"false","label":"Size XL"}],"accordions":[],"images":4}
+[ 10.7s] SHOT audit/screens/01-05-buy-area.png
+[ 10.7s] BUY AREA TEXT >>>
+[ 10.7s] ← CATALOGUE
+PRODUCT 05 / 12
+DENIM
+PHOTO 1 OF 1
+GREY WASH OG JEANS
+£60.00
+SIZE
+XS
+S
+M
+L
+XL
+
+Select Size
+
+SIZE GUIDE
+
+Order before 18:00 and it ships today (Mon–Sat)
+
+Ordered now — leaves tomorrow
+
+SELECT A SIZE
+SPECIFICATION
++
+ITEM DESCRIPTION
++
+MEASUREMENTS
++
+CHAIN OF CUSTODY — SHIPPING & RETURNS
++
+MORE FROM THIS DROP
+BLUE WASH OG JEANS
+£60.00
+BLUE WASH JORTS
+£50.00
+GREY WASH JORTS
+£50.00
+GREY WASH OG JEANS
+£60.00
+SELECT A SIZE
+CHECKOUT NOW
+[ 10.7s] SIZE BUTTONS [{"t":"XS","top":-276,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":-276,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":-276,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":-276,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":-276,"disabled":null,"pressed":"false","label":"Size XL"}]
+[ 15.7s] size tap failed locator.click: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for getByRole(
+[ 16.5s] AFTER WRONG SIZE {"scrollY":1000,"docH":2556,"vh":844,"h1":{"text":"GREY WASH OG JEANS","top":-362},"price":{"text":"£60.00","top":-326,"bottom":-300},"productNo":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"stock":null,"dispatch":{"text":"← CATALOGUE PRODUCT 05 / 12 DENIM PHOTO 1 OF 1 GREY WASH OG JEANS £60.00 SIZE XS S M L XL Select Size SIZE GUI","top":-861,"bottom":630},"addToBag":null,"checkout":{"text":"CHECKOUT NOW","top":788,"bottom":832},"sizes":[{"t":"XS","top":-276,"disabled":null,"pressed":"false","label":"Size XS"},{"t":"S","top":-276,"disabled":null,"pressed":"false","label":"Size S"},{"t":"M","top":-276,"disabled":null,"pressed":"false","label":"Size M"},{"t":"L","top":-276,"disabled":null,"pressed":"false","label":"Size L"},{"t":"XL","top":-276,"disabled":null,"pressed":"false","label":"Size XL"}],"accordions":[],"images":4}
+[ 16.8s] SHOT audit/screens/01-06-size-wrong.png

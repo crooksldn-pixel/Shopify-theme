@@ -1,0 +1,20 @@
+identity {"ok":true,"gb":true}
+reduce? false
+
+
+========== NORMAL — boot line typing ==========
+BOOT TIMELINE
+   40ms  
+  245ms  > 12 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREET
+SHOT audit/screens/18-n-overlay.png
+closed with /^NOT NOW$/i
+
+
+========== NORMAL — second load, boot line again ==========
+BOOT TIMELINE 2
+   40ms  
+  200ms  > 12 PRODUCTS AVAILABLE TO PURCHASE CROOKSLDN OWN THE STREET
+
+
+========== NORMAL — ticker 42s ==========
+  t+0s  "FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"  [{"t":"FREE UK SHIPPING OVER £20 — ORDER BY 18:00 FOR SAME-DAY DISP","op":"1","d":"block"},{"t":"12 PRODUCTS CURRENTLY ONLINE","op":"1","d":"none"}]
