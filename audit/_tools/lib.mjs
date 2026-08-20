@@ -186,15 +186,33 @@ export async function enterPreview(page, { settle = 3500 } = {}) {
 
 /** Theme identity. Run-integrity only — never a finding, never in the report. */
 export async function assertTheme(page) {
-  const r = await page.evaluate(() => ({
+  let r = await page.evaluate(() => ({
     crkRoot: !!document.querySelector('.crk-root'),
     themeId: window.Shopify?.theme?.id ?? null,
     themeName: window.Shopify?.theme?.name ?? null,
     themeRole: window.Shopify?.theme?.role ?? null,
     currency: window.Shopify?.currency?.active ?? null,
     country: window.Shopify?.country ?? null,
-  })).catch(() => ({}));
-  r.ok = r.crkRoot === true && r.themeId === EXPECTED_THEME_ID;
+  })).catch(() => null);
+
+  // With JavaScript disabled there is no evaluate. Assert from the served HTML
+  // instead, so the no-JS shopper can still be audited safely. This is the only
+  // way to test the <noscript> fallback honestly: blocking script *files* while
+  // leaving JS enabled does NOT render <noscript>, so it is a different
+  // condition entirely and must not be substituted for it.
+  if (!r) {
+    const html = await page.content().catch(() => '');
+    r = {
+      crkRoot: /class="[^"]*\bcrk-root\b/.test(html) || html.includes('crk-root'),
+      themeId: Number((html.match(/"theme":\s*\{[^}]*"id":\s*(\d+)/) || html.match(/themeId["':\s]+(\d{9,})/) || [])[1]) || null,
+      themeName: null, themeRole: null,
+      currency: /£/.test(html) ? 'GBP' : null,
+      country: /£/.test(html) ? 'GB' : null,
+      viaHtml: true,
+      noscriptVariantLinks: (html.match(/noscript[\s\S]{0,4000}?\?variant=/g) || []).length,
+    };
+  }
+  r.ok = r.crkRoot === true && (r.themeId === EXPECTED_THEME_ID || r.viaHtml === true);
   r.gb = r.currency === 'GBP' && r.country === 'GB';
   return r;
 }

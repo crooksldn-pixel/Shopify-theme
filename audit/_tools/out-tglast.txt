@@ -1,0 +1,14 @@
+=== landscape drawer reachability ===
+open: {"drawerScroll":[390,390,"visible"],"inner":[["crk-drawer__scrim",390,390,"visible"],["crk-drawer__panel",1129,390,"auto"]],"below":["TRACKING@422","QUESTIONS@475","TERMS@528","CONTACT@581","PLAY CASE:001 @658","ACCOUNT@1069","BAG\n [0]@1069"],"vh":390}
+after wheel: {"drawerScrollTop":0,"inners":[0,400],"below":["ACCOUNT@669","BAG\n [0]@669"],"pageY":0}
+audit/screens/tgl-drawer-landscape-after-scroll.png
+
+=== outline pair, light, modal dismissed ===
+light+outline ON: {"theme":"light","attr":null,"btn":"true","filter":"none"}
+audit/screens/tg-Q3-light-outline-ON.png
+light+outline OFF: {"attr":"off","btn":"false","filter":"none"}
+audit/screens/tg-Q3-light-outline-OFF.png
+audit/screens/tg-Q3-dark-outline-OFF.png
+dark+outline ON: {"attr":null,"btn":"true"}
+audit/screens/tg-Q3-dark-outline-ON.png
+=== TGLAST COMPLETE ===
