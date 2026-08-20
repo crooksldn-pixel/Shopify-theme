@@ -6,7 +6,10 @@
 
   - Shows once per browser via localStorage flag `crooksldn_ctc_seen`.
   - Fires ~3s after load. Append ?ctc=1 to any URL to force it (QA).
-  - Closes via overlay X, backdrop tap, Esc, or the app's crooks-popup-close message.
+  - Closes via overlay X, backdrop tap, Esc, or the app's getaway:close message.
+    The app also draws its own X inside the frame and posts the same message.
+    getaway:close with target 'register' means the visitor missed and chose the
+    signup instead, so we close and take them to REGISTER AS INFORMANT.
 
   Four things the twenty-journey audit found, fixed here. All of them are the
   overlay's fault, not the game's:
@@ -25,8 +28,11 @@
      banner the thing you had to fight past first (02, 18, 20). It now waits
      for the banner to be answered.
 
-  Still the app's, not ours, and reported separately: the reveal step, the
-  date format, and asking for a phone number before naming the prize.
+  The app itself was replaced on 2026-08-20. The previous build gated the prize
+  behind a phone number and then an email, and its reveal button was disabled
+  while the field was empty, so pressing it did nothing at all. The current app
+  asks for neither: it mints against an anonymous player id, times out after 5s
+  rather than hanging, and honours prefers-reduced-motion itself.
 {%- endcomment -%}
 <style>
   .ctc-overlay {
@@ -88,6 +94,17 @@
       height: 100%;
       max-height: none;
     }
+    {%- comment -%}
+      The app draws its own close control at the top right of its card, which on
+      a phone is the full width of the screen. Ours moves left so there are not
+      two overlapping tap targets. It stays rather than being removed: it is the
+      one way out the parent document controls, and the only one a screen reader
+      can reach without entering a cross-origin frame.
+    {%- endcomment -%}
+    .ctc-close {
+      right: auto;
+      left: 10px;
+    }
   }
   {%- comment -%}
     Landscape on a phone left roughly 300px of height for a 680px game, so the
@@ -121,7 +138,7 @@
 </style>
 <script>
   (function () {
-    var APP_URL = 'https://crack-cuff-codes.base44.app';
+    var APP_URL = 'https://crackthecuffs.base44.app';
     var FLAG = 'crooksldn_ctc_seen';
     var DELAY = 3000;
     /* The one attempt is only spent once the popup has been on screen long
@@ -237,9 +254,50 @@
 
       function onMsg(e) {
         if (!e || !e.data) return;
-        /* The app says the visitor has finished with it, so the attempt is
-           spent however long it took. */
-        if (e.data.type === 'crooks-popup-close') { markSeen(); close(); }
+        /* getaway:close is the current app; crooks-popup-close was the previous
+           one, kept so swapping back needs no theme change.
+
+           Deliberately NOT markSeen() on a bare close: the app posts this from
+           its own X on every screen, so it means "shut this", not "finished".
+           Treating it as completion would put back exactly the bug where a
+           reflex close burned the one attempt. close() applies the same
+           SEEN_AFTER_MS rule as every other way out. */
+        var t = e.data.type;
+        if (t !== 'getaway:close' && t !== 'crooks-popup-close') return;
+
+        /* Except here. Choosing the signup after missing is real engagement,
+           and it is the one hand-off the app asks us to complete. */
+        if (e.data.target === 'register') {
+          markSeen();
+          close();
+          sendToRegister();
+          return;
+        }
+        close();
+      }
+
+      /* The popup only renders on the homepage, so the intake section is always
+         on this page — no anchor or navigation needed. Focus follows the scroll
+         so a keyboard or screen-reader user lands on the field, not just near it. */
+      function sendToRegister() {
+        var intake = document.querySelector('[data-crk-section="informant-intake"]');
+        if (!intake) return;
+        /* Reduced motion gets a jump, not a glide. Journey 18 rated this the
+           calmest streetwear site she had used, on the strength of there being
+           no animation anywhere; a smooth scroll is still an animation. */
+        var calm = false;
+        try {
+          calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (err) { calm = false; }
+        try {
+          intake.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+        } catch (err2) {
+          intake.scrollIntoView();
+        }
+        var field = intake.querySelector('input[type="tel"], input[type="email"], input');
+        if (field && field.focus) {
+          window.setTimeout(function () { try { field.focus({ preventScroll: true }); } catch (e2) {} }, 400);
+        }
       }
 
       /* Do not show a dimmed void while the app loads. Wait for the frame, but

@@ -1870,3 +1870,75 @@ contact with the code — the first being "the shop takes two pieces of contact
 data and gives nothing back", when in fact it captured nothing at all. Both were
 accurate about the *symptom* and wrong about the *cause*. Reading the source and
 the data before acting on the recommendation has now paid for itself twice.
+
+---
+
+## 2026-08-20 — The game itself was replaced
+
+George: *"try putting in the new crack the cuffs popup instead, this one works
+alot better."* He is right, and it makes most of yesterday's popup work moot in
+the best way.
+
+The new app is **Crack the Cuffs (Copy)**, appId `6a870f45e91e53c2e754ebd0`,
+published at **https://crackthecuffs.base44.app**. Verified by app id before
+wiring it in — the served HTML also carries the *old* app's id, but only in
+inherited logo and Open Graph asset paths; the functional id is the new one.
+
+| | old app | new app |
+|---|---|---|
+| Gate before the prize | phone + SMS consent, then email | **none** — mints against an anonymous `player_id` |
+| Mint hangs | silent, forever | **5s timeout, failure state, Retry button** |
+| Reduced motion | ignored | `usePrefersReducedMotion` |
+| Coarse pointer | — | `usePointerCoarse` |
+| Dead ends | disabled button hiding its own error | every path sets a status |
+
+That removes at source: the captcha eating warm leads (01, 06), demanding a
+phone before naming the discount (11, 19), reduced motion (18), and the
+disabled-button dead end that was worst moment #1. The fix I applied to the old
+app this morning is now irrelevant; it is left in place and unpublished.
+
+### What changed in the theme
+
+Not just a URL swap — the close contract is different.
+
+- `crooks-popup-close` → **`getaway:close`**. The old message was treated as
+  "finished" and called `markSeen()`. The new one is posted by the app's own X
+  on *every* screen, so it means "shut this". Treating it as completion would
+  have put straight back the bug where a reflex close burns the one attempt.
+  It now just closes, and the same 8s rule applies.
+- **`getaway:close` with `target: 'register'`** — the app's miss screen offers
+  the signup. That one *is* engagement, so it spends the attempt, closes, scrolls
+  to `[data-crk-section="informant-intake"]` and puts focus in the field. The
+  popup is homepage-only, so the section is always on the page and no anchor or
+  navigation is needed.
+- The old message is still accepted, so swapping back needs no theme change.
+- The app draws its own X at the top right of its card, which on a phone is the
+  full width of the screen, so ours moves to the top **left** below 749px. Kept
+  rather than removed: it is the only way out the parent document controls, and
+  the only one a screen reader reaches without entering a cross-origin frame.
+- The register scroll respects `prefers-reduced-motion` — a smooth scroll is
+  still an animation, and journey 18 rated this the calmest streetwear site she
+  had used precisely because there were none.
+
+### Verified
+
+18 assertions against the real snippet (script extracted from the `.liquid` at
+test time so it cannot drift), then confirmed on the deployed page: the homepage
+now embeds `crackthecuffs.base44.app`, listens for `getaway:close`, and contains
+zero references to the old app.
+
+Two test-only mistakes, both mine, neither in the product: a `location.search`
+assignment navigated the page mid-test and hung the run, and a fixed anchor
+string in a patch silently failed to match so the broken test ran again. The
+third apparent failure — the scroll not moving — was a harness artefact:
+Chromium does not animate smooth scrolling under `--virtual-time-budget`, and
+`focus({preventScroll:true})` deliberately does not scroll either. Spying on the
+call rather than the animation tests the part I own. It did surface the genuine
+reduced-motion gap above.
+
+### Still open on the promo
+
+The new app captures **no email and no phone at all**. That is a real commercial
+trade — the two gates existed to build the SMS and email list. REGISTER AS
+INFORMANT is now the only place the list grows, which is the honest version, and
+the app hands off to it on a miss. Flagged to George as a decision, not a defect.
