@@ -93,3 +93,13 @@ they own, so charts now follow industry standard.
 - Spotted while editing, not changed: product.json's custody step 4 says
   crooksldn@gmail.com while product.crooks.json says info@crooksldn.com —
   the RUN3 B2 email question, now visible inside the theme too.
+
+## Email ruling (owner, 2026-08-19)
+**crooksldn@gmail.com is the canonical address** — overrides RUN3 B2's
+"standardise on info@crooksldn.com" recommendation. Theme sweep: footer, FAQ
+and Terms already used the gmail; the single `info@crooksldn.com` (alternate
+product template's custody step 4) has been corrected to the gmail via
+themeFilesUpsert. The theme is now email-consistent. Remaining owner note
+from the audit: the *legal policy pages* (store admin, not theme) also sign
+with the gmail — nothing to change there now, only the old "Capitalised
+variant on contact-information" cosmetic if desired.
