@@ -136,15 +136,45 @@
 
       <nav class="crk-drawer__nav" aria-label="{{ section.settings.drawer_label | escape }}">
         <ul>
+          {%- comment -%}
+            A parent keeps its own link and gains a separate disclosure button
+            beside it. SHOP goes to /collections/frontpage and its ALL child
+            goes to /collections/all — different places — so turning the parent
+            row into a pure toggle would quietly drop a route.
+
+            The submenu is rendered OPEN with aria-expanded="true"; the script
+            closes it on load. That way the markup never depends on JS to be
+            truthful, and the drawer is hidden until opened, so nobody sees it
+            close. Without JS the drawer cannot open at all, which is what the
+            <noscript> menu above is for.
+          {%- endcomment -%}
           {%- for link in crk_menu.links -%}
             <li class="crk-drawer__item">
-              <a class="crk-drawer__link" href="{{ link.url }}">{{ link.title }}</a>
               {%- if link.links.size > 0 -%}
-                <ul class="crk-drawer__sub">
+                {%- assign crk_sub_id = 'crk-submenu-' | append: section.id | append: '-' | append: forloop.index -%}
+                <span class="crk-drawer__row">
+                  <a class="crk-drawer__link" href="{{ link.url }}">{{ link.title }}</a>
+                  <button
+                    type="button"
+                    class="crk-drawer__toggle"
+                    aria-expanded="true"
+                    aria-controls="{{ crk_sub_id }}"
+                    data-crk-submenu-toggle
+                  >
+                    <span class="crk-sr" data-crk-submenu-say
+                      data-crk-open-label="{{ section.settings.submenu_open_label | replace: '[title]', link.title | escape }}"
+                      data-crk-close-label="{{ section.settings.submenu_close_label | replace: '[title]', link.title | escape }}"
+                    >{{ section.settings.submenu_close_label | replace: '[title]', link.title }}</span>
+                    <span class="crk-drawer__mark" aria-hidden="true"></span>
+                  </button>
+                </span>
+                <ul class="crk-drawer__sub" id="{{ crk_sub_id }}" data-crk-submenu>
                   {%- for child in link.links -%}
                     <li><a class="crk-drawer__link" href="{{ child.url }}">{{ child.title }}</a></li>
                   {%- endfor -%}
                 </ul>
+              {%- else -%}
+                <a class="crk-drawer__link" href="{{ link.url }}">{{ link.title }}</a>
               {%- endif -%}
             </li>
           {%- endfor -%}
@@ -205,6 +235,8 @@
     { "type": "text", "id": "account_label", "label": "Account label", "default": "ACCOUNT" },
     { "type": "text", "id": "drawer_heading", "label": "Drawer heading", "default": "MENU" },
     { "type": "text", "id": "drawer_label", "label": "Drawer label (screen readers)", "default": "Main menu" },
+    { "type": "text", "id": "submenu_open_label", "label": "Expand submenu (screen readers)", "info": "Use [title] for the menu name.", "default": "Show [title] links" },
+    { "type": "text", "id": "submenu_close_label", "label": "Collapse submenu (screen readers)", "info": "Use [title] for the menu name.", "default": "Hide [title] links" },
     { "type": "header", "content": "Case 001 (menu drawer)" },
     { "type": "checkbox", "id": "show_case", "label": "Show the case panel in the menu", "default": true },
     { "type": "text", "id": "case_caption", "label": "Panel description (screen readers)", "default": "CASE 001: THE GETAWAY. Animated map: a thief moves through an alley grid collecting coins while a patrolling officer crosses below." },

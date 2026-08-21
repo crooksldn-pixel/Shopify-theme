@@ -516,7 +516,38 @@ body:has(main [data-crk-section]) {
 .crk-drawer__item { border-bottom: 1px solid var(--crk-line) }
 .crk-drawer__link { display: flex; align-items: center; min-height: 52px; font-weight: 500; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--crk-paper) }
 .crk-drawer__link:hover { color: var(--crk-lav) }
+/* A parent row: its own link on the left, a disclosure button on the right.
+   Both are real controls, so SHOP still goes somewhere and the + only opens. */
+.crk-drawer__row { display: flex; align-items: center; gap: 8px }
+.crk-drawer__row .crk-drawer__link { flex: 1 1 auto; min-width: 0 }
+/* Horizon's base stylesheet loads after this file and styles bare `button`,
+   which would strip this back to its defaults. Same fix as the search button
+   and the sightings arrows. */
+.crk-root button.crk-drawer__toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; min-height: 52px; padding: 0;
+  /* pulled into the drawer's own padding so the glyph sits on the right rule */
+  margin-right: -8px;
+  background: none; border: 0; border-radius: 0;
+  font: inherit; color: var(--crk-paper);
+  cursor: pointer;
+}
+.crk-root button.crk-drawer__toggle:hover { color: var(--crk-lav) }
+.crk-root button.crk-drawer__toggle:focus-visible { outline: 2px solid var(--crk-lav); outline-offset: -2px }
+/* Plus and minus drawn from two rules rather than typed as characters, so they
+   stay optically identical and square whatever the font does. */
+.crk-drawer__mark { position: relative; display: block; width: 11px; height: 11px }
+.crk-drawer__mark::before,
+.crk-drawer__mark::after { content: ''; position: absolute; background: currentColor }
+.crk-drawer__mark::before { left: 0; right: 0; top: 5px; height: 1px }
+.crk-drawer__mark::after { top: 0; bottom: 0; left: 5px; width: 1px }
+.crk-drawer__toggle[aria-expanded="true"] .crk-drawer__mark::after { display: none }
+
 .crk-drawer__sub { padding: 0 0 8px 16px }
+.crk-drawer__sub[hidden] { display: none }
 .crk-drawer__sub .crk-drawer__link { min-height: 44px; font-size: 12px; letter-spacing: .06em; color: var(--crk-dim) }
 .crk-drawer__sub .crk-drawer__link:hover { color: var(--crk-lav) }
 .crk-drawer__foot { margin-top: auto; padding: 16px; border-top: 1px solid var(--crk-line) }

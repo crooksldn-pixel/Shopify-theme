@@ -133,6 +133,32 @@
       closers[i].addEventListener('click', close);
     }
 
+    /* Submenus. The markup renders them open so it is never dependent on this
+       file to be truthful; they are closed here, before the drawer has ever
+       been shown, so nobody watches one collapse. Seven collection links under
+       SHOP were most of the drawer's height. */
+    var toggles = drawer.querySelectorAll('[data-crk-submenu-toggle]');
+    for (var t = 0; t < toggles.length; t++) {
+      (function (btn) {
+        var sub = document.getElementById(btn.getAttribute('aria-controls'));
+        if (!sub) return;
+        var say = btn.querySelector('[data-crk-submenu-say]');
+
+        function set(open) {
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          sub.hidden = !open;
+          if (say) {
+            var next = open ? say.getAttribute('data-crk-close-label') : say.getAttribute('data-crk-open-label');
+            if (next) say.textContent = next;
+          }
+        }
+        btn.addEventListener('click', function () {
+          set(btn.getAttribute('aria-expanded') !== 'true');
+        });
+        set(false);
+      })(toggles[t]);
+    }
+
     // The drawer starts hidden; without JS it never opens, which is why the
     // section also renders a <noscript> menu.
     drawer.hidden = true;
