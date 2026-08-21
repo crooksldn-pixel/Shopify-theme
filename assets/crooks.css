@@ -1119,9 +1119,15 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
 .crk-contact__heading { margin-top: 8px }
 .crk-contact__standfirst { margin-top: 16px; max-width: 56ch; color: var(--crk-paper) }
 
-.crk-contact__links { margin-top: 28px }
+/* .crk-links is capped at 760px for the search page's reading measure. Here
+   it sits between two full-width rules, so the cap left the quick answers
+   visibly short of everything around them. */
+.crk-contact__links { margin-top: 28px; max-width: none }
 
 .crk-contact__grid { display: grid; gap: 0; margin-top: 36px; border-top: 1px solid var(--crk-line) }
+/* The quick-answer list already closes with a rule, so the grid's own top rule
+   made two lines 36px apart. Keep the gap, drop the second line. */
+.crk-contact__links + .crk-contact__grid { border-top: none }
 .crk-contact__card { border-bottom: 1px solid var(--crk-line); padding: 24px 0 }
 @media (min-width: 768px) {
   .crk-contact__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px }
