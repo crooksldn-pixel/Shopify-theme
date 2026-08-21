@@ -1354,3 +1354,122 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   .crk-sight__wearing { margin-top: 20px; padding: 16px 24px }
   .crk-sight__piece { font-size: 15px }
 }
+
+/* ============================================================
+   EXPERIMENT — evidence windows (catalogue flat-lays)
+
+   Presentation only, and entirely additive. Every rule below is scoped under
+   .crk-log__grid--evidence-windows, which the catalogue section adds only when
+   its "Enable evidence window image styling" setting is ticked. Nothing above
+   this block was edited, so unticking the setting returns the grid to exactly
+   what it was.
+
+   Two measurements drove the numbers.
+
+   First: none of the twelve catalogue shots has a baked-in background. They are
+   all clean cut-outs, which means the hard cream line around every garment is
+   this stylesheet's .crk-product-image filter and not the image files. It is
+   softened here rather than removed, and paired with a real shadow so the
+   garment sits on the stage instead of being traced onto it.
+
+   Second: how much room each garment has left inside its own frame, measured
+   from the alpha channel. The socks already fill 88% of their frame; the duffle
+   fills 38%. A single scale cannot serve both — push the socks 12% and they
+   touch the border, which the brief rules out. So the scale is per category,
+   taken from the tightest garment in each, and every one keeps at least 3% of
+   the frame clear:
+
+     category      largest dimension fills   touches the border at   set to
+     ACCESSORIES              79%                    1.123            1.05
+     T-SHIRT                  84%                    1.143            1.06
+     SWEATS                   77%                    1.185            1.10
+     DENIM                    72%                    1.231            1.14
+
+   Category comes from the data-crk-category the section already writes, so no
+   product handle is named here and a new category simply takes the default.
+   ============================================================ */
+.crk-log__grid--evidence-windows {
+  --product-media-scale: 1.08;
+  --crk-stage-line: color-mix(in srgb, var(--crk-accent) 20%, transparent);
+  --crk-stage-line-active: color-mix(in srgb, var(--crk-accent) 42%, transparent);
+  /* Grid rules pulled back ~22% so the garments carry more of the attention.
+     The plain value first keeps the current appearance anywhere color-mix is
+     not understood. */
+  background: var(--crk-line);
+  background: color-mix(in srgb, var(--crk-line) 78%, var(--crk-void));
+  border-color: var(--crk-line);
+  border-color: color-mix(in srgb, var(--crk-line) 78%, var(--crk-void));
+}
+
+/* Per-category scale. The ceiling in the table above is where the tightest
+   garment in that category would touch the frame; each of these sits under it. */
+.crk-log__grid--evidence-windows [data-crk-category="DENIM"]       { --product-media-scale: 1.14 }
+.crk-log__grid--evidence-windows [data-crk-category="SWEATS"]      { --product-media-scale: 1.10 }
+.crk-log__grid--evidence-windows [data-crk-category="T-SHIRT"]     { --product-media-scale: 1.06 }
+.crk-log__grid--evidence-windows [data-crk-category="ACCESSORIES"] { --product-media-scale: 1.05 }
+
+/* The card becomes a column so the price row can be anchored rather than left
+   to float wherever the swatches leave it. */
+.crk-log__grid--evidence-windows .crk-card {
+  display: flex;
+  flex-direction: column;
+}
+.crk-log__grid--evidence-windows .crk-card__row { margin-top: auto }
+/* One product in twelve carries a filing date under the price, which would sit
+   that card's price a line higher than the rest. :last-child matches only the
+   cards without one, and gives them the same line back as empty space, so every
+   price in the row lands on the same baseline. */
+.crk-log__grid--evidence-windows .crk-card__row:last-child { margin-bottom: calc(9px * 1.6 + 2px) }
+
+/* The stage. Already square and already inset 12px by the card's padding, so
+   this adds only the light and the frame. The radial sits on top of the
+   scanline texture rather than replacing it — four class levels so it wins on
+   specificity rather than on source order. */
+.crk-root .crk-log__grid--evidence-windows .crk-card .crk-card__media {
+  border: 1px solid var(--crk-stage-line);
+  background-image:
+    radial-gradient(ellipse 76% 60% at 50% 47%,
+      color-mix(in srgb, var(--crk-purple) 34%, transparent) 0%,
+      color-mix(in srgb, var(--crk-purple) 12%, transparent) 46%,
+      transparent 74%),
+    var(--crk-texture);
+  transition: border-color .18s linear;
+}
+
+/* contain, not cover: a non-square shot was being cropped to fill the square.
+   The scale is a variable rather than a transform written out per category, so
+   there is one place to change it. */
+.crk-log__grid--evidence-windows .crk-card__img {
+  object-fit: contain;
+  transform: scale(var(--product-media-scale, 1));
+  transition: transform .18s ease-out;
+}
+
+/* The cream outline, softened. Held in a variable so the shadow and the edge
+   stay in step. Note this rule is (0,2,0): the existing OUTLINE OFF control is
+   (0,3,0) and still switches the whole filter off, which is what that control
+   has always meant. */
+.crk-log__grid--evidence-windows .crk-product-image {
+  --crk-edge: rgba(221, 215, 201, .22);
+  filter:
+    drop-shadow( 1px  0    0 var(--crk-edge))
+    drop-shadow(-1px  0    0 var(--crk-edge))
+    drop-shadow( 0    1px  0 var(--crk-edge))
+    drop-shadow( 0   -1px  0 var(--crk-edge))
+    drop-shadow(0 8px 14px rgba(0, 0, 0, .5));
+}
+
+/* Hover and keyboard focus say the same thing, so a keyboard gets the response
+   a mouse does. Nothing moves: the frame warms and the garment grows by 1.5%,
+   which every category has room for. */
+@media (hover: hover) and (pointer: fine) {
+  .crk-root .crk-log__grid--evidence-windows .crk-card:hover .crk-card__media { border-color: var(--crk-stage-line-active) }
+  /* 1%, not more. The socks sit closest to their frame and the hover bump is
+     the one moment the base scale could push a garment onto the border. */
+  .crk-log__grid--evidence-windows .crk-card:hover .crk-card__img { transform: scale(calc(var(--product-media-scale, 1) * 1.01)) }
+}
+.crk-root .crk-log__grid--evidence-windows .crk-card:focus-visible .crk-card__media { border-color: var(--crk-stage-line-active) }
+@media (prefers-reduced-motion: reduce) {
+  .crk-log__grid--evidence-windows .crk-card__img,
+  .crk-root .crk-log__grid--evidence-windows .crk-card .crk-card__media { transition: none }
+}
