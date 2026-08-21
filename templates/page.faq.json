@@ -61,7 +61,7 @@
           "type": "qa",
           "settings": {
             "question": "How do I know what size to buy?",
-            "answer": "<p>Where a piece has been measured, its product page carries a measurements table — tap SIZE GUIDE next to the size buttons. Everything is measured with the garment laid flat, and you can switch the table between centimetres and inches.</p><p>If the piece you want is not listed yet, message us and we will measure it for you.</p>"
+            "answer": "<p>Where a piece has been measured, its product page carries a measurements table — tap SIZE GUIDE next to the size buttons. The numbers are the garment's own full measurements, taken all the way round, so you can compare them straight against something you already own. You can switch the table between centimetres and inches.</p><p>If the piece you want is not listed yet, message us and we will measure it for you.</p>"
           }
         },
         "q8": {

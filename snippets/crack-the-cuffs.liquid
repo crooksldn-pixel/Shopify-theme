@@ -276,7 +276,11 @@
 
       var small = document.createElement('p');
       small.className = 'ctc-small';
-      small.textContent = 'One code per player. Code expires 20 minutes after you win.';
+      /* No countdown, and no expiry mentioned before there is a code to expire.
+         A ticking clock is on the brand's own rejected list, and naming a
+         deadline for a prize the visitor has not won yet is the pressure
+         selling the whole aesthetic is meant to avoid. */
+      small.textContent = 'One code per player.';
 
       actions.appendChild(run);
       actions.appendChild(not);

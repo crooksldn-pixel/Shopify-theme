@@ -2125,3 +2125,53 @@ authoritative because it was newer. Newer is not the same as right, and I never
 checked it against the numbers it was describing. It now reads "Measured with
 the garment laid flat, so double the waist, chest and hem for the full way
 round", which agrees with the FAQ and with KEEP.md §3.
+
+---
+
+## 2026-08-20 — Countdown out; measurements are FULL, not laid flat
+
+### The data moved under me
+
+George updated the measurement metafields during the session. Checking before
+writing caught it:
+
+    jeans XS waist   was 38cm   ->  now 76.2cm  (30in)
+    tee XS chest     was 51cm   ->  now 100.3cm (39.5in)
+
+So the numbers are already the garment's full, all-the-way-round measurements —
+the industry-normal presentation George asked for. I had been about to double
+values that were already doubled.
+
+**And it means the caption I deployed an hour earlier was wrong in the opposite
+direction.** I had "corrected" the PDP to say *laid flat — double the waist*,
+reasoning from a 38cm XS waist. Against 76.2cm that instruction produces a
+60-inch waist. The reasoning was sound and the input was stale: I read the
+metafields once at the start of the session and treated them as fixed. For live
+store data, read it at the moment you use it.
+
+Now, everywhere: *"True to size. These are the garment's own full measurements,
+taken all the way round — no doubling needed."* The FAQ's "laid flat" sentence
+was changed to match, and the schema defaults too, with an `info` note on the
+setting saying the stored values are full measurements so nobody re-introduces a
+doubling instruction.
+
+### The countdown
+
+Removed. George reversed his earlier "keep the 20 minute countdown" after the
+audit named it as fake urgency on the brand's own rejected list — a timer beside
+a discount is what turns an absent review section from a principle into a
+cover-up.
+
+Gone from three places: the theme's offer sheet, the app's offer screen, and the
+win screen's ticking clock. The offer no longer mentions expiry at all, because
+before you have won there is no code to expire and naming a deadline for an
+unwon prize is the pressure selling the aesthetic exists to avoid.
+
+**The code still genuinely dies after 20 minutes**, so that fact stays on the win
+screen — as a sentence that does not tick: *"One use. Expires 20 minutes after
+it was cut."* Removing the display without removing the constraint would just
+hide it. If the TTL should change, that is a backend decision and it is still
+open.
+
+Lint then caught `minutes` and `seconds` computing nothing — dead code from
+pulling the clock out. Removed.
