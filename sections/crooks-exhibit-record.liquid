@@ -48,12 +48,23 @@
       assign crk_size_opt = opt
     endif
   endfor
+  comment
+    The pre-JS label has to name the real option too, or socks get a button
+    reading "Select a size" on a product with no sizes. crooks-record.js does
+    the same thing once it runs; this is what the server sends before it does.
+    Formatted into a variable first — filter precedence.
+  endcomment
   assign crk_single = false
   assign crk_has_options = true
   if product.variants.size == 1 and product.variants.first.title == 'Default Title'
     assign crk_single = true
     assign crk_has_options = false
     assign crk_size_opt = null
+  endif
+
+  assign crk_select_label = section.settings.label_select
+  if crk_size_opt and section.settings.label_select_option != blank
+    assign crk_select_label = section.settings.label_select_option | replace: '[option]', crk_size_opt.name
   endif
 
   assign mf = product.metafields.crooks
@@ -258,7 +269,7 @@
               {%- endcomment -%}
               <p class="crk-stockline" data-crk-stockline data-out="{% if crk_var and crk_var.available == false %}true{% else %}false{% endif %}" aria-live="polite">
                 {%- if crk_var == blank -%}
-                  {{ section.settings.label_select }}
+                  {{ crk_select_label }}
                 {%- elsif crk_var.available == false -%}
                   {{ section.settings.label_sold_size | replace: '[size]', crk_var.title }}
                 {%- elsif crk_var.inventory_quantity > 0 and crk_var.inventory_quantity <= section.settings.low_stock_threshold -%}
@@ -376,7 +387,7 @@
               {%- if crk_var.available == false -%}
                 {{ section.settings.label_sold }}
               {%- elsif crk_var == blank and crk_has_options -%}
-                {{ section.settings.label_select }}
+                {{ crk_select_label }}
               {%- else -%}
                 {{ section.settings.label_add }}
               {%- endif -%}
@@ -743,6 +754,7 @@
     { "type": "text", "id": "set_collapsed_text", "label": "Collapsed row", "default": "Cop the full fit — add the matching [partner]. Save [saving]." },
     { "type": "text", "id": "set_partner_size_label", "label": "Second size label", "default": "[partner] size" },
     { "type": "text", "id": "set_pick_text", "label": "Second size not chosen yet", "info": "Shown in the set panel, and on the button, while the box is ticked but no second size has been picked. [partner] is replaced with the other item's name.", "default": "Pick a [partner] size" },
+    { "type": "text", "id": "set_main_first_text", "label": "Own size not chosen yet", "info": "Shown in the set panel when the box is ticked but no size has been picked for this item yet.", "default": "Pick your size first" },
     { "type": "text", "id": "set_sold_text", "label": "Partner sold out", "default": "[partner] sold out in [size] — pick another size" },
     { "type": "text", "id": "set_price_label", "label": "Set price line", "default": "[price] for the set" },
     { "type": "text", "id": "set_shipping_text", "label": "Shipping line", "default": "Free UK Tracked 24 included" },

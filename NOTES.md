@@ -2080,3 +2080,48 @@ Message contract with the app, origin-checked: `getaway:close`,
 24 assertions against the real snippet, extracted from the `.liquid` at test
 time. Verified on the deployed page: the offer is in the HTML, `RUN IT` is
 there, and the app URL appears **zero** times as a loaded frame.
+
+---
+
+## 2026-08-20 — New audit, Tier 1: three fixed
+
+### 2. The set panel's false sold-out (my bug, from the no-autoselect change)
+
+Tick the offer, then pick a size for the *other* garment before your own, and the
+panel announced "Cellblock Shorts sold out in M" against 201 units.
+
+`find(main, partner)` cannot match a pair when half of it is missing, so with
+`mainSize` null it returned null, and `paint()` fell through to the sold-out
+branch because `partnerSize` was set. Two states existed where three were
+needed. Now: no own size yet -> "Pick your size first" in black; no partner size
+yet -> "Pick a … size" in black; a real unavailable pair -> sold out, in red.
+
+Introduced by me when I removed the size mirroring. Removing the guess created a
+state the panel had never been in, and I covered one of the two new orderings.
+9 assertions now cover both, plus the genuine sold-out.
+
+### 12. "SELECT A SIZE" on socks (6 journeys)
+
+Socks are sold by Quantity. Both the button and the stock line said "Select a
+size" — the one place the plain-English rule was plainly wrong.
+
+The button now names the option that is actually missing, in **two** places: in
+`crooks-record.js` once JS runs, and in the Liquid the server sends before it
+does. I fixed the JS first, deployed, and the socks page still said "Select a
+size" — because the pre-JS render has its own copy of that label. Verified on
+the deployed pages: socks read `Select Quantity`, jeans read `Select Size`.
+
+### 1. Measurements: "around the garment" vs "laid flat"
+
+The PDP caption and the FAQ disagreed by a factor of two. The data settles it —
+XS jeans list a 38cm waist:
+
+    laid flat -> 38 x 2 = 76cm round = 30in   an XS waist
+    around    -> 38cm round          = 15in   impossible
+
+So laid flat is correct and the PDP caption was wrong. That caption is the one I
+preserved during the 20 Aug merge, when I treated theme-editor copy as
+authoritative because it was newer. Newer is not the same as right, and I never
+checked it against the numbers it was describing. It now reads "Measured with
+the garment laid flat, so double the waist, chest and hem for the full way
+round", which agrees with the FAQ and with KEEP.md §3.

@@ -371,7 +371,13 @@
         }
       }
 
-      if (!complete) setBuy(L.select, true);
+      if (!complete) {
+        /* Name the option that is actually missing. Socks are sold by Quantity,
+           and a button reading "Select a size" on a product with no sizes was
+           the one place the plain-English rule was plainly wrong (6 journeys). */
+        var missing = firstMissingOptionName();
+        setBuy(missing ? L.selectOption.replace('[option]', missing) : L.select, true);
+      }
       else if (v && v.available) setBuy(L.add, false);
       else setBuy(L.sold, true);
 

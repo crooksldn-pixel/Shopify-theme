@@ -31,6 +31,7 @@
   var SIZE_INDEX = parseInt(set.getAttribute('data-crk-set-size-index'), 10) || 0;
   var SOLD_TPL = set.getAttribute('data-crk-set-sold') || '';
   var PICK_TPL = set.getAttribute('data-crk-set-pick') || '';
+  var MAIN_TPL = set.getAttribute('data-crk-set-main-first') || 'Pick your size first';
 
   var variants = [];
   var nodes = set.querySelectorAll('[data-crk-set-variants] li');
@@ -111,7 +112,15 @@
     if (nowEl) nowEl.textContent = '';
     if (!stockLine) return;
     stockLine.hidden = false;
-    if (!partnerSize) {
+    /* Three reasons the pair is not sellable, and only the last is a fault.
+       Ticking the box before choosing your own size used to fall through to the
+       sold-out branch and announce "sold out in M" against full stock, because
+       find() cannot match a pair when half of it is missing. A false sold-out on
+       the upsell is the most expensive sentence on the page. */
+    if (!mainSize) {
+      stockLine.setAttribute('data-out', 'false');
+      stockLine.textContent = MAIN_TPL;
+    } else if (!partnerSize) {
       // Waiting on a choice, not reporting a fault: no red.
       stockLine.setAttribute('data-out', 'false');
       stockLine.textContent = PICK_TPL;
