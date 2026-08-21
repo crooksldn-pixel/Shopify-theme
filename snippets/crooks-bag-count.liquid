@@ -1,0 +1,26 @@
+{%- comment -%}
+  How many GARMENTS are in the bag.
+
+  `cart.item_count` counts cart LINES times quantity, and a bundle is one line
+  however many pieces it contains — so a two-garment set read BAG [1] while the
+  same two garments bought separately read BAG [2]. Same parcel, different
+  number. This expands bundle lines into their components so the count means
+  one thing everywhere.
+
+  Rendered bare (no markup) so it can be both interpolated into the header and
+  served on its own by templates/cart.crk-count.liquid, which is what the
+  JavaScript refetches after an add. One rule, one place.
+{%- endcomment -%}
+{%- liquid
+  assign crk_bag_n = 0
+  for crk_line in cart.items
+    if crk_line.item_components.size > 0
+      for crk_comp in crk_line.item_components
+        assign crk_bag_n = crk_bag_n | plus: crk_comp.quantity
+      endfor
+    else
+      assign crk_bag_n = crk_bag_n | plus: crk_line.quantity
+    endif
+  endfor
+-%}
+{{- crk_bag_n -}}

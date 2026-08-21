@@ -182,12 +182,16 @@
     if (!ids.length) return;
     var updates = {};
     for (var i = 0; i < ids.length; i++) updates[ids[i]] = 0;
-    fetch('/cart/update.js', {
+    var done = fetch('/cart/update.js', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ updates: updates })
     }).catch(function () {});
+    /* Hand the promise back so the PDP reads the bag count — and leaves for the
+       till — only after these lines are actually gone. Without it the count is
+       read mid-flight and reports garments the shopper no longer has. */
+    if (e.detail && e.detail.waitFor) e.detail.waitFor.push(done);
   });
 
   for (var b = 0; b < sizeBtns.length; b++) {

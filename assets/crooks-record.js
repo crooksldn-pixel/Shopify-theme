@@ -35,6 +35,7 @@
       low: root.getAttribute('data-crk-label-low') || '[n] LEFT IN SIZE [size]',
       soldSize: root.getAttribute('data-crk-label-soldsize') || 'SIZE [size] IS SOLD OUT',
       added: root.getAttribute('data-crk-label-added') || 'Added — [n] in bag',
+      addedPlain: root.getAttribute('data-crk-label-added-plain') || 'Added to bag',
       addError: root.getAttribute('data-crk-label-adderror') || 'Could not add that. Refresh and try again.',
       viewBag: root.getAttribute('data-crk-label-viewbag') || 'View bag',
       adding: root.getAttribute('data-crk-label-adding') || 'Adding\u2026'
@@ -50,9 +51,14 @@
      * Progressive enhancement: the form still posts normally if this never runs,
      * which is the no-JS path that keeps the PDP able to sell.
      */
+    /* The bag counts garments, and a bundle line holds two of them, so the
+       arithmetic lives in Liquid where the components are readable.
+       crooks-bag.js owns it; this only falls back to the line count if that
+       file never loaded. */
     function setCartCount(n) {
+      if (window.crkBag) { window.crkBag.paint(n); return; }
       var nodes = document.querySelectorAll('[data-crk-cart-count]');
-      for (var i = 0; i < nodes.length; i++) nodes[i].innerHTML = '\u00a0[' + n + ']';
+      for (var i = 0; i < nodes.length; i++) nodes[i].textContent = '\u00a0[' + n + ']';
     }
 
     function say(msg, isError, count) {
@@ -137,18 +143,35 @@
             say(res.j && res.j.description ? res.j.description : L.addError, true);
             return;
           }
-          return fetch('/cart.js', { credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (cart) {
-              setCartCount(cart.item_count);
+          /* Announce what actually landed, so add-ons can react — the set
+             toggle uses this to clear a component line the bundle replaces.
+             A listener that changes the cart puts its promise on `waitFor`, and
+             nothing below runs until those changes have landed. That matters
+             most on the checkout path: it used to leave for the till before the
+             dispatch, so CHECKOUT NOW on a set carried the loose garment AND
+             the bundle that contains it. */
+          var waitFor = [];
+          try {
+            root.dispatchEvent(new CustomEvent('crk:added', { detail: { id: id, waitFor: waitFor } }));
+          } catch (e) {}
+
+          return Promise.all(waitFor)
+            .then(function () {
               if (then === 'checkout') { leaving = true; window.location.assign(checkoutUrl); return; }
-              /* Announce what actually landed, so add-ons can react — the set
-                 toggle uses this to clear a component line the bundle replaces. */
-              try {
-                root.dispatchEvent(new CustomEvent('crk:added', { detail: { id: id } }));
-              } catch (e) {}
-              var msg = L.added.replace('[n]', cart.item_count);
-              say(msg, false, cart.item_count);
+              var read = window.crkBag
+                ? window.crkBag.refresh()
+                : fetch('/cart.js', { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (cart) { setCartCount(cart.item_count); return cart.item_count; });
+              /* The add already succeeded. A failure to read the count back is
+                 not a failed add, and must not fall through to the error
+                 branch — confirm without a number instead. */
+              return read.catch(function () { return null; });
+            })
+            .then(function (n) {
+              if (leaving) return;
+              var msg = n == null ? L.addedPlain : L.added.replace('[n]', n);
+              say(msg, false, n == null ? 0 : n);
               /* Held until after settle(), which re-derives the buy state and
                  rewrites the sticky meta line as a side effect. Flashing here
                  would be overwritten a microtask later. */

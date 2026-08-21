@@ -1,11 +1,17 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'crooks-drawer.js' | asset_url }}" defer></script>
+<script src="{{ 'crooks-bag.js' | asset_url }}" defer></script>
 <script src="{{ 'crooks-theme.js' | asset_url }}" defer></script>
 
-{%- liquid
-  assign crk_menu = linklists[section.settings.menu]
-  assign crk_cart_count = cart.item_count
--%}
+{%- assign crk_menu = linklists[section.settings.menu] -%}
+
+{%- comment -%}
+  The bag counts GARMENTS, not cart lines. A bundle is one line holding two
+  pieces, so `cart.item_count` read BAG [1] for a set and BAG [2] for the same
+  two garments bought separately. crooks-bag-count owns that rule; the header
+  only prints what it returns.
+{%- endcomment -%}
+{%- capture crk_cart_count -%}{%- render 'crooks-bag-count' -%}{%- endcapture -%}
 
 {%- comment -%}
   The uploaded mark is a black silhouette on transparency, so on the near-black
@@ -27,6 +33,7 @@
 <header
   class="crk-root crk-header"
   data-crk-section="header"
+  data-crk-bag-count-url="{{ routes.cart_url }}?view=crk-count"
   {% if section.settings.show_case and section.settings.case_url != blank %}data-crk-board-src="{{ 'crooks-board.js' | asset_url }}"{% endif %}
   {% if section.settings.logo_invert_dark %}data-crk-logo-invert="true"{% endif %}
 >

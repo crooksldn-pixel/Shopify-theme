@@ -1,0 +1,10 @@
+{%- comment -%}
+  The bag count on its own, as plain text.
+
+  /cart.js reports `has_components: true` for a bundle line but never says how
+  many components it holds, so JavaScript cannot work the garment count out for
+  itself. This alternate cart view answers it from Liquid, where the components
+  ARE readable, and crooks-bag.js fetches it after anything that changes the
+  cart. Reached at {{ routes.cart_url }}?view=crk-count.
+{%- endcomment -%}
+{%- layout none -%}{%- render 'crooks-bag-count' -%}

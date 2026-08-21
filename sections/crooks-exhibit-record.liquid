@@ -90,6 +90,7 @@
   data-crk-low-threshold="{{ section.settings.low_stock_threshold }}"
   data-crk-label-select-option="{{ section.settings.label_select_option | escape }}"
   data-crk-label-added="{{ section.settings.label_added | escape }}"
+  data-crk-label-added-plain="{{ section.settings.label_added_plain | escape }}"
   data-crk-label-adderror="{{ section.settings.label_add_error | escape }}"
   data-crk-label-viewbag="{{ section.settings.label_view_bag | escape }}"
   data-crk-label-adding="{{ section.settings.label_adding | escape }}"
@@ -705,6 +706,7 @@
     { "type": "text", "id": "label_checkout_now", "label": "Checkout now", "default": "Checkout now" },
     { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Shopify dynamic checkout (Shop Pay etc.)", "info": "Shopify-owned chrome; cannot be restyled.", "default": true },
     { "type": "text", "id": "label_added", "label": "Added confirmation", "info": "Use [n] for the bag count.", "default": "Added — [n] in bag" },
+    { "type": "text", "id": "label_added_plain", "label": "Added confirmation, count unavailable", "info": "Shown when the item went in but the bag count could not be read back.", "default": "Added to bag" },
     { "type": "text", "id": "label_adding", "label": "While adding", "info": "Shown on the button between the tap and the cart answering. On a slow connection this is the only sign the tap registered.", "default": "Adding\u2026" },
     { "type": "text", "id": "label_add_error", "label": "Add failed", "default": "Could not add that. Refresh and try again." },
     { "type": "text", "id": "label_view_bag", "label": "View bag link", "default": "View bag" },
