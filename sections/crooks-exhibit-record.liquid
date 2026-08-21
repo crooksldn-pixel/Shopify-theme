@@ -504,6 +504,33 @@
             assign spec_count = spec_count | plus: 1
           endif
         -%}
+        {%- comment -%}
+          Shipping and returns first. The delivery window was the third block
+          inside the fourth panel, and "when will it arrive" is the second
+          question every shopper has after the price. It now opens the list.
+        {%- endcomment -%}
+        {%- if section.blocks.size > 0 -%}
+          <section class="crk-section" id="crk-custody">
+            <h2 class="crk-display crk-h" style="margin: 0;">
+              <button type="button" class="crk-section-head" data-crk-accordion aria-expanded="{% if section.settings.custody_open %}true{% else %}false{% endif %}" aria-controls="crk-custody-body">
+                <span class="crk-display crk-h">{{ section.settings.custody_heading }}</span>
+                <span class="crk-display crk-h" aria-hidden="true" data-crk-accordion-icon>{% if section.settings.custody_open %}−{% else %}+{% endif %}</span>
+              </button>
+            </h2>
+            <div class="crk-section-body" id="crk-custody-body"{% unless section.settings.custody_open %} hidden{% endunless %}>
+              <ol class="crk-custody">
+                {%- for block in section.blocks -%}
+                  {%- if block.type != 'custody_step' -%}{%- continue -%}{%- endif -%}
+                  <li {{ block.shopify_attributes }}>
+                    <span class="crk-label">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }} {{ block.settings.label }}</span>
+                    <p class="crk-body">{{ block.settings.body }}</p>
+                  </li>
+                {%- endfor -%}
+              </ol>
+            </div>
+          </section>
+        {%- endif -%}
+
         {%- if spec_count > 0 -%}
           <section class="crk-section" id="crk-specification">
             <h2 class="crk-display crk-h" style="margin: 0;">
@@ -594,27 +621,6 @@
           </section>
         {%- endif -%}
 
-        {%- if section.blocks.size > 0 -%}
-          <section class="crk-section" id="crk-custody">
-            <h2 class="crk-display crk-h" style="margin: 0;">
-              <button type="button" class="crk-section-head" data-crk-accordion aria-expanded="{% if section.settings.custody_open %}true{% else %}false{% endif %}" aria-controls="crk-custody-body">
-                <span class="crk-display crk-h">{{ section.settings.custody_heading }}</span>
-                <span class="crk-display crk-h" aria-hidden="true" data-crk-accordion-icon>{% if section.settings.custody_open %}−{% else %}+{% endif %}</span>
-              </button>
-            </h2>
-            <div class="crk-section-body" id="crk-custody-body"{% unless section.settings.custody_open %} hidden{% endunless %}>
-              <ol class="crk-custody">
-                {%- for block in section.blocks -%}
-                  {%- if block.type != 'custody_step' -%}{%- continue -%}{%- endif -%}
-                  <li {{ block.shopify_attributes }}>
-                    <span class="crk-label">{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }} {{ block.settings.label }}</span>
-                    <p class="crk-body">{{ block.settings.body }}</p>
-                  </li>
-                {%- endfor -%}
-              </ol>
-            </div>
-          </section>
-        {%- endif -%}
       </div>
 
       {%- comment -%} ---------- filed under the same case ---------- {%- endcomment -%}

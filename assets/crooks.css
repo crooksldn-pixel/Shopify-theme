@@ -1079,3 +1079,34 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
    Quiet: it is reassurance, not a sales line, and it must not compete with the
    stock state or the buy button. */
 .crk-record .crk-swapnote { margin-top: 6px; color: var(--crk-dim); max-width: 42ch }
+
+/* ---- query bar: the submit button, same problem as the field ----
+   `.crk-btn--fill` is (0,1,0) and Horizon's base stylesheet loads afterwards
+   and styles bare `button`, so the SEARCH button lost its fill and read as
+   near-invisible in light mode — the one place a pale page left nothing to see.
+   The field two lines above needed exactly this fix; the button beside it was
+   missed. Specificity, not load order. */
+.crk-root button.crk-query__go {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--crk-purple);
+  border: 1px solid var(--crk-purple);
+  border-radius: 0;
+  color: var(--crk-onpurple);
+  min-height: 56px;
+  font: inherit;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.crk-root button.crk-query__go:hover { border-color: var(--crk-accent) }
+.crk-root button.crk-query__go:focus-visible { outline: 2px solid var(--crk-accent); outline-offset: 2px }
+
+/* ---- tracking: the guest lookup ----
+   The page previously offered a signed-out customer a sign-in button and
+   nothing else, so a guest who had paid had no route at all. */
+.crk-track__lookup { display: block; margin: 20px 0 8px; max-width: 34rem }
+.crk-track__lookup .crk-label { display: block; margin: 12px 0 6px }
+.crk-track__lookup .crk-input { width: 100% }
+.crk-track__lookupgo { margin-top: 14px; width: 100% }
+.crk-track__alt { margin: 12px 0 0 }

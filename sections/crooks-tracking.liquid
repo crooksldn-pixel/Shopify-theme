@@ -177,7 +177,61 @@
         <p class="crk-micro crk-track__boot">{{ section.settings.boot_line }}</p>
         <h2 class="crk-display crk-track__title">{{ section.settings.gate_heading }}</h2>
         <p class="crk-body crk-track__gatebody">{{ section.settings.gate_body }}</p>
-        <a class="crk-btn crk-btn--fill crk-track__cta" href="{{ routes.account_login_url }}">{{ section.settings.gate_cta }}</a>
+
+        {%- comment -%}
+          A guest lookup, because the page had none and a paying customer met a
+          sign-in wall and nothing else.
+
+          It posts to the tracking portal rather than pretending Shopify can do
+          this: there is no native way to look an order up by number and email
+          from a theme. The order-status link Shopify emails is the only
+          first-party route, and it carries a token that cannot be reconstructed
+          from a form, which is why it is named below rather than faked here.
+
+          GET, so the portal receives the fields and the shopper can bookmark or
+          share the result. Field names are settings — if the portal expects
+          different ones they change in the editor, and if it ignores them
+          entirely the shopper still lands on the right page with nothing lost.
+        {%- endcomment -%}
+        {%- if section.settings.lookup_url != blank -%}
+          <form class="crk-track__lookup" method="get" action="{{ section.settings.lookup_url }}" target="_blank" rel="noopener">
+            <label class="crk-label" for="crk-track-order">{{ section.settings.lookup_order_label }}</label>
+            <input
+              class="crk-input"
+              id="crk-track-order"
+              type="text"
+              name="{{ section.settings.lookup_order_field | escape }}"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="{{ section.settings.lookup_order_placeholder | escape }}"
+              required
+            >
+            <label class="crk-label" for="crk-track-email">{{ section.settings.lookup_email_label }}</label>
+            <input
+              class="crk-input"
+              id="crk-track-email"
+              type="email"
+              name="{{ section.settings.lookup_email_field | escape }}"
+              autocomplete="email"
+              placeholder="{{ section.settings.lookup_email_placeholder | escape }}"
+              required
+            >
+            <button class="crk-btn crk-btn--fill crk-track__lookupgo" type="submit">{{ section.settings.lookup_cta }}</button>
+            {%- if section.settings.lookup_note != blank -%}
+              <p class="crk-micro crk-track__note">{{ section.settings.lookup_note }}</p>
+            {%- endif -%}
+          </form>
+
+          {%- if section.settings.returns_url != blank and section.settings.returns_cta != blank -%}
+            <p class="crk-track__alt">
+              <a class="crk-textbtn" href="{{ section.settings.returns_url }}" target="_blank" rel="noopener">{{ section.settings.returns_cta }}</a>
+            </p>
+          {%- endif -%}
+        {%- endif -%}
+
+        <p class="crk-track__alt">
+          <a class="crk-textbtn" href="{{ routes.account_login_url }}">{{ section.settings.gate_cta }}</a>
+        </p>
         <p class="crk-micro crk-track__note">{{ section.settings.gate_note }}</p>
       </div>
     {%- endif -%}
@@ -223,6 +277,19 @@
     { "type": "text", "id": "gate_heading", "label": "Heading", "default": "Identification required" },
     { "type": "textarea", "id": "gate_body", "label": "Body", "default": "Order records are released to the account they were filed under. Sign in to view the chain of custody for your orders." },
     { "type": "text", "id": "gate_cta", "label": "Button", "default": "Sign in" },
+    { "type": "header", "content": "Guest lookup" },
+    { "type": "paragraph", "content": "Shopify has no native guest order lookup, so this posts to your tracking portal. Leave the URL blank to hide the whole form." },
+    { "type": "url", "id": "lookup_url", "label": "Tracking portal URL" },
+    { "type": "text", "id": "lookup_cta", "label": "Button", "default": "Find my order" },
+    { "type": "text", "id": "lookup_order_label", "label": "Order number label", "default": "ORDER NUMBER" },
+    { "type": "text", "id": "lookup_order_placeholder", "label": "Order number placeholder", "default": "1234" },
+    { "type": "text", "id": "lookup_order_field", "label": "Order number field name", "info": "The query parameter your portal expects. AfterShip uses order_number.", "default": "order_number" },
+    { "type": "text", "id": "lookup_email_label", "label": "Email label", "default": "EMAIL ON THE ORDER" },
+    { "type": "text", "id": "lookup_email_placeholder", "label": "Email placeholder", "default": "you@email.com" },
+    { "type": "text", "id": "lookup_email_field", "label": "Email field name", "default": "email" },
+    { "type": "text", "id": "lookup_note", "label": "Note under the form", "default": "Both are on your confirmation email. Opens the tracking centre in a new tab." },
+    { "type": "url", "id": "returns_url", "label": "Returns link" },
+    { "type": "text", "id": "returns_cta", "label": "Returns link label", "default": "Start a return instead" },
     { "type": "textarea", "id": "gate_note", "label": "Note", "default": "No account? The tracking link in your dispatch email opens your order without one." },
     { "type": "header", "content": "No orders" },
     { "type": "textarea", "id": "no_orders", "label": "No orders text", "default": "No orders are filed under this account yet." },

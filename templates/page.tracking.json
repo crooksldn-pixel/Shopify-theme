@@ -1,6 +1,16 @@
 {
   "sections": {
-    "main": { "type": "crooks-tracking", "settings": {} }
+    "main": {
+      "type": "crooks-tracking",
+      "settings": {
+        "lookup_url": "https://5wn03tnm.aftership.com",
+        "returns_url": "https://5wn03tnm.aftership.com",
+        "gate_body": "Signed in, every order you have placed is here with its full chain of custody. Not signed in? Look it up with your order number and the email you used.",
+        "gate_cta": "Sign in for full order history"
+      }
+    }
   },
-  "order": ["main"]
+  "order": [
+    "main"
+  ]
 }
