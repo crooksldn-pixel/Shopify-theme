@@ -427,7 +427,7 @@
           "settings": {
             "image": "shopify://shop_images/8I2A8856-Edit_copy.jpg",
             "image_alt": "A man in a white CROOKSLDN windbreaker leaning out of a red car, firing a water gun.",
-            "focal_x": 50,
+            "focal_x": 35,
             "focal_y": 50,
             "timecode": "14:22:17",
             "label": "",
@@ -453,7 +453,7 @@
           "settings": {
             "image": "shopify://shop_images/compressedImage-2-3-rectangle.jpg",
             "image_alt": "A man in a grey hooded sweatshirt and blue wash baggy jeans, tipping the peak of a navy Crooks cap.",
-            "focal_x": 50,
+            "focal_x": 80,
             "focal_y": 50,
             "timecode": "16:39:58",
             "product": "cb2-wash-jeans",
@@ -472,15 +472,13 @@
         "eyebrow": "CASE FILE 002",
         "heading": "STREET SIGHTINGS",
         "standfirst": "VISUAL RECORDS // [n] FRAMES RECOVERED",
-        "aspect": "9 / 16",
+        "row_height": "52vw",
         "frame_label": "FRAME [n] / [total]",
         "redacted_location": "LOCATION REDACTED",
         "wearing_label": "SUBJECT WEARING:",
         "redacted_piece": "PRODUCT: REDACTED",
         "cta_label": "VIEW EVIDENCE",
         "strip_label": "Recovered frames",
-        "prev_label": "Previous frame",
-        "next_label": "Next frame",
         "say": "Frame [n], [piece]"
       }
     }

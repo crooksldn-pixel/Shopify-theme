@@ -7,8 +7,9 @@
   Three things this has to get right, all of them learned the hard way
   elsewhere in this theme:
 
-  1. It sits above the catalogue, so it must not shift the page. Every frame is
-     an aspect box with the image sized into it; nothing here reflows on load.
+  1. It sits above the catalogue, so it must not shift the page. The row has a
+     height and the columns divide the width, so every photograph is sized
+     before it arrives and nothing here reflows on load.
   2. It must never point at a product that has gone. A frame whose product is
      archived, drafted or simply unpicked falls back to the REDACTED state on
      its own — the merchant does not have to remember to clear the link, and a
@@ -33,6 +34,13 @@
 
 {%- if crk_total > 0 -%}
   {%- capture crk_total_pad %}{% if crk_total < 10 %}0{% endif %}{{ crk_total }}{% endcapture -%}
+
+  {%- comment -%}
+    The middle frame is the selected one, and the middle COLUMN is the wide one
+    whatever is selected. Tying the width to the column rather than to the
+    selection is what lets hover move the highlight without moving the layout.
+  {%- endcomment -%}
+  {%- assign crk_active = crk_total | plus: 1 | divided_by: 2 -%}
 
   {%- comment -%}
     Filters chain left to right with no grouping, so the count is formatted into
@@ -63,9 +71,10 @@
 
       <div
         class="crk-sight__strip"
-        style="--crk-sight-aspect: {{ section.settings.aspect }}"
+        style="--crk-sight-h: clamp(180px, {{ section.settings.row_height }}, 620px)"
         role="group"
         aria-label="{{ section.settings.strip_label | escape }}"
+        data-crk-sight-count="{{ crk_total }}"
         data-crk-sight-strip
       >
         {%- assign crk_i = 0 -%}
@@ -107,6 +116,11 @@
             endif
           -%}
 
+          {%- if crk_i == crk_active -%}
+            {%- assign crk_bar_piece = crk_piece -%}
+            {%- assign crk_bar_href = crk_href -%}
+          {%- endif -%}
+
           {%- capture crk_no %}{% if crk_i < 10 %}0{% endif %}{{ crk_i }}{% endcapture -%}
           {%- assign crk_frame_label = section.settings.frame_label | replace: '[n]', crk_no | replace: '[total]', crk_total_pad -%}
 
@@ -118,6 +132,7 @@
             </span>
 
             <span class="crk-sight__media" style="--crk-sight-focal: {{ block.settings.focal_x }}% {{ block.settings.focal_y }}%">
+              <span class="crk-sight__brackets" aria-hidden="true"></span>
               {%- if block.settings.image != blank -%}
                 {{
                   block.settings.image
@@ -154,7 +169,7 @@
               class="crk-sight__frame"
               href="{{ crk_href }}"
               aria-label="{{ crk_piece | escape }}"
-              aria-current="{% if crk_i == 1 %}true{% else %}false{% endif %}"
+              aria-current="{% if crk_i == crk_active %}true{% else %}false{% endif %}"
               data-crk-sight-frame
               data-crk-sight-index="{{ crk_i }}"
               data-crk-sight-no="{{ crk_frame_label | escape }}"
@@ -166,7 +181,7 @@
             <div
               class="crk-sight__frame crk-sight__frame--dead"
               tabindex="-1"
-              aria-current="{% if crk_i == 1 %}true{% else %}false{% endif %}"
+              aria-current="{% if crk_i == crk_active %}true{% else %}false{% endif %}"
               data-crk-sight-frame
               data-crk-sight-index="{{ crk_i }}"
               data-crk-sight-no="{{ crk_frame_label | escape }}"
@@ -178,46 +193,6 @@
         {%- endfor -%}
       </div>
 
-      {%- comment -%}
-        Hidden in the markup, revealed by the script. With JavaScript off the
-        strip is still three readable frames and three working links, and there
-        are no arrows that do nothing.
-      {%- endcomment -%}
-      <div class="crk-sight__controls" data-crk-sight-controls hidden>
-        <button
-          type="button"
-          class="crk-sight__arrow"
-          aria-label="{{ section.settings.prev_label | escape }}"
-          data-crk-sight-prev
-        >&#8592;</button>
-        <p class="crk-sight__counter" data-crk-sight-counter></p>
-        <button
-          type="button"
-          class="crk-sight__arrow"
-          aria-label="{{ section.settings.next_label | escape }}"
-          data-crk-sight-next
-        >&#8594;</button>
-      </div>
-
-      {%- liquid
-        assign crk_first = section.blocks | where: 'type', 'frame' | first
-        assign crk_first_prod = crk_first.settings.product
-        assign crk_first_href = ''
-        if crk_first.settings.url != blank
-          assign crk_first_href = crk_first.settings.url
-        elsif crk_first_prod != blank and crk_first_prod.url != blank
-          assign crk_first_href = crk_first_prod.url
-        endif
-        assign crk_first_piece = crk_first.settings.label
-        if crk_first_piece == blank and crk_first_prod != blank
-          assign crk_first_piece = crk_first_prod.title
-        endif
-        if crk_first.settings.redacted or crk_first_href == blank or crk_first_piece == blank
-          assign crk_first_href = ''
-          assign crk_first_piece = section.settings.redacted_piece
-        endif
-      -%}
-
       <div class="crk-sight__wearing" data-crk-sight-wearing>
         <p class="crk-sight__wearing-col">
           {%- if section.settings.wearing_label != blank -%}
@@ -226,14 +201,14 @@
           <span
             class="crk-sight__piece"
             data-crk-sight-piece-out
-            data-crk-redacted="{% if crk_first_href == blank %}true{% else %}false{% endif %}"
-          >{{ crk_first_piece }}</span>
+            data-crk-redacted="{% if crk_bar_href == blank %}true{% else %}false{% endif %}"
+          >{{ crk_bar_piece }}</span>
         </p>
         <a
           class="crk-sight__cta"
-          href="{{ crk_first_href | default: '#' }}"
+          href="{{ crk_bar_href | default: '#' }}"
           data-crk-sight-cta
-          {% if crk_first_href == blank %}hidden{% endif %}
+          {% if crk_bar_href == blank %}hidden{% endif %}
         >{{ section.settings.cta_label }} <span aria-hidden="true">&#8594;</span></a>
       </div>
 
@@ -258,16 +233,15 @@
     { "type": "text", "id": "standfirst", "label": "Standfirst", "info": "Use [n] for the number of frames. It is counted from the blocks below.", "default": "VISUAL RECORDS // [n] FRAMES RECOVERED" },
     {
       "type": "select",
-      "id": "aspect",
-      "label": "Frame shape",
-      "info": "Images are cropped to this. Use the crop sliders on each frame to choose what the crop keeps.",
+      "id": "row_height",
+      "label": "Contact sheet height",
+      "info": "How tall the row of frames is. Widths follow from it. Use the crop sliders on each frame to choose what each photograph keeps.",
       "options": [
-        { "value": "9 / 16", "label": "Tall (9:16)" },
-        { "value": "2 / 3", "label": "Portrait (2:3)" },
-        { "value": "3 / 4", "label": "Portrait, softer (3:4)" },
-        { "value": "1 / 1", "label": "Square" }
+        { "value": "44vw", "label": "Compact" },
+        { "value": "52vw", "label": "Standard" },
+        { "value": "62vw", "label": "Tall" }
       ],
-      "default": "9 / 16"
+      "default": "52vw"
     },
 
     { "type": "header", "content": "Labels" },
@@ -279,8 +253,6 @@
 
     { "type": "header", "content": "Accessibility" },
     { "type": "text", "id": "strip_label", "label": "Frame strip description", "default": "Recovered frames" },
-    { "type": "text", "id": "prev_label", "label": "Previous button label", "default": "Previous frame" },
-    { "type": "text", "id": "next_label", "label": "Next button label", "default": "Next frame" },
     { "type": "text", "id": "say", "label": "Screen reader announcement", "info": "Use [n] for the frame number and [piece] for what the subject is wearing.", "default": "Frame [n], [piece]" }
   ],
   "blocks": [

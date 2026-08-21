@@ -1,57 +1,44 @@
 /* CROOKSLDN — street sightings.
  *
- * Enhancement only. The section ships three readable frames and three working
- * links without this file; the arrows are `hidden` in the markup and revealed
- * here, so nothing on the page is a control that does nothing.
+ * Enhancement only, and deliberately small. The section is a contact sheet:
+ * three frames rendered side by side, the middle one selected, each live frame
+ * a link to the piece. All of that is server-rendered and works with this file
+ * absent — there is no carousel to drive and no control that depends on it.
  *
- * One frame is selected at a time. Selecting is what drives the purple border,
- * the LOCATION line, the counter and the SUBJECT WEARING bar. It happens three
- * ways, matched to how the person is actually using the page:
- *   - arrows and keyboard, everywhere
- *   - hover and focus, on a device that has a real pointer
- *   - the snapped frame, on a phone, where the strip is a scroller
- * Tapping a frame is left alone: it is a link to the piece, and hijacking it
- * would make the obvious gesture do the least useful thing.
+ * What this adds is that the SUBJECT WEARING bar follows your attention on a
+ * device that has a pointer: hovering or focusing a frame names the piece in
+ * that frame. Touch is left alone, where a tap is a link and the bar stays on
+ * the selected frame, exactly as it renders.
+ *
+ * Selection never changes any width — the wide column is the middle one
+ * whatever is selected — so nothing here can reflow the row under the pointer.
  */
 (function () {
   'use strict';
 
   function init(root) {
-    var strip = root.querySelector('[data-crk-sight-strip]');
-    var controls = root.querySelector('[data-crk-sight-controls]');
-    if (!strip) return;
-
-    var frames = [].slice.call(strip.querySelectorAll('[data-crk-sight-frame]'));
+    var frames = [].slice.call(root.querySelectorAll('[data-crk-sight-frame]'));
     if (frames.length < 2) return;
 
-    var prevBtn = root.querySelector('[data-crk-sight-prev]');
-    var nextBtn = root.querySelector('[data-crk-sight-next]');
-    var counter = root.querySelector('[data-crk-sight-counter]');
     var pieceOut = root.querySelector('[data-crk-sight-piece-out]');
     var cta = root.querySelector('[data-crk-sight-cta]');
     var say = root.querySelector('[data-crk-sight-say]');
     var SAY_TPL = root.getAttribute('data-crk-sight-say-tpl') || '';
 
-    var current = 0;
+    /* Where the markup left it, so returning to it is exact rather than a
+       guess at which frame the middle is. */
+    var home = 0;
     for (var i = 0; i < frames.length; i++) {
-      if (frames[i].getAttribute('aria-current') === 'true') { current = i; break; }
+      if (frames[i].getAttribute('aria-current') === 'true') { home = i; break; }
     }
+    var current = home;
 
     var fine = true;
     try { fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
-    var still = false;
-    try { still = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
-    /* The strip is a scroller on a phone and a static three-up on a desktop.
-       Ask the element rather than re-testing the breakpoint, so a change to the
-       CSS cannot leave this file believing something else. */
-    function scrolls() {
-      return strip.scrollWidth - strip.clientWidth > 4;
-    }
-
-    function paint(i, opts) {
+    function paint(i) {
       var frame = frames[i];
-      if (!frame) return;
+      if (!frame || i === current) return;
       current = i;
 
       for (var n = 0; n < frames.length; n++) {
@@ -61,7 +48,6 @@
       var piece = frame.getAttribute('data-crk-sight-piece') || '';
       var href = frame.getAttribute('data-crk-sight-href') || '';
 
-      if (counter) counter.textContent = frame.getAttribute('data-crk-sight-no') || '';
       if (pieceOut) {
         pieceOut.textContent = piece;
         pieceOut.setAttribute('data-crk-redacted', href ? 'false' : 'true');
@@ -73,64 +59,38 @@
       if (say && SAY_TPL) {
         say.textContent = SAY_TPL.replace('[n]', String(i + 1)).replace('[piece]', piece);
       }
-
-      if (opts && opts.scroll && scrolls()) {
-        try {
-          strip.scrollTo({ left: frame.offsetLeft - (strip.clientWidth - frame.clientWidth) / 2, behavior: still ? 'auto' : 'smooth' });
-        } catch (e) {
-          strip.scrollLeft = frame.offsetLeft;
-        }
-      }
-      if (opts && opts.focus) frame.focus();
     }
 
-    function step(delta) {
-      var next = (current + delta + frames.length) % frames.length;
-      paint(next, { scroll: true });
-    }
-
-    if (prevBtn) prevBtn.addEventListener('click', function () { step(-1); });
-    if (nextBtn) nextBtn.addEventListener('click', function () { step(1); });
-
-    /* Hover and focus follow the eye, but only where there is a pointer that
-       can hover. On a touch screen the same events fire on tap, a beat before
-       the link navigates, which would repaint the bar for nobody to read. */
     for (var f = 0; f < frames.length; f++) {
       (function (el, idx) {
-        if (fine) el.addEventListener('mouseenter', function () { paint(idx); });
+        if (fine) {
+          el.addEventListener('mouseenter', function () { paint(idx); });
+          /* Put it back when the pointer leaves the sheet altogether, so the
+             bar does not sit on whichever frame the mouse happened to cross on
+             its way somewhere else. */
+          el.addEventListener('mouseleave', function () {
+            window.setTimeout(function () {
+              if (!root.querySelector('.crk-sight__frame:hover')) paint(home);
+            }, 60);
+          });
+        }
         el.addEventListener('focus', function () { paint(idx); }, true);
       })(frames[f], f);
     }
 
-    strip.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        paint((current + 1) % frames.length, { scroll: true, focus: true });
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        paint((current - 1 + frames.length) % frames.length, { scroll: true, focus: true });
-      }
+    /* Locked frames are tabindex=-1, so tabbing alone cannot reach every frame.
+       Arrow keys walk the row once you are in it. */
+    root.addEventListener('keydown', function (e) {
+      if (frames.indexOf(e.target) < 0) return;
+      var d = 0;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') d = 1;
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') d = -1;
+      else return;
+      e.preventDefault();
+      var next = (current + d + frames.length) % frames.length;
+      paint(next);
+      frames[next].focus();
     });
-
-    /* On a phone the frame you have swiped to IS the selection — the arrows are
-       a second way to do the same thing, not the only one. */
-    if ('IntersectionObserver' in window) {
-      var io = new IntersectionObserver(function (entries) {
-        if (!scrolls()) return;
-        var best = null;
-        for (var n = 0; n < entries.length; n++) {
-          if (!entries[n].isIntersecting) continue;
-          if (!best || entries[n].intersectionRatio > best.intersectionRatio) best = entries[n];
-        }
-        if (!best) return;
-        var idx = frames.indexOf(best.target);
-        if (idx > -1 && idx !== current) paint(idx);
-      }, { root: strip, threshold: [0.5, 0.75, 1] });
-      for (var o = 0; o < frames.length; o++) io.observe(frames[o]);
-    }
-
-    if (controls) controls.hidden = false;
-    paint(current);
   }
 
   function mountAll(scope) {
