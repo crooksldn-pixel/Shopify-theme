@@ -2175,3 +2175,36 @@ open.
 
 Lint then caught `minutes` and `seconds` computing nothing — dead code from
 pulling the clock out. Removed.
+
+### The code now lives as long as the drop
+
+George: *"yes"* — tie the code to the drop so the expiry sentence can go
+entirely.
+
+`issueDiscount` minted with `now + 20 minutes`. It now mints with the end of
+`DROP_END_DATE`. One variable feeds both the Shopify discount's `endsAt` and the
+app's stored `code_expires_at`, so a single change moves both — nothing can
+drift between what Shopify enforces and what the popup claims.
+
+    win today  ->  code lives 26.4 days   (was 0.014 days)
+
+Worth noting the header comment on that function already read *"Shopify discount
+codes expire at end of this day"*. The comment was right and the code was not;
+they agree now.
+
+Three details:
+
+- **End of day UTC**, which in British Summer Time is just under an hour into
+  the next London day. Deliberately generous. Erring late costs a few hours of a
+  discount already given away; erring early kills a code in someone's hand.
+- **A broken date cannot hand out a dead prize.** Missing, malformed or already
+  past falls back to 14 days and logs. Verified against all four inputs.
+- **The win screen now renders nothing** where the clock was. The code has no
+  deadline worth naming, and the evidence tag already says "10% off. One use."
+  The expired branch survives for the one case that can still happen — coming
+  back after the drop has closed — and is still gated on the expiry being known,
+  so an unresolved expiry shows nothing rather than guessing.
+
+Also confirmed while in there: the Getaway code is minted with all three
+`combinesWith` flags false, so it cannot stack on anything. That is the opposite
+of `10CROOKS`, which is still ACTIVE with all three true.
