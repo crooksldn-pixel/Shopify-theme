@@ -95,7 +95,7 @@
           "type": "qa",
           "settings": {
             "question": "My item is faulty or you sent the wrong thing.",
-            "answer": "<p>That is on us. Message us with your order number and a photo and we will refund or replace it in full and cover the postage both ways. For transit damage, tell us within 48 hours of delivery so we can raise it with the courier.</p>"
+            "answer": "<p>That is on us. Message us with your order number and a photo and we will refund or replace it in full and cover the postage both ways. You have the full 14 days to report it.</p><p>If the damage happened in transit, telling us within 48 hours lets us claim against the courier while their window is open. That is our deadline, not yours \u2014 report it later and we still put it right.</p>"
           }
         },
         "g4": {

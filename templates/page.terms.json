@@ -35,7 +35,7 @@
           "type": "clause",
           "settings": {
             "title": "Faults and wrong items",
-            "body": "<p>If we sent the wrong item, or it arrived faulty or damaged, that is on us. Message us with your order number and a photo and we will refund or replace it in full, and we cover the postage both ways.</p><p>For transit damage, tell us within 48 hours of delivery so we can raise it with the courier while the claim is still open.</p>"
+            "body": "<p>If we sent the wrong item, or it arrived faulty or damaged, that is on us. Message us with your order number and a photo and we will refund or replace it in full, and we cover the postage both ways.</p><p>You have the full 14 days to report a fault either way. The 48 hours below is not a shorter deadline on your side \u2014 it is only what the courier gives <em>us</em>.</p><p>For damage that happened in transit, telling us within 48 hours of delivery lets us raise a claim while the courier's window is still open. Later than that and we will still put it right; we just wear the cost instead of them.</p>"
           }
         },
         "c6": {

@@ -283,6 +283,14 @@
                   {{ section.settings.size_guide_label }}
                 </button>
               {%- endif -%}
+              {%- comment -%}
+                The free swap was filed on the Questions page and never appeared
+                where the size is actually chosen. It is the single fact that
+                most reduces the risk of picking wrong, so it belongs here.
+              {%- endcomment -%}
+              {%- if section.settings.swap_note != blank -%}
+                <p class="crk-micro crk-swapnote">{{ section.settings.swap_note }}</p>
+              {%- endif -%}
 
               <noscript>
                 <p class="crk-micro" style="margin-top: 8px;">{{ section.settings.nojs_note }}</p>
@@ -710,6 +718,7 @@
     { "type": "text", "id": "label_sold_size", "label": "Sold out size line", "info": "Use [size].", "default": "SIZE [size] IS SOLD OUT" },
     { "type": "range", "id": "low_stock_threshold", "label": "Low stock threshold", "min": 1, "max": 10, "step": 1, "default": 3 },
     { "type": "text", "id": "size_guide_label", "label": "Size guide button", "default": "Size guide" },
+    { "type": "text", "id": "swap_note", "label": "Size swap note", "info": "Sits under the size row, where the size decision is actually made. Leave blank to hide.", "default": "Wrong size? UK swaps are free \u2014 we cover the postage sending the new one out." },
     { "type": "text", "id": "sr_sold_out", "label": "\"Sold out\" (screen readers)", "default": "sold out" },
     { "type": "text", "id": "sr_left", "label": "\"left\" (screen readers)", "default": "left" },
     { "type": "text", "id": "nojs_note", "label": "No-JavaScript note", "default": "CHOOSE A SIZE:" },

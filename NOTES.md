@@ -2253,3 +2253,34 @@ cart with items at 844x390, and this container's browser has no external
 network. The change is justified on its own terms (landscape was demonstrably
 falling through to a layout the redesign replaced) but whether it was the *whole*
 cause of the reported overlap is unverified. Worth a look on a real device.
+
+## 2026-08-20 — Tier 3: #10 (partly) and #11 (partly)
+
+### 10. The contradictions
+
+Checked the theme first: Terms and Questions already agree with each other —
+14 days to tell us, 14 to post back, 5–7 days to refund, 48 hours for transit
+damage. The contradictions the audit names are mostly between the theme and
+things outside it.
+
+What was genuinely mine: **48 hours vs 14 days for a fault** read as two
+deadlines for the same thing. They are not — 14 days is the shopper's right,
+48 hours is the courier's claim window. Both pages now say so explicitly:
+*"That is our deadline, not yours — report it later and we still put it right."*
+A reason beats a number, and it removes the appearance of contradiction without
+weakening either.
+
+Still the owner's, because they live outside the theme:
+- **30 days** on the AfterShip portal against the site's 14 from delivery.
+- **"discounted items"** wording, which with a public 10% code reads as
+  discounted goods not being returnable. Not present anywhere in the theme —
+  it is in the returns portal or Shopify's own return rules.
+
+### 11. The free size swap now appears where the size is chosen
+
+It was filed on the Questions page and never surfaced at the size decision. It
+is the single fact that most reduces the risk of choosing wrong, so it now sits
+under the size row: *"Wrong size? UK swaps are free — we cover the postage
+sending the new one out."* A setting, blankable, styled quiet so it does not
+compete with the stock line or the buy button. Verified on the deployed jeans
+page.

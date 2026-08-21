@@ -1074,3 +1074,8 @@ main:has(> .shopify-policy__container) { background: var(--crk-ground); color: v
    ============================================================ */
 body:has(main [data-crk-section]) { background: var(--crk-ground) }
 body:has(main [data-crk-section]) main { background: var(--crk-ground) }
+
+/* The free size swap, sitting under the size row where the decision is made.
+   Quiet: it is reassurance, not a sales line, and it must not compete with the
+   stock state or the buy button. */
+.crk-record .crk-swapnote { margin-top: 6px; color: var(--crk-dim); max-width: 42ch }
