@@ -1169,14 +1169,25 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
    pointer. Any count other than three falls back to equal columns. */
 .crk-sight__strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-template-columns: var(--crk-sight-cols, repeat(auto-fit, minmax(0, 1fr)));
   gap: 6px;
-  margin-top: 20px;
+  margin-top: 16px;
+  /* Three frames divide the width and nothing overflows, so this is inert until
+     a fourth frame is added — then the row scrolls instead of shrinking. The
+     vertical padding is headroom for the selected frame's scale: an element
+     that scrolls on one axis clips on the other. */
+  padding: 4px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
-.crk-sight__strip[data-crk-sight-count="3"] { grid-template-columns: 1fr 1.35fr 1fr }
-@media (min-width: 768px) { .crk-sight__strip { gap: 10px; margin-top: 24px } }
+.crk-sight__strip::-webkit-scrollbar { display: none }
+@media (min-width: 768px) { .crk-sight__strip { gap: 10px; margin-top: 20px } }
 
 .crk-sight__frame {
+  scroll-snap-align: center;
   display: flex;
   flex-direction: column;
   min-width: 0;

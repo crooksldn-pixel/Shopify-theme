@@ -469,9 +469,9 @@
         "f3"
       ],
       "settings": {
-        "eyebrow": "CASE FILE 002",
-        "heading": "STREET SIGHTINGS",
-        "standfirst": "VISUAL RECORDS // [n] FRAMES RECOVERED",
+        "eyebrow": "",
+        "heading": "WORLD OF CROOKS",
+        "standfirst": "",
         "row_height": "52vw",
         "frame_label": "FRAME [n] / [total]",
         "redacted_location": "LOCATION REDACTED",

@@ -43,6 +43,19 @@
   {%- assign crk_active = crk_total | plus: 1 | divided_by: 2 -%}
 
   {%- comment -%}
+    Up to three frames divide the width and everything is on screen at once.
+    Past three they take a fixed share instead, so the row runs off the edge and
+    becomes a scroller rather than squeezing every frame down to a stamp.
+  {%- endcomment -%}
+  {%- if crk_total == 3 -%}
+    {%- assign crk_cols = '1fr 1.35fr 1fr' -%}
+  {%- elsif crk_total < 3 -%}
+    {%- capture crk_cols %}repeat({{ crk_total }}, minmax(0, 1fr)){% endcapture -%}
+  {%- else -%}
+    {%- capture crk_cols %}repeat({{ crk_total }}, 32%){% endcapture -%}
+  {%- endif -%}
+
+  {%- comment -%}
     Filters chain left to right with no grouping, so the count is formatted into
     its own variable first and only then substituted. Building the markup in a
     capture keeps the assembly out of the output line.
@@ -71,7 +84,7 @@
 
       <div
         class="crk-sight__strip"
-        style="--crk-sight-h: clamp(180px, {{ section.settings.row_height }}, 620px)"
+        style="--crk-sight-h: clamp(180px, {{ section.settings.row_height }}, 620px); --crk-sight-cols: {{ crk_cols }}"
         role="group"
         aria-label="{{ section.settings.strip_label | escape }}"
         data-crk-sight-count="{{ crk_total }}"
@@ -229,7 +242,7 @@
   "tag": "section",
   "settings": [
     { "type": "text", "id": "eyebrow", "label": "Case file chip", "default": "CASE FILE 002" },
-    { "type": "text", "id": "heading", "label": "Heading", "default": "STREET SIGHTINGS" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "WORLD OF CROOKS" },
     { "type": "text", "id": "standfirst", "label": "Standfirst", "info": "Use [n] for the number of frames. It is counted from the blocks below.", "default": "VISUAL RECORDS // [n] FRAMES RECOVERED" },
     {
       "type": "select",

@@ -20,6 +20,7 @@
     var frames = [].slice.call(root.querySelectorAll('[data-crk-sight-frame]'));
     if (frames.length < 2) return;
 
+    var strip = root.querySelector('[data-crk-sight-strip]');
     var pieceOut = root.querySelector('[data-crk-sight-piece-out]');
     var cta = root.querySelector('[data-crk-sight-cta]');
     var say = root.querySelector('[data-crk-sight-say]');
@@ -70,7 +71,10 @@
              its way somewhere else. */
           el.addEventListener('mouseleave', function () {
             window.setTimeout(function () {
-              if (!root.querySelector('.crk-sight__frame:hover')) paint(home);
+              if (root.querySelector('.crk-sight__frame:hover')) return;
+              /* If the row has been scrolled, the frame in view is the honest
+                 answer, not the one the markup started on. */
+              if (!scrolls()) paint(home);
             }, 60);
           });
         }
@@ -91,6 +95,30 @@
       paint(next);
       frames[next].focus();
     });
+
+    /* Ask the element whether it scrolls rather than re-testing a breakpoint,
+       so a change to the CSS cannot leave this file believing something else.
+       With three frames it never does; with more, it does at every width. */
+    function scrolls() {
+      return strip ? strip.scrollWidth - strip.clientWidth > 4 : false;
+    }
+
+    /* When the row is a scroller, the frame you have scrolled to IS the
+       selection — swiping is the whole interaction on a touch screen. */
+    if (strip && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        if (!scrolls()) return;
+        var best = null;
+        for (var n = 0; n < entries.length; n++) {
+          if (!entries[n].isIntersecting) continue;
+          if (!best || entries[n].intersectionRatio > best.intersectionRatio) best = entries[n];
+        }
+        if (!best) return;
+        var idx = frames.indexOf(best.target);
+        if (idx > -1) paint(idx);
+      }, { root: strip, threshold: [0.5, 0.75, 1] });
+      for (var o = 0; o < frames.length; o++) io.observe(frames[o]);
+    }
   }
 
   function mountAll(scope) {
