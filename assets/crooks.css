@@ -1181,22 +1181,33 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   grid-template-columns: var(--crk-sight-cols, repeat(auto-fit, minmax(0, 1fr)));
   gap: 6px;
   margin-top: 16px;
-  /* Three frames divide the width and nothing overflows, so this is inert until
-     a fourth frame is added — then the row scrolls instead of shrinking. The
-     vertical padding is headroom for the selected frame's scale: an element
-     that scrolls on one axis clips on the other. */
+  /* Headroom for the selected frame's scale: an element that scrolls on one
+     axis clips on the other, and without this the border would be shaved. */
   padding: 4px 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  /* No scroll snapping. Snap points and a selection read from scroll position
+     pull against each other at the ends of the strip, where the first and last
+     frames can never reach the middle. Free scrolling has no such argument. */
 }
 .crk-sight__strip::-webkit-scrollbar { display: none }
 @media (min-width: 768px) { .crk-sight__strip { gap: 10px; margin-top: 20px } }
 
+/* Filmstrip mode. How many frames fit is a question about the viewport, so the
+   widths are set here and the section only says whether it is scrolling. Every
+   step leaves a frame part-shown at the right edge — that sliver is the only
+   thing telling you the row keeps going. */
+.crk-sight__strip[data-crk-sight-scroll="on"] {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: 36%;
+}
+@media (min-width: 768px)  { .crk-sight__strip[data-crk-sight-scroll="on"] { grid-auto-columns: 28% } }
+@media (min-width: 1200px) { .crk-sight__strip[data-crk-sight-scroll="on"] { grid-auto-columns: 24% } }
+
 .crk-sight__frame {
-  scroll-snap-align: center;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -1291,6 +1302,23 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
 .crk-sight__frame[aria-current="true"] .crk-sight__brackets { opacity: 1 }
 @media (min-width: 768px) { .crk-sight__brackets { inset: 8px; --len: 22px } }
 @media (prefers-reduced-motion: reduce) { .crk-sight__brackets { transition: none } }
+
+/* Position in the strip, and the plainest available way of saying the row goes
+   on past the edge. Revealed by the script, so it can never claim a scroll that
+   is not there. */
+.crk-sight__rail {
+  position: relative;
+  height: 2px;
+  margin-top: 12px;
+  background: var(--crk-line);
+  overflow: hidden;
+}
+.crk-sight__rail[hidden] { display: none }
+.crk-sight__railbar {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: 30%;
+  background: var(--crk-lav);
+}
 
 .crk-sight__wearing {
   display: flex; align-items: center; justify-content: space-between;

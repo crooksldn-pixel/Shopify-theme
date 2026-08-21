@@ -36,23 +36,31 @@
   {%- capture crk_total_pad %}{% if crk_total < 10 %}0{% endif %}{{ crk_total }}{% endcapture -%}
 
   {%- comment -%}
-    The middle frame is the selected one, and the middle COLUMN is the wide one
-    whatever is selected. Tying the width to the column rather than to the
-    selection is what lets hover move the highlight without moving the layout.
-  {%- endcomment -%}
-  {%- assign crk_active = crk_total | plus: 1 | divided_by: 2 -%}
+    Two modes, and the count decides which.
 
-  {%- comment -%}
-    Up to three frames divide the width and everything is on screen at once.
-    Past three they take a fixed share instead, so the row runs off the edge and
-    becomes a scroller rather than squeezing every frame down to a stamp.
+    Up to three frames the row is a contact sheet: every frame on screen, the
+    middle column the wide one, the middle frame selected. The wide column is
+    the middle one whatever is selected, so hover can move the highlight
+    without moving the layout.
+
+    Past three it is a filmstrip that scrolls. How many frames fit is a
+    question about the viewport, not about the block count, so the widths live
+    in the stylesheet and all this has to say is which mode it is in. The first
+    frame is marked selected because that is where a scroller opens, which is
+    exactly what the script reads back from a scroll position of zero.
   {%- endcomment -%}
-  {%- if crk_total == 3 -%}
-    {%- assign crk_cols = '1fr 1.35fr 1fr' -%}
-  {%- elsif crk_total < 3 -%}
-    {%- capture crk_cols %}repeat({{ crk_total }}, minmax(0, 1fr)){% endcapture -%}
+  {%- if crk_total > 3 -%}
+    {%- assign crk_scroll = 'on' -%}
+    {%- assign crk_active = 1 -%}
+    {%- assign crk_cols = 'none' -%}
   {%- else -%}
-    {%- capture crk_cols %}repeat({{ crk_total }}, 32%){% endcapture -%}
+    {%- assign crk_scroll = 'off' -%}
+    {%- assign crk_active = crk_total | plus: 1 | divided_by: 2 -%}
+    {%- if crk_total == 3 -%}
+      {%- assign crk_cols = '1fr 1.35fr 1fr' -%}
+    {%- else -%}
+      {%- capture crk_cols %}repeat({{ crk_total }}, minmax(0, 1fr)){% endcapture -%}
+    {%- endif -%}
   {%- endif -%}
 
   {%- comment -%}
@@ -88,6 +96,7 @@
         role="group"
         aria-label="{{ section.settings.strip_label | escape }}"
         data-crk-sight-count="{{ crk_total }}"
+        data-crk-sight-scroll="{{ crk_scroll }}"
         data-crk-sight-strip
       >
         {%- assign crk_i = 0 -%}
@@ -204,6 +213,17 @@
             >{{ crk_frame_body }}</div>
           {%- endif -%}
         {%- endfor -%}
+      </div>
+
+      {%- comment -%}
+        A row that scrolls has to say so. The frames themselves only hint at it
+        — a sliver of the next one — so this is the part that reads as "there is
+        more here", and it doubles as your position in the strip. Hidden in the
+        markup and revealed by the script, so it can never claim a scroll that
+        is not there.
+      {%- endcomment -%}
+      <div class="crk-sight__rail" data-crk-sight-rail aria-hidden="true" hidden>
+        <span class="crk-sight__railbar" data-crk-sight-railbar></span>
       </div>
 
       <div class="crk-sight__wearing" data-crk-sight-wearing>

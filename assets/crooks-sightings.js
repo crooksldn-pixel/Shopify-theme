@@ -1,17 +1,19 @@
 /* CROOKSLDN — street sightings.
  *
- * Enhancement only, and deliberately small. The section is a contact sheet:
- * three frames rendered side by side, the middle one selected, each live frame
- * a link to the piece. All of that is server-rendered and works with this file
- * absent — there is no carousel to drive and no control that depends on it.
+ * Enhancement only. The section renders in two shapes and the block count
+ * decides which: up to three frames it is a contact sheet with every frame on
+ * screen and the middle one selected; past three it is a filmstrip that
+ * scrolls. Both are server-rendered and readable with this file absent, every
+ * live frame a link to its piece, and no control anywhere that depends on the
+ * script having run.
  *
- * What this adds is that the SUBJECT WEARING bar follows your attention on a
- * device that has a pointer: hovering or focusing a frame names the piece in
- * that frame. Touch is left alone, where a tap is a link and the bar stays on
- * the selected frame, exactly as it renders.
+ * What this adds is that the SUBJECT WEARING bar follows the frame you are
+ * looking at — the one you have scrolled to on a touch screen, the one under
+ * the pointer on a device that has one — and a rail that says the row carries
+ * on past the edge.
  *
- * Selection never changes any width — the wide column is the middle one
- * whatever is selected — so nothing here can reflow the row under the pointer.
+ * Selection never changes any width, so nothing here can reflow the row under
+ * the pointer or under a thumb mid-swipe.
  */
 (function () {
   'use strict';
@@ -21,13 +23,15 @@
     if (frames.length < 2) return;
 
     var strip = root.querySelector('[data-crk-sight-strip]');
+    var railTrack = root.querySelector('[data-crk-sight-rail]');
+    var railBar = root.querySelector('[data-crk-sight-railbar]');
     var pieceOut = root.querySelector('[data-crk-sight-piece-out]');
     var cta = root.querySelector('[data-crk-sight-cta]');
     var say = root.querySelector('[data-crk-sight-say]');
     var SAY_TPL = root.getAttribute('data-crk-sight-say-tpl') || '';
 
     /* Where the markup left it, so returning to it is exact rather than a
-       guess at which frame the middle is. */
+       guess at which frame the middle one is. */
     var home = 0;
     for (var i = 0; i < frames.length; i++) {
       if (frames[i].getAttribute('aria-current') === 'true') { home = i; break; }
@@ -97,27 +101,66 @@
     });
 
     /* Ask the element whether it scrolls rather than re-testing a breakpoint,
-       so a change to the CSS cannot leave this file believing something else.
-       With three frames it never does; with more, it does at every width. */
+       so a change to the CSS cannot leave this file believing something else. */
     function scrolls() {
       return strip ? strip.scrollWidth - strip.clientWidth > 4 : false;
     }
 
-    /* When the row is a scroller, the frame you have scrolled to IS the
-       selection — swiping is the whole interaction on a touch screen. */
-    if (strip && 'IntersectionObserver' in window) {
-      var io = new IntersectionObserver(function (entries) {
-        if (!scrolls()) return;
-        var best = null;
-        for (var n = 0; n < entries.length; n++) {
-          if (!entries[n].isIntersecting) continue;
-          if (!best || entries[n].intersectionRatio > best.intersectionRatio) best = entries[n];
-        }
-        if (!best) return;
-        var idx = frames.indexOf(best.target);
-        if (idx > -1) paint(idx);
-      }, { root: strip, threshold: [0.5, 0.75, 1] });
-      for (var o = 0; o < frames.length; o++) io.observe(frames[o]);
+    /* Which frame the strip is scrolled to, as a share of the distance
+     * travelled rather than whichever frame happens to sit under the middle.
+     *
+     * Two bugs, one replacement. It was an IntersectionObserver picking the
+     * most-visible frame, and it bounced: a callback only carries the frames
+     * that just crossed a threshold, so the "most visible" of that batch is not
+     * the most visible on screen, and a steady scroll flipped the selection
+     * backwards and forwards between two frames. Reading the middle of the
+     * viewport fixed the bounce but could never reach the ends — with under
+     * three frames in view the last frame is at the edge when the strip is
+     * fully scrolled, never the middle, so the final frame could not be
+     * selected at all. Here it is the whole scroll range mapped onto the whole
+     * strip: scrolled to the start is the first frame, scrolled to the end is
+     * the last, monotonic in between, and it agrees with the markup at rest so
+     * there is nothing to correct on load.
+     */
+    function atScroll() {
+      var span = strip.scrollWidth - strip.clientWidth;
+      if (span <= 0) return current;
+      var t = strip.scrollLeft / span;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      return Math.round(t * (frames.length - 1));
+    }
+
+    function rail() {
+      if (!railTrack || !railBar) return;
+      if (!scrolls()) { railTrack.hidden = true; return; }
+      railTrack.hidden = false;
+      var span = strip.scrollWidth;
+      railBar.style.width = (strip.clientWidth / span * 100) + '%';
+      railBar.style.left = (strip.scrollLeft / span * 100) + '%';
+    }
+
+    if (strip) {
+      var ticking = 0;
+      strip.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = window.requestAnimationFrame(function () {
+          ticking = 0;
+          rail();
+          if (scrolls()) paint(atScroll());
+        });
+      }, { passive: true });
+
+      /* How many frames fit is a media query, so the scroll range and the rail
+         that reports it both change when the window does. */
+      window.addEventListener('resize', function () {
+        rail();
+        if (scrolls()) paint(atScroll());
+      });
+
+      rail();
+      /* Agrees with the markup at a scroll position of zero, so this settles
+         the state without ever repainting it on load. */
+      if (scrolls()) paint(atScroll());
     }
   }
 
