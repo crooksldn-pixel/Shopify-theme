@@ -418,11 +418,77 @@
         "padding-block-start": 0,
         "padding-block-end": 0
       }
+    },
+    "crooks_sightings": {
+      "type": "crooks-sightings",
+      "blocks": {
+        "f1": {
+          "type": "frame",
+          "settings": {
+            "image": "shopify://shop_images/8I2A8856-Edit_copy.jpg",
+            "image_alt": "A man in a white CROOKSLDN windbreaker leaning out of a red car, firing a water gun.",
+            "focal_x": 50,
+            "focal_y": 50,
+            "timecode": "14:22:17",
+            "label": "",
+            "url": "",
+            "redacted": true
+          }
+        },
+        "f2": {
+          "type": "frame",
+          "settings": {
+            "image": "shopify://shop_images/8I2A8814-Edit.jpg",
+            "image_alt": "A man in a black CROOKSLDN tracksuit with white contrast stitching, sitting in the doorway of a red car.",
+            "focal_x": 50,
+            "focal_y": 50,
+            "timecode": "15:07:43",
+            "label": "",
+            "url": "",
+            "redacted": true
+          }
+        },
+        "f3": {
+          "type": "frame",
+          "settings": {
+            "image": "shopify://shop_images/compressedImage-2-3-rectangle.jpg",
+            "image_alt": "A man in a grey hooded sweatshirt and blue wash baggy jeans, tipping the peak of a navy Crooks cap.",
+            "focal_x": 50,
+            "focal_y": 50,
+            "timecode": "16:39:58",
+            "product": "cb2-wash-jeans",
+            "label": "",
+            "url": "",
+            "redacted": false
+          }
+        }
+      },
+      "block_order": [
+        "f1",
+        "f2",
+        "f3"
+      ],
+      "settings": {
+        "eyebrow": "CASE FILE 002",
+        "heading": "STREET SIGHTINGS",
+        "standfirst": "VISUAL RECORDS // [n] FRAMES RECOVERED",
+        "aspect": "9 / 16",
+        "frame_label": "FRAME [n] / [total]",
+        "redacted_location": "LOCATION REDACTED",
+        "wearing_label": "SUBJECT WEARING:",
+        "redacted_piece": "PRODUCT: REDACTED",
+        "cta_label": "VIEW EVIDENCE",
+        "strip_label": "Recovered frames",
+        "prev_label": "Previous frame",
+        "next_label": "Next frame",
+        "say": "Frame [n], [piece]"
+      }
     }
   },
   "order": [
     "carriage",
     "crooks_hero",
+    "crooks_sightings",
     "crooks_exhibit_log",
     "crooks_packaging",
     "crooks_informant",

@@ -1144,3 +1144,163 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
 @media (min-width: 1024px) { .crk-contact__abouttext { font-size: 14px } }
 
 .crk-contact__company { display: block; margin-top: 24px }
+
+/* ---- street sightings: the lookbook as recovered frames ----
+   Sits above the catalogue, so every frame is a fixed aspect box and nothing
+   here can shift the page while the images arrive. */
+.crk-sight__head { border-bottom: 1px solid var(--crk-line); padding-bottom: 24px }
+.crk-sight__file {
+  display: inline-block; border: 1px solid var(--crk-line); padding: 6px 12px;
+  font-weight: 500; font-size: 10px; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--crk-lav);
+}
+.crk-sight__heading { margin-top: 16px }
+.crk-sight__standfirst { display: block; margin-top: 14px }
+.crk-sight__count { color: var(--crk-lav) }
+@media (min-width: 1024px) { .crk-sight__file { font-size: 11px } }
+
+/* The strip is a scroller on a phone and a fixed three-up on a desktop. Same
+   markup either way — the arrows ask the element whether it scrolls. */
+.crk-sight__strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 72%;
+  gap: 12px;
+  margin-top: 28px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* The frames sit on a border, so the row must not clip its own outline. */
+  padding-bottom: 4px;
+}
+.crk-sight__strip::-webkit-scrollbar { display: none }
+@media (min-width: 768px) {
+  .crk-sight__strip {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 16px;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+}
+
+.crk-sight__frame {
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--crk-line);
+  background: var(--crk-panel);
+  /* The selected frame grows very slightly out of the row. transform, not size,
+     so its neighbours never move. */
+  transition: border-color .15s linear, transform .15s ease-out;
+}
+.crk-sight__frame[aria-current="true"] { border-color: var(--crk-purple); transform: scale(1.012) }
+@media (prefers-reduced-motion: reduce) {
+  .crk-sight__frame { transition: border-color .15s linear }
+  .crk-sight__frame[aria-current="true"] { transform: none }
+}
+.crk-sight__frame:focus-visible { outline: 2px solid var(--crk-lav); outline-offset: 2px }
+/* A redacted frame is tabindex=-1: arrow keys can land on it, but it is not a
+   tab stop, because there is nothing behind it to activate. */
+.crk-sight__frame--dead { cursor: default }
+.crk-sight__frame--dead:focus { outline: none }
+.crk-sight__frame--dead:focus-visible { outline: 2px solid var(--crk-lav); outline-offset: 2px }
+
+.crk-sight__bar {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 26px; padding: 0 8px;
+  font-weight: 400; font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--crk-micro);
+}
+.crk-sight__bar--top { justify-content: space-between; border-bottom: 1px solid var(--crk-line) }
+.crk-sight__bar--foot { justify-content: space-between; border-top: 1px solid var(--crk-line) }
+.crk-sight__no { flex: 1; text-align: center }
+
+/* Tick marks and the location line belong to the selected frame only. Hidden
+   rather than removed, so selecting a frame cannot change any frame's height. */
+.crk-sight__tick, .crk-sight__loc { visibility: hidden; letter-spacing: .2em }
+.crk-sight__frame[aria-current="true"] .crk-sight__tick,
+.crk-sight__frame[aria-current="true"] .crk-sight__loc { visibility: visible }
+.crk-sight__tick { flex: none; width: 1.5em }
+.crk-sight__tick--pair { width: 2.5em; text-align: right }
+
+.crk-sight__time { display: inline-flex; align-items: center; gap: 6px; flex: none }
+.crk-sight__dot { display: inline-block; width: 5px; height: 5px; background: var(--crk-red) }
+.crk-sight__loc { flex: none }
+
+.crk-sight__media {
+  display: block; position: relative;
+  aspect-ratio: var(--crk-sight-aspect, 9 / 16);
+  overflow: hidden;
+  background: var(--crk-void);
+}
+.crk-sight__img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  /* Shopify's focal point, so the crop keeps what the merchant chose. */
+  object-position: var(--crk-sight-focal, 50% 50%);
+}
+.crk-sight__img--placeholder { object-fit: contain; opacity: .35 }
+
+.crk-sight__controls { display: flex; align-items: center; justify-content: center; gap: clamp(20px, 5vw, 56px); margin-top: 20px }
+.crk-sight__controls[hidden] { display: none }
+/* Horizon's base stylesheet loads after this file and styles bare `button`,
+   which strips the border off anything that does not out-specify it. Same root
+   cause as the search button; same fix. */
+.crk-root button.crk-sight__arrow {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; min-height: 48px; padding: 0;
+  background: none;
+  border: 1px solid var(--crk-line);
+  border-radius: 0;
+  font: inherit; font-size: 15px; line-height: 1;
+  color: var(--crk-paper);
+  cursor: pointer;
+  transition: border-color .15s linear;
+}
+.crk-root button.crk-sight__arrow:hover { border-color: var(--crk-lav) }
+.crk-root button.crk-sight__arrow:active { background: var(--crk-press) }
+.crk-root button.crk-sight__arrow:focus-visible { outline: 2px solid var(--crk-lav); outline-offset: 2px }
+.crk-sight__counter {
+  min-width: 12ch; text-align: center;
+  font-weight: 400; font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--crk-micro);
+}
+@media (min-width: 1024px) { .crk-sight__counter { font-size: 10px } }
+
+.crk-sight__wearing {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 20px; padding: 16px;
+  border: 1px solid var(--crk-line);
+}
+/* The link is a 48px tap target and the two text lines are shorter, so a frame
+   with nothing to link to used to make the whole bar 4px shorter — the text
+   nudged every time you changed frame. Reserve the height on the text column
+   and the bar stops moving. */
+.crk-sight__wearing-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; min-height: 48px }
+.crk-sight__wearing-label { display: block }
+.crk-sight__piece {
+  font-weight: 500; font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--crk-lav);
+  overflow-wrap: anywhere;
+}
+/* Nothing is being sold behind this frame, so it must not wear the colour that
+   everywhere else on the site means "this is a link to a piece". */
+.crk-sight__piece[data-crk-redacted="true"] { color: var(--crk-micro) }
+.crk-sight__cta {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 48px;
+  font-weight: 500; font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--crk-lav);
+  border-bottom: 1px solid transparent;
+}
+.crk-sight__cta:hover { border-bottom-color: var(--crk-lav) }
+.crk-sight__cta[hidden] { display: none }
+@media (min-width: 1024px) {
+  .crk-sight__wearing { padding: 20px 24px }
+  .crk-sight__piece { font-size: 15px }
+}

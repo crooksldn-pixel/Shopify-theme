@@ -1,0 +1,310 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'crooks-sightings.js' | asset_url }}" defer></script>
+
+{%- comment -%}
+  STREET SIGHTINGS — the lookbook, filed as recovered surveillance frames.
+
+  Three things this has to get right, all of them learned the hard way
+  elsewhere in this theme:
+
+  1. It sits above the catalogue, so it must not shift the page. Every frame is
+     an aspect box with the image sized into it; nothing here reflows on load.
+  2. It must never point at a product that has gone. A frame whose product is
+     archived, drafted or simply unpicked falls back to the REDACTED state on
+     its own — the merchant does not have to remember to clear the link, and a
+     homepage tile can never lead to a 404.
+  3. Without JavaScript every frame and every link still works. The arrows are
+     `hidden` in the markup and only revealed by the script, so there is no
+     dead control on the page.
+
+  Frames are blocks. The count in the standfirst and in every FRAME n / N label
+  is derived from the block list, so it cannot drift out of step with what is
+  actually on the page.
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_total = 0
+  for block in section.blocks
+    if block.type == 'frame'
+      assign crk_total = crk_total | plus: 1
+    endif
+  endfor
+-%}
+
+{%- if crk_total > 0 -%}
+  {%- capture crk_total_pad %}{% if crk_total < 10 %}0{% endif %}{{ crk_total }}{% endcapture -%}
+
+  {%- comment -%}
+    Filters chain left to right with no grouping, so the count is formatted into
+    its own variable first and only then substituted. Building the markup in a
+    capture keeps the assembly out of the output line.
+  {%- endcomment -%}
+  {%- capture crk_count_html %}<span class="crk-sight__count">{{ crk_total_pad }}</span>{% endcapture -%}
+  {%- assign crk_standfirst = section.settings.standfirst | replace: '[n]', crk_count_html -%}
+
+  <section
+    class="crk-root crk-section"
+    data-crk-section="sightings"
+    data-crk-sight-say-tpl="{{ section.settings.say | escape }}"
+  >
+    <div class="crk-inner crk-sight">
+
+      <header class="crk-sight__head">
+        {%- if section.settings.eyebrow != blank -%}
+          <p class="crk-sight__file">{{ section.settings.eyebrow }}</p>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="crk-h2 crk-sight__heading">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.standfirst != blank -%}
+          <p class="crk-micro crk-sight__standfirst">{{ crk_standfirst }}</p>
+        {%- endif -%}
+      </header>
+
+      <div
+        class="crk-sight__strip"
+        style="--crk-sight-aspect: {{ section.settings.aspect }}"
+        role="group"
+        aria-label="{{ section.settings.strip_label | escape }}"
+        data-crk-sight-strip
+      >
+        {%- assign crk_i = 0 -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type != 'frame' -%}{%- continue -%}{%- endif -%}
+          {%- assign crk_i = crk_i | plus: 1 -%}
+
+          {%- liquid
+            assign crk_prod = block.settings.product
+
+            comment
+              A product picker keeps its reference after the product is archived
+              or put back to draft, and both 404 on the storefront. `url` is the
+              honest test: an unpublished product has none, so the frame quietly
+              becomes REDACTED instead of advertising a dead page.
+            endcomment
+            assign crk_href = ''
+            if block.settings.url != blank
+              assign crk_href = block.settings.url
+            elsif crk_prod != blank and crk_prod.url != blank
+              assign crk_href = crk_prod.url
+            endif
+
+            assign crk_piece = block.settings.label
+            if crk_piece == blank and crk_prod != blank
+              assign crk_piece = crk_prod.title
+            endif
+
+            assign crk_redacted = false
+            if block.settings.redacted or crk_href == blank or crk_piece == blank
+              assign crk_redacted = true
+              assign crk_href = ''
+              assign crk_piece = section.settings.redacted_piece
+            endif
+
+            assign crk_alt = block.settings.image_alt
+            if crk_alt == blank
+              assign crk_alt = block.settings.image.alt
+            endif
+          -%}
+
+          {%- capture crk_no %}{% if crk_i < 10 %}0{% endif %}{{ crk_i }}{% endcapture -%}
+          {%- assign crk_frame_label = section.settings.frame_label | replace: '[n]', crk_no | replace: '[total]', crk_total_pad -%}
+
+          {%- capture crk_frame_body -%}
+            <span class="crk-sight__bar crk-sight__bar--top">
+              <span class="crk-sight__tick" aria-hidden="true">-</span>
+              <span class="crk-sight__no">{{ crk_frame_label }}</span>
+              <span class="crk-sight__tick crk-sight__tick--pair" aria-hidden="true">- -</span>
+            </span>
+
+            <span class="crk-sight__media" style="--crk-sight-focal: {{ block.settings.focal_x }}% {{ block.settings.focal_y }}%">
+              {%- if block.settings.image != blank -%}
+                {{
+                  block.settings.image
+                  | image_url: width: 1200
+                  | image_tag:
+                    widths: '320, 480, 640, 900, 1200',
+                    sizes: '(min-width: 1024px) 32vw, 72vw',
+                    alt: crk_alt,
+                    loading: 'lazy',
+                    class: 'crk-sight__img'
+                }}
+              {%- else -%}
+                {{ 'lifestyle-1' | placeholder_svg_tag: 'crk-sight__img crk-sight__img--placeholder' }}
+              {%- endif -%}
+            </span>
+
+            <span class="crk-sight__bar crk-sight__bar--foot">
+              <span class="crk-sight__time">
+                {%- if block.settings.timecode != blank -%}
+                  <span class="crk-sight__dot" aria-hidden="true"></span>{{ block.settings.timecode }}
+                {%- endif -%}
+              </span>
+              <span class="crk-sight__loc">{{ section.settings.redacted_location }}</span>
+            </span>
+          {%- endcapture -%}
+
+          {%- comment -%}
+            A redacted frame is deliberately not a link. There is nothing to sell
+            behind it, and a tile that looks clickable and goes nowhere is worse
+            than one that plainly does not.
+          {%- endcomment -%}
+          {%- if crk_href != blank -%}
+            <a
+              class="crk-sight__frame"
+              href="{{ crk_href }}"
+              aria-label="{{ crk_piece | escape }}"
+              aria-current="{% if crk_i == 1 %}true{% else %}false{% endif %}"
+              data-crk-sight-frame
+              data-crk-sight-index="{{ crk_i }}"
+              data-crk-sight-no="{{ crk_frame_label | escape }}"
+              data-crk-sight-piece="{{ crk_piece | escape }}"
+              data-crk-sight-href="{{ crk_href }}"
+              {{ block.shopify_attributes }}
+            >{{ crk_frame_body }}</a>
+          {%- else -%}
+            <div
+              class="crk-sight__frame crk-sight__frame--dead"
+              tabindex="-1"
+              aria-current="{% if crk_i == 1 %}true{% else %}false{% endif %}"
+              data-crk-sight-frame
+              data-crk-sight-index="{{ crk_i }}"
+              data-crk-sight-no="{{ crk_frame_label | escape }}"
+              data-crk-sight-piece="{{ crk_piece | escape }}"
+              data-crk-sight-href=""
+              {{ block.shopify_attributes }}
+            >{{ crk_frame_body }}</div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      {%- comment -%}
+        Hidden in the markup, revealed by the script. With JavaScript off the
+        strip is still three readable frames and three working links, and there
+        are no arrows that do nothing.
+      {%- endcomment -%}
+      <div class="crk-sight__controls" data-crk-sight-controls hidden>
+        <button
+          type="button"
+          class="crk-sight__arrow"
+          aria-label="{{ section.settings.prev_label | escape }}"
+          data-crk-sight-prev
+        >&#8592;</button>
+        <p class="crk-sight__counter" data-crk-sight-counter></p>
+        <button
+          type="button"
+          class="crk-sight__arrow"
+          aria-label="{{ section.settings.next_label | escape }}"
+          data-crk-sight-next
+        >&#8594;</button>
+      </div>
+
+      {%- liquid
+        assign crk_first = section.blocks | where: 'type', 'frame' | first
+        assign crk_first_prod = crk_first.settings.product
+        assign crk_first_href = ''
+        if crk_first.settings.url != blank
+          assign crk_first_href = crk_first.settings.url
+        elsif crk_first_prod != blank and crk_first_prod.url != blank
+          assign crk_first_href = crk_first_prod.url
+        endif
+        assign crk_first_piece = crk_first.settings.label
+        if crk_first_piece == blank and crk_first_prod != blank
+          assign crk_first_piece = crk_first_prod.title
+        endif
+        if crk_first.settings.redacted or crk_first_href == blank or crk_first_piece == blank
+          assign crk_first_href = ''
+          assign crk_first_piece = section.settings.redacted_piece
+        endif
+      -%}
+
+      <div class="crk-sight__wearing" data-crk-sight-wearing>
+        <p class="crk-sight__wearing-col">
+          {%- if section.settings.wearing_label != blank -%}
+            <span class="crk-micro crk-sight__wearing-label">{{ section.settings.wearing_label }}</span>
+          {%- endif -%}
+          <span
+            class="crk-sight__piece"
+            data-crk-sight-piece-out
+            data-crk-redacted="{% if crk_first_href == blank %}true{% else %}false{% endif %}"
+          >{{ crk_first_piece }}</span>
+        </p>
+        <a
+          class="crk-sight__cta"
+          href="{{ crk_first_href | default: '#' }}"
+          data-crk-sight-cta
+          {% if crk_first_href == blank %}hidden{% endif %}
+        >{{ section.settings.cta_label }} <span aria-hidden="true">&#8594;</span></a>
+      </div>
+
+      {%- comment -%}
+        The announcement lives apart from the bar. The bar's own text is rewritten
+        on every frame change, and a live region that is also the thing being
+        rewritten re-announces its whole contents each time.
+      {%- endcomment -%}
+      <p class="crk-sr" aria-live="polite" data-crk-sight-say></p>
+
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Crooks — Street Sightings",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Case file chip", "default": "CASE FILE 002" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "STREET SIGHTINGS" },
+    { "type": "text", "id": "standfirst", "label": "Standfirst", "info": "Use [n] for the number of frames. It is counted from the blocks below.", "default": "VISUAL RECORDS // [n] FRAMES RECOVERED" },
+    {
+      "type": "select",
+      "id": "aspect",
+      "label": "Frame shape",
+      "info": "Images are cropped to this. Use the crop sliders on each frame to choose what the crop keeps.",
+      "options": [
+        { "value": "9 / 16", "label": "Tall (9:16)" },
+        { "value": "2 / 3", "label": "Portrait (2:3)" },
+        { "value": "3 / 4", "label": "Portrait, softer (3:4)" },
+        { "value": "1 / 1", "label": "Square" }
+      ],
+      "default": "9 / 16"
+    },
+
+    { "type": "header", "content": "Labels" },
+    { "type": "text", "id": "frame_label", "label": "Frame label", "info": "Use [n] for this frame and [total] for the count.", "default": "FRAME [n] / [total]" },
+    { "type": "text", "id": "redacted_location", "label": "Location line", "info": "Shown on the selected frame only. Leave blank to hide it.", "default": "LOCATION REDACTED" },
+    { "type": "text", "id": "wearing_label", "label": "Wearing label", "default": "SUBJECT WEARING:" },
+    { "type": "text", "id": "redacted_piece", "label": "When the piece is not for sale", "info": "Shown instead of a product name when a frame has no live product to link to.", "default": "PRODUCT: REDACTED" },
+    { "type": "text", "id": "cta_label", "label": "Link label", "default": "VIEW EVIDENCE" },
+
+    { "type": "header", "content": "Accessibility" },
+    { "type": "text", "id": "strip_label", "label": "Frame strip description", "default": "Recovered frames" },
+    { "type": "text", "id": "prev_label", "label": "Previous button label", "default": "Previous frame" },
+    { "type": "text", "id": "next_label", "label": "Next button label", "default": "Next frame" },
+    { "type": "text", "id": "say", "label": "Screen reader announcement", "info": "Use [n] for the frame number and [piece] for what the subject is wearing.", "default": "Frame [n], [piece]" }
+  ],
+  "blocks": [
+    {
+      "type": "frame",
+      "name": "Frame",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Photograph" },
+        { "type": "text", "id": "image_alt", "label": "Alt text", "info": "Describe the photograph. Falls back to the alt text set on the file." },
+        { "type": "range", "id": "focal_x", "label": "Crop across", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 50, "info": "Which part of the photograph the frame keeps. 0 is the left edge, 100 the right." },
+        { "type": "range", "id": "focal_y", "label": "Crop down", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 50 },
+        { "type": "text", "id": "timecode", "label": "Timecode", "info": "Chrome. Leave blank to hide it.", "default": "00:00:00" },
+        { "type": "product", "id": "product", "label": "Piece worn" },
+        { "type": "text", "id": "label", "label": "Piece name override", "info": "Defaults to the product title." },
+        { "type": "url", "id": "url", "label": "Link override", "info": "Use to point at a collection instead of a product." },
+        { "type": "checkbox", "id": "redacted", "label": "Not for sale", "info": "Shows the redacted line instead of a product, and makes the frame unclickable.", "default": false }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Crooks — Street Sightings",
+      "blocks": [{ "type": "frame" }, { "type": "frame" }, { "type": "frame" }]
+    }
+  ]
+}
+{% endschema %}
