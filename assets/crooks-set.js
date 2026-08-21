@@ -161,6 +161,35 @@
     root.dispatchEvent(new CustomEvent('crk:rerender'));
   });
 
+  /* The bundle contains both garments, so any loose component line is now a
+     duplicate the shopper would pay twice for. crooks-record.js announces every
+     successful add; if what landed was one of our bundle variants, zero the
+     components. /cart/update.js takes variant ids, which is exactly what we
+     hold. Best effort: if it fails the cart is still correct, just untidy, and
+     the shopper can see and remove the line themselves. */
+  function isBundleVariant(id) {
+    for (var i = 0; i < variants.length; i++) {
+      if (String(variants[i].id) === String(id)) return true;
+    }
+    return false;
+  }
+
+  root.addEventListener('crk:added', function (e) {
+    var added = e && e.detail && e.detail.id;
+    if (!added || !isBundleVariant(added)) return;
+    var componentIds = set.getAttribute('data-crk-set-components') || '';
+    var ids = componentIds.split(',').filter(function (x) { return x; });
+    if (!ids.length) return;
+    var updates = {};
+    for (var i = 0; i < ids.length; i++) updates[ids[i]] = 0;
+    fetch('/cart/update.js', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates: updates })
+    }).catch(function () {});
+  });
+
   for (var b = 0; b < sizeBtns.length; b++) {
     (function (btn) {
       btn.addEventListener('click', function () {
@@ -170,6 +199,16 @@
       });
     })(sizeBtns[b]);
   }
+
+  /* Arriving from the cart's "complete the set" line, with the set already
+     switched on. Without this the offer sends you to a page where the thing it
+     just offered you is off by default, and the obvious next move — adding the
+     other garment on its own page — costs GBP 95 for a GBP 85 set. */
+  try {
+    if (new URLSearchParams(window.location.search).get('set') === '1') {
+      check.checked = true;
+    }
+  } catch (e) {}
 
   paint();
 })();

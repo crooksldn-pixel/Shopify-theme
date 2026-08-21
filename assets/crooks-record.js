@@ -142,6 +142,11 @@
             .then(function (cart) {
               setCartCount(cart.item_count);
               if (then === 'checkout') { leaving = true; window.location.assign(checkoutUrl); return; }
+              /* Announce what actually landed, so add-ons can react — the set
+                 toggle uses this to clear a component line the bundle replaces. */
+              try {
+                root.dispatchEvent(new CustomEvent('crk:added', { detail: { id: id } }));
+              } catch (e) {}
               var msg = L.added.replace('[n]', cart.item_count);
               say(msg, false, cart.item_count);
               /* Held until after settle(), which re-derives the buy state and

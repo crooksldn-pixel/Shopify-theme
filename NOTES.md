@@ -2208,3 +2208,48 @@ Three details:
 Also confirmed while in there: the Getaway code is minted with all three
 `combinesWith` flags false, so it cannot stack on anything. That is the opposite
 of `10CROOKS`, which is still ACTIVE with all three true.
+
+---
+
+## 2026-08-20 — Tier 1 #3 and #5
+
+### 3. Our own upsell was the most expensive route through the shop
+
+The cart said *"Complete the set — add the Cellblock Shorts, save £10."* The link
+went to the **partner's** product page, where the obvious next move is adding
+that garment on its own: £50 + £45 = £95, for a set that costs £85. Three prices
+existed for the same two garments and the one we recommended was the worst.
+
+The offer now links back to the item **already in the bag**, at its exact
+variant, with `?set=1`. `crooks-set.js` reads that and opens with the toggle
+already ticked, so the shopper picks the second size and adds the £85 bundle —
+the thing the sentence promised.
+
+That left a second way to overpay: the bundle contains both garments, so the
+loose component line in the cart becomes a duplicate. `crooks-record.js` now
+announces every successful add as `crk:added`, and the set toggle zeroes the
+component variants through `/cart/update.js` when what landed was one of its own
+bundle variants. Best effort by design — if the call fails the cart is still
+correct, just untidy, and the shopper can see the line.
+
+7 assertions: arriving pre-ticked, the bundle variant reaching the form, the
+components being cleared, and — the one that matters for not breaking normal
+buying — a plain single-item add performing no cart surgery at all.
+
+### 5. The cart line printing the photo over the words
+
+The stacked mobile layout was gated on `max-width: 600px`. A landscape phone is
+about 844px wide, so it never qualified and fell back to Horizon's desktop
+table, which is where the overlap was reported. The stacked grid already works;
+it simply was not reaching the orientation that needed it. It now also triggers
+on a short landscape viewport, because a short viewport in landscape is a phone
+whatever its width claims.
+
+200% zoom needed nothing: zooming halves the reported CSS width, so a phone at
+200% is already well under 600.
+
+**Not confirmed fixed.** I could not reproduce the overlap — it needs a real
+cart with items at 844x390, and this container's browser has no external
+network. The change is justified on its own terms (landscape was demonstrably
+falling through to a layout the redesign replaced) but whether it was the *whole*
+cause of the reported overlap is unverified. Worth a look on a real device.

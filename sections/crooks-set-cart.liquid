@@ -34,6 +34,16 @@
       unless crk_has_partner
         if crk_offer_partner == null
           assign crk_offer_partner = li_partner
+          comment
+            Keep the item that is ALREADY in the bag, and the exact variant of
+            it. The offer has to send the shopper back to this product with the
+            set switched on — not to the partner's own page, where adding it
+            buys the two garments separately at full price. That is how
+            following our own upsell landed people on GBP 95 for a GBP 85 set:
+            the most expensive route through the shop was the one we recommended.
+          endcomment
+          assign crk_offer_main = li_product
+          assign crk_offer_variant = line.variant_id
           assign crk_pair = li_product.price | plus: li_partner.price
           assign crk_offer_saving = crk_pair | minus: li_bundle.price | money_without_trailing_zeros
         endif
@@ -81,8 +91,16 @@
         {%- capture crk_offer_line -%}
           {{ section.settings.offer_text | replace: '[partner]', crk_offer_name | replace: '[saving]', crk_offer_saving }}
         {%- endcapture -%}
+        {%- liquid
+          assign crk_offer_url = crk_offer_main.url
+          if crk_offer_variant
+            assign crk_offer_url = crk_offer_main.url | append: '?variant=' | append: crk_offer_variant | append: '&set=1'
+          else
+            assign crk_offer_url = crk_offer_main.url | append: '?set=1'
+          endif
+        -%}
         <p class="crk-setcart__offer">
-          <a href="{{ crk_offer_partner.url }}">{{ crk_offer_line | strip }}</a>
+          <a href="{{ crk_offer_url }}">{{ crk_offer_line | strip }}</a>
         </p>
       {%- endif -%}
     </div>

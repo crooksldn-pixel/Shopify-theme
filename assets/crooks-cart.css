@@ -228,7 +228,15 @@ main .size-style.link,
    details / quantity / price stacked beside it. Safe for assistive tech because
    the markup carries explicit role="table"/"rowgroup"/"row"/"cell", so changing
    `display` does not strip the semantics. */
-@media screen and (max-width: 600px) {
+/* Landscape phones are ~844px wide, so they never met the 600px breakpoint and
+   fell back to Horizon's desktop table — which is where the photo was reported
+   rendering over the title, size and price. The stacked grid below already
+   works; it simply was not reaching the two orientations that needed it. A
+   short viewport in landscape is a phone whatever its width says.
+   200% zoom is already covered: zooming halves the CSS width, so a phone at
+   200% reports well under 600. */
+@media screen and (max-width: 600px),
+       screen and (max-height: 500px) and (orientation: landscape) {
   .cart-items__table,
   .cart-items__table > tbody,
   .cart-items__table > thead { display: block }
