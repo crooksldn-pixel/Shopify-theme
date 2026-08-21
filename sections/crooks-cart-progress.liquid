@@ -10,8 +10,8 @@
   countdown, no urgency copy, no colour escalation.
 
   Grounded in the real rate card, not invented thresholds:
-    Tracked 48  £3.00   free at £20
-    Tracked 24  £4.99   free at £70
+    Tracked 48  £3.00   free at £30
+    Tracked 24  £4.99   free at £80
 
   UK ONLY. EU is a flat £12.99 and International £18.99 with no free tier at
   all, so a threshold bar shown to an overseas shopper would be chasing
@@ -120,9 +120,9 @@
   "settings": [
     { "type": "paragraph", "content": "Reports progress toward the free-shipping tiers set in Shopify → Settings → Shipping. Keep these numbers in step with that rate card, or the readout will promise carriage that checkout withdraws." },
     { "type": "text", "id": "country_code", "label": "Only show in this country", "info": "ISO code. Other markets have no free tier, so the bar is hidden for them.", "default": "GB" },
-    { "type": "number", "id": "tier_1_threshold", "label": "Tier 1 threshold", "default": 20 },
+    { "type": "number", "id": "tier_1_threshold", "label": "Tier 1 threshold", "default": 30 },
     { "type": "text", "id": "tier_1_label", "label": "Tier 1 label", "default": "Tracked 48 free" },
-    { "type": "number", "id": "tier_2_threshold", "label": "Tier 2 threshold", "default": 70 },
+    { "type": "number", "id": "tier_2_threshold", "label": "Tier 2 threshold", "default": 80 },
     { "type": "text", "id": "tier_2_label", "label": "Tier 2 label", "default": "Tracked 24 free" },
     { "type": "text", "id": "label_to_tier_1", "label": "Below tier 1", "info": "Use [amount].", "default": "[amount] to free Tracked 48" },
     { "type": "text", "id": "label_to_tier_2", "label": "Between the tiers", "info": "Use [amount].", "default": "[amount] to free Tracked 24" },

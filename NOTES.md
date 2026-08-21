@@ -2284,3 +2284,41 @@ under the size row: *"Wrong size? UK swaps are free — we cover the postage
 sending the new one out."* A setting, blankable, styled quiet so it does not
 compete with the stock line or the buy button. Verified on the deployed jeans
 page.
+
+---
+
+## 2026-08-20 — Free shipping to £30 / £80; swap note removed
+
+The swap note added earlier under the size row is gone — George: *"thats bad and
+clutters."* Setting removed too, not just hidden, so it cannot be switched back
+on by accident.
+
+Thresholds raised to £30 (Tracked 48) and £80 (Tracked 24), in **nine** places.
+Worth listing, because a threshold quoted in one forgotten spot is exactly the
+kind of self-contradiction the audit is scoring:
+
+    templates/index.json            carriage bar tiers
+    templates/search.json           carriage bar tiers
+    sections/header-group.json      the rotating status bar message
+    templates/page.terms.json       Carriage clause
+    templates/page.faq.json         "How much is shipping?"
+    templates/product.json          custody step 02
+    templates/product.crooks.json   custody step 02
+    sections/crooks-cart-progress.liquid   schema defaults + the rate-card comment
+    sections/crooks-exhibit-record.liquid  custody preset
+
+The last one nearly escaped: the section preset stores the price as an escaped
+`£`, so a grep for `£20` reported the theme clean while the preset still
+said £20. Any fresh Exhibit Record would have carried the old threshold. Grep
+for both forms.
+
+Pushed schemas before templates, per the push-order rule. Verified on the
+deployed pages: homepage status bar, jeans PDP custody, Terms and Questions all
+read £30/£80, and the deployed `index.json` carries `tier_1_threshold: 30`,
+`tier_2_threshold: 80`.
+
+The carriage bar itself does not render on a page with an empty cart — that is
+its existing `cart.item_count > 0` guard, not a failed deploy.
+
+**Owner still to do:** the live Shipping and Refund policies in admin both quote
+£20/£70. They are outside the theme.

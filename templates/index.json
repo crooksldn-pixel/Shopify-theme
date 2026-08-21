@@ -13,9 +13,9 @@
       "type": "crooks-cart-progress",
       "settings": {
         "country_code": "GB",
-        "tier_1_threshold": 20,
+        "tier_1_threshold": 30,
         "tier_1_label": "Tracked 48 free",
-        "tier_2_threshold": 70,
+        "tier_2_threshold": 80,
         "tier_2_label": "Tracked 24 free",
         "label_to_tier_1": "[amount] to free Tracked 48",
         "label_to_tier_2": "[amount] to free Tracked 24",

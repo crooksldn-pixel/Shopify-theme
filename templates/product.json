@@ -27,7 +27,7 @@
           "type": "custody_step",
           "settings": {
             "label": "Dispatched",
-            "body": "Shipped with Royal Mail Tracked. Free UK shipping over £20, and free Tracked 24 over £70."
+            "body": "Shipped with Royal Mail Tracked. Free UK shipping over £30, and free Tracked 24 over £80."
           }
         },
         "s3": {

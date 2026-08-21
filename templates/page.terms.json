@@ -7,7 +7,7 @@
           "type": "clause",
           "settings": {
             "title": "Carriage",
-            "body": "<p>UK shipping is free on orders over £20, and free Royal Mail Tracked 24 over £70. Below £20 it is charged at checkout before you pay.</p><p>Once dispatched, UK orders arrive in 1–2 working days. International orders take 7–14 working days. Tracking is emailed the moment your parcel leaves us.</p><p>International customers are responsible for any customs duties or import taxes. These are set by your country, not by us, and we cannot predict or refund them.</p>"
+            "body": "<p>UK shipping is free on orders over £30, and free Royal Mail Tracked 24 over £80. Below £30 it is charged at checkout before you pay.</p><p>Once dispatched, UK orders arrive in 1–2 working days. International orders take 7–14 working days. Tracking is emailed the moment your parcel leaves us.</p><p>International customers are responsible for any customs duties or import taxes. These are set by your country, not by us, and we cannot predict or refund them.</p>"
           }
         },
         "c2": {

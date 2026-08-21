@@ -27,7 +27,7 @@
           "type": "qa",
           "settings": {
             "question": "How much is shipping?",
-            "answer": "<p>Free on UK orders over £20. Over £70 you get Royal Mail Tracked 24 free. Below £20 it is calculated at checkout before you pay.</p>"
+            "answer": "<p>Free on UK orders over £30. Over £80 you get Royal Mail Tracked 24 free. Below £30 it is calculated at checkout before you pay.</p>"
           }
         },
         "q4": {
