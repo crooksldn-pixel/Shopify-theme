@@ -157,7 +157,7 @@
         "show_view_toggle": false,
         "show_outline_toggle": false,
         "show_colourways": true,
-        "empty_text": "NO ITEMS IN THE REGISTER MATCH THAT QUERY.",
+        "empty_text": "No products match that. If you were after an answer rather than a piece, the links above have it.",
         "empty_text_noquery": "",
         "docs_heading": "PAGES & ANSWERS",
         "search_heading": "Search: [terms]",

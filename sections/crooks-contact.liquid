@@ -1,0 +1,166 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  CONTACT — information, not a form.
+
+  The page was Horizon's default: a centred page title, an empty body, and a
+  bare contact form. A form asks a worried customer to type their problem into
+  a box and then tells them nothing — no reference, no reply time, no route.
+  An inbox, a reply time, an address and the three self-serve routes are more
+  use and more honest, so that is what this renders.
+
+  Every string is a setting. The quick answers are blocks, so a route can be
+  added or reordered without touching this file.
+{%- endcomment -%}
+
+<section class="crk-root crk-section" data-crk-section="contact">
+  <div class="crk-inner crk-contact">
+
+    <header class="crk-contact__head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="crk-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h1 class="crk-h1 crk-contact__heading">{{ section.settings.heading }}</h1>
+      {%- endif -%}
+      {%- if section.settings.standfirst != blank -%}
+        <p class="crk-contact__standfirst">{{ section.settings.standfirst }}</p>
+      {%- endif -%}
+    </header>
+
+    {%- comment -%}
+      Quick answers first. Most people who land here want a route, not a
+      conversation, and handing them the route before they write is both faster
+      for them and quieter for the inbox.
+    {%- endcomment -%}
+    {%- assign crk_links = 0 -%}
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'link' and block.settings.label != blank -%}
+        {%- assign crk_links = crk_links | plus: 1 -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if crk_links > 0 -%}
+      <div class="crk-links crk-contact__links">
+        {%- if section.settings.links_heading != blank -%}
+          <p class="crk-eyebrow">{{ section.settings.links_heading }}</p>
+        {%- endif -%}
+        <ul class="crk-links__list">
+          {%- for block in section.blocks -%}
+            {%- if block.type != 'link' or block.settings.label == blank -%}{%- continue -%}{%- endif -%}
+            <li {{ block.shopify_attributes }}>
+              <a class="crk-links__item" href="{{ block.settings.url | default: '#' }}"{% if block.settings.new_tab %} target="_blank" rel="noopener noreferrer"{% endif %}>
+                <span class="crk-links__label">{{ block.settings.label }}</span>
+                {%- if block.settings.note != blank -%}
+                  <span class="crk-links__note">{{ block.settings.note }}</span>
+                {%- endif -%}
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+
+    <div class="crk-contact__grid">
+
+      {%- comment -%} ---------- how to reach us ---------- {%- endcomment -%}
+      <div class="crk-contact__card">
+        {%- if section.settings.reach_heading != blank -%}
+          <p class="crk-eyebrow">{{ section.settings.reach_heading }}</p>
+        {%- endif -%}
+        {%- if section.settings.email != blank -%}
+          <p class="crk-contact__line">
+            <a class="crk-contact__link" href="mailto:{{ section.settings.email }}">{{ section.settings.email }}</a>
+          </p>
+        {%- endif -%}
+        {%- if section.settings.instagram_handle != blank and section.settings.instagram_url != blank -%}
+          <p class="crk-contact__line">
+            <a class="crk-contact__link" href="{{ section.settings.instagram_url }}" target="_blank" rel="noopener noreferrer">{{ section.settings.instagram_handle }}</a>
+          </p>
+        {%- endif -%}
+        {%- if section.settings.reply_time != blank -%}
+          <p class="crk-contact__note">{{ section.settings.reply_time }}</p>
+        {%- endif -%}
+        {%- if section.settings.include_note != blank -%}
+          <p class="crk-contact__note">{{ section.settings.include_note }}</p>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ---------- where we are ---------- {%- endcomment -%}
+      {%- if section.settings.address != blank -%}
+        <div class="crk-contact__card">
+          {%- if section.settings.address_heading != blank -%}
+            <p class="crk-eyebrow">{{ section.settings.address_heading }}</p>
+          {%- endif -%}
+          <p class="crk-contact__address">{{ section.settings.address | newline_to_br }}</p>
+          {%- if section.settings.address_note != blank -%}
+            <p class="crk-contact__note">{{ section.settings.address_note }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+    </div>
+
+    {%- comment -%} ---------- who you are writing to ---------- {%- endcomment -%}
+    {%- if section.settings.about_body != blank -%}
+      <div class="crk-contact__about">
+        {%- if section.settings.about_heading != blank -%}
+          <p class="crk-eyebrow">{{ section.settings.about_heading }}</p>
+        {%- endif -%}
+        <div class="crk-prose crk-contact__abouttext">{{ section.settings.about_body }}</div>
+      </div>
+    {%- endif -%}
+
+    {%- if section.settings.company_line != blank -%}
+      <p class="crk-micro crk-contact__company">{{ section.settings.company_line }}</p>
+    {%- endif -%}
+
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — Contact",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "GET IN TOUCH" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "CONTACT" },
+    { "type": "textarea", "id": "standfirst", "label": "Standfirst", "default": "There is no call centre here. The same few people who pack the orders read this inbox, so write in plain English and you will get a plain answer back." },
+
+    { "type": "header", "content": "Quick answers" },
+    { "type": "text", "id": "links_heading", "label": "Heading", "default": "BEFORE YOU WRITE" },
+
+    { "type": "header", "content": "How to reach us" },
+    { "type": "text", "id": "reach_heading", "label": "Heading", "default": "HOW TO REACH US" },
+    { "type": "text", "id": "email", "label": "Email address", "default": "crooksldn@gmail.com" },
+    { "type": "text", "id": "instagram_handle", "label": "Instagram handle", "default": "@crooksldn" },
+    { "type": "url", "id": "instagram_url", "label": "Instagram link" },
+    { "type": "text", "id": "reply_time", "label": "Reply time", "default": "We reply within 1–2 working days." },
+    { "type": "textarea", "id": "include_note", "label": "What to include", "default": "Include your order number and a line on what has happened — a photo too if the piece is faulty or wrong. It gets you an answer in one reply instead of three." },
+
+    { "type": "header", "content": "Where we are" },
+    { "type": "text", "id": "address_heading", "label": "Heading", "default": "WHERE WE ARE" },
+    { "type": "textarea", "id": "address", "label": "Address", "info": "One line per line break.", "default": "Oairo UK Office\nBourne End Business Park\nBourne End\nBuckinghamshire\nSL8 5AS\nUnited Kingdom" },
+    { "type": "text", "id": "address_note", "label": "Note under the address", "default": "Post and returns only — there is no shop counter here. Start a return online first so we can match the parcel to your order." },
+
+    { "type": "header", "content": "About" },
+    { "type": "text", "id": "about_heading", "label": "Heading", "default": "WHO YOU ARE WRITING TO" },
+    { "type": "richtext", "id": "about_body", "label": "Body", "default": "<p>CROOKSLDN is an independent streetwear label run out of London. Short runs, made properly, packed by hand.</p><p>We are small enough that the person reading your email is one of the people who put your order in the box.</p>" },
+
+    { "type": "header", "content": "Small print" },
+    { "type": "text", "id": "company_line", "label": "Company line", "info": "Registered company name and number, if you want it shown." }
+  ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Quick answer",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label" },
+        { "type": "url", "id": "url", "label": "Link" },
+        { "type": "text", "id": "note", "label": "Note beside the label" },
+        { "type": "checkbox", "id": "new_tab", "label": "Open in a new tab", "default": false }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Crooks — Contact" }]
+}
+{% endschema %}

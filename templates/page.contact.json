@@ -6,146 +6,69 @@
  * or related systems. Please exercise caution as any changes
  * made to this file may be overwritten.
  * ------------------------------------------------------------
- */{
+ */
+{
   "sections": {
-    "main": {
-      "type": "main-page",
+    "contact": {
+      "type": "crooks-contact",
       "blocks": {
-        "title": {
-          "type": "text",
-          "name": "t:names.title",
+        "l1": {
+          "type": "link",
           "settings": {
-            "text": "<h1>{{ closest.page.title }}</h1>",
-            "width": "100%",
-            "max_width": "normal",
-            "alignment": "center",
-            "type_preset": "h2",
-            "font": "var(--font-primary--family)",
-            "font_size": "",
-            "line_height": "normal",
-            "letter_spacing": "normal",
-            "case": "none",
-            "wrap": "pretty",
-            "color": "",
-            "background": false,
-            "background_color": "#00000026",
-            "corner_radius": 0,
-            "padding-block-start": 0,
-            "padding-block-end": 0,
-            "padding-inline-start": 0,
-            "padding-inline-end": 0
-          },
-          "blocks": {}
+            "label": "Track your order",
+            "url": "shopify://pages/tracking",
+            "note": "WHERE IS IT",
+            "new_tab": false
+          }
         },
-        "content": {
-          "type": "text",
-          "name": "t:names.content",
+        "l2": {
+          "type": "link",
           "settings": {
-            "text": "{{ closest.page.content }}",
-            "width": "100%",
-            "max_width": "narrow",
-            "alignment": "center",
-            "type_preset": "rte",
-            "font": "var(--font-primary--family)",
-            "font_size": "",
-            "line_height": "normal",
-            "letter_spacing": "normal",
-            "case": "none",
-            "wrap": "pretty",
-            "color": "",
-            "background": false,
-            "background_color": "#00000026",
-            "corner_radius": 0,
-            "padding-block-start": 0,
-            "padding-block-end": 0,
-            "padding-inline-start": 0,
-            "padding-inline-end": 0
-          },
-          "blocks": {}
+            "label": "Start a return or a size swap",
+            "url": "https://5wn03tnm.aftership.com",
+            "note": "RETURNS CENTRE",
+            "new_tab": true
+          }
+        },
+        "l3": {
+          "type": "link",
+          "settings": {
+            "label": "Sizing, shipping and fit",
+            "url": "shopify://pages/faq",
+            "note": "QUESTIONS",
+            "new_tab": false
+          }
+        },
+        "l4": {
+          "type": "link",
+          "settings": {
+            "label": "Trading terms in full",
+            "url": "shopify://pages/terms",
+            "note": "TERMS",
+            "new_tab": false
+          }
         }
       },
-      "block_order": [
-        "title",
-        "content"
-      ],
+      "block_order": ["l1", "l2", "l3", "l4"],
       "settings": {
-        "content_direction": "column",
-        "gap": 32,
-        "color_scheme": "",
-        "padding-block-start": 40,
-        "padding-block-end": 0
-      }
-    },
-    "form": {
-      "type": "section",
-      "blocks": {
-        "contact_form_UwiCkQ": {
-          "type": "contact-form",
-          "settings": {
-            "width": "custom",
-            "custom_width": 50,
-            "width_mobile": "custom",
-            "custom_width_mobile": 100,
-            "inherit_color_scheme": true,
-            "color_scheme": "",
-            "padding-block-start": 0,
-            "padding-block-end": 0,
-            "padding-inline-start": 0,
-            "padding-inline-end": 0
-          },
-          "blocks": {
-            "submit-button": {
-              "type": "contact-form-submit-button",
-              "static": true,
-              "settings": {
-                "label": "Submit",
-                "style_class": "button",
-                "width": "fit-content",
-                "custom_width": 100,
-                "width_mobile": "fit-content",
-                "custom_width_mobile": 100
-              },
-              "blocks": {}
-            }
-          },
-          "block_order": []
-        }
-      },
-      "block_order": [
-        "contact_form_UwiCkQ"
-      ],
-      "name": "t:names.contact_form",
-      "settings": {
-        "content_direction": "column",
-        "vertical_on_mobile": true,
-        "horizontal_alignment": "flex-start",
-        "vertical_alignment": "center",
-        "align_baseline": false,
-        "horizontal_alignment_flex_direction_column": "center",
-        "vertical_alignment_flex_direction_column": "center",
-        "gap": 32,
-        "section_width": "page-width",
-        "section_height": "",
-        "section_height_custom": 50,
-        "color_scheme": "scheme-1",
-        "background_media": "none",
-        "video_position": "cover",
-        "background_image_position": "cover",
-        "border": "none",
-        "border_width": 1,
-        "border_opacity": 100,
-        "border_radius": 0,
-        "toggle_overlay": false,
-        "overlay_color": "#00000026",
-        "overlay_style": "solid",
-        "gradient_direction": "to top",
-        "padding-block-start": 32,
-        "padding-block-end": 84
+        "eyebrow": "GET IN TOUCH",
+        "heading": "CONTACT",
+        "standfirst": "There is no call centre here. The same few people who pack the orders read this inbox, so write in plain English and you will get a plain answer back.",
+        "links_heading": "BEFORE YOU WRITE",
+        "reach_heading": "HOW TO REACH US",
+        "email": "crooksldn@gmail.com",
+        "instagram_handle": "@crooksldn",
+        "instagram_url": "https://instagram.com/crooksldn",
+        "reply_time": "We reply within 1–2 working days.",
+        "include_note": "Include your order number and a line on what has happened — a photo too if the piece is faulty or wrong. It gets you an answer in one reply instead of three.",
+        "address_heading": "WHERE WE ARE",
+        "address": "Oairo UK Office\nBourne End Business Park\nBourne End\nBuckinghamshire\nSL8 5AS\nUnited Kingdom",
+        "address_note": "Post and returns only — there is no shop counter here. Start a return online first so we can match the parcel to your order.",
+        "about_heading": "WHO YOU ARE WRITING TO",
+        "about_body": "<p>CROOKSLDN is an independent streetwear label run out of London. Short runs, made properly, packed by hand.</p><p>We are small enough that the person reading your email is one of the people who put your order in the box.</p>",
+        "company_line": ""
       }
     }
   },
-  "order": [
-    "main",
-    "form"
-  ]
+  "order": ["contact"]
 }

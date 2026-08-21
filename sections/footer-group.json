@@ -240,19 +240,23 @@
             "label_4": "REFUNDS",
             "url_4": "shopify://policies/refund-policy",
             "label_5": "TRACK ORDER",
-            "url_5": "shopify://pages/tracking"
+            "url_5": "shopify://pages/tracking",
+            "label_6": "RETURNS",
+            "url_6": "https://5wn03tnm.aftership.com"
           }
         },
         "c3": {
           "type": "column",
           "settings": {
             "heading": "CONTACT",
-            "label_1": "INSTAGRAM",
-            "url_1": "https://instagram.com/crooksldn",
-            "label_2": "TIKTOK",
-            "url_2": "https://tiktok.com/@crooksldn",
-            "label_3": "EMAIL",
-            "url_3": "mailto:crooksldn@gmail.com"
+            "label_1": "CONTACT US",
+            "url_1": "shopify://pages/contact",
+            "label_2": "EMAIL",
+            "url_2": "mailto:crooksldn@gmail.com",
+            "label_3": "INSTAGRAM",
+            "url_3": "https://instagram.com/crooksldn",
+            "label_4": "TIKTOK",
+            "url_4": "https://tiktok.com/@crooksldn"
           }
         },
         "c4": {
@@ -260,7 +264,7 @@
           "settings": {
             "heading": "GAME",
             "label_1": "Play CROOKSLDN: The Getaway",
-            "url_1": "https://crooks-case-break.base44.app"
+            "url_1": "https://crackthecuffs.base44.app"
           }
         }
       },

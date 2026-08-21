@@ -129,7 +129,16 @@
           The number is its own element so the filter can rewrite it without
           the label having to exist twice — once here and once in JS.
         {%- endcomment -%}
-        <span class="crk-log__count crk-micro" aria-live="polite"><span data-crk-count>{{ crk_total }}</span> {{ section.settings.count_label }}</span>
+        {%- comment -%}
+          "0 RESULTS" in the header tells nobody anything, and it shouted over
+          the direct links above it — which are exactly where the answer to a
+          word like "returns" lives, since Shopify cannot index a policy page or
+          a page whose text sits in section settings. On an empty search the
+          count is simply not drawn.
+        {%- endcomment -%}
+        {%- unless crk_is_search and crk_total == 0 -%}
+          <span class="crk-log__count crk-micro" aria-live="polite"><span data-crk-count>{{ crk_total }}</span> {{ section.settings.count_label }}</span>
+        {%- endunless -%}
       {%- endif -%}
     </header>
 

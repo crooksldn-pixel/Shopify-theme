@@ -1110,3 +1110,31 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
 .crk-track__lookup .crk-input { width: 100% }
 .crk-track__lookupgo { margin-top: 14px; width: 100% }
 .crk-track__alt { margin: 12px 0 0 }
+
+/* ---- contact: information, not a form ----
+   The page shipped as Horizon's default — a centred title and a bare contact
+   form. This is the same head/rule/grid rhythm as .crk-terms so the page reads
+   as part of the same document set. */
+.crk-contact__head { border-bottom: 1px solid var(--crk-line); padding-bottom: 24px }
+.crk-contact__heading { margin-top: 8px }
+.crk-contact__standfirst { margin-top: 16px; max-width: 56ch; color: var(--crk-paper) }
+
+.crk-contact__links { margin-top: 28px }
+
+.crk-contact__grid { display: grid; gap: 0; margin-top: 36px; border-top: 1px solid var(--crk-line) }
+.crk-contact__card { border-bottom: 1px solid var(--crk-line); padding: 24px 0 }
+@media (min-width: 768px) {
+  .crk-contact__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px }
+}
+.crk-contact__line { margin-top: 12px; font-size: 15px; line-height: 1.5 }
+.crk-contact__link { color: var(--crk-lav); border-bottom: 1px solid transparent; overflow-wrap: anywhere }
+.crk-contact__link:hover { border-bottom-color: var(--crk-lav) }
+.crk-contact__address { margin-top: 12px; font-size: 14px; line-height: 1.7; color: var(--crk-paper) }
+.crk-contact__note { margin-top: 12px; max-width: 46ch; font-size: 13px; line-height: 1.65; color: var(--crk-dim) }
+
+.crk-contact__about { padding: 28px 0; border-bottom: 1px solid var(--crk-line) }
+.crk-contact__abouttext { margin-top: 12px; font-size: 13px; line-height: 1.65; color: var(--crk-paper) }
+.crk-contact__abouttext > :last-child { margin-bottom: 0 }
+@media (min-width: 1024px) { .crk-contact__abouttext { font-size: 14px } }
+
+.crk-contact__company { display: block; margin-top: 24px }
