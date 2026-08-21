@@ -4,7 +4,12 @@
   <script src="{{ 'crooks-board.js' | asset_url }}" defer></script>
 {%- endif -%}
 
-<section class="crk-root crk-section" data-crk-section="hero-intake"{% unless section.settings.show_texture %} data-crk-texture="off"{% endunless %}>
+{%- comment -%}
+  The board flag is published on the section, not inferred from the markup, so
+  the type can claim the whole row when there is no board beside it instead of
+  staying pinned to the right half against empty space.
+{%- endcomment -%}
+<section class="crk-root crk-section" data-crk-section="hero-intake"{% unless section.settings.show_texture %} data-crk-texture="off"{% endunless %}{% unless section.settings.show_board %} data-crk-board="off"{% endunless %}>
 
   <div class="crk-inner crk-hero__grid">
     {%- if section.settings.show_board -%}

@@ -201,11 +201,20 @@ body:has(main [data-crk-section]) {
   .crk-hero__grid { grid-template-columns: repeat(12, 1fr); gap: 24px; align-items: center }
   .crk-hero__board { grid-column: 1 / 7 }
   .crk-hero__type { grid-column: 7 / 13 }
+  /* With the board switched off there is nothing in the left half, and the
+     wordmark was sitting against 700px of nothing. Take the whole row. */
+  [data-crk-section="hero-intake"][data-crk-board="off"] .crk-hero__type { grid-column: 1 / 13 }
 }
 .crk-board-panel { background: var(--crk-panel); border: 1px solid var(--crk-line); padding: 12px }
 .crk-board__frame { aspect-ratio: 13 / 11; margin: 8px 0; overflow: hidden }
 .crk-board { display: block; width: 100%; height: 100%; image-rendering: pixelated }
-.crk-boot { min-height: 72px; margin-bottom: 24px }
+/* The typing script empties these lines and refills them a character at a
+   time, so the space has to be reserved up front or the wordmark jumps. It is
+   reserved per line, by the rule below, which means one boot line reserves one
+   line. The flat 72px this used to carry was three lines' worth whatever the
+   merchant had actually written, and with a single line that was 51px of dead
+   space sitting between the line and the wordmark. */
+.crk-boot { margin-bottom: 20px }
 .crk-boot__line { color: var(--crk-lav); font-size: 13px; line-height: 1.6; min-height: 1.6em; white-space: nowrap; overflow: hidden }
 .crk-boot__line--alert { color: var(--crk-red) }
 .crk-hero__mark { opacity: 1; transition: opacity 120ms steps(1, end) }
