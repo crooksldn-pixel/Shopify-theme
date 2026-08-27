@@ -189,7 +189,11 @@ body:has(main [data-crk-section]) {
 
 /* ---- status bar ---- */
 .crk-status { min-height: 28px; background: var(--crk-panel); border-bottom: 1px solid var(--crk-line); display: flex; align-items: center; padding: 0 12px; overflow: hidden }
-@media (min-width: 768px) { .crk-status { padding: 0 16px } }
+/* Centred once there is room for it. On a phone the line very nearly fills the
+   bar, so centring is invisible there and left is where the eye starts; from a
+   tablet up the line is short against the width and hugging the edge reads as a
+   mistake. */
+@media (min-width: 768px) { .crk-status { justify-content: center; padding: 0 16px } }
 /* Lavender rather than dim: this line carries the shipping threshold and the
    cut-off, which is the most useful sentence on the page. Higher contrast than
    the grey it replaces, so nothing is lost on that front. */
