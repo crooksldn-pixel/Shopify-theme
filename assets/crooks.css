@@ -1641,3 +1641,30 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   .crk-404__sweep { animation: none; opacity: .35 }
   .crk-404__caret { animation: none; opacity: 1 }
 }
+
+/* ---- change a size from the cart ----
+   Sits under the read-only variant line Horizon renders. Added by JS, so none
+   of this paints unless the enhancement actually loaded. */
+.crk-root .crk-cartsize__toggle,
+.cart-items__variants-wrapper .crk-cartsize__toggle {
+  -webkit-appearance: none; appearance: none;
+  display: inline-flex; align-items: center;
+  min-height: 44px; margin-top: 4px; padding: 0;
+  background: none; border: 0; border-bottom: 1px solid var(--crk-line, #3A2F4A); border-radius: 0;
+  font: inherit; font-size: 10px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--crk-lav, #A77AC7);
+  cursor: pointer;
+}
+.cart-items__variants-wrapper .crk-cartsize__toggle:hover { border-bottom-color: var(--crk-lav, #A77AC7) }
+.crk-cartsize__panel { margin-top: 10px; padding: 12px; border: 1px solid var(--crk-line, #3A2F4A) }
+.crk-cartsize__legend {
+  margin: 0 0 8px; font-size: 9px; font-weight: 500; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--crk-micro, #8A8377);
+}
+.crk-cartsize__sizes { display: flex; flex-wrap: wrap; gap: 6px }
+/* The register's size buttons, reused so a size looks like a size everywhere. */
+.crk-cartsize__size { min-width: 46px; min-height: 44px }
+.crk-cartsize__note {
+  margin: 8px 0 0; font-size: 11px; letter-spacing: .04em;
+  color: var(--crk-red, #C95450);
+}

@@ -1,6 +1,25 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
 {{ 'crooks-cart-progress.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'crooks-cart-progress.js' | asset_url }}" defer></script>
+{%- comment -%}
+  Changing a size from the cart. Loaded only on the cart page — this section
+  also runs on the homepage, where there is no cart to enhance. The labels ride
+  on a data element rather than being written into the script, so they stay
+  editable and no Liquid ends up inside a <script> tag.
+{%- endcomment -%}
+{%- if request.page_type == 'cart' and section.settings.allow_size_change -%}
+  <script src="{{ 'crooks-cart-size.js' | asset_url }}" defer></script>
+  <div
+    hidden
+    data-crk-cart-size
+    data-label-change="{{ section.settings.size_change_label | escape }}"
+    data-label-close="{{ section.settings.size_close_label | escape }}"
+    data-label-legend="{{ section.settings.size_legend | escape }}"
+    data-label-gone="{{ section.settings.size_gone_label | escape }}"
+    data-label-working="{{ section.settings.size_working_label | escape }}"
+    data-label-failed="{{ section.settings.size_failed_label | escape }}"
+  ></div>
+{%- endif -%}
 
 {%- comment -%}
   CROOKSLDN — carriage status.
@@ -118,6 +137,14 @@
   "name": "Crooks — Carriage status",
   "tag": "section",
   "settings": [
+    { "type": "header", "content": "Change size from the cart" },
+    { "type": "checkbox", "id": "allow_size_change", "label": "Let shoppers change a size in the cart", "default": true },
+    { "type": "text", "id": "size_change_label", "label": "Open label", "default": "CHANGE SIZE" },
+    { "type": "text", "id": "size_close_label", "label": "Close label", "default": "KEEP THIS SIZE" },
+    { "type": "text", "id": "size_legend", "label": "Panel legend", "default": "Change size" },
+    { "type": "text", "id": "size_gone_label", "label": "Unavailable size tooltip", "default": "GONE" },
+    { "type": "text", "id": "size_working_label", "label": "While swapping", "default": "CHANGING\u2026" },
+    { "type": "text", "id": "size_failed_label", "label": "If the swap fails", "default": "That size just went. Nothing has changed in your bag." },
     { "type": "paragraph", "content": "Reports progress toward the free-shipping tiers set in Shopify → Settings → Shipping. Keep these numbers in step with that rate card, or the readout will promise carriage that checkout withdraws." },
     { "type": "text", "id": "country_code", "label": "Only show in this country", "info": "ISO code. Other markets have no free tier, so the bar is hidden for them.", "default": "GB" },
     { "type": "number", "id": "tier_1_threshold", "label": "Tier 1 threshold", "default": 30 },
