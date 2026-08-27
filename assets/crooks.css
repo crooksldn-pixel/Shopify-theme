@@ -188,8 +188,43 @@ body:has(main [data-crk-section]) {
 .crk-scan { display: none !important }
 
 /* ---- status bar ---- */
-.crk-status { height: 28px; background: var(--crk-panel); border-bottom: 1px solid var(--crk-line); display: flex; align-items: center; padding: 0 16px; overflow: hidden }
-.crk-status__msg { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--crk-dim) }
+.crk-status { min-height: 28px; background: var(--crk-panel); border-bottom: 1px solid var(--crk-line); display: flex; align-items: center; padding: 0 12px; overflow: hidden }
+@media (min-width: 768px) { .crk-status { padding: 0 16px } }
+/* Lavender rather than dim: this line carries the shipping threshold and the
+   cut-off, which is the most useful sentence on the page. Higher contrast than
+   the grey it replaces, so nothing is lost on that front. */
+/* One line, always. The full sentence is 64 characters and at the desktop
+   tracking it wrapped to two on a phone, where the bar's own height then cut
+   the second line in half. Tighter tracking and a smaller size fit it whole
+   from about 390px up; below that it ellipses rather than breaking mid-word. */
+.crk-status__msg {
+  font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--crk-lav);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+/* The sentence is 64 characters and the tracking is what decides whether it
+   lands. Measured, not guessed: at 8px/.1em it needs 358px and a 390px phone
+   offers 366 after padding, so the smallest handsets get one more step down
+   rather than losing the half of the line that says SAME-DAY DISPATCH. */
+@media (max-width: 399px) { .crk-status__msg { font-size: 7.5px; letter-spacing: .06em } }
+@media (min-width: 768px) { .crk-status__msg { font-size: 9px; letter-spacing: .2em } }
+@media (min-width: 1024px) { .crk-status__msg { font-size: 10px } }
+/* ---- sticky top ----
+   The header carried `position: sticky` for a long time and never once stuck.
+   Shopify wraps every section in its own .shopify-section div, and that wrapper
+   is exactly as tall as the section inside it, so a sticky child has no room to
+   travel within its containing block and simply scrolls away. The sticky has to
+   go on the WRAPPERS, which is what these rules do — :has(>) rather than the
+   generated ids, which change whenever the section is re-added.
+
+   Pinning the wrappers individually does not work either, for the same reason
+   one level up: a sticky element only travels while its PARENT is in view, and
+   #header-group is only as tall as the two bars inside it. So the group is what
+   gets pinned, and the status line and the nav ride along inside it as one
+   unit. Checked before doing it: that group holds those two sections and
+   nothing else, and sits directly on <body>. */
+body:has(.crk-header[data-crk-sticky="true"]) #header-group {
+  position: sticky; top: 0; z-index: 60;
+}
 
 /* ---- hero intake ---- */
 .crk-hero__grid { display: grid; gap: 32px }
@@ -463,6 +498,15 @@ body:has(main [data-crk-section]) {
 .crk-header__link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid transparent; font-weight: 500; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--crk-paper) }
 .crk-header__link:hover { border-color: var(--crk-lav) }
 .crk-header__count { color: var(--crk-lav) }
+/* Icon action: the same 44px target as a text link, with the glyph centred and
+   the word moved to the accessible name. */
+.crk-header__link--icon { padding: 0 10px }
+.crk-header__glyph { display: block; width: 19px; height: 19px }
+/* The light/dark switch is the longest label in the row and the first thing to
+   go when the bar is tight. It reappears in the menu drawer, so a phone keeps
+   the control rather than losing it. */
+@media (max-width: 767px) { .crk-header__link--theme { display: none } }
+@media (min-width: 768px) { .crk-drawer__theme { display: none } }
 @media (min-width: 1024px) { .crk-header__bar { padding: 8px 24px } .crk-header__logo { font-size: 32px } }
 /* Narrow phones: the .3em tracking on three labels overflows 320px. Tighten
    rather than drop a control — the cart must never leave the bar. Touch

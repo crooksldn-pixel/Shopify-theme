@@ -17,7 +17,7 @@
         "m1": {
           "type": "message",
           "settings": {
-            "message": "FREE UK SHIPPING OVER £30 — ORDER BY 18:00 FOR SAME-DAY DISPATCH"
+            "message": "FREE UK SHIPPING OVER £30 // ORDER BY 18:00 FOR SAME-DAY DISPATCH"
           }
         },
         "m3": {
@@ -34,7 +34,8 @@
       "settings": {
         "rotate": true,
         "interval_ms": 5,
-        "collection": "frontpage"
+        "collection": "frontpage",
+        "sticky": true
       }
     },
     "crooks_header": {
@@ -55,7 +56,7 @@
         "label_to_light": "LIGHT MODE",
         "label_to_dark": "DARK MODE",
         "show_catalogue": true,
-        "catalogue_label": "CATALOGUE",
+        "catalogue_label": "SHOP",
         "catalogue_url": "shopify://collections/all",
         "show_case": true,
         "case_url": "https://crooks-case-break.base44.app",

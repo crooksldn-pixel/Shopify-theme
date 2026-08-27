@@ -36,6 +36,7 @@
   data-crk-bag-count-url="{{ routes.cart_url }}?view=crk-count"
   {% if section.settings.show_case and section.settings.case_url != blank %}data-crk-board-src="{{ 'crooks-board.js' | asset_url }}"{% endif %}
   {% if section.settings.logo_invert_dark %}data-crk-logo-invert="true"{% endif %}
+  data-crk-sticky="{{ section.settings.sticky_top }}"
 >
   <div class="crk-header__bar">
     <a class="crk-header__logo" href="{{ routes.root_url }}">
@@ -60,8 +61,20 @@
         <a class="crk-header__link crk-header__link--catalogue" href="{{ section.settings.catalogue_url }}">{{ section.settings.catalogue_label }}</a>
       {%- endif -%}
 
+      {%- comment -%}
+        Search is a glyph rather than the word, which is what buys the room for
+        the rest of the row on a phone. The label is not deleted, it moves to
+        the accessible name, so a screen reader still hears "SEARCH" and the
+        setting still controls what it says.
+      {%- endcomment -%}
       {%- if section.settings.show_search -%}
-        <a class="crk-header__link" href="{{ routes.search_url }}">{{ section.settings.search_label }}</a>
+        <a class="crk-header__link crk-header__link--icon" href="{{ routes.search_url }}">
+          <svg class="crk-header__glyph" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M12.7 12.7 L17.5 17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
+          </svg>
+          <span class="crk-sr">{{ section.settings.search_label }}</span>
+        </a>
       {%- endif -%}
 
       {%- comment -%}
@@ -78,7 +91,7 @@
           control; the label states what it will do, per the prototype.
         {%- endcomment -%}
         <button
-          class="crk-header__link"
+          class="crk-header__link crk-header__link--theme"
           type="button"
           hidden
           data-crk-theme-toggle
@@ -205,6 +218,23 @@
       {%- endif -%}
 
       <div class="crk-drawer__foot">
+        {%- comment -%}
+          The header row drops the light/dark switch below 768px to make room,
+          so it appears here instead rather than being taken away from phones.
+          crooks-theme.js relabels every toggle on the page when the theme
+          changes, so the two stay in step.
+        {%- endcomment -%}
+        {%- if section.settings.show_theme_toggle -%}
+          <button
+            class="crk-header__link crk-drawer__theme"
+            type="button"
+            hidden
+            data-crk-theme-toggle
+            data-crk-to-light="{{ section.settings.label_to_light | escape }}"
+            data-crk-to-dark="{{ section.settings.label_to_dark | escape }}"
+            aria-pressed="false"
+          >{{ section.settings.label_to_light }}</button>
+        {%- endif -%}
         {%- if shop.customer_accounts_enabled -%}
           <a class="crk-header__link" href="{{ routes.account_url }}">{{ section.settings.account_label }}</a>
         {%- endif -%}
@@ -244,6 +274,7 @@
     { "type": "url", "id": "case_url", "label": "Case link" },
     { "type": "checkbox", "id": "case_new_tab", "label": "Open in a new tab", "default": true },
     { "type": "header", "content": "Options" },
+    { "type": "checkbox", "id": "sticky_top", "label": "Pin the top of the page while scrolling", "info": "Keeps the shipping line and the nav in view as the page moves. Turn off and they scroll away with everything else.", "default": true },
     { "type": "checkbox", "id": "show_search", "label": "Show search link", "default": true },
     { "type": "checkbox", "id": "show_theme_toggle", "label": "Show light/dark toggle", "default": true },
     { "type": "text", "id": "label_to_light", "label": "Label when dark (switches to light)", "default": "LIGHT MODE" },
