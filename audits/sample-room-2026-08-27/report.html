@@ -1,0 +1,707 @@
+<title>Sample Room Fifty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#F1F3F0; --surface:#FFFFFF; --surface-2:#F7F8F6;
+  --ink:#16191A; --chalk:#666E6B; --faint:#8B938F;
+  --rule:#D8DCD7; --rule-strong:#B9BFB9;
+  --stamp:#A81F1B;
+  --pass:#2C6A4A; --partial:#8A6210; --broken:#A81F1B; --missing:#4C5259;
+  --pass-wash:#E4EFE8; --partial-wash:#F6EEDC; --broken-wash:#F7E4E3; --missing-wash:#E7E9EB;
+  --shadow:0 1px 0 rgba(22,25,26,.04), 0 1px 3px rgba(22,25,26,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131614; --surface:#1A1D1B; --surface-2:#20241F;
+    --ink:#E9EBE7; --chalk:#98A09B; --faint:#79817C;
+    --rule:#2B302C; --rule-strong:#3C433D;
+    --stamp:#E0574F;
+    --pass:#63B489; --partial:#D2A03F; --broken:#E0574F; --missing:#9098A0;
+    --pass-wash:#1B2A22; --partial-wash:#2C2418; --broken-wash:#2E1B1A; --missing-wash:#22262A;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131614; --surface:#1A1D1B; --surface-2:#20241F;
+  --ink:#E9EBE7; --chalk:#98A09B; --faint:#79817C;
+  --rule:#2B302C; --rule-strong:#3C433D;
+  --stamp:#E0574F;
+  --pass:#63B489; --partial:#D2A03F; --broken:#E0574F; --missing:#9098A0;
+  --pass-wash:#1B2A22; --partial-wash:#2C2418; --broken-wash:#2E1B1A; --missing-wash:#22262A;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px}
+h1,h2,h3{font-family:"Archivo", "Helvetica Neue", Arial, sans-serif; text-wrap:balance; margin:0}
+.mono{font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace}
+.label{font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--chalk)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- masthead ---------- */
+.masthead{border-bottom:2px solid var(--ink); background:var(--surface)}
+.masthead .wrap{padding-top:34px; padding-bottom:0}
+.dockrow{display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:baseline}
+h1{font-size:clamp(38px,6.4vw,74px); font-weight:800; letter-spacing:-.028em; line-height:.94}
+.sub{margin:14px 0 0; max-width:62ch; color:var(--chalk); font-size:17px}
+.metaline{display:flex; flex-wrap:wrap; gap:6px 22px; padding:22px 0 20px; border-top:1px solid var(--rule); margin-top:26px}
+.metaline div{display:flex; gap:8px; align-items:baseline}
+.metaline .v{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink)}
+
+/* ---------- scorecard ---------- */
+.score{background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow); margin:34px 0}
+.score-head{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; padding:18px 22px; border-bottom:1px solid var(--rule)}
+.tally{display:grid; grid-template-columns:repeat(4,1fr)}
+.tally div{padding:24px 22px; border-right:1px solid var(--rule)}
+.tally div:last-child{border-right:none}
+.tally .n{font-family:"Archivo",sans-serif; font-weight:800; font-size:clamp(40px,7vw,62px); line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.tally .k{margin-top:8px}
+.tally .pct{color:var(--faint); font-size:12px; font-family:"IBM Plex Mono",monospace; margin-top:3px}
+.t-works .n{color:var(--pass)} .t-partial .n{color:var(--partial)}
+.t-broken .n{color:var(--broken)} .t-missing .n{color:var(--missing)}
+.bar{display:flex; height:10px; border-top:1px solid var(--rule)}
+.bar span{display:block}
+
+/* ---------- sections ---------- */
+section{padding:44px 0; border-top:1px solid var(--rule)}
+h2{font-size:clamp(24px,3.2vw,34px); font-weight:800; letter-spacing:-.02em}
+h2 .idx{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:500; color:var(--stamp); letter-spacing:.1em; display:block; margin-bottom:9px}
+.lede{max-width:70ch; color:var(--chalk); margin:14px 0 0; font-size:17px}
+p{max-width:72ch}
+
+/* ---------- root cause ---------- */
+.rc{background:var(--surface); border:1px solid var(--rule); border-left:4px solid var(--stamp); box-shadow:var(--shadow); padding:26px; margin-top:26px}
+.rc h3{font-size:21px; font-weight:700; letter-spacing:-.01em}
+pre{background:var(--surface-2); border:1px solid var(--rule); padding:14px 16px; overflow-x:auto; font-family:"IBM Plex Mono",monospace; font-size:12.5px; line-height:1.65; margin:16px 0}
+code{font-family:"IBM Plex Mono",monospace; font-size:.9em; background:var(--surface-2); padding:1px 5px; border:1px solid var(--rule)}
+pre code{background:none; border:none; padding:0}
+.chain{display:grid; gap:10px; margin-top:20px}
+.chain li{list-style:none; display:grid; grid-template-columns:26px 1fr; gap:12px; align-items:start}
+.chain .step{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--stamp); border:1px solid var(--rule-strong); width:26px; height:26px; display:grid; place-items:center}
+.chain ul{margin:0; padding:0}
+
+/* ---------- evidence figure ---------- */
+figure{margin:26px 0 0; display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+figure img{width:100%; height:auto; display:block; border:1px solid var(--rule)}
+figcaption{font-size:13.5px; color:var(--chalk); margin-top:9px}
+figcaption b{color:var(--ink); font-weight:600}
+
+/* ---------- persona tables ---------- */
+.grp{margin-top:34px}
+.grp-head{display:flex; justify-content:space-between; align-items:baseline; gap:14px; flex-wrap:wrap; padding-bottom:10px; border-bottom:2px solid var(--ink)}
+.grp-head h3{font-size:19px; font-weight:700; letter-spacing:-.01em}
+.grp-head .mix{display:flex; gap:5px}
+.pip{width:9px; height:9px; display:block; border-radius:50%}
+.tblwrap{overflow-x:auto; background:var(--surface); border:1px solid var(--rule); border-top:none}
+table{border-collapse:collapse; width:100%; min-width:840px}
+tbody tr{border-bottom:1px solid var(--rule)}
+tbody tr:last-child{border-bottom:none}
+td{padding:15px 14px; vertical-align:top; font-size:14.5px}
+td.id{width:52px; font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--faint); padding-left:0}
+td.who{width:190px}
+td.who .nm{font-weight:600; display:block}
+td.who .role{color:var(--chalk); font-size:12.5px}
+td.verd{width:112px}
+td.find{font-size:14.5px}
+td.find .task{color:var(--chalk); font-size:13px; display:block; margin-bottom:5px}
+td.find .ev{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--faint); display:block; margin-top:7px; word-break:break-word}
+tr{border-left:3px solid transparent}
+tr.sev-Blocker{border-left-color:var(--broken)}
+tr.sev-Major{border-left-color:var(--partial)}
+tr.sev-Minor{border-left-color:var(--rule-strong)}
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em; padding:3px 8px; border:1px solid currentColor; white-space:nowrap}
+.v-WORKS{color:var(--pass); background:var(--pass-wash)}
+.v-PARTIAL{color:var(--partial); background:var(--partial-wash)}
+.v-BROKEN{color:var(--broken); background:var(--broken-wash)}
+.v-MISSING{color:var(--missing); background:var(--missing-wash)}
+.sev{display:block; margin-top:6px; font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.08em; color:var(--faint)}
+.quote{margin-top:9px; padding-left:11px; border-left:2px solid var(--rule-strong); color:var(--ink); font-size:13.5px; font-style:italic}
+
+/* ---------- spec table (deliverables) ---------- */
+.spec{width:100%; min-width:640px; border-collapse:collapse; background:var(--surface)}
+.spec th{text-align:left; padding:12px 14px; border-bottom:2px solid var(--ink); font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--chalk); font-weight:500}
+.spec td{padding:13px 14px; border-bottom:1px solid var(--rule); font-size:14.5px; vertical-align:top}
+
+/* ---------- fix list ---------- */
+ol.fixes{counter-reset:f; list-style:none; padding:0; margin:26px 0 0; display:grid; gap:2px}
+ol.fixes li{counter-increment:f; background:var(--surface); border:1px solid var(--rule); padding:18px 20px 18px 60px; position:relative}
+ol.fixes li::before{content:counter(f,decimal-leading-zero); position:absolute; left:20px; top:18px; font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--stamp)}
+ol.fixes b{display:block; font-size:16px; margin-bottom:4px}
+ol.fixes .why{color:var(--chalk); font-size:14px}
+ol.fixes .where{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--faint); margin-top:7px; display:block; word-break:break-word}
+
+footer{padding:38px 0 60px; color:var(--faint); font-size:13px}
+a{color:var(--stamp)}
+:focus-visible{outline:2px solid var(--stamp); outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){ .rc,.score{transition:none} }
+@media (max-width:640px){ .tally{grid-template-columns:repeat(2,1fr)} .tally div{border-bottom:1px solid var(--rule)} }
+</style>
+
+<div class="masthead">
+  <div class="wrap">
+    <div class="dockrow">
+      <h1>Fifty people<br>tried to use it</h1>
+    </div>
+    <p class="sub">Fifty personas — the owner, his designers, his production manager, and the factory in Guangzhou — were each given one concrete job to do in Sample Room, and the job was traced through the live code and the live data until it either worked or didn't.</p>
+    <div class="metaline">
+      <div><span class="label">Subject</span><span class="v">sample-room-sync.base44.app</span></div>
+      <div><span class="label">Build tested</span><span class="v">index-CTF_GGa7.js · live</span></div>
+      <div><span class="label">Date</span><span class="v">27 Aug 2026</span></div>
+      <div><span class="label">Personas</span><span class="v num">50</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="score" id="scorecard">
+    <div class="score-head">
+      <h2 style="font-size:19px">The poll</h2>
+      <span class="label">Does it do what it says</span>
+    </div>
+    <div class="tally" id="tally"><div class="t-works"><div class="n num">0</div><div class="k label">WORKS</div><div class="pct">0% · Did the job cleanly</div></div>
+<div class="t-partial"><div class="n num">24</div><div class="k label">PARTIAL</div><div class="pct">48% · Done, but needs rework</div></div>
+<div class="t-broken"><div class="n num">16</div><div class="k label">BROKEN</div><div class="pct">32% · Offered, then fails</div></div>
+<div class="t-missing"><div class="n num">10</div><div class="k label">MISSING</div><div class="pct">20% · No path at all</div></div>
+</div>
+    <div class="bar" id="bar"><span style="flex:24;background:var(--partial)"></span><span style="flex:16;background:var(--broken)"></span><span style="flex:10;background:var(--missing)"></span></div>
+  </div>
+
+  <section id="verdict" style="border-top:none; padding-top:8px">
+    <h2><span class="idx">The short answer</span>You were right, and it has one cause</h2>
+    
+<p>Fifty people were each given one real job. <b>None of them finished cleanly.</b> Twenty-four got something out of the app but would have to redo part of it by hand; sixteen were offered a feature that then failed or saved nothing; ten found no path at all. Twenty-four of the fifty are blockers — the job cannot be done, or the factory receives something wrong.</p>
+<p>The important part is that this is not fifty separate faults. Four of the five things you said were broken trace back to <b>one line repeated in three files</b>, and most of the rest fall into three repeating habits: <b>records created without the thing they exist to hold</b>, <b>fields written but never read</b>, and <b>the app stating on screen that it produced something it cannot produce</b>.</p>
+<p>Your own words were &ldquo;I don't think it does what you think it does.&rdquo; That is the correct reading. The previous round of fixes was real — the hardcoded seam rows are genuinely gone, preflight genuinely blocks, the code splitting genuinely happened — but they were verified by reading the code rather than by using it, and the layer underneath was never exercised.</p>
+
+  </section>
+
+  <section id="rootcause">
+    <h2><span class="idx">Root cause</span>Every reference and every logo is thrown away before the model sees it</h2>
+    
+<div class="rc">
+<h3>One parameter, three files</h3>
+<p>Every image generator in the app builds a list of your reference images — and, in Make, the logo you picked with its placement and millimetre width — and passes them to the image service like this:</p>
+<pre><code>const res = await base44.asServiceRole.integrations.Core.GenerateImage({
+  prompt: fullPrompt,
+  existing_image_urls: existing.length ? existing : null,   // ← the references and the logo
+});</code></pre>
+<p>The Base44 SDK on version 0.8.44 declares that endpoint as taking exactly one field:</p>
+<pre><code>export interface GenerateImageParams {
+    /** Description of the image to generate. */
+    prompt: string;
+}</code></pre>
+<p>The string <code>existing_image_urls</code> appears nowhere in the SDK. The same codebase gets this right elsewhere: <code>breakDownDesign</code> sends its image through the documented <code>file_urls</code> parameter, which is why reading a design works while generating from one does not.</p>
+<p><b>What I can and cannot prove.</b> The SDK forwards whatever object you hand it, so the key does reach Base44's server. I could not test whether the server honours it — the app is behind a login I don't have, and I would not spend your image credits guessing. So: unsupported, unacknowledged, and contradicted by the working call in the next file. One controlled call settles it, and that is why it is the first thing on the fix list.</p>
+<div class="chain"><ul>
+<li><span class="step">1</span><div><b>&ldquo;The reference thing doesn't work&rdquo;</b> — all the model is guaranteed to receive is one sentence: <i>&ldquo;Take colour, material and detailing cues from the supplied reference images.&rdquo;</i> With, possibly, nothing supplied.</div></li>
+<li><span class="step">2</span><div><b>&ldquo;Make something doesn't allow adding of logos&rdquo;</b> — the picker is wired and does send the mark. But the mark rides the same key, and the placement and mm width you set are React state with no field to save into, so they never reach a Placement record either.</div></li>
+<li><span class="step">3</span><div><b>&ldquo;It needs to think how the logos are used&rdquo;</b> — the prompt does tell the model to copy the mark exactly and not to redraw it. If the image never arrives, that instruction guarantees the one thing your brand rules forbid: an invented lookalike.</div></li>
+<li><span class="step">4</span><div><b>&ldquo;Port them over to see how they'd look on a garment&rdquo;</b> — blocked for a second, separate reason: the on-garment panel needs the component to have a picture, and breaking a design down creates components with no image at all.</div></li>
+</ul></div>
+</div>
+
+<figure>
+<div><img alt="Generated mylar pouch candidate with a photographic tabby cat and a pink label reading Salmon" src="data:image/jpeg;base64,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">
+<figcaption><b>What came back.</b> The prompt sent with this image ends &ldquo;No text, captions, labels, watermarks, borders, mockup frames or annotation anywhere in the image.&rdquo; It returned a pink label reading <i>Salmon</i>, and two cats. Nothing in Make checks a generated image against anything — the guardrails only run in Components.</figcaption></div>
+<div><img alt="A cleaner generated mylar pouch with a cat-shaped die-cut window" src="data:image/jpeg;base64,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">
+<figcaption><b>The one that was chosen.</b> Better — but the reference photo you supplied was of your cat, and this is a stock tabby. On the session you actually built a product from, you gave up on generation and uploaded your own image instead.</figcaption></div>
+</figure>
+
+  </section>
+
+  <section id="deliverables">
+    <h2><span class="idx">The four deliverables</span>What the factory actually receives</h2>
+    <p class="lede">You specified four things the manufacturer must get. This is the state of each one today.</p>
+    <div class="tblwrap" style="border-top:1px solid var(--rule); margin-top:22px"><table class="spec" id="deliv"><thead><tr><th>Deliverable</th><th style='width:110px'>State</th><th>What is actually there</th></tr></thead><tbody><tr><td><b>Multi-page PDF tech pack</b></td><td><span class="chip v-MISSING">MISSING</span></td>
+<td>No PDF code anywhere. <code>jspdf</code> and <code>html2canvas</code> are in package.json and imported by zero files. No print stylesheet, no download. The pack is 13 articles scrolling in a browser, each locked in an <code>overflow:hidden</code> A4 box that silently clips anything too tall.<span class="ev" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint);margin-top:7px">pdfFile is null on both live versions; Versions.jsx prints NOT ATTACHED on every row</span></td></tr><tr><td><b>Print-ready artwork, correct size and format</b></td><td><span class="chip v-BROKEN">BROKEN</span></td>
+<td>The vectoriser is real, but the call site hands the whole return object where the SVG string belongs, so the uploaded file is 15 bytes reading <code>[object Object]</code> — and it is then flagged as the vector master and shipped as the factory's print-ready file.<span class="ev" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint);margin-top:7px">9 of 11 Artwork records have no file; the other 2 are SVGs reading PLACEHOLDER; vectorFile null on all 5 Components</span></td></tr><tr><td><b>One zipped folder, structured and named</b></td><td><span class="chip v-MISSING">MISSING</span></td>
+<td>No zip library, no archive code, no file download of any kind in the app. <code>readmeFile</code> and <code>driveFolderUrl</code> are schema fields nothing writes, so the Copy-link button gated on one of them can never appear.<span class="ev" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint);margin-top:7px">PackBuilder apologises in the UI that nothing was written to Drive</span></td></tr><tr><td><b>Excel BOM + measurement spec</b></td><td><span class="chip v-MISSING">MISSING</span></td>
+<td>No spreadsheet library in the project and no writer for <code>xlsxFile</code>. The BOM is not assembled in one place either — fabric on page 06, labels on 12, packaging on 13, and no quantity or consumption figure anywhere. The preflight screen nevertheless reports &ldquo;1 workbook&rdquo; as a hardcoded literal.<span class="ev" style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint);margin-top:7px">Preflight.jsx:50; xlsxFile null on both versions</span></td></tr></tbody></table></div>
+  </section>
+
+  <section id="personas">
+    <h2><span class="idx">The fifty</span>Every job, and whether it got done</h2>
+    <p class="lede">Grouped by the part of the app they were sent into. Severity is the left edge: red is a blocker, amber is major.</p>
+    <div class="grp">
+<div class="grp-head"><h3>Make something</h3><div class="mix"><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Major">
+<td class="id">P1</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Type an idea in Make, get four realistic candidates to choose from</span>The button on /make generates nothing — it only creates a session and navigates. Inside the studio, "Show me four" does work and choosing one persists. But candidates is overwritten on every round, so each "Show me four more" permanently destroys the previous four, and the EARLIER ROUNDS panel can never render because the rounds array it needs is silently discarded by the server.
+<span class="ev">MakeStudio.jsx:80 writes rounds; MakeSession.jsonc declares no such field; live record 6a9097c3… returns no rounds key</span>
+<div class="quote">&ldquo;Four turn up and I can pick one — but the button on the front page does nothing and the second I ask for four more the first four are gone for good.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P2</td>
+<td class="who"><span class="nm">Dee</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Drop in three reference images and have the generation actually derive from them</span>References upload, persist and are sent to the function. The function then puts them in existing_image_urls — a parameter the Base44 SDK does not define and that appears nowhere in it. All the model reliably receives is one sentence: "Take colour, material and detailing cues from the supplied reference images." The 8-image brand reference library is not connected to Make at all.
+<span class="ev">SDK 0.8.44 integrations.types.d.ts:61 — GenerateImageParams { prompt: string }; grep existing_image_urls in @base44/sdk → no hits; generateProductImage/entry.ts:92</span>
+<div class="quote">&ldquo;It uploads my three references, shows them back to me, then generates from a sentence that says 'use the references'.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P3</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Put the CROOKSLDN logo on the thing he is designing, from inside Make</span>The picker is wired and lets you set placement, method and mm width — then all three go nowhere. The logo file rides the same unsupported parameter, so the model is told to "copy exactly" from an image it may never receive. marks is local React state with no field to save to, so the placement and size are lost on reload and never reach a Placement record.
+<span class="ev">MakeStudio.jsx:20 useState; no marks field in MakeSession.jsonc; MarkPicker options filtered by o.url — all 5 Components have image:null</span>
+<div class="quote">&ldquo;There's a picker with my logo in it and boxes for where it goes and how wide — none of it reaches the picture or the spec.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P4</td>
+<td class="who"><span class="nm">Sasha</span><span class="role">Freelance designer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Bring in her own finished render instead of generating</span>The mechanism works but the UI points the wrong way. "I already have an image" opens no file picker; the empty state tells her to press "Show me four", which on an empty idea returns a 400 error, and that button is never disabled. Find the secondary "Use my own image" button and the path is sound all the way to breakdown.
+<span class="ev">Make.jsx:94; MakeStudio.jsx:243-245, 168-174; generateProductImage/entry.ts:57</span>
+<div class="quote">&ldquo;I clicked 'I already have an image' and it dropped me on a screen telling me to press Generate, which then errors.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P5</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Edit the expanded brief before generating, as promised</span>No screen displays expandedBrief, let alone edits it. It is written once after each generation and never read. The generator is fed the raw idea box. expandArtworkBrief, the function that exists to draft such a brief, has zero call sites anywhere in the app.
+<span class="ev">grep expandedBrief in src → one write at MakeStudio.jsx:80, zero reads; schema says "shown and editable before generating"</span>
+<div class="quote">&ldquo;It says the brief is shown and editable before generating — it's never shown, and my design is filed under a completely different product's name.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">Design origination — the screen the owner starts on.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>Artwork, logos and vectors</h3><div class="mix"><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Major">
+<td class="id">P6</td>
+<td class="who"><span class="nm">Nia</span><span class="role">Graphic designer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Generate a CROOKSLDN graphic from a prompt, in brand style</span>The pipeline holding the brand-style logic is unreachable — generateArtwork and expandArtworkBrief have no callers since the generator pages were deleted. The live substitute sends exactly one Brand field to the model: doNots. Tone, colours and fonts never reach the prompt, and the crafted style prose is discarded in favour of raw "era: 1970s." key/value strings.
+<span class="ev">6 callFunction sites in src, neither is generateArtwork; ComponentStudio.jsx:103; artworkPrompt.js:63 styleLines() dead</span>
+<div class="quote">&ldquo;It knows three things we don't do and nothing about what we look like — that's not a brand style, that's a blocklist.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P7</td>
+<td class="who"><span class="nm">Nia</span><span class="role">Graphic designer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Rely on the three brand negative constraints being enforced</span>The do-nots reach the prompt as text, but the post-generation "brand mark" check is a substring match on the prompt string, never on the pixels — rephrase and it passes while the model still draws lettering. The report is never persisted and the Approve button does not consult it. Setting any vectorFile short-circuits Resolution and Rendering to pass.
+<span class="ev">guardrails.js:80-83, :30, :105; executed under node — prompt 'big block letters spelling the label name' → PASS on Brand mark</span>
+<div class="quote">&ldquo;It reads my prompt for the word CROOKSLDN and calls that a brand check, then cries about four pixels.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P8</td>
+<td class="who"><span class="nm">Tom</span><span class="role">Production artworker</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Place the real brand mark onto artwork as an asset, never redrawn</span>The compositing is real and produces a genuine flattened PNG. Everything that makes it usable is discarded: the handler keeps only the image and drops the logo id, mm width and x/y, and the Component schema has nowhere to hold them. It also overwrites the unmarked original. The mm size survives only as burnt pixels — the exact thing the factory asks for twice.
+<span class="ev">CompositeMark.jsx:47-50 returns them; ComponentStudio.jsx:257 keeps only data.image; compositedLogoId null on all 124 GeneratedAssets</span>
+<div class="quote">&ldquo;It's welded someone's Helvetica mock-up into my print file, called it our lockup, and forgotten to write down how big it is.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P9</td>
+<td class="who"><span class="nm">Tom</span><span class="role">Production artworker</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Convert a PNG logo into a print-ready vector for the factory</span>The tracer itself is legitimate and emits real path geometry. The call site passes the whole return object where the SVG string was expected, so the uploaded .svg is the 15-byte text "[object Object]". That file becomes the factory's print-ready master and is flagged as a vector master — and its mere presence flips the guardrail checks to pass.
+<span class="ev">ComponentStudio.jsx:228-229 svgToFile(obj); executed under node → File size 15, contents "[object Object]"; regression vs deleted ArtworkGenerator.jsx:186 which destructured correctly</span>
+<div class="quote">&ldquo;I pressed Convert to vector and it saved me a text file that says [object Object], then told the checks everything was fine.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P10</td>
+<td class="who"><span class="nm">Nia</span><span class="role">Graphic designer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Ask for four variations off a chosen graphic</span>"More like this" does pass the chosen image back through, so the intent is right — but it rides the same unsupported parameter as the references, so the conditioning is unproven. The lineage field parentAssetId is read and written by no code at all and is null on all 124 records. The four come back into ephemeral state, and choosing one overwrites the graphic she was varying from.
+<span class="ev">grep parentAssetId → one hit, the schema line; generateComponent/entry.ts:75; Component holds a single image field</span>
+<div class="quote">&ldquo;Pick a favourite and it eats the one you started from, and there's no record of what came from what.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">Generating a graphic and getting a usable file out of it.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>Components onto garments</h3><div class="mix"><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Major">
+<td class="id">P11</td>
+<td class="who"><span class="nm">Kofi</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Generate a logo in Components, then see it on a garment</span>The path exists and is short, but the whole on-garment panel is gated behind the component having an image, and no component in the app has one. The preview it would give is not his spec anyway: it hardcodes six invented spots unrelated to the 17 real placements, defaults to a tee, and draws at a guessed scale. The four candidates live in React state only — nothing is saved.
+<span class="ev">ComponentStudio.jsx:288 gate; OnGarment.jsx:6-13 hardcoded spots; grep GeneratedAsset.create in src → 0 matches</span>
+<div class="quote">&ldquo;I made four logos, picked one, and the app kept none of them.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P12</td>
+<td class="who"><span class="nm">Kofi</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Break a finished design into reusable components</span>The image is never generated and never written. The breakdown asks a language model to describe what is on the design and then creates Component records from that text with no image key in the object at all — while the source design image sits right there unused. The parallel Artwork record is created with no source file either, so the placement's artwork is empty too.
+<span class="ev">Breakdown.jsx:121-126 — create({name,kind,method,widthMm,heightMm,repeatCm,notes,derivedFromSessionId,status,brandId}), no image; Breakdown.jsx:128-130</span>
+<div class="quote">&ldquo;It read my design, wrote me a shopping list of what's on it, and then made five empty records.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P13</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Attach an approved component to a placement</span>componentId saves, and nothing ever reads it. The placement resolves its picture solely through artworkId, so the component's artwork never appears — on screen or on pack page 08. The dedicated attach widget is dead code with zero importers. There are two half-connected artwork systems: the AI creates Components, while rendering, preflight and the pack all read Artwork.
+<span class="ev">grep componentId in src → two writes, zero reads; Placements.jsx:115; AttachToPlacement.jsx has no importer; PlacementsPanel.jsx:66 reads p.offsetMm, a field that does not exist</span>
+<div class="quote">&ldquo;I attached the component, it saved an ID nothing looks at, and the factory gets a name and no picture.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P14</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Check on the flats that placements sit in the right spot at the right size</span>The mm-to-pixel arithmetic is correct and it does draw real artwork. Everything downstream is wrong: anchor is never read, so a hem tag draws 20mm below the shoulder; horizontalRef is never read; and wearer's-left is flipped to a negative x, drawing on the viewer's left while the pack prints the opposite rule beside it. On live data nothing draws at all — 9 of 11 artworks have no file.
+<span class="ev">Executed flatRender geometry under node: anchor=Hem and anchor=HPS both y=85.8; From side seam and From CF both x=409.7; wearer's left x=345.2, left of centre</span>
+<div class="quote">&ldquo;The drawing and the words underneath it disagree — I can't send this to anyone.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P15</td>
+<td class="who"><span class="nm">Wei</span><span class="role">QC engineer, Guangzhou</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Read the placement spec to set up the print — needs the logo measurements</span>The gate genuinely works: preflight refuses to issue a pack with a placement missing width, height, anchor or offset, and the written sentence is correct and complete. So he will not get a blank dimension. What he gets is a correct sentence next to a drawing that contradicts it — which is the phone call this app exists to stop.
+<span class="ev">Executed runPreflight against the live 'Thigh logo' record → blocks on widthMm, heightMm and art; format.js:24-28 sentence is correct</span>
+<div class="quote">&ldquo;The numbers are complete, but the picture beside them puts the logo on the wrong side — so I still ring London before I burn a screen.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">Porting a mark across and seeing it in place.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>The pack, and what comes out of it</h3><div class="mix"><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Blocker">
+<td class="id">P16</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Export the multi-page PDF tech pack to email the factory</span>There is no PDF generation anywhere. jspdf and html2canvas sit in package.json and are imported by zero files. No window.print, no print stylesheet, no download of any kind — the pack is 13 article elements scrolling in a browser. Each page is overflow:hidden inside a locked A4 box, so any table taller than the box is silently clipped rather than flowing on.
+<span class="ev">grep for jspdf/html2canvas imports in src and base44 → nothing; both TechPackVersion records have pdfFile:null; Versions.jsx:58 prints NOT ATTACHED on every row</span>
+<div class="quote">&ldquo;There's no PDF — I'm meant to email a factory in China a link to a login screen they can't get into.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P17</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Get the Excel BOM and measurement spec</span>No spreadsheet library exists in the project and xlsxFile is written by no code path. Worse, the app tells the user otherwise: the preflight screen reports "…1 workbook" as a hardcoded literal with nothing behind it. No BOM is assembled in one place either — fabric sits on page 06, labels on 12, packaging on 13, and no page anywhere carries a quantity or consumption figure.
+<span class="ev">Preflight.jsx:50 hardcodes '1 workbook'; grep xlsxFile → one read, zero writers; both versions have xlsxFile:null</span>
+<div class="quote">&ldquo;It tells me to my face that it made one workbook, and there isn't a line of code in the app that can write a spreadsheet.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P18</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Get one zipped folder, structured and named, for the factory's drive</span>No zip library, no archive code, no file download of any kind. readmeFile and driveFolderUrl are aspirational schema fields nothing writes, so the "Copy link" button gated on driveFolderUrl can never appear. And there is almost nothing to collect by hand: 9 of 11 artworks have no print-ready file, and the only two that do are SVG boxes reading PLACEHOLDER.
+<span class="ev">grep download/createObjectURL/new Blob in src → only a local upload preview; no function emits a file; PackBuilder.jsx:125 apologises that nothing was written to Drive</span>
+<div class="quote">&ldquo;Three of the four things we're supposed to send don't exist as files, and the two artworks that do are grey boxes with PLACEHOLDER printed on them.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P19</td>
+<td class="who"><span class="nm">Wei</span><span class="role">QC engineer, Guangzhou</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Read page 04, the construction page</span>The waffle really is gone — the hardcoded seam rows are deleted, an empty table prints "Not specified" rather than inventing, and generation is per-product. But no live garment has any construction data, so every garment pack in the app prints a blank page 04, and nothing stops it being issued: preflight has zero construction rules. Meanwhile the same invent-a-spec defect moved down the pack — the decoration page still hardcodes cure temperatures and mesh counts.
+<span class="ev">Executed runPreflight on a product with construction:[] → 9 blocks, none mentioning construction; PagePreview.jsx:301-311 hardcodes 'Cure 160 °C for 60 s', 'Mesh count 110T', 'Density 0.4 mm'</span>
+<div class="quote">&ldquo;Page 04 is honest now — it says nothing on every garment you've got — and page 11 still tells me cure temperatures nobody typed in.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P20</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Run preflight, issue v1, and get a frozen snapshot</span>Preflight genuinely blocks — it disables the button and re-runs before writing, throwing before anything is created. The diff works. But the snapshot is 22 flat strings that omit most of the pack: no seam rows, no dimensions, no care symbols, no carton or AQL terms, no images. And nothing ever re-renders a pack from a snapshot, so the pages a factory was sent silently change the moment settings are edited.
+<span class="ev">Executed preflight → 9 blocks, 5 warnings, readiness 3/7; snapshot probe → 22 fields, 'any key holding a seam row? false'; grep PagePreview → only PackBuilder, always from live records</span>
+<div class="quote">&ldquo;The checks stop me sending rubbish — but what it freezes is twenty-two lines of text, not the pack I actually sent.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">The four things the factory is supposed to receive.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>The factory's side</h3><div class="mix"><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Major">
+<td class="id">P21</td>
+<td class="who"><span class="nm">Wei</span><span class="role">QC engineer, Guangzhou</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Read the tech pack in Chinese</span>The Chinese that exists is fully populated — all 120 glossary terms and every POM name have CN. But the CN layer stops at labels: 23 plain headers against 11 bilingual ones, and every free-text field he actually needs is English-only with no CN field in the schema at all — including howToMeasure, the measuring instructions themselves. The bilingual "do not measure from this" caption exists but only prints when there's a hero image, which 11 of 13 products lack.
+<span class="ev">SizeChart.jsonc points[] has pomNameCN but no howToMeasureCn; PagePreview.jsx:54-55 caption inside the heroImageUrl branch; the else branch at :57-63 has no caption in either language</span>
+<div class="quote">&ldquo;The column titles are in Chinese and the measuring instructions are in English — that is backwards.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P22</td>
+<td class="who"><span class="nm">Mrs Chen</span><span class="role">Factory sample room manager</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Get composition, weight, width and a colour reference before cutting</span>The numeric fabric spec is real and complete — all 24 swatches carry composition, gsm and width, and the pack prints them. The colour half fails: 23 of 24 swatches have no photo, so the cell prints NO PHOTO, and the one that has a photo is a synthetic cream rectangle reading PLACEHOLDER — used as the swatch for the colourway named Jet Black. The pack never checks isPlaceholder, so it prints as if real.
+<span class="ev">grep isPlaceholder in components/pack/ → zero hits; preflight.js:80 hard-blocks a missing photo but :153 only warns on a placeholder; SwatchDetail.jsx:82 never clears the flag on real upload</span>
+<div class="quote">&ldquo;You sent me a cream square labelled Jet Black and nothing says it's fake — so I'm emailing you for the swatch again.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P23</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Have the app recommend a manufacturer from the vetted list</span>There is no recommendation engine of any kind — capabilities and decoration methods are rendered as decorative chips and never compared to the product. Worse, the vetted list cannot be entered: Manufacturer is only ever listed, never created or updated, anywhere in the codebase. The two live records are seeded and one is a blank placeholder.
+<span class="ev">grep 'Manufacturer.' in src → 7 hits, all .list(); grep recommend → zero hits app-wide; preflight only checks the id is set and the name isn't 'Unassigned'</span>
+<div class="quote">&ldquo;It's a phone book with one number in it, and I can't even add the second.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P24</td>
+<td class="who"><span class="nm">Wei</span><span class="role">QC engineer, Guangzhou</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Check the pack's trade terms against the glossary</span>The glossary genuinely feeds the pack — every heading resolves through it. But it is wired only into the pack renderer: the product pages fetch all 120 terms and then no component reads them, so there is no inline gloss while specifying. And "confirmed by your factory" is inert — verifiedByManufacturer is written and read only inside the glossary page, and all 120 terms are unverified with nothing marking that on the pack.
+<span class="ev">grep verifiedByManufacturer → 6 hits, all in Glossary.jsx; ProductRecord.jsx:39 fetches terms, grep glossary in components/product/ → zero hits</span>
+<div class="quote">&ldquo;Not one of those 120 terms has been confirmed by us and the pack doesn't say so — so I still ring about 缝型 versus 车缝方式.&rdquo;</div></td>
+</tr>
+<tr class="sev-Minor">
+<td class="id">P25</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">MINOR</span></td>
+<td class="find"><span class="task">Confirm the pack honours the unit settings</span>Both unit settings are stored on the live record and read by nothing — a grep for either name across the whole src tree returns nothing. Every unit in the app is a hardcoded literal, and the settings screen prints a static uneditable sentence instead of the stored value. The output is correct today only because the literals happen to match; nothing would follow if the value changed.
+<span class="ev">grep measurementUnitGarment|measurementUnitPlacement in src → no output; PackSettingsPage.jsx:101-102 prints a literal string while every other field uses the editable helper</span>
+<div class="quote">&ldquo;The pack says cm and mm and it's right — but that's luck, not the setting.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">Read in Guangzhou, in Chinese, by people who will not log in.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>Size charts and measurements</h3><div class="mix"><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Blocker">
+<td class="id">P26</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Load his existing size charts in from a spreadsheet</span>There is no import of any kind — no file input, no paste handler, no OCR, no CSV or XLSX parser in the tree. The only creation path makes a chart with an empty points array and sizes hardcoded to S–XXL, so denim waist sizes or a one-size cap cannot even be represented. Reproducing just the six charts already there is 486 hand-typed entries.
+<span class="ev">SizeCharts.jsx:29 creates with sizes:['S','M','L','XL','XXL'], points:[]; UploadFile is wired into 15 places, none in sizecharts; counted 51 POMs × sizes = 231 value cells, each its own network write</span>
+<div class="quote">&ldquo;I said I'd load my charts in and the answer is a blank table and 486 boxes to type.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P27</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Add a POM, set tolerance, fill values across S–XXL</span>The edit loop works and persists, and tolerance is per-point. But there is no validation at all: a chest that shrinks from S to XXL saves clean, passes preflight clean and prints clean, because the only check anywhere tests for a missing value. The POM code is read-only once created, there is no delete or reorder, and every cell blur fires a whole-document write, so fast tabbing can race and drop values.
+<span class="ev">PomTable.jsx:56-64 bare update, no checks; preflight.js:129 tests pt.values?.[sz] == null only; PomTable.jsx:103 renders pomCode as static text</span>
+<div class="quote">&ldquo;It'll happily let me type a garment that gets smaller as it gets bigger, and then print it.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P28</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Ask the AI to recommend changes to a size chart</span>No AI path touches a point of measure. There are six model call sites and none read or write a POM. The only producer of size-chart change proposals is a deterministic mapping that copies a measured value across after a human has already made the decision — so the chart changes only once a physical sample has come back and the owner has decided himself.
+<span class="ev">grep InvokeLLM → 6 hits, none referencing points/POM/tolerance; loop.js:20-42 filters on decisions the user already chose; live SpecChangeProposal count: 0</span>
+<div class="quote">&ldquo;There is no AI anywhere near my charts, just a form that copies a number I already wrote down myself.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P29</td>
+<td class="who"><span class="nm">Wei</span><span class="role">QC engineer, Guangzhou</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Read the measurement spec for the mylar packaging pouch</span>The size chart is chosen by the model as free text and written with no validation. The pouch got the Denim — straight chart; its sibling record got the literal English word "none" stored as a foreign key. The printed page says "Overall size: Not specified" — a bag with no dimensions — while the version snapshot, the immutable spec of record, captures the full jeans table.
+<span class="ev">breakDownDesign/entry.ts:42,106 guard is a prompt sentence only; Breakdown.jsx:165 persists verbatim; ran buildSnapshot on the live record → 49 of 56 fields are jeans measurements, 'ANY DIMENSIONS FIELD?: false'</span>
+<div class="quote">&ldquo;You have sent me a plastic bag with a 78 cm inseam and no bag size — I stop the line and we lose a week.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P30</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Make a print scale with garment size, S versus XXL</span>scalesWithSize is stored, never computed, and settable nowhere — three occurrences in the whole app: two read-only displays and one hardcoded false. Nothing does the arithmetic. And the pack prints, unconditionally on every placement, a bilingual instruction telling the factory not to scale — a literal string, not a test of the field. The one thing the owner said every brand forgets, the app forgets too.
+<span class="ev">grep scalesWithSize → 3 lines; Breakdown.jsx:140 writes false; PagePreview.jsx:290 prints 'Print size is identical on every garment size. Do not scale.' with no condition</span>
+<div class="quote">&ldquo;It's a field nothing can switch on, nothing does the maths for, and the pack says 'do not scale' regardless.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">The hardest thing to fake and the fastest way to a bad sample.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>The swatch library</h3><div class="mix"><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Major">
+<td class="id">P31</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Photograph and catalogue 40 swatches from the China trip</span>Strictly one at a time — the file input has no multiple attribute and there is no bulk import for swatches, though the app uses bulkCreate for references. "Add many" just resets the form, so supplier and source trip get retyped for every record. Nothing reads the photo: no colour extraction, no gsm estimate, no auto-fill. And a swatch flagged placeholder stays flagged forever, because the photo upload never clears the flag.
+<span class="ev">AddSwatchForm.jsx:79 no multiple; SwatchDetail.jsx:82 writes {photo} only, vs PlacementDetail.jsx:56 which also clears isPlaceholder; 23 of 24 live swatches have photo:""</span>
+<div class="quote">&ldquo;I came back from Guangzhou with a suitcase of fabric and it wants me to type the same supplier name in forty times.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P32</td>
+<td class="who"><span class="nm">Dee</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Have the AI pick a fabric from the library rather than inventing one</span>The library genuinely is passed to the model and the match writes back a real swatch link — the wiring is real. But the model gets four text attributes and no image, so fabric is matched by reading words, never by looking; availableColours is never sent or checked, so nothing stops a green colourway on a black-only swatch; and the join is exact string equality, so one stray space degrades to "nothing matched".
+<span class="ev">breakDownDesign/entry.ts:21,28,119 passes the library; Breakdown.jsx:95 matches with === ; grep availableColours → written once, read nowhere downstream</span>
+<div class="quote">&ldquo;It does look at my swatches, but it's reading a text list with the lights off.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P33</td>
+<td class="who"><span class="nm">Mrs Chen</span><span class="role">Factory sample room manager</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Source against the swatch photo and full spec on the fabric page</span>The chain resolves and the spec prints. But the photo prints at 40 pixels square — not something anyone can colour-match against. Blank composition and gsm print as silently empty cells rather than "not specified". And placeholder status never reaches the pack: the fabric page uses a raw image, not the component that carries the PLACEHOLDER badge, so a generated beige square prints as if photographed.
+<span class="ev">PagePreview.jsx:232 width:40,height:40; :234 raw {s.composition} with no fallback; grep isPlaceholder in components/pack/ → zero hits</span>
+<div class="quote">&ldquo;A forty-pixel square is not a colour reference, and an empty box in the composition column tells me nothing.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P34</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">At 300 swatches, find black heavyweight loopback, 380gsm+, from the Dongguan supplier</span>Real filtering exists and pagination will hold at 300. Half his query lands: loopback and the weight range work. "Black" fails outright — colour is not in the search haystack and there is no colour filter, which is the single most obvious way to search a swatch library. "Dongguan" fails — there is no city or region field. There is also no sort control and the weight slider is capped at 600gsm.
+<span class="ev">Swatches.jsx:46 haystack is code+name+composition only; schema has no location field; :23 lists with no explicit limit, unlike every other swatch consumer in the app</span>
+<div class="quote">&ldquo;I can find the loopback and the weight, but I can't ask it for black — which is the entire reason I keep a swatch library.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P35</td>
+<td class="who"><span class="nm">Dee</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Get the colourway to mean something — own code, Pantone, tied to a swatch</span>The read side is wired and the colourway does drive the flat's colour. The write side collapses. dyeMethod is read in three places and written in none, so every colourway the app creates has it permanently null with no UI to fix it. Codes are minted by chopping the colour name to six letters — JETBL, MATTE — beside the house CW-01 scheme, with no uniqueness check. And the Pantone is a guess the model read off a photo, printed to the factory in full ink as though confirmed.
+<span class="ev">grep dyeMethod → 3 reads, 0 writes; Breakdown.jsx:112 code = name.slice(0,6); :114 pantoneTcx = bodyColour.pantoneGuess; live now has two Jet Blacks, CW-01 and JETBL</span>
+<div class="quote">&ldquo;It named my colourway JETBL by chopping the word in half and printed a Pantone it guessed off a photo as if it were confirmed.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">The suitcase of fabric from China.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>The sampling loop</h3><div class="mix"><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Major">
+<td class="id">P36</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Request a sample round against the issued pack</span>For the SKU asked about there is no path — Convict Joggers has no tech pack version, so the button is disabled. Where a pack exists the binding to the version is correct and hard. Courier is absent from the request form. And nothing leaves the app: the field labelled "Note to the factory" saves to the database with no email, export or copy control anywhere, so the factory never sees the request.
+<span class="ev">SampleRounds.jsx:48-53 disabled; grep mailto|clipboard|download on the sample path → nothing; RequestRound.jsx:41 seeds sizes M,L for every product, so a one-size cap creates zero measurement rows</span>
+<div class="quote">&ldquo;The note I just wrote to Vivian sits in a database she'll never open.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P37</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Measure the returned sample against spec and tolerance</span>The tolerance maths is correct — executed across negative deviations and the boundary-equal case, it passes every one — and spec values come from the issued pack's snapshot rather than the live chart, which is right. The reporting is wrong: unmeasured rows count in the denominator as failures, so the same round reads "7 of 16" on one screen and "88%" on another. The measure screen applies no ordering, so POMs arrive in API order.
+<span class="ev">Executed samples.js → boundary ±tol inTol=true, fp trap handled; live round has 16 rows, 8 measured; MeasurementsPanel.jsx:31 vs PerformancePanel.jsx:82</span>
+<div class="quote">&ldquo;The sums are right but the scoreboard isn't — 7 of 16 when I only measured 8.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P38</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Log a fault with photos, severity and a link to the placement or POM</span>The form writes every field needed and the shape works. Two real defects in the photos: every upload failure — network, auth, format — is reported to the user as "were too large", and on a partial failure the record is created anyway and the form stays open, so pressing Save again logs a duplicate fault instead of retrying. There is no way to attach a photo after the fact, and the Chinese description must be typed by hand.
+<span class="ev">IssueForm.jsx:19-28 catch reports size for every error; :29-43 creates unconditionally then only closes on full success; IssuesPanel.jsx:52-58 read-only</span>
+<div class="quote">&ldquo;If a photo won't go up it tells me it was too big when it wasn't, and the only way to retry is to log the fault twice.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P39</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Accept three measurements as made so round 2 is judged against the truth</span>He cannot. The decision dropdown is disabled on any measurement inside tolerance — which is the opposite of what "accept as made" is for — and the live round has one row out of sixteen outside tolerance. Nothing has ever reached the proposal stage. When the apply path does run it writes into the shared master chart used by three products, changes one size in isolation with no re-grade: executed, it made L identical to XL and edited the beanie's chart at the same time.
+<span class="ev">MeasurementsPanel.jsx:84 disabled={inTol !== false}; live SpecChangeProposal count 0; executed ProposalsPanel apply → T02 L=74.5=XL; chart …926e5 is shared by Lock-Up Tee, Association Tee and Isolation Beanie</span>
+<div class="quote">&ldquo;It won't let me sign off the measurements that were fine, and when I made it run the sum it turned my L into my XL.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P40</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Judge the factory — reject rate, rounds to approval, lead time actual vs quoted</span>The figures are genuinely computed from real history, not placeholders. But there is one round in the app and it has never been closed, so two of four figures are em-dashes, and there is no reject-rate figure at all — the thing actually asked for. The one number shown, 88%, counts only measured rows and contradicts what the samples list prints for the same round.
+<span class="ev">Executed PerformancePanel logic on live data → rounds 1, approval —, accuracy 88%, lead 17 vs 18 quoted, reject rate not computed anywhere</span>
+<div class="quote">&ldquo;Real sums on one seeded sample — no reject rate, two dashes, and an 88% the samples page calls 7 out of 16.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">Request, measure, log the fault, change the spec.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>Learning the brand</h3><div class="mix"><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Blocker">
+<td class="id">P41</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Have the app pull live Shopify sell-through to ground its recommendations</span>There is no Shopify code, no credentials, no connector and no sales field anywhere. The recommendation backend states the absence itself in a comment and then tells the model outright: "You have no sales data." Shopify is not even in the 82-connector catalogue for this app, so it cannot be connected.
+<span class="ev">grep shopify across /app → 0 hits; generateConcepts/entry.ts:5 '// No sales data — that is Phase 5'; entry.ts:46; list_connectors → connected_count 0</span>
+<div class="quote">&ldquo;There is not one line of Shopify in this thing — it has never seen a single sale of mine.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P42</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Upload past tech packs and product files so it learns the house standard</span>Every file input in the app is image-only and there is no document parsing of any kind. The reference library is the sole brand intake. Worse, the one input with no filter is the brand logo uploader, and because it treats .pdf as a vector format, a tech pack dropped there is silently listed as a valid vector logo asset.
+<span class="ev">AddReferenceForm.jsx:50 accept="image/*"; grep pdfjs/pdf-parse/application-pdf/ExtractDataFromUploadedFile → none; BrandProfile.jsx:9 VECTOR_FORMATS includes 'pdf'</span>
+<div class="quote">&ldquo;It will take a JPEG of a wall and call it brand learning, but it cannot read the three tech packs that define how we make things.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P43</td>
+<td class="who"><span class="nm">Dee</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Maintain the brand profile and have it steer generation</span>All six fields save, and three of them genuinely reach the models — tone, do-nots and colours. The other three are decoration: default print methods, blank suppliers and fonts are read nowhere outside the page that renders them. The two with the most manufacturing consequence are the dead ones.
+<span class="ev">doNots reaches 5 functions; defaultPrintMethods only at BrandProfile.jsx:102,106; blankSuppliers only at :98; fonts only at :94</span>
+<div class="quote">&ldquo;Half of what I keep updating goes into the model and half just sits there — and it's the print method and the blanks that do nothing.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P44</td>
+<td class="who"><span class="nm">Dee</span><span class="role">Designer</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Tag moodboards by role so each steers generation differently</span>The reference library is written, listed and deleted — and read by nothing else in the app. It appears zero times in the backend. The role field is stored and consumed by no code at all. And the form tells the user the opposite: it states each reference is "passed to the artwork generator", which no generator receives.
+<span class="ev">grep BrandReference across src and base44 → 4 hits, all its own CRUD; AddReferenceForm.jsx:64-68 makes the claim; 7 of 8 live records have no role key at all</span>
+<div class="quote">&ldquo;I tagged every board Style or Colour like it mattered, and the code never once opens that table.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P45</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Get suggestions grounded in sell-through, range gaps and the drop calendar</span>One of the three bases is real. The range is genuinely passed and the model reasons off it by name. Sales data is absent. The calendar is reduced to a bare drop name — launch dates exist on the records and are never sent. And the suggestions persist nowhere: nothing writes a ProductConcept, so the list is gone on refresh.
+<span class="ev">Suggestions.jsx:27-31 sends products and dropName only; grep launchDate → display only; grep ProductConcept in src → 0 hits</span>
+<div class="quote">&ldquo;It can see my product list and that's it — and the suggestions vanish the second I refresh the page.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">Shopify, past packs, the profile, the moodboards.</p>
+</div>
+<div class="grp">
+<div class="grp-head"><h3>Naming, drops, compliance, versions</h3><div class="mix"><span class="pip" style="background:var(--broken)" title="BROKEN"></span><span class="pip" style="background:var(--missing)" title="MISSING"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span><span class="pip" style="background:var(--partial)" title="PARTIAL"></span></div></div>
+<div class="tblwrap"><table><tbody><tr class="sev-Blocker">
+<td class="id">P46</td>
+<td class="who"><span class="nm">Ade</span><span class="role">Production manager</span></td>
+<td class="verd"><span class="chip v-BROKEN">BROKEN</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Rely on the naming convention for codes, artwork files and folders</span>Codes are a free-text suggestion with no format, length or uniqueness check, and the generator does not reproduce his house style — 5 of 8 real SKUs come out wrong. The breakdown path hardcodes the CRK- prefix, so the second brand would get CRK codes too. The file half does not exist: no filename is constructed anywhere, because nothing is ever exported.
+<span class="ev">Executed slugify on his SKUs → CRK-CONVICT-JOGGERS vs real CRK-CONVICT-JOGGER, CRK-ASSOCIATION-TEE vs CRK-ASSOC-TEE; Breakdown.jsx:157 hardcodes 'CRK-'; colourway codes auto-generate as MATTE, JETBL beside house-style CW-01</span>
+<div class="quote">&ldquo;It guesses a code I'd have to retype every time, and there's no file to name because nothing ever comes out of it.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P47</td>
+<td class="who"><span class="nm">Marcus</span><span class="role">Brand owner</span></td>
+<td class="verd"><span class="chip v-MISSING">MISSING</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Set up his named heist-themed drops</span>There is no way to create or edit a drop — the page is a read-only table with no form, no button and no dialog, and the entity is never created or updated anywhere in the app. The three drops that exist were seeded. And although season is optional in the schema, the UI prints it as the drop's identity line, so his named drops read "Lock-Up · SS 2026".
+<span class="ev">grep Drop.create|Drop.update in src → zero; Drops.jsx:51,67,80 render season and year as identity</span>
+<div class="quote">&ldquo;I can't add a drop at all, and the three in there are labelled with the season codes I specifically said we don't use.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P48</td>
+<td class="who"><span class="nm">Ravi</span><span class="role">Compliance ops</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Specify neck label, care label with UK composition, swing tags and poly bag</span>He cannot create a trim — the page is read-only apart from one field, and the only create is inside the AI breakdown. Composition validation is real and does gate issue, but its fibre list is missing prescribed UK names and it rejects legitimate labels: any shell/lining garment, any decimal percentage, and the standard "exclusive of trimmings" wording. Care symbols are display-only with no write path at all.
+<span class="ev">Executed composition.js → REJECT on 'Shell: 100% nylon, Lining: 100% polyester', '99.5% cotton, 0.5% elastane', '98% cotton, 2% elastane, exclusive of trimmings'; fibre list length 30, missing modacrylic and others; grep careSymbols → 4 hits, all reads</span>
+<div class="quote">&ldquo;It calls composition legally required and then refuses the composition on half my range, and I can't touch a single wash symbol.&rdquo;</div></td>
+</tr>
+<tr class="sev-Blocker">
+<td class="id">P49</td>
+<td class="who"><span class="nm">Priya</span><span class="role">Product developer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">BLOCKER</span></td>
+<td class="find"><span class="task">Issue v2 and see exactly what changed from v1</span>The diff is genuinely computed and v1 really is frozen. But the snapshot is blind to whole sections: change the stitch density, add a seam row, reword the construction notes, change a wash symbol or swap the hero image and the diff reports nothing changed. Renaming a placement produces four phantom rows instead of one rename, because the diff key is the placement's name.
+<span class="ev">Executed snapshot.js on two specs with 10 deliberate changes → 4 detected, 24 snapshot keys, no keys matching seam/spi/stitch/symbol/image; live v2 changeSummary is the string "df"</span>
+<div class="quote">&ldquo;It'll tell me the hem measurement moved but not that I changed the stitch density — and there's no actual pack to send either way.&rdquo;</div></td>
+</tr>
+<tr class="sev-Major">
+<td class="id">P50</td>
+<td class="who"><span class="nm">Sasha</span><span class="role">Freelance designer</span></td>
+<td class="verd"><span class="chip v-PARTIAL">PARTIAL</span><span class="sev">MAJOR</span></td>
+<td class="find"><span class="task">Land cold, find her way around, and stand up the performance claims</span>Navigation is genuinely fine — 15 destinations in three named groups, and the dashboard's "needs attention" rows link straight to the screen that fixes each thing. Two of three performance claims hold: 64 lazy chunks are real, and the dashboard query limits were cut. But the dashboard still runs preflight for every product, which downloads full-resolution artwork one file at a time just to read its pixel dimensions.
+<span class="ev">Measured entry 441,026 B raw / 144,725 B brotli; Floor.jsx:59 runs runPreflight per product; preflight.js:95 awaits measureImage inside a sequential loop; 8 unbounded .list() calls with no brand filter</span>
+<div class="quote">&ldquo;I could find my way around fine, but the dashboard sat there pulling down print artwork one file at a time before it would show me anything.&rdquo;</div></td>
+</tr>
+</tbody></table></div>
+<p style="font-size:13.5px;color:var(--chalk);margin:10px 0 0">The admin that has to be right every time.</p>
+</div>
+
+  </section>
+
+  <section id="fixes">
+    <h2><span class="idx">In order</span>What to fix, in the order that unblocks the most</h2>
+    <ol class="fixes" id="fixlist"><li><b>Settle the image-input parameter, then fix it</b><span class="why">All three image generators pass the references and the logo in a key called <code>existing_image_urls</code>. The Base44 SDK types <code>GenerateImage</code> as taking <code>prompt</code> and nothing else, and the string appears nowhere in the SDK. Meanwhile the breakdown function — which demonstrably works — sends its image through the documented <code>file_urls</code> parameter. One controlled call settles whether the server honours the key. If it doesn't, this single fix is most of your complaint list.</span><span class="where">generateProductImage/entry.ts:92 · generateArtwork/entry.ts:55 · generateComponent/entry.ts:81 · vs breakDownDesign/entry.ts:133</span></li>
+<li><b>Make the breakdown actually cut the graphics out</b><span class="why">Separating a design writes Component records from a text description with no image key in the object at all, while the design image sits unused. That is why nothing can be put on a garment: the mark picker filters on having a picture, and nothing has one.</span><span class="where">Breakdown.jsx:121-126</span></li>
+<li><b>One-line fix: the vectoriser's return value</b><span class="why"><code>svgToFile(result)</code> is called where <code>svgToFile(result.svg)</code> was meant. Destructure it. Until then every &ldquo;convert to vector&rdquo; writes a 15-byte file that says <code>[object Object]</code> and silences the guardrails.</span><span class="where">ComponentStudio.jsx:228-229</span></li>
+<li><b>Stop claiming outputs that do not exist</b><span class="why">Three of the four contracted deliverables have no code behind them, and the app states otherwise on screen. Either build the exporters or take the claims out — a preflight that promises a workbook it cannot write is worse than a blank page.</span><span class="where">Preflight.jsx:50 · Versions.jsx:58</span></li>
+<li><b>Fix the flat geometry before anyone trusts a drawing</b><span class="why">The arithmetic is right; the inputs are ignored. <code>anchor</code> and <code>horizontalRef</code> are never read, and wearer's-left is mirrored — so a hem tag draws near the collar and a left-chest logo comes out on the right, directly beside a written spec that says the opposite.</span><span class="where">flatRender.js:104-113</span></li>
+<li><b>Stop inventing spec the factory will act on</b><span class="why">A mylar bag carries a denim size chart and a 78 cm inseam in its frozen version record. The decoration page hardcodes cure temperatures and mesh counts. Pantones guessed off a photo print in the same ink as confirmed ones. Two synthetic Helvetica SVGs are presented as the brand's primary lockup. Each of these reaches a factory as instruction.</span><span class="where">breakDownDesign/entry.ts:42 · PagePreview.jsx:301-311 · Breakdown.jsx:114</span></li>
+<li><b>Give back the data entry you promised</b><span class="why">No size chart import, no bulk swatch upload, no way to create a manufacturer, a drop, or a trim. You said you would load your charts in; the app answers with 486 empty boxes.</span><span class="where">SizeCharts.jsx:29 · AddSwatchForm.jsx:79 · grep Drop.create → zero</span></li>
+<li><b>Fix the save-then-assume pattern</b><span class="why">Writes go out with fields the schema does not declare, are dropped server-side, and the UI updates its local state anyway — so the screen shows a save that did not happen. That pattern is why generation looked like it worked and then had nothing behind it.</span><span class="where">MakeStudio.jsx:80 writes rounds; MakeSession.jsonc has no such field</span></li>
+</ol>
+  </section>
+
+  <footer id="method">
+<p style="max-width:76ch"><b>How this was done.</b> The app is behind a login, so nobody could click through it — including me. Each persona's job was traced three ways instead, strongest evidence first: against your <b>live data</b> (what actually persisted in your real records), against <b>executed code</b> (the pure logic modules — preflight, guardrails, snapshot, tolerance maths, the vectoriser, the flat geometry — run under node with real inputs, with their actual output quoted), and against a <b>source trace</b> of the click path. Nothing here is asserted from reading a function name. No records were created or modified in your app.</p>
+<p style="max-width:76ch"><b>Two things you should know.</b> The deployed JavaScript bundle changed hash partway through this audit — from <code>index-CTF_GGa7.js</code> to <code>index-DjFJPd0d.js</code>, with the stylesheet unchanged. Opening the build sandbox to read the source appears to have triggered a rebuild and republish of the same code. I made no edits, but I did not intend to touch your live site and you should know it happened. Separately, one design session changed state mid-run, consistent with you using the app while this was running — the data quoted is a snapshot from 27 August.</p>
+<p style="max-width:76ch"><b>Where the personas disagreed.</b> Two testers reached opposite conclusions about whether image conditioning works, one calling the variations feature &ldquo;genuine image conditioning.&rdquo; I checked the SDK myself and neither could be right on the evidence available — hence the section above, which states exactly what is proven and what is not.</p>
+<p style="margin-top:20px">50 personas · 24 blockers · 25 major · 1 minor · 0 clean passes · sample-room-sync.base44.app · 27 August 2026</p>
+</footer>
+</div>
+
