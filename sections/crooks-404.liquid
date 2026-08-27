@@ -1,0 +1,155 @@
+{{ 'crooks.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  404 — record not on file.
+
+  The stock page said "Page not found. The link may be incorrect, or the page
+  has been removed." and offered nothing else: no search, no routes, no way
+  back. A 404 is usually someone with intent — a stale link from a post, a
+  mistyped URL, a collection that got renamed — so the job of this page is to
+  hand them somewhere to go, not to apologise.
+
+  So: the failed lookup is staged as a register search that came back empty,
+  and underneath it is a real search box and the routes people actually want.
+  The theatre is decoration and marked aria-hidden; everything that carries
+  meaning is plain text and every string is a setting.
+
+  All motion is CSS and every animation stops under prefers-reduced-motion.
+{%- endcomment -%}
+
+<section class="crk-root crk-section" data-crk-section="notfound">
+  <div class="crk-inner crk-404">
+
+    {%- if section.settings.status_line != blank -%}
+      <p class="crk-micro crk-404__status">{{ section.settings.status_line }}</p>
+    {%- endif -%}
+
+    {%- comment -%}
+      The numerals are decoration: the heading below says the same thing in
+      words, so a screen reader is not made to read "four zero four" first.
+    {%- endcomment -%}
+    {%- if section.settings.code != blank -%}
+      <p class="crk-404__code" aria-hidden="true">{{ section.settings.code }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.heading != blank -%}
+      <h1 class="crk-h1 crk-404__heading">{{ section.settings.heading }}</h1>
+    {%- endif -%}
+
+    {%- if section.settings.body != blank -%}
+      <p class="crk-404__body">{{ section.settings.body }}</p>
+    {%- endif -%}
+
+    {%- comment -%}
+      The scanner. A sweep passes down a record card whose fields are redacted
+      blocks, and the verdict line ends in a blinking caret. Pure decoration —
+      hidden from assistive tech, and it holds no information that is not also
+      written in the copy above and the routes below.
+    {%- endcomment -%}
+    {%- if section.settings.show_scanner -%}
+      <div class="crk-404__scan" aria-hidden="true">
+        <span class="crk-404__sweep"></span>
+        <p class="crk-404__query">{{ section.settings.query_line }}</p>
+        <ul class="crk-404__rows">
+          <li class="crk-404__row"><span class="crk-404__key">{{ section.settings.field_1 }}</span><span class="crk-404__redact"></span></li>
+          <li class="crk-404__row"><span class="crk-404__key">{{ section.settings.field_2 }}</span><span class="crk-404__redact"></span></li>
+          <li class="crk-404__row"><span class="crk-404__key">{{ section.settings.field_3 }}</span><span class="crk-404__redact"></span></li>
+        </ul>
+        <p class="crk-404__verdict">{{ section.settings.verdict }}<span class="crk-404__caret"></span></p>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%}
+      A real search, pointed at the same register the search page uses, so a
+      dead link becomes one query rather than a dead end.
+    {%- endcomment -%}
+    <form class="crk-query__form crk-404__find" action="{{ routes.search_url }}" method="get" role="search">
+      <input type="hidden" name="type" value="product,page">
+      <input type="hidden" name="options[prefix]" value="last">
+      <label class="crk-sr" for="crk-404-q">{{ section.settings.search_label }}</label>
+      <input
+        class="crk-input crk-query__input"
+        id="crk-404-q"
+        type="search"
+        name="q"
+        placeholder="{{ section.settings.search_placeholder | escape }}"
+        autocomplete="off"
+      >
+      <button class="crk-btn crk-btn--fill crk-query__go" type="submit">{{ section.settings.search_cta }}</button>
+    </form>
+
+    {%- assign crk_links = 0 -%}
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'link' and block.settings.label != blank -%}
+        {%- assign crk_links = crk_links | plus: 1 -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if crk_links > 0 -%}
+      <div class="crk-links crk-404__links">
+        {%- if section.settings.links_heading != blank -%}
+          <p class="crk-eyebrow">{{ section.settings.links_heading }}</p>
+        {%- endif -%}
+        <ul class="crk-links__list">
+          {%- for block in section.blocks -%}
+            {%- if block.type != 'link' or block.settings.label == blank -%}{%- continue -%}{%- endif -%}
+            <li {{ block.shopify_attributes }}>
+              <a class="crk-links__item" href="{{ block.settings.url | default: '/' }}">
+                <span class="crk-links__label">{{ block.settings.label }}</span>
+                {%- if block.settings.note != blank -%}
+                  <span class="crk-links__note">{{ block.settings.note }}</span>
+                {%- endif -%}
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Crooks — 404",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "status_line", "label": "Status line", "default": "REGISTER LOOKUP // NO RESULT" },
+    { "type": "text", "id": "code", "label": "Code", "info": "Decoration. The heading carries the meaning.", "default": "404" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "NOT ON FILE" },
+    { "type": "textarea", "id": "body", "label": "Body", "default": "The reference you followed is not in the register. It may have been filed under another name, or the piece may have been pulled. Search below, or take one of the routes." },
+
+    { "type": "header", "content": "Scanner" },
+    { "type": "checkbox", "id": "show_scanner", "label": "Show the scanner panel", "default": true },
+    { "type": "text", "id": "query_line", "label": "Query line", "default": "> SEARCHING REGISTER" },
+    { "type": "text", "id": "field_1", "label": "Field 1", "default": "REF" },
+    { "type": "text", "id": "field_2", "label": "Field 2", "default": "FILED" },
+    { "type": "text", "id": "field_3", "label": "Field 3", "default": "LOCATION" },
+    { "type": "text", "id": "verdict", "label": "Verdict", "default": "NO MATCH" },
+
+    { "type": "header", "content": "Search" },
+    { "type": "text", "id": "search_label", "label": "Search label (screen readers)", "default": "Search the register" },
+    { "type": "text", "id": "search_placeholder", "label": "Search placeholder", "default": "TRY A NAME, A SIZE, OR A QUESTION" },
+    { "type": "text", "id": "search_cta", "label": "Search button", "default": "SEARCH" },
+
+    { "type": "header", "content": "Routes" },
+    { "type": "text", "id": "links_heading", "label": "Heading", "default": "OR TRY ONE OF THESE" }
+  ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Route",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label" },
+        { "type": "url", "id": "url", "label": "Link" },
+        { "type": "text", "id": "note", "label": "Note beside the label" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Crooks — 404",
+      "blocks": [{ "type": "link" }, { "type": "link" }, { "type": "link" }, { "type": "link" }]
+    }
+  ]
+}
+{% endschema %}
