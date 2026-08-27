@@ -81,3 +81,72 @@ decides a drops brand's future: information that closes sales, promises that
 reconcile, demand that gets banked. Then steal their drawer, their badges,
 their branded checkout, and their photography ambition — all of it
 implementable without a single rounded corner.
+
+---
+
+# RUN 2 — the rematch (2026-08-27)
+
+The same twenty personas re-ran against the NEW CROOKSLDN build (fresh
+preview of staging `202053779799`; Getaway popup observed, never fed a phone
+number). Unfounded was NOT re-audited — the baseline stands. Full run-2
+evidence: `rerun/journeys/`, `rerun/SUMMARY.md`, `rerun/features/raw-delta.md`.
+Persona 19 (desktop) was still in flight at write-up; the desktop dimension
+below keeps its run-1 verdict pending that log.
+
+## Chips that moved
+
+| Dimension | Was | Now | Why it moved |
+|---|---|---|---|
+| Add-to-bag feedback | **Unfounded**, decisively | **TIE** | "ADDING…" answers in 0.2s + inline confirm; CHECKOUT NOW double-add dead; persona 14 ("Twelve quid? For socks?") returned and bought clean. Their drawer still wins quick-add from cards; certainty itself is now equal. |
+| Sold-out on cards | **Unfounded** | **TIE** | Register cards now say "2 OF 5 SIZES LEFT" pre-click (personas 1, 6 both cited it as the best moment). MORE FROM THIS DROP cards are still blind — that last gap keeps it from flipping fully. |
+| Trust anchors | Split | **CROOKSLDN** | "Crooks Clothing Company LTD, England & Wales" now in the terms — the sceptic called it "the single strongest thing on this site" and passed his vetting. Canonical email + true-to-size tables compound it. Their Companies House record still stands opposite gmail + the Oairo mystery, but the halves are no longer even. |
+
+Everything else held: CROOKSLDN keeps stock reality, sold-out handling,
+product information (now stronger — council descriptions + measurements on
+every garment checked), set machinery, shipping transparency, promise
+consistency, accessibility (now stronger — the popup is keyboard/SR/PRM
+playable) and post-purchase (now stronger — signed-out tracking lookup,
+1-tap RETURNS). Unfounded keeps photography & zoom, checkout branding, and
+(pending 19) desktop.
+
+**Run-2 tally by chip: CROOKSLDN 9 · Unfounded 3 · split/tie 3** (run 1 by
+the same per-row count: 8 · 5 · 2).
+
+## The shopper ledger, run over run
+
+Run 1: 15/20 reached checkout; losses 1, 6, 12, 14; service 20.
+Run 2: 14/19 decided-or-checkout so far (19 pending); losses 1, 6, **17**;
+service 12 and 20, both satisfied.
+
+- **12 flipped loss → satisfied** — every search query landed; the empty
+  state now answers in voice.
+- **14 flipped loss → buy** — "the two things that beat him last week —
+  the dead button and the phantom second pair — both gone."
+- **9 upgraded** — bought the £50 crewneck she abandoned in run 1; the new
+  measurements table flipped her.
+- **17 flipped buy → loss, the run's one regression** — her freshly-won
+  Getaway code was rejected at Shopify checkout (£45 cart vs £50 till,
+  reproduced twice). She walked on principle. The popup's back office is
+  now the single most expensive defect on the site.
+
+## The steal list, revisited
+
+1. Add-to-bag certainty — **TAKEN** (own idiom: inline, not a drawer).
+2. Pre-click sold-out truth — **TAKEN** on the register; related-product
+   cards still owe it.
+3. Branded checkout — **still open** (stock white skin unchanged).
+4. Legal identity line — **TAKEN**, and it converted the sceptic.
+5. In-stock filter — still open.
+6. Photography ambition — **still open, and now the biggest gap**: ON MODEL
+   still shows one placeholder man on 13 cards while real on-model shots
+   exist on the jeans PDP; grey jeans still 1 photo vs blue's 2 (it steered
+   persona 10's £60 to blue).
+
+## Run-2 verdict
+
+Run 1's sentence — right machines, several broken — is spent. The theme-side
+machines are repaired and persona-verified; what costs sales now is (a) the
+Getaway's unreliable code backing and its seven-item punch-list
+(`rerun/SUMMARY.md`), (b) stock depth, and (c) the photography gap that
+Unfounded still wins. Fix the popup's mint, wire the real photos, and the
+scoreboard reads 11–2.
