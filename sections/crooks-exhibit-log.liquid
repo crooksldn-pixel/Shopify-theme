@@ -311,88 +311,11 @@
             endfor
           endif
 
-          comment
-            Low stock from real inventory only — a threshold over the summed
-            quantity of purchasable variants. No invented scarcity: if nothing
-            is tracked the total is 0 and the product simply reads AVAILABLE.
+comment
+            Per-size availability now lives in crooks-sizes-left so the product
+            page's related rail can use the identical rule. The rail was blind
+            to half-sold pieces precisely because this was section-local.
           endcomment
-          assign crk_low = false
-          if section.settings.low_stock_threshold > 0 and product.available
-            assign crk_qty = 0
-            for v in product.variants
-              if v.available
-                assign crk_qty = crk_qty | plus: v.inventory_quantity
-              endif
-            endfor
-            if crk_qty > 0 and crk_qty <= section.settings.low_stock_threshold
-              assign crk_low = true
-            endif
-          endif
-
-          comment
-            Partial sold-out. product.available is true while a single variant
-            remains, so a piece with three of five sizes gone still read
-            AVAILABLE — persona 06: the blanket label "conveys zero information
-            and reads as a broken promise".
-
-            Counted per size VALUE, not per variant: a tee is size x colour, so
-            M is still available while only M/BLACK is gone. Scoped to an option
-            actually named like a size, so the socks' "Quantity" and one-size
-            pieces are left alone rather than told they have options left.
-          endcomment
-          assign crk_size_pos = 0
-          assign crk_size_vals = null
-          for opt in product.options_with_values
-            assign crk_opt_name = opt.name | downcase
-            if crk_opt_name contains 'size'
-              assign crk_size_pos = forloop.index
-              assign crk_size_vals = opt.values
-              break
-            endif
-          endfor
-
-          assign crk_sizes_total = 0
-          assign crk_sizes_left = 0
-          if crk_size_vals and product.available
-            assign crk_sizes_total = crk_size_vals.size
-            for val in crk_size_vals
-              assign crk_val_ok = false
-              for v in product.variants
-                unless v.available
-                  continue
-                endunless
-                if crk_size_pos == 1
-                  assign crk_vv = v.option1
-                elsif crk_size_pos == 2
-                  assign crk_vv = v.option2
-                else
-                  assign crk_vv = v.option3
-                endif
-                if crk_vv == val
-                  assign crk_val_ok = true
-                  break
-                endif
-              endfor
-              if crk_val_ok
-                assign crk_sizes_left = crk_sizes_left | plus: 1
-              endif
-            endfor
-          endif
-
-          assign crk_partial = false
-          if crk_sizes_total > 1 and crk_sizes_left > 0 and crk_sizes_left < crk_sizes_total
-            assign crk_partial = true
-          endif
-
-          comment
-            Formatted here, not in the output tag: chaining filters inside {{ }}
-            is the precedence trap this codebase has hit four times.
-          endcomment
-          assign crk_sizes_line = ''
-          if crk_partial and section.settings.sizes_left_label != blank
-            assign crk_sizes_line = section.settings.sizes_left_label | replace: '[n]', crk_sizes_left
-            assign crk_sizes_line = crk_sizes_line | replace: '[m]', crk_sizes_total
-          endif
 
           assign crk_filed = false
           if product.published_at and section.settings.filed_days > 0
@@ -531,17 +454,15 @@
                 the opposite of what the slot is for. Stock status is now always
                 present and the date sits below it, de-emphasised.
               {%- endcomment -%}
-              <span class="crk-card__status">
-                {%- if product.available == false -%}
-                  {{ section.settings.sold_out_label }}
-                {%- elsif crk_low -%}
-                  {{ section.settings.low_stock_label }}
-                {%- elsif crk_sizes_line != blank -%}
-                  {{ crk_sizes_line }}
-                {%- else -%}
-                  {{ section.settings.available_label }}
-                {%- endif -%}
-              </span>
+              {%- render 'crooks-sizes-left',
+                product: product,
+                class: 'crk-card__status',
+                sizes_left_label: section.settings.sizes_left_label,
+                low_threshold: section.settings.low_stock_threshold,
+                low_label: section.settings.low_stock_label,
+                sold_label: section.settings.sold_out_label,
+                available_label: section.settings.available_label
+              -%}
             </span>
             {%- if crk_filed and product.available and section.settings.filed_label != blank -%}
               <span class="crk-card__dropped">{{ section.settings.filed_label | replace: '[date]', crk_filed_on }}</span>

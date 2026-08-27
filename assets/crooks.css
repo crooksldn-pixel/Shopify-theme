@@ -757,6 +757,9 @@ body:has(.crk-header[data-crk-sticky="true"]) #header-group {
 .crk-record .crk-related-tray img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .crk-record .crk-related-exh { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--crk-dim); margin-top: 4px; }
 .crk-record .crk-related-soldout { color: var(--crk-red); font-size: 11px; }
+/* Partly sold is a warning, not a refusal — the register uses lavender for
+   "some sizes left" and red only for gone, so the rail matches it. */
+.crk-record .crk-related-soldout[data-crk-stock="part"] { color: var(--crk-lav); letter-spacing: .12em; }
 
 @media (min-width: 768px) {
   .crk-record { font-size: 15px; }

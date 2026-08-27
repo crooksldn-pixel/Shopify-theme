@@ -650,9 +650,22 @@
                     </span>
                     <span class="crk-data">{% render 'crooks-title', product: rp %}</span>
                     <span class="crk-display" style="font-size: 18px;">{{ rp.price | money }}</span>
-                    {%- unless rp.available -%}
-                      <span class="crk-related-soldout">{{ section.settings.label_sold }}</span>
-                    {%- endunless -%}
+                    {%- comment -%}
+                      The rail used to know one thing: gone entirely. A piece
+                      with two of five sizes left looked as buyable here as a
+                      full one, which is the same blindness the register cards
+                      were fixed for. Same snippet, so they cannot drift apart.
+                      The available label is deliberately empty — a rail that
+                      says AVAILABLE under every card is noise; this only speaks
+                      when there is something to warn about.
+                    {%- endcomment -%}
+                    {%- render 'crooks-sizes-left',
+                      product: rp,
+                      class: 'crk-related-soldout',
+                      sizes_left_label: section.settings.related_sizes_label,
+                      sold_label: section.settings.label_sold,
+                      available_label: ''
+                    -%}
                   </a>
                 {%- endif -%}
               {%- endif -%}
@@ -777,7 +790,8 @@
     { "type": "text", "id": "unit_cm", "label": "Centimetres button", "default": "CM" },
     { "type": "text", "id": "unit_in", "label": "Inches button", "default": "IN" },
     { "type": "text", "id": "custody_heading", "label": "Chain of custody heading", "default": "Chain of custody \u2014 shipping & returns" },
-    { "type": "text", "id": "related_heading", "label": "Related heading", "default": "More from this drop" }
+    { "type": "text", "id": "related_heading", "label": "Related heading", "default": "More from this drop" },
+    { "type": "text", "id": "related_sizes_label", "label": "Related: some sizes gone label", "info": "Shown on a related card still buyable but not in every size. [n] is how many sizes are left, [m] how many there are.", "default": "[n] OF [m] SIZES LEFT" }
   ],
   "blocks": [
     { "type": "@app" },
