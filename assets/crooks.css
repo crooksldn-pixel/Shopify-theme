@@ -528,17 +528,21 @@ body:has(.crk-header[data-crk-sticky="true"]) #header-group {
    disappeared on every common phone. Below 430 the actions wrap instead. */
 .crk-header__logo { min-width: 44px; overflow: hidden; white-space: nowrap }
 .crk-header__actions { flex: none }
-/* At 200% zoom a 390px phone is 195 CSS px and the tightened bar still cannot fit
-   the wordmark plus three 44px controls on one row. Wrap rather than shrink the
-   targets: the cart stays in the bar, which is the rule that matters. */
-@media (max-width: 429px) {
-  /* Layer 2 of the CLS fix (audit A1, "belt and braces"). Metric-matched
-     fallbacks above remove the font-driven width change; this widens the margin
-     so nothing ELSE late-arriving can tip the row over its wrap threshold.
-     Measured at 390px: the actions row is 360px of content in 366px of space —
-     6px of headroom. Trimming the bar's inline padding from 16px to 10px buys
-     12px, roughly tripling it, and costs nothing visually at this width.
-     flex-wrap stays: the 200% zoom fix (run 2) depends on it. */
+/* Wrap rather than shrink the targets: the cart stays in the bar, which is the
+   rule that matters. It only has to happen when the row genuinely cannot fit.
+
+   That threshold used to be 429px, measured when the row held five controls
+   including the word SEARCH and the light/dark switch: 360px of content in
+   366px of space. SEARCH is a 19px glyph now and the switch moved to the drawer
+   below 768px, so the row asks for 211px. With the 44px floor under the
+   wordmark and the gap, it needs 261px of inner width — about 281px of
+   viewport. Every real handset clears that with room to spare (39px at 320,
+   109px at 390), so it was wrapping on phones for no reason.
+
+   Held at 299px so the case this was written for still works: 200% zoom on a
+   390px phone is 195 CSS px, which cannot fit the row and correctly wraps.
+   The padding trim comes along, where those few pixels still matter. */
+@media (max-width: 299px) {
   .crk-header__bar { flex-wrap: wrap; padding-inline: 10px }
   .crk-header__actions { flex-wrap: wrap; margin-left: 0; width: 100% }
 }
