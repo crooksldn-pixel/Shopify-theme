@@ -2,18 +2,19 @@
 
 2026-08-27, fresh preview of staging theme `202053779799`, GB market,
 staging verified per session. Compares against run 1 (2026-08-18/19) and the
-Unfounded baseline. Persona 19 (desktop) results pending at time of writing;
-19 journeys + a delta-check agent complete.
+Unfounded baseline. All 20 journeys + a delta-check agent complete.
 
 ## Outcomes vs run 1
 
 Committed to buy (built a basket with clear intent, stopped at the audit
-line): 02, 03, 04, 05, 07, 08, 09, 10*, 11, 13, 14, 15, 16, 18 — with 09 now
-buying the £50 crewneck she abandoned in run 1 (the size guide flipped her),
-and 14 explicitly reversing his run-1 walkout ("would finish the order this
-time"). Didn't: 01 and 06 (stock + the captcha, unchanged), and a NEW loss —
-**17 walked on principle when her freshly-won Getaway code was rejected at
-checkout.** 12 and 20 were service visits (both satisfied this run).
+line): 02, 03, 04, 05, 07, 08, 09, 10*, 11, 13, 14, 15, 16, 18, 19 — with 09
+now buying the £50 crewneck she abandoned in run 1 (the size guide flipped
+her), 14 explicitly reversing his run-1 walkout ("would finish the order this
+time"), and 19 (desktop) taking the Cellblock set in L at £76.50 — a fresh
+Getaway code's £8.50 stacking on the £10 bundle saving. Didn't: 01 and 06
+(stock + the captcha, unchanged), and a NEW loss — **17 walked on principle
+when her freshly-won Getaway code was rejected at checkout.** 12 and 20 were
+service visits (both satisfied this run).
 *10 decided (blue) without checking out.
 
 **The loss profile changed shape: run 1's theme bugs (double-add, silent
@@ -54,18 +55,39 @@ unreliable code backing and inventory.**
    EXPIRED before the countdown) reproduced by delta, 13, 16.
 3. **Tumblers unresponsive on a throttled phone** — 10 taps, nothing locked
    (14): "the only part of the site still hostile to an old Android."
-4. **COPY CODE hard-navigates to live crooksldn.com/collections/all** (15) —
-   hardcoded production URL; ejects the shopper mid-session.
+4. **COPY CODE hard-navigates to live crooksldn.com/collections/all** (15;
+   19 reproduced it twice on desktop WITH clipboard permission granted) —
+   hardcoded production URL; ejects the shopper mid-session onto the live
+   Dawn-theme site in USD. Related: the footer's "Play CROOKSLDN: The
+   Getaway" is an external same-tab link to crackthecuffs.base44.app —
+   another route off the store (19).
 5. **Winners get re-pitched** — a win sets no flag (11, 15, 17); only NOT
    NOW sets the snooze (20 confirmed the snooze holds).
 6. **"Code sent by text" is now false** and scares privacy-wary players (6
-   journeys); "expires in 20 minutes" is a bluff — code worked past 20 (9):
-   fake urgency AND factually wrong. Name exists in three variants
-   (GETAWAY / CRACK THE CUFFS / PLAY CROOKS: THE GETAWAY) + "(Copy)" dev
-   artifact in the DOM.
+   journeys; it nearly made 19 decline); "expires in 20 minutes" is
+   inconsistent — 9's code worked past 20, while 19's genuinely-expired code
+   failed SILENTLY in the cart (field clears, no message, total unchanged).
+   Name exists in three variants (GETAWAY / CRACK THE CUFFS / PLAY CROOKS:
+   THE GETAWAY) + "(Copy)" dev artifact in the DOM.
 7. Double intro, dead black void, detached close-X (fat-finger kills the
    game, 9), win screen overflows a 450px viewport hiding FILE IT (17),
    perpetual tumbler tick with no pause under reduced motion (18).
+
+## Desktop, run 2 (persona 19 — the run-1 "second-class surface" retested)
+
+Better: header hover states everywhere; 6 of 13 cards photo-swap on hover;
+add-to-bag now answers on desktop ("ADDING…" → inline "Added — 2 in bag");
+instant search results; complete light mode; category chips filter properly
+with shareable ?cat= URLs; set offer now asks for the shorts size explicitly
+instead of silently matching it. Still second fiddle: PDP galleries got
+THINNER since run 1 (crewneck and jeans literally print "PHOTO 1 OF 1"), no
+zoom anywhere, 7 of 13 cards don't react to hover, ON MODEL flips
+aria-pressed but changes zero images, no desktop sticky buy bar (the sticky
+buy panel scrolls off by ~900px on accordion-heavy PDPs), the homepage's
+last grid row is one card + a 3-column empty purple slab, WORLD OF CROOKS
+clips its 5th frame with no scroll affordance — and **REGISTER AS INFORMANT
+still has no input, button or link**: run 1's unmounted intake, still
+unmounted, now with copy ("Get on it.") pointing at nothing.
 
 ## New store-side items
 

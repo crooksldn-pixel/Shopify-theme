@@ -90,8 +90,6 @@ The same twenty personas re-ran against the NEW CROOKSLDN build (fresh
 preview of staging `202053779799`; Getaway popup observed, never fed a phone
 number). Unfounded was NOT re-audited — the baseline stands. Full run-2
 evidence: `rerun/journeys/`, `rerun/SUMMARY.md`, `rerun/features/raw-delta.md`.
-Persona 19 (desktop) was still in flight at write-up; the desktop dimension
-below keeps its run-1 verdict pending that log.
 
 ## Chips that moved
 
@@ -107,7 +105,12 @@ every garment checked), set machinery, shipping transparency, promise
 consistency, accessibility (now stronger — the popup is keyboard/SR/PRM
 playable) and post-purchase (now stronger — signed-out tracking lookup,
 1-tap RETURNS). Unfounded keeps photography & zoom, checkout branding, and
-(pending 19) desktop.
+desktop — though the desktop gap NARROWED (19): CROOKSLDN's desktop now has
+hover states on the header and 6 of 13 cards, inline add-to-bag feedback,
+instant search and a complete light mode. Unfounded still wins the dimension
+on card photo-swaps everywhere, quick-add, a sticky buy bar and real
+galleries — CROOKSLDN's crewneck and jeans PDPs literally print
+"PHOTO 1 OF 1", have no zoom, and the buy panel scrolls off-screen.
 
 **Run-2 tally by chip: CROOKSLDN 9 · Unfounded 3 · split/tie 3** (run 1 by
 the same per-row count: 8 · 5 · 2).
@@ -115,8 +118,10 @@ the same per-row count: 8 · 5 · 2).
 ## The shopper ledger, run over run
 
 Run 1: 15/20 reached checkout; losses 1, 6, 12, 14; service 20.
-Run 2: 14/19 decided-or-checkout so far (19 pending); losses 1, 6, **17**;
-service 12 and 20, both satisfied.
+Run 2: 15/20 decided-or-checkout; losses 1, 6, **17**; service 12 and 20,
+both satisfied. Same headline rate, better composition: run 1's theme-bug
+losses (12, 14) are recovered; the one new loss is the popup's till, and 19
+(desktop) closed on the £85 set at £76.50 with a working Getaway code.
 
 - **12 flipped loss → satisfied** — every search query landed; the empty
   state now answers in voice.
@@ -144,9 +149,12 @@ service 12 and 20, both satisfied.
 
 ## Run-2 verdict
 
-Run 1's sentence — right machines, several broken — is spent. The theme-side
-machines are repaired and persona-verified; what costs sales now is (a) the
-Getaway's unreliable code backing and its seven-item punch-list
-(`rerun/SUMMARY.md`), (b) stock depth, and (c) the photography gap that
-Unfounded still wins. Fix the popup's mint, wire the real photos, and the
-scoreboard reads 11–2.
+Run 1's sentence — right machines, several broken — is mostly spent. The
+theme-side machines are repaired and persona-verified; of run 1's three
+broken capture machines, only the game was truly rebuilt — the notify form
+still feeds a captcha (6) and REGISTER AS INFORMANT is still an intake with
+no input (19). What costs sales now is (a) the Getaway's unreliable code
+backing and its punch-list (`rerun/SUMMARY.md`), (b) stock depth, and
+(c) the photography gap that Unfounded still wins. Fix the popup's mint,
+mount the two capture forms, wire the real photos, and the scoreboard reads
+11–2.
