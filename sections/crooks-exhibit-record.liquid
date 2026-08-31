@@ -532,7 +532,13 @@
           </section>
         {%- endif -%}
 
-        {%- if spec_count > 0 -%}
+        {%- comment -%}
+          George, 2026-08-31: "for now remove specification for products and
+          just keep the item description." Switched off rather than deleted —
+          the rows, the settings and the metafields are all untouched, so
+          turning it back on is one checkbox in the theme editor.
+        {%- endcomment -%}
+        {%- if spec_count > 0 and section.settings.spec_show -%}
           <section class="crk-section" id="crk-specification">
             <h2 class="crk-display crk-h" style="margin: 0;">
               <button type="button" class="crk-section-head" data-crk-accordion aria-expanded="{% if section.settings.spec_open %}true{% else %}false{% endif %}" aria-controls="crk-specification-body">
@@ -756,6 +762,7 @@
     { "type": "text", "id": "notify_ok", "label": "Notify success", "default": "Logged. We will email you when this exhibit returns." },
     { "type": "text", "id": "notify_err", "label": "Notify error", "default": "Submission rejected — check the address." },
     { "type": "header", "content": "Specification" },
+    { "type": "checkbox", "id": "spec_show", "label": "Show the Specification panel", "default": false, "info": "Off hides the whole panel. Fabric, cut, wash, origin, care and case reference stay on the products \u2014 nothing is deleted." },
     { "type": "text", "id": "spec_heading", "label": "Heading", "default": "Specification" },
     { "type": "text", "id": "row_size", "label": "Size row", "default": "Size" },
     { "type": "text", "id": "one_size_text", "label": "One size text", "default": "One size" },
