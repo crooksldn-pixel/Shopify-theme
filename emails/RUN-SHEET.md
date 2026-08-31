@@ -4,10 +4,19 @@ Council-ruled plan (working papers + full verdict: `audit/` council files and
 `scratchpad` transcript; verdict summarised in the session log). Files:
 
 1. `crooks-abandoned-1-property-log.html` — ~5 min, no discount.
+   Subject: "You left something in your bag at CROOKSLDN"
 2. `crooks-abandoned-2-evidence-tampering.html` — ~1 h, unique 15% + fulfilment socks.
+   Subject: "15% off the items you left — CROOKSLDN"
 3. `crooks-abandoned-3-final-disposition.html` — ~24 h, unique one-time 20% (owner's
    call, council guardrails baked in; the 15%-closure council default is a 3-string
    swap documented in the file header).
+   Subject: "Last call: 20% off your bag for 24 hours — CROOKSLDN"
+
+NOTE (owner request, 2026-08-31): copy rewritten in plain English — the
+terminal look stays, but no in-world jargon a customer must translate.
+Honesty lines survive in plain form ("stock isn't reserved", the sub-£30
+postage disclosure, "codes don't stack — use whichever is bigger", real
+expiries, one browse-anyway text link).
 
 ## The rail (pick one, honestly)
 - **Klaviyo (recommended)**: Flow trigger "Checkout Started" → wait 5 min →
