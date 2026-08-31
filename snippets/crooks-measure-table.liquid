@@ -1,0 +1,61 @@
+{%- comment -%}
+  One measurements table.
+
+  Pulled out of crooks-exhibit-record so it can be rendered more than once on
+  a page: a set is two garments, and a shopper choosing two sizes on one page
+  needs both charts, not neither.
+
+  Accepts:
+    rows          the crooks.measurements value (array of objects, size first)
+    caption_cm    caption shown while the table is in centimetres
+    caption_in    caption swapped in when the unit toggle goes to inches
+    region_label  accessible name for the scrollport
+    piece         optional garment name, shown above the table on a set page
+
+  The unit toggle itself lives once in the section — it switches every table
+  on the page, because crooks-record.js converts every td[data-cm] it finds.
+{%- endcomment -%}
+
+{%- if rows and rows.size > 0 -%}
+  {%- if piece != blank -%}
+    <p class="crk-label crk-measure-piece">{{ piece }}</p>
+  {%- endif -%}
+
+  {%- comment -%}
+    Own scrollport: unwrapped, this table pushed the page to 308px against a
+    195px viewport at 200% zoom (WCAG 1.4.10 reflow). tabindex makes the
+    scrollable region reachable by keyboard, which is why it needs a name.
+  {%- endcomment -%}
+  <div
+    class="crk-tablewrap"
+    tabindex="0"
+    role="region"
+    aria-label="{{ region_label | escape }}"
+  >
+    <table class="crk-table">
+      <caption data-crk-measure-caption data-cm="{{ caption_cm | escape }}" data-in="{{ caption_in | escape }}">
+        {{ caption_cm }}
+      </caption>
+      <thead>
+        <tr>
+          {%- for pair in rows.first -%}
+            <th scope="col">{{ pair[0] }}</th>
+          {%- endfor -%}
+        </tr>
+      </thead>
+      <tbody>
+        {%- for row in rows -%}
+          <tr data-crk-measure-row="{{ row.size | escape }}" data-active="false">
+            {%- for pair in row -%}
+              {%- if forloop.first -%}
+                <th scope="row">{{ pair[1] }}</th>
+              {%- else -%}
+                <td data-cm="{{ pair[1] | escape }}">{{ pair[1] }}</td>
+              {%- endif -%}
+            {%- endfor -%}
+          </tr>
+        {%- endfor -%}
+      </tbody>
+    </table>
+  </div>
+{%- endif -%}

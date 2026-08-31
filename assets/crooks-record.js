@@ -540,7 +540,9 @@
 
     /* ---- cm / in unit toggle ---- */
     var units = root.querySelectorAll('[data-crk-unit]');
-    var caption = root.querySelector('[data-crk-measure-caption]');
+    /* All of them: a set page carries one table per garment, so there is a
+       caption per table. The td conversion below was already page-wide. */
+    var captions = root.querySelectorAll('[data-crk-measure-caption]');
     function setUnit(unit) {
       for (var u = 0; u < units.length; u++) {
         var on = units[u].getAttribute('data-crk-unit') === unit;
@@ -554,9 +556,9 @@
         var n = parseFloat(cm);
         tds[t].textContent = isNaN(n) ? cm : (Math.round((n / 2.54) * 10) / 10) + 'in';
       }
-      if (caption) {
-        var c = caption.getAttribute(unit === 'cm' ? 'data-cm' : 'data-in');
-        if (c) caption.textContent = c;
+      for (var cI = 0; cI < captions.length; cI++) {
+        var c = captions[cI].getAttribute(unit === 'cm' ? 'data-cm' : 'data-in');
+        if (c) captions[cI].textContent = c;
       }
     }
     for (var u2 = 0; u2 < units.length; u2++) {

@@ -1668,3 +1668,9 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   margin: 8px 0 0; font-size: 11px; letter-spacing: .04em;
   color: var(--crk-red, #C95450);
 }
+
+/* Set pages carry one measurements table per garment. The piece name labels
+   which chart is which — without it a shopper sees two tables of numbers and
+   no way to tell the hoodie from the joggers. */
+.crk-measure-piece { margin: 20px 0 8px; color: var(--crk-lav) }
+.crk-measure-piece:first-of-type { margin-top: 8px }

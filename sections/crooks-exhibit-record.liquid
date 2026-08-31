@@ -73,6 +73,25 @@
   if rows and rows.size > 0
     assign has_measurements = true
   endif
+
+  # A set has no measurements of its own because it is not one garment. Left
+  # alone it showed no size guide at all — on the page where a shopper is
+  # picking two sizes at once, which is exactly where sizing matters most.
+  # crooks.set_components names the pieces, and each of those is measured.
+  assign crk_parts = mf.set_components.value
+  assign crk_parts_measured = 0
+  if has_measurements == false and crk_parts
+    for crk_part in crk_parts
+      assign crk_prows = crk_part.metafields.crooks.measurements.value
+      if crk_prows and crk_prows.size > 0
+        assign crk_parts_measured = crk_parts_measured | plus: 1
+      endif
+    endfor
+  endif
+  assign crk_show_measure = false
+  if has_measurements or crk_parts_measured > 0
+    assign crk_show_measure = true
+  endif
 -%}
 
 {%- render 'crooks-schema-product', product: product -%}
@@ -574,7 +593,7 @@
           </section>
         {%- endif -%}
 
-        {%- if has_measurements -%}
+        {%- if crk_show_measure -%}
           <section class="crk-section" id="crk-measurements">
             <h2 class="crk-display crk-h" style="margin: 0;">
               <button type="button" class="crk-section-head" data-crk-accordion aria-expanded="{% if section.settings.measure_open %}true{% else %}false{% endif %}" aria-controls="crk-measurements-body">
@@ -587,43 +606,22 @@
                 <button type="button" class="crk-unit" data-crk-unit="cm" data-selected="true" aria-pressed="true">{{ section.settings.unit_cm }}</button>
                 <button type="button" class="crk-unit" data-crk-unit="in" data-selected="false" aria-pressed="false">{{ section.settings.unit_in }}</button>
               </div>
-              {%- comment -%}
-                Own scrollport: unwrapped, this table pushed the page to 308px against a
-                195px viewport at 200% zoom (WCAG 1.4.10 reflow). tabindex makes the
-                scrollable region reachable by keyboard, which is why it needs a name.
-              {%- endcomment -%}
-              <div
-                class="crk-tablewrap"
-                tabindex="0"
-                role="region"
-                aria-label="{{ section.settings.measure_region_label | escape }}"
-              >
-              <table class="crk-table">
-                <caption data-crk-measure-caption data-cm="{{ section.settings.measure_caption_cm | escape }}" data-in="{{ section.settings.measure_caption_in | escape }}">
-                  {{ section.settings.measure_caption_cm }}
-                </caption>
-                <thead>
-                  <tr>
-                    {%- for pair in rows.first -%}
-                      <th scope="col">{{ pair[0] }}</th>
-                    {%- endfor -%}
-                  </tr>
-                </thead>
-                <tbody>
-                  {%- for row in rows -%}
-                    <tr data-crk-measure-row="{{ row.size | escape }}" data-active="false">
-                      {%- for pair in row -%}
-                        {%- if forloop.first -%}
-                          <th scope="row">{{ pair[1] }}</th>
-                        {%- else -%}
-                          <td data-cm="{{ pair[1] | escape }}">{{ pair[1] }}</td>
-                        {%- endif -%}
-                      {%- endfor -%}
-                    </tr>
-                  {%- endfor -%}
-                </tbody>
-              </table>
-              </div>
+              {%- if has_measurements -%}
+                {%- render 'crooks-measure-table',
+                    rows: rows,
+                    caption_cm: section.settings.measure_caption_cm,
+                    caption_in: section.settings.measure_caption_in,
+                    region_label: section.settings.measure_region_label -%}
+              {%- else -%}
+                {%- for crk_part in crk_parts -%}
+                  {%- render 'crooks-measure-table',
+                      rows: crk_part.metafields.crooks.measurements.value,
+                      caption_cm: section.settings.measure_caption_cm,
+                      caption_in: section.settings.measure_caption_in,
+                      region_label: section.settings.measure_region_label,
+                      piece: crk_part.title -%}
+                {%- endfor -%}
+              {%- endif -%}
             </div>
           </section>
         {%- endif -%}
