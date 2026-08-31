@@ -67,8 +67,8 @@
     if (spoken && m !== lastSpokenMinute) {
       lastSpokenMinute = m;
       spoken.textContent = h > 0
-        ? h + ' hours ' + m + ' minutes until the store opens'
-        : m + ' minutes ' + s + ' seconds until the store opens';
+        ? h + (h === 1 ? ' hour ' : ' hours ') + m + (m === 1 ? ' minute' : ' minutes') + ' until the store opens'
+        : m + (m === 1 ? ' minute ' : ' minutes ') + s + (s === 1 ? ' second' : ' seconds') + ' until the store opens';
     }
   }
 
