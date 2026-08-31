@@ -103,3 +103,35 @@ themeFilesUpsert. The theme is now email-consistent. Remaining owner note
 from the audit: the *legal policy pages* (store admin, not theme) also sign
 with the gmail — nothing to change there now, only the old "Capitalised
 variant on contact-information" cosmetic if desired.
+
+## Hoodie chart (owner-supplied, 2026-08-31)
+
+Chart supplied for the Convict hoodies (image via PRESTON): Length /
+Width / Inner Arm Length in inches, laid flat, plus a Recommended Height
+column. Written to `crooks.measurements` on all three active hoodies —
+**PINK CONVICT HOODIE** (10993383801175, incl. its V1/V2 variants),
+**BLACK CONVICT HOODIE** (10837208105303), **GREY CONVICT HOODIE**
+(10636762841431). None had a measurements metafield before; the size-guide
+button and MEASUREMENTS accordion now unlock on all three.
+
+Published under the true-to-size convention (inches shown after toggle):
+- **chest** 46 / 48 / 50 / 51 / 52 — flat width 23–26 doubled to full
+  circumference (baggy fit, consistent with the description).
+- **length** 23 / 24 / 25 / 25.5 / 26 — as printed.
+- **inner arm** 18.5 / 19.5 / 20.5 / 21.5 / 22.5 — as printed (underarm
+  seam; keyed "inner arm", not "sleeve", to stay honest about the method).
+- **fits height** ~5'4" and under · ~5'5"–5'7" · ~5'8"–5'10" ·
+  ~5'11"–6'1" · ~6'2" and up — the chart's body-fit mapping, the exact
+  thing personas 03/09 asked for ("describes the garment, not the wearer").
+
+Mechanics note: the cm/in toggle converts any cell whose value parses as a
+number (`parseFloat`), so a bare `5'5"–5'7"` would render as "2in" in inch
+mode. Height values are therefore prefixed with `~` (verified against the
+staging theme's live crooks-record.js: non-numeric values pass through both
+unit modes verbatim). Heights stay in feet/inches under both modes — UK
+convention for body height regardless of unit.
+
+cm stored (×2.54, 1dp) so the inch toggle round-trips exactly: chest
+116.8/121.9/127/129.5/132.1 · length 58.4/61/63.5/64.8/66 · inner arm
+47/49.5/52.1/54.6/57.2. Mutation returned all three values byte-identical;
+userErrors empty.
