@@ -2284,5 +2284,25 @@
         "default": "equal-width-buttons"
       }
     ]
+  },
+  {
+    "name": "CROOKSLDN",
+    "settings": [
+      {
+        "type": "header",
+        "content": "The Getaway"
+      },
+      {
+        "type": "paragraph",
+        "content": "The Crack the Cuffs discount popup. It only ever appears on the homepage, and never in the theme editor."
+      },
+      {
+        "type": "checkbox",
+        "id": "getaway_enabled",
+        "label": "Show the Getaway popup",
+        "default": false,
+        "info": "Off means the Base44 game is never fetched at all, so the homepage does not pay for it."
+      }
+    ]
   }
 ]

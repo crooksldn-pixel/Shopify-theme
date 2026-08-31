@@ -198,11 +198,17 @@
       Homepage only. Rendered from the layout it fired on every template, so a shopper
       who arrived on a product page from Instagram met a full-viewport overlay over the
       buy panel and pulled a 166 KB Base44 bundle onto a PDP and the cart.
+
+      Now also behind a switch: Theme settings -> CROOKSLDN -> Show the Getaway popup.
+      Off is the default. The snippet is untouched and still on disk, so turning it
+      back on is one checkbox, not a rebuild.
     {%- endcomment -%}
-    {%- unless request.design_mode -%}
-      {%- if template.name == 'index' -%}
-        {% render 'crack-the-cuffs' %}
-      {%- endif -%}
-    {%- endunless -%}
+    {%- if settings.getaway_enabled -%}
+      {%- unless request.design_mode -%}
+        {%- if template.name == 'index' -%}
+          {% render 'crack-the-cuffs' %}
+        {%- endif -%}
+      {%- endunless -%}
+    {%- endif -%}
   </body>
 </html>
