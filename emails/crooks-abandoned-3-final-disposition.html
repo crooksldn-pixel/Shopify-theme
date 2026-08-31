@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+  CROOKSLDN — ABANDONED CHECKOUT EMAIL 3 of 3: "FINAL DISPOSITION"
+  Send: ~24 hours after abandonment.
+
+  BUILT AS THE OWNER SPECIFIED: 20% — with every guardrail the council attached:
+  · Klaviyo unique coupon "DISP20": 20% off order, ONE use, expires 24h after issue,
+    NOT combinable, EXCLUDES the Sets collection (they already save £10 — the exclusion
+    is disclosed in the copy below, per the no-card-tricks law).
+  · Segment this email to FIRST-TIME abandoners only (flow filter: has not received
+    this flow before). A repeatable 20% ladder trains regulars to abandon carts and
+    outbids the Getaway's 10%. One taste per customer, ever.
+  COUNCIL DEFAULT (if you drop the 20%): re-state the SAME EVID15 code with its real
+  closing time and make this a closure email — swap the code tag, the two "20%"
+  mentions, and the exclusion line; everything else stands.
+
+  SUBJECT:   CROOKSLDN — final disposition. 20%, then the file seals.
+  PREHEADER: (in the hidden div below)
+
+  MERGE MAP: Klaviyo tags as-is (link {{ event.extra.checkout_url }},
+  coupon {% coupon_code 'DISP20' %}); Shopify-native link equivalent is {{ url }}.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>CROOKSLDN — final disposition</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .wrap { width: 100% !important; }
+      .col { display: block !important; width: 100% !important; box-sizing: border-box; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#0C0B10;" bgcolor="#0C0B10">
+
+  <!-- preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+    One use, 24 hours, then full price stands. No obligation either way.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0C0B10" style="background-color:#0C0B10;">
+    <tr><td align="center" style="padding:24px 12px;">
+
+      <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+        <!-- ticker -->
+        <tr><td style="border:1px solid #2A2634; border-left:3px solid #9B6FC4; padding:10px 16px; font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:2px; color:#8D879C;" bgcolor="#141219">
+          CROOKSLDN &nbsp;/&nbsp; EVIDENCE ROOM &nbsp;/&nbsp; FINAL DISPOSITION
+        </td></tr>
+
+        <!-- case-file stamp block -->
+        <tr><td align="center" style="border:1px solid #2A2634; border-top:none; padding:32px 24px 8px;" bgcolor="#141219">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr><td align="center" style="border:2px solid #2A2634; padding:14px 26px;">
+              <div style="font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:4px; color:#8D879C;">CASE STATUS</div>
+              <div style="font-family:'Courier New',Courier,monospace; font-size:22px; font-weight:bold; letter-spacing:2px; color:#E8E5EF; padding-top:6px;">DISPOSITION PENDING</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- headline + body -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:20px 24px 0;" bgcolor="#141219">
+          <div style="font-family:'Courier New',Courier,monospace; font-size:26px; line-height:1.2; font-weight:bold; color:#E8E5EF;">
+            THIS FILE CLOSES<br>IN 24 HOURS.
+          </div>
+        </td></tr>
+        <tr><td style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:0 24px 18px; font-family:'Courier New',Courier,monospace; font-size:14px; line-height:1.6; color:#E8E5EF;" bgcolor="#141219">
+          <p style="margin:12px 0 0;">Last entry in the log. The items you left are either claimed or the case is closed — no hard feelings either way. For the final 24 hours, <span style="color:#9B6FC4;">20% stands against your claim</span>. When the code below expires, it expires. Full price after; we don't haggle twice.</p>
+        </td></tr>
+
+        <!-- the code -->
+        <tr><td align="center" style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:6px 24px 4px;" bgcolor="#141219">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr><td align="center" style="border:2px solid #9B6FC4; padding:16px 12px;" bgcolor="#191622">
+              <div style="font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:3px; color:#9B6FC4;">FINAL DISPOSITION — 20% OFF</div>
+              <div style="font-family:'Courier New',Courier,monospace; font-size:24px; font-weight:bold; letter-spacing:2px; color:#E8E5EF; padding-top:8px;">{% coupon_code 'DISP20' %}</div>
+              <div style="font-family:'Courier New',Courier,monospace; font-size:11px; color:#8D879C; padding-top:6px;">One use. Valid 24 hours from this email. Doesn't apply to sets &mdash; they're already &pound;10 under.</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- CTA -->
+        <tr><td align="center" style="border:1px solid #2A2634; border-top:none; padding:26px 24px;" bgcolor="#141219">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr><td bgcolor="#9B6FC4" style="border:1px solid #9B6FC4;">
+              <a href="{{ event.extra.checkout_url }}" style="display:inline-block; padding:14px 32px; font-family:'Courier New',Courier,monospace; font-size:16px; font-weight:bold; letter-spacing:1px; color:#0C0B10; text-decoration:none;">FINAL CLAIM &mdash; 20% OFF</a>
+            </td></tr>
+          </table>
+          <div style="font-family:'Courier New',Courier,monospace; font-size:12px; color:#8D879C; padding-top:12px;">Stock was never reserved — if a size has gone in the meantime, that's the drop.</div>
+        </td></tr>
+
+        <!-- full disclosure -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:16px 24px; font-family:'Courier New',Courier,monospace; font-size:12px; line-height:1.8; color:#8D879C;" bgcolor="#0F0E14">
+          FOR THE FILE:<br>
+          &gt; Free UK shipping is calculated after the discount — below &pound;30 net, postage runs &pound;3&ndash;&pound;4.99.<br>
+          &gt; Holding a GTWY code from the game? Codes don't stack. Use the larger number.<br>
+          &gt; Order before <span style="color:#E8E5EF;">18:00 London</span> and it leaves the same day. Free UK size swaps. 14-day returns.
+        </td></tr>
+
+        <!-- browse line -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:16px 24px; font-family:'Courier New',Courier,monospace; font-size:13px; color:#8D879C;" bgcolor="#141219">
+          Case closed either way. <a href="https://crooksldn.com/collections/all" style="color:#9B6FC4; text-decoration:underline;">THE REGISTER stays open for inspection</a> &mdash; browsing is not a crime.
+        </td></tr>
+
+        <!-- footer -->
+        <tr><td style="padding:18px 8px 0; font-family:'Courier New',Courier,monospace; font-size:11px; line-height:1.8; color:#5E5870;" align="center">
+          You started a checkout at crooksldn.com — that is the only reason this file exists.<br>
+          CROOKSLDN &nbsp;·&nbsp; <a href="https://crooksldn.com" style="color:#8D879C;">crooksldn.com</a> &nbsp;·&nbsp; <a href="https://instagram.com/crooksldn" style="color:#8D879C;">@crooksldn</a> &nbsp;·&nbsp; <a href="{% unsubscribe_url %}" style="color:#8D879C;">Unsubscribe</a>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

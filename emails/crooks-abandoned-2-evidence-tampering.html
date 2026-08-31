@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+  CROOKSLDN — ABANDONED CHECKOUT EMAIL 2 of 3: "EVIDENCE TAMPERING AUTHORIZED"
+  Send: ~1 hour after abandonment. 15% unique code + fulfilment-added socks.
+
+  SUBJECT:   15% off the items you left — CROOKSLDN.
+  PREHEADER: (in the hidden div below)
+
+  DISCOUNT SETUP (create BEFORE sending):
+  · Klaviyo unique coupon "EVID15": 15% off order, expires 48h after issue, one use,
+    NOT combinable with other discount codes (so it can't collide with GTWY game codes).
+  · The merge tag below — {% coupon_code 'EVID15' %} — prints each recipient's unique code.
+
+  SOCKS BLOCK: the "CONTRABAND" paragraph promises socks added at fulfilment on £30+ orders.
+  Only keep it if the packing-slip flag exists (Flow: order uses an EVID15 code AND total ≥ £30
+  → tag order CONTRABAND-SOCKS; tag prints on the packing slip). If that flag is not built,
+  DELETE the block marked SOCKS-START/SOCKS-END — a forgotten pair costs more trust than no socks.
+
+  MERGE MAP: Klaviyo tags as-is. Shopify native equivalents: link {{ url }},
+  items {% for line in checkout.line_items %} / {{ line.title }} / {{ line.price | money }} / {{ line.image | img_url: 'medium' }}.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>CROOKSLDN — evidence tampering authorized</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .wrap { width: 100% !important; }
+      .col { display: block !important; width: 100% !important; box-sizing: border-box; }
+      .exhibit-img { width: 88px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#0C0B10;" bgcolor="#0C0B10">
+
+  <!-- preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+    Your code: 15% off, one use, 48 hours — genuinely. Socks in the bag on claims of &pound;30+.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0C0B10" style="background-color:#0C0B10;">
+    <tr><td align="center" style="padding:24px 12px;">
+
+      <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+        <!-- ticker -->
+        <tr><td style="border:1px solid #2A2634; border-left:3px solid #9B6FC4; padding:10px 16px; font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:2px; color:#8D879C;" bgcolor="#141219">
+          CROOKSLDN &nbsp;/&nbsp; EVIDENCE ROOM &nbsp;/&nbsp; AMENDMENT 01
+        </td></tr>
+
+        <!-- headline -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:28px 24px 8px;" bgcolor="#141219">
+          <div style="font-family:'Courier New',Courier,monospace; font-size:26px; line-height:1.2; font-weight:bold; color:#E8E5EF;">
+            EVIDENCE TAMPERING:<br>AUTHORIZED.
+          </div>
+        </td></tr>
+        <tr><td style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:0 24px 18px; font-family:'Courier New',Courier,monospace; font-size:14px; line-height:1.6; color:#E8E5EF;" bgcolor="#141219">
+          <p style="margin:12px 0 0;">Your file is still open. The figure below has been struck from it — <span style="color:#9B6FC4;">15% off the items you logged</span>, one use, yours alone. It dies in 48 hours, and it genuinely dies.</p>
+        </td></tr>
+
+        <!-- the stamp / code -->
+        <tr><td align="center" style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:6px 24px 4px;" bgcolor="#141219">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr><td align="center" style="border:2px solid #9B6FC4; padding:16px 12px;" bgcolor="#191622">
+              <div style="font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:3px; color:#9B6FC4;">15% STRUCK FROM THE RECORD</div>
+              <div style="font-family:'Courier New',Courier,monospace; font-size:24px; font-weight:bold; letter-spacing:2px; color:#E8E5EF; padding-top:8px;">{% coupon_code 'EVID15' %}</div>
+              <div style="font-family:'Courier New',Courier,monospace; font-size:11px; color:#8D879C; padding-top:6px;">Enter it in the discount field at the till. Valid 48 hours from this email. One use.</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- SOCKS-START — delete this whole <tr> if the CONTRABAND-SOCKS packing-slip flag is not built -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:16px 24px 0; font-family:'Courier New',Courier,monospace; font-size:13px; line-height:1.6; color:#E8E5EF;" bgcolor="#141219">
+          <span style="color:#9B6FC4; letter-spacing:2px; font-size:11px;">CONTRABAND —</span> claims of &pound;30 or more made with this code ship with one pair of MotionTec&trade; socks slipped in the bag. Not logged at checkout. No second code. You'll know when you open it.
+        </td></tr>
+        <!-- SOCKS-END -->
+
+        <!-- exhibits: abandoned line items -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:18px 24px 4px; font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:2px; color:#8D879C;" bgcolor="#141219">STILL ON THE TABLE:</td></tr>
+        {% for item in event.extra.line_items %}
+        <tr><td style="border:1px solid #2A2634; border-top:1px dashed #2A2634; border-bottom:none; padding:14px 24px;" bgcolor="#141219">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="104" valign="top">
+                <img class="exhibit-img" src="{{ item.product.images.0.src }}" width="104" alt="{{ item.product.title }}" style="display:block; width:104px; border:1px solid #2A2634;">
+              </td>
+              <td valign="top" style="padding-left:16px; font-family:'Courier New',Courier,monospace;">
+                <div style="font-size:11px; letter-spacing:2px; color:#8D879C;">EXHIBIT {{ forloop.counter }}{% if item.quantity > 1 %} &nbsp;·&nbsp; QTY {{ item.quantity }}{% endif %}</div>
+                <div style="font-size:15px; font-weight:bold; color:#E8E5EF; padding-top:4px;">{{ item.product.title }}</div>
+                {% if item.variant.title and item.variant.title != 'Default Title' %}<div style="font-size:12px; color:#8D879C; padding-top:2px;">{{ item.variant.title }}</div>{% endif %}
+                <div style="font-size:15px; color:#9B6FC4; padding-top:6px;">&pound;{{ item.line_price|floatformat:2 }}</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        {% endfor %}
+
+        <!-- CTA -->
+        <tr><td align="center" style="border:1px solid #2A2634; border-top:1px dashed #2A2634; padding:26px 24px;" bgcolor="#141219">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr><td bgcolor="#9B6FC4" style="border:1px solid #9B6FC4;">
+              <a href="{{ event.extra.checkout_url }}" style="display:inline-block; padding:14px 32px; font-family:'Courier New',Courier,monospace; font-size:16px; font-weight:bold; letter-spacing:1px; color:#0C0B10; text-decoration:none;">RECLAIM &mdash; 15% OFF</a>
+            </td></tr>
+          </table>
+          <div style="font-family:'Courier New',Courier,monospace; font-size:12px; color:#8D879C; padding-top:12px;">Stock is not reserved. Exhibits may be released to other claimants.</div>
+        </td></tr>
+
+        <!-- full disclosure -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:16px 24px; font-family:'Courier New',Courier,monospace; font-size:12px; line-height:1.8; color:#8D879C;" bgcolor="#0F0E14">
+          FOR THE FILE:<br>
+          &gt; Free UK shipping is calculated after the discount — below &pound;30 net, postage runs &pound;3&ndash;&pound;4.99.<br>
+          &gt; Holding a GTWY code from the game? Codes don't stack. Use the larger number.<br>
+          &gt; Order before <span style="color:#E8E5EF;">18:00 London</span> and it leaves the same day. Free UK size swaps. 14-day returns.
+        </td></tr>
+
+        <!-- browse line -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:16px 24px; font-family:'Courier New',Courier,monospace; font-size:13px; color:#8D879C;" bgcolor="#141219">
+          Not buying? The file is still public. <a href="https://crooksldn.com/collections/all" style="color:#9B6FC4; text-decoration:underline;">Inspect THE REGISTER.</a>
+        </td></tr>
+
+        <!-- footer -->
+        <tr><td style="padding:18px 8px 0; font-family:'Courier New',Courier,monospace; font-size:11px; line-height:1.8; color:#5E5870;" align="center">
+          You started a checkout at crooksldn.com — that is the only reason this file exists.<br>
+          CROOKSLDN &nbsp;·&nbsp; <a href="https://crooksldn.com" style="color:#8D879C;">crooksldn.com</a> &nbsp;·&nbsp; <a href="https://instagram.com/crooksldn" style="color:#8D879C;">@crooksldn</a> &nbsp;·&nbsp; <a href="{% unsubscribe_url %}" style="color:#8D879C;">Unsubscribe</a>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

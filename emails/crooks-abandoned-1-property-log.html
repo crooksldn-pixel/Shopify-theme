@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<!--
+  CROOKSLDN — ABANDONED CHECKOUT EMAIL 1 of 3: "PROPERTY LOG"
+  Send: ~5 minutes after abandonment (real 5 min needs an ESP; native Shopify fires 10–60 min).
+  No discount in this email, by design.
+
+  SUBJECT:   You left items at CROOKSLDN — logged, not reserved.
+  PREHEADER: (in the hidden div below)
+
+  MERGE MAP — replace per platform before sending:
+  · Klaviyo (recommended rail):
+      checkout link   {{ event.extra.checkout_url }}          (as used below)
+      line items      {% for item in event.extra.line_items %} (as used below)
+      unsubscribe     confirm your account's tag (commonly {% unsubscribe_url %}) before first send
+  · Shopify native "Checkout abandonment" notification (Settings → Notifications):
+      checkout link   {{ url }}
+      line items      {% for line in checkout.line_items %} … {{ line.title }} · {{ line.price | money }} · {{ line.image | img_url: 'medium' }}
+      (native = single email only; disable it if you run this sequence on an ESP — never both)
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>CROOKSLDN — property log</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .wrap { width: 100% !important; }
+      .col { display: block !important; width: 100% !important; box-sizing: border-box; }
+      .exhibit-img { width: 88px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#0C0B10;" bgcolor="#0C0B10">
+
+  <!-- preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+    Order before 18:00 London for same-day dispatch. Free UK size swaps. 14-day returns.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0C0B10" style="background-color:#0C0B10;">
+    <tr><td align="center" style="padding:24px 12px;">
+
+      <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+        <!-- ticker -->
+        <tr><td style="border:1px solid #2A2634; border-left:3px solid #9B6FC4; padding:10px 16px; font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:2px; color:#8D879C;" bgcolor="#141219">
+          CROOKSLDN &nbsp;/&nbsp; EVIDENCE ROOM &nbsp;/&nbsp; PROPERTY LOG
+        </td></tr>
+
+        <!-- headline -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:28px 24px 8px;" bgcolor="#141219">
+          <div style="font-family:'Courier New',Courier,monospace; font-size:26px; line-height:1.2; font-weight:bold; color:#E8E5EF;">
+            A CHECKOUT WAS STARTED.<br>IT WAS NOT COMPLETED.
+          </div>
+        </td></tr>
+        <tr><td style="border:1px solid #2A2634; border-top:none; border-bottom:none; padding:0 24px 20px; font-family:'Courier New',Courier,monospace; font-size:14px; line-height:1.6; color:#E8E5EF;" bgcolor="#141219">
+          <p style="margin:12px 0 0;">The following items were logged against your session and left at the till. For the record: <span style="color:#9B6FC4;">stock is not reserved</span> — exhibits may be released to other claimants at any time.</p>
+        </td></tr>
+
+        <!-- exhibits: abandoned line items -->
+        {% for item in event.extra.line_items %}
+        <tr><td style="border:1px solid #2A2634; border-top:1px dashed #2A2634; border-bottom:none; padding:14px 24px;" bgcolor="#141219">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="104" valign="top">
+                <img class="exhibit-img" src="{{ item.product.images.0.src }}" width="104" alt="{{ item.product.title }}" style="display:block; width:104px; border:1px solid #2A2634;">
+              </td>
+              <td valign="top" style="padding-left:16px; font-family:'Courier New',Courier,monospace;">
+                <div style="font-size:11px; letter-spacing:2px; color:#8D879C;">EXHIBIT {{ forloop.counter }}{% if item.quantity > 1 %} &nbsp;·&nbsp; QTY {{ item.quantity }}{% endif %}</div>
+                <div style="font-size:15px; font-weight:bold; color:#E8E5EF; padding-top:4px;">{{ item.product.title }}</div>
+                {% if item.variant.title and item.variant.title != 'Default Title' %}<div style="font-size:12px; color:#8D879C; padding-top:2px;">{{ item.variant.title }}</div>{% endif %}
+                <div style="font-size:15px; color:#9B6FC4; padding-top:6px;">&pound;{{ item.line_price|floatformat:2 }}</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        {% endfor %}
+
+        <!-- CTA -->
+        <tr><td align="center" style="border:1px solid #2A2634; border-top:1px dashed #2A2634; padding:26px 24px;" bgcolor="#141219">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr><td bgcolor="#9B6FC4" style="border:1px solid #9B6FC4;">
+              <a href="{{ event.extra.checkout_url }}" style="display:inline-block; padding:14px 32px; font-family:'Courier New',Courier,monospace; font-size:16px; font-weight:bold; letter-spacing:1px; color:#0C0B10; text-decoration:none;">RECLAIM PROPERTY</a>
+            </td></tr>
+          </table>
+          <div style="font-family:'Courier New',Courier,monospace; font-size:12px; color:#8D879C; padding-top:12px;">Your bag is exactly as you left it, sizes and all.</div>
+        </td></tr>
+
+        <!-- the facts -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:18px 24px;" bgcolor="#0F0E14">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:'Courier New',Courier,monospace; font-size:12px; line-height:1.7; color:#8D879C;">
+            <tr>
+              <td class="col" valign="top" width="33%" style="padding:4px 8px 4px 0;">&gt; Order before <span style="color:#E8E5EF;">18:00 London</span>, it leaves the same day.</td>
+              <td class="col" valign="top" width="33%" style="padding:4px 8px;">&gt; Free UK <span style="color:#E8E5EF;">size swaps</span> if the fit is wrong.</td>
+              <td class="col" valign="top" width="33%" style="padding:4px 0 4px 8px;">&gt; <span style="color:#E8E5EF;">14-day returns</span>, unworn with tags.</td>
+            </tr>
+          </table>
+          <div style="font-family:'Courier New',Courier,monospace; font-size:12px; color:#8D879C; padding-top:10px;">&gt; Free UK Tracked 48 on orders over &pound;30. Tracked 24 free over &pound;80.</div>
+        </td></tr>
+
+        <!-- browse line -->
+        <tr><td style="border:1px solid #2A2634; border-top:none; padding:16px 24px; font-family:'Courier New',Courier,monospace; font-size:13px; color:#8D879C;" bgcolor="#141219">
+          No obligation to claim. <a href="https://crooksldn.com/collections/all" style="color:#9B6FC4; text-decoration:underline;">THE REGISTER remains open for inspection.</a>
+        </td></tr>
+
+        <!-- footer -->
+        <tr><td style="padding:18px 8px 0; font-family:'Courier New',Courier,monospace; font-size:11px; line-height:1.8; color:#5E5870;" align="center">
+          You started a checkout at crooksldn.com — that is the only reason this file exists.<br>
+          CROOKSLDN &nbsp;·&nbsp; <a href="https://crooksldn.com" style="color:#8D879C;">crooksldn.com</a> &nbsp;·&nbsp; <a href="https://instagram.com/crooksldn" style="color:#8D879C;">@crooksldn</a> &nbsp;·&nbsp; <a href="{% unsubscribe_url %}" style="color:#8D879C;">Unsubscribe</a>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
