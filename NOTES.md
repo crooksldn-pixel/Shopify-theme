@@ -2322,3 +2322,48 @@ its existing `cart.item_count > 0` guard, not a failed deploy.
 
 **Owner still to do:** the live Shipping and Refund policies in admin both quote
 £20/£70. They are outside the theme.
+
+---
+
+## The launch email envelope: subject, preview, from-name
+
+George: *"lets make the subject and preview text, lets make it click baity.
+something like oops, didnt mean to send you that but abit smarter, we need to
+make people click the notification thinking its more important than it is"*
+
+Put to the council. Five advisors, five peer reviews, unanimous against the
+fake-mistake framing — and unanimous that the peer review's strongest response
+was the one that did arithmetic instead of ethics.
+
+The number that settles it: ~400 recipients. An honest subject on a warm,
+expectant list opens at 55–65%. Bait might add ten points — about **40 extra
+opens**. Three of those 40 pressing "report spam" is **0.75%**, against
+Google's **0.3%** ceiling, on the first send from a domain with no reputation
+and no volume to rebuild with. Forty opens traded for every future email
+landing in Promotions.
+
+The Outsider found the specific failure nobody inside the brand could see: a
+fake-mistake subject, from a sender you don't recognise, on a domain that has
+never emailed you, from a brand whose name contains the word **CROOKS**, is
+indistinguishable from phishing.
+
+**The line, precisely: you may withhold what is inside; you may never
+misrepresent what kind of message this is.** Curiosity about content is
+editing. Fake reply, fake error, fake receipt, fake human — that falsifies
+provenance. Withhold the ending; never fake the envelope.
+
+Three things all five advisors missed and the reviews caught:
+
+- The **from-name** moves opens more than the subject when the domain is
+  unknown. Set it to `CROOKSLDN`, the name on the signup form.
+- Four of the five wrote a deadline into their copy ("runs to Sunday",
+  "until [date]"). The drop-code fix above exists precisely so a claimed
+  expiry is fed by the same variable Shopify enforces. **No deadline goes in
+  the email unless the discount carries it.**
+- Marketing sent from the root domain drags order confirmations down with it.
+  Send from a subdomain.
+
+Shipped: `email/crooksldn-launch.html`. Subject and from-name are set in
+Shopify Email, not in the file, so both are recorded in the file's header
+comment. The preview-text `<div>` after `<body>` was rewritten to complement
+the chosen subject rather than repeat it.

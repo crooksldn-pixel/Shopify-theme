@@ -1,0 +1,350 @@
+<!-- Please note that templates must include {{ unsubscribe_link }} and {{ open_tracking_block }} variables. -->
+<!--
+  CROOKSLDN — launch email.
+
+  BEFORE YOU SEND, two things to change. Both are marked >>> in the code.
+    1. LAUNCH CODE — appears in FOUR places: this note, the hero image link,
+       the code box, and the two buttons. Search for  CROOKS10  and replace
+       every one (find-and-replace is easiest).
+       The code MUST already exist as a real discount in Shopify > Discounts.
+       A code in an email that is not a real discount is exactly what cost you
+       a sale in the audit.
+    2. THE DISCOUNT LINE — "10% off your first order" near the code box.
+       Change if the amount is not 10%.
+
+  THE ENVELOPE — set these three in Shopify Email before you send. They do
+  more work than anything inside the email, and none of them live in this file.
+
+    FROM NAME     CROOKSLDN
+                  Exactly as it appears on the signup form. Not "Crooks
+                  Clothing Company Ltd" (nobody signed up to that name) and
+                  not "George at CROOKSLDN" on send one — recognition beats
+                  warmth when the domain has never emailed anyone before.
+
+    SUBJECT       You asked to be told. It's open.
+                  32 characters. Survives iOS portrait truncation (~33) whole.
+
+    PREVIEW       Three pieces live now. 10% off with the code inside — free
+                  UK delivery over £30.
+                  This is the <div> immediately after <body>. If you change
+                  the subject, change that div to match — it must add facts
+                  the subject does not already carry, never repeat it.
+
+  NO DEADLINE APPEARS IN THIS EMAIL, deliberately. Do not add one ("ends
+  Sunday", "48 hours only") unless the Shopify discount itself carries the
+  same end date. An unenforced deadline is the sale theatre the audit
+  criticised the competitor for.
+
+  Everything else is real, checked against the live store on the day it was
+  written: the three pieces, their prices, the shipping thresholds and the
+  18:00 cut-off.
+
+  Built for email, not the web. Tables, inline styles, no web fonts, no
+  JavaScript. Courier is the fallback for the pixel display face and happens
+  to suit the brand. Roughly half of readers will see this with images off,
+  so nothing load-bearing is an image — the button is real HTML and every
+  photograph has alt text that reads in its place.
+-->
+<!doctype html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!-- Tells Apple Mail and Outlook this is already a dark design, so they do not
+     invert it into something else. -->
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>CROOKSLDN is open</title>
+<!--[if mso]>
+<xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+<![endif]-->
+<style>
+  /* Only some clients read this block. Nothing here is required for the email
+     to work — it is polish on top of the inline styles. */
+  body { margin:0 !important; padding:0 !important; width:100% !important; }
+  img { -ms-interpolation-mode:bicubic; }
+  a { text-decoration:none; }
+  @media only screen and (max-width:479px) {
+    .crk-pad { padding-left:18px !important; padding-right:18px !important; }
+    .crk-wordmark { font-size:34px !important; letter-spacing:6px !important; }
+    .crk-thumb { width:120px !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#0B0A0E;">
+
+<!-- Preview text: what shows beside the subject line in the inbox. -->
+<div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all; color:#0B0A0E;">
+  Three pieces live now. 10% off with the code inside &mdash; free UK delivery over &pound;30.
+  &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0B0A0E" style="background-color:#0B0A0E;">
+<tr><td align="center" style="padding:0;">
+
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px;">
+
+  <!-- ── status bar ─────────────────────────────────────────── -->
+  <tr>
+    <td bgcolor="#0E0C13" align="center" class="crk-pad"
+        style="background-color:#0E0C13; border-bottom:1px solid #3A2F4A; padding:9px 24px; font-family:'Courier New',Courier,monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#A77AC7;">
+      THE REGISTER IS OPEN
+    </td>
+  </tr>
+
+  <!-- ── hero ───────────────────────────────────────────────
+    Brand imagery, not a product claim: the jacket in this shot is archived.
+    To lead on something buyable instead, swap the src for the grey hoodie and
+    blue jeans shot, which is one of the three sold below —
+    .../compressedImage-2-3-rectangle.jpg?v=1784551970&width=600&height=420&crop=center
+    The whole image is a link, because a lot of people tap the picture.
+  -->
+  <tr>
+    <td style="padding:0; font-size:0; line-height:0;">
+      <a href="https://crooksldn.com/discount/CROOKS10?redirect=/collections/all">
+        <img src="https://cdn.shopify.com/s/files/1/1004/1078/6135/files/8I2A8856-Edit_copy.jpg?v=1784545498&width=600&height=420&crop=top"
+             width="600" alt="CROOKSLDN" border="0"
+             style="display:block; width:100%; max-width:600px; height:auto; border:0; outline:none; color:#DDD7C9; font-family:'Courier New',Courier,monospace; font-size:12px;">
+      </a>
+    </td>
+  </tr>
+
+  <!-- ── the headline ───────────────────────────────────────── -->
+  <tr>
+    <td align="center" class="crk-pad crk-wordmark"
+        style="padding:34px 24px 0 24px; font-family:'Courier New',Courier,monospace; font-weight:bold; font-size:56px; line-height:1; letter-spacing:2px; color:#DDD7C9;">
+      IT&rsquo;S OPEN
+    </td>
+  </tr>
+  <tr>
+    <td align="center" class="crk-pad"
+        style="padding:14px 24px 0 24px; font-family:'Courier New',Courier,monospace; font-size:13px; line-height:1.6; letter-spacing:3px; text-transform:uppercase; color:#A77AC7;">
+      CROOKSLDN &middot; THE FIRST DROP IS LIVE
+    </td>
+  </tr>
+
+  <!-- ── the offer ──────────────────────────────────────────
+    >>> CHANGE 1 of 2: the code below.
+  -->
+  <tr>
+    <td class="crk-pad" style="padding:26px 24px 0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#542578"
+             style="background-color:#542578; border:1px solid #A77AC7;">
+        <tr>
+          <td align="center" style="padding:24px 16px 0 16px; font-family:'Courier New',Courier,monospace; font-weight:bold; font-size:30px; line-height:1.18; letter-spacing:1px; color:#FFFFFF;">
+            10% OFF YOUR<br>FIRST ORDER
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:16px 16px 4px 16px; font-family:'Courier New',Courier,monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:#DDD7C9;">
+            WITH THE CODE
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:0 16px 24px 16px; font-family:'Courier New',Courier,monospace; font-weight:bold; font-size:34px; letter-spacing:6px; color:#FFFFFF;">
+            CROOKS10
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── the button ─────────────────────────────────────────
+    >>> CHANGE 2 of 2: the code inside this link. /discount/CODE applies it and
+    lands them on the catalogue in one step, so there is nothing to type. The
+    same link is on the hero image above and the second button below — change
+    the code in all of them (search and replace is easiest).
+
+    Bone on black, not purple: the purple block above is already the loudest
+    thing on the page, and a purple button beside it would compete rather than
+    lead. This is the only pale block in the email, so the eye lands on it.
+  -->
+  <tr>
+    <td class="crk-pad" style="padding:16px 24px 0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td bgcolor="#DDD7C9" align="center" style="background-color:#DDD7C9;">
+            <a href="https://crooksldn.com/discount/CROOKS10?redirect=/collections/all"
+               style="display:block; padding:22px 20px; font-family:'Courier New',Courier,monospace; font-weight:bold; font-size:17px; letter-spacing:3px; text-transform:uppercase; color:#0B0A0E; text-decoration:none;">
+              SHOP THE DROP &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" class="crk-pad" style="padding:12px 24px 0 24px; font-family:'Courier New',Courier,monospace; font-size:12px; line-height:1.7; color:#8A8377;">
+      Code applied for you &middot; Free UK delivery over &pound;30
+    </td>
+  </tr>
+
+  <!-- ── three pieces ───────────────────────────────────────── -->
+  <tr>
+    <td class="crk-pad" style="padding:38px 24px 0 24px; font-family:'Courier New',Courier,monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:#8A8377; border-bottom:1px solid #3A2F4A; padding-bottom:10px;">
+      A FEW OF THEM
+    </td>
+  </tr>
+
+  <!-- MONEY CLIVE TEE -->
+  <tr>
+    <td class="crk-pad" style="padding:0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="160" valign="top" style="padding:18px 16px 18px 0;">
+            <a href="https://crooksldn.com/products/evil-clive-tee">
+              <img class="crk-thumb" src="https://cdn.shopify.com/s/files/1/1004/1078/6135/files/5dfb353c-2a5a-49cc-8935-bef883e307b4_webp_76d91566-7c17-435d-b8f5-902fa96f7ef1.png?v=1786198507&width=320"
+                   width="160" alt="MONEY CLIVE TEE" border="0"
+                   style="display:block; width:160px; height:auto; border:1px solid #3A2F4A; outline:none; color:#DDD7C9; font-family:'Courier New',Courier,monospace; font-size:11px;">
+            </a>
+          </td>
+          <td valign="middle" style="padding:18px 0; border-bottom:1px solid #3A2F4A; font-family:'Courier New',Courier,monospace;">
+            <a href="https://crooksldn.com/products/evil-clive-tee" style="font-size:14px; font-weight:bold; letter-spacing:1px; color:#DDD7C9; text-decoration:none;">MONEY CLIVE TEE</a>
+            <div style="padding-top:8px; font-size:16px; color:#DDD7C9;">&pound;25.00</div>
+            <div style="padding-top:6px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#A77AC7;">XS &ndash; XL &middot; BLACK OR WHITE</div>
+          
+            <div style="padding-top:12px;">
+              <a href="https://crooksldn.com/products/evil-clive-tee" style="font-family:'Courier New',Courier,monospace; font-size:11px; font-weight:bold; letter-spacing:3px; text-transform:uppercase; color:#A77AC7; text-decoration:none;">SHOP &rarr;</a>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CHARCOAL CELLBLOCK CREWNECK -->
+  <tr>
+    <td class="crk-pad" style="padding:0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="160" valign="top" style="padding:18px 16px 18px 0;">
+            <a href="https://crooksldn.com/products/charcoal-cellblock-crewneck">
+              <img class="crk-thumb" src="https://cdn.shopify.com/s/files/1/1004/1078/6135/files/cellcrew.webp?v=1785770354&width=320"
+                   width="160" alt="CHARCOAL CELLBLOCK CREWNECK" border="0"
+                   style="display:block; width:160px; height:auto; border:1px solid #3A2F4A; outline:none; color:#DDD7C9; font-family:'Courier New',Courier,monospace; font-size:11px;">
+            </a>
+          </td>
+          <td valign="middle" style="padding:18px 0; border-bottom:1px solid #3A2F4A; font-family:'Courier New',Courier,monospace;">
+            <a href="https://crooksldn.com/products/charcoal-cellblock-crewneck" style="font-size:14px; font-weight:bold; letter-spacing:1px; color:#DDD7C9; text-decoration:none;">CHARCOAL CELLBLOCK CREWNECK</a>
+            <div style="padding-top:8px; font-size:16px; color:#DDD7C9;">&pound;50.00</div>
+            <div style="padding-top:6px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#A77AC7;">XS &ndash; XL &middot; ALL SIZES IN</div>
+          
+            <div style="padding-top:12px;">
+              <a href="https://crooksldn.com/products/charcoal-cellblock-crewneck" style="font-family:'Courier New',Courier,monospace; font-size:11px; font-weight:bold; letter-spacing:3px; text-transform:uppercase; color:#A77AC7; text-decoration:none;">SHOP &rarr;</a>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- BLUE WASH YARD JEANS -->
+  <tr>
+    <td class="crk-pad" style="padding:0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="160" valign="top" style="padding:18px 16px 18px 0;">
+            <a href="https://crooksldn.com/products/cb2-wash-jeans">
+              <img class="crk-thumb" src="https://cdn.shopify.com/s/files/1/1004/1078/6135/files/crooksldn-blue-wash-baggy-jeans_e437f5a7-9985-48a7-8777-5744f970910a.png?v=1786194968&width=320"
+                   width="160" alt="BLUE WASH YARD JEANS" border="0"
+                   style="display:block; width:160px; height:auto; border:1px solid #3A2F4A; outline:none; color:#DDD7C9; font-family:'Courier New',Courier,monospace; font-size:11px;">
+            </a>
+          </td>
+          <td valign="middle" style="padding:18px 0; border-bottom:1px solid #3A2F4A; font-family:'Courier New',Courier,monospace;">
+            <a href="https://crooksldn.com/products/cb2-wash-jeans" style="font-size:14px; font-weight:bold; letter-spacing:1px; color:#DDD7C9; text-decoration:none;">BLUE WASH YARD JEANS</a>
+            <div style="padding-top:8px; font-size:16px; color:#DDD7C9;">&pound;60.00</div>
+            <div style="padding-top:6px; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#A77AC7;">XS &ndash; XL &middot; ALL SIZES IN</div>
+          
+            <div style="padding-top:12px;">
+              <a href="https://crooksldn.com/products/cb2-wash-jeans" style="font-family:'Courier New',Courier,monospace; font-size:11px; font-weight:bold; letter-spacing:3px; text-transform:uppercase; color:#A77AC7; text-decoration:none;">SHOP &rarr;</a>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── second button ──────────────────────────────────────
+    The same destination as the first. Anyone who scrolled the pieces has shown
+    interest and should not have to scroll back up to act on it.
+  -->
+  <tr>
+    <td class="crk-pad" style="padding:26px 24px 0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td bgcolor="#DDD7C9" align="center" style="background-color:#DDD7C9;">
+            <a href="https://crooksldn.com/discount/CROOKS10?redirect=/collections/all"
+               style="display:block; padding:20px; font-family:'Courier New',Courier,monospace; font-weight:bold; font-size:16px; letter-spacing:3px; text-transform:uppercase; color:#0B0A0E; text-decoration:none;">
+              SEE ALL 15 PIECES &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── the facts ──────────────────────────────────────────── -->
+  <tr>
+    <td class="crk-pad" style="padding:30px 24px 0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0E0C13"
+             style="background-color:#0E0C13; border:1px solid #3A2F4A;">
+        <tr>
+          <td style="padding:18px 18px 4px 18px; font-family:'Courier New',Courier,monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:#8A8377;">
+            THE PLAIN FACTS
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 18px 18px 18px; font-family:'Courier New',Courier,monospace; font-size:13px; line-height:1.85; color:#DDD7C9;">
+            Free UK delivery over &pound;30 &mdash; Tracked 48<br>
+            Free Tracked 24 over &pound;80<br>
+            Order by 18:00 and it goes out the same day<br>
+            14 days to change your mind<br>
+            Every order tracked, both ways
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── who you are buying from ────────────────────────────── -->
+  <tr>
+    <td class="crk-pad" style="padding:26px 24px 0 24px; font-family:'Courier New',Courier,monospace; font-size:12px; line-height:1.7; color:#8A8377;">
+      An independent streetwear label run out of London. Small runs, made
+      properly, packed by the same handful of people who answer the inbox.<br><br>
+      CROOKSLDN is a trading name of Crooks Clothing Company Ltd, registered in
+      England and Wales. Questions go to
+      <a href="mailto:crooksldn@gmail.com" style="color:#A77AC7; text-decoration:underline;">crooksldn@gmail.com</a>
+      and a person answers them.
+    </td>
+  </tr>
+
+  <!-- ── footer ─────────────────────────────────────────────── -->
+  <tr>
+    <td class="crk-pad" style="padding:30px 24px 40px 24px; border-top:1px solid #3A2F4A;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding-top:20px; font-family:'Courier New',Courier,monospace; font-size:11px; line-height:1.8; color:#8A8377;">
+            Oairo UK Office, Bourne End Business Park,<br>
+            Bourne End, Buckinghamshire, SL8 5AS, United Kingdom
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top:16px; font-family:'Courier New',Courier,monospace; font-size:11px; line-height:1.8; color:#8A8377;">
+            You are getting this because you asked to be told when CROOKSLDN opened.<br>
+            {{ unsubscribe_link }}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+</table>
+
+</td></tr>
+</table>
+
+{{ open_tracking_block }}
+
+</body>
+</html>
