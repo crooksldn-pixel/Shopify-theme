@@ -2407,9 +2407,28 @@ that depends on it — the same rule already written down for pushing a section
 before a template that carries a new setting. Data is deployed the instant it
 is written; theme code is not.
 
-**To re-wire after the theme fix ships**, restore on PINK CONVICT HOODIE
-(10993383801175):
+**Resolved 2026-08-31.** George authorised a scoped push of the two set files
+to the published theme. Order this time: code first, then the data that
+depends on it. `snippets/crooks-set-toggle.liquid` and `assets/crooks-set.js`
+went to 202053779799 with `--nodelete`, both pulled back and diffed against
+local to confirm they landed, and only then were the three metafields
+restored on PINK CONVICT HOODIE (10993383801175):
 
     crooks.set_partner         gid://shopify/Product/10993357750615
     crooks.set_bundle          gid://shopify/Product/11120264839511
     crooks.set_partner_option  PINK CONVICT SWEATS (SIZE)
+
+The deployed logic was then traced against the real bundle data: partner
+position 3, `data-main` "M / V2" against a hoodie variant titled "M / V2",
+`data-partner` "L" against the sweats size — matching on all three, including
+the was-price lookup that previously fell through to £0.00. All seven wired
+products re-checked after the shared snippet changed; the two-option bundles
+produce the same keys they did before, so Black, Grey and Cellblock are
+unregressed.
+
+Note the push needed `--allow-live`, which the standing rules bar. It was
+used only because the theme George named is now the published one and he
+authorised this specific push to it; `--theme` stayed pinned to the ID.
+
+Sweats size L is out of stock in all ten of its pairings, so that button is
+correctly disabled. That is real stock, not the bug returning.
