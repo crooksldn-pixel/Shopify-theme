@@ -2367,3 +2367,49 @@ Shipped: `email/crooksldn-launch.html`. Subject and from-name are set in
 Shopify Email, not in the file, so both are recorded in the file's header
 comment. The preview-text `<div>` after `<body>` was rewritten to complement
 the chosen subject rather than repeat it.
+
+---
+
+## Pink Set read sold out on every size — my error
+
+George: *"pink set is saying continuously sold out fix that"*
+
+Not stock. 40 of PINK SET's 50 variants were in stock at the time; only the
+ten sweats-L pairs were at zero.
+
+**What I did wrong.** I wrote the four set metafields to PINK CONVICT HOODIE
+while the theme fix that makes them work was still sitting undeployed in git.
+Data landed on the live store, code did not. The deployed snippet splits a
+bundle variant with a single `if crk_partner_pos == 1 / else` over
+option1/option2, which holds only while a bundle is two axes.
+
+PINK SET has three — the hoodie carries a V1/V2 variant as well as a size —
+and `set_partner_option` names the option at **position 3**. The old branch
+therefore read `bv.option2`, the *variant letter*, as the partner's size. So
+`data-partner` was V1/V2 while the size buttons offered XS–XL, `find()` could
+never match a pair, and `paint()` fell through to its sold-out branch for
+every combination. The struck-through "was" price rendered £0.00 for the same
+reason: `v.title` is "XS / V1" on a two-axis garment and never equalled the
+bare size the old code built.
+
+**What I did about it.** Deleted `set_partner`, `set_bundle` and
+`set_partner_option` from PINK CONVICT HOODIE, which removes the toggle and
+the false sold-out from the live page immediately, with no deploy needed.
+`set_short_name` stays — it is only a display name and harms nothing.
+
+Black and Grey are safe on the deployed code and were left wired: both are
+two-option bundles whose `set_partner_option` sits at position 1 or 2, which
+is exactly what the old branch handles, and both components' variant titles
+are bare sizes.
+
+**The order this should have gone in.** Schema and code first, then the data
+that depends on it — the same rule already written down for pushing a section
+before a template that carries a new setting. Data is deployed the instant it
+is written; theme code is not.
+
+**To re-wire after the theme fix ships**, restore on PINK CONVICT HOODIE
+(10993383801175):
+
+    crooks.set_partner         gid://shopify/Product/10993357750615
+    crooks.set_bundle          gid://shopify/Product/11120264839511
+    crooks.set_partner_option  PINK CONVICT SWEATS (SIZE)
