@@ -31,42 +31,36 @@
   if crk_partner and crk_bundle and crk_partner_option != blank and crk_bundle.available
     assign crk_set_ok = true
   endif
--%}
 
-{%- if crk_set_ok -%}
-  {%- liquid
-    assign crk_partner_name = crk_partner.metafields.crooks.set_short_name.value | default: crk_partner.title
-
-    comment
-      Which of this product's options carries the size, so the toggle can follow
-      the shopper's main selection.
-    endcomment
-    assign crk_size_index = 0
-    for opt in product.options_with_values
-      assign crk_opt_name = opt.name | downcase
-      if crk_opt_name contains 'size'
-        assign crk_size_index = forloop.index0
-        break
-      endif
-    endfor
-
-    comment
-      Position of the partner's size within the bundle's options, read from the
-      metafield rather than inferred from option names.
-    endcomment
-    assign crk_partner_pos = 0
+  comment
+    Position of the partner's size within the bundle's options, read from the
+    metafield rather than inferred from option names. Zero means set_partner_option
+    does not name any option on the bundle — a typo, or an option renamed in
+    admin. Rather than render a toggle that quietly pairs the wrong sizes, the
+    whole panel stands down and the page sells the single garment.
+  endcomment
+  assign crk_partner_pos = 0
+  if crk_set_ok
     for opt in crk_bundle.options_with_values
       if opt.name == crk_partner_option
         assign crk_partner_pos = forloop.index
         break
       endif
     endfor
+    if crk_partner_pos == 0
+      assign crk_set_ok = false
+    endif
+  endif
+-%}
+
+{%- if crk_set_ok -%}
+  {%- liquid
+    assign crk_partner_name = crk_partner.metafields.crooks.set_short_name.value | default: crk_partner.title
   -%}
 
   <div
     class="crk-set"
     data-crk-set
-    data-crk-set-size-index="{{ crk_size_index }}"
     data-crk-set-cta="{{ section.settings.set_cta | escape }}"
     data-crk-set-sold="{{ section.settings.set_sold_text | replace: '[partner]', crk_partner_name | escape }}"
     data-crk-set-pick="{{ section.settings.set_pick_text | replace: '[partner]', crk_partner_name | escape }}"
@@ -137,13 +131,30 @@
     <ul class="crk-sr" data-crk-set-variants aria-hidden="true">
       {%- for bv in crk_bundle.variants -%}
         {%- liquid
-          if crk_partner_pos == 1
-            assign crk_bv_partner = bv.option1
-            assign crk_bv_main = bv.option2
-          else
-            assign crk_bv_partner = bv.option2
-            assign crk_bv_main = bv.option1
-          endif
+          comment
+            Split the bundle variant into the partner's size and everything
+            else. Written against bv.options rather than option1/option2
+            because a bundle is not always two axes: the Pink hoodie carries
+            a V1/V2 variant as well as a size, so its set has three options
+            and the old pair of assignments read the variant letter as the
+            partner's size.
+
+            What is left over, joined in the bundle's own option order, is
+            exactly the main product's variant title — "XS" for a one-option
+            garment, "XS / V1" for two — which is what the match below and
+            the JS both key on.
+          endcomment
+          assign crk_bv_partner = ''
+          assign crk_bv_main = ''
+          for crk_ov in bv.options
+            if forloop.index == crk_partner_pos
+              assign crk_bv_partner = crk_ov
+            elsif crk_bv_main == ''
+              assign crk_bv_main = crk_ov
+            else
+              assign crk_bv_main = crk_bv_main | append: ' / ' | append: crk_ov
+            endif
+          endfor
 
           assign crk_main_v = null
           for v in product.variants

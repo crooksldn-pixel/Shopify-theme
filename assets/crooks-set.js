@@ -28,7 +28,6 @@
   var nowEl = set.querySelector('[data-crk-set-now]');
   if (!check || !panel) return;
 
-  var SIZE_INDEX = parseInt(set.getAttribute('data-crk-set-size-index'), 10) || 0;
   var SOLD_TPL = set.getAttribute('data-crk-set-sold') || '';
   var PICK_TPL = set.getAttribute('data-crk-set-pick') || '';
   var MAIN_TPL = set.getAttribute('data-crk-set-main-first') || 'Pick your size first';
@@ -133,7 +132,22 @@
   /* crooks-record.js calls this after it has settled the normal buy state, so
      the set has the last word without racing it. */
   root._crkAfterRender = function (state) {
-    var nextMain = state.selected[SIZE_INDEX] || null;
+    /* The main key is every one of this product's chosen option values,
+       joined the way Shopify titles a variant. A one-option garment gives
+       "XS"; the Pink hoodie, which has a V1/V2 axis as well as a size,
+       gives "XS / V1". Reading a single size option instead matched the
+       wrong bundle variant on any garment with more than one axis. Null
+       until every axis has been chosen — a half-built key matches nothing
+       and would report a false sold-out. */
+    var nextMain = null;
+    if (state.selected && state.selected.length) {
+      var parts = [];
+      for (var q = 0; q < state.selected.length; q++) {
+        if (!state.selected[q]) { parts = null; break; }
+        parts.push(state.selected[q]);
+      }
+      if (parts) nextMain = parts.join(' / ');
+    }
     if (nextMain !== mainSize) {
       mainSize = nextMain;
       paint();
