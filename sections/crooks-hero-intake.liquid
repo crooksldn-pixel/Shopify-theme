@@ -30,7 +30,21 @@
     {%- endif -%}
 
     <div class="crk-hero__type">
-      {%- assign crk_count = collections[section.settings.collection].products_count -%}
+      {%- liquid
+            comment
+              products_count includes the sets, which are a buying mechanism and never
+              appear in the grid, so the headline would promise four pieces that are
+              not there. Counted instead, skipping anything carrying
+              crooks.set_components.
+            endcomment
+            assign crk_col_count = collections[section.settings.collection]
+            assign crk_count = 0
+            for crk_cp in crk_col_count.products
+              unless crk_cp.metafields.crooks.set_components
+                assign crk_count = crk_count | plus: 1
+              endunless
+            endfor
+          -%}
       {%- if section.blocks.size > 0 -%}
         <div class="crk-boot">
           {%- for block in section.blocks -%}

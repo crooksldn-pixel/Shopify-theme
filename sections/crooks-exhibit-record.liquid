@@ -633,6 +633,9 @@
         assign related = ''
         assign related_n = 0
         for p in crk_col.products
+          if p.metafields.crooks.set_components
+            continue
+          endif
           if p.id != product.id and p.type == product.type and related_n < 4
             assign related = related | append: p.handle | append: '|'
             assign related_n = related_n | plus: 1

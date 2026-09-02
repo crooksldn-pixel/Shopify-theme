@@ -28,15 +28,27 @@
     assign crk_products = search.results
   endif
 
-  assign crk_total = crk_products.size
-  if crk_is_search
-    assign crk_total = 0
-    for item in crk_products
-      if item.object_type == 'product'
-        assign crk_total = crk_total | plus: 1
-      endif
-    endfor
-  endif
+  comment
+    Sets are a buying mechanism, not a product anyone should meet. They exist so
+    "complete the set" can post one line to the cart with both garments on it,
+    and they carry crooks.set_components to say so. Every loop below skips them,
+    and the total is counted rather than taken from .size so the header cannot
+    promise more pieces than the grid shows.
+
+    They stay published to the Online Store on purpose: an unpublished product's
+    variant cannot be added to the cart, so hiding them that way would break the
+    toggle they exist for.
+  endcomment
+  assign crk_total = 0
+  for item in crk_products
+    if crk_is_search and item.object_type != 'product'
+      continue
+    endif
+    if item.metafields.crooks.set_components
+      continue
+    endif
+    assign crk_total = crk_total | plus: 1
+  endfor
 
   comment
     On a collection page the collection's own title is the honest heading. The
@@ -64,6 +76,9 @@
   endcomment
   assign crk_seen = '|'
   for product in crk_products
+    if product.metafields.crooks.set_components
+      continue
+    endif
     assign crk_type = product.type | upcase
     if crk_type != blank
       assign crk_probe = '|' | append: crk_type | append: '|'
@@ -240,6 +255,9 @@
             have the fields a card renders.
           endcomment
           if crk_is_search and product.object_type != 'product'
+            continue
+          endif
+          if product.metafields.crooks.set_components
             continue
           endif
 
@@ -516,8 +534,9 @@ comment
       "itemListElement": [
         {%- assign crk_pos = 0 -%}
         {%- for product in crk_products limit: 30 -%}
+          {%- if product.metafields.crooks.set_components -%}{%- continue -%}{%- endif -%}
           {%- assign crk_pos = crk_pos | plus: 1 -%}
-          {%- unless forloop.first -%},{%- endunless -%}
+          {%- if crk_pos > 1 -%},{%- endif -%}
           {
             "@type": "ListItem",
             "position": {{ crk_pos }},
