@@ -1,5 +1,6 @@
 {{ 'crooks.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'crooks-terminal.js' | asset_url }}" defer></script>
+<script src="{{ 'crooks-quickadd.js' | asset_url }}" defer></script>
 
 {%- liquid
   comment
@@ -388,54 +389,109 @@ comment
             assign model_cls = model_cls | append: ' crk-product-image'
           endunless
         -%}
+        {%- liquid
+          comment
+            QUICK ADD data. The size option is whichever option is actually
+            named like a size — this catalogue spells colour two ways already,
+            so nothing is assumed about position or spelling. Values render in
+            Shopify's own order, which is the merchant's order and is already
+            XS-S-M-L-XL; re-sorting here would break the first product that
+            sells a size this theme has never heard of.
+          endcomment
+          assign crk_qa_opt = null
+          assign crk_qa_pos = 0
+          for opt in product.options_with_values
+            assign crk_nm2 = opt.name | downcase
+            if crk_nm2 contains 'size'
+              assign crk_qa_opt = opt
+              assign crk_qa_pos = forloop.index
+              break
+            endif
+          endfor
+
+          comment
+            A product with one option resolves a size straight to a variant. One
+            with two — size AND colour — does not: picking M on a tee sold in
+            black and white names two variants, and guessing which the shopper
+            meant is how a quick add posts the wrong garment. Those cards send
+            the shopper to the product page instead, with the size already
+            chosen. The button says so rather than pretending.
+          endcomment
+          assign crk_qa_axes = product.options_with_values.size
+
+          comment
+            The whole-product fallback for a piece with no size at all: socks
+            are sold by Quantity, a balaclava is one size. Those quick add the
+            first buyable variant, because there is no second decision to make.
+          endcomment
+          assign crk_qa_solo = null
+          unless crk_qa_opt
+            for v in product.variants
+              if v.available
+                assign crk_qa_solo = v
+                break
+              endif
+            endfor
+          endunless
+        -%}
         <li class="crk-log__cell" data-crk-category="{{ crk_cat | escape }}"{% if crk_model %} data-crk-has-model="{% if crk_model_is_real %}real{% else %}placeholder{% endif %}"{% endif %}>
-          <a
+          <div
             class="crk-card{% if crk_alt %} crk-card--swap{% endif %}{% unless product.available %} crk-card--sold{% endunless %}"
-            href="{{ product.url }}"
+            data-crk-qa
+            data-crk-qa-url="{{ product.url }}"
+            data-crk-qa-title="{{ product.title | escape }}"
           >
-            <span class="crk-card__top crk-micro">
-              <span>{{ section.settings.exhibit_prefix }} {% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}</span>
-              <span>{{ crk_cat }}</span>
-            </span>
-            <span class="crk-card__media">
-              {%- if crk_main -%}
-                {{
-                  crk_main
-                  | image_url: width: 800
-                  | image_tag:
-                    loading: 'lazy',
-                    widths: '200, 300, 400, 600, 800',
-                    sizes: '(min-width: 1024px) 25vw, 50vw',
-                    class: main_cls,
-                    alt: crk_main.alt
-                }}
-              {%- endif -%}
-              {%- if crk_alt -%}
-                {{
-                  crk_alt
-                  | image_url: width: 800
-                  | image_tag:
-                    loading: 'lazy',
-                    widths: '200, 300, 400, 600, 800',
-                    sizes: '(min-width: 1024px) 25vw, 50vw',
-                    class: alt_cls,
-                    alt: ''
-                }}
-              {%- endif -%}
-              {%- if crk_model -%}
-                {{
-                  crk_model
-                  | image_url: width: 800
-                  | image_tag:
-                    loading: 'lazy',
-                    widths: '200, 300, 400, 600, 800',
-                    sizes: '(min-width: 1024px) 25vw, 50vw',
-                    class: model_cls,
-                    alt: ''
-                }}
-              {%- endif -%}
-            </span>
-            <span class="crk-card__name">{% render 'crooks-title', product: product %}</span>
+            {%- comment -%}
+              The image links to the product, but it is the same destination as
+              the name directly beneath it. Two links to one place is noise on a
+              screen reader and an extra tab stop for a keyboard, so this one is
+              taken out of the tree and the name carries the accessible link.
+            {%- endcomment -%}
+            <a class="crk-card__medialink" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+              <span class="crk-card__media">
+                {%- if crk_main -%}
+                  {{
+                    crk_main
+                    | image_url: width: 800
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '200, 300, 400, 600, 800',
+                      sizes: '(min-width: 1024px) 25vw, 50vw',
+                      class: main_cls,
+                      alt: crk_main.alt
+                  }}
+                {%- endif -%}
+                {%- if crk_alt -%}
+                  {{
+                    crk_alt
+                    | image_url: width: 800
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '200, 300, 400, 600, 800',
+                      sizes: '(min-width: 1024px) 25vw, 50vw',
+                      class: alt_cls,
+                      alt: ''
+                  }}
+                {%- endif -%}
+                {%- if crk_model -%}
+                  {{
+                    crk_model
+                    | image_url: width: 800
+                    | image_tag:
+                      loading: 'lazy',
+                      widths: '200, 300, 400, 600, 800',
+                      sizes: '(min-width: 1024px) 25vw, 50vw',
+                      class: model_cls,
+                      alt: ''
+                  }}
+                {%- endif -%}
+              </span>
+            </a>
+
+            <a class="crk-card__namelink" href="{{ product.url }}">
+              <span class="crk-card__name">{% render 'crooks-title', product: product %}</span>
+            </a>
+
             {%- if crk_sw -%}
               {%- capture crk_sw_names -%}
                 {%- for val in crk_sw.values -%}
@@ -462,30 +518,112 @@ comment
               </span>
               <span class="crk-sr">{{ section.settings.colourways_sr_label }}: {{ crk_sw_names | strip }}</span>
             {%- endif -%}
-            <span class="crk-card__row">
-              <span class="crk-price">{{ product.price | money }}</span>
-              {%- comment -%}
-                KEEP.md §7 asks for the filing date as "an addition to the
-                format, not a replacement of it". It was built as a replacement:
-                an in-stock product inside the window rendered FILED 03.08
-                INSTEAD OF its availability, so new arrivals read as sold out —
-                the opposite of what the slot is for. Stock status is now always
-                present and the date sits below it, de-emphasised.
-              {%- endcomment -%}
-              {%- render 'crooks-sizes-left',
-                product: product,
-                class: 'crk-card__status',
-                sizes_left_label: section.settings.sizes_left_label,
-                low_threshold: section.settings.low_stock_threshold,
-                low_label: section.settings.low_stock_label,
-                sold_label: section.settings.sold_out_label,
-                available_label: section.settings.available_label
+
+            <p class="crk-card__price">
+              {%- liquid
+                comment
+                  Formatted into variables first: chaining money inside the output
+                  tag is the precedence trap this codebase has hit repeatedly.
+                endcomment
+                assign crk_now_money = product.price | money
+                assign crk_was_money = product.compare_at_price | money
               -%}
-            </span>
+              <span class="crk-price">{{ crk_now_money }}</span>
+              {%- if product.compare_at_price > product.price -%}
+                <s class="crk-card__was">{{ crk_was_money }}</s>
+              {%- endif -%}
+            </p>
+
             {%- if crk_filed and product.available and section.settings.filed_label != blank -%}
               <span class="crk-card__dropped">{{ section.settings.filed_label | replace: '[date]', crk_filed_on }}</span>
             {%- endif -%}
-          </a>
+
+            {%- if crk_qa_opt -%}
+              <div
+                class="crk-card__sizes"
+                role="group"
+                aria-label="{{ section.settings.qa_sizes_label | replace: '[product]', product.title | escape }}"
+              >
+                {%- for val in crk_qa_opt.values -%}
+                  {%- liquid
+                    assign crk_v_name = val.name | default: val
+
+                    comment
+                      How many buyable variants wear this size, and which is the
+                      first. One means the size names a variant outright. More
+                      than one means a second choice is still open.
+                    endcomment
+                    assign crk_v_count = 0
+                    assign crk_v_id = ''
+                    for v in product.variants
+                      unless v.available
+                        continue
+                      endunless
+                      case crk_qa_pos
+                        when 1
+                          assign crk_vv2 = v.option1
+                        when 2
+                          assign crk_vv2 = v.option2
+                        else
+                          assign crk_vv2 = v.option3
+                      endcase
+                      if crk_vv2 == crk_v_name
+                        assign crk_v_count = crk_v_count | plus: 1
+                        if crk_v_id == ''
+                          assign crk_v_id = v.id
+                        endif
+                      endif
+                    endfor
+                  -%}
+                  <button
+                    type="button"
+                    class="crk-card__size"
+                    data-crk-qa-size="{{ crk_v_name | escape }}"
+                    {%- if crk_v_count == 1 %} data-crk-qa-variant="{{ crk_v_id }}"{% endif -%}
+                    {%- if crk_v_count > 1 %} data-crk-qa-choose="true"{% endif -%}
+                    {%- if crk_v_count == 0 %} aria-disabled="true"{% endif -%}
+                    aria-pressed="false"
+                  >{{ crk_v_name }}{%- if crk_v_count == 0 -%}<span class="crk-sr"> {{ section.settings.qa_sold_sr }}</span>{%- endif -%}</button>
+                {%- endfor -%}
+              </div>
+            {%- endif -%}
+
+            {%- comment -%}
+              The button starts as a real disabled control rather than an armed
+              one that fails on click. crooks-quickadd.js relabels it the moment
+              a size is chosen. Without that file it stays disabled and the card
+              is still a working link to the product page.
+            {%- endcomment -%}
+            {%- liquid
+              assign crk_qa_state = 'need-size'
+              assign crk_qa_text = section.settings.qa_select_label
+              unless product.available
+                assign crk_qa_state = 'sold'
+                assign crk_qa_text = section.settings.qa_sold_label
+              endunless
+              if product.available and crk_qa_opt == null
+                assign crk_qa_state = 'ready'
+                assign crk_qa_text = section.settings.qa_add_label
+              endif
+            -%}
+            <button
+              type="button"
+              class="crk-card__qa"
+              data-crk-qa-btn
+              data-crk-qa-state="{{ crk_qa_state }}"
+              {%- if crk_qa_solo %} data-crk-qa-variant="{{ crk_qa_solo.id }}"{% endif -%}
+              {%- if crk_qa_axes > 1 %} data-crk-qa-multi="true"{% endif -%}
+              data-crk-qa-add="{{ section.settings.qa_add_label | escape }}"
+              data-crk-qa-select="{{ section.settings.qa_select_label | escape }}"
+              data-crk-qa-choose="{{ section.settings.qa_choose_label | escape }}"
+              data-crk-qa-busy="{{ section.settings.qa_busy_label | escape }}"
+              data-crk-qa-done="{{ section.settings.qa_done_label | escape }}"
+              data-crk-qa-error="{{ section.settings.qa_error_label | escape }}"
+              {%- unless product.available %} disabled{% endunless -%}
+            >{{ crk_qa_text }}</button>
+
+            <p class="crk-card__qamsg" data-crk-qa-msg role="status" aria-live="polite" hidden></p>
+          </div>
         </li>
       {%- endfor -%}
     </ul>
@@ -600,6 +738,18 @@ comment
     { "type": "text", "id": "colour_option_names", "label": "Option names treated as colourways", "info": "Comma separated. Matched case-insensitively.", "default": "Colour,Color,Colourway,Colorway" },
     { "type": "text", "id": "colourways_sr_label", "label": "Colourways label (screen readers)", "default": "Colourways" },
     { "type": "text", "id": "available_label", "label": "Available label", "default": "AVAILABLE" },
+
+    { "type": "header", "content": "Quick add" },
+    { "type": "paragraph", "content": "Every label is a setting. Sizes come from the product's own size option and render in Shopify's order, so nothing here needs touching when a product is added." },
+    { "type": "text", "id": "qa_sizes_label", "label": "Size group label (screen readers)", "info": "[product] is replaced with the product name, so each card's size buttons say which garment they belong to.", "default": "Size, [product]" },
+    { "type": "text", "id": "qa_select_label", "label": "Before a size is chosen", "default": "SELECT SIZE" },
+    { "type": "text", "id": "qa_add_label", "label": "Ready to add", "default": "QUICK ADD" },
+    { "type": "text", "id": "qa_choose_label", "label": "When a second choice is open", "info": "Shown on products sold in more than one colourway, where a size alone does not name a variant. The button opens the product page instead of guessing.", "default": "CHOOSE COLOUR" },
+    { "type": "text", "id": "qa_busy_label", "label": "While adding", "default": "ADDING\u2026" },
+    { "type": "text", "id": "qa_done_label", "label": "Added", "default": "ADDED TO BAG" },
+    { "type": "text", "id": "qa_error_label", "label": "If the add fails", "default": "COULD NOT ADD" },
+    { "type": "text", "id": "qa_sold_label", "label": "Sold out", "default": "SOLD OUT" },
+    { "type": "text", "id": "qa_sold_sr", "label": "Sold-out size, screen readers", "info": "Read after the size name, so a strike-through is not the only way to know.", "default": "sold out" },
     { "type": "text", "id": "low_stock_label", "label": "Low stock label", "default": "LOW STOCK" },
     { "type": "text", "id": "sizes_left_label", "label": "Some sizes gone label", "info": "Shown when a piece is still buyable but not in every size. [n] is how many sizes are left, [m] how many there are. Leave blank to show the available label instead.", "default": "[n] OF [m] SIZES LEFT" },
     { "type": "range", "id": "low_stock_threshold", "label": "Low stock at or below", "unit": "u", "min": 0, "max": 20, "step": 1, "default": 3 },

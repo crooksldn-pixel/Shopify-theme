@@ -1674,3 +1674,204 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
    no way to tell the hoodie from the joggers. */
 .crk-measure-piece { margin: 20px 0 8px; color: var(--crk-lav) }
 .crk-measure-piece:first-of-type { margin-top: 8px }
+
+/* ===================================================================
+   CATALOGUE CARD — quick add layout
+   ===================================================================
+   Scoped to .crk-log__grid so nothing here reaches the product page,
+   the related rail or the cart. Tokens only: no new colours.
+
+   The card used to be a single <a> wrapping everything, which is why
+   it could not carry buttons — an anchor may not contain one, and a
+   click on a size would have navigated instead of choosing. It is now
+   a flex column with two links inside it, which also gives every card
+   the same height regardless of how long its name runs.
+   =================================================================== */
+
+.crk-log__grid .crk-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  border: 1px solid transparent;
+}
+
+.crk-card__medialink { display: block }
+
+/* The purple cast behind the image. Black garments on a black ground
+   were reading as silhouettes; this lifts them without touching the
+   photograph itself. Inset so the glow sits under the garment rather
+   than ringing the card edge. */
+.crk-log__grid .crk-card__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  margin: 0 0 10px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 78% 62% at 50% 52%,
+      color-mix(in srgb, var(--crk-purple) 62%, transparent) 0%,
+      color-mix(in srgb, var(--crk-purple) 22%, transparent) 55%,
+      transparent 78%),
+    var(--crk-panel);
+}
+/* color-mix is recent. Anything without it still gets a flat purple
+   panel, which is the point of the treatment — just less soft. */
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .crk-log__grid .crk-card__media { background: var(--crk-panel) }
+}
+
+.crk-card__namelink { display: block; color: inherit }
+.crk-log__grid .crk-card__name {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  min-height: 2.7em;          /* two lines, so prices sit on one baseline */
+  overflow-wrap: anywhere;
+}
+.crk-card__namelink:hover .crk-card__name { color: var(--crk-lav) }
+
+.crk-card__price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 10px;
+  flex-wrap: wrap;
+}
+.crk-log__grid .crk-price { font-size: 17px; line-height: 1 }
+.crk-card__was { font-size: 12px; color: var(--crk-micro) }
+
+/* Sizes. margin-top:auto pins this and the button to the bottom of the
+   card, so a one-line name and a three-line name still line up. */
+.crk-card__sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: auto 0 10px;
+  border: 1px solid var(--crk-line);
+}
+.crk-root button.crk-card__size {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 2px;
+  border: 0;
+  border-right: 1px solid var(--crk-line);
+  background: none;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--crk-text);
+  cursor: pointer;
+}
+.crk-root button.crk-card__size:last-child { border-right: 0 }
+.crk-root button.crk-card__size:hover { background: var(--crk-press) }
+.crk-root button.crk-card__size[aria-pressed="true"] {
+  background: var(--crk-purple);
+  color: var(--crk-onpurple);
+}
+/* Sold out stays legible and stays in the tab order — it is information,
+   not clutter. The strike is backed up by text for screen readers. */
+.crk-root button.crk-card__size[aria-disabled="true"] {
+  color: var(--crk-micro);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.crk-root button.crk-card__size[aria-disabled="true"]:hover { background: none }
+
+/* Quick add. Named with the element so Horizon's base stylesheet, which
+   loads after this file and styles bare `button`, cannot win. */
+.crk-root button.crk-card__qa {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--crk-purple);
+  background: var(--crk-purple);
+  color: var(--crk-onpurple);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.crk-root button.crk-card__qa:hover { border-color: var(--crk-lav) }
+.crk-root button.crk-card__qa[data-crk-qa-state="need-size"],
+.crk-root button.crk-card__qa:disabled {
+  background: none;
+  border-color: var(--crk-line);
+  color: var(--crk-dim);
+  cursor: default;
+}
+.crk-root button.crk-card__qa[data-crk-qa-state="busy"] { opacity: .7; cursor: wait }
+.crk-root button.crk-card__qa[data-crk-qa-state="done"] {
+  background: none;
+  border-color: var(--crk-lav);
+  color: var(--crk-lav);
+}
+
+.crk-card__qamsg {
+  margin: 6px 0 0;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--crk-lav);
+  overflow-wrap: anywhere;
+}
+.crk-card__qamsg[data-crk-qa-out="true"] { color: var(--crk-red) }
+
+/* Compact head and filters: the mockup's brief is that products should
+   arrive sooner. Title left, live count right, on one line. */
+.crk-exhibit-log .crk-log__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+  margin-bottom: 12px;
+}
+.crk-exhibit-log .crk-log__head .crk-h2 { font-size: 26px }
+.crk-exhibit-log .crk-log__count { margin-left: 0; flex: none; white-space: nowrap }
+.crk-exhibit-log .crk-filters { gap: 6px; margin-bottom: 14px }
+.crk-exhibit-log .crk-filter {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 10px;
+  letter-spacing: .16em;
+}
+.crk-exhibit-log .crk-filter[aria-pressed="true"]::before { content: none }
+
+@media (min-width: 768px) {
+  .crk-exhibit-log .crk-log__head .crk-h2 { font-size: 36px }
+  .crk-log__grid .crk-card__name { font-size: 12px }
+  .crk-log__grid .crk-price { font-size: 19px }
+}
+
+/* Very narrow phones: tighten rather than collapse. At 320px five size
+   buttons across two columns is the tightest thing on the page. */
+@media (max-width: 359px) {
+  .crk-log__grid .crk-card { padding: 8px }
+  .crk-exhibit-log .crk-log__head .crk-h2 { font-size: 21px }
+  .crk-log__grid .crk-card__name { font-size: 10px; letter-spacing: .04em }
+  .crk-log__grid .crk-price { font-size: 15px }
+  .crk-root button.crk-card__size { font-size: 9px; min-height: 32px }
+  .crk-root button.crk-card__qa { font-size: 9px; letter-spacing: .1em }
+  .crk-exhibit-log .crk-filter { padding: 0 10px; letter-spacing: .1em }
+}
+
+/* Bottom-align the buy controls so every card's button sits on the same
+   line regardless of how many lines its name ran to. The size row takes
+   the free space when there is one; a product with no sizes — socks, a
+   one-size piece — hands it to the button instead. */
+.crk-log__grid .crk-card__qa { margin-top: auto }
+.crk-card__sizes + .crk-card__qa { margin-top: 0 }
+
+/* The filters rail carries a sticky 1px fade to signal it scrolls. With
+   four compact controls it no longer does at any width this grid uses,
+   and the fade rendered as a stray rule after TEES. */
+.crk-exhibit-log .crk-filters::after { content: none }
