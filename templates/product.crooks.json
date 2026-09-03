@@ -48,7 +48,7 @@
         "exhibit_word": "PRODUCT",
         "case_word": "CASE",
         "show_texture": true,
-        "photo_label": "Photo [i] of [n]",
+        "photo_label": "[i] / [n]",
         "gallery_label": "Evidence photographs",
         "low_stock_threshold": 3,
         "spec_open": false,

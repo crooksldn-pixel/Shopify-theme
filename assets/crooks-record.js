@@ -224,8 +224,22 @@
       });
     }
 
+    /* [price] in a button label is filled from the variant currently
+       resolved, using the string Liquid already formatted through `money` —
+       so presentment currency and geo conversion stay Shopify's job and no
+       currency is ever assembled here. With no variant resolved the token and
+       the dash before it are dropped rather than left showing. */
+    function withPrice(label) {
+      if (label.indexOf('[price]') === -1) return label;
+      var el = root.querySelector('[data-crk-price]');
+      var p = el ? el.textContent.trim() : '';
+      if (!p) return label.replace(/\s*[\u2014-]\s*\[price\]/, '').replace('[price]', '').trim();
+      return label.replace('[price]', p);
+    }
+
     function setBuy(label, disabled) {
       if (!buyBtn) return;
+      label = withPrice(label);
       buyBtn.textContent = label;
       buyBtn.disabled = !!disabled;
       var sticky = root.querySelector('[data-crk-sticky-add]');
@@ -340,16 +354,86 @@
       return days.indexOf(tomorrow) !== -1 ? 'tomorrow' : 'nextopen';
     }
 
+    /* Minutes left before the cut-off, in the shop's timezone. Read from the
+       same Intl call as the state above rather than from Date arithmetic, so
+       a visitor in another timezone — or on a device with the wrong clock —
+       still sees London's remaining time, and a BST/GMT switch needs no code.
+       Recomputed from absolute time on every tick, so a refresh cannot make
+       the countdown jump or restart. */
+    function minutesToCutoff() {
+      if (!dispatchLine) return null;
+      var tz = dispatchLine.getAttribute('data-crk-tz') || 'Europe/London';
+      var cutoff = parseInt(dispatchLine.getAttribute('data-crk-cutoff'), 10);
+      if (isNaN(cutoff)) return null;
+      try {
+        var parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false
+        }).formatToParts(new Date());
+        var m = {};
+        for (var i = 0; i < parts.length; i++) m[parts[i].type] = parts[i].value;
+        var h = parseInt(m.hour, 10);
+        if (h === 24) h = 0;
+        var mins = parseInt(m.minute, 10);
+        if (isNaN(h) || isNaN(mins)) return null;
+        var left = (cutoff * 60) - (h * 60 + mins);
+        return left > 0 ? left : null;
+      } catch (e) { return null; }
+    }
+
+    function countdownText() {
+      var left = minutesToCutoff();
+      if (left == null) return null;
+      var h = Math.floor(left / 60), m = left % 60;
+      return h > 0 ? h + 'H ' + m + 'M' : m + 'M';
+    }
+
+    var dispatchTimer = null;
     function renderDispatch(soldChoice) {
       if (!dispatchLine) return;
+      if (dispatchTimer) { window.clearInterval(dispatchTimer); dispatchTimer = null; }
+
       var state = soldChoice ? null : dispatchState();
       if (!state) { dispatchLine.hidden = true; return; }
-      var key = { today: 'data-crk-today', tomorrow: 'data-crk-tomorrow', nextopen: 'data-crk-nextopen' }[state];
-      var text = dispatchLine.getAttribute(key);
+
+      /* One state, one sentence. The old line could say "dispatched today"
+         while a second line said "leaves tomorrow"; there is now exactly one
+         source for the claim and the countdown belongs to the today state
+         alone. */
+      var text;
+      var cd = state === 'today' ? countdownText() : null;
+      var tpl = dispatchLine.getAttribute('data-crk-countdown');
+      if (cd && tpl) {
+        text = tpl.replace('[t]', cd);
+      } else {
+        var key = { today: 'data-crk-today', tomorrow: 'data-crk-tomorrow', nextopen: 'data-crk-nextopen' }[state];
+        text = dispatchLine.getAttribute(key);
+      }
       if (!text) { dispatchLine.hidden = true; return; }
-      dispatchLine.textContent = text;
+
+      var delivery = dispatchLine.getAttribute('data-crk-delivery');
+      dispatchLine.textContent = '';
+      var top = document.createElement('span');
+      top.className = 'crk-dispatch__line';
+      top.textContent = text;
+      dispatchLine.appendChild(top);
+      if (delivery) {
+        var sub = document.createElement('span');
+        sub.className = 'crk-dispatch__sub';
+        sub.textContent = delivery;
+        dispatchLine.appendChild(sub);
+      }
       dispatchLine.setAttribute('data-crk-dispatch-state', state);
       dispatchLine.hidden = false;
+
+      /* Tick the countdown once a minute. It is minutes-resolution copy, so a
+         per-second timer would burn wakeups to rewrite the same string. */
+      if (cd && tpl) {
+        dispatchTimer = window.setInterval(function () {
+          var next = countdownText();
+          if (!next) { renderDispatch(soldChoice); return; }
+          top.textContent = tpl.replace('[t]', next);
+        }, 30000);
+      }
     }
 
     function render() {
@@ -570,6 +654,7 @@
     /* ---- gallery ---- */
     var slides = root.querySelectorAll('[data-crk-slide]');
     var thumbs = root.querySelectorAll('[data-crk-thumb]');
+    var dots = root.querySelectorAll('[data-crk-dot]');
     var counter = root.querySelector('[data-crk-photo-counter]');
     var counterTpl = root.getAttribute('data-crk-photo-label') || 'Photo [i] of [n]';
     var idx = 0;
@@ -578,6 +663,7 @@
       idx = n;
       for (var s = 0; s < slides.length; s++) slides[s].hidden = s !== n;
       for (var t = 0; t < thumbs.length; t++) thumbs[t].setAttribute('data-active', t === n ? 'true' : 'false');
+      for (var d = 0; d < dots.length; d++) dots[d].setAttribute('data-active', d === n ? 'true' : 'false');
       if (counter) counter.textContent = counterTpl.replace('[i]', n + 1).replace('[n]', slides.length);
     }
     for (var t2 = 0; t2 < thumbs.length; t2++) {

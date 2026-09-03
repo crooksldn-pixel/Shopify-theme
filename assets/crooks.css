@@ -1875,3 +1875,132 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
    four compact controls it no longer does at any width this grid uses,
    and the fade rendered as a stray rule after TEES. */
 .crk-exhibit-log .crk-filters::after { content: none }
+
+/* ===================================================================
+   PRODUCT PAGE — header above the gallery, fit strip, reassurance
+   ===================================================================
+   Scoped under .crk-record, which is the product page only. Tokens
+   only: no colour is introduced that the palette does not already
+   define.
+   =================================================================== */
+
+/* Mobile order is source order: what it is, what it costs, then the
+   picture. On desktop the header moves into the right column above the
+   buy panel, so the two-column layout the page already had is kept. */
+.crk-record .crk-record__head { margin: 0 0 16px }
+.crk-record .crk-record__price { margin-top: 6px }
+
+.crk-record .crk-record__rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+.crk-record .crk-record__stars { color: var(--crk-accent); letter-spacing: .12em }
+.crk-record .crk-record__stars [data-crk-star-off="true"] { color: var(--crk-line) }
+.crk-record .crk-record__reviews { color: var(--crk-dim); text-transform: uppercase }
+
+.crk-record .crk-record__sub {
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--crk-dim);
+}
+
+/* Fit strip. One rule, no nested box — the brief asks for fewer
+   outlines, and this is a caption for the gallery above it. */
+.crk-record .crk-record__fit {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--crk-line);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--crk-dim);
+  overflow-wrap: anywhere;
+}
+
+/* Carousel dots, over the foot of the image so the gallery reads as one
+   object rather than growing a strip of chrome beneath it. */
+.crk-record .crk-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.crk-record .crk-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--crk-line);
+  transition: background .15s linear;
+}
+.crk-record .crk-dot[data-active="true"] { background: var(--crk-accent) }
+
+/* Thumbnails are desktop navigation. On a phone the dots and the swipe
+   already do that job, and the row was a second scrollable strip
+   competing with the gallery it belonged to. */
+@media (max-width: 959px) {
+  .crk-record .crk-thumbs { display: none }
+}
+
+/* Dispatch: one claim, one supporting line. Previously two sentences
+   could contradict each other; they are now one element with one state. */
+.crk-record .crk-dispatch__line { display: block }
+.crk-record .crk-dispatch__sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: .1em;
+  color: var(--crk-dim);
+  text-transform: uppercase;
+}
+
+/* Reassurance. Three facts, no boxes — restrained marks instead of
+   icon files, so nothing extra is fetched. */
+.crk-record .crk-reassure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.crk-record .crk-reassure li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--crk-dim);
+}
+.crk-record .crk-reassure__mark {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--crk-accent);
+}
+
+/* The sticky bar carries one action now, so it takes the full width. */
+.crk-record .crk-buybar__actions { grid-template-columns: 1fr }
+.crk-record .crk-stickybar {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 960px) {
+  /* Header into the right column above the panel; the gallery spans both
+     rows on the left. Same two columns as before — only the placement of
+     the header is new. */
+  .crk-record .crk-grid { grid-template-rows: auto minmax(0, 1fr) }
+  .crk-record .crk-record__head { grid-column: 2; grid-row: 1; margin-bottom: 0 }
+  .crk-record .crk-record__gallery { grid-column: 1; grid-row: 1 / span 2 }
+  .crk-record .crk-panel-record { grid-column: 2; grid-row: 2 }
+  .crk-record .crk-title { font-size: 40px }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crk-record .crk-dot { transition: none }
+}

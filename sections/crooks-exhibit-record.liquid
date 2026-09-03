@@ -135,8 +135,58 @@
     </header>
 
     <div class="crk-grid">
+      {%- comment -%}
+        ---------- product header ----------
+        Above the gallery in source order, which is the mobile order: a shopper
+        should know what this is and what it costs before scrolling a picture.
+        On desktop it moves into the right column above the buy panel via grid
+        placement, so the two-column layout is unchanged.
+
+        Every row here is gated on real data. The rating renders only when
+        Shopify's own reviews.rating and reviews.rating_count metafields carry
+        values — the ones a review app writes. No app, no reviews, no row.
+        Stars are never drawn from nothing.
+      {%- endcomment -%}
+      <header class="crk-record__head">
+        <h1 class="crk-display crk-title">{% render 'crooks-title', product: product %}</h1>
+        <div class="crk-display crk-price crk-record__price" data-crk-price>{{ crk_price_display }}</div>
+
+        {%- liquid
+          assign crk_rating = product.metafields.reviews.rating.value
+          assign crk_rating_n = product.metafields.reviews.rating_count
+          assign crk_has_rating = false
+          if crk_rating and crk_rating.rating and crk_rating_n and crk_rating_n > 0
+            assign crk_has_rating = true
+          endif
+        -%}
+        {%- if crk_has_rating -%}
+          {%- liquid
+            comment
+              Rounded to whole stars for the glyph row; the exact figure is in
+              the accessible text beside it, so nothing is overstated visually
+              without the real number being available.
+            endcomment
+            assign crk_stars = crk_rating.rating | round
+            assign crk_scale = crk_rating.scale_max | plus: 0
+          -%}
+          <p class="crk-record__rating">
+            <span class="crk-record__stars" aria-hidden="true">
+              {%- for i in (1..crk_scale) -%}
+                <span{% if i > crk_stars %} data-crk-star-off="true"{% endif %}>&#9733;</span>
+              {%- endfor -%}
+            </span>
+            <span class="crk-record__reviews">({{ crk_rating_n }} {{ section.settings.reviews_label }})</span>
+            <span class="crk-sr">{{ crk_rating.rating }} {{ section.settings.rating_sr }} {{ crk_rating.scale_max }}</span>
+          </p>
+        {%- endif -%}
+
+        {%- if product.metafields.crooks.subtitle != blank -%}
+          <p class="crk-record__sub">{{ product.metafields.crooks.subtitle }}</p>
+        {%- endif -%}
+      </header>
+
       {%- comment -%} ---------- gallery ---------- {%- endcomment -%}
-      <div>
+      <div class="crk-record__gallery">
         <div
           class="crk-tray crk-tray-main"
           role="group"
@@ -173,11 +223,25 @@
           {%- endfor -%}
         </div>
 
+        {%- comment -%}
+          Counter and dots sit over the foot of the image rather than under it,
+          so the gallery reads as one object and the fit strip below it is not
+          pushed down the screen. Both are decoration: the slides themselves
+          carry the alt text and the thumb buttons carry the accessible names.
+        {%- endcomment -%}
         <div class="crk-gallery-chrome">
           <span class="crk-counter" data-crk-photo-counter aria-hidden="true">
             {{ section.settings.photo_label | replace: '[i]', 1 | replace: '[n]', product.images.size }}
           </span>
         </div>
+
+        {%- if product.images.size > 1 -%}
+          <div class="crk-dots" aria-hidden="true">
+            {%- for image in product.images -%}
+              <span class="crk-dot" data-crk-dot data-active="{% if forloop.first %}true{% else %}false{% endif %}"></span>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
 
         {%- if product.images.size > 1 -%}
           <div class="crk-thumbs">
@@ -194,12 +258,45 @@
             {%- endfor -%}
           </div>
         {%- endif -%}
+
+        {%- comment -%}
+          Fit summary. Assembled from whichever of the three metafields are
+          filled in, so a product with only a fit reads "OVERSIZED FIT" and one
+          with none renders nothing at all rather than a strip of separators.
+        {%- endcomment -%}
+        {%- liquid
+          assign crk_fit = product.metafields.crooks.fit
+          assign crk_mh = product.metafields.crooks.model_height
+          assign crk_ms = product.metafields.crooks.model_size
+          assign crk_fit_parts = ''
+          if crk_fit != blank
+            assign crk_fit_parts = crk_fit
+          endif
+          assign crk_model_line = ''
+          if crk_mh != blank and crk_ms != blank
+            assign crk_model_line = section.settings.fit_model_template | replace: '[height]', crk_mh
+            assign crk_model_line = crk_model_line | replace: '[size]', crk_ms
+          endif
+          if crk_model_line != blank
+            if crk_fit_parts != blank
+              assign crk_fit_parts = crk_fit_parts | append: '  //  ' | append: crk_model_line
+            else
+              assign crk_fit_parts = crk_model_line
+            endif
+          endif
+        -%}
+        {%- if crk_fit_parts != blank -%}
+          <p class="crk-record__fit">{{ crk_fit_parts }}</p>
+        {%- endif -%}
       </div>
 
       {%- comment -%} ---------- record panel ---------- {%- endcomment -%}
       <div class="crk-panel crk-panel-record crk-panel-sticky">
-        <h1 class="crk-display crk-title">{% render 'crooks-title', product: product %}</h1>
-        <div class="crk-display crk-price" style="margin-top: 4px;" data-crk-price>{{ crk_price_display }}</div>
+        {%- comment -%}
+          The title and price now live in crk-record__head above the gallery.
+          data-crk-price moved with them; crooks-record.js repaints by attribute,
+          not by position, so variant changes still rewrite the right element.
+        {%- endcomment -%}
 
         {%- if product.available -%}
           {%- form 'product', product, id: 'crk-product-form' -%}
@@ -370,6 +467,8 @@
                   data-crk-today="{{ section.settings.dispatch_today | escape }}"
                   data-crk-tomorrow="{{ section.settings.dispatch_tomorrow | escape }}"
                   data-crk-nextopen="{{ section.settings.dispatch_next_open | escape }}"
+                  data-crk-countdown="{{ section.settings.dispatch_countdown | escape }}"
+                  data-crk-delivery="{{ section.settings.dispatch_delivery | escape }}"
                   hidden
                 ></p>
               {%- endif -%}
@@ -412,6 +511,39 @@
                 {{ section.settings.label_add }}
               {%- endif -%}
             </button>
+
+            {%- comment -%}
+              Reassurance strip. Three facts, each a setting, each matching a
+              policy that is already written on the terms page — the shipping
+              threshold, the dispatch cutoff and the returns window. Any row
+              left blank in the editor simply does not render, so this cannot
+              become a place where a promise outlives the policy behind it.
+            {%- endcomment -%}
+            {%- liquid
+              assign crk_reassure = 0
+              if section.settings.reassure_1 != blank
+                assign crk_reassure = crk_reassure | plus: 1
+              endif
+              if section.settings.reassure_2 != blank
+                assign crk_reassure = crk_reassure | plus: 1
+              endif
+              if section.settings.reassure_3 != blank
+                assign crk_reassure = crk_reassure | plus: 1
+              endif
+            -%}
+            {%- if crk_reassure > 0 -%}
+              <ul class="crk-reassure">
+                {%- if section.settings.reassure_1 != blank -%}
+                  <li><span class="crk-reassure__mark" aria-hidden="true"></span>{{ section.settings.reassure_1 }}</li>
+                {%- endif -%}
+                {%- if section.settings.reassure_2 != blank -%}
+                  <li><span class="crk-reassure__mark" aria-hidden="true"></span>{{ section.settings.reassure_2 }}</li>
+                {%- endif -%}
+                {%- if section.settings.reassure_3 != blank -%}
+                  <li><span class="crk-reassure__mark" aria-hidden="true"></span>{{ section.settings.reassure_3 }}</li>
+                {%- endif -%}
+              </ul>
+            {%- endif -%}
 
             {%- comment -%}
               Shopify's dynamic checkout. Its chrome is Shopify-owned and cannot be
@@ -699,9 +831,13 @@
         Its CHECKOUT NOW is therefore a theme button that adds and goes straight to
         checkout: same destination, different mechanism from the wallet row above.
       {%- endcomment -%}
+      {%- comment -%}
+        One action. CHECKOUT NOW was a second, competing button in a bar the
+        width of a phone; the brief asks for a single wide control and the
+        express lane still exists in the panel above.
+      {%- endcomment -%}
       <div class="crk-buybar__actions">
         <button type="button" class="crk-btn" data-crk-sticky-add>{{ section.settings.label_add }}</button>
-        <button type="button" class="crk-btn crk-btn--now" data-crk-sticky-now>{{ section.settings.label_checkout_now }}</button>
       </div>
     </div>
   {%- endif -%}
@@ -718,11 +854,11 @@
     { "type": "text", "id": "case_word", "label": "Case word", "default": "CASE" },
     { "type": "checkbox", "id": "show_texture", "label": "Show scanline texture", "default": true },
     { "type": "header", "content": "Gallery" },
-    { "type": "text", "id": "photo_label", "label": "Photo counter", "info": "Use [i] and [n].", "default": "Photo [i] of [n]" },
+    { "type": "text", "id": "photo_label", "label": "Photo counter", "info": "Use [i] and [n].", "default": "[i] / [n]" },
     { "type": "text", "id": "gallery_label", "label": "Gallery group label (screen readers)", "default": "Evidence photographs" },
     { "type": "header", "content": "Buying" },
     { "type": "text", "id": "size_group_label", "label": "Size group label (screen readers)", "default": "Select a size" },
-    { "type": "text", "id": "label_add", "label": "Add to bag", "default": "Add to bag" },
+    { "type": "text", "id": "label_add", "label": "Add to bag", "info": "[price] is replaced with the selected variant's price, formatted by Shopify in the shopper's currency. Remove the token and the button simply reads as written.", "default": "ADD TO BAG \u2014 [price]" },
     { "type": "text", "id": "label_checkout_now", "label": "Checkout now", "default": "Checkout now" },
     { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Shopify dynamic checkout (Shop Pay etc.)", "info": "Shopify-owned chrome; cannot be restyled.", "default": true },
     { "type": "text", "id": "label_added", "label": "Added confirmation", "info": "Use [n] for the bag count.", "default": "Added — [n] in bag" },
@@ -752,6 +888,8 @@
     { "type": "text", "id": "dispatch_timezone", "label": "Shop timezone", "info": "IANA name. The cutoff is judged in this zone, not the shopper's.", "default": "Europe/London" },
     { "type": "text", "id": "dispatch_today", "label": "Before cutoff, on a dispatch day", "default": "Ordered now \u2014 leaves today" },
     { "type": "text", "id": "dispatch_tomorrow", "label": "After cutoff, next day is a dispatch day", "default": "Ordered now \u2014 leaves tomorrow" },
+    { "type": "text", "id": "dispatch_countdown", "label": "Countdown line", "info": "Shown before the cut-off. [t] is replaced by the live time remaining, counted against the shop timezone below \u2014 never the visitor's device clock.", "default": "ORDER WITHIN [t] \u2014 DISPATCHED TODAY" },
+    { "type": "text", "id": "dispatch_delivery", "label": "Delivery estimate", "info": "Second line, shown in every state. Leave blank to hide it.", "default": "UK DELIVERY IN 1\u20133 WORKING DAYS" },
     { "type": "text", "id": "dispatch_next_open", "label": "Otherwise (closed tomorrow)", "default": "Ordered now \u2014 leaves Monday" },
     { "type": "header", "content": "Sold out" },
     { "type": "text", "id": "released_text", "label": "Released text", "default": "RELEASED — NO LONGER IN CUSTODY" },
@@ -762,6 +900,15 @@
     { "type": "text", "id": "notify_subject", "label": "Notify email subject", "default": "Restock request" },
     { "type": "text", "id": "notify_ok", "label": "Notify success", "default": "Logged. We will email you when this exhibit returns." },
     { "type": "text", "id": "notify_err", "label": "Notify error", "default": "Submission rejected — check the address." },
+    { "type": "header", "content": "Header, fit and reassurance" },
+    { "type": "paragraph", "content": "The rating row renders only when a review app has written Shopify's reviews.rating and reviews.rating_count metafields. With no reviews there is no row \u2014 stars are never drawn from nothing. Subtitle and fit come from crooks.subtitle, crooks.fit, crooks.model_height and crooks.model_size; any that are empty are skipped." },
+    { "type": "text", "id": "reviews_label", "label": "Reviews word", "default": "REVIEWS" },
+    { "type": "text", "id": "rating_sr", "label": "Rating, screen readers", "info": "Reads as \"4.8 out of 5\".", "default": "out of" },
+    { "type": "text", "id": "fit_model_template", "label": "Model line", "info": "[height] and [size] are replaced by the product's own metafields. Rendered only when both are filled in.", "default": "MODEL [height] WEARS [size]" },
+    { "type": "text", "id": "reassure_1", "label": "Reassurance 1", "default": "FREE UK DELIVERY" },
+    { "type": "text", "id": "reassure_2", "label": "Reassurance 2", "default": "SAME-DAY DISPATCH" },
+    { "type": "text", "id": "reassure_3", "label": "Reassurance 3", "default": "14-DAY RETURNS" },
+
     { "type": "header", "content": "Specification" },
     { "type": "checkbox", "id": "spec_show", "label": "Show the Specification panel", "default": false, "info": "Off hides the whole panel. Fabric, cut, wash, origin, care and case reference stay on the products \u2014 nothing is deleted." },
     { "type": "text", "id": "spec_heading", "label": "Heading", "default": "Specification" },
