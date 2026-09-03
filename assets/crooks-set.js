@@ -48,6 +48,7 @@
   }
   if (!variants.length) return;
 
+  var addBtn = set.querySelector('[data-crk-set-add]');
   var sizeBtns = sizesBox ? sizesBox.querySelectorAll('[data-crk-set-size]') : [];
   /* partnerSize stays null until the shopper picks one themselves. It is never
      seeded from the main size: someone buying a crewneck in L is not thereby
@@ -92,13 +93,18 @@
   }
 
   function paint() {
-    panel.hidden = !check.checked;
-    if (!check.checked) {
-      set.removeAttribute('data-crk-set-on');
-      return;
-    }
-    set.setAttribute('data-crk-set-on', 'true');
+    /* The card is always on the page now, so the panel is never hidden. The
+       tick still decides whether the form is armed with the bundle variant. */
+    set.setAttribute('data-crk-set-on', check.checked ? 'true' : 'false');
     paintSizes();
+
+    /* ADD BOTH needs both sizes before it can name a bundle variant. */
+    if (addBtn) {
+      var ready = !!(mainSize && partnerSize && find(mainSize, partnerSize) &&
+                     find(mainSize, partnerSize).available);
+      addBtn.disabled = !ready;
+    }
+    if (!check.checked) return;
 
     var v = mainSize && partnerSize ? find(mainSize, partnerSize) : null;
     if (v && v.available) {
@@ -227,6 +233,21 @@
       check.checked = true;
     }
   } catch (e) {}
+
+  /* ADD BOTH is a second action, not a second cart call. It ticks the box the
+     existing logic already runs on and then presses the page's own buy button,
+     so the bundle variant, the component line it replaces and the waitFor
+     dispatch are all handled by the code that already handles them. */
+  if (addBtn) {
+    addBtn.addEventListener('click', function () {
+      if (addBtn.disabled) return;
+      check.checked = true;
+      paint();
+      root.dispatchEvent(new CustomEvent('crk:rerender'));
+      var buy = root.querySelector('[data-crk-buy]');
+      if (buy && !buy.disabled) buy.click();
+    });
+  }
 
   paint();
 })();

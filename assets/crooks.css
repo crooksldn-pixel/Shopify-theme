@@ -2004,3 +2004,282 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
 @media (prefers-reduced-motion: reduce) {
   .crk-record .crk-dot { transition: none }
 }
+
+/* ===================================================================
+   PRODUCT PAGE — buy panel, matched to the reference
+   ===================================================================
+   The panel was a bordered card containing more bordered cards. The
+   reference has one flat column with the controls doing the work, so
+   the outer box and the nested ones come off and the CTA carries the
+   weight instead.
+   =================================================================== */
+
+.crk-record .crk-panel-record {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* Breadcrumb rail: useful on desktop, but on a phone it pushed the
+   title and price below the fold on the one screen that sells. */
+@media (max-width: 959px) {
+  .crk-record .crk-rail { display: none }
+}
+
+/* Size: label left, guide right, buttons in one unbroken row of equal
+   cells rather than five separate boxes with gaps between them. */
+.crk-record .crk-sizehead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+.crk-record button.crk-sizeguide {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--crk-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.crk-record .crk-sizes {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--crk-line);
+  margin: 0;
+}
+.crk-record button.crk-size {
+  min-height: 56px;
+  padding: 0 2px;
+  border: 0;
+  border-right: 1px solid var(--crk-line);
+  background: none;
+  font-family: var(--crk-font-mono);
+  font-size: 14px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--crk-text);
+  cursor: pointer;
+}
+.crk-record button.crk-size:last-child { border-right: 0 }
+.crk-record button.crk-size:hover { background: var(--crk-press) }
+.crk-record button.crk-size[data-selected="true"],
+.crk-record button.crk-size[aria-pressed="true"] {
+  background: var(--crk-purple);
+  color: var(--crk-onpurple);
+}
+/* Sold out: a diagonal rule through the cell, as the reference draws it.
+   The strike is decoration — crooks-record.js also sets aria-disabled, so
+   the state is announced rather than only seen. */
+.crk-record button.crk-size[aria-disabled="true"] {
+  color: var(--crk-micro);
+  cursor: not-allowed;
+  background-image: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    var(--crk-line) calc(50% - 1px),
+    var(--crk-line) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+.crk-record button.crk-size[aria-disabled="true"]:hover { background-color: transparent }
+
+/* Dispatch: one panel, violet-ruled, with the countdown as the headline
+   and the delivery estimate under it. */
+.crk-record .crk-dispatch {
+  display: block;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--crk-accent);
+  background: color-mix(in srgb, var(--crk-purple) 16%, transparent);
+  color: var(--crk-accent);
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .crk-record .crk-dispatch { background: var(--crk-panel) }
+}
+.crk-record .crk-dispatch__line { font-weight: 500 }
+
+/* The primary control. Full width, filled, and in the display face —
+   it is the one thing on the page that has to be unmissable. */
+.crk-record button.crk-btn[data-crk-buy] {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  min-height: 62px;
+  padding: 0 16px;
+  border: 1px solid var(--crk-purple);
+  background: var(--crk-purple);
+  color: var(--crk-onpurple);
+  font-family: var(--crk-font-display);
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.crk-record button.crk-btn[data-crk-buy]:hover { border-color: var(--crk-lav) }
+.crk-record button.crk-btn[data-crk-buy]:disabled {
+  background: none;
+  border-color: var(--crk-line);
+  color: var(--crk-dim);
+  cursor: default;
+}
+
+.crk-record .crk-reassure {
+  gap: 6px 14px;
+  margin-top: 14px;
+  justify-content: space-between;
+}
+.crk-record .crk-reassure li { font-size: 9px; letter-spacing: .1em }
+.crk-record .crk-reassure__ico {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--crk-accent);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Accordions: one hairline between rows instead of a box round each. */
+.crk-record .crk-section {
+  border: 0;
+  border-top: 1px solid var(--crk-line);
+}
+.crk-record .crk-section:last-of-type { border-bottom: 1px solid var(--crk-line) }
+.crk-record .crk-section-head {
+  min-height: 60px;
+  padding: 0;
+  gap: 16px;
+}
+
+/* Sticky bar: the same filled control as the panel above it. */
+.crk-record .crk-stickybar button.crk-btn {
+  background: var(--crk-purple);
+  border: 1px solid var(--crk-purple);
+  color: var(--crk-onpurple);
+  min-height: 50px;
+  font-family: var(--crk-font-display);
+  font-size: 17px;
+  letter-spacing: .04em;
+}
+.crk-record .crk-stickybar button.crk-btn:disabled {
+  background: none;
+  border-color: var(--crk-line);
+  color: var(--crk-dim);
+}
+
+@media (max-width: 359px) {
+  .crk-record button.crk-size { min-height: 50px; font-size: 12px }
+  .crk-record button.crk-btn[data-crk-buy] { font-size: 19px; min-height: 56px }
+  .crk-record .crk-reassure li { font-size: 8px }
+}
+
+/* Matching-set card. Was a tick-box that revealed a panel; the reference
+   stands the whole offer on the page with its own action, so the row is
+   now a card header — thumbnail, heading, the pair price and the saving —
+   with the size picker and ADD BOTH beneath it. Violet-ruled so it reads
+   as an offer without competing with the primary button above. */
+.crk-record .crk-set {
+  margin: 18px 0 0;
+  padding: 14px;
+  border: 1px solid var(--crk-accent);
+  background: var(--crk-panel);
+}
+.crk-record .crk-set__row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  cursor: default;
+}
+/* The checkbox is the mechanism, not the interface — ADD BOTH ticks it.
+   Kept in the DOM and reachable, just not drawn as a control the shopper
+   has to find before the offer makes sense. */
+.crk-record .crk-set .crk-check {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.crk-record .crk-set__thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: var(--crk-ground);
+  border: 1px solid var(--crk-line);
+}
+.crk-record .crk-set__copy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--crk-dim);
+}
+.crk-record .crk-set__panel { margin-top: 12px }
+.crk-record .crk-set__label { margin: 0 0 6px }
+.crk-record .crk-set__sizes {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border: 1px solid var(--crk-line);
+  margin: 0 0 10px;
+}
+.crk-record button.crk-set__add,
+.crk-record .crk-set__panel button.crk-set__add {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--crk-accent);
+  background: none;
+  color: var(--crk-accent);
+  font-family: var(--crk-font-display);
+  font-size: 18px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.crk-record button.crk-set__add:hover { background: var(--crk-press) }
+.crk-record button.crk-set__add:disabled {
+  border-color: var(--crk-line);
+  color: var(--crk-dim);
+  cursor: default;
+}
+.crk-record .crk-set__price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--crk-text);
+}
+.crk-record .crk-set__was { color: var(--crk-micro); font-size: 12px }
+.crk-record .crk-set__now { color: var(--crk-accent); letter-spacing: .06em }
+
+@media (min-width: 480px) {
+  .crk-record .crk-set__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .crk-record .crk-set__label,
+  .crk-record .crk-set__price,
+  .crk-record .crk-set__stock { grid-column: 1 / -1 }
+  .crk-record .crk-set__sizes { margin-bottom: 0 }
+  .crk-record button.crk-set__add { width: auto; min-width: 140px }
+}

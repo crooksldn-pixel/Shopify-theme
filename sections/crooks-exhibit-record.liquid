@@ -332,6 +332,20 @@
                 Every option renders, whatever it is called and whatever order it
                 comes in. Nothing here assumes "Size" or a single option.
               {%- endcomment -%}
+              {%- comment -%}
+                Label left, size guide right, on one row above the buttons. The
+                guide used to sit under the row as a third stacked control,
+                which pushed the dispatch line and the button further down the
+                one screen that has to sell the garment.
+              {%- endcomment -%}
+              <div class="crk-sizehead">
+                <span class="crk-label">{{ crk_size_opt.name | default: section.settings.size_head_label }}</span>
+                {%- if has_measurements -%}
+                  <button type="button" class="crk-sizeguide" data-crk-size-guide>
+                    {{ section.settings.size_guide_label }}
+                  </button>
+                {%- endif -%}
+              </div>
               {%- for option in product.options_with_values -%}
                 {%- liquid
                   assign oi = forloop.index0
@@ -352,7 +366,6 @@
                   endfor
                 -%}
                 <div class="crk-optgroup" data-crk-optgroup="{{ oi }}" data-crk-optname="{{ option.name | escape }}">
-                  <div class="crk-label" style="display: block; margin-bottom: 8px;">{{ option.name }}</div>
                   <div class="crk-sizes{% if wide %} crk-sizes--wide{% endif %}" role="group" aria-label="{{ option.name | escape }}">
                     {%- for value in option.values -%}
                       {%- liquid
@@ -395,11 +408,6 @@
                   {{ section.settings.label_in_stock }}
                 {%- endif -%}
               </p>
-              {%- if has_measurements -%}
-                <button type="button" class="crk-textbtn" style="margin-top: 8px;" data-crk-size-guide>
-                  {{ section.settings.size_guide_label }}
-                </button>
-              {%- endif -%}
 
               <noscript>
                 <p class="crk-micro" style="margin-top: 8px;">{{ section.settings.nojs_note }}</p>
@@ -534,13 +542,13 @@
             {%- if crk_reassure > 0 -%}
               <ul class="crk-reassure">
                 {%- if section.settings.reassure_1 != blank -%}
-                  <li><span class="crk-reassure__mark" aria-hidden="true"></span>{{ section.settings.reassure_1 }}</li>
+                  <li><svg class="crk-reassure__ico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 5l6-3 6 3v6l-6 3-6-3z"/><path d="M2 5l6 3 6-3M8 8v6"/></svg>{{ section.settings.reassure_1 }}</li>
                 {%- endif -%}
                 {%- if section.settings.reassure_2 != blank -%}
-                  <li><span class="crk-reassure__mark" aria-hidden="true"></span>{{ section.settings.reassure_2 }}</li>
+                  <li><svg class="crk-reassure__ico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9 1L3 9h4l-1 6 7-8H9z"/></svg>{{ section.settings.reassure_2 }}</li>
                 {%- endif -%}
                 {%- if section.settings.reassure_3 != blank -%}
-                  <li><span class="crk-reassure__mark" aria-hidden="true"></span>{{ section.settings.reassure_3 }}</li>
+                  <li><svg class="crk-reassure__ico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M14 8a6 6 0 1 1-2.5-4.9"/><path d="M14 1v4h-4"/></svg>{{ section.settings.reassure_3 }}</li>
                 {%- endif -%}
               </ul>
             {%- endif -%}
@@ -873,7 +881,8 @@
     { "type": "text", "id": "label_low", "label": "Low stock line", "info": "Use [n] and [size].", "default": "[n] LEFT IN SIZE [size]" },
     { "type": "text", "id": "label_sold_size", "label": "Sold out size line", "info": "Use [size].", "default": "SIZE [size] IS SOLD OUT" },
     { "type": "range", "id": "low_stock_threshold", "label": "Low stock threshold", "min": 1, "max": 10, "step": 1, "default": 3 },
-    { "type": "text", "id": "size_guide_label", "label": "Size guide button", "default": "Size guide" },
+    { "type": "text", "id": "size_head_label", "label": "Size row label", "info": "Used only when the product option has no name of its own.", "default": "SIZE" },
+    { "type": "text", "id": "size_guide_label", "label": "Size guide button", "default": "SIZE GUIDE" },
     { "type": "text", "id": "sr_sold_out", "label": "\"Sold out\" (screen readers)", "default": "sold out" },
     { "type": "text", "id": "sr_left", "label": "\"left\" (screen readers)", "default": "left" },
     { "type": "text", "id": "nojs_note", "label": "No-JavaScript note", "default": "CHOOSE A SIZE:" },
@@ -934,6 +943,7 @@
     { "type": "text", "id": "set_sold_text", "label": "Partner sold out", "default": "[partner] sold out in [size] — pick another size" },
     { "type": "text", "id": "set_price_label", "label": "Set price line", "default": "[price] for the set" },
     { "type": "text", "id": "set_shipping_text", "label": "Shipping line", "default": "Free UK Tracked 24 included" },
+    { "type": "text", "id": "set_add_label", "label": "Add both button", "default": "ADD BOTH" },
     { "type": "text", "id": "set_cta", "label": "Button when the set is on", "default": "ADD THE FULL FIT — [price]" },
     { "type": "header", "content": "Other sections" },
     { "type": "text", "id": "provenance_heading", "label": "Description heading", "default": "Item description" },

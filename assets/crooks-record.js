@@ -393,7 +393,11 @@
       if (dispatchTimer) { window.clearInterval(dispatchTimer); dispatchTimer = null; }
 
       var state = soldChoice ? null : dispatchState();
-      if (!state) { dispatchLine.hidden = true; return; }
+      if (!state) {
+        dispatchLine.hidden = true;
+        if (deliveryLine) deliveryLine.hidden = !!soldChoice;
+        return;
+      }
 
       /* One state, one sentence. The old line could say "dispatched today"
          while a second line said "leaves tomorrow"; there is now exactly one
@@ -424,6 +428,11 @@
       }
       dispatchLine.setAttribute('data-crk-dispatch-state', state);
       dispatchLine.hidden = false;
+      /* The static "order before 18:00 and it ships today (Mon-Sat)" line and
+         this one were both rendering, so the page said it ships today directly
+         above saying it leaves tomorrow. Whenever this line is up it is the
+         only claim; the static one is the no-JS fallback and stands down. */
+      if (deliveryLine) deliveryLine.hidden = true;
 
       /* Tick the countdown once a minute. It is minutes-resolution copy, so a
          per-second timer would burn wakeups to rewrite the same string. */
@@ -467,19 +476,25 @@
 
       if (stockLine) {
         if (!complete) {
+          /* The button already reads SELECT A SIZE. Repeating it underneath was
+             a second sentence saying nothing, between the sizes and the price.
+             Kept in the DOM for the live region, hidden until it has something
+             to report. */
           var nm = firstMissingOptionName();
           stockLine.textContent = nm ? L.selectOption.replace('[option]', nm) : L.select;
           stockLine.setAttribute('data-out', 'false');
+          stockLine.hidden = true;
         } else if (!v || !v.available) {
+          stockLine.hidden = false;
           var label = selected[selected.length - 1] || '';
           stockLine.textContent = L.soldSize.replace('[size]', label);
           stockLine.setAttribute('data-out', 'true');
         } else if (v.qty > 0 && v.qty <= LOW) {
+          stockLine.hidden = false;
           stockLine.textContent = L.low.replace('[n]', v.qty).replace('[size]', selected.join(' / '));
           stockLine.setAttribute('data-out', 'false');
         } else {
-          stockLine.textContent = L.inStock;
-          stockLine.setAttribute('data-out', 'false');
+          stockLine.hidden = true;
         }
       }
 

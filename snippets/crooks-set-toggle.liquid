@@ -87,7 +87,14 @@
       </span>
     </label>
 
-    <div class="crk-set__panel" data-crk-set-panel hidden>
+    {%- comment -%}
+      Always open. It was a tick-box that revealed a panel, which meant the
+      offer had to be discovered before it could be read; the reference shows
+      the whole thing standing on the page with its own action. The checkbox
+      survives as the mechanism — ADD BOTH ticks it, so every rule about which
+      bundle variant is armed and which component line to clear is unchanged.
+    {%- endcomment -%}
+    <div class="crk-set__panel" data-crk-set-panel>
       <p class="crk-eyebrow crk-set__label" id="crk-set-size-label">
         {{ section.settings.set_partner_size_label | replace: '[partner]', crk_partner_name }}
       </p>
@@ -118,6 +125,14 @@
         <s class="crk-set__was" data-crk-set-was></s>
         <span class="crk-set__now" data-crk-set-now></span>
       </p>
+
+      <button
+        type="button"
+        class="crk-set__add"
+        data-crk-set-add
+        data-crk-set-add-label="{{ section.settings.set_add_label | escape }}"
+        disabled
+      >{{ section.settings.set_add_label }}</button>
 
       {%- if section.settings.set_shipping_text != blank -%}
         <p class="crk-micro crk-set__ship">{{ section.settings.set_shipping_text }}</p>
