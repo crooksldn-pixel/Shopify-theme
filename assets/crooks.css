@@ -2283,3 +2283,42 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   .crk-record .crk-set__sizes { margin-bottom: 0 }
   .crk-record button.crk-set__add { width: auto; min-width: 140px }
 }
+
+/* ===================================================================
+   FOOTER — three rows
+   ===================================================================
+   Four link columns stacked one per row on a phone, which made the
+   footer four screens of scrolling after the content had ended. They
+   now sit two-up, so the footer reads as three rows: two of links and
+   the base line under them.
+
+   Desktop keeps the four columns across, which is already one clean
+   row and does not need breaking up.
+   =================================================================== */
+.crk-footer__cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 16px;
+}
+.crk-footer__col { min-width: 0 }
+.crk-footer__col ul { margin-top: 8px }
+.crk-footer__col a {
+  min-height: 40px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* Very narrow phones: two columns of link text at 320px clips the
+   longer labels, so it falls back to a single column there. */
+@media (max-width: 359px) {
+  .crk-footer__cols { grid-template-columns: minmax(0, 1fr) }
+}
+
+@media (min-width: 640px) {
+  .crk-footer__cols {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 32px;
+  }
+  .crk-footer__col ul { margin-top: 12px }
+  .crk-footer__col a { min-height: 44px; font-size: 12px }
+}
