@@ -2322,3 +2322,61 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   .crk-footer__col ul { margin-top: 12px }
   .crk-footer__col a { min-height: 44px; font-size: 12px }
 }
+
+/* Reassurance strip wrapped 2 + 1, which left a ragged second line and a
+   gap above the accordions. Three equal columns keep it on one row; on a
+   phone the labels are short enough to survive the tightest width, and
+   under 360px it stacks deliberately rather than wrapping unevenly. */
+.crk-record .crk-reassure {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  justify-content: initial;
+}
+.crk-record .crk-reassure li {
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 8.5px;
+  letter-spacing: .06em;
+  line-height: 1.35;
+}
+.crk-record .crk-reassure__ico { width: 12px; height: 12px; margin-top: 1px }
+@media (min-width: 420px) {
+  .crk-record .crk-reassure li { font-size: 9px; letter-spacing: .1em }
+}
+@media (max-width: 339px) {
+  .crk-record .crk-reassure { grid-template-columns: minmax(0, 1fr); gap: 6px }
+  .crk-record .crk-reassure li { align-items: center }
+}
+
+/* ===================================================================
+   ABOVE THE FOLD on a 393x852 phone
+   ===================================================================
+   The first screen was the reward bar, the breadcrumb, the title and a
+   square image — and nothing that sells. The gallery is capped so the
+   size row and the dispatch panel come into view with it, and the cart
+   progress bar stands down on a product page, where it is answering a
+   question nobody has asked yet.
+   =================================================================== */
+@media (max-width: 959px) {
+  /* The reward bar is gated in Liquid now, not hidden here. */
+
+  /* Cap the image so it cannot take the whole viewport. 52svh leaves the
+     size row and the dispatch panel on the first screen; svh rather than
+     vh so the mobile browser's collapsing toolbar does not change it. */
+  .crk-record .crk-record__gallery .crk-tray-main { max-height: 52svh }
+  .crk-record .crk-record__gallery .crk-main-img {
+    max-height: 52svh;
+    width: 100%;
+    object-fit: contain;
+  }
+  .crk-record .crk-record__head { margin-bottom: 10px }
+  .crk-record .crk-title { font-size: 27px }
+  .crk-record .crk-record__price { margin-top: 4px }
+  .crk-record .crk-record__sub { margin-top: 5px; font-size: 10px }
+  .crk-record .crk-dots { margin-top: 7px }
+  .crk-record .crk-sizehead { margin: 12px 0 6px }
+  .crk-record button.crk-size { min-height: 48px }
+  .crk-record .crk-dispatch { margin-top: 10px; padding: 9px 11px; font-size: 11px }
+  .crk-record button.crk-btn[data-crk-buy] { margin-top: 10px; min-height: 54px; font-size: 21px }
+}

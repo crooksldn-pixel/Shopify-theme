@@ -41,8 +41,17 @@
   endcomment
   assign crk_partner_pos = 0
   if crk_set_ok
+    comment
+      Matched case-insensitively and trimmed. The names were stored in the
+      caps the bundle used at the time; renaming those options in admin to
+      title case — a cosmetic edit, invisible in the product form — silently
+      broke the match on all four sets at once and took every upsell off the
+      site. A rename of the letters should not cost the offer.
+    endcomment
+    assign crk_partner_probe = crk_partner_option | downcase | strip
     for opt in crk_bundle.options_with_values
-      if opt.name == crk_partner_option
+      assign crk_opt_probe = opt.name | downcase | strip
+      if crk_opt_probe == crk_partner_probe
         assign crk_partner_pos = forloop.index
         break
       endif

@@ -48,6 +48,17 @@
     assign crk_show = true
   endif
 
+  comment
+    Off on product pages by default. It is a cart device answering "how much
+    more for free delivery", and a shopper who has not chosen a size yet has
+    not asked that question. On a 393x852 phone it was the first thing on the
+    screen and pushed the size row, the dispatch line and the button out of
+    the first view entirely.
+  endcomment
+  if request.page_type == 'product' and section.settings.show_on_product == false
+    assign crk_show = false
+  endif
+
   assign t1 = section.settings.tier_1_threshold | times: 100
   assign t2 = section.settings.tier_2_threshold | times: 100
   assign total = cart.total_price
@@ -137,6 +148,7 @@
   "name": "Crooks — Carriage status",
   "tag": "section",
   "settings": [
+    { "type": "checkbox", "id": "show_on_product", "label": "Show on product pages", "default": false, "info": "Off by default: on a phone this bar was the first thing above the garment, pushing the size row and the button off the first screen." },
     { "type": "header", "content": "Change size from the cart" },
     { "type": "checkbox", "id": "allow_size_change", "label": "Let shoppers change a size in the cart", "default": true },
     { "type": "text", "id": "size_change_label", "label": "Open label", "default": "CHANGE SIZE" },
