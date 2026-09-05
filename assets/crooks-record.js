@@ -170,6 +170,14 @@
             })
             .then(function (n) {
               if (leaving) return;
+              /* Everything that was going to change the cart has changed it —
+                 including any component line the set toggle removed. Only now
+                 is it safe for the bag drawer to draw itself. */
+              try {
+                document.dispatchEvent(new CustomEvent('crk:cartchanged', {
+                  detail: { count: n, open: true }
+                }));
+              } catch (e) {}
               var msg = n == null ? L.addedPlain : L.added.replace('[n]', n);
               say(msg, false, n == null ? 0 : n);
               /* Held until after settle(), which re-derives the buy state and

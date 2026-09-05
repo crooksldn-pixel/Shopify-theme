@@ -1,0 +1,128 @@
+{%- comment -%}
+  The bag drawer's contents.
+
+  Rendered by templates/cart.crk-drawer.liquid and fetched as HTML at
+  {{ routes.cart_url }}?view=crk-drawer, the same trick crooks-bag-count already
+  uses. Doing it this way rather than rendering /cart.js in JavaScript means
+  every amount on this panel is formatted by Liquid's `money`, so presentment
+  currency and market conversion stay Shopify's job — the house rule is that no
+  currency string is ever assembled in JS, and a drawer that built its own
+  totals would break it on the most expensive screen in the shop.
+
+  It also means a bundle line reports its real garment count, which /cart.js
+  cannot answer: it says has_components but never how many.
+{%- endcomment -%}
+
+{%- liquid
+  assign crk_units = 0
+  for item in cart.items
+    if item.item_components and item.item_components.size > 0
+      assign crk_units = crk_units | plus: item.item_components.size
+    else
+      assign crk_units = crk_units | plus: item.quantity
+    endif
+  endfor
+-%}
+
+<div data-crk-bag-count-value="{{ crk_units }}" hidden></div>
+
+{%- if cart.item_count == 0 -%}
+  <div class="crk-bagdrawer__empty">
+    <p class="crk-bagdrawer__emptyline">{{ settings.crk_bag_empty | default: 'THE BAG IS EMPTY' }}</p>
+    <a class="crk-bagdrawer__cta crk-bagdrawer__cta--ghost" href="{{ routes.all_products_collection_url }}">
+      {{ settings.crk_bag_empty_cta | default: 'BROWSE THE CATALOGUE' }}
+    </a>
+  </div>
+{%- else -%}
+  <ul class="crk-bagdrawer__lines">
+    {%- for item in cart.items -%}
+      {%- liquid
+        assign crk_line_money = item.final_line_price | money
+        assign crk_was_money = item.original_line_price | money
+        assign crk_discounted = false
+        if item.original_line_price > item.final_line_price
+          assign crk_discounted = true
+        endif
+      -%}
+      <li class="crk-bagdrawer__line" data-crk-bag-line data-crk-key="{{ item.key }}">
+        <a class="crk-bagdrawer__thumb" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+          {%- if item.image -%}
+            {{ item.image | image_url: width: 200 | image_tag: loading: 'lazy', alt: '', widths: '100, 200' }}
+          {%- endif -%}
+        </a>
+
+        <div class="crk-bagdrawer__meta">
+          <a class="crk-bagdrawer__name" href="{{ item.url }}">{{ item.product.title }}</a>
+
+          {%- comment -%}
+            A bundle is one line holding two garments. Naming them is the
+            difference between "BLACK SET" and knowing which two sizes are
+            actually on the way.
+          {%- endcomment -%}
+          {%- if item.item_components and item.item_components.size > 0 -%}
+            <ul class="crk-bagdrawer__parts">
+              {%- for part in item.item_components -%}
+                <li>{{ part.product.title }} &middot; {{ part.variant.title }}</li>
+              {%- endfor -%}
+            </ul>
+          {%- elsif item.variant.title != 'Default Title' -%}
+            <p class="crk-bagdrawer__variant">{{ item.variant.title }}</p>
+          {%- endif -%}
+
+          {%- if item.selling_plan_allocation -%}
+            <p class="crk-bagdrawer__variant">{{ item.selling_plan_allocation.selling_plan.name }}</p>
+          {%- endif -%}
+
+          <div class="crk-bagdrawer__row">
+            <div class="crk-bagdrawer__qty" role="group" aria-label="{{ item.product.title | escape }}">
+              <button type="button" class="crk-bagdrawer__step" data-crk-bag-qty="{{ item.quantity | minus: 1 }}"
+                aria-label="{{ settings.crk_bag_less | default: 'Remove one' | escape }}">&minus;</button>
+              <span class="crk-bagdrawer__qtyval" data-crk-bag-qtyval>{{ item.quantity }}</span>
+              <button type="button" class="crk-bagdrawer__step" data-crk-bag-qty="{{ item.quantity | plus: 1 }}"
+                aria-label="{{ settings.crk_bag_more | default: 'Add one' | escape }}">+</button>
+            </div>
+
+            <p class="crk-bagdrawer__price">
+              {%- if crk_discounted -%}<s>{{ crk_was_money }}</s> {% endif -%}
+              <span>{{ crk_line_money }}</span>
+            </p>
+          </div>
+
+          {%- if item.line_level_discount_allocations.size > 0 -%}
+            {%- for alloc in item.line_level_discount_allocations -%}
+              <p class="crk-bagdrawer__disc">{{ alloc.discount_application.title }}</p>
+            {%- endfor -%}
+          {%- endif -%}
+
+          <button type="button" class="crk-bagdrawer__remove" data-crk-bag-qty="0">
+            {{ settings.crk_bag_remove | default: 'REMOVE' }}
+          </button>
+        </div>
+      </li>
+    {%- endfor -%}
+  </ul>
+
+  <div class="crk-bagdrawer__foot">
+    {%- if cart.cart_level_discount_applications.size > 0 -%}
+      {%- for app in cart.cart_level_discount_applications -%}
+        {%- assign crk_saved = app.total_allocated_amount | money -%}
+        <p class="crk-bagdrawer__disc">{{ app.title }} &minus;{{ crk_saved }}</p>
+      {%- endfor -%}
+    {%- endif -%}
+
+    {%- assign crk_total_money = cart.total_price | money -%}
+    <p class="crk-bagdrawer__total">
+      <span>{{ settings.crk_bag_subtotal | default: 'SUBTOTAL' }}</span>
+      <span class="crk-bagdrawer__totalval">{{ crk_total_money }}</span>
+    </p>
+    <p class="crk-bagdrawer__note">{{ settings.crk_bag_note | default: 'Shipping and any discount codes are worked out at checkout.' }}</p>
+
+    <form action="{{ routes.cart_url }}" method="post">
+      <button type="submit" name="checkout" class="crk-bagdrawer__cta" data-crk-bag-checkout>
+        {{ settings.crk_bag_checkout | default: 'CHECKOUT' }}
+      </button>
+    </form>
+
+    <a class="crk-bagdrawer__view" href="{{ routes.cart_url }}">{{ settings.crk_bag_view | default: 'VIEW THE FULL BAG' }}</a>
+  </div>
+{%- endif -%}

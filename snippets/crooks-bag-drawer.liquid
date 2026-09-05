@@ -1,0 +1,48 @@
+{{ 'crooks-bag-drawer.css' | asset_url | stylesheet_tag }}
+
+{%- comment -%}
+  The bag drawer shell.
+
+  Rendered once from theme.liquid, on every template, so the bag opens in place
+  wherever the shopper is instead of costing them a page load and their scroll
+  position.
+
+  Empty on arrival: the contents are fetched from {{ routes.cart_url }}?view=crk-drawer
+  the first time it opens, so a page that is never used to open the bag pays
+  nothing for it beyond this markup.
+
+  Progressive enhancement. The bag link in the header is a real link to /cart
+  and stays one — crooks-bag-drawer.js intercepts the click only once it has
+  loaded. With JS off, or if this file fails, the cart page is still there and
+  still works. The full bag is also linked from inside the drawer, deliberately:
+  a drawer is a shortcut, not a replacement for the page that can do everything.
+{%- endcomment -%}
+
+<div class="crk-root crk-bagdrawer" data-crk-bagdrawer hidden>
+  <div class="crk-bagdrawer__scrim" data-crk-bag-close tabindex="-1"></div>
+
+  <aside
+    class="crk-bagdrawer__panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="crk-bagdrawer-title"
+    data-crk-bagdrawer-panel
+  >
+    <header class="crk-bagdrawer__head">
+      <h2 class="crk-bagdrawer__title" id="crk-bagdrawer-title">
+        {{ settings.crk_bag_title | default: 'THE BAG' }}
+        <span class="crk-bagdrawer__count" data-crk-bag-headcount></span>
+      </h2>
+      <button type="button" class="crk-bagdrawer__close" data-crk-bag-close>
+        <span aria-hidden="true">&#10005;</span>
+        <span class="crk-sr">{{ settings.crk_bag_close | default: 'Close the bag' }}</span>
+      </button>
+    </header>
+
+    <div class="crk-bagdrawer__body" data-crk-bag-body aria-busy="false">
+      <p class="crk-bagdrawer__loading" data-crk-bag-loading>{{ settings.crk_bag_loading | default: 'OPENING THE BAG&hellip;' }}</p>
+    </div>
+  </aside>
+</div>
+
+<script src="{{ 'crooks-bag-drawer.js' | asset_url }}" defer></script>

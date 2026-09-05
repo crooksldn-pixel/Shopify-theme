@@ -203,6 +203,14 @@
       Off is the default. The snippet is untouched and still on disk, so turning it
       back on is one checkbox, not a rebuild.
     {%- endcomment -%}
+    {%- comment -%}
+      The bag drawer. Rendered on every template so the bag opens in place
+      wherever the shopper is. Empty until first opened, and the header's bag
+      link stays a real link to /cart, so this costs nothing on a page where
+      it is never used and breaks nothing if the script never loads.
+    {%- endcomment -%}
+    {%- render 'crooks-bag-drawer' -%}
+
     {%- if settings.getaway_enabled -%}
       {%- unless request.design_mode -%}
         {%- if template.name == 'index' -%}

@@ -2302,6 +2302,86 @@
         "label": "Show the Getaway popup",
         "default": false,
         "info": "Off means the Base44 game is never fetched at all, so the homepage does not pay for it."
+      },
+      {
+        "type": "header",
+        "content": "The bag drawer"
+      },
+      {
+        "type": "paragraph",
+        "content": "Every string on the drawer. The bag link in the header stays a real link to /cart, so with JavaScript off the cart page is still there."
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_title",
+        "label": "Drawer heading",
+        "default": "THE BAG"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_close",
+        "label": "Close, screen readers",
+        "default": "Close the bag"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_loading",
+        "label": "While it opens",
+        "default": "OPENING THE BAG…"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_empty",
+        "label": "Empty bag",
+        "default": "THE BAG IS EMPTY"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_empty_cta",
+        "label": "Empty bag button",
+        "default": "BROWSE THE CATALOGUE"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_remove",
+        "label": "Remove a line",
+        "default": "REMOVE"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_less",
+        "label": "Decrease, screen readers",
+        "default": "Remove one"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_more",
+        "label": "Increase, screen readers",
+        "default": "Add one"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_subtotal",
+        "label": "Subtotal label",
+        "default": "SUBTOTAL"
+      },
+      {
+        "type": "textarea",
+        "id": "crk_bag_note",
+        "label": "Note under the total",
+        "default": "Shipping and any discount codes are worked out at checkout."
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_checkout",
+        "label": "Checkout button",
+        "default": "CHECKOUT"
+      },
+      {
+        "type": "text",
+        "id": "crk_bag_view",
+        "label": "Link to the full bag",
+        "default": "VIEW THE FULL BAG"
       }
     ]
   }

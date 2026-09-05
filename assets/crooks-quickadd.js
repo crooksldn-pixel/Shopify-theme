@@ -146,6 +146,11 @@
         })
         .then(function () {
           busy = false;
+          /* Same announcement the product page makes, so the bag drawer is the
+             confirmation here too rather than a second, different one. */
+          try {
+            document.dispatchEvent(new CustomEvent('crk:cartchanged', { detail: { open: true } }));
+          } catch (e) {}
           btn.setAttribute('data-crk-qa-state', 'done');
           btn.textContent = L.done;
           setMsg(msg, '');

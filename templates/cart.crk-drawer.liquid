@@ -1,0 +1,8 @@
+{%- comment -%}
+  The bag drawer's contents, on their own, as HTML.
+
+  Reached at {{ routes.cart_url }}?view=crk-drawer and fetched by
+  crooks-bag-drawer.js after anything that changes the cart. Same pattern as
+  cart.crk-count: layout none, one snippet, no chrome.
+{%- endcomment -%}
+{%- layout none -%}{%- render 'crooks-bag-drawer-body' -%}
