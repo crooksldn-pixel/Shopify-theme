@@ -338,14 +338,6 @@
                 which pushed the dispatch line and the button further down the
                 one screen that has to sell the garment.
               {%- endcomment -%}
-              <div class="crk-sizehead">
-                <span class="crk-label">{{ crk_size_opt.name | default: section.settings.size_head_label }}</span>
-                {%- if has_measurements -%}
-                  <button type="button" class="crk-sizeguide" data-crk-size-guide>
-                    {{ section.settings.size_guide_label }}
-                  </button>
-                {%- endif -%}
-              </div>
               {%- for option in product.options_with_values -%}
                 {%- liquid
                   assign oi = forloop.index0
@@ -366,6 +358,22 @@
                   endfor
                 -%}
                 <div class="crk-optgroup" data-crk-optgroup="{{ oi }}" data-crk-optname="{{ option.name | escape }}">
+                  {%- comment -%}
+                    Every option is named. Collapsing this to one heading above
+                    the whole loop was a real defect: a tee is Colour AND Size,
+                    so the page showed one heading and two anonymous rows of
+                    buttons, and a shopper picking from the first row had no way
+                    to know it was the colour. The size guide hangs off whichever
+                    option is the size, not off the first one.
+                  {%- endcomment -%}
+                  <div class="crk-sizehead">
+                    <span class="crk-label">{{ option.name }}</span>
+                    {%- if has_measurements and option.name == crk_size_opt.name -%}
+                      <button type="button" class="crk-sizeguide" data-crk-size-guide>
+                        {{ section.settings.size_guide_label }}
+                      </button>
+                    {%- endif -%}
+                  </div>
                   <div class="crk-sizes{% if wide %} crk-sizes--wide{% endif %}" role="group" aria-label="{{ option.name | escape }}">
                     {%- for value in option.values -%}
                       {%- liquid

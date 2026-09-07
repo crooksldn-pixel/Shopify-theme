@@ -2380,3 +2380,10 @@ body:has(main [data-crk-section]) main { background: var(--crk-ground) }
   .crk-record .crk-dispatch { margin-top: 10px; padding: 9px 11px; font-size: 11px }
   .crk-record button.crk-btn[data-crk-buy] { margin-top: 10px; min-height: 54px; font-size: 21px }
 }
+
+/* The option label sits with its own buttons, not once above all of them.
+   A two-option product — every tee is Colour and Size — showed one heading
+   over two anonymous rows. */
+.crk-record .crk-optgroup + .crk-optgroup { margin-top: 14px }
+.crk-record .crk-optgroup .crk-sizehead { margin: 14px 0 6px }
+.crk-record .crk-optgroup:first-of-type .crk-sizehead { margin-top: 20px }
