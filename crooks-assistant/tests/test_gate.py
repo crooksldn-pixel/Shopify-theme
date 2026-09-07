@@ -169,3 +169,26 @@ def test_registry_issued_id_args_are_enforced():
     from app.tools import shopify_tools  # noqa: F401
 
     assert classify("shopify_order_detail", {"order_id": "gid://shopify/Order/9"}, issued_ids=[]).tier is Tier.RED
+
+
+async def test_client_errors_reach_the_model_readably(session):
+    """A Shopify throttle must be reported as a throttle, not 'failed unexpectedly'."""
+    from app.clients.shopify import ShopifyError
+    from app.tools import registry
+
+    @registry.tool(name="shopify_find_order_probe", description="d", input_schema={"type": "object"})
+    async def probe():
+        raise ShopifyError("Shopify is rate-limiting us. Try again in a moment.")
+
+    try:
+        # Not in the gate allowlist, so call invoke's error path through dispatch's handler
+        # by temporarily allowing it.
+        from app.tools import gate
+
+        gate._KNOWN_TOOLS = frozenset(gate._KNOWN_TOOLS | {"shopify_find_order_probe"})
+        out = await dispatch("shopify_find_order_probe", {}, session=session, timeout_s=5)
+        assert out.startswith("ERROR: Shopify is rate-limiting")
+        assert "unexpectedly" not in out
+    finally:
+        registry._REGISTRY.pop("shopify_find_order_probe", None)
+        gate._KNOWN_TOOLS = frozenset(gate._KNOWN_TOOLS - {"shopify_find_order_probe"})

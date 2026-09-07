@@ -18,6 +18,17 @@ from app.tools.registry import ToolError
 
 log = logging.getLogger("crooks.tools")
 
+
+def _readable_errors() -> tuple[type[BaseException], ...]:
+    from app.clients.gmail import GmailAuthRequired, GmailError
+    from app.clients.shopify import ShopifyAuthError, ShopifyError
+    from app.clients.whisper import WhisperUnavailable
+
+    return (ToolError, ShopifyError, ShopifyAuthError, GmailError, GmailAuthRequired, WhisperUnavailable)
+
+
+_READABLE_ERRORS = _readable_errors()
+
 # Result keys whose values are ids the assistant may later use in a detail-style lookup.
 _ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "id")
 
@@ -71,7 +82,9 @@ async def dispatch(
 
     try:
         payload = await registry.invoke(name, args, timeout_s=timeout_s)
-    except ToolError as exc:
+    except _READABLE_ERRORS as exc:
+        # Client errors carry a message written to be read out ("Shopify is rate-limiting
+        # us"). They must reach the model intact, not as "failed unexpectedly".
         log.warning("tool=%s failed: %s", name, exc)
         if calls is not None:
             calls.append(ToolCall(name=name, args=args, ok=False, error=str(exc)))

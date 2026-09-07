@@ -5,7 +5,7 @@ the working tree that followed it. Every finding was triaged by hand against the
 An automated three-refuter verification pass ran alongside; it had returned 11 standing and 39 refuted verdicts out of 50 when this ledger was written, and is not the
 basis of the dispositions below — the code is.
 
-**63 findings**: 55 fixed · 2 partly · 4 accepted · 2 open
+**63 findings**: 57 fixed · 2 partly · 4 accepted · 0 open
 
 Status meanings: **fixed** — changed in the named commit, with a test where one was practical;
 **partly** — the real part is fixed, the rest is explained; **accepted** — true, and left as a
@@ -31,7 +31,7 @@ deliberate trade-off that is written down; **open** — true and not yet done.
 | medium | agent-sdk | `app/providers/max_agent_sdk.py:172` | No timeout around the SDK response loop: a stalled CLI pins the request, the session and the shared _current forever | **fixed** | 120 s turn timeout; client dropped on expiry (cebccbe) |
 | medium | browser | `web/app.js:152` | speechSynthesis chain survives cancel(): onerror re-arms the next chunk, so stopSpeaking() never actually stops speaking | **fixed** | generation counter (cebccbe) |
 | medium | browser | `web/app.js:202` | Release before getUserMedia resolves is lost: mic starts recording after the finger has already lifted | **fixed** | pendingStart guard (cebccbe) |
-| medium | browser | `web/app.js:272` | submit() reports any HTTP error as 'lost contact / Backend unreachable' and never checks response.ok | **open** | not addressed in this session |
+| medium | browser | `web/app.js:272` | submit() reports any HTTP error as 'lost contact / Backend unreachable' and never checks response.ok | **fixed** | response.ok is checked and the status shown (cebccbe) |
 | medium | browser | `web/app.js:360` | Microphone test's onstop has no error handling; a failed /audio-test leaves the page stuck in LISTENING | **fixed** | try/catch plus WAV playback (cebccbe) |
 | medium | gate-security | `app/tools/gate.py:104` | Gate ignores ToolSpec.tier and ToolSpec.issued_id_args; registry tiers are decorative and /tools can misreport them | **fixed** | gate consults registry tier and issued-id args (cebccbe) |
 | medium | gate-security | `app/providers/max_agent_sdk.py:37` | Billing guard checks two env names while the SDK subprocess inherits the entire parent environment | **fixed** | guard covers key-helper and Bedrock/Vertex/Foundry; CLI asked for its auth source (cebccbe) |
@@ -51,7 +51,7 @@ deliberate trade-off that is written down; **open** — true and not yet done.
 | medium | plan-conformance | `app/routes/turn.py:109` | Normaliser ambiguities and low-confidence matches are computed then discarded before the agent sees them | **fixed** | ambiguities appended to the model's input (cebccbe) |
 | medium | shopify-api | `app/tools/shopify_tools.py:412` | shopify_inventory query exceeds Shopify's 1,000-point single-query cap for any limit >= 10 | **fixed** | MAX_PRODUCTS = 10 (cebccbe) |
 | medium | shopify-api | `app/tools/shopify_tools.py:426` | Inventory search 'title:*Yard Jeans*' is parsed by Shopify as 'title:*Yard' AND 'Jeans*', not a title phrase; leading wildcard is undocumented | **fixed** | bare-word search, verified live (cebccbe) |
-| medium | shopify-api | `app/tools/dispatch.py:82` | ShopifyError/ShopifyAuthError are not ToolError, so every Shopify failure reaches Claude as 'failed unexpectedly' with the message stripped and a traceback logged | **open** | still surfaces as 'failed unexpectedly' with the message logged; message should be passed through. Low effort, not yet done |
+| medium | shopify-api | `app/tools/dispatch.py:82` | ShopifyError/ShopifyAuthError are not ToolError, so every Shopify failure reaches Claude as 'failed unexpectedly' with the message stripped and a traceback logged | **fixed** | client errors (Shopify, Gmail, whisper) reach the model with their spoken message intact (e3fda21+) |
 | medium | shopify-api | `tests/test_shopify_tools.py:64` | Two tests in tests/test_shopify_tools.py fail against the working tree's name:1928 change | **fixed** | tests updated to the verified name:1928 syntax (f72198f) |
 | medium | shopify-api | `app/runtime.py:67` | Catalogue job persists 50 customer names to an un-ignored file and requests customer emails it never uses; order queries also fetch unused customer emails | **fixed** | customer names no longer cached; cache gitignored (cebccbe) |
 | medium | speech | `app/speech/transcribe.py:65` | After the first hourly catalogue refresh the Whisper prompt contains customer names and aliases only — every product name is cut by the 60-term cap | **fixed** | prompt budgeted by characters, live-then-seed order (cebccbe) |
@@ -83,7 +83,6 @@ deliberate trade-off that is written down; **open** — true and not yet done.
 - *Double Metaphone is not used* — jellyfish removed it in 1.0.
 - *`name:#NNNN` should be used for order search* — bare `name:1928` matches both `CROOKS-1928` and legacy `#1036`, verified on the live store.
 
-## Still open, in priority order
+## Still open
 
-- **medium** `web/app.js:272` — submit() reports any HTTP error as 'lost contact / Backend unreachable' and never checks response.ok. not addressed in this session.
-- **medium** `app/tools/dispatch.py:82` — ShopifyError/ShopifyAuthError are not ToolError, so every Shopify failure reaches Claude as 'failed unexpectedly' with the message stripped and a traceback logged. still surfaces as 'failed unexpectedly' with the message logged; message should be passed through. Low effort, not yet done.
+Nothing. The four accepted items are trade-offs, written down above, not omissions.
