@@ -1,0 +1,8 @@
+# The five M3 benchmark phrases, one per line as "<audio-file-stem> | <expected transcript>".
+# Record each on the TABLET, at the distance you will actually use, and name the file to match.
+# Lines starting with # are ignored. Add your own after these five.
+orders-today   | How many orders have we had today?
+find-order     | Find order 4832.
+inventory      | How many Blue Wash Yard Jeans in medium do we have?
+emails-today   | Look at my emails from today.
+customer-reply | Has that customer replied yet?

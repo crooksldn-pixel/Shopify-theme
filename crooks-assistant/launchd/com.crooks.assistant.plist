@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Install:  cp launchd/com.crooks.assistant.plist ~/Library/LaunchAgents/
+            launchctl load ~/Library/LaunchAgents/com.crooks.assistant.plist
+  Replace USERNAME below with your short username (`whoami`).
+
+  A restart loop here is almost always a wrong WorkingDirectory or a PATH that does not
+  include the `claude` binary — launchd does not read your shell profile.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.crooks.assistant</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/USERNAME/crooks-assistant/.venv/bin/python</string>
+    <string>-m</string><string>uvicorn</string>
+    <string>app.main:app</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>8000</string>
+  </array>
+
+  <key>WorkingDirectory</key><string>/Users/USERNAME/crooks-assistant</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- launchd starts with a minimal PATH; the SDK spawns `claude` and needs to find it. -->
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/USERNAME/.local/bin</string>
+    <key>HOME</key><string>/Users/USERNAME</string>
+  </dict>
+
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key><false/>
+    <key>Crashed</key><true/>
+  </dict>
+  <!-- Without this, a crash loop restarts as fast as the CPU allows. -->
+  <key>ThrottleInterval</key><integer>10</integer>
+
+  <key>StandardOutPath</key><string>/Users/USERNAME/crooks-assistant/logs/assistant.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/USERNAME/crooks-assistant/logs/assistant.err.log</string>
+  <key>ProcessType</key><string>Interactive</string>
+</dict>
+</plist>

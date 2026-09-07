@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0d0d0e">
+<title>CROOKS Assistant</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="bar">
+  <span class="wordmark">CROOKS</span>
+  <span id="conn" class="conn" data-state="connecting">Connecting…</span>
+  <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">⚙</button>
+</header>
+
+<main>
+  <section id="stage" class="stage" data-state="READY">
+    <p id="state-label" class="state-label">Ready</p>
+    <p id="heard" class="heard" aria-live="polite"></p>
+    <p id="answer" class="answer" aria-live="polite">Hold the button and ask me something.</p>
+    <p id="timings" class="timings" hidden></p>
+  </section>
+
+  <button id="talk" class="talk" type="button" aria-label="Hold to talk">
+    <span class="talk-inner"><span id="talk-label">Hold&nbsp;to&nbsp;talk</span></span>
+  </button>
+</main>
+
+<dialog id="settings" class="settings">
+  <h2>Settings</h2>
+
+  <label class="field">
+    <span>Voice</span>
+    <select id="voice-select"></select>
+  </label>
+  <p id="voice-note" class="note"></p>
+  <div class="row">
+    <button id="preview-voice" class="btn" type="button">Preview</button>
+    <button id="mic-test" class="btn" type="button">Microphone test</button>
+  </div>
+
+  <label class="check"><input type="checkbox" id="speak-toggle" checked> Speak answers aloud</label>
+  <label class="check"><input type="checkbox" id="timing-toggle"> Show timings</label>
+
+  <h3>Backend</h3>
+  <pre id="health-detail" class="health">…</pre>
+
+  <div class="row">
+    <button id="reset-session" class="btn" type="button">New conversation</button>
+    <button id="close-settings" class="btn primary" type="button">Done</button>
+  </div>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

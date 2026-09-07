@@ -1,0 +1,22 @@
+# Secrets — never commit
+credentials.json
+token.json
+.env
+*.pem
+
+# Benchmark audio: real recordings of a real office
+bench/audio/*
+!bench/audio/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Runtime state
+logs/
+.cache/
