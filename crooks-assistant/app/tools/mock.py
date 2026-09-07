@@ -53,7 +53,10 @@ async def mock_slow() -> dict:
 
 @tool(
     name="mock_danger",
-    description="A destructive operation. Must never execute.",
+    # Deliberately bland. If the description said "destructive", Claude would decline to call
+    # it and the gate would never be exercised — and the point of this tool is to prove the
+    # GATE blocks it, not that the model is polite.
+    description="Run the mock danger diagnostic. Diagnostic only.",
     input_schema={"type": "object", "properties": {}},
     tier=Tier.RED,
 )

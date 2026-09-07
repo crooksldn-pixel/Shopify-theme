@@ -56,9 +56,13 @@ class WhisperClient:
             "temperature": "0.0",
             "temperature_inc": "0.2",
             "response_format": "json",
-            # VAD is what stops silence becoming "Thank you." Configured on the server too;
-            # asked for here as well so a mis-started server is visible rather than silent.
-            "vad_filter": "true",
+            # VAD is what stops silence becoming "Thank you." The server is started with --vad
+            # too; asking per request as well means a mis-started server still filters.
+            # Field name verified against examples/server/server.cpp: it is `vad`.
+            "vad": "true",
+            "no_timestamps": "true",
+            # Suppress non-speech tokens ("[MUSIC]", "♪") at the decoder, not just in our blocklist.
+            "suppress_nst": "true",
         }
         if prompt:
             data["prompt"] = prompt

@@ -15,7 +15,7 @@ from app.logging.turnlog import TurnLog
 from app.providers.base import ClaudeProvider
 from app.providers.max_agent_sdk import MaxAgentSDKProvider
 from app.session.manager import SessionManager, get_manager
-from app.speech.normalise import Catalogue, Normaliser, from_file
+from app.speech.normalise import Normaliser, from_file
 from app.speech.transcribe import Transcriber
 from config.settings import Settings, get_settings
 
@@ -68,8 +68,7 @@ class Runtime:
         except OSError:
             pass
         merged = seed + live
-        self.normaliser._source = lambda: Catalogue(merged)  # noqa: SLF001 — same interface
-        self.normaliser.refresh()
+        self.normaliser.repoint(merged, aliases=self.normaliser.catalogue.aliases)
         log.info("normaliser repointed at live catalogue: %d terms", len(merged))
 
     def reload_kb(self) -> KnowledgeBase:
@@ -89,6 +88,7 @@ def build(settings: Settings | None = None) -> Runtime:
         whisper,
         normaliser,
         save_dir=settings.bench_audio_dir if settings.save_captures else None,
+        max_saved=settings.max_saved_captures,
     )
 
     shopify = ShopifyClient(
@@ -135,8 +135,9 @@ def _build_normaliser(settings: Settings) -> Normaliser:
         # A warm start uses last hour's live catalogue rather than falling back to the seed.
         try:
             cached = [t for t in cache.read_text(encoding="utf-8").splitlines() if t.strip()]
-            terms = list(normaliser.catalogue.terms) + cached
-            normaliser = Normaliser(lambda: Catalogue(terms))
+            normaliser.repoint(
+                list(normaliser.catalogue.terms) + cached, aliases=normaliser.catalogue.aliases
+            )
         except OSError:
             pass
     return normaliser
@@ -149,6 +150,7 @@ def _make_customer_lookup(shopify: ShopifyClient):
     check"), never False ("not a customer") — those are different answers.
     """
     cache: dict[str, bool] = {}
+    max_entries = 2000
 
     async def lookup(email: str) -> bool | None:
         email = (email or "").strip().lower()
@@ -159,6 +161,8 @@ def _make_customer_lookup(shopify: ShopifyClient):
         from app.tools.shopify_tools import _search_customers
 
         matches = await _search_customers(shopify, f"email:{email}", limit=1)
+        if len(cache) >= max_entries:
+            cache.clear()
         cache[email] = bool(matches)
         return cache[email]
 

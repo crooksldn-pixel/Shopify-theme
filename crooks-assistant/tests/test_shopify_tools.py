@@ -61,7 +61,8 @@ async def test_numeric_query_searches_by_order_name():
     client = FakeShopify([{"data": {"orders": {"edges": [{"node": ORDER_NODE}]}}}])
     shopify_tools.bind(client)
     result = await shopify_tools.shopify_find_order("4832")
-    assert result["matched_on"] == "name:#4832"
+    # Bare `name:4832` matches both "CROOKS-4832" and legacy "#4832" — verified on the live store.
+    assert result["matched_on"] == "name:4832"
     assert result["orders"][0]["order_number"] == "#4832"
     assert result["orders"][0]["order_id"] == "gid://shopify/Order/4832"
 
@@ -70,7 +71,7 @@ async def test_hash_prefix_is_stripped():
     client = FakeShopify([{"data": {"orders": {"edges": []}}}])
     shopify_tools.bind(client)
     result = await shopify_tools.shopify_find_order("#4832")
-    assert result["matched_on"] == "name:#4832"
+    assert result["matched_on"] == "name:4832"
 
 
 async def test_name_query_resolves_customer_first():
@@ -208,3 +209,97 @@ async def test_live_tools_return_expected_shapes():
     if orders["orders"]:
         detail = await shopify_tools.shopify_order_detail(orders["orders"][0]["order_id"])
         assert "items" in detail and "fulfillments" in detail
+
+
+# --- lessons from the live store ------------------------------------------
+
+@pytest.mark.parametrize("spoken", ["CROOKS-1928", "crooks 1928", "order 1928", "#1928", "1928"])
+async def test_all_spoken_order_forms_search_the_bare_number(spoken):
+    client = FakeShopify([{"data": {"orders": {"edges": []}}}])
+    shopify_tools.bind(client)
+    result = await shopify_tools.shopify_find_order(spoken)
+    assert result["matched_on"] == "name:1928"
+
+
+async def test_size_matches_one_segment_of_a_multi_option_variant():
+    """Real variant titles look like 'Black / XS'. The size is one segment."""
+    client = FakeShopify([{"data": {"products": {"edges": [{"node": {
+        "id": "p", "title": "CRX GARMS T-SHIRT", "status": "ACTIVE", "totalInventory": 9,
+        "variants": {"edges": [
+            {"node": {"id": "v1", "title": "Black / M", "sku": None, "inventoryQuantity": 4,
+                      "inventoryPolicy": "DENY", "inventoryItem": {"tracked": True}}},
+            {"node": {"id": "v2", "title": "White / L", "sku": None, "inventoryQuantity": 5,
+                      "inventoryPolicy": "DENY", "inventoryItem": {"tracked": True}}},
+        ]},
+    }}]}}}])
+    shopify_tools.bind(client)
+    variants = (await shopify_tools.shopify_inventory("CRX", size="medium"))["products"][0]["variants"]
+    assert [v["variant"] for v in variants] == ["Black / M"]
+
+
+async def test_oversold_variant_is_explained_not_negative():
+    client = FakeShopify([{"data": {"products": {"edges": [{"node": {
+        "id": "p", "title": "GREY CONVICT SWEATS", "status": "ACTIVE", "totalInventory": 1,
+        "variants": {"edges": [{"node": {"id": "v", "title": "M", "sku": None, "inventoryQuantity": -1,
+                                         "inventoryPolicy": "DENY", "inventoryItem": {"tracked": True}}}]},
+    }}]}}}])
+    shopify_tools.bind(client)
+    v = (await shopify_tools.shopify_inventory("convict sweats"))["products"][0]["variants"][0]
+    assert v["available"] == 0
+    assert v["oversold_by"] == 1
+    assert "Oversold" in v["note"]
+
+
+async def test_first_name_search_with_many_matches_flags_ambiguity_on_orders():
+    node = lambda i, n: {  # noqa: E731
+        "id": f"gid://shopify/Customer/{i}", "displayName": n,
+        "defaultEmailAddress": {"emailAddress": f"{i}@example.com"},
+        "numberOfOrders": "1", "amountSpent": {"amount": "10.00", "currencyCode": "GBP"},
+    }
+    client = FakeShopify([
+        {"data": {"customers": {"edges": [{"node": node(1, "Noah Brown")}, {"node": node(2, "Noah Conway")}]}}},
+        {"data": {"orders": {"edges": [{"node": ORDER_NODE}]}}},
+    ])
+    shopify_tools.bind(client)
+    result = await shopify_tools.shopify_find_order("Noah")
+    assert result["ambiguous"] is True
+    assert len(result["customers_matched"]) == 2
+    assert "ask which" in result["instruction"].lower()
+
+
+async def test_customer_search_flags_truncation():
+    node = lambda i: {  # noqa: E731
+        "id": f"gid://shopify/Customer/{i}", "displayName": f"Noah {i}",
+        "defaultEmailAddress": {"emailAddress": f"{i}@example.com"},
+        "numberOfOrders": "0", "amountSpent": {"amount": "0", "currencyCode": "GBP"},
+    }
+    client = FakeShopify([{"data": {"customers": {"edges": [{"node": node(i)} for i in range(3)]}}}])
+    shopify_tools.bind(client)
+    result = await shopify_tools.shopify_find_customer("Noah", limit=3)
+    assert result["truncated"] is True
+    assert result["customers"][0]["orders"] == 0  # numberOfOrders arrives as a string
+
+
+async def test_empty_customer_query_is_omitted():
+    client = FakeShopify([{"data": {"customers": {"edges": []}}}])
+    shopify_tools.bind(client)
+    await shopify_tools._search_customers(client, "", limit=5)
+    assert client.queries[0][1]["q"] is None
+
+
+async def test_catalogue_takes_only_colour_option_values():
+    client = FakeShopify([
+        {"data": {"products": {"edges": [{"node": {
+            "title": "CRX GARMS T-SHIRT",
+            "options": [{"name": "Colour", "values": ["Black", "White"]},
+                        {"name": "Size", "values": ["XS", "S", "M"]},
+                        {"name": "Grey Convict Hoodie (Size)", "values": ["XS"]},
+                        {"name": "Quantity", "values": ["1pc", "3pc"]}],
+        }}]}}},
+        {"data": {"customers": {"edges": []}}},
+    ])
+    shopify_tools.bind(client)
+    terms = await shopify_tools.catalogue_terms()
+    assert "Black" in terms and "White" in terms
+    for noise in ("XS", "S", "M", "1pc", "3pc"):
+        assert noise not in terms

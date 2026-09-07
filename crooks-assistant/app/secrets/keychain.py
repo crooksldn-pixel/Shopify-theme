@@ -34,12 +34,30 @@ def _validate(key: str) -> None:
         raise ValueError(f"Unknown secret key {key!r}. Known keys: {', '.join(KNOWN_KEYS)}")
 
 
+class KeychainUnavailable(SecretMissing):
+    """No usable keyring backend — Linux without a secret service, or a macOS process running
+    outside a login session (launchd before login, an SSH shell). Treated as "secret missing"
+    so callers fall back or fail with a message that names the real cause."""
+
+    def __init__(self, key: str, cause: Exception) -> None:
+        RuntimeError.__init__(
+            self,
+            f"Secret {key!r} could not be read: the keychain is unavailable to this process "
+            f"({type(cause).__name__}: {cause}). On macOS this usually means the process is "
+            "running outside your login session.",
+        )
+        self.key = key
+
+
 def get(key: str) -> str:
     """Return a secret, raising SecretMissing if absent. Never logs the value."""
     _validate(key)
     import keyring
 
-    value = keyring.get_password(SERVICE, key)
+    try:
+        value = keyring.get_password(SERVICE, key)
+    except Exception as exc:  # noqa: BLE001 — every keyring backend raises its own type
+        raise KeychainUnavailable(key, exc) from exc
     if not value:
         raise SecretMissing(key)
     return value

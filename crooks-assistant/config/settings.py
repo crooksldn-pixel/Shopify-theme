@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # --- Shopify ---
-    shopify_shop_domain: str = "crooksldn.myshopify.com"
+    # The myshopify domain, not the storefront domain. Verified against the live store.
+    shopify_shop_domain: str = "5wn03t-nm.myshopify.com"
     shopify_api_version: str = "2025-07"
     # "client_credentials" (Dev Dashboard app) or "static_token" (legacy shpat_ fallback, M6).
     shopify_auth_mode: str = "client_credentials"
@@ -47,6 +48,8 @@ class Settings(BaseSettings):
 
     # --- dev toggles ---
     save_captures: bool = True
+    # Keep only this many tablet recordings on disk. They are recordings of an office.
+    max_saved_captures: int = 200
 
 
 @lru_cache(maxsize=1)

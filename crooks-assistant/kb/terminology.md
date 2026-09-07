@@ -1,28 +1,61 @@
 # Terminology
 
-Product names, customer names and in-house shorthand, written the way they are SAID rather than
-the way they are spelled in Shopify. This file is the seed list M3 builds the normaliser
-against; from M7 the live Shopify catalogue is merged in on top of it, hourly.
+# Product names, customer names and in-house shorthand, written the way they are SAID. This file
+# seeds the speech normaliser at M3; from M7 the live Shopify catalogue is merged in on top of it
+# every hour. It is also part of the knowledge base, so the assistant reads it too — which is how
+# it knows to say "cross stars tee" rather than trying to pronounce "CRXST★RZ".
 
-Rules: one term per line, no bullets needed, `#` starts a comment. Order matters slightly — the
-Whisper prompt is truncated from the front at 224 tokens, so put the terms you most need
-recognised at the BOTTOM of the products section.
+# Format: one term per line. `#` starts a comment. `spoken form => Canonical Name` declares how
+# something is said when the Shopify title is not pronounceable. Put the terms you most need
+# recognised at the BOTTOM of a section — Whisper's prompt is truncated from the front.
 
-Replace everything below with the real CROOKS catalogue. Roughly forty product names is the
-right size. These placeholders exist so the pipeline runs before you have written it.
+# The products below are the live CROOKSLDN catalogue as of 7 Sept 2026. Correct the spoken forms
+# to match how you actually say them; that is the five-minute job that makes this work.
 
 ## Products
 
+Grey Convict Sweats
+Grey Convict Hoodie
+Black Convict Sweats
+Black Convict Hoodie
+Pink Convict Sweats
+Pink Convict Hoodie
+Crooks Express Tee
+CRX Garms T-Shirt
+CRXST★RZ T-Shirt
+OG Jeans
+Hydrocuff Windbreaker
+Grey Wash Yard Jeans
 Blue Wash Yard Jeans
-Bone Wash Yard Jeans
-Crooks Cargo Pant
-Cuffed Beanie
-Stash Hoodie
-Balaclava Knit
+Blue Wash Yard Jorts
+Grey Wash Yard Jorts
+Charcoal Cellblock Crewneck
+Charcoal Cellblock Shorts
+Black/Blue Motiontec Socks
+White/Red Motiontec Socks
+Cellblock Set
+Grey Set
+Pink Set
+Black Set
+
+## Spoken forms
+
+# Left: what you say. Right: the product it means. The right-hand side can be a partial name
+# when several products share it — "motion tech socks" matches both colours in Shopify, and the
+# assistant will ask which.
+crx garms tee => CRX Garms T-Shirt
+c r x garms tee => CRX Garms T-Shirt
+cross stars tee => CRXST★RZ T-Shirt
+crossstars tee => CRXST★RZ T-Shirt
+crooks stars tee => CRXST★RZ T-Shirt
+motion tech socks => Motiontec Socks
+hydro cuff => Hydrocuff Windbreaker
+yard jeans => Wash Yard Jeans
+yard jorts => Wash Yard Jorts
 
 ## Customers
 
-# Regular customers you talk about by name.
+# Regular customers you talk about by name, one per line.
 
 ## Shorthand
 

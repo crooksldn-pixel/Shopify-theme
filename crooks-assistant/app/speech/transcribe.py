@@ -8,6 +8,7 @@ answers a question nobody asked is worse than one that says it did not hear.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,10 +52,17 @@ class SpeechResult:
 
 
 def build_prompt(terms: list[str]) -> str:
-    """A bare comma-separated term list, most important LAST because truncation eats the front."""
-    if not terms:
+    """A comma-separated term list ending in a full stop, most important LAST because
+    truncation eats the front.
+
+    Whisper imitates the prompt's style. A bare lower-case list produced transcripts with no
+    capitals and no punctuation; the same list in display case ending with a period restored
+    both. Symbols are dropped because '★' teaches the model nothing about how a word sounds."""
+    cleaned = [re.sub(r"[^A-Za-z0-9' ]+", " ", t).strip() for t in terms]
+    cleaned = [" ".join(t.split()) for t in cleaned if t and t.strip()]
+    if not cleaned:
         return ""
-    return ", ".join(terms[-PROMPT_MAX_TERMS:])
+    return ", ".join(dict.fromkeys(cleaned[-PROMPT_MAX_TERMS:])) + "."
 
 
 class Transcriber:
@@ -64,10 +72,12 @@ class Transcriber:
         normaliser: Normaliser,
         *,
         save_dir: Path | None = None,
+        max_saved: int = 200,
     ) -> None:
         self._client = client
         self._normaliser = normaliser
         self._save_dir = save_dir
+        self._max_saved = max_saved
 
     async def from_blob(self, blob: bytes, *, filename_hint: str = "") -> SpeechResult:
         timings: dict[str, float] = {}
@@ -84,6 +94,8 @@ class Transcriber:
         except DecodeError as exc:
             return SpeechResult(ok=False, reason=str(exc), timings_ms={"decode": _ms(t0)})
         timings["decode"] = _ms(t0)
+        if save_to is not None:
+            prune_captures(self._save_dir, self._max_saved)
 
         if not audio.stats.usable:
             return SpeechResult(
@@ -100,7 +112,7 @@ class Transcriber:
         t1 = time.perf_counter()
         try:
             transcript: Transcript = await self._client.transcribe(
-                audio.as_wav(), prompt=build_prompt(self._normaliser.catalogue.terms)
+                audio.as_wav(), prompt=build_prompt(self._normaliser.catalogue.prompt_terms())
             )
         except WhisperUnavailable as exc:
             return SpeechResult(ok=False, reason=str(exc), stats=audio.stats, timings_ms=timings)
@@ -130,6 +142,25 @@ class Transcriber:
             normalised=normalised,
             timings_ms=timings,
         )
+
+
+def prune_captures(directory: Path | None, keep: int) -> int:
+    """Keep the newest `keep` recordings. These are recordings of an office; the benchmark
+    corpus needs a few dozen, not a year of them. Returns how many were removed."""
+    if directory is None or keep <= 0 or not directory.exists():
+        return 0
+    files = sorted(
+        (p for p in directory.iterdir() if p.is_file() and not p.name.startswith(".")),
+        key=lambda p: p.stat().st_mtime,
+    )
+    removed = 0
+    for path in files[: max(0, len(files) - keep)]:
+        try:
+            path.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
 
 
 def _ms(since: float) -> float:

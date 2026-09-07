@@ -78,6 +78,9 @@ def main() -> int:
         failures += 1
         print("       Python 3.12+ is required. A system 3.9 on PATH will shadow a newer one;")
         print("       create the venv with an explicit interpreter: python3.12 -m venv .venv")
+    py312 = shutil.which("python3.12")
+    row(OK if py312 else WARN, "python3.12", py312 or "not on PATH — brew install python@3.12 (make venv needs it)")
+    warnings += 0 if py312 else 1
 
     for name, hint in [
         ("git", "brew install git"),

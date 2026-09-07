@@ -161,3 +161,125 @@ def test_load_terms_missing_file_is_not_fatal(tmp_path):
 
 def test_catalogue_dedupes_case_insensitively():
     assert len(Catalogue(["Stash Hoodie", "stash hoodie", "STASH HOODIE"])) == 1
+
+
+# --- lessons from the real CROOKSLDN catalogue -------------------------------
+
+REAL = [
+    "Grey Convict Sweats", "Grey Convict Hoodie", "Black Convict Hoodie", "Crooks Express Tee",
+    "CRX Garms T-Shirt", "CRXST★RZ T-Shirt", "OG Jeans", "Hydrocuff Windbreaker",
+    "Grey Wash Yard Jeans", "Blue Wash Yard Jeans", "Blue Wash Yard Jorts",
+    "Charcoal Cellblock Crewneck", "Black/Blue Motiontec Socks", "White/Red Motiontec Socks",
+    "Pink Set", "Grey Set",
+]
+ALIASES = {"cross stars tee": "CRXST★RZ T-Shirt", "motion tech socks": "Motiontec Socks"}
+
+
+@pytest.fixture()
+def real():
+    return from_terms(REAL, ALIASES)
+
+
+def test_alias_maps_unpronounceable_name(real):
+    assert real.normalise("cross stars tee").text == "CRXST★RZ T-Shirt"
+    assert real.normalise("cross stars tee").matches[0].via == "alias"
+
+
+def test_alias_does_not_false_match_a_similar_real_product(real):
+    """'cross stars tee' scored above the old threshold against 'Crooks Express Tee'."""
+    assert "Crooks Express Tee" not in real.normalise("cross stars tee").text
+
+
+def test_compound_word_splits_are_repaired(real):
+    assert "Hydrocuff Windbreaker" in real.normalise("the hydro cuff wind breaker").text
+    assert "Charcoal Cellblock Crewneck" in real.normalise("charcoal cell block crew neck").text
+
+
+def test_colour_variants_are_not_conflated(real):
+    out = real.normalise("black blue motion tech socks")
+    assert "Black/Blue Motiontec Socks" in out.text
+    assert "White/Red" not in out.text
+
+
+def test_partial_name_below_threshold_is_left_alone():
+    """'motiontec socks' matches neither colour well enough to replace — so it is not replaced,
+    and Claude's Shopify search on the partial name will return both for it to ask about."""
+    n = from_terms(["Black/Blue Motiontec Socks", "White/Red Motiontec Socks"])
+    out = n.normalise("motiontec socks")
+    assert out.text == "motiontec socks"
+    assert not out.matches
+
+
+def test_tie_between_two_products_is_left_alone_and_reported():
+    """Two names one similar word apart, heard as something between them: a tie is not a
+    decision, so the words stay as heard and the candidates are reported."""
+    n = from_terms(["Black Motiontec Socks", "Blank Motiontec Socks"])
+    out = n.normalise("blanc motiontec socks")
+    assert out.text == "blanc motiontec socks", "a tie must not be broken by guessing"
+    assert out.ambiguities
+    assert set(out.ambiguities[0].candidates) >= {"Black Motiontec Socks", "Blank Motiontec Socks"}
+
+
+def test_synonyms_bridge_tee_and_t_shirt(real):
+    assert "CRX Garms T-Shirt" in real.normalise("crx garms tee").text
+
+
+def test_case_is_not_an_obstacle():
+    n = from_terms(["BLUE WASH YARD JEANS"])
+    assert n.normalise("blue wash yard genes").text == "BLUE WASH YARD JEANS"
+
+
+def test_shopify_title_case_and_seed_dedupe_keeps_the_seed():
+    n = from_terms(["Blue Wash Yard Jeans", "BLUE WASH YARD JEANS"])
+    assert n.catalogue.terms == ["Blue Wash Yard Jeans"]
+
+
+def test_prompt_terms_are_display_case_with_aliases_last(real):
+    terms = real.catalogue.prompt_terms()
+    assert "CRXST RZ T-Shirt".replace("-", " ") in [t.replace("-", " ") for t in terms]
+    assert terms[-1] == "Motion Tech Socks"
+    assert all("★" not in t for t in terms)
+
+
+def test_repoint_swaps_the_catalogue(real):
+    real.repoint(["Cuffed Beanie"], {"the beanie": "Cuffed Beanie"})
+    assert real.normalise("the beanie").text == "Cuffed Beanie"
+    assert real.normalise("cross stars tee").text == "cross stars tee"
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [("find order CROOKS-1928", ["1928"]), ("crooks 1928", ["1928"]), ("order crooks 1928", ["1928"])],
+)
+def test_crooks_prefixed_order_numbers(real, text, expected):
+    assert real.normalise(text).order_numbers == expected
+
+
+def test_nineteen_twenty_eight_is_an_order_number(real):
+    out = real.normalise("find order nineteen twenty eight")
+    assert out.order_numbers == ["1928"]
+
+
+def test_prose_lines_in_terminology_are_not_terms(tmp_path):
+    from app.speech.normalise import load_terminology
+
+    f = tmp_path / "t.md"
+    f.write_text(
+        "# Terminology\n\nProduct names written the way they are said, one per line please.\n\n"
+        "## Products\n\nOG Jeans\ncross stars tee => CRXST★RZ T-Shirt\n",
+        encoding="utf-8",
+    )
+    terms, aliases = load_terminology(f)
+    assert terms == ["OG Jeans"]
+    assert aliases == {"cross stars tee": "CRXST★RZ T-Shirt"}
+
+
+def test_shipped_terminology_seed_loads_cleanly():
+    from pathlib import Path
+
+    from app.speech.normalise import from_file
+
+    n = from_file(Path(__file__).resolve().parent.parent / "kb" / "terminology.md")
+    assert len(n.catalogue) >= 20
+    assert n.catalogue.max_words <= 6, "a prose line has leaked into the term list"
+    assert "cross stars tee" in n.catalogue.aliases

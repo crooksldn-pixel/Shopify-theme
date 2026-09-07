@@ -37,6 +37,16 @@ class Session:
     turns: int = 0
     proposals: list[StagedProposal] = field(default_factory=list)
 
+    # What the assistant is doing right now, driven by the tool actually executing — never
+    # guessed from the question. The tablet polls this during a turn (M11).
+    state: str = "READY"
+    state_detail: str = ""
+
+    def set_state(self, state: str, detail: str = "") -> None:
+        self.state = state
+        self.state_detail = detail
+        self.touch()
+
     def touch(self) -> None:
         self.last_seen_at = time.time()
 

@@ -7,6 +7,7 @@ query string from the model, because that is how a read-only integration becomes
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from app.clients.shopify import ShopifyClient, ShopifyError
@@ -90,21 +91,24 @@ _ORDER_FIELDS = """
 async def shopify_find_order(query: str, limit: int = 5) -> dict:
     client = _c()
     limit = max(1, min(int(limit), MAX_PAGE))
-    term = query.strip().lstrip("#").strip()
+    term = _strip_order_prefix(query)
     if not term:
         raise ToolError("No order number or customer given.")
 
-    # A bare number is an order name. Shopify stores it with the '#' prefix.
-    search = f"name:#{term}" if term.isdigit() else None
+    # A bare number is an order name. This store names orders "CROOKS-1928" (older ones
+    # "#1036"); a bare `name:1928` matches both forms — verified against the live store.
+    search = f"name:{term}" if term.isdigit() else None
+    ambiguous_customers: list[dict] = []
 
     if search is None:
         # There is no `customer_name:` filter on orders. Resolve the customer first, then
         # search by customer_id — searching orders by a name string silently returns nothing.
-        customers = await _search_customers(client, term, limit=5)
+        customers = await _search_customers(client, term, limit=10)
         if not customers:
             return {"query": query, "orders": [], "note": f"No customer matching {term!r}."}
         clauses = " OR ".join(f"customer_id:{c['id'].rsplit('/', 1)[-1]}" for c in customers)
         search = f"({clauses})"
+        ambiguous_customers = customers if len(customers) > 1 else []
 
     payload = await client.graphql(
         f"""
@@ -118,12 +122,31 @@ async def shopify_find_order(query: str, limit: int = 5) -> dict:
     )
     orders = [_order_summary(e["node"]) for e in payload["data"]["orders"]["edges"]]
     result: dict[str, Any] = {"query": query, "matched_on": search, "orders": orders}
+    if not term.isdigit() and ambiguous_customers:
+        result["ambiguous"] = True
+        result["customers_matched"] = [
+            {"customer_id": c["customer_id"], "name": c["name"]} for c in ambiguous_customers
+        ]
+        result["instruction"] = (
+            "More than one customer matched that name. Say which customers you found and ask "
+            "which one is meant before reporting an order as theirs."
+        )
     if not orders:
         result["note"] = (
             f"No order found for {query!r}. Note that without the read_all_orders scope only "
             "the last 60 days of orders are visible."
         )
     return result
+
+
+_ORDER_PREFIX_RE = re.compile(r"^\s*(?:order\s*)?(?:crooks[\s-]*)?#?\s*", re.I)
+
+
+def _strip_order_prefix(query: str) -> str:
+    """'CROOKS-1928', 'crooks 1928', '#1928', 'order 1928' and '1928' are all the same order."""
+    query = query.strip()
+    stripped = _ORDER_PREFIX_RE.sub("", query).strip()
+    return stripped if stripped.isdigit() else query.lstrip("#").strip()
 
 
 def _order_summary(node: dict) -> dict:
@@ -293,7 +316,7 @@ async def shopify_list_orders(
 async def _search_customers(client: ShopifyClient, term: str, limit: int = 5) -> list[dict]:
     payload = await client.graphql(
         """
-        query FindCustomers($q: String!, $n: Int!) {
+        query FindCustomers($q: String, $n: Int!) {
           customers(first: $n, query: $q) {
             edges { node {
               id
@@ -305,7 +328,7 @@ async def _search_customers(client: ShopifyClient, term: str, limit: int = 5) ->
           }
         }
         """,
-        {"q": term, "n": max(1, min(limit, MAX_PAGE))},
+        {"q": term.strip() or None, "n": max(1, min(limit, MAX_PAGE))},
     )
     return [
         {
@@ -314,7 +337,7 @@ async def _search_customers(client: ShopifyClient, term: str, limit: int = 5) ->
             "name": e["node"].get("displayName"),
             # Customer.email is deprecated; defaultEmailAddress is the current field.
             "email": (e["node"].get("defaultEmailAddress") or {}).get("emailAddress"),
-            "orders": e["node"].get("numberOfOrders"),
+            "orders": int(e["node"].get("numberOfOrders") or 0),
             "spent": _money(e["node"].get("amountSpent")),
         }
         for e in payload["data"]["customers"]["edges"]
@@ -339,8 +362,12 @@ async def _search_customers(client: ShopifyClient, term: str, limit: int = 5) ->
 )
 async def shopify_find_customer(query: str, limit: int = 5) -> dict:
     client = _c()
+    limit = max(1, min(int(limit), MAX_PAGE))
     matches = await _search_customers(client, query.strip(), limit=limit)
     result: dict[str, Any] = {"query": query, "count": len(matches), "customers": matches}
+    if len(matches) >= limit:
+        result["truncated"] = True
+        result["note"] = f"Showing the first {limit}; there may be more. Narrow the search."
     if len(matches) > 1:
         result["ambiguous"] = True
         result["instruction"] = "More than one customer matched. Ask which one; do not choose."
@@ -410,17 +437,25 @@ async def shopify_inventory(product: str, size: str = "", limit: int = 5) -> dic
         for v in node["variants"]["edges"]:
             vn = v["node"]
             title = (vn.get("title") or "").strip()
-            if wanted and title.lower() not in wanted:
+            segments = {seg.strip().lower() for seg in title.split("/")}
+            if wanted and not (segments & wanted):
                 continue
             tracked = (vn.get("inventoryItem") or {}).get("tracked", True)
+            quantity = vn.get("inventoryQuantity")
+            note = None
+            if not tracked:
+                note = "Inventory is not tracked for this variant."
+            elif quantity is not None and quantity < 0:
+                note = f"Oversold by {abs(quantity)} — more sold than were in stock."
             variants.append(
                 {
                     "variant_id": vn["id"],
                     "variant": title,
                     "sku": vn.get("sku"),
-                    "available": vn.get("inventoryQuantity") if tracked else None,
+                    "available": (max(quantity, 0) if quantity is not None else None) if tracked else None,
+                    "oversold_by": abs(quantity) if tracked and quantity is not None and quantity < 0 else 0,
                     "tracked": tracked,
-                    "note": None if tracked else "Inventory is not tracked for this variant.",
+                    "note": note,
                 }
             )
         products.append(
@@ -566,7 +601,8 @@ async def catalogue_terms(limit: int = 250) -> list[str]:
             node = edge["node"]
             terms.append(node["title"])
             for option in node.get("options") or []:
-                if (option.get("name") or "").lower() not in {"size", "title"}:
+                name = (option.get("name") or "").lower()
+                if "colour" in name or "color" in name:
                     terms.extend(option.get("values") or [])
     except ShopifyError as exc:
         log.warning("catalogue: product fetch failed, continuing: %s", exc)

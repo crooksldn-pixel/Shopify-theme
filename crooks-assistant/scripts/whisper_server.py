@@ -67,7 +67,8 @@ def main() -> int:
         "--language", "en",
         "--threads", str(os.cpu_count() or 8),
         "--no-timestamps",
-        "--print-progress", "false",
+        # Suppress non-speech tokens at the decoder. Flags verified against `whisper-server --help`.
+        "--suppress-nst",
     ]
     if vad is not None:
         cmd += ["--vad", "--vad-model", str(vad)]

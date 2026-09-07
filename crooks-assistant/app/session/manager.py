@@ -40,6 +40,20 @@ class SessionManager:
             session.touch()
             return session
 
+    def exists(self, session_id: str) -> bool:
+        with self._lock:
+            self._sweep_locked()
+            return session_id in self._sessions
+
+    def peek(self, session_id: str) -> Session:
+        """Read without touching last_seen_at — polling for state must not keep a session alive."""
+        with self._lock:
+            self._sweep_locked()
+            session = self._sessions.get(session_id)
+            if session is None:
+                raise SessionExpired(session_id)
+            return session
+
     def drop(self, session_id: str) -> None:
         with self._lock:
             self._sessions.pop(session_id, None)

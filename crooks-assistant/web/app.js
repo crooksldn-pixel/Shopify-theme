@@ -30,6 +30,10 @@ const store = {
 
 let sessionId = store.get('crooks.session', '') || (Math.random().toString(36).slice(2, 14));
 store.set('crooks.session', sessionId);
+// How many turns this conversation has had, as far as the tablet knows. Sent with each turn
+// so the backend can tell "new conversation" from "I restarted and forgot yours".
+let turns = parseInt(store.get('crooks.turns', '0'), 10) || 0;
+let statePoll = null;
 
 let mediaRecorder = null;
 let chunks = [];
@@ -241,31 +245,50 @@ function renderTimings(timings) {
   el.timings.textContent = Object.entries(timings).map(([k, v]) => `${k} ${v}ms`).join('  ·  ');
 }
 
+// While a turn is in flight, ask the backend what it is actually doing. The state on screen
+// is driven by the tool that is running, never inferred from the question.
+function startStatePolling() {
+  stopStatePolling();
+  statePoll = setInterval(async () => {
+    if (!busy) return;
+    try {
+      const data = await (await fetch(`/state/${encodeURIComponent(sessionId)}`, { cache: 'no-store' })).json();
+      if (busy && data.known && data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state);
+    } catch { /* the turn response will carry the outcome */ }
+  }, 400);
+}
+function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
+
 async function submit(body, isAudio) {
   busy = true;
   el.talk.disabled = true;
   setState('TRANSCRIBING', isAudio ? 'Transcribing' : 'Thinking');
+  startStatePolling();
   try {
     const options = isAudio
       ? { method: 'POST', body }
       : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
-    if (isAudio) setTimeout(() => { if (busy) setState('THINKING'); }, 900);
+    if (isAudio) setTimeout(() => { if (busy && el.stage.dataset.state === 'TRANSCRIBING') setState('THINKING'); }, 1200);
     const response = await fetch('/turn', options);
     const data = await response.json();
 
     sessionId = data.session_id || sessionId;
     store.set('crooks.session', sessionId);
+    turns = typeof data.turns === 'number' ? data.turns : turns + 1;
+    if (data.lost_thread) turns = 0;
+    store.set('crooks.turns', String(turns));
     el.heard.textContent = data.question ? `“${data.question}”` : '';
     el.answer.textContent = data.answer;
     renderTimings(data.timings_ms);
 
     if (data.error_kind) { setState('ERROR'); speak(data.answer); }
-    else { setState(data.last_state === 'THINKING' ? 'READY' : data.last_state); speak(data.answer); }
+    else { setState('READY'); speak(data.answer); }
   } catch (error) {
     setState('ERROR');
     el.answer.textContent = 'I lost contact with the backend. It may have restarted.';
     setConn('down', 'Backend unreachable');
   } finally {
+    stopStatePolling();
     busy = false;
     el.talk.disabled = false;
     // If speech is off there is no onend to return us to READY, so do it here.
@@ -277,6 +300,7 @@ function sendAudio(blob) {
   const form = new FormData();
   form.append('audio', blob, 'turn.webm');
   form.append('session_id', sessionId);
+  form.append('turns', String(turns));
   submit(form, true);
 }
 
@@ -284,12 +308,19 @@ function sendAudio(blob) {
 
 el.talk.addEventListener('pointerdown', (event) => {
   event.preventDefault();
+  // Capture the pointer so pointerup reaches this button even if the thumb drifts off it —
+  // otherwise a slightly sliding thumb means the recording never stops.
+  try { el.talk.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
   unlockSpeech();          // must be inside the gesture
   acquireWakeLock();
   startRecording();        // start before any other UI work, or the first word is clipped
 });
-for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-  el.talk.addEventListener(type, (event) => { event.preventDefault(); stopRecording(); });
+for (const type of ['pointerup', 'pointercancel']) {
+  el.talk.addEventListener(type, (event) => {
+    event.preventDefault();
+    try { el.talk.releasePointerCapture(event.pointerId); } catch { /* noop */ }
+    stopRecording();
+  });
 }
 el.talk.addEventListener('contextmenu', (event) => event.preventDefault());
 
@@ -308,6 +339,8 @@ el.resetSession.addEventListener('click', async () => {
   try { await fetch('/reset', { method: 'POST', body: form }); } catch { /* noop */ }
   sessionId = Math.random().toString(36).slice(2, 14);
   store.set('crooks.session', sessionId);
+  turns = 0;
+  store.set('crooks.turns', '0');
   el.heard.textContent = '';
   el.answer.textContent = 'Started a new conversation.';
   el.settings.close();

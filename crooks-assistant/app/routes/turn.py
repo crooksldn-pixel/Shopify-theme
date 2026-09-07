@@ -19,6 +19,7 @@ log = logging.getLogger("crooks.turn")
 router = APIRouter()
 
 MAX_UPLOAD_BYTES = 10_000_000
+MAX_TEXT_CHARS = 2_000
 
 
 def _tool_state(tool_names: list[str]) -> str:
@@ -39,10 +40,10 @@ async def turn(
     audio: UploadFile | None = File(default=None),
 ) -> dict:
     runtime = request.app.state.runtime
-    session_id = session_id or uuid.uuid4().hex[:12]
     started = time.perf_counter()
     timings: dict[str, float] = {}
     transcript_info: dict | None = None
+    expected_turns: int | None = None
 
     # JSON bodies are what curl and scripts/chat.py send; multipart is what the tablet sends.
     if text is None and audio is None:
@@ -52,6 +53,22 @@ async def turn(
             body = {}
         text = body.get("text")
         session_id = body.get("session_id") or session_id
+        expected_turns = body.get("turns")
+    else:
+        form_turns = (await request.form()).get("turns")
+        expected_turns = int(form_turns) if form_turns not in (None, "") else None
+
+    # The tablet says how many turns it thinks this conversation has had. If the backend has
+    # no such session but the tablet believes one exists, the backend restarted (or the
+    # session idled out) and the honest answer is "I've lost the thread", not a fresh start
+    # that silently forgets what "that order" meant.
+    lost_thread = False
+    if session_id and expected_turns and not runtime.sessions.exists(session_id):
+        lost_thread = True
+    session_id = session_id or uuid.uuid4().hex[:12]
+    if lost_thread:
+        runtime.sessions.drop(session_id)
+        await runtime.provider.reset_session(session_id)
 
     if audio is not None:
         blob = await audio.read()
@@ -74,6 +91,16 @@ async def turn(
         return _answer(
             runtime, session_id, "I did not catch that.", error_kind="empty",
             timings=timings, started=started, transcript=transcript_info,
+        )
+    text = text.strip()[:MAX_TEXT_CHARS]
+
+    if lost_thread:
+        return _answer(
+            runtime, session_id,
+            "I've lost the thread of our conversation — either I restarted or it has been a "
+            "while. Ask me again from the start.",
+            error_kind="lost_thread", timings=timings, started=started,
+            transcript=transcript_info, question=text, lost_thread=True,
         )
 
     await runtime.maybe_refresh_catalogue()
@@ -115,14 +142,22 @@ def _answer(
     transcript: dict | None = None,
     question: str = "",
     tool_calls: list | None = None,
+    lost_thread: bool = False,
 ) -> dict:
     tool_calls = tool_calls or []
     timings["total"] = (time.perf_counter() - started) * 1000
+    turns = 0
+    try:
+        turns = runtime.sessions.get(session_id).turns
+    except KeyError:
+        pass
     payload = {
         "session_id": session_id,
+        "turns": turns,
         "answer": answer,
         "question": question or (transcript or {}).get("text", ""),
         "error_kind": error_kind,
+        "lost_thread": lost_thread,
         "state": "ERROR" if error_kind else "READY",
         "last_state": _tool_state([c["name"] for c in tool_calls]),
         "tool_calls": tool_calls,
@@ -131,6 +166,25 @@ def _answer(
     }
     runtime.turnlog.write(payload)
     return payload
+
+
+@router.get("/state/{session_id}")
+async def state(request: Request, session_id: str) -> dict:
+    """What the assistant is doing right now. The tablet polls this during a turn so the
+    screen says CHECKING SHOPIFY because shopify_list_orders is actually running, not because
+    the question had the word "orders" in it."""
+    runtime = request.app.state.runtime
+    try:
+        session = runtime.sessions.peek(session_id)
+    except KeyError:
+        return {"session_id": session_id, "known": False, "state": "READY", "detail": ""}
+    return {
+        "session_id": session_id,
+        "known": True,
+        "state": session.state,
+        "detail": session.state_detail,
+        "turns": session.turns,
+    }
 
 
 @router.post("/audio-test")

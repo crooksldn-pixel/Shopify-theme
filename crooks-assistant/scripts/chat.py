@@ -30,6 +30,7 @@ def main() -> int:
     args = parser.parse_args()
 
     session_id = args.session or f"cli-{uuid.uuid4().hex[:8]}"
+    turns = 0
     client = httpx.Client(base_url=args.url, timeout=120)
     print(BANNER)
 
@@ -56,6 +57,7 @@ def main() -> int:
         if text == "/new":
             client.post("/reset", data={"session_id": session_id})
             session_id = f"cli-{uuid.uuid4().hex[:8]}"
+            turns = 0
             print(f"{DIM}new session {session_id}{RESET}")
             continue
         if text == "/health":
@@ -73,12 +75,17 @@ def main() -> int:
             continue
 
         try:
-            data = client.post("/turn", json={"text": text, "session_id": session_id}).json()
+            data = client.post(
+                "/turn", json={"text": text, "session_id": session_id, "turns": turns}
+            ).json()
         except httpx.HTTPError as exc:
             print(f"{RED}request failed: {exc}{RESET}")
             continue
 
         session_id = data.get("session_id", session_id)
+        turns = data.get("turns", turns + 1)
+        if data.get("lost_thread"):
+            print(f"{YELLOW}  (backend lost the session — starting over){RESET}")
         for call in data.get("tool_calls", []):
             if call["ok"]:
                 print(f"{DIM}  → {call['name']}  {call.get('ms') or '?'}ms{RESET}")
