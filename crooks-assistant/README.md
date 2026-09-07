@@ -29,7 +29,7 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 | M7 Shopify tools | Seven tools; queries validated against the schema and search syntax verified on the live store. **Needs your credentials to run.** |
 | M8 Gmail auth | Auth script and refresh handling. **Needs the Google Cloud console work.** |
 | M9 Gmail tools | Two tools, no write path anywhere. |
-| M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **Needs your KB content.** |
+| M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **KB written from the store's own policies and metafields**; one discretion section is yours. |
 | M11 Voice in | `/turn` takes audio or text; the tablet polls `/state` so the screen shows the tool actually running. |
 | M12 Voice out | Chunking, unlock, voice picker — all three Android guardrails. |
 | M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check; launchd plists; log rotation; capture cap. |
@@ -38,7 +38,7 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 What has actually been verified — here, on Linux, and against the real store:
 
 ```
-230 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
+258 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
 ruff clean                                                       make lint
 8/8 GraphQL queries validated against the Shopify Admin schema
 ```
@@ -120,7 +120,7 @@ Then, in order:
 ```bash
 make dev          # backend
 make chat         # terminal REPL — use this, not voice, for repeat testing
-make test         # 123 tests; the live API ones skip without credentials
+make test         # 258 tests, all offline; the two live API ones skip without credentials
 make lint
 make bench        # M3 model comparison, on tablet audio
 make acceptance   # M14, 18 commands
@@ -186,6 +186,22 @@ launchd/             run-at-boot plists
 
 whisper.cpp itself lives outside the repo at `~/tools/whisper.cpp` — it is a large third-party
 build tree and does not belong in this history.
+
+---
+
+## The review
+
+Eight independent reviewers each took one lens — gate security, Agent SDK correctness, Shopify
+API, Gmail API, Chrome-on-Android, speech, plan conformance, unattended operation — and produced
+63 findings. Every finding was triaged against the current tree; the ones that stood were fixed
+in commit `cebccbe`. The most serious: transcripts were reaching the stdout log unredacted,
+`POST /reload-kb` changed nothing the model saw, the billing guard ran inside a caught start-up,
+Gmail calls blocked the event loop so the tool timeout could never fire, and a stalled Claude
+turn would have held the turn lock forever. The full list is in that commit's message.
+
+Findings that were refuted stayed refuted: "token.json is a secret in a file" was the plan's own
+choice (the Gmail credential can now live in the Keychain instead); caller-chosen session ids are
+accepted on a single-user tailnet.
 
 ---
 
