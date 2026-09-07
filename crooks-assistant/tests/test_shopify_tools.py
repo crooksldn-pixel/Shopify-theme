@@ -441,3 +441,28 @@ async def test_inventory_limit_is_capped_for_query_cost():
     shopify_tools.bind(client)
     await shopify_tools.shopify_inventory("jeans", limit=50)
     assert client.queries[0][1]["n"] == shopify_tools.MAX_PRODUCTS
+
+
+@pytest.mark.parametrize(
+    "doc",
+    [
+        "mutation { orderUpdate(input: {}) { order { id } } }",
+        "mutation M($id: ID!) { orderCancel(orderId: $id) { job { id } } }",
+        "  # a comment\n  mutation { x }",
+        "MUTATION { y }",
+    ],
+)
+async def test_client_refuses_any_mutation(doc):
+    from app.clients.shopify import ShopifyClient, ShopifyError, _is_mutation
+
+    assert _is_mutation(doc)
+    client = ShopifyClient("x.myshopify.com", "2025-07", auth_mode="static_token")
+    with pytest.raises(ShopifyError, match="never sends"):
+        await client.graphql(doc)
+
+
+@pytest.mark.parametrize("doc", ["query { shop { name } }", "{ shop { name } }", "query Q($n: Int!) { orders(first: $n) { edges { node { id } } } }"])
+def test_reads_are_not_mutations(doc):
+    from app.clients.shopify import _is_mutation
+
+    assert not _is_mutation(doc)

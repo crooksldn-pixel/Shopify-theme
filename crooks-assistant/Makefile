@@ -1,5 +1,7 @@
 VENV := .venv
 PY   := $(VENV)/bin/python
+# 3.12 preferred; 3.11 is what the suite was verified on. Anything older will not work.
+PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
 .PHONY: help doctor venv dev bench test lint chat acceptance whisper-server
@@ -19,7 +21,7 @@ doctor:
 	@$(PY) scripts/doctor.py 2>/dev/null || python3 scripts/doctor.py
 
 venv:
-	python3.12 -m venv $(VENV)
+	$(PYTHON) -m venv $(VENV)
 	$(PIP) install -q --upgrade pip
 	$(PIP) install -e ".[dev]"
 	@echo "venv ready — activate with: source $(VENV)/bin/activate"

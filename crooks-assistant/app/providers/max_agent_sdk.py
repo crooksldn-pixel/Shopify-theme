@@ -28,6 +28,7 @@ from app.secrets.keychain import SecretMissing
 from app.session.models import Session
 from app.tools import registry
 from app.tools.dispatch import dispatch, make_pretooluse_hook
+from app.tools.gate import Tier
 
 log = logging.getLogger("crooks.claude")
 
@@ -137,7 +138,12 @@ class MaxAgentSDKProvider(ClaudeProvider):
         from claude_agent_sdk import ClaudeAgentOptions, HookMatcher
 
         server = registry.build_mcp_server(self._dispatch)
-        tool_names = [f"mcp__{registry.MCP_SERVER_NAME}__{n}" for n in registry.names()]
+        prefix = f"mcp__{registry.MCP_SERVER_NAME}__"
+        # RED tools are refused twice: disallowed at the SDK layer, and denied by the hook if
+        # anything ever reaches it. Belt and braces, because one barrier is one failure away.
+        red = {s.name for s in registry.all_specs() if s.tier is Tier.RED}
+        tool_names = [prefix + n for n in registry.names() if n not in red]
+        disallowed = [prefix + n for n in sorted(red)]
 
         return ClaudeAgentOptions(
             system_prompt=self._system_prompt,
@@ -146,6 +152,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
             tools=[],
             mcp_servers={registry.MCP_SERVER_NAME: server},
             allowed_tools=tool_names,
+            disallowed_tools=disallowed,
             # Nobody is sitting at a terminal to answer a prompt, so nothing may prompt. The
             # gate, not an interactive approval, is what makes this safe.
             permission_mode="dontAsk",

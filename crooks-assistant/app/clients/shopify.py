@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -134,6 +135,10 @@ class ShopifyClient:
     # ------------------------------------------------------------- graphql
 
     async def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+        # Read-only is enforced HERE, not only by the scope list the owner types into a console.
+        # A document whose operation is a mutation never leaves this process.
+        if _is_mutation(query):
+            raise ShopifyError("Refused: this assistant never sends a Shopify mutation.")
         token = await self._access_token()
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as http:
@@ -235,6 +240,17 @@ class ShopifyClient:
             return False, str(exc)
         except Exception as exc:  # noqa: BLE001
             return False, f"Shopify check failed: {exc}"
+
+
+_MUTATION_RE = re.compile(r"^\s*(?:#[^\n]*\n\s*)*mutation\b", re.I)
+
+
+def _is_mutation(document: str) -> bool:
+    """True if the GraphQL document's operation is a mutation. Anonymous `{ ... }` and
+    `query` documents are reads; anything starting with `mutation` is a write."""
+    return bool(_MUTATION_RE.match(document or "")) or bool(
+        re.search(r"\bmutation\s+\w*\s*[({]", document or "", re.I)
+    )
 
 
 def _iso_utc(dt: datetime) -> str:

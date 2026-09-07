@@ -72,11 +72,11 @@ def main() -> int:
             failures += 1
 
     version = sys.version_info
-    ok_python = version >= (3, 12)
+    ok_python = version >= (3, 11)
     row(OK if ok_python else BAD, "python", f"{platform.python_version()} at {sys.executable}")
     if not ok_python:
         failures += 1
-        print("       Python 3.12+ is required. A system 3.9 on PATH will shadow a newer one;")
+        print("       Python 3.11+ is required (3.12 preferred). A system 3.9 on PATH shadows newer ones;")
         print("       create the venv with an explicit interpreter: python3.12 -m venv .venv")
     py312 = shutil.which("python3.12")
     row(OK if py312 else WARN, "python3.12", py312 or "not on PATH — brew install python@3.12 (make venv needs it)")

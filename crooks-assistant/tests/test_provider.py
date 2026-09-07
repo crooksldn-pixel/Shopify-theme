@@ -111,6 +111,10 @@ def test_options_construct_with_no_builtin_tools(monkeypatch):
     assert opts.setting_sources == []
     assert "crooks" in opts.mcp_servers
     assert all(name.startswith("mcp__crooks__") for name in opts.allowed_tools)
+    # RED tools are disallowed at the SDK layer too, not only denied by the hook.
+    assert "mcp__crooks__mock_danger" in opts.disallowed_tools
+    assert "mcp__crooks__mock_danger" not in opts.allowed_tools
+    assert "mcp__crooks__mock_echo" in opts.allowed_tools
     assert "PreToolUse" in opts.hooks
     assert opts.env == {}  # CLI mode injects nothing
     assert opts.system_prompt == "sys"

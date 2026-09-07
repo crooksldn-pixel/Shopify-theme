@@ -7,6 +7,10 @@
 
   A restart loop here is almost always a wrong WorkingDirectory or a PATH that does not
   include the `claude` binary — launchd does not read your shell profile.
+
+  BEFORE loading this: `claude setup-token` and `python scripts/set_secrets.py
+  claude_oauth_token`. Under launchd there is no login session, so the CLI's own login is
+  not available; without the stored token the backend boots but every turn fails.
 -->
 <plist version="1.0">
 <dict>
