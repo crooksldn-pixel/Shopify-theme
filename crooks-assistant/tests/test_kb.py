@@ -42,3 +42,20 @@ def test_system_prompt_carries_the_rules(tmp_path):
 def test_empty_kb_tells_the_model_to_say_so(tmp_path):
     prompt = build_system_prompt(load(tmp_path))
     assert "knowledge base is empty" in prompt
+
+
+def test_readme_is_not_knowledge(tmp_path):
+    (tmp_path / "README.md").write_text("how to edit this folder", encoding="utf-8")
+    (tmp_path / "returns-policy.md").write_text("14 days.", encoding="utf-8")
+    kb = load(tmp_path)
+    assert kb.files == ["returns-policy.md"]
+    assert "how to edit" not in kb.text
+
+
+def test_shipped_kb_loads_the_policy_files():
+    from pathlib import Path
+
+    kb = load(Path(__file__).resolve().parent.parent / "kb")
+    assert {"returns-policy.md", "shipping-policy.md", "cs-rules.md", "terminology.md"} <= set(kb.files)
+    assert "README.md" not in kb.files
+    assert "14 days" in kb.text and "Tracked 24" in kb.text

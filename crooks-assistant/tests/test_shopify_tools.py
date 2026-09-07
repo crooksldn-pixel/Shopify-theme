@@ -303,3 +303,53 @@ async def test_catalogue_takes_only_colour_option_values():
     assert "Black" in terms and "White" in terms
     for noise in ("XS", "S", "M", "1pc", "3pc"):
         assert noise not in terms
+
+
+async def test_product_info_parses_measurements_and_narrows_by_size():
+    client = FakeShopify([{"data": {"products": {"edges": [{"node": {
+        "id": "p", "title": "BLUE WASH YARD JEANS", "status": "ACTIVE",
+        "description": "Yard jeans — Blue wash. 14oz denim.",
+        "metafields": {"edges": [
+            {"node": {"key": "fabric", "type": "single_line_text_field", "value": "14oz denim"}},
+            {"node": {"key": "care", "type": "multi_line_text_field", "value": "Cold wash inside out."}},
+            {"node": {"key": "measurements", "type": "json", "value":
+             '[{"size":"S","waist":"81.3cm","inseam":"76.2cm"},{"size":"M","waist":"86.4cm","inseam":"77.5cm"}]'}},
+            {"node": {"key": "set_partner", "type": "product_reference", "value": "gid://x"}},
+        ]},
+    }}]}}}])
+    shopify_tools.bind(client)
+    result = await shopify_tools.shopify_product_info("yard jeans", size="medium")
+    info = result["products"][0]
+    assert info["fabric"] == "14oz denim" and info["care"].startswith("Cold wash")
+    assert info["measurements"] == [{"size": "M", "waist": "86.4cm", "inseam": "77.5cm"}]
+    assert "set_partner" not in info
+
+
+async def test_product_info_without_measurements_says_so():
+    client = FakeShopify([{"data": {"products": {"edges": [{"node": {
+        "id": "p", "title": "HYDROCUFF WINDBREAKER", "status": "ACTIVE", "description": "",
+        "metafields": {"edges": []},
+    }}]}}}])
+    shopify_tools.bind(client)
+    info = (await shopify_tools.shopify_product_info("hydrocuff"))["products"][0]
+    assert info["measurements"] == []
+    assert "No measurements" in info["measurements_note"]
+
+
+async def test_product_info_is_green_and_registered():
+    from app.tools.gate import Tier, classify
+    from app.tools.registry import get
+
+    assert classify("shopify_product_info", {"product": "jeans"}).tier is Tier.GREEN
+    assert get("shopify_product_info").tier is Tier.GREEN
+
+
+async def test_catalogue_includes_store_short_names():
+    client = FakeShopify([
+        {"data": {"products": {"edges": [{"node": {
+            "title": "GREY CONVICT HOODIE", "options": [], "shortName": {"value": "Convict Hoodie"},
+        }}]}}},
+        {"data": {"customers": {"edges": []}}},
+    ])
+    shopify_tools.bind(client)
+    assert "Convict Hoodie" in await shopify_tools.catalogue_terms()

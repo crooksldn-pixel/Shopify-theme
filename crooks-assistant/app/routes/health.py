@@ -32,6 +32,15 @@ async def health(request: Request) -> dict:
         check("gmail", asyncio.to_thread(runtime.gmail.health)),
     )
 
+    # The plan's M3 failure check: Core ML build succeeds but the .mlmodelc is missing, and
+    # everything runs twice as slowly with no error. Say so here so it cannot go unnoticed.
+    bin_dir = runtime.settings.whisper_bin_dir
+    coreml = bin_dir / "models" / f"ggml-{runtime.settings.whisper_model}-encoder.mlmodelc"
+    if checks["whisper"]["ok"]:
+        checks["whisper"]["detail"] += (
+            f" · Core ML encoder {'present' if coreml.exists() else 'MISSING (GPU only, ~2x slower)'}"
+        )
+
     checks["knowledge_base"] = {
         "ok": not runtime.kb.empty,
         "detail": f"{len(runtime.kb.files)} file(s), {runtime.kb.chars} chars",

@@ -6,6 +6,7 @@ query string from the model, because that is how a read-only integration becomes
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any
@@ -575,6 +576,86 @@ async def shopify_sales_summary(days: int = 1) -> dict:
     }
 
 
+# ------------------------------------------------------------ product info
+
+
+@tool(
+    name="shopify_product_info",
+    description=(
+        "Read a CROOKS product's description and the garment facts the store publishes for it: "
+        "fabric, cut, origin, care, and measurements per size. Use for 'what's the inseam on a "
+        "medium' or 'what are the jeans made of'. Not for stock — use shopify_inventory."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "product": {"type": "string", "description": "The product name, e.g. 'Yard Jeans'."},
+            "size": {"type": "string", "description": "Optional size to narrow the measurements to."},
+            "limit": {"type": "integer", "description": "Maximum products (1-50).", "default": 3},
+        },
+        "required": ["product"],
+    },
+    tier=Tier.GREEN,
+)
+async def shopify_product_info(product: str, size: str = "", limit: int = 3) -> dict:
+    client = _c()
+    limit = max(1, min(int(limit), MAX_PAGE))
+    payload = await client.graphql(
+        """
+        query ProductInfo($q: String!, $n: Int!) {
+          products(first: $n, query: $q) {
+            edges { node {
+              id
+              title
+              status
+              description
+              metafields(first: 10, namespace: "crooks") {
+                edges { node { key type value } }
+              }
+            } }
+          }
+        }
+        """,
+        {"q": f"title:*{product.strip()}*", "n": limit},
+    )
+    edges = payload["data"]["products"]["edges"]
+    if not edges:
+        return {"product": product, "note": f"No product matching {product!r}."}
+
+    wanted = _size_aliases(size)
+    products = []
+    for edge in edges:
+        node = edge["node"]
+        facts: dict[str, Any] = {}
+        measurements: list[dict] = []
+        for m in node["metafields"]["edges"]:
+            key, value = m["node"]["key"], m["node"]["value"]
+            if key == "measurements":
+                try:
+                    measurements = json.loads(value)
+                except (TypeError, ValueError):
+                    measurements = []
+            elif key in {"fabric", "cut", "origin", "care", "subtitle", "set_short_name"}:
+                facts[key] = value
+        if wanted:
+            measurements = [m for m in measurements if str(m.get("size", "")).lower() in wanted]
+        products.append(
+            {
+                "product_id": node["id"],
+                "title": node["title"],
+                "status": node.get("status"),
+                "description": _truncate(node.get("description") or "", 600) or None,
+                **facts,
+                "measurements": measurements,
+                "measurements_note": (
+                    "Garment measurements in centimetres." if measurements
+                    else "No measurements are published for this product."
+                ),
+            }
+        )
+    return {"product": product, "size": size or None, "products": products}
+
+
 # ----------------------------------------------------- live catalogue for M3's normaliser
 
 
@@ -591,7 +672,11 @@ async def catalogue_terms(limit: int = 250) -> list[str]:
             """
             query Catalogue($n: Int!) {
               products(first: $n) {
-                edges { node { title options { name values } } }
+                edges { node {
+                  title
+                  options { name values }
+                  shortName: metafield(namespace: "crooks", key: "set_short_name") { value }
+                } }
               }
             }
             """,
@@ -600,6 +685,9 @@ async def catalogue_terms(limit: int = 250) -> list[str]:
         for edge in payload["data"]["products"]["edges"]:
             node = edge["node"]
             terms.append(node["title"])
+            short = (node.get("shortName") or {}).get("value")
+            if short:
+                terms.append(short)  # "Convict Hoodie" — how the store itself abbreviates it
             for option in node.get("options") or []:
                 name = (option.get("name") or "").lower()
                 if "colour" in name or "color" in name:

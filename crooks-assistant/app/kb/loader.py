@@ -35,6 +35,8 @@ def load(kb_dir: Path) -> KnowledgeBase:
     names: list[str] = []
     total = 0
     for path in sorted(kb_dir.glob("*.md")):
+        if path.name.upper() == "README.MD":
+            continue  # instructions for the human editing this directory, not knowledge
         try:
             body = path.read_text(encoding="utf-8").strip()
         except OSError as exc:

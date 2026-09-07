@@ -14,7 +14,7 @@ def test_all_day1_tools_are_registered():
         "mock_echo", "mock_slow", "mock_danger",
         "shopify_find_order", "shopify_order_detail", "shopify_list_orders",
         "shopify_find_customer", "shopify_inventory", "shopify_sales_summary",
-        "gmail_search", "gmail_read_thread",
+        "shopify_product_info", "gmail_search", "gmail_read_thread",
     ):
         assert expected in names
 

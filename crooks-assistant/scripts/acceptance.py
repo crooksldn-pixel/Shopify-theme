@@ -8,6 +8,7 @@ Shopify admin says — so it asks, one question at a time, and does the arithmet
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import re
 import statistics
@@ -45,6 +46,57 @@ def load_commands(path: Path) -> list[dict]:
     return commands
 
 
+async def fill_placeholders() -> dict[str, str]:
+    """Resolve the bracketed placeholders in tests/acceptance.md from live data, so the owner
+    does not have to look anything up before scoring. Anything unresolvable stays bracketed."""
+    fills: dict[str, str] = {}
+    try:
+        from app.clients.shopify import ShopifyClient
+        from app.tools import shopify_tools
+        from config.settings import get_settings
+
+        settings = get_settings()
+        client = ShopifyClient(
+            settings.shopify_shop_domain, settings.shopify_api_version,
+            auth_mode=settings.shopify_auth_mode,
+        )
+        shopify_tools.bind(client)
+        recent = await shopify_tools.shopify_list_orders(days=30, limit=1)
+        if recent["orders"]:
+            order = recent["orders"][0]
+            fills["[REAL ORDER NUMBER]"] = order["order_number"].lstrip("#").replace("CROOKS-", "")
+            if order.get("customer_name"):
+                fills["[REAL CUSTOMER NAME]"] = order["customer_name"]
+        products = await shopify_tools.catalogue_terms(limit=50)
+        pick = next((t for t in products if "jeans" in t.lower()), products[0] if products else None)
+        if pick:
+            fills["[REAL PRODUCT]"] = pick.title()
+        # A first name shared by at least two customers — the ambiguity case must be real.
+        customers = await shopify_tools._search_customers(client, "", limit=50)
+        firsts: dict[str, int] = {}
+        for c in customers:
+            first = (c.get("name") or "").split(" ")[0].strip()
+            if first and first[0].isalpha():
+                firsts[first] = firsts.get(first, 0) + 1
+        shared = next((f for f, n in sorted(firsts.items(), key=lambda kv: -kv[1]) if n >= 2), None)
+        if shared:
+            fills["[A FIRST NAME MATCHING TWO CUSTOMERS]"] = shared
+    except Exception as exc:  # noqa: BLE001 — no credentials yet is normal before M6
+        print(f"  {DIM}Shopify placeholders not filled: {exc}{RESET}")
+
+    try:
+        from app.clients.gmail import GmailClient
+        from app.tools import gmail_tools
+
+        gmail_tools.bind(GmailClient())
+        threads = (await gmail_tools.gmail_search(days=7, limit=5))["threads"]
+        if threads:
+            fills["[SUBJECT OF A REAL RECENT EMAIL]"] = threads[0]["subject"]
+    except Exception as exc:  # noqa: BLE001
+        print(f"  {DIM}Gmail placeholder not filled: {exc}{RESET}")
+    return fills
+
+
 def ask_yn(prompt: str) -> bool:
     while True:
         answer = input(f"    {prompt} [y/n] ").strip().lower()
@@ -68,6 +120,15 @@ def main() -> int:
         return 1
 
     placeholders = [c for c in commands if "[" in c["text"]]
+    if placeholders:
+        print(f"{DIM}Filling placeholders from the live store and inbox…{RESET}")
+        fills = asyncio.run(fill_placeholders())
+        for c in commands:
+            for key, value in fills.items():
+                c["text"] = c["text"].replace(key, value)
+        for key, value in fills.items():
+            print(f"  {key} → {value}")
+        placeholders = [c for c in commands if "[" in c["text"]]
     if placeholders:
         print(f"{YELLOW}{len(placeholders)} command(s) still contain placeholders:{RESET}")
         for c in placeholders:

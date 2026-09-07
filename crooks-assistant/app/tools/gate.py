@@ -57,6 +57,7 @@ _KNOWN_TOOLS = frozenset({
     # Shopify — M7
     "shopify_find_order", "shopify_order_detail", "shopify_list_orders",
     "shopify_find_customer", "shopify_inventory", "shopify_sales_summary",
+    "shopify_product_info",
     # Gmail — M9
     "gmail_search", "gmail_read_thread",
 })

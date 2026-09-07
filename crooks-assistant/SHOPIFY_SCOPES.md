@@ -1,6 +1,6 @@
 # Shopify app scopes
 
-Read-only, and no more than the six tools actually need. Set these on the Dev Dashboard app
+Read-only, and no more than the seven tools actually need. Set these on the Dev Dashboard app
 before releasing a version (M6). The list was produced by validating every query in
 `app/tools/shopify_tools.py` against the live Admin schema, not by guessing.
 
