@@ -150,3 +150,22 @@ async def test_ids_from_a_result_become_usable(session):
         {"order_id": "gid://shopify/Order/4832"},
         issued_ids=session.issued_ids,
     ).tier is Tier.AMBER
+
+
+# --- the gate consults the registry's own declaration ----------------------
+
+def test_registry_amber_tier_is_honoured_even_without_a_rule():
+    from app.tools import registry
+
+    registry.tool(name="shopify_find_customer_probe", description="d", input_schema={"type": "object"}, tier=Tier.AMBER)(lambda **k: None)
+    # Not in the gate's own tables; still AMBER because the registry says so — but unknown
+    # to the allowlist, so RED wins. The allowlist is the outer wall.
+    assert classify("shopify_find_customer_probe").tier is Tier.RED
+    registry._REGISTRY.pop("shopify_find_customer_probe")
+
+
+def test_registry_issued_id_args_are_enforced():
+    """shopify_order_detail declares order_id in the registry; the gate needs it issued."""
+    from app.tools import shopify_tools  # noqa: F401
+
+    assert classify("shopify_order_detail", {"order_id": "gid://shopify/Order/9"}, issued_ids=[]).tier is Tier.RED

@@ -40,10 +40,23 @@ def load_commands(path: Path) -> list[dict]:
             continue
         item = re.match(r"^(\d+)\.\s+(.+)$", line.strip())
         if item:
-            commands.append(
-                {"n": int(item.group(1)), "section": section, "text": item.group(2).strip()}
-            )
-    return commands
+            text = item.group(2).strip()
+            after = re.match(r"^\*\(after (\d+)\)\*\s*(.+)$", text)
+            commands.append({
+                "n": int(item.group(1)), "section": section,
+                "text": after.group(2).strip() if after else text,
+                "after": int(after.group(1)) if after else None,
+            })
+    # A follow-up ("When was it shipped?") only makes sense straight after the command it
+    # refers to, so it runs there rather than fourteen commands later.
+    ordered: list[dict] = []
+    followups = [c for c in commands if c["after"]]
+    for command in commands:
+        if command["after"]:
+            continue
+        ordered.append(command)
+        ordered.extend(f for f in followups if f["after"] == command["n"])
+    return ordered
 
 
 async def fill_placeholders() -> dict[str, str]:
@@ -164,6 +177,8 @@ def main() -> int:
             print(f"    {DIM}tools: {tools}  ·  {elapsed:.1f}s{RESET}")
             print(f"    {BOLD}→{RESET} {answer}")
 
+        # Typed mode has no transcript to judge — it counts as correct and says so in the
+        # record rather than silently inflating the score.
         transcript_ok = True if not args.spoken else ask_yn("Transcript correct?")
         tool_ok = ask_yn("Right tool(s) for the question?")
         answer_ok = ask_yn("Answer accurate?")
@@ -171,6 +186,7 @@ def main() -> int:
 
         records.append({
             "n": command["n"], "section": command["section"], "command": command["text"],
+            "mode": "spoken" if args.spoken else "typed (transcript not scored)",
             "transcript": transcript, "answer": answer, "tools": tools,
             "seconds": round(elapsed, 2), "transcript_ok": transcript_ok,
             "tool_ok": tool_ok, "answer_ok": answer_ok, "confident_wrong": confident_wrong,

@@ -111,6 +111,8 @@ class Catalogue:
         seen: dict[str, str] = {}
         for term in terms:
             term = " ".join(str(term).split())
+            if term.startswith("\x00"):
+                continue  # runtime's product/customer boundary marker, not a term
             key = clean(term)
             if key and key not in seen:
                 seen[key] = term
@@ -274,8 +276,10 @@ def words_to_digits(tokens: list[str]) -> list[str]:
                 out.append("".join(str(n) for n in run))
                 i = j
                 continue
-            out.append(str(run[0]) if run else tokens[i])
-            i = j if run else i + 1
+            # A lone number word stays a word: "three shirts", "oh, how many" — rewriting
+            # those damages a correct transcript for no gain.
+            out.append(tokens[i])
+            i += 1
             continue
         out.append(tokens[i])
         i += 1
@@ -283,10 +287,11 @@ def words_to_digits(tokens: list[str]) -> list[str]:
 
 
 def extract_order_numbers(text: str) -> list[str]:
-    """Order numbers as CROOKS uses them: 3–6 digits after an order-ish cue. 'order 1928',
-    '#1928', 'CROOKS-1928' and 'crooks 1928' all yield '1928'."""
+    """Order numbers as CROOKS uses them: 3–5 digits after an order-ish cue. 'order 1928',
+    '#1928', 'CROOKS-1928' and 'crooks 1928' all yield '1928'. Six digits and up is a phone
+    number fragment, not an order."""
     found: list[str] = []
-    for match in re.finditer(r"#?\s*(\d{3,6})\b", text):
+    for match in re.finditer(r"(?<!\d)#?\s*(\d{3,5})\b(?!\s*\d)", text):
         digits = match.group(1)
         before = text[max(0, match.start() - 24) : match.start()]
         if _ORDER_CUE.search(before) or match.group(0).lstrip().startswith("#"):

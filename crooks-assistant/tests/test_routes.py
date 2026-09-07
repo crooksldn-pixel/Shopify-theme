@@ -135,3 +135,39 @@ async def test_reset(client):
 async def test_index_serves_the_tablet_page(client):
     r = await client.get("/")
     assert r.status_code == 200 and "CROOKS" in r.text
+
+
+async def test_reload_kb_resets_the_provider_prompt(client):
+    provider = app.state.runtime.provider
+    provider.prompts = []
+
+    async def set_system_prompt(prompt):
+        provider.prompts.append(prompt)
+
+    provider.set_system_prompt = set_system_prompt
+    body = (await client.post("/reload-kb")).json()
+    assert body["reloaded"] and provider.prompts and "CROOKS" in provider.prompts[0]
+
+
+async def test_audio_test_returns_playable_wav(client):
+    pytest.importorskip("av")
+    from tests.test_decode import tone_pcm, webm_opus
+
+    files = {"audio": ("t.webm", webm_opus(tone_pcm(0.5)), "audio/webm")}
+    body = (await client.post("/audio-test", files=files)).json()
+    assert body["ok"] and body["wav_base64"].startswith("UklGR")  # "RIFF" in base64
+
+
+async def test_tool_calls_carry_redacted_args(client):
+    from app.providers.base import ToolCall, TurnResult
+
+    async def turn(session_id, text):
+        return TurnResult(text="ok", session_id=session_id, tool_calls=[
+            ToolCall(name="gmail_search", args={"query": "from:jo@example.com", "days": 1})
+        ])
+
+    app.state.runtime.provider.turn = turn
+    body = (await client.post("/turn", json={"text": "hi", "session_id": "args"})).json()
+    call = body["tool_calls"][0]
+    assert call["args"]["days"] == "1"
+    assert "jo@example.com" not in call["args"]["query"]

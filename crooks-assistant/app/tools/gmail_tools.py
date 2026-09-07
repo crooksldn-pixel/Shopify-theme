@@ -7,6 +7,7 @@ well, so a write path would have to defeat both to exist.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import re
@@ -14,6 +15,7 @@ from email.utils import parseaddr
 from typing import Any
 
 from app.clients.gmail import GmailAuthRequired, GmailClient
+from app.logging.turnlog import redact_text
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, tool
 
@@ -49,6 +51,21 @@ def _c() -> GmailClient:
     if _client is None:
         raise ToolError("Gmail is not configured on this backend.")
     return _client
+
+
+def _describe(exc: Exception) -> str:
+    """googleapiclient errors embed the request URL — including the search query, which may
+    contain an email address the owner typed. Strip URLs, then redact what is left."""
+    text = re.sub(r"https?://\S+", "[url]", str(exc))
+    return redact_text(text)[:200]
+
+
+def _is_auth_failure(exc: Exception) -> bool:
+    try:
+        from google.auth.exceptions import RefreshError
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(exc, (RefreshError, GmailAuthRequired)) or "invalid_grant" in str(exc)
 
 
 def _headers(message: dict) -> dict[str, str]:
@@ -149,7 +166,10 @@ async def gmail_search(
     if query.strip():
         full_query += f" {query.strip()}"
 
-    try:
+    # googleapiclient is synchronous. Run it in a thread so the event loop stays free and the
+    # 8-second tool timeout can actually fire — awaiting blocking I/O directly makes the
+    # timeout unenforceable and freezes every other request while Gmail stalls.
+    def fetch_all() -> list[dict]:
         service = client.service()
         listing = (
             service.users()
@@ -157,45 +177,55 @@ async def gmail_search(
             .list(userId="me", q=full_query, maxResults=limit)
             .execute()
         )
-    except GmailAuthRequired as exc:
-        raise ToolError(str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
-        raise ToolError(f"Gmail search failed: {exc}") from exc
-
-    results: list[dict[str, Any]] = []
-    seen_threads: set[str] = set()
-    for stub in listing.get("messages", []) or []:
-        try:
-            # metadata format still costs 20 quota units, so the result count is the lever.
-            message = (
-                service.users()
-                .messages()
-                .get(
-                    userId="me",
-                    id=stub["id"],
-                    format="metadata",
-                    metadataHeaders=[
-                        "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
-                        "Precedence", "Auto-Submitted", "List-Post",
-                    ],
+        messages: list[dict] = []
+        for stub in listing.get("messages", []) or []:
+            try:
+                # metadata format still costs 20 quota units, so the result count is the lever.
+                messages.append(
+                    service.users()
+                    .messages()
+                    .get(
+                        userId="me",
+                        id=stub["id"],
+                        format="metadata",
+                        metadataHeaders=[
+                            "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
+                            "Precedence", "Auto-Submitted", "List-Post",
+                        ],
+                    )
+                    .execute()
                 )
-                .execute()
-            )
-        except Exception as exc:  # noqa: BLE001
-            log.warning("could not fetch message %s: %s", stub["id"], exc)
-            continue
+            except Exception as exc:  # noqa: BLE001
+                log.warning("could not fetch message %s: %s", stub["id"], _describe(exc))
+        return messages
 
+    try:
+        messages = await asyncio.to_thread(fetch_all)
+    except Exception as exc:  # noqa: BLE001
+        if _is_auth_failure(exc):
+            client.reset()
+            raise ToolError(str(GmailAuthRequired("Gmail authorisation has expired."))) from exc
+        raise ToolError(f"Gmail search failed: {_describe(exc)}") from exc
+
+    candidates: list[tuple[str, dict[str, str], dict]] = []
+    seen_threads: set[str] = set()
+    for message in messages:
         thread_id = message.get("threadId", "")
         if thread_id in seen_threads:
             continue
         seen_threads.add(thread_id)
-
         headers = _headers(message)
-        sender_name, sender_email = parseaddr(headers.get("from", ""))
-        bulk = _is_bulk(headers)
-        if bulk and not include_bulk:
+        if _is_bulk(headers) and not include_bulk:
             continue
+        candidates.append((thread_id, headers, message))
 
+    # Cross-reference every sender against Shopify concurrently, not one after another.
+    senders = [parseaddr(h.get("from", ""))[1] for _, h, _ in candidates]
+    known = await asyncio.gather(*(_known_customer(e) for e in senders))
+
+    results: list[dict[str, Any]] = []
+    for (thread_id, headers, message), sender_email, is_known in zip(candidates, senders, known, strict=True):
+        sender_name = parseaddr(headers.get("from", ""))[0]
         results.append(
             {
                 "thread_id": thread_id,
@@ -204,8 +234,8 @@ async def gmail_search(
                 "subject": headers.get("subject", "(no subject)"),
                 "date": headers.get("date", ""),
                 "snippet": (message.get("snippet") or "")[:300],
-                "likely_bulk": bulk,
-                "known_customer": await _known_customer(sender_email),
+                "likely_bulk": _is_bulk(headers),
+                "known_customer": is_known,
             }
         )
 
@@ -243,19 +273,21 @@ async def gmail_search(
 async def gmail_read_thread(thread_id: str) -> dict:
     client = _c()
     try:
-        thread = (
-            client.service()
+        thread = await asyncio.to_thread(
+            lambda: client.service()
             .users()
             .threads()
             .get(userId="me", id=thread_id, format="full")
             .execute()
         )
-    except GmailAuthRequired as exc:
-        raise ToolError(str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        raise ToolError(f"Could not read thread {thread_id}: {exc}") from exc
+        if _is_auth_failure(exc):
+            client.reset()
+            raise ToolError(str(GmailAuthRequired("Gmail authorisation has expired."))) from exc
+        raise ToolError(f"Could not read thread {thread_id}: {_describe(exc)}") from exc
 
-    messages = thread.get("messages", [])[:MAX_THREAD_MESSAGES]
+    # The NEWEST messages are the ones that matter — the customer's latest reply is at the end.
+    messages = thread.get("messages", [])[-MAX_THREAD_MESSAGES:]
     out = []
     for message in messages:
         headers = _headers(message)

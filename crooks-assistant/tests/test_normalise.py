@@ -94,8 +94,10 @@ def test_words_to_digits(spoken, expected):
     assert words_to_digits(spoken) == expected
 
 
-def test_single_number_word_is_not_glued():
-    assert words_to_digits(["I", "want", "three", "shirts"]) == ["I", "want", "3", "shirts"]
+def test_single_number_word_is_left_alone():
+    """A lone number word is conversation, not an order number. Rewriting it gains nothing."""
+    assert words_to_digits(["I", "want", "three", "shirts"]) == ["I", "want", "three", "shirts"]
+    assert words_to_digits(["oh", ",", "how", "many"]) == ["oh", ",", "how", "many"]
 
 
 # --- order numbers ---------------------------------------------------------
@@ -109,6 +111,7 @@ def test_single_number_word_is_not_glued():
         ("look up #1201", ["1201"]),
         ("we sold 12 units", []),          # no order cue, and too short
         ("that was 2024 last year", []),   # a year with no cue is not an order
+        ("call 07700 900123", []),         # phone fragments are not orders
     ],
 )
 def test_order_number_extraction(text, expected):

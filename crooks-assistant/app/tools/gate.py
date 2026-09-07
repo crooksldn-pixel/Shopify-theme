@@ -108,7 +108,14 @@ def classify(
     if name == "mock_danger":
         return Decision(Tier.RED, "mock_danger exists to prove RED tools never execute.")
 
-    for arg in _ISSUED_ID_ARGS.get(name, ()):
+    # The registry's ToolSpec is the second source of truth: a tool that declares AMBER or
+    # an issued-id argument there gets it here too, so the two tables cannot drift apart.
+    spec_tier, spec_id_args = _spec_hints(name)
+    id_args = tuple(dict.fromkeys(_ISSUED_ID_ARGS.get(name, ()) + spec_id_args))
+    if spec_tier is Tier.RED:
+        return Decision(Tier.RED, f"{name} is registered as RED.")
+
+    for arg in id_args:
         value = args.get(arg)
         if value is None or not str(value).strip():
             return Decision(Tier.RED, f"{name} requires {arg}, which was not supplied.")
@@ -138,7 +145,18 @@ def classify(
         except (TypeError, ValueError):
             return Decision(Tier.RED, f"days={days!r} is not a number.")
 
-    if name in _PII_TOOLS:
+    if name in _PII_TOOLS or spec_tier is Tier.AMBER:
         return Decision(Tier.AMBER, f"{name} returns customer personal data; read it back.")
 
     return Decision(Tier.GREEN, "Read-only, in scope, arguments within bounds.")
+
+
+def _spec_hints(name: str) -> tuple[Tier | None, tuple[str, ...]]:
+    """Tier and issued-id arguments the registry declares for this tool, if registered."""
+    from app.tools import registry
+
+    try:
+        spec = registry.get(name)
+    except KeyError:
+        return None, ()
+    return spec.tier, tuple(spec.issued_id_args)

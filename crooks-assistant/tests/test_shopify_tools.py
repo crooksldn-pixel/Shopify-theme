@@ -353,3 +353,91 @@ async def test_catalogue_includes_store_short_names():
     ])
     shopify_tools.bind(client)
     assert "Convict Hoodie" in await shopify_tools.catalogue_terms()
+
+
+# --- the review's findings ---------------------------------------------------
+
+async def test_yesterday_is_an_explicit_window():
+    """days=1, days_ago=1 must be exactly yesterday, with both bounds in the query."""
+    client = FakeShopify([{"data": {"orders": {"edges": [], "pageInfo": {"hasNextPage": False}}}}])
+    shopify_tools.bind(client)
+    result = await shopify_tools.shopify_list_orders(days=1, days_ago=1)
+    q = client.queries[0][1]["q"]
+    assert "created_at:>=" in q and "created_at:<" in q
+    start = datetime.fromisoformat(result["since"].replace("Z", "+00:00"))
+    end = datetime.fromisoformat(result["until"].replace("Z", "+00:00"))
+    assert (end - start).total_seconds() == 86400
+    london_end = end.astimezone(ZoneInfo("Europe/London"))
+    assert london_end.date() == datetime.now(ZoneInfo("Europe/London")).date()
+
+
+async def test_throttling_arrives_as_http_200_and_is_named():
+    from app.clients.shopify import ShopifyError
+
+    class Throttled(FakeShopify):
+        async def graphql(self, query, variables=None):
+            raise ShopifyError("Shopify is rate-limiting us. Try again in a moment.")
+
+    shopify_tools.bind(Throttled([]))
+    with pytest.raises(ShopifyError, match="rate-limiting"):
+        await shopify_tools.shopify_sales_summary(days=1)
+
+
+def test_throttled_extension_code_is_detected():
+    """The real client: a 200 with errors[].extensions.code == THROTTLED is a throttle."""
+    import asyncio
+
+    from app.clients.shopify import ShopifyClient, ShopifyError
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        def json(self):
+            return {"data": None, "errors": [{"message": "Throttled", "extensions": {"code": "THROTTLED"}}]}
+
+    client = ShopifyClient("x.myshopify.com", "2025-07", auth_mode="static_token")
+
+    async def run():
+        import httpx
+
+        class FakeHttp:
+            def __init__(self, *a, **k): pass
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): return False
+            async def post(self, *a, **k): return FakeResponse()
+
+        original = httpx.AsyncClient
+        httpx.AsyncClient = FakeHttp
+        try:
+            client._access_token = lambda: _coro("tok")  # type: ignore[assignment]
+            with pytest.raises(ShopifyError, match="rate-limiting"):
+                await client.graphql("query { shop { name } }")
+        finally:
+            httpx.AsyncClient = original
+
+    asyncio.run(run())
+
+
+async def _coro(value):
+    return value
+
+
+def test_product_query_strips_search_syntax():
+    assert shopify_tools._product_query('yard "jeans" *') == "yard  jeans"
+    assert shopify_tools._product_query("") == "*"
+    assert ":" not in shopify_tools._search_term("title:jeans") and "*" not in shopify_tools._search_term("a*")
+
+
+async def test_email_lookup_is_quoted():
+    client = FakeShopify([{"data": {"customers": {"edges": []}}}])
+    shopify_tools.bind(client)
+    await shopify_tools._search_customers(client, "email:evil*@x.com", limit=1)
+    assert client.queries[0][1]["q"] == 'email:"evil @x.com"'
+
+
+async def test_inventory_limit_is_capped_for_query_cost():
+    client = FakeShopify([{"data": {"products": {"edges": []}}}])
+    shopify_tools.bind(client)
+    await shopify_tools.shopify_inventory("jeans", limit=50)
+    assert client.queries[0][1]["n"] == shopify_tools.MAX_PRODUCTS

@@ -20,3 +20,4 @@ venv/
 # Runtime state
 logs/
 .cache/
+kb/.catalogue-cache.txt

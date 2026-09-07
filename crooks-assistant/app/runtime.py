@@ -64,10 +64,13 @@ class Runtime:
         seed = list(self.normaliser.catalogue.terms)
         cache = self.settings.kb_dir / ".catalogue-cache.txt"
         try:
-            cache.write_text("\n".join(live), encoding="utf-8")
+            # Products only. Customer names are personal data and do not belong in a file.
+            cache.write_text("\n".join(t for t in live if t in set(live[: live_product_count(live)])), encoding="utf-8")
         except OSError:
             pass
-        merged = seed + live
+        # Live terms first, hand-written seed (with its aliases) LAST: the Whisper prompt is
+        # truncated from the front, so the terms the owner wrote must be the ones that survive.
+        merged = live + seed
         self.normaliser.repoint(merged, aliases=self.normaliser.catalogue.aliases)
         log.info("normaliser repointed at live catalogue: %d terms", len(merged))
 
@@ -127,6 +130,17 @@ def build(settings: Settings | None = None) -> Runtime:
     )
 
 
+def live_product_count(live: list[str]) -> int:
+    """catalogue_terms() returns products then customers; a sentinel marks the boundary."""
+    try:
+        return live.index(CUSTOMER_BOUNDARY)
+    except ValueError:
+        return len(live)
+
+
+CUSTOMER_BOUNDARY = "\x00customers"
+
+
 def _build_normaliser(settings: Settings) -> Normaliser:
     seed = settings.kb_dir / "terminology.md"
     normaliser = from_file(seed)
@@ -136,7 +150,7 @@ def _build_normaliser(settings: Settings) -> Normaliser:
         try:
             cached = [t for t in cache.read_text(encoding="utf-8").splitlines() if t.strip()]
             normaliser.repoint(
-                list(normaliser.catalogue.terms) + cached, aliases=normaliser.catalogue.aliases
+                cached + list(normaliser.catalogue.terms), aliases=normaliser.catalogue.aliases
             )
         except OSError:
             pass

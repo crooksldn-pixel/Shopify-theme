@@ -22,7 +22,10 @@ log = logging.getLogger("crooks.transcribe")
 # Whisper accepts an initial prompt to bias decoding. It is truncated from the FRONT at 224
 # tokens, so the most important terms go LAST. It must be a bare comma-separated list — prose
 # here bleeds into the transcript, which looks like a hallucination and is not one.
-PROMPT_MAX_TERMS = 60
+# Whisper keeps roughly the last 224 tokens of the prompt; ~900 characters of short product
+# names lands under that. Counting characters rather than terms keeps a long live catalogue from
+# pushing the hand-written aliases out.
+PROMPT_MAX_CHARS = 900
 
 
 @dataclass(slots=True)
@@ -60,9 +63,17 @@ def build_prompt(terms: list[str]) -> str:
     both. Symbols are dropped because '★' teaches the model nothing about how a word sounds."""
     cleaned = [re.sub(r"[^A-Za-z0-9' ]+", " ", t).strip() for t in terms]
     cleaned = [" ".join(t.split()) for t in cleaned if t and t.strip()]
+    cleaned = list(dict.fromkeys(cleaned))
     if not cleaned:
         return ""
-    return ", ".join(dict.fromkeys(cleaned[-PROMPT_MAX_TERMS:])) + "."
+    kept: list[str] = []
+    length = 0
+    for term in reversed(cleaned):  # last terms are the most important; keep from the end
+        if length + len(term) + 2 > PROMPT_MAX_CHARS:
+            break
+        kept.append(term)
+        length += len(term) + 2
+    return ", ".join(reversed(kept)) + "."
 
 
 class Transcriber:
@@ -98,16 +109,13 @@ class Transcriber:
             prune_captures(self._save_dir, self._max_saved)
 
         if not audio.stats.usable:
-            return SpeechResult(
-                ok=False,
-                reason=(
-                    "I could not hear that clearly."
-                    if audio.stats.rms_dbfs <= -50
-                    else "That recording was too short."
-                ),
-                stats=audio.stats,
-                timings_ms=timings,
-            )
+            if audio.stats.duration_s < 0.3:
+                reason = "That was too short — hold the button while you speak."
+            elif audio.stats.peak >= 0.999:
+                reason = "That came through distorted — a bit further from the microphone."
+            else:
+                reason = "I could not hear that clearly — a bit closer to the microphone."
+            return SpeechResult(ok=False, reason=reason, stats=audio.stats, timings_ms=timings)
 
         t1 = time.perf_counter()
         try:
@@ -115,7 +123,9 @@ class Transcriber:
                 audio.as_wav(), prompt=build_prompt(self._normaliser.catalogue.prompt_terms())
             )
         except WhisperUnavailable as exc:
-            return SpeechResult(ok=False, reason=str(exc), stats=audio.stats, timings_ms=timings)
+            # Spoken line for the tablet; the developer detail goes to the log, not the speaker.
+            log.error("whisper unavailable: %s", exc)
+            return SpeechResult(ok=False, reason=exc.spoken, stats=audio.stats, timings_ms=timings)
         timings["transcribe"] = _ms(t1)
 
         if transcript.is_hallucination:

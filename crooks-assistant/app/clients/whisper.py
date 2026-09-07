@@ -28,7 +28,11 @@ HALLUCINATION_BLOCKLIST = frozenset(
 
 
 class WhisperUnavailable(RuntimeError):
-    """whisper-server is not reachable. A named failure, not a generic 500."""
+    """whisper-server is not reachable. A named failure, not a generic 500.
+
+    `spoken` is what the tablet says; `str(exc)` is the developer detail for the log."""
+
+    spoken = "My speech recognition is not running, so I cannot hear you right now."
 
 
 @dataclass(slots=True)
@@ -48,29 +52,52 @@ class WhisperClient:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self._timeout = timeout_s
+        # Set to False the first time the server rejects per-request VAD (started without a
+        # Silero model). We then rely on our own level gate and hallucination blocklist.
+        self._server_vad = True
 
     async def transcribe(self, wav: bytes, *, prompt: str = "") -> Transcript:
         """POST a 16 kHz mono WAV to /inference and return the transcript."""
+        started = time.perf_counter()
+        response = await self._post(wav, prompt, vad=self._server_vad)
+        if response.status_code == 500 and self._server_vad and "vad" in response.text.lower():
+            log.warning("whisper-server rejected per-request VAD (no VAD model?); continuing without it")
+            self._server_vad = False
+            response = await self._post(wav, prompt, vad=False)
+
+        if response.status_code != 200:
+            raise WhisperUnavailable(
+                f"whisper-server returned {response.status_code}: {response.text[:200]}"
+            )
+
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise WhisperUnavailable("whisper-server returned something that was not JSON.") from exc
+        text = (payload.get("text") or "").strip()
+        ms = (time.perf_counter() - started) * 1000
+        return Transcript(text=text, ms=ms, model=self.model)
+
+    async def _post(self, wav: bytes, prompt: str, *, vad: bool) -> httpx.Response:
         files = {"file": ("audio.wav", wav, "audio/wav")}
         data = {
             "temperature": "0.0",
             "temperature_inc": "0.2",
             "response_format": "json",
-            # VAD is what stops silence becoming "Thank you." The server is started with --vad
-            # too; asking per request as well means a mis-started server still filters.
-            # Field name verified against examples/server/server.cpp: it is `vad`.
-            "vad": "true",
             "no_timestamps": "true",
             # Suppress non-speech tokens ("[MUSIC]", "♪") at the decoder, not just in our blocklist.
             "suppress_nst": "true",
         }
+        if vad:
+            # VAD is what stops silence becoming "Thank you." The server is started with --vad
+            # too; asking per request as well means a mis-started server still filters.
+            # Field name verified against examples/server/server.cpp: it is `vad`.
+            data["vad"] = "true"
         if prompt:
             data["prompt"] = prompt
-
-        started = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
-                response = await client.post(f"{self.base_url}/inference", files=files, data=data)
+                return await client.post(f"{self.base_url}/inference", files=files, data=data)
         except httpx.ConnectError as exc:
             raise WhisperUnavailable(
                 f"whisper-server is not running at {self.base_url}. Start it with "
@@ -78,16 +105,10 @@ class WhisperClient:
             ) from exc
         except httpx.TimeoutException as exc:
             raise WhisperUnavailable("whisper-server did not respond in time.") from exc
-
-        if response.status_code != 200:
-            raise WhisperUnavailable(
-                f"whisper-server returned {response.status_code}: {response.text[:200]}"
-            )
-
-        payload = response.json()
-        text = (payload.get("text") or "").strip()
-        ms = (time.perf_counter() - started) * 1000
-        return Transcript(text=text, ms=ms, model=self.model)
+        except httpx.HTTPError as exc:
+            # Includes a server that died mid-request (RemoteProtocolError) — still our problem
+            # to name, not a 500 to raise.
+            raise WhisperUnavailable(f"whisper-server request failed: {type(exc).__name__}") from exc
 
     async def health(self) -> tuple[bool, str]:
         try:

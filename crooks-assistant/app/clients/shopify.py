@@ -63,6 +63,7 @@ class ShopifyClient:
         self._tz: ZoneInfo | None = None
         self._shop: dict[str, Any] | None = None
         self.token_requests = 0  # M6 asserts the second run reuses the cache
+        self.last_partial_errors: str | None = None
 
     # ---------------------------------------------------------------- auth
 
@@ -160,14 +161,25 @@ class ShopifyClient:
         # A 200 with an `errors` array is normal for protected customer data: fields come back
         # null and the reason is in `errors`. Reading only `data` makes that look like an outage.
         errors = payload.get("errors")
+        self.last_partial_errors = None
         if errors:
             messages = "; ".join(
                 str(e.get("message", e)) for e in errors if isinstance(e, dict)
             ) or str(errors)
+            codes = {
+                str((e.get("extensions") or {}).get("code", "")).upper()
+                for e in errors if isinstance(e, dict)
+            }
+            # Throttling and cost overruns come back as HTTP 200 with an errors array, not 429.
+            if "THROTTLED" in codes:
+                raise ShopifyError("Shopify is rate-limiting us. Try again in a moment.")
+            if "MAX_COST_EXCEEDED" in codes:
+                raise ShopifyError("That query was too expensive for Shopify; narrow it.")
             if payload.get("data") is None:
                 raise ShopifyError(f"Shopify rejected the query: {messages}")
             log.warning("Shopify partial errors (likely protected-data redaction): %s", messages)
             payload.setdefault("_partial_errors", messages)
+            self.last_partial_errors = messages
 
         user_errors = _collect_user_errors(payload.get("data") or {})
         if user_errors:

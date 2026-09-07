@@ -21,6 +21,8 @@ log = logging.getLogger("crooks.shopify_tools")
 # expensive part, so line items and similar are capped well below the API's own limit.
 MAX_PAGE = 50
 MAX_LINE_ITEMS = 50
+# products x variants is the expensive nesting; 10 x 50 stays under Shopify's 1,000-point cap.
+MAX_PRODUCTS = 10
 MAX_BODY_CHARS = 1200
 
 _client: ShopifyClient | None = None
@@ -123,6 +125,8 @@ async def shopify_find_order(query: str, limit: int = 5) -> dict:
     )
     orders = [_order_summary(e["node"]) for e in payload["data"]["orders"]["edges"]]
     result: dict[str, Any] = {"query": query, "matched_on": search, "orders": orders}
+    if payload.get("_partial_errors"):
+        result["partial"] = payload["_partial_errors"]
     if not term.isdigit() and ambiguous_customers:
         result["ambiguous"] = True
         result["customers_matched"] = [
@@ -264,8 +268,10 @@ async def shopify_order_detail(order_id: str) -> dict:
     input_schema={
         "type": "object",
         "properties": {
-            "days": {"type": "integer", "description": "How many days back, 1 = today.",
+            "days": {"type": "integer", "description": "How many days the window covers, 1 = one day.",
                      "default": 1},
+            "days_ago": {"type": "integer", "description": "Shift the window back: 0 = ends today, 1 = ends yesterday. 'Yesterday' is days=1, days_ago=1.",
+                         "default": 0},
             "limit": {"type": "integer", "description": "Maximum orders (1-50).", "default": 20},
             "unfulfilled_only": {
                 "type": "boolean",
@@ -277,14 +283,15 @@ async def shopify_order_detail(order_id: str) -> dict:
     tier=Tier.GREEN,
 )
 async def shopify_list_orders(
-    days: int = 1, limit: int = 20, unfulfilled_only: bool = False
+    days: int = 1, limit: int = 20, unfulfilled_only: bool = False, days_ago: int = 0
 ) -> dict:
     client = _c()
     limit = max(1, min(int(limit), MAX_PAGE))
     days = max(1, min(int(days), 365))
+    days_ago = max(0, min(int(days_ago), 365))
 
-    start, _ = await client.local_day_bounds(days_back=days - 1)
-    query = f"created_at:>='{start}'"
+    start, end = await _window(client, days, days_ago)
+    query = f"created_at:>='{start}' AND created_at:<'{end}'"
     if unfulfilled_only:
         query += " AND fulfillment_status:unfulfilled"
 
@@ -303,18 +310,32 @@ async def shopify_list_orders(
     orders = [_order_summary(e["node"]) for e in connection["edges"]]
     return {
         "since": start,
+        "until": end,
         "timezone": str(await client.timezone()),
         "days": days,
+        "days_ago": days_ago,
         "count": len(orders),
         "truncated": connection["pageInfo"]["hasNextPage"],
         "orders": orders,
     }
 
 
+async def _window(client: ShopifyClient, days: int, days_ago: int) -> tuple[str, str]:
+    """[start, end) in UTC for a window of `days` shop-local days ending `days_ago` days ago."""
+    start, _ = await client.local_day_bounds(days_back=days_ago + days - 1)
+    _, end = await client.local_day_bounds(days_back=days_ago)
+    return start, end
+
+
 # ------------------------------------------------------------------ customers
 
 
 async def _search_customers(client: ShopifyClient, term: str, limit: int = 5) -> list[dict]:
+    term = term.strip()
+    if term.lower().startswith("email:"):
+        term = f'email:"{_search_term(term[6:])}"'
+    else:
+        term = _search_term(term)
     payload = await client.graphql(
         """
         query FindCustomers($q: String, $n: Int!) {
@@ -366,6 +387,8 @@ async def shopify_find_customer(query: str, limit: int = 5) -> dict:
     limit = max(1, min(int(limit), MAX_PAGE))
     matches = await _search_customers(client, query.strip(), limit=limit)
     result: dict[str, Any] = {"query": query, "count": len(matches), "customers": matches}
+    if not matches and client.last_partial_errors:
+        result["partial"] = client.last_partial_errors
     if len(matches) >= limit:
         result["truncated"] = True
         result["note"] = f"Showing the first {limit}; there may be more. Narrow the search."
@@ -400,7 +423,7 @@ async def shopify_find_customer(query: str, limit: int = 5) -> dict:
 )
 async def shopify_inventory(product: str, size: str = "", limit: int = 5) -> dict:
     client = _c()
-    limit = max(1, min(int(limit), MAX_PAGE))
+    limit = max(1, min(int(limit), MAX_PRODUCTS))
     payload = await client.graphql(
         """
         query Inventory($q: String!, $n: Int!) {
@@ -424,7 +447,7 @@ async def shopify_inventory(product: str, size: str = "", limit: int = 5) -> dic
           }
         }
         """,
-        {"q": f"title:*{product.strip()}*", "n": limit},
+        {"q": _product_query(product), "n": limit},
     )
     edges = payload["data"]["products"]["edges"]
     if not edges:
@@ -475,6 +498,17 @@ async def shopify_inventory(product: str, size: str = "", limit: int = 5) -> dic
     return result
 
 
+def _search_term(text: str) -> str:
+    """Strip characters that have meaning in Shopify's search syntax from user-supplied text."""
+    return re.sub(r"[\"'*:()\\]", " ", text).strip()
+
+
+def _product_query(product: str) -> str:
+    """Bare words match across title and tags and are ANDed — verified on the live store. A
+    leading wildcard inside a multi-word `title:` clause is not documented to work."""
+    return _search_term(product) or "*"
+
+
 def _size_aliases(size: str) -> set[str]:
     """People say 'medium', Shopify stores 'M'. Match either without guessing at the data."""
     size = size.strip().lower()
@@ -507,16 +541,19 @@ def _size_aliases(size: str) -> set[str]:
     input_schema={
         "type": "object",
         "properties": {
-            "days": {"type": "integer", "description": "How many days back, 1 = today.",
+            "days": {"type": "integer", "description": "How many days the window covers, 1 = one day.",
                      "default": 1},
+            "days_ago": {"type": "integer", "description": "Shift the window back: 0 = ends today, 1 = ends yesterday. 'Yesterday' is days=1, days_ago=1.",
+                         "default": 0},
         },
     },
     tier=Tier.GREEN,
 )
-async def shopify_sales_summary(days: int = 1) -> dict:
+async def shopify_sales_summary(days: int = 1, days_ago: int = 0) -> dict:
     client = _c()
     days = max(1, min(int(days), 365))
-    start, _ = await client.local_day_bounds(days_back=days - 1)
+    days_ago = max(0, min(int(days_ago), 365))
+    start, end = await _window(client, days, days_ago)
 
     total = 0.0
     count = 0
@@ -542,7 +579,7 @@ async def shopify_sales_summary(days: int = 1) -> dict:
               }
             }
             """,
-            {"q": f"created_at:>='{start}'", "n": MAX_PAGE, "after": cursor},
+            {"q": f"created_at:>='{start}' AND created_at:<'{end}'", "n": MAX_PAGE, "after": cursor},
         )
         connection = payload["data"]["orders"]
         for edge in connection["edges"]:
@@ -562,14 +599,16 @@ async def shopify_sales_summary(days: int = 1) -> dict:
         # Never a bare number: the source and the precision travel with the figure.
         "source": "Shopify Admin API, orders created in the period",
         "since": start,
+        "until": end,
         "timezone": str(await client.timezone()),
         "days": days,
+        "days_ago": days_ago,
         "orders": count,
         "revenue": round(total, 2),
         "currency": currency or "GBP",
         "complete": complete,
         "basis": (
-            "Current total per order including tax and shipping, before refunds. "
+            "Current total per order including tax and shipping, after any refunds. "
             "Cancelled orders are included if they were placed in the period."
         ),
         "caveat": None if complete else "More than 500 orders in the period; figure is partial.",
@@ -599,7 +638,7 @@ async def shopify_sales_summary(days: int = 1) -> dict:
 )
 async def shopify_product_info(product: str, size: str = "", limit: int = 3) -> dict:
     client = _c()
-    limit = max(1, min(int(limit), MAX_PAGE))
+    limit = max(1, min(int(limit), MAX_PRODUCTS))
     payload = await client.graphql(
         """
         query ProductInfo($q: String!, $n: Int!) {
@@ -616,7 +655,7 @@ async def shopify_product_info(product: str, size: str = "", limit: int = 3) -> 
           }
         }
         """,
-        {"q": f"title:*{product.strip()}*", "n": limit},
+        {"q": _product_query(product), "n": limit},
     )
     edges = payload["data"]["products"]["edges"]
     if not edges:
@@ -695,10 +734,11 @@ async def catalogue_terms(limit: int = 250) -> list[str]:
     except ShopifyError as exc:
         log.warning("catalogue: product fetch failed, continuing: %s", exc)
 
+    terms.append("\x00customers")  # boundary: everything after this is a person's name
     try:
         customers = await _search_customers(client, "", limit=50)
         terms.extend(c["name"] for c in customers if c.get("name"))
     except ShopifyError as exc:
         log.warning("catalogue: customer fetch failed, continuing: %s", exc)
 
-    return [t for t in dict.fromkeys(terms) if t and len(t) > 2]
+    return [t for t in dict.fromkeys(terms) if t and (len(t) > 2 or t.startswith("\x00"))]

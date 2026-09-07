@@ -57,3 +57,6 @@ class ClaudeProvider(ABC):
     @abstractmethod
     async def reset_session(self, session_id: str) -> None:
         """Drop any conversation state held for this session id."""
+
+    async def set_system_prompt(self, prompt: str) -> None:  # noqa: B027 — optional hook
+        """Replace the system prompt for all FUTURE conversations. Default: no-op."""

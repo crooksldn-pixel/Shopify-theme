@@ -127,9 +127,15 @@ def main() -> int:
         sys.path.insert(0, str(REPO))
         from app.secrets import keychain
 
+        try:
+            keychain.get("claude_oauth_token")
+        except keychain.KeychainUnavailable as exc:
+            raise RuntimeError(str(exc)) from exc
+        except keychain.SecretMissing:
+            pass
         for key in keychain.KNOWN_KEYS:
             have = keychain.present(key)
-            optional = key == "shopify_static_token"
+            optional = key in {"shopify_static_token", "gmail_token"}
             row(
                 OK if have else (WARN if optional else BAD),
                 key,
@@ -138,7 +144,7 @@ def main() -> int:
             if not have and not optional:
                 warnings += 1
     except Exception as exc:  # noqa: BLE001
-        row(WARN, "keychain", f"could not check: {exc}")
+        row(WARN, "keychain", f"unavailable to this process — secrets could not be checked: {str(exc)[:70]}")
         warnings += 1
     print("       Store a secret with: python scripts/set_secrets.py <key>")
 

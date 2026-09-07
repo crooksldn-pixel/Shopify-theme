@@ -127,3 +127,49 @@ async def test_health_reports_cli_auth_caveat():
     p._started, p._auth_mode = True, "cli"
     ok, detail = await p.health()
     assert ok and "launchd" in detail
+
+
+def test_red_hook_events_are_recorded_as_tool_calls():
+    from app.session.models import Session
+
+    p = MaxAgentSDKProvider(system_prompt="sys")
+    session = Session(session_id="s")
+    session.stage("mock_danger", {}, "refused by gate")
+    p._current = session
+    p._on_tool_event("mock_danger", "RED")
+    assert p._calls and p._calls[0].name == "mock_danger" and not p._calls[0].ok
+    assert session.state == "THINKING" and "refused" in session.state_detail
+
+
+def test_tool_events_drive_live_state():
+    from app.session.models import Session
+
+    p = MaxAgentSDKProvider(system_prompt="sys")
+    p._current = Session(session_id="s")
+    p._on_tool_event("shopify_list_orders", "GREEN")
+    assert p._current.state == "CHECKING SHOPIFY"
+    p._on_tool_event("gmail_search", "GREEN")
+    assert p._current.state == "CHECKING EMAIL"
+
+
+async def test_set_system_prompt_drops_open_clients():
+    class FakeClient:
+        def __init__(self): self.closed = False
+        async def disconnect(self): self.closed = True
+
+    p = MaxAgentSDKProvider(system_prompt="old")
+    fake = FakeClient()
+    p._clients["s"] = fake
+    p._client_last_used["s"] = 0
+    await p.set_system_prompt("new")
+    assert p._system_prompt == "new"
+    assert fake.closed and not p._clients
+
+
+def test_broader_billing_guard(monkeypatch):
+    for name in ("ANTHROPIC_API_KEY_HELPER", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX"):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setenv(name, "1")
+        with pytest.raises(BillingGuardError):
+            assert_no_payg_credentials()
+        monkeypatch.delenv(name)

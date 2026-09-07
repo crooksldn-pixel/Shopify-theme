@@ -19,6 +19,8 @@ MAX_BYTES = 5_000_000
 KEEP_FILES = 5
 
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
+# Shopify GIDs and other long ids must survive redaction, or the log is useless for debugging.
+_PROTECT = re.compile(r"gid://shopify/\w+/\d+|prop_[0-9a-f]+|[0-9a-f]{16,}")
 # UK mobile and landline shapes, and international. Deliberately greedy: a false positive costs
 # a redacted number in a log, a false negative puts a customer's phone number on disk.
 _PHONE = re.compile(r"(?:(?<!\w)(?:\+\d{1,3}[\s-]?)?(?:\d[\s-]?){9,14}\d(?!\w))")
@@ -30,15 +32,38 @@ _REDACT_KEYS = {
     "address", "address1", "address2", "shippingaddress", "billingaddress", "street",
     "phone", "phonenumber", "postcode", "zip", "postalcode", "email", "emailaddress",
     "from_email", "customer_email", "body", "snippet",
+    # Names are personal data too. Order `name` (CROOKS-1928) is a different key and survives.
+    "customer_name", "displayname", "from",
 }
 
 
 def redact_text(text: str) -> str:
+    protected: list[str] = []
+
+    def keep(match: re.Match) -> str:
+        protected.append(match.group(0))
+        return f"\x00{len(protected) - 1}\x00"
+
+    text = _PROTECT.sub(keep, text)
     text = _EMAIL.sub("[email]", text)
     text = _CARD.sub("[card]", text)
     text = _POSTCODE.sub("[postcode]", text)
     text = _PHONE.sub("[phone]", text)
-    return text
+    return re.sub(r"\x00(\d+)\x00", lambda m: protected[int(m.group(1))], text)
+
+
+class RedactingFilter(logging.Filter):
+    """Redacts every formatted log message. Transcripts, tool arguments and API error text all
+    pass through stdlib logging, and none of them may carry a customer's details to disk."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:  # noqa: BLE001
+            return True
+        record.msg = redact_text(message)
+        record.args = ()
+        return True
 
 
 def redact(value: Any) -> Any:

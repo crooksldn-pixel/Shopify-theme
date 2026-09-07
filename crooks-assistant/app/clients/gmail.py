@@ -33,29 +33,66 @@ class GmailError(RuntimeError):
     """A Gmail call failed in a way worth reporting honestly."""
 
 
+def _read_token_json() -> tuple[str, str]:
+    """(json, where). The Keychain is preferred — the refresh token is a long-lived secret and
+    the project rule is that secrets do not live in files. token.json (mode 600) remains the
+    fallback for the plan's original flow and for hosts without a keychain."""
+    from app.secrets import keychain
+
+    stored = keychain.get_optional("gmail_token")
+    if stored:
+        return stored, "keychain"
+    if TOKEN_PATH.exists():
+        return TOKEN_PATH.read_text(encoding="utf-8"), "file"
+    raise GmailAuthRequired("No Gmail token stored.")
+
+
+def store_token_json(payload: str) -> str:
+    """Persist the authorised-user JSON. Returns where it went."""
+    from app.secrets import keychain
+
+    try:
+        keychain.set_secret("gmail_token", payload)
+        if TOKEN_PATH.exists():
+            TOKEN_PATH.unlink()
+        return "keychain"
+    except Exception:  # noqa: BLE001 — no keychain: fall back to the 600-mode file
+        TOKEN_PATH.write_text(payload, encoding="utf-8")
+        TOKEN_PATH.chmod(0o600)
+        return "file"
+
+
 def load_credentials():
     """Load and refresh the stored credential. Never opens a browser."""
+    import json
+
     from google.auth.exceptions import RefreshError
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
 
-    if not TOKEN_PATH.exists():
-        raise GmailAuthRequired("No Gmail token stored.")
+    raw, where = _read_token_json()
+    try:
+        info = json.loads(raw)
+    except ValueError as exc:
+        raise GmailAuthRequired(f"The stored Gmail token ({where}) is not valid JSON.") from exc
+    creds = Credentials.from_authorized_user_info(info, SCOPES)
 
-    creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+    if not creds.refresh_token:
+        raise GmailAuthRequired(
+            "The stored Gmail credential has no refresh token, so it will expire within the hour."
+        )
 
     if creds.valid:
         return creds
 
-    if creds.expired and creds.refresh_token:
+    if creds.expired:
         try:
             creds.refresh(Request())
         except RefreshError as exc:
             # invalid_grant is usually a Google password change (which revokes Gmail-scoped
             # tokens by design) or an app still in Testing (7-day token lifetime).
             raise GmailAuthRequired(f"Gmail refresh was rejected ({exc}).") from exc
-        TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
-        TOKEN_PATH.chmod(0o600)
+        store_token_json(creds.to_json())
         return creds
 
     raise GmailAuthRequired("The stored Gmail credential cannot be refreshed.")

@@ -16,10 +16,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.clients.gmail import (  # noqa: E402
     CREDENTIALS_PATH,
     SCOPES,
-    TOKEN_PATH,
     GmailAuthRequired,
     GmailClient,
     load_credentials,
+    store_token_json,
 )
 
 
@@ -38,11 +38,17 @@ def authorise() -> int:
     print("\nA browser will open. Expect an 'unverified app' warning — that is correct for a\n"
           "private app. Click Advanced, then 'Go to … (unsafe)', then Allow. Once, ever.\n")
     # 127.0.0.1 rather than localhost: Google warns localhost can trip client firewalls.
-    creds = flow.run_local_server(host="127.0.0.1", port=0, open_browser=True)
+    # prompt=consent + access_type=offline: a re-authorisation without them can come back
+    # with no refresh token at all, which is a credential that dies within the hour.
+    creds = flow.run_local_server(
+        host="127.0.0.1", port=0, open_browser=True, access_type="offline", prompt="consent"
+    )
+    if not creds.refresh_token:
+        print("Google did not return a refresh token. Revoke the app at myaccount.google.com/permissions and run this again.")
+        return 1
 
-    TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
-    TOKEN_PATH.chmod(0o600)
-    print(f"\nStored {TOKEN_PATH} (mode 600).")
+    where = store_token_json(creds.to_json())
+    print(f"\nStored the Gmail credential in the {'macOS Keychain' if where == 'keychain' else 'token.json file (mode 600)'}.")
     return verify()
 
 
@@ -54,6 +60,7 @@ def verify() -> int:
         return 1
 
     granted = list(creds.scopes or [])
+    print(f"refresh token  : {'present' if creds.refresh_token else 'MISSING — re-run without --verify'}")
     print(f"scopes granted : {granted}")
     if granted != SCOPES:
         print(f"WARNING: expected exactly {SCOPES}. A wider scope than gmail.readonly is a bug.")

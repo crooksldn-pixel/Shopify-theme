@@ -50,7 +50,7 @@ def similar(a: str, b: str) -> bool:
 
 async def bench_model(model: str, files: list[Path], normaliser, iterations: int, url: str):
     client = WhisperClient(url, model=model)
-    prompt = build_prompt(normaliser.catalogue.terms)
+    prompt = build_prompt(normaliser.catalogue.prompt_terms())  # exactly what production sends
     rows = []
     for path in files:
         try:

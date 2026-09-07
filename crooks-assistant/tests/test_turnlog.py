@@ -61,3 +61,34 @@ def test_written_log_line_contains_no_personal_data(tmp_path):
     for leak in ("jo@example.com", "Rivington", "07700900123"):
         assert leak not in written, f"{leak!r} reached the log file"
     assert json.loads(written)["text"].startswith("email [email]")
+
+
+# --- the review's findings: ids must survive, stdlib logging must be covered ----------
+
+def test_shopify_gids_and_proposal_ids_survive_redaction():
+    text = "order gid://shopify/Order/8245370618199 staged prop_2593c23364af for jo@x.com"
+    out = redact_text(text)
+    assert "gid://shopify/Order/8245370618199" in out
+    assert "prop_2593c23364af" in out
+    assert "jo@x.com" not in out
+
+
+def test_customer_name_keys_are_redacted_but_order_name_survives():
+    out = redact({"name": "CROOKS-1928", "customer_name": "Anna Denning", "from": "Anna <a@b.com>"})
+    assert out["name"] == "CROOKS-1928"
+    assert out["customer_name"] == "[redacted]"
+    assert out["from"] == "[redacted]"
+
+
+def test_redacting_filter_covers_stdlib_logging(caplog):
+    import logging
+
+    from app.logging.turnlog import RedactingFilter
+
+    logger = logging.getLogger("crooks.test.filter")
+    logger.addFilter(RedactingFilter())
+    with caplog.at_level(logging.INFO, logger="crooks.test.filter"):
+        logger.info("transcript: email me at %s or call %s", "jo@example.com", "07700 900123")
+    joined = " ".join(r.getMessage() for r in caplog.records)
+    assert "jo@example.com" not in joined and "07700 900123" not in joined
+    assert "[email]" in joined and "[phone]" in joined

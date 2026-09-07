@@ -24,9 +24,17 @@ async def voices() -> dict:
 
 @router.post("/reload-kb")
 async def reload_kb(request: Request) -> dict:
+    from app.kb.loader import build_system_prompt
+
     runtime = request.app.state.runtime
     kb = runtime.reload_kb()
-    return {"reloaded": True, "files": kb.files, "chars": kb.chars}
+    await runtime.provider.set_system_prompt(build_system_prompt(kb))
+    return {
+        "reloaded": True,
+        "files": kb.files,
+        "chars": kb.chars,
+        "note": "Open conversations were reset so the new knowledge base takes effect.",
+    }
 
 
 @router.get("/tools")

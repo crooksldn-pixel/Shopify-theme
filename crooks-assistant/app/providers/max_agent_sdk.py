@@ -32,6 +32,18 @@ from app.tools.dispatch import dispatch, make_pretooluse_hook
 log = logging.getLogger("crooks.claude")
 
 
+# Every route by which the claude CLI could bill somewhere other than the subscription: a raw
+# key, a bearer token, a key-helper script, or a cloud provider. Any of them set means stop.
+PAYG_ENV_VARS = (
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_API_KEY_HELPER",
+    "CLAUDE_CODE_USE_BEDROCK",
+    "CLAUDE_CODE_USE_VERTEX",
+    "CLAUDE_CODE_USE_FOUNDRY",
+)
+
+
 class BillingGuardError(RuntimeError):
     """A pay-as-you-go credential is present. Refuse to run rather than spend money silently."""
 
@@ -39,7 +51,7 @@ class BillingGuardError(RuntimeError):
 def assert_no_payg_credentials() -> None:
     """Called at startup. The single most expensive mistake this project could make is to fall
     back to API billing without noticing, and the SDK will happily do that if a key is exported."""
-    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+    for name in PAYG_ENV_VARS:
         if os.environ.get(name):
             raise BillingGuardError(
                 f"{name} is set in this environment. The assistant runs on the Claude Max "
@@ -58,6 +70,8 @@ class MaxAgentSDKProvider(ClaudeProvider):
         tool_timeout_s: float = 8.0,
         cli_path: str = "",
         max_turns: int = 12,
+        turn_timeout_s: float = 120.0,
+        client_idle_timeout_s: float = 1800.0,
     ) -> None:
         self._system_prompt = system_prompt
         self._model = model
@@ -65,7 +79,10 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._tool_timeout_s = tool_timeout_s
         self._cli_path = cli_path
         self._max_turns = max_turns
+        self._turn_timeout_s = turn_timeout_s
+        self._client_idle_timeout_s = client_idle_timeout_s
         self._clients: dict[str, object] = {}
+        self._client_last_used: dict[str, float] = {}
         self._current: Session | None = None
         self._calls: list[ToolCall] = []
         self._states: list[str] = []
@@ -153,6 +170,11 @@ class MaxAgentSDKProvider(ClaudeProvider):
     def _on_tool_event(self, name: str, tier: str) -> None:
         self._states.append(name)
         session = self._current
+        if tier == "RED":
+            # A hook-denied call never reaches dispatch, so record it here or the turn log
+            # would show a refusal the model reported but no tool call behind it.
+            reason = session.proposals[-1].reason if session and session.proposals else "refused"
+            self._calls.append(ToolCall(name=name, args={}, ok=False, error=reason))
         if session is None:
             return
         if tier == "RED":
@@ -181,6 +203,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
     async def _client_for(self, session_id: str):
         from claude_agent_sdk import ClaudeSDKClient
 
+        await self._sweep_idle_clients()
         client = self._clients.get(session_id)
         if client is None:
             # Held open across turns. Recreating it per request costs seconds of subprocess
@@ -189,7 +212,34 @@ class MaxAgentSDKProvider(ClaudeProvider):
             client = ClaudeSDKClient(options=self._options())
             await client.connect()
             self._clients[session_id] = client
+            await self._verify_auth_source(client)
+        self._client_last_used[session_id] = time.time()
         return client
+
+    async def _sweep_idle_clients(self) -> None:
+        """Each client is a `claude` subprocess. Sessions expire; their subprocesses must too."""
+        now = time.time()
+        for session_id, last in list(self._client_last_used.items()):
+            if now - last > self._client_idle_timeout_s:
+                await self.reset_session(session_id)
+
+    async def _verify_auth_source(self, client) -> None:
+        """Ask the running CLI how it authenticated. Belt and braces over the env check: if it
+        reports an API key, stop before a single token is billed."""
+        try:
+            info = await client.get_server_info()
+        except Exception:  # noqa: BLE001 — informational; absence is not a failure
+            return
+        if not isinstance(info, dict):
+            return
+        source = str(info.get("apiKeySource") or info.get("api_key_source") or "").lower()
+        provider = str(info.get("apiProvider") or info.get("api_provider") or "").lower()
+        log.info("claude auth source=%r provider=%r", source or "?", provider or "?")
+        if source and any(k in source for k in ("api_key", "apikey", "ANTHROPIC_API_KEY".lower())):
+            raise BillingGuardError(
+                f"The claude CLI reports it is authenticating with an API key ({source}). "
+                "That is pay-as-you-go billing. Refusing to continue."
+            )
 
     async def turn(self, session_id: str, text: str) -> TurnResult:
 
@@ -218,17 +268,32 @@ class MaxAgentSDKProvider(ClaudeProvider):
         result_message = None
         try:
             client = await self._client_for(session_id)
-            await client.query(text)
-            parts: list[str] = []
-            async for message in client.receive_response():
-                if isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            parts.append(block.text)
-                elif isinstance(message, ResultMessage):
-                    result_message = message
-                    break
-            answer = "\n".join(p.strip() for p in parts if p.strip()).strip()
+
+            async def run() -> tuple[str, object]:
+                await client.query(text)
+                parts: list[str] = []
+                last = None
+                async for message in client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                parts.append(block.text)
+                    elif isinstance(message, ResultMessage):
+                        last = message
+                        break
+                return "\n".join(p.strip() for p in parts if p.strip()).strip(), last
+
+            # A stalled CLI must not hold the turn lock forever.
+            answer, result_message = await asyncio.wait_for(run(), timeout=self._turn_timeout_s)
+        except TimeoutError:
+            log.warning("turn timed out after %.0fs; dropping the client", self._turn_timeout_s)
+            await self.reset_session(session_id)
+            if session is not None:
+                session.set_state("ERROR", "timeout")
+            return TurnResult(
+                text="That took too long and I have given up on it. Ask me again.",
+                tool_calls=self._calls, session_id=session_id, error_kind="timeout",
+            )
         except Exception as exc:  # noqa: BLE001
             kind, spoken = classify_claude_error(exc)
             log.warning("turn failed (%s): %s", kind, exc)
@@ -271,8 +336,17 @@ class MaxAgentSDKProvider(ClaudeProvider):
         )
         return TurnResult(text=answer, tool_calls=self._calls, session_id=session_id)
 
+    async def set_system_prompt(self, prompt: str) -> None:
+        """A new knowledge base means a new system prompt, and the SDK fixes the prompt when a
+        client connects — so every open client is dropped. The next turn reconnects with the
+        new prompt; the conversation history is lost, which is the honest trade."""
+        self._system_prompt = prompt
+        for session_id in list(self._clients):
+            await self.reset_session(session_id)
+
     async def reset_session(self, session_id: str) -> None:
         client = self._clients.pop(session_id, None)
+        self._client_last_used.pop(session_id, None)
         if client is not None:
             try:
                 await client.disconnect()

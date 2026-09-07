@@ -15,6 +15,7 @@ KNOWN_KEYS = (
     "shopify_client_id",
     "shopify_client_secret",
     "shopify_static_token",  # legacy shpat_ fallback (M6 failure path only)
+    "gmail_token",  # the authorised-user JSON (refresh token inside); token.json is the fallback
 )
 
 

@@ -54,10 +54,11 @@ async def test_hallucinations_become_no_speech(text):
     assert "did not catch" in result.reason
 
 
-async def test_whisper_down_is_named_not_crashed():
+async def test_whisper_down_is_spoken_not_crashed():
     result = await Transcriber(FakeWhisper(fail=True), norm()).from_blob(webm_opus(tone_pcm(1.0)))
     assert not result.ok
-    assert "whisper-server" in result.reason
+    assert "speech recognition" in result.reason
+    assert "whisper" not in result.reason.lower(), "developer detail must not be spoken aloud"
 
 
 async def test_undecodable_upload_is_reported():
@@ -77,10 +78,11 @@ async def test_prompt_is_display_case_and_ends_with_period():
 
 
 def test_build_prompt_puts_last_terms_last_and_caps_length():
-    terms = [f"term {i}" for i in range(100)]
+    terms = [f"term number {i}" for i in range(300)]
     prompt = build_prompt(terms)
-    assert prompt.endswith("term 99.")
-    assert "term 0," not in prompt  # truncated from the front
+    assert prompt.endswith("term number 299.")
+    assert "term number 0," not in prompt  # truncated from the front
+    assert len(prompt) <= 905
 
 
 def test_build_prompt_strips_symbols_and_dedupes():

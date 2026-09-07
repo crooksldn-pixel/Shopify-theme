@@ -6,12 +6,14 @@ Accepts text (development, and the typed interface that keeps allowance testing 
 
 from __future__ import annotations
 
+import base64
 import logging
 import time
 import uuid
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 
+from app.logging.turnlog import redact
 from app.speech.decode import DecodeError, decode
 
 log = logging.getLogger("crooks.turn")
@@ -86,6 +88,13 @@ async def turn(
                 timings=timings, started=started, transcript=transcript_info,
             )
         text = result.text
+        # The normaliser refused to guess between near-identical names; tell the model, so it
+        # can search the partial name and ask — rather than silently losing the information.
+        if result.normalised and result.normalised.ambiguities:
+            notes = "; ".join(
+                f"'{a.heard}' could be {' or '.join(a.candidates)}" for a in result.normalised.ambiguities
+            )
+            text = f"{text}\n[The speech recogniser was unsure: {notes}. Ask if it matters.]"
 
     if not text or not text.strip():
         return _answer(
@@ -104,6 +113,7 @@ async def turn(
         )
 
     await runtime.maybe_refresh_catalogue()
+    await _ensure_provider_started(runtime)
 
     t0 = time.perf_counter()
     result = await runtime.provider.turn(session_id, text.strip())
@@ -125,10 +135,27 @@ async def turn(
         transcript=transcript_info,
         question=text.strip(),
         tool_calls=[
-            {"name": c.name, "ok": c.ok, "error": c.error, "ms": c.duration_ms}
+            {
+                "name": c.name, "ok": c.ok, "error": c.error, "ms": c.duration_ms,
+                # Arguments are what make a wrong answer diagnosable in chat.py — redacted,
+                # because the model may have put an email address in them.
+                "args": redact({k: str(v)[:80] for k, v in (c.args or {}).items()}),
+            }
             for c in result.tool_calls
         ],
     )
+
+
+async def _ensure_provider_started(runtime) -> None:
+    """If the provider failed at boot (token not yet stored, say), retry now rather than
+    answering "still starting up" until someone restarts the process."""
+    provider = runtime.provider
+    if getattr(provider, "_started", True):
+        return
+    try:
+        await provider.start()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("provider start retry failed: %s", exc)
 
 
 def _answer(
@@ -204,6 +231,8 @@ async def audio_test(request: Request, audio: UploadFile = File(...)) -> dict:
         "ok": True,
         "mime_type": audio.content_type,
         "saved_to": str(decoded.saved_to),
+        # The decoded WAV, so the page can play back exactly what the backend heard (M2).
+        "wav_base64": base64.b64encode(decoded.as_wav()).decode("ascii"),
         **decoded.stats.as_dict(),
     }
 

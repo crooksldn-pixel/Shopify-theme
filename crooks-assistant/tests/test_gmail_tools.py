@@ -167,3 +167,36 @@ async def test_live_search_returns_expected_shape():
     assert {"query", "count", "threads"} <= result.keys()
     for thread in result["threads"]:
         assert {"thread_id", "from", "subject", "likely_bulk"} <= thread.keys()
+
+
+# --- the review's findings ---------------------------------------------------
+
+def test_error_descriptions_drop_urls_and_personal_data():
+    exc = RuntimeError("HttpError 400 requesting https://gmail.googleapis.com/v1/users/me/messages?q=from%3Ajo%40example.com returned bad")
+    out = gmail_tools._describe(exc)
+    assert "googleapis" not in out and "[url]" in out
+
+
+def test_gmail_token_can_live_in_the_keychain():
+    from app.secrets import keychain
+
+    assert "gmail_token" in keychain.KNOWN_KEYS
+
+
+async def test_read_thread_keeps_the_newest_messages():
+    """A customer's latest reply is at the END of a long thread."""
+    from unittest.mock import MagicMock
+
+    fake = MagicMock()
+    messages = [
+        {"id": str(i), "payload": {"headers": [{"name": "From", "value": f"p{i}@x.com"}, {"name": "Subject", "value": "s"}, {"name": "Date", "value": "d"}], "mimeType": "text/plain", "body": {"data": b64(f"msg {i}")}}}
+        for i in range(20)
+    ]
+    fake.users().threads().get().execute.return_value = {"messages": messages}
+    client = gmail_tools.GmailClient()
+    client._service = fake
+    gmail_tools.bind(client)
+    out = await gmail_tools.gmail_read_thread("t1")
+    assert out["messages_shown"] == 12 and out["truncated"]
+    assert out["messages"][-1]["body"] == "msg 19"
+    assert out["messages"][0]["body"] == "msg 8"

@@ -42,6 +42,9 @@ let busy = false;
 let wakeLock = null;
 let speechUnlocked = false;
 let voices = [];
+let speakGeneration = 0;     // bumped on every cancel(); a chain from an older generation stops itself
+let pendingStart = false;    // true between pointerdown and the recorder actually starting
+let lastWasError = false;    // so an error stays on screen after it has been read out
 
 /* ------------------------------------------------------------------ state */
 
@@ -115,11 +118,13 @@ function unlockSpeech() {
 }
 
 function stopSpeaking() {
+  speakGeneration += 1;   // any chunk chain still running belongs to an old generation now
   if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch { /* noop */ } }
 }
 
 function chunkForSpeech(text, limit = 200) {
-  const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+  // A full stop between digits is a decimal point ("£430.50"), not a sentence end.
+  const sentences = text.match(/(?:[^.!?]|\.(?=\d))+[.!?]*\s*/g) || [text];
   const out = [];
   let current = '';
   for (const sentence of sentences) {
@@ -136,20 +141,23 @@ function chunkForSpeech(text, limit = 200) {
   return out.filter(Boolean);
 }
 
-function speak(text) {
+function speak(text, { isError = false } = {}) {
   if (!window.speechSynthesis || !el.speakToggle.checked || !text) return;
   stopSpeaking();
+  const generation = speakGeneration;
   const parts = chunkForSpeech(text);
   const chosen = voices.find((v) => v.name === el.voiceSelect.value);
   let index = 0;
+  const finish = () => { if (!busy) setState(isError ? 'ERROR' : 'READY'); };
   const next = () => {
-    if (index >= parts.length) { if (!busy) setState('READY'); return; }
+    if (generation !== speakGeneration) return;      // cancelled: do not re-arm the chain
+    if (index >= parts.length) { finish(); return; }
     const utterance = new SpeechSynthesisUtterance(parts[index++]);
     if (chosen) { utterance.voice = chosen; utterance.lang = chosen.lang; }
     else utterance.lang = 'en-GB';
     utterance.rate = 1.0;
     utterance.onend = next;
-    utterance.onerror = next;   // never leave the chain hanging on a failed chunk
+    utterance.onerror = next;   // a failed chunk moves on; a cancelled chain stops above
     window.speechSynthesis.speak(utterance);
   };
   setState('SPEAKING');
@@ -189,7 +197,8 @@ function pickMimeType() {
 }
 
 async function startRecording() {
-  if (recording || busy) return;
+  if (recording || busy || pendingStart) return;
+  pendingStart = true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     setState('ERROR');
     el.answer.textContent = window.isSecureContext
@@ -206,6 +215,12 @@ async function startRecording() {
         sampleRate: { ideal: 16000 },   // ideal, never exact — exact fails outright on some devices
       },
     });
+    if (!pendingStart) {
+      // The thumb lifted while the permission/stream was being set up. Recording now would
+      // capture silence after the question was already asked.
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
     const mimeType = pickMimeType();
     mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 32000 } : {});
     chunks = [];
@@ -226,10 +241,13 @@ async function startRecording() {
     el.answer.textContent = error && error.name === 'NotAllowedError'
       ? 'Microphone permission was refused. Allow it in the browser settings, choosing "While using the app".'
       : `Could not open the microphone: ${error}`;
+  } finally {
+    pendingStart = false;
   }
 }
 
 function stopRecording() {
+  pendingStart = false;      // a release before the recorder started cancels the start
   if (!recording) return;
   recording = false;
   el.talk.dataset.recording = 'false';
@@ -270,6 +288,11 @@ async function submit(body, isAudio) {
       : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
     if (isAudio) setTimeout(() => { if (busy && el.stage.dataset.state === 'TRANSCRIBING') setState('THINKING'); }, 1200);
     const response = await fetch('/turn', options);
+    if (!response.ok) {
+      setState('ERROR');
+      el.answer.textContent = `The backend answered with an error (${response.status}). Try again.`;
+      return;
+    }
     const data = await response.json();
 
     sessionId = data.session_id || sessionId;
@@ -281,7 +304,8 @@ async function submit(body, isAudio) {
     el.answer.textContent = data.answer;
     renderTimings(data.timings_ms);
 
-    if (data.error_kind) { setState('ERROR'); speak(data.answer); }
+    lastWasError = Boolean(data.error_kind);
+    if (data.error_kind) { setState('ERROR'); speak(data.answer, { isError: true }); }
     else { setState('READY'); speak(data.answer); }
   } catch (error) {
     setState('ERROR');
@@ -291,8 +315,8 @@ async function submit(body, isAudio) {
     stopStatePolling();
     busy = false;
     el.talk.disabled = false;
-    // If speech is off there is no onend to return us to READY, so do it here.
-    if (!el.speakToggle.checked && el.stage.dataset.state !== 'ERROR') setState('READY');
+    // If speech is off there is no onend to settle the state, so do it here.
+    if (!el.speakToggle.checked) setState(lastWasError ? 'ERROR' : 'READY');
   }
 }
 
@@ -359,13 +383,28 @@ el.micTest.addEventListener('click', async () => {
     recorder.ondataavailable = (e) => { if (e.data.size) parts.push(e.data); };
     recorder.onstop = async () => {
       stream.getTracks().forEach((t) => t.stop());
-      const form = new FormData();
-      form.append('audio', new Blob(parts, { type: recorder.mimeType }), 'test.webm');
-      const data = await (await fetch('/audio-test', { method: 'POST', body: form })).json();
-      setState(data.ok && data.usable ? 'READY' : 'ERROR');
-      el.answer.textContent = data.ok
-        ? `${data.duration_s}s, ${data.sample_rate}Hz ${data.channels}ch, peak ${data.peak_dbfs}dBFS, RMS ${data.rms_dbfs}dBFS — ${data.usable ? 'usable' : 'too quiet or clipped'}. Recorded as ${data.mime_type}.`
-        : `Decode failed: ${data.error}`;
+      try {
+        const form = new FormData();
+        form.append('audio', new Blob(parts, { type: recorder.mimeType }), 'test.webm');
+        const response = await fetch('/audio-test', { method: 'POST', body: form });
+        if (!response.ok) throw new Error(`backend answered ${response.status}`);
+        const data = await response.json();
+        setState(data.ok && data.usable ? 'READY' : 'ERROR');
+        el.answer.textContent = data.ok
+          ? `${data.duration_s}s, ${data.sample_rate}Hz ${data.channels}ch, peak ${data.peak_dbfs}dBFS, RMS ${data.rms_dbfs}dBFS — ${data.usable ? 'usable' : 'too quiet or clipped'}. Recorded as ${data.mime_type}. Playing back what the backend heard.`
+          : `Decode failed: ${data.error}`;
+        if (data.ok && data.wav_base64) {
+          // Play back exactly what the backend decoded — the M2 "is it intelligible" check.
+          const bytes = Uint8Array.from(atob(data.wav_base64), (c) => c.charCodeAt(0));
+          const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+          const player = new Audio(url);
+          player.onended = () => URL.revokeObjectURL(url);
+          player.play().catch(() => { /* autoplay blocked: the stats still tell the story */ });
+        }
+      } catch (error) {
+        setState('ERROR');
+        el.answer.textContent = `Microphone test failed: ${error}`;
+      }
     };
     recorder.start(250);
     setTimeout(() => recorder.stop(), 3000);
