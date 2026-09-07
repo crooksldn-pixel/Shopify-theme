@@ -5,7 +5,7 @@ the working tree that followed it. Every finding was triaged by hand against the
 An automated three-refuter verification pass ran alongside; it had returned 11 standing and 39 refuted verdicts out of 50 when this ledger was written, and is not the
 basis of the dispositions below — the code is.
 
-**63 findings**: 57 fixed · 2 partly · 4 accepted · 0 open
+**66 findings**: 60 fixed · 2 partly · 4 accepted · 0 open
 
 Status meanings: **fixed** — changed in the named commit, with a test where one was practical;
 **partly** — the real part is fixed, the rest is explained; **accepted** — true, and left as a
@@ -77,12 +77,34 @@ deliberate trade-off that is written down; **open** — true and not yet done.
 | low | speech | `app/speech/decode.py:48` | A clipped recording is discarded and the user is told it was "too short" | **fixed** | distinct spoken reason for clipping (cebccbe) |
 | low | speech | `scripts/bench_whisper.py:53` | Benchmark measures a different Whisper prompt than production uses | **fixed** | bench uses prompt_terms() (cebccbe) |
 
+| high | council (outsider) | `app/kb/loader.py:38` | Editing instructions and open questions in kb/*.md reached the model's system prompt | **fixed** | loader strips HTML comments; discretion section tells the model to defer; regression test over the shipped kb (cd0d567) |
+| medium | council (executor) | `README.md` | `claude /login` written as a shell command; policy files described as still unwritten; test count stale | **fixed** | corrected from the tree and from pytest output (cd0d567, this commit) |
+| medium | council (contrarian) | `app/clients/shopify.py:136` | Read-only rested on the scope list alone; no mutation refusal in the client; RED tools in allowed_tools | **fixed** | client refuses mutation documents; RED tools in disallowed_tools; both tested (e3fda21) |
+
 ## Findings the reviewers were wrong about, briefly
 
 - *A top-level `secrets/` package is missing* — it shadows the stdlib and breaks FastAPI; `app/secrets/` is deliberate.
 - *Double Metaphone is not used* — jellyfish removed it in 1.0.
 - *`name:#NNNN` should be used for order search* — bare `name:1928` matches both `CROOKS-1928` and legacy `#1036`, verified on the live store.
 
+## The refuter pass
+
+Three independent refuters (one for low severity) were asked to disprove each finding. 11 verdicts stood; 50 were refuted. The standing verdicts, in the refuters' own words, with the disposition each maps to:
+
+- Confirmed in source. app/clients/gmail.py:57-58 and scripts/gmail_auth.py:43-44 write creds.to_json() to REPO_ROOT/token.json (gmail.py:18-20); credentials.json is also kept there (gmail.py:19). The installed Credentials.to_json() serialises token, refresh_tok… *(severity: keep)* — covered by the matching **fixed** row above.
+- Confirmed against the source and the installed library. app/clients/gmail.py:20 sets TOKEN_PATH = REPO_ROOT / "token.json"; gmail.py:57 and scripts/gmail_auth.py:43 both call TOKEN_PATH.write_text(creds.to_json(), ...), and gmail.py:45 reads it back with Crede… *(severity: keep)* — covered by the matching **fixed** row above.
+- The factual core of the claim checks out and I could not refute it. app/clients/gmail.py:57 and scripts/gmail_auth.py:43 both call `TOKEN_PATH.write_text(creds.to_json(), ...)` with TOKEN_PATH = REPO_ROOT/token.json (gmail.py:18-20). I read google.oauth2.crede… *(severity: lower)* — covered by the matching **fixed** row above.
+- Confirmed against /home/user/Shopify-theme/crooks-assistant/web/app.js. stopSpeaking() (line 118) is a bare speechSynthesis.cancel() with no generation/ownership tracking; speak() (lines 145-154) chains chunks with `utterance.onend = next; utterance.onerror = … *(severity: keep)* — covered by the matching **fixed** row above.
+- Confirmed from /home/user/Shopify-theme/crooks-assistant/web/app.js. The chain only ever has one utterance queued at a time: `next()` (lines 145-154) creates chunk N and enqueues chunk N+1 solely from that chunk's `onend`/`onerror`, and both handlers are the s… *(severity: keep)* — covered by the matching **fixed** row above.
+- Confirmed in web/app.js. stopSpeaking() (117-119) is a bare speechSynthesis.cancel(); the chain closure `next` (145-154) is re-armed on both onend and onerror (151-152) with no generation/abort guard, so the spec-mandated error event ('interrupted') on the can… *(severity: keep)* — covered by the matching **fixed** row above.
+- Confirmed against the actual sources. app/clients/whisper.py:62 sends `"vad": "true"` unconditionally on every /inference call, and the comment at lines 59-60 claims this makes "a mis-started server still filter". scripts/whisper_server.py:58-59 only prints a … *(severity: lower)* — covered by the matching **fixed** row above.
+- The claim stands; I confirmed it in source and empirically, not just by reading. Source check (whisper.cpp checkout at scratchpad/tools/whisper.cpp, commit 52a939a): examples/server/server.cpp:594-596 copies the `vad` form field into params.vad; :968-969 sets … *(severity: lower)* — covered by the matching **fixed** row above.
+- Confirmed in source. app/runtime.py:77-79 reload_kb() only reassigns self.kb; the provider is constructed once at runtime.py:111-112 with build_system_prompt(kb). In app/providers/max_agent_sdk.py the prompt is stored at line 76 and read only in _options() at … *(severity: keep)* — covered by the matching **fixed** row above.
+- Reproduced end to end, not just traced. A whisper-server was built in the scratchpad (/tmp/claude-0/-home-user-Shopify-theme/d1718050-649b-5a97-8172-d7d22b2cb490/scratchpad/tools/whisper.cpp, commit 52a939a, build/bin/whisper-server present). Started it with e… *(severity: lower)* — covered by the matching **fixed** row above.
+- Confirmed against the source. app/runtime.py:77-79 `reload_kb()` only does `self.kb = load(self.settings.kb_dir)`; the provider is constructed once at runtime.py:111-117 with `system_prompt=build_system_prompt(kb)` and is never touched again. In app/providers/… *(severity: keep)* — covered by the matching **fixed** row above.
+
+A refuted verdict does not by itself close a finding here; several refuted findings were fixed anyway because the fix was cheap and the failure real on the Mac even if not on Linux.
+
 ## Still open
 
-Nothing. The four accepted items are trade-offs, written down above, not omissions.
+Nothing. The four accepted items are trade-offs, written down above, not omissions. Session-id authentication is one of them: on a single-user tailnet the trust is in Tailscale; if the backend is ever exposed more widely, add a shared token before anything else.

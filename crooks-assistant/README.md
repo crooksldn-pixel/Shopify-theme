@@ -38,7 +38,7 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 What has actually been verified — here, on Linux, and against the real store:
 
 ```
-258 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
+268 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
 ruff clean                                                       make lint
 8/8 GraphQL queries validated against the Shopify Admin schema
 ```
@@ -121,11 +121,18 @@ Then, in order:
 ```bash
 make dev          # backend
 make chat         # terminal REPL — use this, not voice, for repeat testing
-make test         # 258 tests, all offline; the two live API ones skip without credentials
+make test         # 268 tests, all offline; the two live API ones skip without credentials
 make lint
 make bench        # M3 model comparison, on tablet audio
 make acceptance   # M14, 18 commands
 ```
+
+**The acceptance script has not been run against real Claude.** It could have been — the store
+was readable and the CLI was logged in — but eighteen live turns come out of your Max allowance
+and nobody had authorised that spend. It is a five-minute decision that is yours: once M6 is
+done, `python scripts/acceptance.py` in typed mode fills the placeholders from the store, costs
+about eighteen turns, and turns "the gate holds" into an answer-accuracy score with the
+questions it fumbled listed.
 
 **Test through `make chat`, not through the tablet.** The build and the assistant draw from the
 same Max allowance, and a long day of voice testing can exhaust the weekly window. Tool logic is
