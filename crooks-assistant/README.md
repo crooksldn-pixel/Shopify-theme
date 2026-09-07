@@ -88,7 +88,7 @@ Then, in order:
    (without it everything works about twice as slowly and says nothing), and a Silero VAD model
    must be present (without it, silence transcribes as "Thank you.").
 
-3. **Claude token** (M4) — `claude /login`, then `claude setup-token`, then
+3. **Claude token** (M4) — run `claude` and sign in with `/login` if you have not, then `claude setup-token`, then
    `python scripts/set_secrets.py claude_oauth_token` and paste at the local prompt.
    **The token expires after one year — diary a reminder for month eleven.**
 
@@ -105,7 +105,8 @@ Then, in order:
 
 6. **Content** — `kb/terminology.md` already holds the live catalogue with spoken aliases for
    the stylised names; correct the aliases to how you actually say them (five minutes). The
-   policy files described in `kb/README.md` are still yours to write.
+   policy and sizing files are written from the store's own published content; the one thing
+   only you can write is the discretion section of `kb/cs-rules.md`.
 
 7. **Voice** (M12) — settings → audition the voices → pick one. If none show "offline", install
    the en-GB voice data: Settings → General management → Text-to-speech → Install voice data.

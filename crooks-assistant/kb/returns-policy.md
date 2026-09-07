@@ -1,8 +1,10 @@
 # Returns and refunds
 
-Source: the Refund Policy published on crooksldn.com, read from the store on 7 Sept 2026.
-Written as answers, because the assistant reads these aloud. Keep it current — if the policy
-page changes, change this.
+<!-- Editing notes: from the Refund Policy published on crooksldn.com, read 7 Sept 2026.
+Written as answers because the assistant reads these aloud. If the policy page changes, change
+this file. -->
+
+This is the CROOKS returns and refunds policy as published on the website.
 
 ## Changed your mind, or wrong size
 

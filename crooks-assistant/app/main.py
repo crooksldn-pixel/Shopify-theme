@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
         # A missing Claude token must not stop the backend booting: /health then names the
         # problem, and each /turn retries start() so fixing it needs no restart.
         log.error("Claude provider did not start: %s", exc)
-    log.info("CROOKS Assistant listening on http://%s:%s", settings.host, settings.port)
+    log.info("CROOKS Assistant ready (bind address is whatever uvicorn was started with)")
     yield
     await app.state.runtime.provider.stop()
 

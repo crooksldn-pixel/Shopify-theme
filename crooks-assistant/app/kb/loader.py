@@ -7,6 +7,7 @@ live in Shopify and asking an API for it is both slower and wrong.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,6 +43,8 @@ def load(kb_dir: Path) -> KnowledgeBase:
         except OSError as exc:
             log.warning("could not read %s: %s", path, exc)
             continue
+        # Notes to whoever edits the file live in <!-- comments --> and never reach the model.
+        body = re.sub(r"<!--.*?-->", "", body, flags=re.S).strip()
         if not body:
             continue
         if total + len(body) > MAX_KB_CHARS:

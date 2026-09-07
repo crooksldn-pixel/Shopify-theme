@@ -1,9 +1,11 @@
 # Sizing and garment measurements
 
-Source: the `crooks.measurements`, `crooks.fabric`, `crooks.cut`, `crooks.origin` and `crooks.care`
-metafields on each product in the store, read on 7 Sept 2026. All measurements are garment
-measurements in centimetres, laid flat, unless a column says otherwise. The assistant can also
-read these live with the shopify_product_info tool; this file is the quick reference.
+<!-- Editing notes: generated from the crooks.measurements / fabric / cut / origin / care
+metafields on each product, read 7 Sept 2026. Regenerate if products change. -->
+
+All measurements are garment measurements in centimetres, laid flat, unless a column says
+otherwise. These are the published figures as of September 2026; for the live figures on a
+specific product use the shopify_product_info tool.
 
 General: sizes run XS to XL. Convict pieces are wide and heavy; Yard Jeans are structured, not
 baggy; OG Jeans are baggy and stacked. When a customer is between sizes, ask their usual fit and

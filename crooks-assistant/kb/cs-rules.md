@@ -1,8 +1,9 @@
 # Customer service rules
 
-Source: the Contact page published on crooksldn.com, read from the store on 7 Sept 2026, plus
-the operating rules that follow from the refund and shipping policies. Edit the discretion
-section — that is the part only the owner knows.
+<!-- Editing notes (not read by the assistant): drawn from the Contact page published on
+crooksldn.com on 7 Sept 2026 plus the operating rules that follow from the refund and shipping
+policies. The Discretion section below is the part only the owner can write; until it is
+written, the assistant is told to defer. Replace it with real rules when you have them. -->
 
 ## Tone and promise
 
@@ -30,8 +31,9 @@ section — that is the part only the owner knows.
 - If an order is more than sixty days old it may not be visible; say so rather than saying it
   does not exist.
 
-## Discretion (owner to complete)
+## Discretion
 
-- When do we waive return postage for a change of mind?
-- When do we replace before the return arrives?
-- Who signs off a refund over a certain amount?
+The owner has not yet written down the rules for discretionary calls: waiving return postage
+for a change of mind, replacing an item before the return arrives, or who signs off a large
+refund. When a question turns on one of these, say that it is the owner's call, case by case,
+and do not invent a rule.

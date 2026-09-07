@@ -1,6 +1,8 @@
 # Shipping and delivery
 
-Source: the Shipping policy published on crooksldn.com, read from the store on 7 Sept 2026.
+<!-- Editing notes: from the Shipping policy published on crooksldn.com, read 7 Sept 2026. -->
+
+This is the CROOKS shipping and delivery policy as published on the website.
 
 ## What it costs
 

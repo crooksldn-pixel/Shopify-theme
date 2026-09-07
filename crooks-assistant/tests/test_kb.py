@@ -59,3 +59,17 @@ def test_shipped_kb_loads_the_policy_files():
     assert {"returns-policy.md", "shipping-policy.md", "cs-rules.md", "terminology.md"} <= set(kb.files)
     assert "README.md" not in kb.files
     assert "14 days" in kb.text and "Tracked 24" in kb.text
+
+
+def test_editing_notes_in_html_comments_never_reach_the_prompt(tmp_path):
+    (tmp_path / "x.md").write_text("<!-- owner: edit this -->\nReturns within 14 days.", encoding="utf-8")
+    kb = load(tmp_path)
+    assert "edit this" not in kb.text and "14 days" in kb.text
+
+
+def test_shipped_kb_contains_no_editing_instructions():
+    from pathlib import Path
+
+    kb = load(Path(__file__).resolve().parent.parent / "kb")
+    for leak in ("Editing notes", "owner to complete", "Edit the discretion", "Keep it current", "Replace everything below"):
+        assert leak not in kb.text, f"{leak!r} would be read to the model"
