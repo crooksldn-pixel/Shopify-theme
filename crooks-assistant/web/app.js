@@ -335,6 +335,9 @@ async function speakAnswer(text, { isError = false } = {}) {
   setState('SPEAKING');
   const controller = new AbortController();
   speakAbort = controller;
+  // The Mac gives up on ElevenLabs after ten seconds; a voice whose headers have not arrived
+  // by then is not coming, and Android's should start. The body may stream for longer.
+  const headersTimer = setTimeout(() => { controller.timedOut = true; controller.abort(); }, SPEAK_HEADERS_TIMEOUT_MS);
   let response;
   try {
     response = await fetch('/speak', {
@@ -344,6 +347,7 @@ async function speakAnswer(text, { isError = false } = {}) {
       signal: controller.signal,
       cache: 'no-store',
     });
+    clearTimeout(headersTimer);
     if (generation !== speakGeneration) return;    // interrupted while it was generating
     if (response.status === 204) { settle(isError); return; }   // nothing worth saying
     if (!response.ok) {
@@ -363,9 +367,12 @@ async function speakAnswer(text, { isError = false } = {}) {
     if (!blob.size) { browserSpeak(text, { isError, reason: 'empty audio' }); return; }
     playAudio(blob, text, generation, isError);
   } catch (error) {
-    // An abort is the owner interrupting, not a failure: they are already holding the orb.
-    if (controller.signal.aborted || generation !== speakGeneration) return;
-    browserSpeak(text, { isError, reason: 'backend unreachable' });
+    clearTimeout(headersTimer);
+    if (generation !== speakGeneration) return;
+    // An abort is the owner interrupting, not a failure: they are already holding the orb —
+    // unless it was the timer, in which case the Mac's voice is not coming.
+    if (controller.signal.aborted && !controller.timedOut) return;
+    browserSpeak(text, { isError, reason: controller.timedOut ? 'voice timed out' : 'the Mac unreachable' });
   } finally {
     if (speakAbort === controller) speakAbort = null;
   }
@@ -879,6 +886,7 @@ function startStatePolling() {
 }
 function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
 
+const SPEAK_HEADERS_TIMEOUT_MS = 15000;   // the Mac's own TTS timeout is 10 s
 let turnAbort = null;         // the in-flight /turn, so holding through a slow one can drop it
 const TURN_TIMEOUT_MS = 130000; // a little over the backend's own 120 s turn timeout
 

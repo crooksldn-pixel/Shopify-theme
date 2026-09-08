@@ -607,3 +607,53 @@ async def test_a_hold_during_hearing_still_abandons_the_question(client):
     await turn
     await asyncio.sleep(0)
     assert calls == []
+
+
+async def test_speak_streams_through_the_real_middleware(client):
+    """The streaming test above calls the route directly. This one drives the whole ASGI app —
+    middleware included — and times the body messages, so a middleware that buffers the
+    response (the classic BaseHTTPMiddleware regression) cannot return unnoticed."""
+    import json
+    import time
+
+    class SlowVoiceStream:
+        async def chunks(self):
+            yield b"\\xff\\xfb\\x90\\x00" + b"\\x01" * 64
+            await asyncio.sleep(0.4)
+            yield b"\\x02" * 64
+
+    voice = app.state.runtime.voice
+
+    async def open_stream(text):
+        return SlowVoiceStream()
+
+    voice.open_stream = open_stream  # type: ignore[method-assign]
+    body = json.dumps({"text": "Twelve orders today."}).encode()
+    scope = {
+        "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "POST",
+        "scheme": "http", "path": "/speak", "raw_path": b"/speak", "query_string": b"",
+        "root_path": "", "headers": [(b"content-type", b"application/json"), (b"host", b"t"),
+                                     (b"content-length", str(len(body)).encode())],
+        "client": ("127.0.0.1", 1234), "server": ("127.0.0.1", 8000), "state": {},
+    }
+    sent_body = False
+    arrivals: list[tuple[float, bytes]] = []
+    started = time.perf_counter()
+
+    async def receive():
+        nonlocal sent_body
+        if sent_body:
+            await asyncio.sleep(3600)
+        sent_body = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    async def send(message):
+        if message["type"] == "http.response.body" and message.get("body"):
+            arrivals.append((time.perf_counter() - started, message["body"]))
+
+    await app(scope, receive, send)
+    assert arrivals, "no body arrived"
+    first_at, first = arrivals[0]
+    assert first.startswith(b"\\xff\\xfb")
+    assert first_at < 0.25, f"the middleware held the first chunk for {first_at:.2f}s"
+    assert b"".join(chunk for _, chunk in arrivals).endswith(b"\\x02" * 64)

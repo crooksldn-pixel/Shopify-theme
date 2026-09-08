@@ -327,3 +327,12 @@ def test_the_shell_is_the_orb_not_a_dashboard():
     assert "System ready." in INDEX and "What do you need?" in INDEX
     assert "How can I help" not in INDEX
     assert INDEX.count("<nav") <= 1
+
+
+def test_the_voice_request_cannot_hang_the_tablet():
+    """If the Mac's voice has not even answered its headers in fifteen seconds, Android's
+    voice starts; an abort by the timer is a failure, an abort by the owner is not."""
+    speak = section(APP_JS, "async function speakAnswer", "/* ------------------------------------------------------------------ health */")
+    assert "SPEAK_HEADERS_TIMEOUT_MS" in speak and "controller.timedOut = true" in speak
+    assert "if (controller.signal.aborted && !controller.timedOut) return;" in speak
+    assert "reason: controller.timedOut ? 'voice timed out'" in speak
