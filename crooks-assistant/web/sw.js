@@ -74,6 +74,10 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;                       // never a POST: nothing to replay
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;            // nothing but the Mac
+  // Only the app's own page is the shell. A navigation to /whoami, /health or /docs is a
+  // page of its own — passed straight to the Mac, never stored under '/', or the next
+  // offline launch would open as that JSON instead of the app.
+  if (request.mode === 'navigate' && url.pathname !== '/') return;
   const path = request.mode === 'navigate' ? '/' : url.pathname;
   if (SHELL.indexOf(path) === -1) return;                     // not the shell: not intercepted
   event.respondWith(networkFirst(path, request));
@@ -87,7 +91,9 @@ async function networkFirst(path, request) {
   try {
     const response = await withTimeout(fetch(request), NETWORK_TIMEOUT_MS);
     if (response.status >= 500) throw new Error(`backend ${response.status}`);
-    if (response.ok) cache.put(path, response.clone());   // same origin by construction
+    // Same origin by construction. The page slot takes HTML only: whatever else answers at
+    // '/' (a proxy's JSON, a redirect body) is passed on but never kept as the app.
+    if (response.ok && (path !== '/' || isHtml(response))) cache.put(path, response.clone());
     return response;
   } catch (error) {
     const cached = await cache.match(path);
@@ -95,6 +101,11 @@ async function networkFirst(path, request) {
     if (path === '/') return new Response(OFFLINE_HTML, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     return Response.error();
   }
+}
+
+function isHtml(response) {
+  const type = (response.headers && typeof response.headers.get === 'function' ? response.headers.get('content-type') : '') || '';
+  return type.toLowerCase().indexOf('text/html') === 0;
 }
 
 function withTimeout(promise, ms) {

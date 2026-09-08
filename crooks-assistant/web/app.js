@@ -567,7 +567,7 @@ function maybeReloadForNewBuild(build) {
   if (knownBuild === null) { knownBuild = build; return; }
   if (build === knownBuild) return;
   // The Mac now serves newer page files. Take them the moment nothing is in progress.
-  if (busy || recording || speakingVia || el.settings.open) return;
+  if (!idle()) return;
   knownBuild = build;
   if (swRegistration) {
     // Let the worker fetch the new build first, so the reload lands on a shell that is
@@ -1437,7 +1437,13 @@ let reconnectDelay = RECONNECT_MIN_MS;
 let pingInFlight = false;
 
 function idle() {
-  return !busy && !recording && !speakingVia && !pendingStart && !el.settings.open;
+  return !busy && !recording && !speakingVia && !pendingStart && !el.settings.open && !liveActionSurface();
+}
+
+// A card the owner may be about to tap, or has just tapped. A reload under it would lose
+// the tap, or the answer to it.
+function liveActionSurface() {
+  return Boolean(document.querySelector('.action-surface[data-state="arming"], .action-surface[data-state="armed"], .action-surface[data-state="committing"]'));
 }
 
 function setSystem(phase, title, sub, note) {

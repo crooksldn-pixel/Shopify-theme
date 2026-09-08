@@ -315,7 +315,7 @@ def test_the_owner_is_told_about_the_mac_not_a_backend():
 
 def test_a_new_build_reloads_the_page_only_when_idle():
     body = function_body(APP_JS, "function maybeReloadForNewBuild(build)")
-    assert "if (busy || recording || speakingVia || el.settings.open) return;" in body
+    assert "if (!idle()) return;" in body
     assert "location.reload()" in body
 
 

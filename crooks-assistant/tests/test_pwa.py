@@ -190,7 +190,14 @@ def test_a_new_build_is_taken_only_when_nothing_is_in_progress():
 
 def test_a_new_build_on_the_mac_goes_through_the_worker_when_there_is_one():
     body = function_body(APP_JS, "function maybeReloadForNewBuild(build)")
-    assert "if (busy || recording || speakingVia || el.settings.open) return;" in body
+    # One definition of idle for every update path: a hold that has not yet started the
+    # recorder, and a card the owner may be about to tap, both hold the reload back.
+    assert "if (!idle()) return;" in body
+    idle = function_body(APP_JS, "function idle()")
+    assert "!pendingStart" in idle and "!liveActionSurface()" in idle
+    surfaces = function_body(APP_JS, "function liveActionSurface()")
+    for state in ("arming", "armed", "committing"):
+        assert f'[data-state="{state}"]' in surfaces
     assert "swRegistration.update()" in body
     assert "const UPDATE_GRACE_MS = 20000;" in APP_JS
 

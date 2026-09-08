@@ -39,6 +39,7 @@ function boot() {
     Response,
     URL,
     caches,
+    network,
     location: { origin: ORIGIN },
     clients: { claim: async () => { calls.claim += 1; } },
     skipWaiting: () => { calls.skipWaiting += 1; },
@@ -51,7 +52,8 @@ function boot() {
       if (network.mode === 'fail') throw new TypeError('network down');
       if (network.mode === 'hang') return new Promise(() => {});
       const status = typeof network.mode === 'number' ? network.mode : 200;
-      return new Response(`${status === 200 ? 'fresh' : 'status'}:${p}`, { status, headers: { 'content-type': p.endsWith('.js') ? 'text/javascript' : 'text/html' } });
+      const type = network.type || (p.endsWith('.js') ? 'text/javascript' : 'text/html');
+      return new Response(`${status === 200 ? 'fresh' : 'status'}:${p}`, { status, headers: { 'content-type': type } });
     },
   };
   sandbox.self = sandbox;
@@ -189,4 +191,23 @@ test('a commit is never queued, synced or replayed by the worker', () => {
   const event = w.fire('fetch', { method: 'POST', url: `${ORIGIN}/actions/prop_1/commit` });
   assert.equal(event.response, null, 'a commit goes straight to the Mac, or nowhere');
   assert.deepEqual(w.fetched, [], 'the worker itself never sent it');
+});
+
+test('a page of its own — /whoami, /health, /docs — is never the shell, and never poisons it', async () => {
+  const w = await installed();
+  await w.fire('fetch', { method: 'GET', url: `${ORIGIN}/`, mode: 'navigate' }).response;   // the real shell is cached
+  for (const path of ['/whoami', '/health', '/docs', '/openapi.json', '/actions/prop_1']) {
+    const event = w.fire('fetch', { method: 'GET', url: `${ORIGIN}${path}`, mode: 'navigate' });
+    assert.equal(event.response, null, `${path} goes straight to the Mac`);
+  }
+  const cache = [...w.cacheStore.values()][0];
+  assert.equal(await (await cache.match('/')).text(), 'fresh:/');
+  // And whatever answers at '/' with something other than HTML is passed on, not kept.
+  w.network.type = 'application/json';
+  const odd = await w.fire('fetch', { method: 'GET', url: `${ORIGIN}/`, mode: 'navigate' }).response;
+  assert.equal(await odd.text(), 'fresh:/');
+  w.network.type = null;
+  w.network.mode = 'fail';
+  const offline = await w.fire('fetch', { method: 'GET', url: `${ORIGIN}/`, mode: 'navigate' }).response;
+  assert.equal(offline.headers.get('content-type').indexOf('text/html'), 0, 'the shell slot still holds the app');
 });
