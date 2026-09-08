@@ -18,6 +18,8 @@ def test_successful_polls_are_dropped_and_everything_else_is_kept():
     f = QuietPollsFilter()
     assert not f.filter(_access("/state/abc", 200))
     assert not f.filter(_access("/health", 200))
+    assert not f.filter(_access("/ping", 200))
+    assert not f.filter(_access("/sw.js", 200))
     assert not f.filter(_access("/health?fresh=1", 200))
     assert not f.filter(_access("/static/app.js", 304))
     assert f.filter(_access("/turn", 200)), "a question is always logged"

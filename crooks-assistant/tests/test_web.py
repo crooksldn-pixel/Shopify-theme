@@ -57,7 +57,7 @@ def test_the_tablet_talks_only_to_its_own_backend():
     for src in re.findall(r"<script[^>]+src=\"([^\"]+)\"", INDEX):
         assert src.startswith("/static/"), f"index.html loads {src}"
     for href in re.findall(r"href=\"([^\"]+)\"", INDEX):
-        assert href.startswith("/static/"), f"index.html links {href}"
+        assert href.startswith("/static/") or href == "/manifest.webmanifest", f"index.html links {href}"
 
 
 # --------------------------------------------------------------------------- the renderer
@@ -108,7 +108,7 @@ def test_no_write_action_is_wired():
         for verb in ("/send", "/fulfil", "/refund", "/cancel-order", "/cancel_order", "mutation"):
             assert verb not in source, f"{name} mentions {verb}"
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
-        assert endpoint.split("?")[0].rstrip("/") in {"/speak", "/health", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/"), endpoint
+        assert endpoint.split("?")[0].rstrip("/") in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/"), endpoint
 
 
 # --------------------------------------------------------------------------- the voice

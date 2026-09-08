@@ -8,11 +8,12 @@ LAN IP looks like it works and then fails on the browser API that actually matte
 from __future__ import annotations
 
 import logging
+import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app import runtime as runtime_module
@@ -107,7 +108,7 @@ async def guard_and_freshness(request: Request, call_next):
             return JSONResponse(status_code=403, content={"error": "not allowed", "who": login or "unknown"})
     response = await call_next(request)
     path = request.url.path
-    if path == "/" or path.startswith("/static/"):
+    if path in ("/", "/sw.js", "/manifest.webmanifest") or path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 
@@ -118,11 +119,29 @@ app.include_router(speak.router)
 app.include_router(admin.router)
 
 if WEB_DIR.exists():
+    mimetypes.add_type("application/manifest+json", ".webmanifest")
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
     @app.get("/")
     async def index() -> FileResponse:
         return FileResponse(WEB_DIR / "index.html")
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    async def manifest() -> FileResponse:
+        # At the root, like the worker, so the installed app's scope is the whole site.
+        return FileResponse(WEB_DIR / "manifest.webmanifest", media_type="application/manifest+json")
+
+    @app.get("/sw.js", include_in_schema=False)
+    async def service_worker(request: Request) -> Response:
+        # Served from the root so its scope is the whole app, with the build id written in so
+        # the file changes — and Chrome installs the new worker — whenever a page file does.
+        source = (WEB_DIR / "sw.js").read_text(encoding="utf-8")
+        build = getattr(request.app.state.runtime, "build", "unknown")
+        return Response(
+            source.replace("__BUILD__", build),
+            media_type="text/javascript; charset=utf-8",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     @app.get("/favicon.ico", include_in_schema=False)
     async def favicon() -> FileResponse:

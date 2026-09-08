@@ -36,3 +36,14 @@ def test_the_renderer_under_node():
     )
     assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
     assert "# fail 0" in result.stdout
+
+
+@needs_node
+def test_the_service_worker_under_node():
+    """The worker keeps the shell and nothing else — proved by running it, not by reading it."""
+    result = subprocess.run(
+        [NODE, "--test", str(ROOT / "tests" / "web" / "sw.test.js")],
+        capture_output=True, text=True, timeout=120, cwd=ROOT,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
+    assert "# fail 0" in result.stdout

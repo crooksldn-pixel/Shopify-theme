@@ -444,3 +444,28 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
   *,*::before,*::after{transition-duration:1ms!important;animation-duration:1ms!important;animation-iteration-count:1!important}
   .card{animation:none}
 }
+
+/* ------------------------------------------------------------- system layer */
+/* Boot and offline, in CROOKS's own words. Above everything but the settings sheet (a dialog
+   in the top layer); when the Mac answers it fades and stops taking touches. */
+.system{
+  position:fixed;inset:0;z-index:30;display:grid;place-items:center;
+  background:var(--bg-0);color:var(--ink);
+  transition:opacity var(--t-3) var(--ease-out),visibility 0s;   /* appears at once, fades in */
+}
+.system[data-phase="online"]{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity var(--t-3) var(--ease-out),visibility 0s linear var(--t-3);   /* fades out, then goes */
+}
+.system-inner{text-align:center;padding:0 32px;max-width:420px}
+.system-wordmark{display:block;font-weight:800;letter-spacing:.32em;padding-left:.32em;font-size:12px;color:var(--ink-3);margin-bottom:34px}
+.system-pulse{
+  display:block;width:8px;height:8px;border-radius:50%;margin:0 auto 26px;background:var(--ink-3);
+  animation:sys-pulse 1.8s var(--ease-inout) infinite;
+}
+.system[data-phase="offline"] .system-pulse{background:var(--bad)}
+.system-title{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.26em;padding-left:.26em;text-transform:uppercase}
+.system-sub{margin:0;font-size:15px;color:var(--ink-2);line-height:1.5}
+.system-note{margin:22px 0 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
+@keyframes sys-pulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.system-pulse{animation:none}}

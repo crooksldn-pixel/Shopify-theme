@@ -26,14 +26,14 @@ work, and the recommendation is to take them in order and stop when the pad is g
 
 ## Route 1 — the page, installed properly (done, or one afternoon)
 
-Already shipped: a web manifest with `display: standalone` and portrait orientation, so
-"Add to Home screen" opens the assistant full-screen with no browser chrome, and a wake lock
-while the page is showing. Cheap additions still on the web side:
+Already shipped: the app installs from Chrome as "CROOKS OS" — a manifest with
+`display: standalone`, portrait orientation, the wordmark as its icon (maskable too, so
+Samsung's launcher shapes it like the others), a wake lock while the page is showing, and a
+service worker that keeps the shell (page, scripts, styles, icons) and nothing else, so the
+installed app opens instantly and, when the Mac is away, opens onto a SYSTEM OFFLINE state
+of its own that reconnects by itself. A new build installs in the background and is taken
+only when nothing is in progress. Cheap additions still on the web side:
 
-- **A service worker** so the shell (HTML, CSS, JS, icons) loads instantly and offline; the
-  page then shows "the Mac is not answering" as a state of its own rather than a Chrome error.
-  Half a day, offline-testable — and the first thing to build, because it is the only part of
-  this route that is code.
 - **An "as of 09:12" stamp on every card.** A fixture's enemy is staleness: a count that was
   true this morning must not look true at four o'clock. One line in the renderer.
 - **Android's own kiosk mode ("screen pinning")** — Settings → Security → Pin windows — keeps

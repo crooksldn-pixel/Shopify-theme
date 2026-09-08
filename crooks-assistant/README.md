@@ -168,7 +168,10 @@ What Linux could not verify, in the order to try it. Ten minutes.
    Android voice and the log says `audio context suspended`: that is the guard working;
    tell me, because it means the tablet needs the whole-file path by default.
 9. `touch web/app.js`, restart the backend — the tablet reloads itself when idle.
-10. "Add to Home screen" from Chrome's menu — the assistant opens full-screen, portrait.
+10. In Chrome's menu, "Install app" (older Chrome: "Add to Home screen") — a CROOKS OS icon
+    lands on the home screen and opens full-screen, portrait, straight into the assistant. Put
+    the Mac to sleep: the app shows SYSTEM OFFLINE and waits; wake it: the app comes back on
+    its own.
 11. Ask "how were sales each day this week" — the log shows one `shopify_sales_summary`
     call, not seven, and the card lists a row per day.
 

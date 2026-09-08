@@ -31,6 +31,7 @@ const $ = (id) => document.getElementById(id);
 
 const el = {
   body: document.body, stage: $('stage'), conn: $('conn'), connText: $('conn-text'),
+  system: $('system'), systemTitle: $('system-title'), systemSub: $('system-sub'), systemNote: $('system-note'),
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
   heard: $('heard'), answer: $('answer'), errline: $('errline'), timings: $('timings'),
   context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
@@ -549,6 +550,13 @@ function maybeReloadForNewBuild(build) {
   // The Mac now serves newer page files. Take them the moment nothing is in progress.
   if (busy || recording || speakingVia || el.settings.open) return;
   knownBuild = build;
+  if (swRegistration) {
+    // Let the worker fetch the new build first, so the reload lands on a shell that is
+    // already cached; if no new worker takes over, reload anyway after a grace period.
+    swRegistration.update().catch(() => {});
+    setTimeout(() => { if (!reloadingForUpdate && idle()) location.reload(); }, UPDATE_GRACE_MS);
+    return;
+  }
   location.reload();
 }
 
@@ -573,6 +581,8 @@ async function pollHealth(fresh = false) {
   try {
     const response = await fetch(fresh ? '/health?fresh=1' : '/health', { cache: 'no-store', signal: controller.signal });
     const data = await response.json();
+    if (reachable !== true) wentOnline();
+    applyUpdateWhenIdle();
     const checks = data.checks || {};
     const failed = Object.entries(checks).filter(([, c]) => !c.ok).map(([k]) => k);
     if (!failed.length) setConn('ok', 'Online');
@@ -600,6 +610,7 @@ async function pollHealth(fresh = false) {
     el.health.appendChild(healthRow(false, 'the Mac', 'Cannot reach the assistant. Is the Mac awake and is it running (make up)?'));
     el.voiceStatus.textContent = 'Unknown';
     el.voiceStatus.className = 'badge quiet';
+    wentOffline();
   } finally {
     clearTimeout(timer);
     healthInFlight = false;
@@ -976,12 +987,14 @@ async function submit(body, isAudio) {
     setState('ERROR', lastErrorTitle);
     setConn('down', 'Offline');
     haptic(HAPTIC.error);
+    if (!controller.signal.aborted) setTimeout(checkReachable, 0);   // after `finally` clears busy
   } finally {
     clearTimeout(timeout);
     if (turnAbort === controller) turnAbort = null;
     stopStatePolling();
     busy = false;
     el.talk.dataset.busy = 'false';
+    applyUpdateWhenIdle();
     // If speech is off there is no onend to settle the state, so do it here.
     if (!el.speakToggle.checked) setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
   }
@@ -1211,6 +1224,135 @@ if (DEV) {
   });
 }
 
+/* ------------------------------------------------------------- system layer */
+
+// The Mac is the only server. While it cannot be reached the page is a fixture with nothing
+// behind it, so it says so in CROOKS's own words, keeps asking quietly, and comes back on its
+// own. /ping costs the Mac nothing and is never cached, so the answer is always the truth.
+const PING_TIMEOUT_MS = 4000;
+const RECONNECT_MIN_MS = 3000;
+const RECONNECT_MAX_MS = 15000;
+let reachable = null;            // null until the first answer, then true or false
+let reconnectTimer = null;
+let reconnectDelay = RECONNECT_MIN_MS;
+let pingInFlight = false;
+
+function idle() {
+  return !busy && !recording && !speakingVia && !pendingStart && !el.settings.open;
+}
+
+function setSystem(phase, title, sub, note) {
+  el.system.dataset.phase = phase;
+  if (title !== undefined) el.systemTitle.textContent = title;
+  if (sub !== undefined) el.systemSub.textContent = sub;
+  if (note !== undefined) el.systemNote.textContent = note;
+}
+
+async function checkReachable() {
+  if (pingInFlight) return;
+  pingInFlight = true;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+  try {
+    const response = await fetch('/ping', { cache: 'no-store', signal: controller.signal });
+    if (!response.ok) throw new Error(`ping ${response.status}`);
+    const data = await response.json();
+    if (!data.ok) throw new Error('ping not ok');
+    wentOnline();
+  } catch {
+    wentOffline();
+  } finally {
+    clearTimeout(timer);
+    pingInFlight = false;
+  }
+}
+
+function wentOnline() {
+  const wasDown = reachable === false;
+  reachable = true;
+  clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  reconnectDelay = RECONNECT_MIN_MS;
+  setSystem('online');
+  if (wasDown) {
+    // Back after an outage: the pill, the sheet's rows, the lock and the microphone all need
+    // re-establishing, and a build shipped while we were away should be taken.
+    setConn('connecting', 'Connecting');
+    pollHealth(true);
+    acquireWakeLock();
+    warmMic();
+    if (swRegistration) swRegistration.update().catch(() => {});
+  }
+}
+
+function wentOffline() {
+  reachable = false;
+  // Never over a question in flight, a recording, or Derek mid-sentence: the turn's own
+  // error copy covers those, and the layer takes over once the screen is quiet.
+  if (idle()) {
+    setSystem('offline', 'System offline', 'Waiting for CROOKS Assistant…', 'Checking quietly · tap to check now');
+  }
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(checkReachable, reconnectDelay);
+  reconnectDelay = Math.min(Math.round(reconnectDelay * 1.6), RECONNECT_MAX_MS);
+}
+
+el.system.addEventListener('click', () => { if (reachable === false) { reconnectDelay = RECONNECT_MIN_MS; checkReachable(); } });
+window.addEventListener('online', () => { if (reachable !== true) checkReachable(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && reachable === false) checkReachable();
+});
+
+/* ------------------------------------------------------------- installed app */
+
+// The service worker keeps the shell — page, scripts, styles, icons — and nothing else, so the
+// installed app opens instantly and opens at all when the Mac is away. A newer build installs
+// in the background and is taken only when nothing is in progress; the page then reloads
+// once onto the shell the new worker has already cached.
+const UPDATE_GRACE_MS = 20000;
+let swRegistration = null;
+let updateWaiting = null;        // a newer build, installed and waiting for an idle moment
+let updateApplied = false;       // we asked it to take over; the next controllerchange is ours
+let reloadingForUpdate = false;
+
+function applyUpdateWhenIdle() {
+  if (!updateWaiting || !idle()) return;
+  const worker = updateWaiting;
+  updateWaiting = null;
+  updateApplied = true;
+  worker.postMessage({ type: 'SKIP_WAITING' });
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js').then((registration) => {
+    swRegistration = registration;
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      updateWaiting = registration.waiting;
+      applyUpdateWhenIdle();
+    }
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        // Installed behind a running page: a new build is ready. Without a controller it is
+        // the first install, and the page is already the current build.
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          updateWaiting = worker;
+          applyUpdateWhenIdle();
+        }
+      });
+    });
+  }).catch(() => { /* the page works without it; only instant, offline startup is lost */ });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!updateApplied || reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    location.reload();
+  });
+}
+
+registerServiceWorker();
+checkReachable();
 acquireWakeLock();
 setMode('orb');
 setState('READY');

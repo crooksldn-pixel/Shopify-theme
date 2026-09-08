@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 # What the tablet asks for on a timer. Success is the expected case and says nothing.
-POLLED_PREFIXES = ("/state/", "/health", "/static/")
+POLLED_PREFIXES = ("/state/", "/health", "/ping", "/static/", "/sw.js", "/manifest.webmanifest", "/favicon.ico")
 QUIET_STATUSES = (200, 304)
 
 

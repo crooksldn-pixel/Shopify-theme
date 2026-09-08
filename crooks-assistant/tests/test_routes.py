@@ -504,6 +504,30 @@ async def test_cancel_stops_prefetches_and_asks_the_provider_to_interrupt(client
     assert asked == ["busy"]
 
 
+async def test_the_installed_app_is_served_from_the_root(client):
+    """Chrome installs from the manifest and the worker; both live at the root so the app's
+    scope is the whole site, and the worker carries the build it was served with."""
+    manifest = await client.get("/manifest.webmanifest")
+    assert manifest.status_code == 200
+    assert manifest.headers["content-type"].startswith("application/manifest+json")
+    assert manifest.json()["name"] == "CROOKS OS"
+    assert manifest.headers.get("cache-control") == "no-cache"
+
+    worker = await client.get("/sw.js")
+    assert worker.status_code == 200
+    assert "javascript" in worker.headers["content-type"]
+    assert worker.headers.get("cache-control") == "no-cache"
+    assert "__BUILD__" not in worker.text
+
+    ping = (await client.get("/ping")).json()
+    assert ping["ok"] is True and ping["build"]
+    assert "crooks-shell-${BUILD}" in worker.text and f"const BUILD = '{ping['build']}';" in worker.text
+
+    for icon in ("icon-192.png", "icon-512.png", "icon-maskable-192.png", "icon-maskable-512.png"):
+        response = await client.get(f"/static/{icon}")
+        assert response.status_code == 200 and response.headers["content-type"] == "image/png", icon
+
+
 async def test_the_page_and_its_scripts_are_never_cached_for_long(client):
     for path in ("/", "/static/app.js"):
         response = await client.get(path)
