@@ -215,7 +215,15 @@ as the pattern every later change will follow rather than as a feature of its ow
     Claude calls the tool → the gate stages it → the Mac reads the order and decides the exact
     note → a card appears on the tablet → you tap it → the Mac checks the order has not changed,
     sends the one reviewed mutation, reads the order again to prove it → the card says NOTE
-    ADDED, Vikram says "Order note added", and an Undo waits for a minute.
+    ADDED, Vikram says "Note added to order 1930", and an Undo waits for a minute.
+
+Say the order number and the Mac looks the order up before Claude is asked, so the card is
+ready sooner and the note is proposed for an order the Mac has already seen. Say "yes" or "go
+ahead" while the card is waiting and the Mac answers, without Claude, that nothing happens
+until you tap; the card stays. A fumbled hold or a recording that said nothing withdraws
+nothing. If a tap from where you are would be refused, the card says so before you tap —
+changes switched off, no allowed logins, a login not on the list, or a request made on the
+Mac itself — and the "Changes" dot on the ready screen shows the same.
 
 What holds it together, and what the tests hold:
 
@@ -225,10 +233,12 @@ What holds it together, and what the tests hold:
   the order and the mutation come from what the Mac stored when it staged the proposal.
 - **Once.** Two taps, a retry, a double request: one mutation. A lost connection asks the Mac
   what happened rather than tapping again.
-- **Bound to now.** A proposal expires after a minute and dies with the next instruction, a
-  cancel or a reset. The order is re-read before the write; if it changed, nothing is sent.
+- **Bound to now.** A proposal waits a minute from the moment its card leaves for the tablet
+  and dies with the next instruction, a cancel or a reset. The order is re-read before the
+  write; if it changed, nothing is sent.
 - **Proven.** Shopify's 200 is not success; the re-read is. Only a verified change shows
-  NOTE ADDED or is spoken as done.
+  NOTE ADDED or is spoken as done. If Shopify's answer is lost mid-way, the Mac re-reads the
+  order once and says what it saw: applied, untouched, or "check the order" — never a guess.
 - **Recorded.** `logs/actions.jsonl` is an append-only ledger of every proposal and outcome:
   identities, fingerprints and lengths, never the note.
 

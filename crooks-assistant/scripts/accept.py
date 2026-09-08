@@ -165,7 +165,8 @@ def main() -> int:
         for path in ("/", "/static/app.js", "/static/ui.js", "/static/style.css", "/static/orb.js", "/static/audio-viz.js", "/sw.js"):
             _, raw, _ = get(f"{base}{path}")
             _, packed, packed_headers = get(f"{base}{path}", gzip_ok=True)
-            sizes[path] = {"raw": len(raw), "wire": len(packed), "encoding": packed_headers.get("Content-Encoding", "")}
+            encoding = next((v for k, v in packed_headers.items() if k.lower() == "content-encoding"), "")
+            sizes[path] = {"raw": len(raw), "wire": len(packed), "encoding": encoding}
         total_raw = sum(s["raw"] for s in sizes.values())
         total_wire = sum(s["wire"] for s in sizes.values())
         report.add("page files travel compressed", total_wire < total_raw * 0.5, f"{total_raw / 1024:.0f} KB raw → {total_wire / 1024:.0f} KB on the wire")

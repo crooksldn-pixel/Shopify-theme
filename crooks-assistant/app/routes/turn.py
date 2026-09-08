@@ -258,7 +258,9 @@ def _now_line(runtime) -> str:
     except Exception:  # noqa: BLE001
         tz = None
     now = datetime.now(tz)
-    return f"[Now: {now.strftime('%A %-d %B %Y, %H:%M')} {runtime.settings.shop_timezone}]"
+    # Day without a leading zero, spelled out here rather than with a strftime flag that
+    # differs between the Mac's libc and Linux's.
+    return f"[Now: {now.strftime('%A')} {now.day} {now.strftime('%B %Y, %H:%M')} {runtime.settings.shop_timezone}]"
 
 
 async def _prefetch_order(runtime, session, text: str, calls: list, timings: dict) -> str:
