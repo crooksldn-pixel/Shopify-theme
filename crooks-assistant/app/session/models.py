@@ -37,6 +37,11 @@ class Session:
     turns: int = 0
     proposals: list[StagedProposal] = field(default_factory=list)
 
+    # Personal strings tool results exposed this session (customer names, sender addresses).
+    # The turn log scrubs these from the free-text answer and question before writing, so a
+    # name Claude reads aloud never lands on disk.
+    pii_seen: set[str] = field(default_factory=set)
+
     # What the assistant is doing right now, driven by the tool actually executing — never
     # guessed from the question. The tablet polls this during a turn (M11).
     state: str = "READY"
@@ -52,6 +57,12 @@ class Session:
 
     def idle_s(self) -> float:
         return time.time() - self.last_seen_at
+
+    def remember_pii(self, *values: str) -> None:
+        for value in values:
+            value = (value or "").strip()
+            if len(value) >= 3:
+                self.pii_seen.add(value)
 
     def issue(self, *ids: str) -> None:
         for value in ids:

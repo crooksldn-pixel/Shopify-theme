@@ -75,6 +75,12 @@ _MAX_LIMIT = 50
 _MAX_DAYS = 365
 
 _ID_SHAPE = re.compile(r"^[A-Za-z0-9/_.:=+-]{1,200}$")
+# The kind of id each detail tool accepts. A Customer gid handed to the order tool is not
+# "issued this session" in any sense that matters, even though a search did return it.
+_ID_KIND = {
+    "order_id": re.compile(r"^gid://shopify/Order/\d+$"),
+    "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
+}
 
 
 def _looks_like_mutation(name: str) -> bool:
@@ -122,6 +128,9 @@ def classify(
         value = str(value)
         if not _ID_SHAPE.match(value):
             return Decision(Tier.RED, f"{arg}={value!r} is not a well-formed id.")
+        kind = _ID_KIND.get(arg)
+        if kind is not None and not kind.match(value):
+            return Decision(Tier.RED, f"{arg}={value!r} is not the kind of id {name} takes.")
         if value not in issued:
             return Decision(
                 Tier.RED,

@@ -174,8 +174,11 @@ def _answer(
     tool_calls = tool_calls or []
     timings["total"] = (time.perf_counter() - started) * 1000
     turns = 0
+    names: set[str] = set()
     try:
-        turns = runtime.sessions.get(session_id).turns
+        session = runtime.sessions.get(session_id)
+        turns = session.turns
+        names = set(session.pii_seen)
     except KeyError:
         pass
     payload = {
@@ -191,7 +194,7 @@ def _answer(
         "transcript": transcript,
         "timings_ms": {k: round(v, 1) for k, v in timings.items()},
     }
-    runtime.turnlog.write(payload)
+    runtime.turnlog.write(payload, names=names)
     return payload
 
 

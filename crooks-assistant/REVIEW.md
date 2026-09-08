@@ -5,7 +5,7 @@ the working tree that followed it. Every finding was triaged by hand against the
 An automated three-refuter verification pass ran alongside; it had returned 11 standing and 39 refuted verdicts out of 50 when this ledger was written, and is not the
 basis of the dispositions below — the code is.
 
-**66 findings**: 60 fixed · 2 partly · 4 accepted · 0 open
+**71 findings**: 65 fixed · 2 partly · 4 accepted · 0 open
 
 Status meanings: **fixed** — changed in the named commit, with a test where one was practical;
 **partly** — the real part is fixed, the rest is explained; **accepted** — true, and left as a
@@ -23,7 +23,7 @@ deliberate trade-off that is written down; **open** — true and not yet done.
 | high | ops-reliability | `app/logging/turnlog.py:57` | Turn-log redaction misses names and street lines, and mangles ids, errnos and season/size codes | **partly** | customer_name/displayName/from keys and GIDs handled (cebccbe); free-text street lines are not detectable by regex — the tools never return full addresses |
 | high | plan-conformance | `app/runtime.py:74` | POST /reload-kb reports success but the assistant keeps answering from the old knowledge base | **fixed** | provider.set_system_prompt drops open clients (cebccbe) |
 | high | plan-conformance | `app/speech/transcribe.py:135` | Raw spoken transcripts are written verbatim to the unredacted, unrotated stdout log | **fixed** | as above — RedactingFilter (cebccbe) |
-| high | speech | `app/clients/whisper.py:62` | Client forces vad=true on every request; a server started without a Silero model then fails every transcription with 500 | **fixed** | falls back to no per-request VAD on a 500 mentioning vad (cebccbe) |
+| high | speech | `app/clients/whisper.py:62` | Client forces vad=true on every request; a server started without a Silero model then fails every transcription with 500 | **fixed** | first fix (cebccbe) keyed on a body that never says "vad" and never fired — the review's synthesis reproduced that; now any 500 while VAD is on gets one retry without it, the launcher refuses to start without a VAD model, and /health transcribes half a second of silence so "ok" means inference works (this commit) |
 | high | speech | `app/speech/transcribe.py:135` | Full transcripts (customer names, spoken emails/phone numbers) are logged via stdlib logging, bypassing turnlog.redact() | **fixed** | RedactingFilter on all handlers, rotating file log (cebccbe) |
 | medium | agent-sdk | `app/tools/dispatch.py:137` | RED calls denied by the PreToolUse hook never appear in tool_calls or the turn log; ResultMessage.permission_denials is discarded | **fixed** | hook events append a failed ToolCall (cebccbe) |
 | medium | agent-sdk | `app/providers/max_agent_sdk.py:37` | Billing guard only checks two env vars; the CLI recognises five other credential sources and the init message's apiKeySource/apiProvider are never verified | **fixed** | as above (cebccbe) |
@@ -80,6 +80,12 @@ deliberate trade-off that is written down; **open** — true and not yet done.
 | high | council (outsider) | `app/kb/loader.py:38` | Editing instructions and open questions in kb/*.md reached the model's system prompt | **fixed** | loader strips HTML comments; discretion section tells the model to defer; regression test over the shipped kb (cd0d567) |
 | medium | council (executor) | `README.md` | `claude /login` written as a shell command; policy files described as still unwritten; test count stale | **fixed** | corrected from the tree and from pytest output (cd0d567, this commit) |
 | medium | council (contrarian) | `app/clients/shopify.py:136` | Read-only rested on the scope list alone; no mutation refusal in the client; RED tools in allowed_tools | **fixed** | client refuses mutation documents; RED tools in disallowed_tools; both tested (e3fda21) |
+
+| high | synthesis | `app/logging/turnlog.py:69` | Customer names inside the spoken answer and transcript reached turns.jsonl; errnos, filenames and size codes were mangled by the shape regexes | **fixed** | names tool results exposed are remembered per session and scrubbed from free text; identifiers protected; postcode regex excludes size codes; tests reproduce each case (this commit) |
+| medium | synthesis | `app/providers/max_agent_sdk.py:233` | Post-connect auth-source check read `apiKeySource` at the top level; the CLI nests it under `account`, so the check was inert | **fixed** | reads the nested account block (this commit) |
+| medium | synthesis | `app/clients/gmail.py:59` | Keychain failure fell back to writing the credential to a file silently | **fixed** | the fallback logs a warning naming the exception and the file (this commit) |
+| medium | synthesis | `README.md`, `app/secrets/keychain.py` | Keychain reachability under launchd stated three contradictory ways | **fixed** | a LaunchAgent runs in the login session and reaches the Keychain; SSH, system daemons and pre-login do not — stated the same way everywhere (this commit) |
+| low | synthesis | `app/tools/gate.py:125` | The issued-id ledger is untyped: a Customer gid passed the gate as an order_id | **fixed** | each detail tool checks its argument is the right kind of id (this commit) |
 
 ## Findings the reviewers were wrong about, briefly
 

@@ -31,19 +31,31 @@ _READABLE_ERRORS = _readable_errors()
 
 # Result keys whose values are ids the assistant may later use in a detail-style lookup.
 _ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "id")
+# Result keys whose values are a person's details. Remembered so the turn log can scrub them.
+_PII_KEYS = ("customer_name", "name", "from", "from_email", "email", "displayName")
 
 
-def _harvest_ids(payload: Any, session: Session) -> None:
-    """Walk a tool result and record every id it exposed, so follow-up lookups are permitted."""
+def _harvest_ids(payload: Any, session: Session, *, in_customer: bool = False) -> None:
+    """Walk a tool result: record every id it exposed (so follow-up lookups are permitted) and
+    every personal string (so the turn log can scrub it)."""
     if isinstance(payload, dict):
+        is_order = "order_id" in payload or "order_number" in payload
+        customerish = in_customer or ("customer_id" in payload and not is_order) or any(
+            k in payload for k in ("from_email", "email")
+        )
         for key, value in payload.items():
             if key in _ID_KEYS and isinstance(value, (str, int)):
                 session.issue(str(value))
+            elif key in _PII_KEYS and isinstance(value, str):
+                # `name` is also an order's name (CROOKS-1928); it is personal only inside a
+                # customer record, never inside an order record.
+                if key != "name" or (customerish and not is_order):
+                    session.remember_pii(value)
             else:
-                _harvest_ids(value, session)
+                _harvest_ids(value, session, in_customer=customerish and not is_order)
     elif isinstance(payload, list):
         for item in payload:
-            _harvest_ids(item, session)
+            _harvest_ids(item, session, in_customer=in_customer)
 
 
 def _render(payload: Any) -> str:

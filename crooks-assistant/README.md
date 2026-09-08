@@ -67,12 +67,24 @@ your Keychain, Tailscale, launchd, and the live Shopify/Gmail tools with your cr
 
 ## Setup on the Mac
 
-```bash
-git clone <this repo> ~/crooks-assistant && cd ~/crooks-assistant
-make doctor          # tells you exactly what is missing
-make venv
-make dev             # http://127.0.0.1:8000
-```
+Every step is the same shape: open Terminal, `cd ~/crooks-assistant`, type one line. You never
+run a Python file directly; `make` does it. `make help` prints this list.
+
+| Step | You type | Then |
+|---|---|---|
+| Check the Mac | `make doctor` | Install whatever it names, the way it says |
+| Install | `make venv` then `make test` | Expect 279 passed |
+| Run it | `make dev` | In a second Terminal tab: `tailscale serve 8000` |
+| Speech | `make whisper-server` | It prints the build steps the first time |
+| Tokens and keys | `make secrets` | Asks for the Claude token, Client ID, Client secret, one at a time, hidden |
+| Prove Shopify | `make shopify` | Shop name, `Europe/London`, one recent order, cache reused |
+| Gmail | `make gmail` | A browser opens once. Then `make gmail-verify` |
+| Everything at once | `make check` | Doctor, Shopify, Gmail in one go |
+| Ask questions | `make chat` | Typed, so it does not use the tablet or much allowance |
+| Day 1 test | `make acceptance SPOKEN=1` | From the tablet, at your working distance |
+
+The console work (Tailscale, Shopify Dev Dashboard, Google Cloud) is the only part that is
+not a `make` line, and it is described step by step below.
 
 Then, in order:
 
@@ -86,21 +98,24 @@ Then, in order:
 2. **whisper.cpp** (M3) — `python scripts/whisper_server.py` prints the exact build commands if
    it is not built yet. Two things to check: the Core ML `.mlmodelc` must sit beside the `.bin`
    (without it everything works about twice as slowly and says nothing), and a Silero VAD model
-   must be present (without it, silence transcribes as "Thank you.").
+   must be present — the launcher refuses to start without one, because a server without it
+   rejects every request that asks for voice detection and the tablet would say "connected"
+   while every question failed.
 
 3. **Claude token** (M4) — run `claude` and sign in with `/login` if you have not, then `claude setup-token`, then
-   `python scripts/set_secrets.py claude_oauth_token` and paste at the local prompt.
+   `make secrets` and paste it at the hidden prompt.
    **The token expires after one year — diary a reminder for month eleven.**
 
 4. **Shopify** (M6) — check the store is listed under Stores in the Dev Dashboard organisation
    *first*; if it is not, client credentials fail permanently with `shop_not_permitted` and the
-   `shpat_` fallback is the way out. Scopes are in `SHOPIFY_SCOPES.md`. Then
-   `python scripts/set_secrets.py shopify_client_id` and `… shopify_client_secret`, and
-   `python scripts/shopify_check.py`.
+   `shpat_` fallback is the way out. Scopes are in `SHOPIFY_SCOPES.md`. Then `make secrets`
+   for the Client ID and secret, and `make shopify` to prove it. You do not need to find the
+   Stores list first: `make shopify` either works or names `shop_not_permitted`, which is the
+   same answer in ten seconds.
 
 5. **Gmail** (M8) — Google Cloud project → enable the Gmail API → Branding → Audience: External
    → Data Access: `gmail.readonly` only → **Publish app** → Clients → Desktop app → save the
-   JSON as `credentials.json`. Then `python scripts/gmail_auth.py`.
+   JSON as `credentials.json` in this folder. Then `make gmail`.
    **Skip "Publish app" and your token dies every seven days.**
 
 6. **Content** — `kb/terminology.md` already holds the live catalogue with spoken aliases for

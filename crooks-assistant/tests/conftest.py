@@ -16,7 +16,12 @@ def shopify_configured() -> bool:
 def gmail_configured() -> bool:
     from app.clients.gmail import TOKEN_PATH
 
-    return TOKEN_PATH.exists()
+    if TOKEN_PATH.exists():
+        return True
+    try:
+        return keychain.present("gmail_token")
+    except Exception:  # noqa: BLE001
+        return False
 
 
 needs_shopify = pytest.mark.skipif(

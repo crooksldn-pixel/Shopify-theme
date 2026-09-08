@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import time
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -19,13 +20,17 @@ MAX_BYTES = 5_000_000
 KEEP_FILES = 5
 
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
-# Shopify GIDs and other long ids must survive redaction, or the log is useless for debugging.
-_PROTECT = re.compile(r"gid://shopify/\w+/\d+|prop_[0-9a-f]+|[0-9a-f]{16,}")
-# UK mobile and landline shapes, and international. Deliberately greedy: a false positive costs
-# a redacted number in a log, a false negative puts a customer's phone number on disk.
-_PHONE = re.compile(r"(?:(?<!\w)(?:\+\d{1,3}[\s-]?)?(?:\d[\s-]?){9,14}\d(?!\w))")
-_POSTCODE = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.I)
-_CARD = re.compile(r"\b(?:\d[ -]?){13,19}\b")
+# Things that look like personal data and are not: Shopify GIDs, proposal ids, hex ids, errnos
+# ("[Errno -1094995529]"), timestamped filenames ("20260907-225520.webm"). Protected first.
+_PROTECT = re.compile(
+    r"gid://shopify/\w+/\d+|prop_[0-9a-f]+|[0-9a-f]{16,}|Errno -?\d+|\d{8}-\d{6}(?:\.\w+)?"
+)
+# UK mobile and landline shapes, and international. A digit run glued to a letter, hyphen or
+# dot on either side is an identifier, not a number someone dials.
+_PHONE = re.compile(r"(?<![\w.-])(?:\+\d{1,3}[\s-]?)?(?:\d[\s-]?){9,14}\d(?![\w.-])")
+# UK postcode, excluding inward parts that are garment sizes (2XL, 3XS) or pack counts (3PK).
+_POSTCODE = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d(?!XL|XS|PK|PC)[A-Z]{2}\b", re.I)
+_CARD = re.compile(r"(?<![\w.-])(?:\d[ -]?){13,19}(?![\w.-])")
 
 # Keys whose values are addresses or contact details however they are spelled.
 _REDACT_KEYS = {
@@ -37,7 +42,11 @@ _REDACT_KEYS = {
 }
 
 
-def redact_text(text: str) -> str:
+def redact_text(text: str, names: Iterable[str] = ()) -> str:
+    """Redact by shape, and by the specific names this turn's tools returned. A name cannot be
+    found by regex; it can be found because we know exactly which names the model was shown."""
+    for name in sorted({n for n in names if n and len(n) >= 3}, key=len, reverse=True):
+        text = re.sub(re.escape(name), "[name]", text, flags=re.I)
     protected: list[str] = []
 
     def keep(match: re.Match) -> str:
@@ -66,20 +75,21 @@ class RedactingFilter(logging.Filter):
         return True
 
 
-def redact(value: Any) -> Any:
-    """Walk any structure and redact both by key name and by value shape."""
+def redact(value: Any, names: Iterable[str] = ()) -> Any:
+    """Walk any structure and redact by key name, by value shape, and by known names."""
+    names = tuple(names)
     if isinstance(value, dict):
         out = {}
         for key, item in value.items():
             if str(key).lower().replace("_", "") in {k.replace("_", "") for k in _REDACT_KEYS}:
                 out[key] = "[redacted]" if item not in (None, "", [], {}) else item
             else:
-                out[key] = redact(item)
+                out[key] = redact(item, names)
         return out
     if isinstance(value, list):
-        return [redact(v) for v in value]
+        return [redact(v, names) for v in value]
     if isinstance(value, str):
-        return redact_text(value)
+        return redact_text(value, names)
     return value
 
 
@@ -89,8 +99,8 @@ class TurnLog:
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.path = self.log_dir / "turns.jsonl"
 
-    def write(self, record: dict[str, Any]) -> None:
-        record = {"ts": time.time(), "iso": time.strftime("%Y-%m-%dT%H:%M:%S"), **redact(record)}
+    def write(self, record: dict[str, Any], names: Iterable[str] = ()) -> None:
+        record = {"ts": time.time(), "iso": time.strftime("%Y-%m-%dT%H:%M:%S"), **redact(record, names)}
         try:
             self._rotate_if_needed()
             with self.path.open("a", encoding="utf-8") as handle:

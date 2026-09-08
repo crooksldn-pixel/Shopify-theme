@@ -65,6 +65,18 @@ def test_detail_tool_accepts_issued_id():
     assert classify("shopify_order_detail", {"order_id": oid}, issued_ids=[oid]).tier is Tier.AMBER
 
 
+def test_a_customer_id_is_not_an_order_id_even_if_issued():
+    cid = "gid://shopify/Customer/77"
+    d = classify("shopify_order_detail", {"order_id": cid}, issued_ids=[cid])
+    assert d.tier is Tier.RED and "kind of id" in d.reason
+
+
+def test_thread_ids_must_look_like_gmail_thread_ids():
+    d = classify("gmail_read_thread", {"thread_id": "gid://shopify/Order/1"}, issued_ids=["gid://shopify/Order/1"])
+    assert d.tier is Tier.RED
+    assert classify("gmail_read_thread", {"thread_id": "18f2a9c0b1d2e3f4"}, issued_ids=["18f2a9c0b1d2e3f4"]).tier is Tier.AMBER
+
+
 def test_detail_tool_rejects_missing_id():
     assert classify("shopify_order_detail", {}, issued_ids=["x"]).tier is Tier.RED
 
@@ -192,3 +204,16 @@ async def test_client_errors_reach_the_model_readably(session):
     finally:
         registry._REGISTRY.pop("shopify_find_order_probe", None)
         gate._KNOWN_TOOLS = frozenset(gate._KNOWN_TOOLS - {"shopify_find_order_probe"})
+
+
+def test_harvest_records_personal_strings_but_not_order_names(session):
+    from app.tools.dispatch import _harvest_ids
+
+    _harvest_ids(
+        {"orders": [{"order_id": "gid://shopify/Order/1", "name": "CROOKS-1928", "customer_name": "Anna Denning",
+                     "customer_id": "gid://shopify/Customer/7"}],
+         "threads": [{"thread_id": "t1", "from": "Jo Bloggs", "from_email": "jo@example.com"}]},
+        session,
+    )
+    assert {"Anna Denning", "Jo Bloggs", "jo@example.com"} <= session.pii_seen
+    assert "CROOKS-1928" not in session.pii_seen

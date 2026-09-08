@@ -4,18 +4,25 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv dev bench test lint chat acceptance whisper-server
+.PHONY: help doctor venv dev bench test lint chat acceptance whisper-server secrets shopify gmail gmail-verify check
 
 help:
-	@echo "make doctor      — check every prerequisite and print versions"
-	@echo "make venv        — create .venv and install dependencies"
-	@echo "make dev         — run the backend on 127.0.0.1:8000"
-	@echo "make whisper-server — run whisper.cpp server on 127.0.0.1:8910"
-	@echo "make bench       — benchmark Whisper models over bench/audio/"
-	@echo "make test        — pytest (live API tests skipped without credentials)"
-	@echo "make lint        — ruff check"
-	@echo "make chat        — terminal REPL against /turn"
-	@echo "make acceptance  — run the 18-command Day 1 acceptance script"
+	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
+	@echo ""
+	@echo "  make doctor          check the Mac has everything; prints the fix for anything missing"
+	@echo "  make venv            install the Python side (once)"
+	@echo "  make test            prove it works here (~3 s)"
+	@echo "  make dev             start the backend, then: tailscale serve 8000"
+	@echo "  make whisper-server  start speech recognition (prints build steps if not built yet)"
+	@echo "  make bench           choose the Whisper model from your tablet recordings"
+	@echo "  make secrets         store the Claude token and Shopify credentials (asks for each)"
+	@echo "  make shopify         prove Shopify works and the token cache is used"
+	@echo "  make gmail           authorise Gmail once, in a browser"
+	@echo "  make gmail-verify    prove Gmail refreshes without a browser"
+	@echo "  make check           doctor + shopify + gmail-verify in one go"
+	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
+	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"
+	@echo "  make lint            code style"
 
 doctor:
 	@$(PY) scripts/doctor.py 2>/dev/null || python3 scripts/doctor.py
@@ -45,4 +52,18 @@ chat:
 	$(PY) scripts/chat.py
 
 acceptance:
-	$(PY) scripts/acceptance.py
+	$(PY) scripts/acceptance.py $(if $(SPOKEN),--spoken,)
+
+secrets:
+	$(PY) scripts/set_secrets.py --all
+
+shopify:
+	$(PY) scripts/shopify_check.py
+
+gmail:
+	$(PY) scripts/gmail_auth.py
+
+gmail-verify:
+	$(PY) scripts/gmail_auth.py --verify
+
+check: doctor shopify gmail-verify

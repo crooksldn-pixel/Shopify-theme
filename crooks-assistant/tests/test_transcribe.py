@@ -121,3 +121,28 @@ def test_prune_keeps_newest(tmp_path):
 def test_prune_handles_missing_dir(tmp_path):
     assert prune_captures(tmp_path / "nope", keep=5) == 0
     assert prune_captures(None, keep=5) == 0
+
+
+async def test_vad_retry_fires_on_a_bare_500():
+    """The real whisper-server 500 body is {"error":"failed to process audio"} — no "vad"."""
+
+    calls: list[bool] = []
+
+    class Resp:
+        def __init__(self, code, body): self.status_code, self.text = code, body
+        def json(self): return {"text": "hello"}
+
+    client = WhisperClient("http://fake")
+
+    async def fake_post(wav, prompt, *, vad):
+        calls.append(vad)
+        return Resp(500, '{"error":"failed to process audio"}') if vad else Resp(200, "")
+
+    client._post = fake_post  # type: ignore[assignment]
+    t = await client.transcribe(b"wav")
+    assert t.text == "hello"
+    assert calls == [True, False]
+    assert client._server_vad is False
+    # subsequent calls do not ask for VAD again
+    await client.transcribe(b"wav")
+    assert calls[-1] is False

@@ -37,15 +37,17 @@ def _validate(key: str) -> None:
 
 class KeychainUnavailable(SecretMissing):
     """No usable keyring backend — Linux without a secret service, or a macOS process running
-    outside a login session (launchd before login, an SSH shell). Treated as "secret missing"
-    so callers fall back or fail with a message that names the real cause."""
+    outside a login session (a system LaunchDaemon, an SSH shell, a LaunchAgent that fires
+    before the user has logged in). A LaunchAgent in ~/Library/LaunchAgents runs inside the
+    login session and normally reaches the login Keychain. Treated as "secret missing" so
+    callers fall back or fail with a message that names the real cause."""
 
     def __init__(self, key: str, cause: Exception) -> None:
         RuntimeError.__init__(
             self,
             f"Secret {key!r} could not be read: the keychain is unavailable to this process "
             f"({type(cause).__name__}: {cause}). On macOS this usually means the process is "
-            "running outside your login session.",
+            "running outside your login session (SSH, a system daemon, or before login).",
         )
         self.key = key
 

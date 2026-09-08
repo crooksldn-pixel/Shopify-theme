@@ -56,7 +56,12 @@ def store_token_json(payload: str) -> str:
         if TOKEN_PATH.exists():
             TOKEN_PATH.unlink()
         return "keychain"
-    except Exception:  # noqa: BLE001 — no keychain: fall back to the 600-mode file
+    except Exception as exc:  # noqa: BLE001 — no keychain: fall back to the 600-mode file
+        log.warning(
+            "Keychain unavailable (%s: %s); Gmail credential written to %s with mode 600. "
+            "This is the plan's original flow and an accepted exception to the secrets rule.",
+            type(exc).__name__, exc, TOKEN_PATH.name,
+        )
         TOKEN_PATH.write_text(payload, encoding="utf-8")
         TOKEN_PATH.chmod(0o600)
         return "file"

@@ -239,8 +239,14 @@ class MaxAgentSDKProvider(ClaudeProvider):
             return
         if not isinstance(info, dict):
             return
-        source = str(info.get("apiKeySource") or info.get("api_key_source") or "").lower()
-        provider = str(info.get("apiProvider") or info.get("api_provider") or "").lower()
+        # The CLI nests these under `account` (measured: top-level lookups logged '?').
+        account = info.get("account") if isinstance(info.get("account"), dict) else {}
+        source = str(
+            account.get("apiKeySource") or info.get("apiKeySource") or info.get("api_key_source") or ""
+        ).lower()
+        provider = str(
+            account.get("apiProvider") or info.get("apiProvider") or info.get("api_provider") or ""
+        ).lower()
         log.info("claude auth source=%r provider=%r", source or "?", provider or "?")
         if source and any(k in source for k in ("api_key", "apikey", "ANTHROPIC_API_KEY".lower())):
             raise BillingGuardError(

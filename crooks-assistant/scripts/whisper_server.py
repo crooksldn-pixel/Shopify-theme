@@ -56,7 +56,13 @@ def main() -> int:
             "unzip it into models/ before trusting any benchmark number.\n"
         )
     if vad is None:
-        print("WARNING: no Silero VAD model found. Without VAD, silence transcribes as 'Thank you.'\n")
+        print(
+            "No Silero VAD model found in models/. Without it the server rejects every request\n"
+            "that asks for VAD, and silence that slips past the level gate transcribes as\n"
+            "'Thank you.' Refusing to start. Fix:\n\n"
+            f"  cd {root} && sh ./models/download-vad-model.sh silero-v5.1.2\n"
+        )
+        return 1
 
     host, port = settings.whisper_url.rsplit(":", 1)
     cmd = [

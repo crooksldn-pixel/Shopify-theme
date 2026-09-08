@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from app.logging.turnlog import TurnLog, redact, redact_text
 
 
@@ -92,3 +94,32 @@ def test_redacting_filter_covers_stdlib_logging(caplog):
     joined = " ".join(r.getMessage() for r in caplog.records)
     assert "jo@example.com" not in joined and "07700 900123" not in joined
     assert "[email]" in joined and "[phone]" in joined
+
+
+# --- the completed review: free-text answers, and over-redaction ------------
+
+def test_known_names_are_scrubbed_from_free_text():
+    out = redact_text("CROOKS-1928 was placed by Jane Smith. She has moved.", names=["Jane Smith"])
+    assert "Jane Smith" not in out and "[name]" in out and "CROOKS-1928" in out
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["[Errno -1094995529] Invalid data", "saved 20260907-225520.webm", "SS24 2XL sold out", "gid://shopify/Order/8245370618199"],
+)
+def test_identifiers_and_size_codes_are_not_mangled(text):
+    assert redact_text(text) == text
+
+
+def test_real_postcode_still_redacted_after_size_exclusion():
+    assert "[postcode]" in redact_text("send to SW1A 1AA")
+    assert "[postcode]" in redact_text("E8 3RL please")
+
+
+def test_turn_log_scrubs_names_the_tools_returned(tmp_path):
+    TurnLog(tmp_path).write(
+        {"answer": "Order CROOKS-1928 is Anna Denning's, shipped yesterday.", "question": "whose is 1928"},
+        names={"Anna Denning"},
+    )
+    written = (tmp_path / "turns.jsonl").read_text()
+    assert "Anna Denning" not in written and "CROOKS-1928" in written

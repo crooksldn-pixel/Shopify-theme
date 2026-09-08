@@ -152,9 +152,18 @@ def main() -> int:
     for path, why in [
         (REPO / "kb" / "terminology.md", "M3 — product names as you say them"),
         (REPO / "credentials.json", "M8 — Google Desktop client"),
-        (REPO / "token.json", "M8 — written by scripts/gmail_auth.py"),
     ]:
         row(OK if path.exists() else WARN, path.name, str(path) if path.exists() else f"absent — {why}")
+    try:
+        sys.path.insert(0, str(REPO))
+        from app.secrets import keychain as kc
+
+        gmail_ok = kc.present("gmail_token") or (REPO / "token.json").exists()
+        row(OK if gmail_ok else WARN, "gmail credential",
+            "stored" if gmail_ok else "absent — M8: python scripts/gmail_auth.py (goes to the Keychain)")
+    except Exception:  # noqa: BLE001
+        row(OK if (REPO / "token.json").exists() else WARN, "gmail credential",
+            "token.json present" if (REPO / "token.json").exists() else "absent — M8")
 
     print("─" * 74)
     if failures:

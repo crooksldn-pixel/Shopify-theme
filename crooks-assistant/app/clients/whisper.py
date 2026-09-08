@@ -27,6 +27,19 @@ HALLUCINATION_BLOCKLIST = frozenset(
 )
 
 
+def _silence_wav(seconds: float) -> bytes:
+    import io
+    import wave
+
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16_000)
+        w.writeframes(b"\x00\x00" * int(16_000 * seconds))
+    return buf.getvalue()
+
+
 class WhisperUnavailable(RuntimeError):
     """whisper-server is not reachable. A named failure, not a generic 500.
 
@@ -60,10 +73,19 @@ class WhisperClient:
         """POST a 16 kHz mono WAV to /inference and return the transcript."""
         started = time.perf_counter()
         response = await self._post(wav, prompt, vad=self._server_vad)
-        if response.status_code == 500 and self._server_vad and "vad" in response.text.lower():
-            log.warning("whisper-server rejected per-request VAD (no VAD model?); continuing without it")
-            self._server_vad = False
-            response = await self._post(wav, prompt, vad=False)
+        if response.status_code == 500 and self._server_vad:
+            # A server started without a Silero model answers every VAD request with a bare
+            # {"error":"failed to process audio"} — the body never says "vad" (measured). So
+            # any 500 while VAD is on gets one retry without it; if that works, remember.
+            retry = await self._post(wav, prompt, vad=False)
+            if retry.status_code == 200:
+                log.warning(
+                    "whisper-server cannot do per-request VAD (no Silero model?). Continuing "
+                    "without it — silence will rely on our level gate and blocklist. Start the "
+                    "server with a VAD model to fix this."
+                )
+                self._server_vad = False
+                response = retry
 
         if response.status_code != 200:
             raise WhisperUnavailable(
@@ -111,9 +133,18 @@ class WhisperClient:
             raise WhisperUnavailable(f"whisper-server request failed: {type(exc).__name__}") from exc
 
     async def health(self) -> tuple[bool, str]:
+        """Transcribe half a second of silence. "The port answers" is not health; "a request
+        goes through the whole inference path" is."""
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
                 response = await client.get(f"{self.base_url}/")
-            return response.status_code < 500, f"whisper-server at {self.base_url}"
+            if response.status_code >= 500:
+                return False, f"whisper-server at {self.base_url} answered {response.status_code}"
         except Exception as exc:  # noqa: BLE001
             return False, f"whisper-server unreachable at {self.base_url}: {exc}"
+        try:
+            await self.transcribe(_silence_wav(0.5), prompt="")
+        except WhisperUnavailable as exc:
+            return False, f"whisper-server is up but inference fails: {exc}"
+        vad = "server VAD" if self._server_vad else "NO server VAD (start it with a Silero model)"
+        return True, f"whisper-server at {self.base_url}, inference ok, {vad}"
