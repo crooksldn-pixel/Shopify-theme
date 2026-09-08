@@ -16,6 +16,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 
 from app.logging.turnlog import redact
 from app.presentation import present
+from app.routes.actions import writes_context
 from app.speech.decode import DecodeError, decode
 from app.speech.speakable import to_speakable
 
@@ -92,16 +93,16 @@ async def turn(
     if audio is not None:
         blob = await audio.read()
         if len(blob) > MAX_UPLOAD_BYTES:
-            return _answer(
+            return await _answer(
                 runtime, session_id, "That recording was too long for me to handle.",
-                error_kind="audio_too_large", timings=timings, started=started, speak=speak,
+                request=request, error_kind="audio_too_large", timings=timings, started=started, speak=speak,
             )
         result = await runtime.transcriber.from_blob(blob, filename_hint=audio.filename or "")
         transcript_info = result.as_dict()
         timings.update(result.timings_ms)
         if not result.ok:
-            return _answer(
-                runtime, session_id, result.reason, error_kind="speech",
+            return await _answer(
+                runtime, session_id, result.reason, request=request, error_kind="speech",
                 timings=timings, started=started, transcript=transcript_info, speak=speak,
             )
         text = result.text
@@ -114,8 +115,8 @@ async def turn(
             text = f"{text}\n[The speech recogniser was unsure: {notes}. Ask if it matters.]"
 
     if not text or not text.strip():
-        return _answer(
-            runtime, session_id, "I did not catch that.", error_kind="empty",
+        return await _answer(
+            runtime, session_id, "I did not catch that.", request=request, error_kind="empty",
             timings=timings, started=started, transcript=transcript_info, speak=speak,
         )
     text = text.strip()[:MAX_TEXT_CHARS]
@@ -145,10 +146,11 @@ async def turn(
         # for those Claude asks which one.
         answer = f"{LOST_THREAD_PREFIX}{answer}"
 
-    return _answer(
+    return await _answer(
         runtime,
         session_id,
         answer,
+        request=request,
         error_kind=result.error_kind,
         timings=timings,
         started=started,
@@ -197,11 +199,12 @@ async def _ensure_provider_started(runtime) -> None:
         log.warning("provider start retry failed: %s", exc)
 
 
-def _answer(
+async def _answer(
     runtime,
     session_id: str,
     answer: str,
     *,
+    request: Request | None = None,
     error_kind: str | None = None,
     timings: dict,
     started: float,
@@ -223,6 +226,13 @@ def _answer(
     except KeyError:
         pass
     abandoned = bool(session is not None and session.abandoned)
+    # A change was proposed this turn. Say, now and in the same breath, whether a tap on THIS
+    # tablet could apply it — a card that cannot be applied must never look as if it can.
+    writes = None
+    if any(getattr(c, "proposal_id", None) for c in (calls or [])) and request is not None:
+        writes = await writes_context(request)
+        if not writes["allowed"] and writes["spoken"]:
+            answer = f"{answer.rstrip()} {writes['spoken']}"
     if speak and answer and not abandoned:
         # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
         # is already generating. The same request it would make anyway, just earlier. An
@@ -234,7 +244,7 @@ def _answer(
     timings["total"] = (time.perf_counter() - started) * 1000
     # What the screen shows beside the answer: cards chosen from the tool results, never from
     # the prose. See app/presentation.py for the vocabulary and the bounds.
-    ui = present(calls, session=session, error_kind=error_kind)
+    ui = present(calls, session=session, error_kind=error_kind, writes=writes)
     payload = {
         "session_id": session_id,
         "turns": turns,
@@ -247,6 +257,7 @@ def _answer(
         # The page files this answer was made for. A tablet running an older page learns it
         # here, at the end of the turn, rather than at the next health poll.
         "build": runtime.build,
+        "writes": writes,
         "tool_calls": tool_calls,
         "transcript": transcript,
         "timings_ms": {k: round(v, 1) for k, v in timings.items()},

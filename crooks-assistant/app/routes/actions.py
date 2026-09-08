@@ -23,31 +23,71 @@ log = logging.getLogger("crooks.actions")
 router = APIRouter(prefix="/actions")
 
 
-def _refuse(status: int, code: str, detail: str) -> JSONResponse:
-    return JSONResponse(status_code=status, content={"code": code, "detail": detail})
+# What the tablet says, out loud, when a change cannot be applied from where it is. Fixed
+# lines: nothing from the request and nothing from Shopify reaches the voice.
+SPOKEN_REFUSALS = {
+    "writes_disabled": "Changes are switched off on the Mac, so I can't apply that.",
+    "allow_list_missing": "Nobody is allowed to apply changes yet: the allowed logins aren't set on the Mac.",
+    "not_authorised": "This tablet isn't allowed to apply changes.",
+    "not_authorised_local": "Requests from the Mac itself aren't allowed to apply changes.",
+    "scope_missing": "Shopify hasn't given the app permission to write orders yet.",
+}
 
 
-def _authorise(request: Request) -> tuple[str, JSONResponse | None]:
-    """Who is tapping, and whether they may. The write boundary, independent of the general
+def _refuse(status: int, code: str, detail: str, spoken_key: str | None = None) -> JSONResponse:
+    content = {"code": code, "detail": detail, "spoken": SPOKEN_REFUSALS.get(spoken_key or code, "")}
+    return JSONResponse(status_code=status, content=content)
+
+
+def caller_check(request: Request) -> tuple[str, str, str, str]:
+    """Who is asking, and whether they may apply a change: (caller, code, detail, spoken_key).
+    The code is empty when they may. The write boundary, independent of the general
     middleware: writes need the allow-list to exist, the caller to be on it, and a request made
-    on the Mac itself to be deliberately permitted."""
+    on the Mac itself to be deliberately permitted. Used by the commit route to refuse, and by
+    /turn to tell the tablet — before anyone taps — whether a tap could work from here."""
     runtime = request.app.state.runtime
     settings = runtime.settings
     if not settings.writes_enabled:
-        return "", _refuse(403, "writes_disabled", "Writes are switched off on the Mac (CROOKS_WRITES_ENABLED).")
+        return "", "writes_disabled", "Writes are switched off on the Mac (CROOKS_WRITES_ENABLED).", "writes_disabled"
     allowed = runtime.allowed_logins
     if not allowed:
-        return "", _refuse(403, "allow_list_missing", "No allowed Tailscale logins are configured (CROOKS_ALLOWED_LOGINS).")
+        return "", "allow_list_missing", "No allowed Tailscale logins are configured (CROOKS_ALLOWED_LOGINS).", "allow_list_missing"
     login = request.headers.get("tailscale-user-login", "").strip()
     proxied = bool(request.headers.get("x-forwarded-for"))
     if proxied or login:
         if login.lower() in allowed:
-            return login.lower(), None
-        return "", _refuse(403, "not_authorised", "This login may not apply changes.")
+            return login.lower(), "", "", ""
+        return "", "not_authorised", "This login may not apply changes.", "not_authorised"
     # No login and not proxied: a request made on the Mac itself.
     if settings.writes_local_owner:
-        return "local", None
-    return "", _refuse(403, "not_authorised", "Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).")
+        return "local", "", "", ""
+    return "", "not_authorised", "Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).", "not_authorised_local"
+
+
+def _authorise(request: Request) -> tuple[str, JSONResponse | None]:
+    caller, code, detail, spoken_key = caller_check(request)
+    if code:
+        return "", _refuse(403, code, detail, spoken_key)
+    return caller, None
+
+
+async def writes_context(request: Request) -> dict:
+    """What the tablet needs to know about applying changes from this request's identity:
+    whether writes are ready on the Mac and whether this caller may tap. Sent with every turn
+    that proposes something, so the card can say up front when a tap would be refused."""
+    runtime = request.app.state.runtime
+    caller, code, detail, spoken_key = caller_check(request)
+    status = await runtime.write_status()
+    if not code and not status.ready:
+        code, detail, spoken_key = status.code, status.detail, status.code
+    return {
+        "state": status.state,
+        "allowed": not code,
+        "code": code,
+        "detail": detail,
+        "spoken": SPOKEN_REFUSALS.get(spoken_key, "") if code else "",
+        "caller": caller or None,
+    }
 
 
 @router.post("/{proposal_id}/commit", response_model=None)
@@ -58,7 +98,7 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         return refusal
     status = await runtime.write_status()
     if not status.ready:
-        return _refuse(403, status.code, status.detail)
+        return _refuse(403, status.code, status.detail, status.code)
     if not session_id.strip():
         return _refuse(400, "wrong_session", "The session is missing.")
 

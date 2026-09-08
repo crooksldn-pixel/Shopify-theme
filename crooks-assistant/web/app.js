@@ -1108,8 +1108,10 @@ async function submit(body, isAudio) {
     const response = await fetch('/turn', options);
     if (!response.ok) {
       lastWasError = true;
-      lastErrorTitle = 'The Mac hit a problem';
-      el.errline.textContent = `The assistant on the Mac answered with an error (${response.status}). Try again.`;
+      lastErrorTitle = response.status === 403 ? 'Not allowed' : 'The Mac hit a problem';
+      el.errline.textContent = response.status === 403
+        ? "The Mac refused this tablet: its login is not on the allowed list (CROOKS_ALLOWED_LOGINS)."
+        : `The assistant on the Mac answered with an error (${response.status}). Try again.`;
       setState('ERROR', lastErrorTitle);
       haptic(HAPTIC.error);
       return;
@@ -1416,6 +1418,7 @@ async function checkReachable() {
   const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
   try {
     const response = await fetch('/ping', { cache: 'no-store', signal: controller.signal });
+    if (response.status === 403) { wentRefused(); return; }
     if (!response.ok) throw new Error(`ping ${response.status}`);
     const data = await response.json();
     if (!data.ok) throw new Error('ping not ok');
@@ -1444,6 +1447,17 @@ function wentOnline() {
     warmMic();
     if (swRegistration) swRegistration.update().catch(() => {});
   }
+}
+
+// The Mac answered, and said no: this tablet's login is not on its allowed list. That is a
+// configuration to fix on the Mac, not an outage, and the screen must not call it one.
+function wentRefused() {
+  reachable = false;
+  if (idle()) {
+    setSystem('refused', 'Not allowed', "This tablet's login is not on the Mac's allowed list.", 'CROOKS_ALLOWED_LOGINS on the Mac · open /whoami · tap to check again');
+  }
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(checkReachable, RECONNECT_MAX_MS);
 }
 
 function wentOffline() {

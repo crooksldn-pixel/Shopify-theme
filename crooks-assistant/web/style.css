@@ -464,6 +464,7 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
   animation:sys-pulse 1.8s var(--ease-inout) infinite;
 }
 .system[data-phase="offline"] .system-pulse{background:var(--bad)}
+.system[data-phase="refused"] .system-pulse{background:var(--warn);animation:none}
 .system-title{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:.26em;padding-left:.26em;text-transform:uppercase}
 .system-sub{margin:0;font-size:15px;color:var(--ink-2);line-height:1.5}
 .system-note{margin:22px 0 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
@@ -497,7 +498,9 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .action-surface[data-state="verified"]{color:var(--ok);border-color:rgba(120,200,140,.4)}
 .action-surface[data-state="stale"],.action-surface[data-state="expired"],.action-surface[data-state="revoked"],
 .action-surface[data-state="failed"],.action-surface[data-state="unverified"],.action-surface[data-state="unsupported"],
+.action-surface[data-state="unavailable"],
 .action-surface[data-state="unknown"]{color:var(--ink-4);border-style:dashed;border-color:var(--line)}
+.action-surface[data-state="unavailable"]{color:var(--warn);border-color:rgba(220,178,102,.3)}
 .action-surface[data-state="stale"] .action-label,.action-surface[data-state="expired"] .action-label,
 .action-surface[data-state="revoked"] .action-label{text-decoration:line-through;text-decoration-color:var(--ink-4)}
 .action-meta{margin:10px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);min-height:1em}

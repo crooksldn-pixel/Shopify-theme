@@ -97,6 +97,12 @@ async def guard_and_freshness(request: Request, call_next):
     What the tablet keeps: the page and its scripts are served with no-cache, so a page open
     for a week picks up a new build on its next load rather than in a fortnight.
     """
+    # A page from another site — another tailnet host, or anything the tablet's browser was
+    # pointed at — must not be able to POST here with the tablet's own Tailscale identity.
+    # Chrome names the relationship in Sec-Fetch-Site; an Origin that is neither this host nor
+    # the forwarded one is refused too. Requests without either header (curl, scripts) pass.
+    if request.method in _STATE_CHANGING and _cross_site(request):
+        return JSONResponse(status_code=403, content={"error": "cross-site request refused"})
     allowed = getattr(request.app.state, "allowed_logins", ())
     if allowed:
         login = request.headers.get("tailscale-user-login", "")
@@ -111,6 +117,24 @@ async def guard_and_freshness(request: Request, call_next):
     if path in ("/", "/sw.js", "/manifest.webmanifest") or path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
+
+
+_STATE_CHANGING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def _cross_site(request: Request) -> bool:
+    site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if site in ("cross-site", "same-site"):
+        return True
+    origin = request.headers.get("origin", "").strip().lower()
+    if not origin or origin == "null":
+        return bool(origin)   # "null" is an opaque origin: a sandboxed or file: page. Refuse.
+    origin_host = origin.split("://", 1)[-1].split("/", 1)[0]
+    hosts = {
+        request.headers.get("host", "").strip().lower(),
+        request.headers.get("x-forwarded-host", "").strip().lower(),
+    }
+    return origin_host not in hosts
 
 
 app.include_router(health.router)

@@ -301,3 +301,117 @@ async def test_a_commit_never_reaches_claude(client):
     proposal = await staged(client)
     await commit(client, proposal.proposal_id)
     assert list(getattr(client.runtime.provider, "turns", [])) == turns_before
+
+
+# --------------------------------------------------------------------------- what the turn says
+
+
+class StagingProvider(FakeProvider):
+    """A provider that behaves like Claude asked to add a note: finds nothing, calls the write
+    tool, and answers as the tool told it to."""
+
+    def __init__(self, runtime):
+        self.runtime = runtime
+        self.turns = []
+
+    async def turn(self, session_id, text):
+        from app.providers.base import ToolCall
+
+        self.turns.append((session_id, text))
+        session = self.runtime.sessions.get_or_create(session_id)
+        session.issue(ORDER)
+        await dispatch(TOOL, {"order_id": ORDER, "note": "Customer asked for an exchange"}, session=session, timeout_s=5)
+        proposal = session.proposals[-1]
+        return TurnResult(
+            text="The note's ready. Tap the card to apply it.", session_id=session_id,
+            tool_calls=[ToolCall(name=TOOL, args={"order_id": ORDER, "note": "Customer asked for an exchange"}, ok=True, proposal_id=proposal.proposal_id)],
+        )
+
+
+async def test_a_proposal_from_an_allowed_tablet_arms_and_says_only_that_it_is_ready(client):
+    configure(client)
+    client.runtime.provider = StagingProvider(client.runtime)
+    body = (await client.post("/turn", json={"text": "add a note to order 1938", "session_id": "t1"}, headers=PROXIED)).json()
+    assert body["answer"] == "The note's ready. Tap the card to apply it."
+    (card,) = [i for i in body["ui"] if i["type"] == "confirmation"]
+    assert card["data"]["commit"] == {"allowed": True}
+    assert card["data"]["status"] == "pending" and card["data"]["interaction"]["kind"] == "tap_commit"
+    assert body["writes"]["allowed"] is True and body["writes"]["caller"] == OWNER
+    assert body["error_kind"] is None and not [i for i in body["ui"] if i["type"] == "error"]
+    for forbidden in ("not allowed", "read-only", "cannot", "added the note"):
+        assert forbidden not in body["answer"].lower()
+
+
+@pytest.mark.parametrize("setup, headers, code, phrase", [
+    (dict(writes=False), PROXIED, "writes_disabled", "switched off"),
+    (dict(writes=True, logins=""), PROXIED, "allow_list_missing", "allowed logins aren't set"),
+    (dict(writes=True, local=False), {}, "not_authorised", "from the Mac itself"),
+])
+async def test_a_proposal_this_tablet_cannot_apply_says_so_at_once(client, setup, headers, code, phrase):
+    """The card appears, but its surface never arms, the reason is on it, and the spoken answer
+    carries the same fixed sentence — before anyone taps, not after a refused tap. (A login
+    that is not on the allow-list never gets this far: the middleware refuses it outright.)"""
+    configure(client, **setup)
+    client.runtime.provider = StagingProvider(client.runtime)
+    body = (await client.post("/turn", json={"text": "add a note to order 1938", "session_id": "t2"}, headers=headers)).json()
+    assert body["writes"]["allowed"] is False and body["writes"]["code"] == code
+    (card,) = [i for i in body["ui"] if i["type"] == "confirmation"]
+    assert card["data"]["commit"]["allowed"] is False and card["data"]["commit"]["code"] == code
+    assert card["data"]["commit"]["reason"]
+    assert phrase in body["answer"], body["answer"]
+    assert body["answer"].startswith("The note's ready.")
+    assert client.store.mutations == []
+
+
+async def test_a_refused_commit_carries_a_spoken_line(client):
+    configure(client, writes=False)
+    proposal = await staged(client)
+    body = (await commit(client, proposal.proposal_id)).json()
+    assert body["code"] == "writes_disabled" and body["spoken"].startswith("Changes are switched off")
+    configure(client, local=False)
+    body = (await commit(client, proposal.proposal_id, headers={})).json()
+    assert body["code"] == "not_authorised" and body["spoken"].startswith("Requests from the Mac itself")
+
+
+async def test_a_login_outside_the_allow_list_cannot_even_ask(client):
+    """The general guard, not the write boundary: such a tablet gets a 403 on everything, and
+    the tablet must show that as "not allowed", never as "offline"."""
+    configure(client, logins="someone-else@example.com")
+    for path in ("/ping", "/health", "/turn"):
+        response = await (client.post(path, json={"text": "hi", "session_id": "x"}, headers=PROXIED) if path == "/turn" else client.get(path, headers=PROXIED))
+        assert response.status_code == 403 and response.json()["error"] == "not allowed", path
+
+
+# --------------------------------------------------------------------------- cross-site
+
+
+async def test_a_cross_site_post_is_refused_even_with_the_tablets_identity(client):
+    configure(client)
+    proposal = await staged(client)
+    for headers in (
+        {**PROXIED, "Sec-Fetch-Site": "cross-site"},
+        {**PROXIED, "Sec-Fetch-Site": "same-site"},
+        {**PROXIED, "Origin": "https://evil.example"},
+        {**PROXIED, "Origin": "null"},
+    ):
+        response = await commit(client, proposal.proposal_id, headers=headers)
+        assert response.status_code == 403, headers
+        response = await client.post("/turn", json={"text": "hi", "session_id": "x"}, headers=headers)
+        assert response.status_code == 403, headers
+    assert client.store.mutations == [] and proposal.status.value == "PENDING"
+
+
+async def test_the_tablets_own_page_and_scripts_still_pass(client):
+    configure(client)
+    proposal = await staged(client)
+    ok = [
+        {**PROXIED, "Sec-Fetch-Site": "same-origin", "Origin": "https://crooks-assistant.taildfb357.ts.net", "X-Forwarded-Host": "crooks-assistant.taildfb357.ts.net"},
+        {**PROXIED, "Sec-Fetch-Site": "none"},
+        {**PROXIED},                                  # curl-style: no fetch metadata at all
+        {**PROXIED, "Origin": "http://t", "Host": "t"},
+    ]
+    for headers in ok[:-1]:
+        assert (await client.get("/ping", headers=headers)).status_code == 200
+        assert (await client.post("/cancel", data={"session_id": "x"}, headers=headers)).status_code == 200, headers
+    response = await commit(client, proposal.proposal_id, headers=ok[0])
+    assert response.status_code == 200 and response.json()["status"] == "verified"

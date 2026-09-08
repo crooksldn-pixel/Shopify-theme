@@ -426,12 +426,15 @@
     const supported = INTERACTIONS.indexOf(kind) !== -1;
     const armedAfter = num(interaction.armed_after_ms) === null ? 650 : Math.max(0, interaction.armed_after_ms);
     const status = text(d.status, 'pending');
-    const live = supported && status === 'pending' && Boolean(d.proposal_id);
+    // The Mac already knows whether a tap from this tablet could apply it. When it cannot,
+    // the surface says so and never arms: an honest card beats a button that fails.
+    const blocked = d.commit && typeof d.commit === 'object' && d.commit.allowed === false ? d.commit : null;
+    const live = supported && status === 'pending' && Boolean(d.proposal_id) && !blocked;
     const surface = h('div', {
       class: 'action-surface', role: 'button', tabindex: live ? '0' : '-1', 'aria-disabled': 'true',
-      data: { state: live ? 'arming' : (supported ? status : 'unsupported'), kind },
+      data: { state: live ? 'arming' : (blocked ? 'unavailable' : (supported ? status : 'unsupported')), kind },
     }, [
-      h('span', { class: 'action-label', text: live ? text(interaction.label, 'Tap to apply') : (supported ? settledLabel(status) : 'Needs a newer tablet build') }),
+      h('span', { class: 'action-label', text: live ? text(interaction.label, 'Tap to apply') : (blocked ? "Can't apply from this tablet" : (supported ? settledLabel(status) : 'Needs a newer tablet build')) }),
       h('span', { class: 'action-arm', 'aria-hidden': 'true' }),
     ]);
     const node = card('confirmation', [
@@ -446,7 +449,7 @@
       d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
       d.detail && d.entity ? h('p', { class: 'card-meta', text: text(d.detail) }) : null,
       surface,
-      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · nothing happens until you tap` : 'Nothing happens until you tap') : '' }),
+      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · nothing happens until you tap` : 'Nothing happens until you tap') : (blocked ? text(blocked.reason) : '') }),
     ], Object.assign({ className: `tier-${risk}` }, opts));
     node.dataset.proposal = text(d.proposal_id);
     node.dataset.ref = text(d.entity_ref);

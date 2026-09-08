@@ -84,6 +84,7 @@ def present(
     *,
     session: Session | None = None,
     error_kind: str | None = None,
+    writes: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """The `ui` list for one turn: context cards from the tool results, one error card per
     failed service, and the context stack when the conversation has accumulated one."""
@@ -100,7 +101,7 @@ def present(
             if proposal is not None and not any(
                 i["type"] == "confirmation" and i["data"].get("proposal_id") == proposal.proposal_id for i in items
             ):
-                items.append(_confirmation(proposal))
+                items.append(_confirmation(proposal, writes=writes))
             continue
         if not isinstance(call.result, dict):
             continue
@@ -395,12 +396,21 @@ def _error(service: str, kind: str, title: str, recovery: str) -> dict[str, Any]
 # --------------------------------------------------------------------------- actions
 
 
-def _confirmation(proposal) -> dict[str, Any]:
+def _confirmation(proposal, *, writes: dict[str, Any] | None = None) -> dict[str, Any]:
     """The action card, from the staged proposal and nothing else: the model chose no
     component and supplied no label. The tool's own `present` names the change; this bounds
-    it and adds what the tablet needs to run the interaction and nothing it does not."""
+    it and adds what the tablet needs to run the interaction and nothing it does not. When
+    the Mac already knows a tap from this tablet would be refused, the card says so instead
+    of arming a surface that would fail."""
     words = _present_words(proposal)
     interaction = proposal.interaction if proposal.interaction in INTERACTIONS else "unsupported"
+    commit = None
+    if isinstance(writes, dict) and writes.get("allowed") is False:
+        commit = {
+            "allowed": False,
+            "code": _text(writes.get("code"), 40),
+            "reason": _text(_COMMIT_BLOCKED_WORDS.get(str(writes.get("code")), "Changes cannot be applied from this tablet.")),
+        }
     return _ui("confirmation", {
         "proposal_id": _text(proposal.proposal_id, 40),
         "status": _text(proposal.status.value.lower(), 20),
@@ -420,7 +430,17 @@ def _confirmation(proposal) -> dict[str, Any]:
         "expires_at": proposal.public()["expires_at"],
         "ttl_s": proposal.ttl_s(),
         "reversible": bool(proposal.reversible),
+        "commit": commit if commit else {"allowed": True},
     })
+
+
+# Why a tap would be refused from here, in the words the card shows under the change.
+_COMMIT_BLOCKED_WORDS = {
+    "writes_disabled": "Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).",
+    "allow_list_missing": "No allowed logins are set on the Mac (CROOKS_ALLOWED_LOGINS).",
+    "not_authorised": "This tablet's login is not on the allowed list. Open /whoami to see it.",
+    "scope_missing": "The Shopify app has not been granted write_orders.",
+}
 
 
 def _present_words(proposal) -> dict[str, Any]:

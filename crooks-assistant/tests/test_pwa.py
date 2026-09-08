@@ -205,3 +205,16 @@ def test_nothing_served_to_the_tablet_holds_a_secret_or_the_mac_s_address(name):
     for forbidden in ("client_secret", "refresh_token", "authorization:", "bearer ", "192.168.", "10.0.", "100.64.", ".local:8000", "127.0.0.1:8000"):
         assert forbidden not in lowered, f"{name} contains {forbidden}"
     assert not re.search(r"\b(?:sk|xi|shpat|shpca|shpss)_[A-Za-z0-9]{16,}", text), f"{name} contains a key"
+
+
+def test_a_refusal_is_shown_as_a_refusal_not_an_outage():
+    """A Mac that answers 403 is up and saying no. The system layer names that (with where to
+    fix it) rather than claiming the assistant is offline, and a refused turn says the same."""
+    check = function_body(APP_JS, "async function checkReachable()")
+    assert "if (response.status === 403) { wentRefused(); return; }" in check
+    refused = function_body(APP_JS, "function wentRefused()")
+    assert "setSystem('refused', 'Not allowed'" in refused and "CROOKS_ALLOWED_LOGINS" in refused
+    assert "reconnectTimer = setTimeout(checkReachable, RECONNECT_MAX_MS);" in refused
+    submit = function_body(APP_JS, "async function submit(body, isAudio)")
+    assert "response.status === 403 ? 'Not allowed'" in submit
+    assert 'its login is not on the allowed list (CROOKS_ALLOWED_LOGINS)' in submit
