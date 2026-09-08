@@ -42,6 +42,7 @@ class Runtime:
     kb: KnowledgeBase
     turnlog: TurnLog
     started_at: float = field(default_factory=time.time)
+    build: str = ""
     _catalogue_refreshed_at: float = 0.0
     _catalogue_task: asyncio.Task | None = None
 
@@ -146,6 +147,7 @@ def build(settings: Settings | None = None) -> Runtime:
         cooldown_s=settings.tts_cooldown_s,
         enabled=settings.tts_enabled,
     )
+    voice.prefetch_enabled = settings.tts_prefetch
     normaliser = _build_normaliser(settings)
     transcriber = Transcriber(
         whisper,
@@ -180,6 +182,7 @@ def build(settings: Settings | None = None) -> Runtime:
     )
 
     return Runtime(
+        build=web_build_id(),
         settings=settings,
         sessions=sessions,
         whisper=whisper,
@@ -246,6 +249,23 @@ def _make_customer_lookup(shopify: ShopifyClient):
         return cache[email]
 
     return lookup
+
+
+def web_build_id(web_dir: Path | None = None) -> str:
+    """A short fingerprint of the tablet page's files, so a page that has been open for days
+    can tell that the Mac now serves a newer one."""
+    import hashlib
+
+    web_dir = web_dir or (Path(__file__).resolve().parent.parent / "web")
+    digest = hashlib.sha1()
+    try:
+        for path in sorted(web_dir.glob("*")):
+            if path.is_file():
+                stat = path.stat()
+                digest.update(f"{path.name}:{stat.st_size}:{int(stat.st_mtime)}\n".encode())
+    except OSError:
+        return "unknown"
+    return digest.hexdigest()[:12]
 
 
 def seed_paths(settings: Settings) -> list[Path]:

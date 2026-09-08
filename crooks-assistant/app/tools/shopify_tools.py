@@ -165,6 +165,7 @@ def _order_summary(node: dict) -> dict:
         "total": _money(node.get("currentTotalPriceSet")),
         "customer_name": customer.get("displayName"),
         "customer_id": customer.get("id"),
+        "customer_email": (customer.get("defaultEmailAddress") or {}).get("emailAddress"),
     }
 
 

@@ -15,7 +15,7 @@ VERSION = "0.1.0"
 # inference. The tablet polls; the settings sheet, the launcher and `make status` all ask.
 # Answering from a recent result for this long keeps that from becoming a constant hum on the
 # Mac and on the Shopify rate budget. `?fresh=1` skips it, for when someone is looking.
-CACHE_TTL_S = 20.0
+CACHE_TTL_S = 45.0
 
 
 @router.get("/health")
@@ -114,6 +114,9 @@ async def _health(runtime) -> dict:
         # ElevenLabs — speech falls back to the Mac and the answer still arrives.
         "status": "ok" if all(c["ok"] for c in checks.values()) else "degraded",
         "version": VERSION,
+        # Changes whenever the tablet page's files change on the Mac; the tablet reloads
+        # itself, when idle, on seeing a new one. A page can otherwise stay open for weeks.
+        "build": runtime.build,
         "uptime_s": round(runtime.uptime_s, 1),
         "sessions": runtime.sessions.count(),
         # One line for "who is listening", so a spoken problem can be diagnosed at a glance.

@@ -318,14 +318,53 @@ async def test_one_connection_is_reused_across_answers(monkeypatch):
 # --------------------------------------------------------------------------- prefetch
 
 
+async def drain(chunks) -> bytes:
+    return b"".join([c async for c in chunks])
+
+
+class SlowStream(httpx.AsyncByteStream):
+    """An MP3 arriving in pieces with time between them, like ElevenLabs generating it."""
+
+    def __init__(self, pieces, gap_s: float) -> None:
+        self.pieces = pieces
+        self.gap_s = gap_s
+
+    async def __aiter__(self):
+        import asyncio
+
+        for i, piece in enumerate(self.pieces):
+            if i:
+                await asyncio.sleep(self.gap_s)
+            yield piece
+
+
+async def test_the_first_chunk_is_handed_out_before_the_last_is_generated(mock_http):
+    """The point of prefetching is to move the start of the voice earlier, not to wait for
+    the whole file: what has arrived goes out now, the rest follows as it is made."""
+    import time
+
+    mock_http(lambda request: httpx.Response(200, stream=SlowStream([MP3, MP3, MP3], 0.25)))
+    client = make()
+    client.prefetch("Twelve orders today.")
+    started = time.perf_counter()
+    chunks = await client.take_ready("Twelve orders today.")
+    first = await chunks.__anext__()
+    first_at = time.perf_counter() - started
+    rest = await drain(chunks)
+    total_at = time.perf_counter() - started
+    assert first == MP3
+    assert first_at < 0.2, f"first chunk waited {first_at:.2f}s for the rest"
+    assert total_at >= 0.45 and rest == MP3 + MP3
+    assert client.prefetches == 1 and client.prefetch_hits == 1
+
+
 async def test_a_prefetched_answer_is_handed_out_once_and_only_once(mock_http):
     holder = mock_http(lambda request: httpx.Response(200, content=MP3))
     client = make()
     assert client.prefetch("Twelve orders today.") is True
-    assert await client.take_ready("Twelve orders today.") == MP3
+    assert await drain(await client.take_ready("Twelve orders today.")) == MP3
     assert await client.take_ready("Twelve orders today.") is None   # not served twice
     assert len(holder["requests"]) == 1
-    assert client.prefetches == 1 and client.prefetch_hits == 1
 
 
 async def test_prefetch_is_the_same_single_request_earlier(mock_http):
@@ -334,37 +373,70 @@ async def test_prefetch_is_the_same_single_request_earlier(mock_http):
     client = make()
     client.prefetch("Hello.")
     client.prefetch("Hello.")
-    assert await client.take_ready("Hello.") == MP3
+    assert await drain(await client.take_ready("Hello.")) == MP3
     assert len(holder["requests"]) == 1
 
 
-async def test_prefetch_costs_nothing_when_the_voice_is_off_or_cooling(mock_http):
+async def test_prefetch_costs_nothing_when_off_or_cooling(mock_http):
     holder = mock_http(lambda request: httpx.Response(200, content=MP3))
     off = make(enabled=False)
     assert off.prefetch("Hello.") is False
     cooling = make(cooldown_s=300)
     cooling._cooldown_until = 10**12
     assert cooling.prefetch("Hello.") is False
+    switched_off = make()
+    switched_off.prefetch_enabled = False
+    assert switched_off.prefetch("Hello.") is False
     assert make().prefetch("") is False
     assert holder["requests"] == []
 
 
-async def test_a_failed_prefetch_leaves_speak_to_report_it(mock_http):
+async def test_a_failed_prefetch_is_reported_once_not_paid_for_twice(mock_http):
+    """The failure is remembered: /speak raises it immediately and does not open a second
+    request that would sit through the same timeout."""
     holder = mock_http(lambda request: httpx.Response(402, json={"detail": {"status": "quota_exceeded"}}))
     client = make(cooldown_s=0)
     client.prefetch("Hello.")
-    assert await client.take_ready("Hello.") is None
-    assert len(holder["requests"]) == 1
-    # /speak then tries itself and gets the named failure.
     with pytest.raises(VoiceUnavailable) as exc:
-        await client.synthesise("Hello.")
+        await client.take_ready("Hello.")
     assert exc.value.kind == "credit"
+    assert len(holder["requests"]) == 1
+    assert await client.take_ready("Hello.") is None   # consumed; the next ask streams afresh
 
 
-async def test_stale_prefetches_are_dropped(mock_http, monkeypatch):
+async def test_a_fixed_line_is_synthesised_once_and_free_after_that(mock_http):
+    """"I did not catch that" is the same sentence every time; pinned, it costs one request
+    for the life of the process and is instant on every repeat."""
+    holder = mock_http(lambda request: httpx.Response(200, content=MP3))
+    client = make()
+    client.prefetch("I did not catch that.", pin=True)
+    assert await drain(await client.take_ready("I did not catch that.")) == MP3
+    assert await drain(await client.take_ready("I did not catch that.")) == MP3
+    client.prefetch("I did not catch that.", pin=True)   # /turn asks again: nothing to do
+    assert await drain(await client.take_ready("I did not catch that.")) == MP3
+    assert len(holder["requests"]) == 1
+    assert client.prefetch_hits == 3
+
+
+async def test_stale_prefetches_are_dropped(mock_http):
     mock_http(lambda request: httpx.Response(200, content=MP3))
     client = make()
     client.prefetch("Old.")
     await client._inflight["Old."]
-    client._ready["Old."] = (MP3, 0.0)   # synthesised long ago
-    assert await client.take_ready("Old.") is None
+    client._ready["Old."].at = 0.0   # synthesised long ago
+    client.prefetch("New.")           # any new prefetch sweeps the stale ones
+    assert "Old." not in client._ready
+    await client._inflight["New."]
+
+
+async def test_an_interrupted_owner_stops_the_synthesis(mock_http):
+    """Barge-in on the tablet never asks /speak; the Mac must not go on generating for it."""
+    mock_http(lambda request: httpx.Response(200, stream=SlowStream([MP3] * 6, 0.2)))
+    client = make()
+    client.prefetch("A long answer nobody will hear.")
+    import asyncio
+
+    await asyncio.sleep(0.05)
+    assert client.cancel_prefetches() == 1
+    await asyncio.sleep(0.05)
+    assert client._inflight == {}

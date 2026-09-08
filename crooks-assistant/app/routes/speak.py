@@ -58,22 +58,21 @@ async def speak(request: Request) -> Response:
         # a paid request is not; 204 tells the tablet so without looking like a failure.
         return Response(status_code=204)
 
-    # /turn started synthesising this answer the moment it knew it (VoiceClient.prefetch).
-    # If that finished, or is about to, the MP3 goes out whole and at once.
-    ready = await voice.take_ready(spoken)
-    if ready:
-        return Response(
-            content=ready,
-            media_type="audio/mpeg",
-            headers={
-                "X-Crooks-Voice": voice.voice_name,
-                "X-Crooks-Model": voice.model,
-                "X-Crooks-Prefetched": "1",
-                "Cache-Control": "no-store",
-            },
-        )
-
+    headers = {
+        # Diagnostics the tablet can show without a second request, and nothing secret.
+        "X-Crooks-Voice": voice.voice_name,
+        "X-Crooks-Model": voice.model,
+        "Cache-Control": "no-store",
+    }
     try:
+        # /turn started synthesising this answer the moment it knew it (VoiceClient.prefetch).
+        # What has arrived goes out now and the rest follows as ElevenLabs produces it — the
+        # tablet starts playing the opening while the ending is still being generated.
+        ready = await voice.take_ready(spoken)
+        if ready is not None:
+            return StreamingResponse(
+                ready, media_type="audio/mpeg", headers={**headers, "X-Crooks-Prefetched": "1"}
+            )
         stream = await voice.open_stream(spoken)
     except VoiceUnavailable as exc:
         # The text is not logged; its length is what makes a latency or truncation report
@@ -88,13 +87,4 @@ async def speak(request: Request) -> Response:
             },
         )
 
-    return StreamingResponse(
-        stream.chunks(),
-        media_type="audio/mpeg",
-        headers={
-            # Diagnostics the tablet can show without a second request, and nothing secret.
-            "X-Crooks-Voice": voice.voice_name,
-            "X-Crooks-Model": voice.model,
-            "Cache-Control": "no-store",
-        },
-    )
+    return StreamingResponse(stream.chunks(), media_type="audio/mpeg", headers=headers)

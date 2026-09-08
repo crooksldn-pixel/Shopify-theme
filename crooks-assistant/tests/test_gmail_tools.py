@@ -200,3 +200,111 @@ async def test_read_thread_keeps_the_newest_messages():
     assert out["messages_shown"] == 12 and out["truncated"]
     assert out["messages"][-1]["body"] == "msg 19"
     assert out["messages"][0]["body"] == "msg 8"
+
+
+# --------------------------------------------------------------------------- one round trip
+
+
+class FakeBatch:
+    """googleapiclient's BatchHttpRequest, as far as gmail_search uses it."""
+
+    def __init__(self, callback, responses: dict, fail: bool = False) -> None:
+        self.callback = callback
+        self.responses = responses
+        self.fail = fail
+        self.added: list[str] = []
+        self.executions = 0
+
+    def add(self, request, request_id=None):
+        self.added.append(request_id)
+
+    def execute(self):
+        self.executions += 1
+        if self.fail:
+            raise RuntimeError("batch endpoint unavailable")
+        for request_id in self.added:
+            response = self.responses.get(request_id)
+            self.callback(request_id, response, None if response else RuntimeError("gone"))
+
+
+def _message(mid: str, sender: str, subject: str) -> dict:
+    return {
+        "id": mid, "threadId": f"t-{mid}", "snippet": subject,
+        "payload": {"headers": headers(From=sender, Subject=subject, Date="Mon, 8 Sep 2026 10:00:00 +0100")},
+    }
+
+
+def _service_with(fake_batch_factory):
+    from unittest.mock import MagicMock
+
+    service = MagicMock()
+    service.users().messages().list().execute.return_value = {"messages": [{"id": "1"}, {"id": "2"}, {"id": "3"}]}
+    service.users().messages().get().execute.side_effect = [
+        _message("1", "Jo <jo@example.com>", "Order 1930"),
+        _message("2", "Sam <sam@example.com>", "Sizing"),
+        _message("3", "Kit <kit@example.com>", "Returns"),
+    ]
+    if fake_batch_factory is None:
+        del service.new_batch_http_request
+    else:
+        service.new_batch_http_request = fake_batch_factory
+    return service
+
+
+async def test_search_fetches_every_message_in_one_batch_round_trip(monkeypatch):
+    batches = []
+
+    def factory(callback):
+        batch = FakeBatch(callback, {
+            "1": _message("1", "Jo <jo@example.com>", "Order 1930"),
+            "2": _message("2", "Sam <sam@example.com>", "Sizing"),
+            "3": _message("3", "Kit <kit@example.com>", "Returns"),
+        })
+        batches.append(batch)
+        return batch
+
+    service = _service_with(factory)
+    client = gmail_tools._c()
+    client._service = service
+    monkeypatch.setattr(gmail_tools, "_known_customer", _no_lookup)
+    result = await gmail_tools.gmail_search(query="", days=1, limit=10, include_bulk=True)
+    assert [t["subject"] for t in result["threads"]] == ["Order 1930", "Sizing", "Returns"]
+    assert len(batches) == 1 and batches[0].executions == 1 and batches[0].added == ["1", "2", "3"]
+    assert service.users().messages().get().execute.call_count == 0
+
+
+async def test_a_message_missing_from_the_batch_is_skipped_not_fatal(monkeypatch):
+    def factory(callback):
+        return FakeBatch(callback, {"1": _message("1", "Jo <jo@example.com>", "Order 1930")})
+
+    client = gmail_tools._c()
+    client._service = _service_with(factory)
+    monkeypatch.setattr(gmail_tools, "_known_customer", _no_lookup)
+    result = await gmail_tools.gmail_search(query="", days=1, limit=10, include_bulk=True)
+    assert [t["subject"] for t in result["threads"]] == ["Order 1930"]
+
+
+async def test_a_broken_batch_falls_back_to_one_by_one(monkeypatch):
+    def factory(callback):
+        return FakeBatch(callback, {}, fail=True)
+
+    service = _service_with(factory)
+    client = gmail_tools._c()
+    client._service = service
+    monkeypatch.setattr(gmail_tools, "_known_customer", _no_lookup)
+    result = await gmail_tools.gmail_search(query="", days=1, limit=10, include_bulk=True)
+    assert len(result["threads"]) == 3
+    assert service.users().messages().get().execute.call_count == 3
+
+
+async def test_a_client_without_batching_fetches_one_by_one(monkeypatch):
+    service = _service_with(None)
+    client = gmail_tools._c()
+    client._service = service
+    monkeypatch.setattr(gmail_tools, "_known_customer", _no_lookup)
+    result = await gmail_tools.gmail_search(query="", days=1, limit=10, include_bulk=True)
+    assert len(result["threads"]) == 3
+
+
+async def _no_lookup(email: str):
+    return None

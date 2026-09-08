@@ -118,7 +118,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
             # from a system daemon, which nothing here uses.
             if not cli_logged_in(cli):
                 raise RuntimeError(
-                    f"{exc} (and the claude CLI is not logged in either — run `claude /login`)."
+                    f"{exc} (and the claude CLI is not logged in either — run `claude`, then `/login`)."
                 ) from exc
             self._auth_mode = "cli"
             log.info(
@@ -415,6 +415,20 @@ class MaxAgentSDKProvider(ClaudeProvider):
         await self._drop_spare()   # it was connected with the old prompt
         self._prewarm_soon()
 
+    async def interrupt(self, session_id: str) -> bool:
+        """Ask the CLI to stop the turn it is running for this session. The turn then ends
+        with whatever text it had, and the lock is released for the question that replaced
+        it. True when there was a client to interrupt."""
+        client = self._clients.get(session_id)
+        if client is None or self._current is None or self._current.session_id != session_id:
+            return False
+        try:
+            await client.interrupt()
+        except Exception as exc:  # noqa: BLE001 — a turn that already ended is not a failure
+            log.info("interrupt for %s did nothing: %s", session_id, exc)
+            return False
+        return True
+
     async def reset_session(self, session_id: str) -> None:
         client = self._clients.pop(session_id, None)
         self._client_last_used.pop(session_id, None)
@@ -451,8 +465,8 @@ RESULT_SPOKEN = {
     ),
     "max_turns": "That took more steps than I allow myself. Here is as far as I got.",
     "auth": (
-        "My Claude login is not working. The subscription token may have expired — it needs "
-        "renewing with claude setup-token."
+        "My Claude login is not working on the Mac. Run claude there and sign in again with "
+        "slash login."
     ),
     "api_error": "Claude returned an error, so I have not got an answer.",
     "unknown": "Something went wrong while I was thinking. I have not got an answer.",

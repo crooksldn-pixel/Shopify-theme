@@ -166,12 +166,12 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         row(WARN, "keychain", f"unavailable to this process — secrets could not be checked: {str(exc)[:70]}")
         warnings += 1
-    print("       Store a secret with: python scripts/set_secrets.py <key>")
+    print("       Store a secret with: make secrets")
 
     print("─" * 74)
     for path, why in [
-        (REPO / "kb" / "terminology.md", "M3 — product names as you say them"),
-        (REPO / "credentials.json", "M8 — Google Desktop client"),
+        (REPO / "kb" / "terminology.md", "product names as you say them"),
+        (REPO / "credentials.json", "the Google Desktop client JSON (see README, Gmail)"),
     ]:
         row(OK if path.exists() else WARN, path.name, str(path) if path.exists() else f"absent — {why}")
     try:
@@ -180,10 +180,10 @@ def main() -> int:
 
         gmail_ok = kc.present("gmail_token") or (REPO / "token.json").exists()
         row(OK if gmail_ok else WARN, "gmail credential",
-            "stored" if gmail_ok else "absent — M8: python scripts/gmail_auth.py (goes to the Keychain)")
+            "stored" if gmail_ok else "absent — run: make gmail (the credential goes to the Keychain)")
     except Exception:  # noqa: BLE001
         row(OK if (REPO / "token.json").exists() else WARN, "gmail credential",
-            "token.json present" if (REPO / "token.json").exists() else "absent — M8")
+            "token.json present" if (REPO / "token.json").exists() else "absent — run: make gmail")
 
     print("─" * 74)
     if failures:

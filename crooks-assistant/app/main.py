@@ -11,8 +11,8 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import runtime as runtime_module
@@ -62,6 +62,9 @@ async def lifespan(app: FastAPI):
     app.state.runtime = runtime_module.build(settings)
     app.state.health_cache = None   # /health answers from a recent result; none yet
     app.state.health_lock = None
+    app.state.allowed_logins = tuple(
+        login.strip().lower() for login in settings.allowed_logins.split(",") if login.strip()
+    )
     try:
         await app.state.runtime.provider.start()
     except BillingGuardError:
@@ -76,6 +79,33 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CROOKS Assistant", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def guard_and_freshness(request: Request, call_next):
+    """Two small things every request passes through.
+
+    Who may ask: by default anyone who can reach the port — the tailnet is the owner's own
+    private network and the backend binds to loopback behind it. When CROOKS_ALLOWED_LOGINS
+    names Tailscale logins, `tailscale serve` tags every proxied request with the caller's
+    login and only those callers are answered; a request that reaches the port without the
+    header (curl on the Mac itself) is still allowed, because it is on the Mac.
+
+    What the tablet keeps: the page and its scripts are served with no-cache, so a page open
+    for a week picks up a new build on its next load rather than in a fortnight.
+    """
+    allowed = getattr(request.app.state, "allowed_logins", ())
+    if allowed:
+        login = request.headers.get("tailscale-user-login", "")
+        if login and login.lower() not in allowed:
+            return JSONResponse(status_code=403, content={"error": "not allowed", "who": login})
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 app.include_router(health.router)
 app.include_router(turn.router)
 app.include_router(speak.router)

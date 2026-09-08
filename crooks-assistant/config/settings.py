@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     # --- transport ---
     host: str = "127.0.0.1"
     port: int = 8000
+    # Who may ask, as Tailscale logins ("you@example.com, partner@example.com"). Empty means
+    # anyone on the tailnet — it is the owner's own private network. Set it and every request
+    # proxied by `tailscale serve` from another login is refused; requests made on the Mac
+    # itself carry no login and are always allowed.
+    allowed_logins: str = ""
 
     # --- Shopify ---
     # The myshopify domain, not the storefront domain. Verified against the live store.
@@ -54,7 +59,12 @@ class Settings(BaseSettings):
     # ~16 kB/s. The 32 kbps stream this replaced was audibly compressed on the tablet
     # speaker, and four times the bytes is nothing next to the generation time.
     tts_output_format: str = "mp3_44100_128"
-    tts_timeout_s: float = 20.0
+    # ElevenLabs answers the first byte of an MP3 within a second or two; a voice that has
+    # not started by now is a voice that is not coming, and Android's should take over.
+    tts_timeout_s: float = 10.0
+    # Start synthesising an answer the moment /turn knows it, so it is generating while the
+    # tablet asks for it. Off means /speak synthesises on request, as it did before.
+    tts_prefetch: bool = True
     # Longer than one answer can be (max_answer_chars is 700) with room for the spoken forms,
     # which are longer than the digits they replace.
     tts_max_chars: int = 1200

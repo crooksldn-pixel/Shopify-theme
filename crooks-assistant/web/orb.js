@@ -28,8 +28,10 @@
   const STATES = {
     READY: {},
     LISTENING: { scale: 1.07, breathe: 0.02, breatheHz: 0.35, deform: 0.05, drift: 0.8, spin: 0.07, inner: 0.42, glow: 0.24, react: 1, fps: 60 },
-    TRANSCRIBING: { scale: 0.985, breathe: 0.012, breatheHz: 1.1, deform: 0.03, drift: 1.6, spin: 0.18, inner: 0.7, glow: 0.18, fps: 60 },
-    THINKING: { scale: 0.96, breathe: 0.008, breatheHz: 0.5, deform: 0.02, drift: 0.35, spin: 0.4, inner: 0.95, glow: 0.15, inward: 1, fps: 60 },
+    TRANSCRIBING: { scale: 0.985, breathe: 0.012, breatheHz: 1.1, deform: 0.03, drift: 1.6, spin: 0.18, inner: 0.7, glow: 0.18, fps: 40 },
+    // The state the orb spends longest in; half the frames is invisible here and is what
+    // keeps a 2019 tablet cool through an afternoon of questions.
+    THINKING: { scale: 0.96, breathe: 0.008, breatheHz: 0.5, deform: 0.02, drift: 0.35, spin: 0.4, inner: 0.95, glow: 0.15, inward: 1, fps: 30 },
     SPEAKING: { scale: 1.035, breathe: 0.012, breatheHz: 0.6, deform: 0.032, drift: 1.0, spin: 0.1, inner: 0.5, glow: 0.26, react: 1, fps: 60 },
     SUCCESS: { scale: 1.02, breathe: 0.006, breatheHz: 0.3, deform: 0.008, drift: 0.2, spin: 0.03, inner: 0.4, glow: 0.3, tint: 1, fps: 60 },
     ERROR: { scale: 0.94, breathe: 0.004, breatheHz: 0.2, deform: 0.022, drift: 0.25, spin: 0.02, inner: 0.5, glow: 0.22, tint: -1, tension: 1, fps: 60 },

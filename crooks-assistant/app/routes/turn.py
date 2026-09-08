@@ -111,19 +111,14 @@ async def turn(
         )
     text = text.strip()[:MAX_TEXT_CHARS]
 
-    if lost_thread:
-        return _answer(
-            runtime, session_id,
-            "I've lost the thread of our conversation — either I restarted or it has been a "
-            "while. Ask me again from the start.",
-            error_kind="lost_thread", timings=timings, started=started,
-            transcript=transcript_info, question=text, lost_thread=True, speak=speak,
-        )
-
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
     # in front of it. This question is answered with the catalogue as it stands.
     runtime.refresh_catalogue_soon()
     await _ensure_provider_started(runtime)
+
+    # What was heard, on the session now, so the tablet can show it while Claude thinks
+    # rather than only once the answer lands — a mis-heard question is visible at once.
+    runtime.sessions.get_or_create(session_id).heard = text.strip()
 
     t0 = time.perf_counter()
     result = await runtime.provider.turn(session_id, text.strip())
@@ -134,6 +129,12 @@ async def turn(
         # A forty-second spoken monologue is a bad product; truncate at a sentence boundary.
         cut = answer[: runtime.settings.max_answer_chars]
         answer = cut[: cut.rfind(".") + 1] or cut
+    if lost_thread and result.error_kind is None:
+        # The backend restarted (or the conversation idled out) since the tablet last spoke.
+        # It heard the question, so it answers it — from the start, and says so — rather than
+        # asking the owner to repeat himself. Only "that order" questions lose anything, and
+        # for those Claude asks which one.
+        answer = f"{LOST_THREAD_PREFIX}{answer}"
 
     return _answer(
         runtime,
@@ -155,7 +156,11 @@ async def turn(
         ],
         calls=result.tool_calls,
         speak=speak,
+        lost_thread=lost_thread,
     )
+
+
+LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 
 
 def _truthy(value) -> bool:
@@ -192,8 +197,11 @@ def _answer(
     tool_calls = tool_calls or []
     if speak and answer:
         # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
-        # is already generating or done. The same request it would make anyway, just earlier.
-        runtime.voice.prefetch(to_speakable(answer, max_chars=runtime.voice.max_chars))
+        # is already generating. The same request it would make anyway, just earlier. An
+        # error line is a fixed sentence: synthesised once, kept, free and instant after that.
+        runtime.voice.prefetch(
+            to_speakable(answer, max_chars=runtime.voice.max_chars), pin=bool(error_kind)
+        )
     timings["total"] = (time.perf_counter() - started) * 1000
     turns = 0
     names: set[str] = set()
@@ -243,7 +251,21 @@ async def state(request: Request, session_id: str) -> dict:
         "state": session.state,
         "detail": session.state_detail,
         "turns": session.turns,
+        "heard": session.heard,
     }
+
+
+@router.post("/cancel")
+async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
+    """The owner has moved on: he is holding the orb again while the last question is still
+    being thought about. Interrupt Claude, and stop synthesising any answer nobody will hear.
+    Nothing is undone — there is nothing to undo; every tool is read-only."""
+    runtime = request.app.state.runtime
+    interrupted = False
+    if session_id:
+        interrupted = await runtime.provider.interrupt(session_id)
+    stopped = runtime.voice.cancel_prefetches()
+    return {"cancelled": True, "interrupted": interrupted, "prefetches_stopped": stopped}
 
 
 @router.post("/audio-test")

@@ -63,3 +63,7 @@ class ClaudeProvider(ABC):
 
     async def set_system_prompt(self, prompt: str) -> None:  # noqa: B027 — optional hook
         """Replace the system prompt for all FUTURE conversations. Default: no-op."""
+
+    async def interrupt(self, session_id: str) -> bool:
+        """Stop the turn in progress for this session, if one is. Default: nothing to stop."""
+        return False

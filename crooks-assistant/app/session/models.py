@@ -46,6 +46,8 @@ class Session:
     # guessed from the question. The tablet polls this during a turn (M11).
     state: str = "READY"
     state_detail: str = ""
+    # The question as transcribed, for the tablet to show while the answer is being worked out.
+    heard: str = ""
 
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and

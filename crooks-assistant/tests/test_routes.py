@@ -94,11 +94,16 @@ async def test_empty_text_is_handled(client):
     assert body["error_kind"] == "empty"
 
 
-async def test_lost_thread_when_tablet_expects_a_session(client):
-    body = (await client.post("/turn", json={"text": "and that?", "session_id": "ghost", "turns": 2})).json()
-    assert body["error_kind"] == "lost_thread"
+async def test_lost_thread_is_answered_from_the_start_and_says_so(client):
+    """The backend restarted since the tablet last spoke. It heard the question, so it answers
+    it in a fresh conversation and says the earlier thread is gone — not "ask me again"."""
+    body = (await client.post("/turn", json={"text": "how many orders today?", "session_id": "ghost", "turns": 2})).json()
+    assert body["error_kind"] is None
     assert body["lost_thread"] is True
-    assert "lost the thread" in body["answer"]
+    assert body["answer"].startswith("I lost our earlier thread, so from the start: ")
+    assert "fake answer" in body["answer"]
+    # The tablet's count is reset to the fresh session's.
+    assert body["turns"] in (0, 1)
 
 
 async def test_new_session_with_zero_turns_is_not_lost(client):
@@ -383,3 +388,131 @@ async def test_the_catalogue_refresh_never_blocks_a_turn(client):
     assert task is not None and not task.done()   # scheduled, not awaited
     await task
     assert runtime._catalogue_refreshed_at > 0
+
+
+# --------------------------------------------------------------------------- the council's tests
+
+
+async def test_speak_streams_the_prefetched_answer_before_it_has_all_arrived(client):
+    """The first bytes of a prefetched answer leave for the tablet while ElevenLabs is still
+    producing the rest. This is the test the first speed commit did not have. The route is
+    called directly: the ASGI test transport buffers bodies, which is the very thing the
+    tablet's player must not do."""
+    import time
+
+    from fastapi.responses import StreamingResponse
+
+    from app.routes.speak import speak
+
+    class SlowVoiceStream:
+        async def chunks(self):
+            yield b"\xff\xfb\x90\x00" + b"\x01" * 64
+            await asyncio.sleep(0.4)
+            yield b"\x02" * 64
+
+    voice = app.state.runtime.voice
+    calls = []
+
+    async def open_stream(text):
+        calls.append(text)
+        return SlowVoiceStream()
+
+    voice.open_stream = open_stream  # type: ignore[method-assign]
+    turn = (await client.post("/turn", json={"text": "how many orders", "session_id": "slow", "speak": True})).json()
+
+    class FakeRequest:
+        app = client._transport.app  # type: ignore[attr-defined]
+
+        async def json(self):
+            return {"text": turn["answer"]}
+
+    started = time.perf_counter()
+    response = await speak(FakeRequest())
+    assert isinstance(response, StreamingResponse)
+    assert response.headers.get("x-crooks-prefetched") == "1"
+    first_at = None
+    total = b""
+    async for chunk in response.body_iterator:
+        if first_at is None:
+            first_at = time.perf_counter() - started
+        total += chunk
+    assert first_at is not None and first_at < 0.25, f"first byte after {first_at:.2f}s"
+    assert total.startswith(b"\xff\xfb") and total.endswith(b"\x02" * 64)
+    assert len(calls) == 1
+
+
+async def test_the_prefetch_key_is_what_speak_will_ask_for(client):
+    """/turn prefetches the speakable form of the answer and /speak looks up the speakable
+    form of the text the tablet sends; if those ever drift apart every answer is synthesised
+    twice. The tablet sends the answer verbatim, so this holds them together."""
+    calls = stub_voice(app)
+    provider = app.state.runtime.provider
+
+    async def turn(session_id, text):
+        from app.providers.base import TurnResult
+
+        return TurnResult(text="**Order #1930** came to £60.", session_id=session_id)
+
+    provider.turn = turn
+    body = (await client.post("/turn", json={"text": "order 1930", "session_id": "key", "speak": True})).json()
+    await client.post("/speak", json={"text": body["answer"]})
+    assert calls == ["Order nineteen thirty came to sixty pounds."]
+
+
+async def test_a_fixed_error_line_is_never_synthesised_twice(client):
+    calls = stub_voice(app)
+    for _ in range(3):
+        body = (await client.post("/turn", json={"text": "  ", "session_id": "err", "speak": True})).json()
+        assert body["error_kind"] == "empty"
+        assert (await client.post("/speak", json={"text": body["answer"]})).status_code == 200
+    assert len(calls) == 1
+
+
+async def test_a_failed_prefetch_is_reported_at_once_without_a_second_request(client):
+    calls = stub_voice(app, fail="timeout")
+    body = (await client.post("/turn", json={"text": "hello", "session_id": "tmo", "speak": True})).json()
+    response = await client.post("/speak", json={"text": body["answer"]})
+    assert response.status_code == 503 and response.json()["kind"] == "timeout"
+    assert len(calls) == 1
+
+
+async def test_state_carries_what_was_heard_while_thinking(client):
+    await client.post("/turn", json={"text": "show me order 1930", "session_id": "heard"})
+    body = (await client.get("/state/heard")).json()
+    assert body["heard"] == "show me order 1930"
+
+
+async def test_cancel_stops_prefetches_and_asks_the_provider_to_interrupt(client):
+    provider = app.state.runtime.provider
+    asked = []
+
+    async def interrupt(session_id):
+        asked.append(session_id)
+        return True
+
+    provider.interrupt = interrupt
+    body = (await client.post("/cancel", data={"session_id": "busy"})).json()
+    assert body == {"cancelled": True, "interrupted": True, "prefetches_stopped": 0}
+    assert asked == ["busy"]
+
+
+async def test_the_page_and_its_scripts_are_never_cached_for_long(client):
+    for path in ("/", "/static/app.js"):
+        response = await client.get(path)
+        assert response.status_code == 200
+        assert response.headers.get("cache-control") == "no-cache"
+    health = (await client.get("/health?fresh=1")).json()
+    assert len(health["build"]) == 12
+
+
+async def test_allowed_logins_refuse_a_stranger_and_admit_the_owner_and_the_mac(client):
+    app.state.allowed_logins = ("owner@example.com",)
+    try:
+        stranger = await client.get("/health", headers={"Tailscale-User-Login": "someone@else.com"})
+        assert stranger.status_code == 403
+        owner = await client.get("/health", headers={"Tailscale-User-Login": "Owner@Example.com"})
+        assert owner.status_code == 200
+        local = await client.get("/health")   # no header: the Mac itself
+        assert local.status_code == 200
+    finally:
+        app.state.allowed_logins = ()

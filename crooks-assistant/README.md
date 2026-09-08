@@ -4,8 +4,9 @@ A voice assistant for CROOKS LDN. You hold a button on a tablet, ask a question 
 answers out loud — reading from the Shopify store and the email inbox, and never writing to
 either.
 
-Everything runs on your own Mac bar one thing. No database, no monthly cost beyond the ones you
-already have. Claude is reached through the Agent SDK on the Claude Max subscription;
+Everything runs on your own Mac except the two services it talks to: Claude, on the Max
+subscription you already pay for, and ElevenLabs, which hears and speaks on credit. No
+database, no server anywhere else. Claude is reached through the Agent SDK on the Claude Max subscription;
 speech-to-text is ElevenLabs Scribe v2, with whisper.cpp on this Mac as the automatic fallback
 whenever ElevenLabs cannot answer; the answer is spoken back by Derek, an ElevenLabs voice
 generated on this Mac, with the tablet's own Android voice as that fallback.
@@ -14,14 +15,18 @@ Built to the fifteen-milestone plan in *CROOKS Assistant Build Plan* (Rev 3, 7 S
 
 ## Start here
 
+Every day:
+
 ```bash
 cd ~/crooks-assistant/crooks-assistant
 make up          # everything the tablet needs, in this window; prints the address to open
 ```
 
-Or `make install` once and the Mac starts it at login with no window at all (`make status`
-tells you how it is doing). First time on a new Mac: `make doctor`, `make venv`, `make secrets`,
-then the console steps under *Setup on the Mac*. `make help` lists every command.
+Or `make install` once, and the Mac starts it at login with no window at all (`make status`
+tells you how it is doing).
+
+The first time on a new Mac, before either of those: `make doctor`, then `make venv`, then
+`make secrets`, then the console steps under *Setup on the Mac*. `make help` lists every command.
 
 ---
 
@@ -80,8 +85,8 @@ your Keychain, Tailscale, launchd, and the live Shopify/Gmail tools with your cr
 
 ## Setup on the Mac
 
-Every step is the same shape: open Terminal, `cd ~/crooks-assistant`, type one line. You never
-run a Python file directly; `make` does it. `make help` prints this list.
+Every step is the same shape: open Terminal, `cd ~/crooks-assistant/crooks-assistant`, type
+one line. You never run a Python file directly; `make` does it. `make help` prints this list.
 
 | Step | You type | Then |
 |---|---|---|
@@ -125,9 +130,9 @@ Then, in order:
    whisper.cpp becomes the fallback. Without a key the assistant listens entirely locally, as
    it did before — set `CROOKS_STT_PRIMARY=whisper` to choose that on purpose.
 
-4. **Claude token** (M4) — run `claude` and sign in with `/login` if you have not, then `claude setup-token`, then
-   `make secrets` and paste it at the hidden prompt.
-   **The token expires after one year — diary a reminder for month eleven.**
+4. **Claude** (M4) — run `claude` and sign in with `/login` if you have not. That login is
+   what the assistant uses (`auth=cli`); no token needs storing. If a turn ever says the
+   login is not working, run `claude` and `/login` again.
 
 5. **Shopify** (M6) — check the store is listed under Stores in the Dev Dashboard organisation
    *first*; if it is not, client credentials fail permanently with `shop_not_permitted` and the
@@ -141,15 +146,15 @@ Then, in order:
    JSON as `credentials.json` in this folder. Then `make gmail`.
    **Skip "Publish app" and your token dies every seven days.**
 
-6. **Content** — `kb/terminology.md` already holds the live catalogue with spoken aliases for
+7. **Content** — `kb/terminology.md` already holds the live catalogue with spoken aliases for
    the stylised names; correct the aliases to how you actually say them (five minutes). The
    policy and sizing files are written from the store's own published content; the one thing
    only you can write is the discretion section of `kb/cs-rules.md`.
 
-7. **Voice** (M12) — settings → audition the voices → pick one. If none show "offline", install
+8. **Voice** (M12) — settings → audition the voices → pick one. If none show "offline", install
    the en-GB voice data: Settings → General management → Text-to-speech → Install voice data.
 
-8. **Run at login** (M13) — `make install`. It fills in the templates in `launchd/`, loads
+9. **Run at login** (M13) — `make install`. It fills in the templates in `launchd/`, loads
    them, sets the Tailscale route and reads `/health` back. `make status`, `make restart`,
    `make uninstall` from then on.
 
@@ -184,7 +189,11 @@ These are launchd agents in your login session, so the claude CLI's own login an
 work as they do in a Terminal. The Mac must be logged in; stop it sleeping in System Settings
 → Energy rather than leaving a Terminal open.
 
-Then open the ts.net address on the tablet. Hold the button, speak, release. The microphone
+Then open the ts.net address on the tablet and add it to the home screen: it opens
+full-screen, portrait, as its own app. Hold the orb, speak, release. If a question is taking
+too long, hold again: after a second the tablet abandons it, tells the Mac to stop thinking
+about it, and listens for the next one. The page reloads itself, when idle, whenever the Mac
+starts serving a newer build. The microphone
 stays open while the page is showing, so the first word is not lost to start-up; it is
 released when the page is hidden and reopened when it returns.
 
@@ -311,7 +320,16 @@ trip earlier, never an extra one. And the tablet plays the MP3 as it streams, th
 Source Extensions, so the first sentence is heard while the last is still being generated;
 anything that goes wrong mid-stream replays the bytes already received, then falls back to
 Android. Every external client keeps one HTTPS connection open between calls — ElevenLabs
-twice, Shopify, whisper-server — so no sentence pays a TLS handshake.
+twice, Shopify, whisper-server — so no sentence pays a TLS handshake, and an email search
+fetches its messages in one batched Google request rather than one request each.
+
+Fixed lines — "I did not catch that", the usage-limit notice — are synthesised once and
+kept for the life of the process, so the moments the owner is already irritated cost nothing
+and start at once. A prefetch that fails is remembered, so `/speak` reports it immediately
+rather than sitting through the same timeout twice, and abandoning a question (below) stops
+any synthesis nobody will hear. `CROOKS_TTS_PREFETCH=false` turns the prefetch off; the
+settings sheet's "Start speaking before the whole answer has arrived" turns streaming off;
+either way the older whole-file path is what runs.
 
 Holding the orb stops Derek before the recorder starts, so the assistant can never be
 recorded answering itself, and a new answer cancels the previous one's request and playback.
@@ -348,6 +366,15 @@ speaks. If either analyser is unavailable the orb approximates; the audio itself
 delayed or rerouted for it. Open the page with `?dev=1` for a developer section in Settings
 that renders every component from invented data (marked "Fixture · not live") and lets you ask
 by typing; `?dev=0` hides it again. Production renders only what the backend returns.
+
+### Who may ask
+
+Nothing here has a password: the backend binds to loopback on the Mac and is reached only
+through the owner's own tailnet. That is the intended trust boundary and it is written down
+here so that it is a decision, not an oversight. To narrow it, set `CROOKS_ALLOWED_LOGINS` in
+`.env` to the Tailscale logins that may ask (`you@example.com`); `tailscale serve` stamps every
+proxied request with the caller's login and any other login is refused with a 403. Requests
+made on the Mac itself carry no login and are always allowed.
 
 ### Layout
 

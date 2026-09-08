@@ -82,6 +82,59 @@ class VoiceStream:
         return (time.perf_counter() - self._started) * 1000
 
 
+class Prefetched:
+    """An answer being synthesised ahead of the request for it.
+
+    Holds every chunk received so far and wakes anyone following it when the next arrives, so
+    /speak can start sending the opening of the sentence while ElevenLabs is still generating
+    the end of it — the point of prefetching is to move the start earlier, not to wait for the
+    whole file. Handed out once, unless pinned: a fixed line ("I did not catch that") is kept
+    for the life of the process and costs nothing the second time."""
+
+    def __init__(self, *, pinned: bool = False) -> None:
+        self.chunks: list[bytes] = []
+        self.done = False
+        self.error: VoiceUnavailable | None = None
+        self.pinned = pinned
+        self.at = time.time()
+        self._cond = asyncio.Condition()
+
+    async def push(self, chunk: bytes) -> None:
+        async with self._cond:
+            self.chunks.append(chunk)
+            self._cond.notify_all()
+
+    async def finish(self, error: VoiceUnavailable | None = None) -> None:
+        async with self._cond:
+            self.done = True
+            self.error = error
+            self._cond.notify_all()
+
+    async def wait_first(self) -> None:
+        """Until the first chunk exists or the stream has ended — so a caller can tell an
+        answer that is coming from one that failed before it started."""
+        async with self._cond:
+            while not self.chunks and not self.done:
+                await self._cond.wait()
+
+    async def follow(self) -> AsyncIterator[bytes]:
+        """Everything received so far, then the rest as it arrives."""
+        index = 0
+        while True:
+            async with self._cond:
+                while index >= len(self.chunks) and not self.done:
+                    await self._cond.wait()
+                if index >= len(self.chunks):
+                    return
+                chunk = self.chunks[index]
+                index += 1
+            yield chunk
+
+    @property
+    def size(self) -> int:
+        return sum(len(c) for c in self.chunks)
+
+
 class VoiceClient:
     def __init__(
         self,
@@ -112,8 +165,9 @@ class VoiceClient:
         self._http: httpx.AsyncClient | None = None
         # Answers synthesised ahead of the tablet asking for them — see prefetch(). Keyed by
         # the spoken text; a handful of entries, a couple of minutes, in memory only.
-        self._ready: dict[str, tuple[bytes, float]] = {}
+        self._ready: dict[str, Prefetched] = {}
         self._inflight: dict[str, asyncio.Task] = {}
+        self.prefetch_enabled = True
         self.prefetches = 0
         self.prefetch_hits = 0
         # Non-sensitive diagnostics for /health. Never the text that was spoken.
@@ -282,65 +336,101 @@ class VoiceClient:
     # anything older is an answer that was interrupted, and is dropped rather than kept.
     READY_TTL_S = 120.0
     READY_MAX = 4
+    PINNED_MAX = 24
 
-    def prefetch(self, text: str) -> bool:
+    def prefetch(self, text: str, *, pin: bool = False) -> bool:
         """Start synthesising an answer now, before the tablet asks for it.
 
         /turn knows the answer a round trip before /speak arrives; starting ElevenLabs on it
         then means the audio is generating while the JSON crosses the tailnet and the tablet
         renders. The tablet only says `speak` when it will actually ask, so this is the same
-        single request, earlier — never an extra one. Returns True when a request was started."""
-        if not self.enabled or self.cooling_down or not text:
+        single request, earlier — never an extra one. `pin` keeps a fixed line for good.
+        Returns True when the answer is, or is about to be, ready."""
+        if not self.enabled or not self.prefetch_enabled or self.cooling_down or not text:
             return False
-        if text in self._ready or text in self._inflight:
-            return True
         if self.max_chars and len(text) > self.max_chars:
             text = text[: self.max_chars]
+        existing = self._ready.get(text)
+        if existing is not None and (existing.pinned or not existing.done or existing.error is None):
+            return True
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return False
+        self._expire_ready()
+        entry = Prefetched(pinned=pin)
+        self._ready[text] = entry
         self.prefetches += 1
-        task = loop.create_task(self._fetch_into_ready(text))
-        self._inflight[text] = task
+        self._inflight[text] = loop.create_task(self._fetch_into(text, entry))
         return True
 
-    async def _fetch_into_ready(self, text: str) -> None:
+    async def _fetch_into(self, text: str, entry: Prefetched) -> None:
         try:
-            audio = await self.synthesise(text)
-        except VoiceUnavailable:
-            return   # /speak will try again and report the shape of the failure itself
+            stream = await self.open_stream(text)
+        except VoiceUnavailable as exc:
+            # Remembered, so /speak reports the shape of the failure at once rather than
+            # paying the same timeout a second time.
+            self._inflight.pop(text, None)
+            await entry.finish(exc)
+            return
         except Exception:  # noqa: BLE001 — a prefetch must never take the loop down
             log.exception("tts prefetch failed unexpectedly")
+            self._inflight.pop(text, None)
+            await entry.finish(VoiceUnavailable("prefetch failed", kind="prefetch"))
             return
+        try:
+            async for chunk in stream.chunks():
+                await entry.push(chunk)
+        except asyncio.CancelledError:
+            await stream.aclose()
+            await entry.finish(VoiceUnavailable("cancelled", kind="cancelled"))
+            raise
         finally:
             self._inflight.pop(text, None)
-        self._expire_ready()
-        self._ready[text] = (audio, time.time())
-        while len(self._ready) > self.READY_MAX:
-            del self._ready[next(iter(self._ready))]
+            if not entry.done:
+                await entry.finish()
+        if entry.pinned and not entry.chunks:
+            entry.pinned = False   # nothing worth keeping
 
     def _expire_ready(self) -> None:
         now = time.time()
-        for key, (_, at) in list(self._ready.items()):
-            if now - at > self.READY_TTL_S:
+        unpinned = [k for k, e in self._ready.items() if not e.pinned]
+        for key in unpinned:
+            entry = self._ready[key]
+            if entry.done and (now - entry.at > self.READY_TTL_S or entry.error is not None):
                 del self._ready[key]
+        unpinned = [k for k, e in self._ready.items() if not e.pinned and e.done]
+        while len(unpinned) > self.READY_MAX:
+            del self._ready[unpinned.pop(0)]
+        pinned = [k for k, e in self._ready.items() if e.pinned]
+        while len(pinned) > self.PINNED_MAX:
+            del self._ready[pinned.pop(0)]
 
-    async def take_ready(self, text: str) -> bytes | None:
-        """The prefetched MP3 for this text, waiting for an in-flight one; None when there is
-        none, in which case the caller streams as before. Each answer is handed out once."""
-        task = self._inflight.get(text)
-        if task is not None:
-            try:
-                await asyncio.shield(task)
-            except (asyncio.CancelledError, Exception):  # noqa: BLE001
-                pass
-        self._expire_ready()
-        entry = self._ready.pop(text, None)
+    async def take_ready(self, text: str) -> AsyncIterator[bytes] | None:
+        """The prefetched answer for this text, as chunks — the ones already here, then the
+        rest as they arrive. None when nothing was prefetched, in which case the caller
+        streams as before. Raises the VoiceUnavailable a prefetch ended with before producing
+        any audio, so the caller reports it without a second request."""
+        entry = self._ready.get(text)
         if entry is None:
             return None
+        if not entry.pinned:
+            del self._ready[text]   # handed out once
+        await entry.wait_first()
+        if entry.error is not None and not entry.chunks:
+            raise entry.error
         self.prefetch_hits += 1
-        return entry[0]
+        return entry.follow()
+
+    def cancel_prefetches(self) -> int:
+        """Stop synthesising anything not yet handed out: the owner has moved on."""
+        cancelled = 0
+        for text, task in list(self._inflight.items()):
+            entry = self._ready.get(text)
+            if entry is not None and not entry.pinned and not task.done():
+                task.cancel()
+                cancelled += 1
+        return cancelled
 
     async def synthesise(self, text: str) -> bytes:
         """The whole MP3, for scripts and tests. The tablet uses open_stream()."""

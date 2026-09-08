@@ -39,7 +39,7 @@ def function_body(source: str, signature: str) -> str:
 def test_no_credential_is_served_to_the_browser(path):
     """The key is read from the Keychain on the Mac and used in one header there. Anything
     that looks like a key, a key header, or a direct call to ElevenLabs is a leak."""
-    source = (WEB / path).read_text(encoding="utf-8")
+    source = (WEB / path).read_bytes().decode("utf-8", errors="ignore")   # icons are binary
     lowered = source.lower()
     for forbidden in ("xi-api-key", "elevenlabs.io", "api.elevenlabs", "elevenlabs_api_key", "shpat_", "myshopify.com"):
         assert forbidden not in lowered, f"{path} names {forbidden}"
@@ -104,9 +104,11 @@ def test_no_write_action_is_wired():
     """Read-only: no card can send, fulfil, refund or cancel anything."""
     for name in JS_FILES:
         source = (WEB / name).read_text(encoding="utf-8")
-        assert "/send" not in source and "/fulfil" not in source and "/refund" not in source and "/cancel" not in source, name
+        # /cancel abandons a question in flight; it is the only "cancel" here and changes nothing.
+        for verb in ("/send", "/fulfil", "/refund", "/cancel-order", "/cancel_order", "mutation"):
+            assert verb not in source, f"{name} mentions {verb}"
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
-        assert endpoint.split("?")[0].rstrip("/") in {"/speak", "/health", "/turn", "/audio-test", "/reset"} or endpoint.startswith("/state/"), endpoint
+        assert endpoint.split("?")[0].rstrip("/") in {"/speak", "/health", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/"), endpoint
 
 
 # --------------------------------------------------------------------------- the voice
@@ -249,7 +251,39 @@ def test_the_voice_streams_and_every_streaming_failure_plays_whole():
     assert "generation !== speakGeneration" in stream
     assert "reader.cancel()" in stream
     # The whole-file path and the Android voice remain behind it, untouched.
-    assert "function playAudio(blob, text, generation, isError)" in APP_JS
+    assert "function playAudio(blob, text, generation, isError, startAt = 0)" in APP_JS
+
+
+def test_both_playback_paths_guard_against_a_silent_context():
+    """A player bound to a suspended AudioContext plays nothing. Streaming and whole-file
+    playback both hand that case to the fallback, through one shared check."""
+    assert APP_JS.count("guardSilentContext(generation") >= 2
+    assert "function guardSilentContext(generation, onSilent)" in APP_JS
+    assert "playAudio(new Blob(received, { type: 'audio/mpeg' }), text, generation, isError, reached)" in APP_JS
+
+
+def test_a_turn_in_flight_can_be_abandoned_by_holding():
+    assert "const controller = new AbortController();" in function_body(APP_JS, "async function submit(body, isAudio)")
+    cancel = function_body(APP_JS, "function cancelTurnAndListen()")
+    assert "turnAbort.abort()" in cancel and "fetch('/cancel'" in cancel and "startRecording()" in cancel
+    hold = function_body(APP_JS, "function onHoldStart(event)")
+    assert "cancelHoldTimer = setTimeout(cancelTurnAndListen, CANCEL_HOLD_MS)" in hold
+    assert "clearTimeout(cancelHoldTimer)" in function_body(APP_JS, "function onHoldEnd(event)")
+
+
+def test_the_owner_is_told_about_the_mac_not_a_backend():
+    for word in ("backend", "Backend"):
+        for line in APP_JS.splitlines():
+            if word in line and ("textContent" in line or "lastErrorTitle" in line or "healthRow(" in line):
+                raise AssertionError(f"owner-facing copy says backend: {line.strip()}")
+    assert "'Degraded'" not in APP_JS
+    assert "function faultLabel(checks)" in APP_JS
+
+
+def test_a_new_build_reloads_the_page_only_when_idle():
+    body = function_body(APP_JS, "function maybeReloadForNewBuild(build)")
+    assert "if (busy || recording || speakingVia || el.settings.open) return;" in body
+    assert "location.reload()" in body
 
 
 def test_the_turn_says_whether_the_voice_will_be_asked_for():

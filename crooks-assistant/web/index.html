@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,interactive-widget=resizes-content">
 <meta name="theme-color" content="#07070a">
 <meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
 <title>CROOKS</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="icon" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body data-mode="orb">
@@ -91,6 +95,7 @@
     <h3>Voice</h3>
     <p class="voice-line"><span id="voice-status" class="badge quiet">Checking</span><span id="voice-name">ElevenLabs voice, generated on the Mac</span></p>
     <label class="check"><input type="checkbox" id="speak-toggle" checked> Speak answers aloud</label>
+    <label class="check"><input type="checkbox" id="stream-toggle" checked> Start speaking before the whole answer has arrived</label>
     <div class="row-btns">
       <button id="preview-voice" class="btn" type="button">Preview voice</button>
       <button id="mic-test" class="btn" type="button">Microphone test</button>
@@ -101,7 +106,7 @@
 
     <h3>Diagnostics</h3>
     <label class="check"><input type="checkbox" id="timing-toggle"> Show timings</label>
-    <pre id="health-detail" class="health">…</pre>
+    <div id="health-detail" class="health" role="list"></div>
 
     <h3>Conversation</h3>
     <div class="row-btns">

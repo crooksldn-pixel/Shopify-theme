@@ -92,6 +92,31 @@ async def _known_customer(email: str) -> bool | None:
         return None
 
 
+def _fetch_batched(service, stubs, get_request) -> list[dict] | None:
+    """Fetch every message in one batch HTTP request. None when the client cannot batch (a
+    test double, an old library), in which case the caller fetches one by one."""
+    new_batch = getattr(service, "new_batch_http_request", None)
+    if not stubs or new_batch is None or not callable(new_batch):
+        return None
+    results: dict[str, dict] = {}
+
+    def collect(request_id, response, exception):
+        if exception is not None:
+            log.warning("could not fetch message %s: %s", request_id, _describe(exception))
+        elif isinstance(response, dict):
+            results[request_id] = response
+
+    try:
+        batch = new_batch(callback=collect)
+        for stub in stubs:
+            batch.add(get_request(stub), request_id=stub["id"])
+        batch.execute()
+    except Exception as exc:  # noqa: BLE001 — fall back to the one-by-one path
+        log.warning("batched fetch failed (%s); fetching one by one", _describe(exc))
+        return None
+    return [results[stub["id"]] for stub in stubs if stub["id"] in results]
+
+
 def _decode_part(part: dict) -> str:
     data = (part.get("body") or {}).get("data")
     if not data:
@@ -177,24 +202,27 @@ async def gmail_search(
             .list(userId="me", q=full_query, maxResults=limit)
             .execute()
         )
+        stubs = listing.get("messages", []) or []
+        # metadata format still costs 20 quota units, so the result count is the lever.
+        headers = [
+            "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
+            "Precedence", "Auto-Submitted", "List-Post",
+        ]
+
+        def get_request(stub):
+            return service.users().messages().get(
+                userId="me", id=stub["id"], format="metadata", metadataHeaders=headers,
+            )
+
+        # One round trip for all of them, not one each: a batch request carries every get in
+        # a single HTTP call, which is most of a second saved on every email question.
+        batched = _fetch_batched(service, stubs, get_request)
+        if batched is not None:
+            return batched
         messages: list[dict] = []
-        for stub in listing.get("messages", []) or []:
+        for stub in stubs:
             try:
-                # metadata format still costs 20 quota units, so the result count is the lever.
-                messages.append(
-                    service.users()
-                    .messages()
-                    .get(
-                        userId="me",
-                        id=stub["id"],
-                        format="metadata",
-                        metadataHeaders=[
-                            "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
-                            "Precedence", "Auto-Submitted", "List-Post",
-                        ],
-                    )
-                    .execute()
-                )
+                messages.append(get_request(stub).execute())
             except Exception as exc:  # noqa: BLE001
                 log.warning("could not fetch message %s: %s", stub["id"], _describe(exc))
         return messages

@@ -25,7 +25,7 @@ help:
 	@echo "  make shopify         prove Shopify works and the token cache is used"
 	@echo "  make gmail           authorise Gmail once, in a browser"
 	@echo "  make gmail-verify    prove Gmail refreshes without a browser"
-	@echo "  make voice           hear Vikram on this Mac (one short ElevenLabs request)"
+	@echo "  make voice           hear Derek on this Mac (one short ElevenLabs request)"
 	@echo "  make check           doctor + shopify + gmail-verify in one go"
 	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
 	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"

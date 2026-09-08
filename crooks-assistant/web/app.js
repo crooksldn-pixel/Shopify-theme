@@ -42,7 +42,7 @@ const el = {
   settings: $('settings'), settingsBtn: $('settings-btn'), closeSettings: $('close-settings'),
   voiceStatus: $('voice-status'), voiceName: $('voice-name'),
   voiceSelect: $('voice-select'), voiceNote: $('voice-note'), preview: $('preview-voice'),
-  micTest: $('mic-test'), speakToggle: $('speak-toggle'), timingToggle: $('timing-toggle'),
+  micTest: $('mic-test'), speakToggle: $('speak-toggle'), streamToggle: $('stream-toggle'), timingToggle: $('timing-toggle'),
   health: $('health-detail'), resetSession: $('reset-session'),
   dev: $('dev'), devGrid: $('dev-grid'), devText: $('dev-text'),
 };
@@ -352,7 +352,7 @@ async function speakAnswer(text, { isError = false } = {}) {
       browserSpeak(text, { isError, reason: kind });
       return;
     }
-    if (canStream() && response.body) {
+    if (el.streamToggle.checked && canStream() && response.body) {
       // Play as the bytes arrive: the first sentence starts while the last is still being
       // generated. Every failure inside falls back to the whole-file path, then to Android.
       await playStream(response, text, generation, isError);
@@ -435,7 +435,10 @@ async function playStream(response, text, generation, isError) {
   player.src = url;
   player.volume = 1.0;
   const started = player.play();
-  if (started && started.catch) started.catch(() => fallback('autoplay blocked'));
+  if (started && started.catch) {
+    started.then(() => guardSilentContext(generation, () => fallback('audio context suspended')))
+      .catch(() => fallback('autoplay blocked'));
+  }
 
   const reader = response.body.getReader();
   try {
@@ -453,16 +456,33 @@ async function playStream(response, text, generation, isError) {
   if (generation !== speakGeneration) return;
   if (!total) { releaseAudioUrl(); browserSpeak(text, { isError, reason: 'empty audio' }); return; }
   if (failed) {
-    // Whatever stopped the stream, the answer is in hand: play it the plain way.
-    try { player.pause(); } catch { /* noop */ }
-    playAudio(new Blob(received, { type: 'audio/mpeg' }), text, generation, isError);
+    // Whatever stopped the stream, the answer is in hand: play it the plain way, from where
+    // the stream got to rather than from the start — the owner should not hear it twice.
+    let reached = 0;
+    try { reached = player.currentTime || 0; player.pause(); } catch { /* noop */ }
+    playAudio(new Blob(received, { type: 'audio/mpeg' }), text, generation, isError, reached);
   }
 }
 
-function playAudio(blob, text, generation, isError) {
+// A player bound to an AudioContext that is not running plays silence. That is the one
+// failure the analyser path can cause, so it is the one both playback paths check for.
+function guardSilentContext(generation, onSilent) {
+  if (!audio || !audio.hasPlayer || audio.state === 'running') return;
+  setTimeout(() => {
+    if (generation !== speakGeneration || audio.state === 'running') return;
+    onSilent();
+  }, 400);
+}
+
+function playAudio(blob, text, generation, isError, startAt = 0) {
   const url = URL.createObjectURL(blob);
   releaseAudioUrl();
   currentAudioUrl = url;
+  if (startAt > 0.5) {
+    player.addEventListener('loadedmetadata', () => {
+      if (generation === speakGeneration) { try { player.currentTime = startAt; } catch { /* not seekable */ } }
+    }, { once: true });
+  }
   const done = () => {
     if (generation !== speakGeneration) return;   // a newer answer owns the player now
     releaseAudioUrl();
@@ -484,15 +504,11 @@ function playAudio(blob, text, generation, isError) {
   const started = player.play();
   if (started && started.catch) {
     started.then(() => {
-      // A player bound to a context that is not running plays silence. That is the one
-      // failure this path can cause, so it is the one it checks for and hands to the fallback.
-      if (!audio || !audio.hasPlayer || audio.state === 'running') return;
-      setTimeout(() => {
-        if (generation !== speakGeneration || audio.state === 'running') return;
+      guardSilentContext(generation, () => {
         try { player.pause(); } catch { /* noop */ }
         releaseAudioUrl();
         browserSpeak(text, { isError, reason: 'audio context suspended' });
-      }, 400);
+      });
     }).catch(() => {
       // Chrome refused to play without a gesture. The hold is one, so this should not happen
       // after the first question — but the answer still gets spoken.
@@ -504,6 +520,30 @@ function playAudio(blob, text, generation, isError) {
 }
 
 /* ------------------------------------------------------------------ health */
+
+// The badge names the thing that is down, in the owner's words, worst first.
+function faultLabel(checks) {
+  const down = (k) => checks[k] && checks[k].ok === false;
+  if (down('claude')) return 'Claude offline';
+  if (down('speech')) return 'Cannot hear you';
+  if (down('shopify') && down('gmail')) return 'Shopify and Gmail offline';
+  if (down('shopify')) return 'Shopify offline';
+  if (down('gmail')) return 'Gmail offline';
+  if (down('tts') || down('scribe')) return 'Voice fallback in use';
+  if (down('whisper')) return 'No offline recogniser';
+  return 'Partly offline';
+}
+
+let knownBuild = null;
+function maybeReloadForNewBuild(build) {
+  if (!build) return;
+  if (knownBuild === null) { knownBuild = build; return; }
+  if (build === knownBuild) return;
+  // The Mac now serves newer page files. Take them the moment nothing is in progress.
+  if (busy || recording || speakingVia || el.settings.open) return;
+  knownBuild = build;
+  location.reload();
+}
 
 function setService(name, ok) {
   const node = el.svc[name];
@@ -519,15 +559,14 @@ async function pollHealth(fresh = false) {
     const checks = data.checks || {};
     const failed = Object.entries(checks).filter(([, c]) => !c.ok).map(([k]) => k);
     if (!failed.length) setConn('ok', 'Online');
-    else setConn('degraded', 'Degraded');
+    else setConn('degraded', faultLabel(checks));
+    maybeReloadForNewBuild(data.build);
     setService('shopify', checks.shopify ? checks.shopify.ok : null);
     setService('gmail', checks.gmail ? checks.gmail.ok : null);
     const canHear = !checks.speech || checks.speech.ok;
     const canSpeak = !checks.tts || checks.tts.ok;
     setService('voice', canHear && canSpeak);
-    el.health.textContent = Object.entries(checks)
-      .map(([k, c]) => `${c.ok ? 'ok  ' : 'FAIL'} ${k.padEnd(15)} ${c.detail}`)
-      .join('\n');
+    renderHealthRows(checks);
     const voice = data.voice || {};
     if (voice.voice) {
       el.voiceName.textContent = voice.enabled
@@ -540,11 +579,36 @@ async function pollHealth(fresh = false) {
   } catch {
     setConn('down', 'Offline');
     setService('shopify', null); setService('gmail', null); setService('voice', null);
-    el.health.textContent = 'Cannot reach the backend.';
+    clear(el.health);
+    el.health.appendChild(healthRow(false, 'the Mac', 'Cannot reach the assistant. Is the Mac awake and is it running (make up)?'));
     el.voiceStatus.textContent = 'Unknown';
     el.voiceStatus.className = 'badge quiet';
   }
 }
+const HEALTH_NAMES = {
+  claude: 'Claude', speech: 'Hearing', scribe: 'ElevenLabs hearing', whisper: 'Offline hearing',
+  tts: 'Voice', shopify: 'Shopify', gmail: 'Gmail', knowledge_base: 'Knowledge', terminology: 'Product names',
+};
+function healthRow(ok, name, detail) {
+  const row = document.createElement('div');
+  row.className = 'hrow';
+  row.dataset.ok = ok ? 'true' : 'false';
+  const dot = document.createElement('span'); dot.className = 'hdot';
+  const label = document.createElement('span'); label.className = 'hname'; label.textContent = name;
+  const text = document.createElement('span'); text.className = 'hdetail'; text.textContent = detail || '';
+  row.appendChild(dot); row.appendChild(label); row.appendChild(text);
+  return row;
+}
+function renderHealthRows(checks) {
+  clear(el.health);
+  const order = ['claude', 'speech', 'tts', 'shopify', 'gmail', 'scribe', 'whisper', 'knowledge_base', 'terminology'];
+  for (const key of order) {
+    const c = checks[key];
+    if (!c) continue;
+    el.health.appendChild(healthRow(c.ok, HEALTH_NAMES[key] || key, c.detail));
+  }
+}
+
 pollHealth();
 setInterval(() => pollHealth(false), 30000);
 
@@ -803,28 +867,39 @@ function startStatePolling() {
     if (!busy) return;
     try {
       const data = await (await fetch(`/state/${encodeURIComponent(sessionId)}`, { cache: 'no-store' })).json();
-      if (busy && data.known && data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state);
+      if (!busy || !data.known) return;
+      if (data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state);
+      // The transcript, the moment the Mac has it: a mis-heard question shows before the
+      // answer to it is paid for.
+      if (data.heard && !el.heard.textContent) el.heard.textContent = `“${data.heard}”`;
     } catch { /* the turn response will carry the outcome */ }
   }, 400);
 }
 function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
 
+let turnAbort = null;         // the in-flight /turn, so holding through a slow one can drop it
+const TURN_TIMEOUT_MS = 130000; // a little over the backend's own 120 s turn timeout
+
 async function submit(body, isAudio) {
   busy = true;
   el.talk.dataset.busy = 'true';
   el.errline.textContent = '';
+  el.heard.textContent = '';
   setState('TRANSCRIBING', isAudio ? 'Transcribing' : 'Thinking');
   startStatePolling();
+  const controller = new AbortController();
+  turnAbort = controller;
+  const timeout = setTimeout(() => controller.abort(), TURN_TIMEOUT_MS);
   try {
     const options = isAudio
-      ? { method: 'POST', body }
-      : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
+      ? { method: 'POST', body, signal: controller.signal }
+      : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal };
     if (isAudio) setTimeout(() => { if (busy && el.stage.dataset.state === 'TRANSCRIBING') setState('THINKING'); }, 1200);
     const response = await fetch('/turn', options);
     if (!response.ok) {
       lastWasError = true;
-      lastErrorTitle = 'Backend error';
-      el.errline.textContent = `The backend answered with an error (${response.status}). Try again.`;
+      lastErrorTitle = 'The Mac hit a problem';
+      el.errline.textContent = `The assistant on the Mac answered with an error (${response.status}). Try again.`;
       setState('ERROR', lastErrorTitle);
       haptic(HAPTIC.error);
       return;
@@ -847,13 +922,24 @@ async function submit(body, isAudio) {
     haptic(lastWasError ? HAPTIC.error : HAPTIC.done);
     speakAnswer(data.answer, { isError: lastWasError });   // deliberately not awaited
   } catch (error) {
+    if (controller.signal.aborted && controller.cancelled) {
+      // The owner moved on: nothing to report, the next question is already being asked.
+      el.heard.textContent = '';
+      el.answer.textContent = '';
+      setState('READY');
+      return;
+    }
     lastWasError = true;
-    lastErrorTitle = 'Connection lost';
-    el.errline.textContent = 'I lost contact with the backend. It may have restarted.';
+    lastErrorTitle = controller.signal.aborted ? 'The Mac took too long' : 'The Mac did not answer';
+    el.errline.textContent = controller.signal.aborted
+      ? 'That question was abandoned after two minutes. Ask again.'
+      : 'Is the Mac awake, and is the assistant running on it? (make up)';
     setState('ERROR', lastErrorTitle);
     setConn('down', 'Offline');
     haptic(HAPTIC.error);
   } finally {
+    clearTimeout(timeout);
+    if (turnAbort === controller) turnAbort = null;
     stopStatePolling();
     busy = false;
     el.talk.dataset.busy = 'false';
@@ -884,21 +970,46 @@ function onHoldStart(event) {
   unlockSpeech();          // must be inside the gesture
   stopSpeaking();          // before anything else: the voice must not be recorded answering itself
   acquireWakeLock();
-  if (busy) { showBusyHint(); return; }   // a turn is in flight; say so rather than nothing
+  if (busy) {
+    // A turn is in flight. Say so; and if the hold goes on, take it as "forget that one".
+    showBusyHint();
+    clearTimeout(cancelHoldTimer);
+    cancelHoldTimer = setTimeout(cancelTurnAndListen, CANCEL_HOLD_MS);
+    return;
+  }
   setState('LISTENING');   // the orb wakes on the touch itself, not on the recorder
   startRecording();        // start before any other UI work, or the first word is clipped
 }
 let busyHintTimer = null;
+let cancelHoldTimer = null;
+const CANCEL_HOLD_MS = 900;   // hold this long through a turn in flight to abandon it
+
 function showBusyHint() {
-  el.talkLabel.textContent = 'One moment';
+  el.talkLabel.textContent = 'Keep holding to ask something else';
   if (orb) orb.pulse();
   clearTimeout(busyHintTimer);
-  busyHintTimer = setTimeout(() => { if (!recording) el.talkLabel.textContent = 'Hold to speak'; }, 900);
+  busyHintTimer = setTimeout(() => { if (!recording) el.talkLabel.textContent = 'Hold to speak'; }, 1600);
+}
+
+// The owner is still holding: the question in flight is not the one he wants answered.
+// Drop it on the tablet, tell the Mac to stop thinking about it, and start listening.
+function cancelTurnAndListen() {
+  cancelHoldTimer = null;
+  if (!busy || !turnAbort) return;
+  turnAbort.cancelled = true;
+  turnAbort.abort();
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  fetch('/cancel', { method: 'POST', body: form }).catch(() => { /* the abort already freed the tablet */ });
+  haptic(HAPTIC.start);
+  // submit()'s finally clears busy once the abort lands; start listening right after it.
+  setTimeout(() => { if (!busy && !recording) { setState('LISTENING'); startRecording(); } }, 60);
 }
 
 function onHoldEnd(event) {
   event.preventDefault();
   try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
+  if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }   // a tap, not a hold
   stopRecording();
 }
 for (const target of [el.talk, el.orbFrame]) {
@@ -940,6 +1051,8 @@ el.preview.addEventListener('click', () => {
   el.speakToggle.checked = previous;
 });
 el.timingToggle.addEventListener('change', () => { if (!el.timingToggle.checked) el.timings.hidden = true; });
+el.streamToggle.checked = store.get('crooks.stream', '1') !== '0';
+el.streamToggle.addEventListener('change', () => store.set('crooks.stream', el.streamToggle.checked ? '1' : '0'));
 el.resetSession.addEventListener('click', async () => {
   const form = new FormData();
   form.append('session_id', sessionId);

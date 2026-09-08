@@ -402,9 +402,16 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .btn:active{background:var(--glass-3);transform:scale(.985)}
 .btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg-0);font-weight:600}
 .health{
-  font-family:var(--mono);font-size:11px;line-height:1.7;background:var(--bg-1);border:1px solid var(--line);
-  border-radius:var(--r-2);padding:12px;margin:0;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto;color:var(--ink-2);
+  background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-2);padding:4px 12px;margin:0;
+  max-height:260px;overflow-y:auto;
 }
+.hrow{display:grid;grid-template-columns:8px 118px 1fr;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.hrow:first-child{border-top:0}
+.hdot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;position:relative;top:-1px}
+.hrow[data-ok="false"] .hdot{background:var(--bad)}
+.hname{color:var(--ink);font-weight:600}
+.hrow[data-ok="false"] .hname{color:var(--bad)}
+.hdetail{color:var(--ink-3);word-break:break-word;font-size:12px;line-height:1.45}
 .dev{border:1px dashed rgba(220,178,102,.4);border-radius:var(--r-2);padding:12px 14px;margin-top:20px}
 .dev h3{margin-top:0;color:var(--warn)}
 .dev-grid{display:flex;flex-wrap:wrap;gap:8px}

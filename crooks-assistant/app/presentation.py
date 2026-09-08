@@ -64,7 +64,7 @@ _TURN_ERRORS: dict[str, tuple[str, str, str]] = {
     "timeout": ("assistant", "That took too long", "Ask again."),
     "not_started": ("assistant", "Assistant still starting", "Wait a moment and ask again."),
     "usage_limit": ("assistant", "Claude usage limit reached", "Try again later."),
-    "auth": ("assistant", "Claude needs signing in on the Mac", "Run claude login on the Mac."),
+    "auth": ("assistant", "Claude needs signing in on the Mac", "On the Mac: run claude, then /login."),
     "max_turns": ("assistant", "Stopped part-way", "Ask a narrower question."),
     "api_error": ("assistant", "Assistant unavailable", "Try again in a moment."),
 }

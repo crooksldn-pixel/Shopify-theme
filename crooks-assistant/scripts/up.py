@@ -31,6 +31,11 @@ import whisper_server  # noqa: E402
 from config.settings import Settings, get_settings  # noqa: E402
 
 BACKOFF_S = (2, 4, 8, 16, 30)
+# A child that dies this soon after starting, this many times in a row, is not going to start:
+# a missing token, a port in use, a billing guard. Say so once and stop, rather than filling
+# the window with the same traceback until the owner closes it.
+QUICK_EXIT_S = 10.0
+MAX_QUICK_EXITS = 4
 
 
 def backend_command(settings: Settings, *, reload: bool = False) -> list[str]:
@@ -80,9 +85,15 @@ class Child:
         self.cmd = cmd
         self.process: subprocess.Popen | None = None
         self.restarts = 0
+        self.quick_exits = 0
+        self.started_at = 0.0
         self.stopping = False
+        self.given_up = False
 
     def start(self) -> None:
+        import time
+
+        self.started_at = time.time()
         self.process = subprocess.Popen(  # noqa: S603 — our own commands
             self.cmd, cwd=lc.ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
             bufsize=1, env={**os.environ, "PYTHONUNBUFFERED": "1"},
@@ -129,14 +140,20 @@ def main(argv: list[str] | None = None) -> int:
     print("CROOKS Assistant — starting\n" + "─" * 74)
     for note in notes:
         print(f"  note   {note}")
-    if not children_spec:
-        print("  nothing to start here. `make status` says how the running copy is doing.")
-        return 0
 
     children = [Child(name, cmd) for name, cmd in children_spec]
     for child in children:
         print(f"  start  {child.name}: {' '.join(child.cmd)}")
         child.start()
+    if not children:
+        # Everything is already running (the login-time agents, usually). The owner still
+        # needs the address and a health line; then there is nothing for this window to do.
+        if not args.no_tailscale:
+            host, note = lc.ensure_serve(settings.port)
+            print(f"  https  https://{host}/  ({note})" if host else f"  https  not available: {note}")
+        print(f"  health {lc.summarise_health(lc.fetch_health(f'http://{settings.host}:{settings.port}/health'))}")
+        print("  nothing to start here; the running copy is answering. `make status` for more.")
+        return 0
 
     stop = threading.Event()
 
@@ -159,18 +176,35 @@ def main(argv: list[str] | None = None) -> int:
     print("  Ctrl-C stops everything. Logs: logs/assistant.log (redacted) and this window.")
     print("─" * 74)
 
+    import time
+
     exit_code = 0
     while not stop.is_set():
         for child in children:
-            if child.alive or child.stopping:
+            if child.alive or child.stopping or child.given_up:
                 continue
             code = child.process.returncode if child.process else None
+            if time.time() - child.started_at < QUICK_EXIT_S:
+                child.quick_exits += 1
+            else:
+                child.quick_exits = 0
+            if child.quick_exits >= MAX_QUICK_EXITS:
+                child.given_up = True
+                print(
+                    f"[{child.name:<7}] keeps exiting straight away (code {code}); giving up on it. "
+                    "The reason is in its output above. Fix it, then Ctrl-C and `make up` again."
+                )
+                exit_code = 1
+                continue
             delay = BACKOFF_S[min(child.restarts, len(BACKOFF_S) - 1)]
             child.restarts += 1
             print(f"[{child.name:<7}] exited with {code}; restarting in {delay}s (restart {child.restarts})")
             if stop.wait(delay):
                 break
             child.start()
+        if children and all(c.given_up for c in children):
+            print("  every service has given up; stopping.")
+            break
         stop.wait(1.0)
 
     print("\n  stopping…")
