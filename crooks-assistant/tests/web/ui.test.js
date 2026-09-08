@@ -353,3 +353,26 @@ test('an email thread shows a face per message and lights the latest', () => {
   assert.deepEqual(msgs.map((m) => textOf(m.querySelector('.avatar'))), ['AL', 'SF']);
   assert.ok(msgs[0].classList.contains('is-collapsed') && msgs[1].classList.contains('is-latest'));
 });
+
+test('the surface stops inviting a tap just before the Mac would say Expired', () => {
+  const scheduled = [];
+  const h = tapHarness({ ttl_s: 60 }, { timers: { set: (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; }, clear: () => {} } });
+  const expiry = scheduled.find((t) => t.ms > 1000);
+  assert.ok(expiry && expiry.ms === 59000, 'a second early, never late');
+  h.at(700); h.arm();
+  expiry.fn();
+  assert.equal(h.surface.dataset.state, 'expired');
+  h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  assert.deepEqual(h.commits, []);
+  assert.ok(textOf(h.surface).includes('Expired'));
+});
+
+test('the arming fill lasts exactly as long as the arming', () => {
+  const h = tapHarness({ interaction: { kind: 'tap_commit', label: 'Tap to apply', armed_after_ms: 900 } });
+  assert.equal(h.surface.style.getPropertyValue('--arm-ms'), '900ms');
+});
+
+test('partial payment and partial shipping light the middle of the strip', () => {
+  const node = UI.renderItem({ type: 'order', data: { order_number: '#2', payment: 'partially paid', fulfillment: 'partially fulfilled', placed_at: '2026-09-08T09:42:00Z' } });
+  assert.equal(node.querySelectorAll('.is-partial').length, 2);
+});

@@ -26,6 +26,8 @@
  * hand over a live track, and the owner had already started speaking.
  */
 
+'use strict';
+
 // The Galaxy Tab A 8.0 (2019) has four slow cores and two gigabytes; blur behind the settings
 // sheet and a sixty-frame orb are what make it stutter and warm. A device that reports few
 // cores or little memory is marked lite: same design, fewer effects, half the orb's frames.
@@ -37,8 +39,6 @@
     if (cores <= 4 || memory <= 3 || tabA) document.documentElement.dataset.lite = '1';
   } catch { /* leave the defaults */ }
 })();
-
-'use strict';
 
 const $ = (id) => document.getElementById(id);
 
@@ -168,7 +168,7 @@ function setMode(mode) {
   el.talk.setAttribute('aria-label', mode === 'orb' ? 'Hold to speak' : 'Hold to speak (dock)');
 }
 
-const HAPTIC = { start: 12, done: [10, 60, 10], error: [40, 50, 40] };
+const HAPTIC = { start: 12, release: 8, done: [10, 60, 10], error: [40, 50, 40] };
 function haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* unsupported */ }
 }
@@ -599,6 +599,10 @@ async function pollHealth(fresh = false) {
   const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   try {
     const response = await fetch(fresh ? '/health?fresh=1' : '/health', { cache: 'no-store', signal: controller.signal });
+    // The Mac answers 403 to a login it does not list, on every path. That is not "online":
+    // the system layer says NOT ALLOWED and the badge must not contradict it every 45 s.
+    if (response.status === 403) { wentRefused(); return; }
+    if (!response.ok) throw new Error(`health ${response.status}`);
     const data = await response.json();
     if (reachable !== true) wentOnline();
     applyUpdateWhenIdle();
@@ -746,11 +750,11 @@ async function startRecording() {
       : 'The microphone needs a secure HTTPS connection. Open the tailscale ts.net address, not the LAN address.');
     return;
   }
-  stopSpeaking();
   try {
     // Warm path: no await, so the recorder starts inside the same task as the touch.
     const stream = micIsLive() ? micStream : await ensureMicStream();
     if (!pendingStart) return;   // the thumb lifted while permission was being granted
+    discardRecording = false;
     const mimeType = pickMimeType();
     mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 32000 } : {});
     chunks = [];
@@ -758,6 +762,7 @@ async function startRecording() {
     mediaRecorder.onstop = () => {
       // The stream stays open: the next press starts recording on the first sample.
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+      if (discardRecording) { discardRecording = false; setState('READY'); return; }
       if (blob.size > 800) sendAudio(blob);
       else { setState('READY'); el.sub.textContent = 'That was too short — hold while you speak.'; }
     };
@@ -778,14 +783,22 @@ async function startRecording() {
   }
 }
 
-function stopRecording() {
+function stopRecording(discard = false) {
   pendingStart = false;      // a release before the recorder started cancels the start
   if (!recording) return;
   recording = false;
+  discardRecording = discard;
   el.talk.dataset.recording = 'false';
   el.talkLabel.textContent = 'Hold to speak';
+  // The thumb lifted: say so now, on this frame. The encoder takes its time to flush and
+  // the orb must not keep listening to the room while it does.
+  if (discard) setState('READY');
+  else { setState('TRANSCRIBING'); haptic(HAPTIC.release); }
   try { mediaRecorder.stop(); } catch { /* already stopped */ }
 }
+// A cancelled pointer — a palm, an edge swipe, the notification shade — ends the recording
+// without sending it. Half a sentence is not a question.
+let discardRecording = false;
 
 /* ------------------------------------------------------------ context deck */
 
@@ -948,7 +961,7 @@ async function recoverActionState(proposalId) {
     try {
       const response = await fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
       const data = await response.json();
-      if (data && data.status && data.status !== 'executing') return data;
+      if (data && data.status && data.status !== 'executing' && data.status !== 'executed') return data;
     } catch { /* still unreachable; try again */ }
   }
   return null;
@@ -978,11 +991,17 @@ function settleAction(node, payload, status) {
     el.errline.textContent = ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.');
   }
   haptic(payload.status === 'verified' ? HAPTIC.done : HAPTIC.error);
+  if (payload.status === 'verified' && !busy && !recording) {
+    // The one moment the green orb is for: the Mac proved the change.
+    setState('SUCCESS');
+    setTimeout(() => { if (!busy && !recording && el.stage.dataset.state === 'SUCCESS') setState('READY'); }, 1400);
+  }
   if (payload.spoken) speakAnswer(String(payload.spoken), { isError: payload.status !== 'verified' });
 }
 
 const ACTION_LABELS = {
   verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
+  executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…',
   unverified: 'Not confirmed', service_unavailable: 'Not applied', not_authorised: 'Not allowed', writes_disabled: 'Switched off',
   allow_list_missing: 'Not configured', scope_missing: 'Not permitted', unknown: 'Unknown', wrong_session: 'Not this conversation',
 };
@@ -999,13 +1018,14 @@ function settleActionNode(node, state, label) {
   if (node && typeof node.settle === 'function') node.settle(state, label);
 }
 
-// Pending surfaces on screen, in every context the deck still holds.
-function settlePendingActions(state, label) {
+// The cards the Mac named, wherever the deck still holds them.
+function settleProposals(ids, state, label) {
+  const wanted = new Set(ids.map(String));
   const seen = new Set();
   const visit = (node) => {
     if (!node || seen.has(node)) return;
     seen.add(node);
-    if (typeof node.settle === 'function') {
+    if (typeof node.settle === 'function' && node.dataset && wanted.has(node.dataset.proposal)) {
       const surface = node.querySelector ? node.querySelector('.action-surface') : null;
       const current = surface ? surface.dataset.state : '';
       if (current === 'arming' || current === 'armed') node.settle(state, label);
@@ -1098,12 +1118,12 @@ const TURN_TIMEOUT_MS = 130000; // a little over the backend's own 120 s turn ti
 async function submit(body, isAudio) {
   busy = true;
   el.talk.dataset.busy = 'true';
-  // A new instruction withdraws whatever was proposed under the last one. The Mac decides
-  // the same thing on its side; the card goes quiet here so it cannot be tapped meanwhile.
-  settlePendingActions('revoked', 'Withdrawn');
+  // A card cannot be tapped while a question is in flight (actionBlocked). Whether this
+  // question withdraws it is the Mac's decision, answered with the turn: a fumbled hold or
+  // a recording that said nothing withdraws nothing.
   el.errline.textContent = '';
   el.heard.textContent = '';
-  setState('TRANSCRIBING', isAudio ? 'Transcribing' : 'Thinking');
+  setState(isAudio ? 'TRANSCRIBING' : 'THINKING');
   startStatePolling();
   const controller = new AbortController();
   turnAbort = controller;
@@ -1119,7 +1139,6 @@ async function submit(body, isAudio) {
     const options = isAudio
       ? { method: 'POST', body, signal: controller.signal }
       : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal };
-    if (isAudio) setTimeout(() => { if (busy && el.stage.dataset.state === 'TRANSCRIBING') setState('THINKING'); }, 1200);
     const response = await fetch('/turn', options);
     if (!response.ok) {
       lastWasError = true;
@@ -1140,15 +1159,17 @@ async function submit(body, isAudio) {
     store.set('crooks.turns', String(turns));
     el.heard.textContent = data.question ? `“${data.question}”` : '';
     el.answer.textContent = data.answer;
-    renderTimings(data.timings_ms, data.transcript);
-
     lastWasError = Boolean(data.error_kind);
-    renderTurn(data);
     if (data.build) pendingBuild = String(data.build);
-    // The text is on screen before the voice is asked for; the answer never waits on audio.
     setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
     haptic(lastWasError ? HAPTIC.error : HAPTIC.done);
+    // The text is on screen, then the cards, then the voice — and the voice never waits on
+    // audio. The /speak request is sent from here, ahead of building the cards.
+    renderTurn(data);
     speakAnswer(data.answer, { isError: lastWasError });   // deliberately not awaited
+    renderTimings(data.timings_ms, data.transcript);
+    // Exactly the cards this instruction withdrew, as the Mac decided; no others.
+    if (Array.isArray(data.revoked) && data.revoked.length) settleProposals(data.revoked, 'revoked', 'Withdrawn');
   } catch (error) {
     if (controller.signal.aborted && controller.cancelled) {
       // The owner moved on: nothing to report, the next question is already being asked.
@@ -1244,7 +1265,7 @@ function onHoldEnd(event) {
   holding = false;
   try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
   if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }   // a tap, not a hold
-  stopRecording();
+  stopRecording(event.type === 'pointercancel');
 }
 for (const target of [el.talk, el.orbFrame]) {
   target.addEventListener('pointerdown', onHoldStart);

@@ -130,7 +130,10 @@ def test_voice_wins_over_a_tap():
     body = function_body(APP_JS, "function actionBlocked()")
     assert "recording || pendingStart || busy" in body
     submit = function_body(APP_JS, "async function submit(body, isAudio)")
-    assert "settlePendingActions('revoked', 'Withdrawn');" in submit
+    # The Mac decides what an instruction withdraws and names the cards in its answer; the
+    # tablet settles exactly those. A fumbled hold withdraws nothing on either side.
+    assert "settleProposals(data.revoked, 'revoked', 'Withdrawn')" in submit
+    assert "settlePendingActions('revoked'" not in submit
     assert "renderOpts()" in function_body(APP_JS, "function renderTurn(data)")
 
 

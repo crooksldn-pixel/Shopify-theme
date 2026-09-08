@@ -112,10 +112,10 @@
     const cancelled = Boolean(d.cancelled_at);
     const steps = [
       { label: 'Placed', done: true, when: formatDate(d.placed_at, DAY_FMT) },
-      { label: 'Paid', done: pay === 'paid' || pay === 'partially_refunded' || pay === 'refunded', partial: pay === 'partially_paid' || pay === 'authorized' },
+      { label: 'Paid', done: pay === 'paid' || pay === 'partially refunded' || pay === 'partially_refunded' || pay === 'refunded', partial: pay === 'partially paid' || pay === 'partially_paid' || pay === 'authorized' },
       cancelled
         ? { label: 'Cancelled', done: true, bad: true, when: formatDate(d.cancelled_at, DAY_FMT) }
-        : { label: ful === 'fulfilled' ? 'Shipped' : 'To ship', done: ful === 'fulfilled', partial: ful === 'partial' || ful === 'partially_fulfilled', when: shipped ? formatDate(shipped, DAY_FMT) : '' },
+        : { label: ful === 'fulfilled' ? 'Shipped' : 'To ship', done: ful === 'fulfilled', partial: ful === 'partial' || ful === 'partially fulfilled' || ful === 'partially_fulfilled', when: shipped ? formatDate(shipped, DAY_FMT) : '' },
     ];
     return h('ol', { class: 'tl', 'aria-label': 'Order progress' }, steps.map((st) => h('li', {
       class: `tl-step${st.done ? ' is-done' : ''}${st.partial ? ' is-partial' : ''}${st.bad ? ' is-bad' : ''}`,
@@ -517,15 +517,15 @@
     ], Object.assign({ className: `tier-${risk}` }, opts));
     node.dataset.proposal = text(d.proposal_id);
     node.dataset.ref = text(d.entity_ref);
-    if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts);
+    if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts, num(d.ttl_s));
     return node;
   }
 
   function settledLabel(status) {
-    return { verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', failed: 'Not applied', unverified: 'Not confirmed', executing: 'Applying…' }[status] || 'Not available';
+    return { verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', failed: 'Not applied', unverified: 'Not confirmed', executing: 'Applying…', executed: 'Applying…' }[status] || 'Not available';
   }
 
-  function wireTapCommit(node, surface, proposalId, armedAfter, opts) {
+  function wireTapCommit(node, surface, proposalId, armedAfter, opts, ttlS) {
     const now = opts.now || (() => Date.now());
     const shown = now();
     let downAt = null;
@@ -534,15 +534,23 @@
     const blocked = () => (typeof opts.blocked === 'function' ? Boolean(opts.blocked()) : false);
     // Bound wrappers: a host timer called through a plain object is an illegal invocation in Chromium.
     const timers = opts.timers || { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) };
+    // The visible fill lasts exactly as long as the arming does: one number, ours, not a string from the data.
+    if (surface.style && surface.style.setProperty) surface.style.setProperty('--arm-ms', `${Math.round(armedAfter)}ms`);
     const armTimer = timers.set(() => {
       if (!committed && surface.dataset.state === 'arming') {
         surface.dataset.state = 'armed';
         surface.setAttribute('aria-disabled', 'false');
       }
     }, armedAfter);
+    // The Mac's clock decides expiry; this only stops the surface from inviting a tap that
+    // would be answered "Expired". A little early rather than a little late.
+    const expiryTimer = ttlS !== null && ttlS !== undefined ? timers.set(() => {
+      if (!committed && (surface.dataset.state === 'arming' || surface.dataset.state === 'armed')) node.settle('expired', 'Expired');
+    }, Math.max(0, ttlS * 1000 - 1000)) : null;
     node.settle = (state, label) => {
       // Called by the app when the Mac has answered, or the proposal has gone stale.
       timers.clear(armTimer);
+      if (expiryTimer !== null) timers.clear(expiryTimer);
       committed = state !== 'armed';
       surface.dataset.state = state;
       surface.setAttribute('aria-disabled', state === 'armed' ? 'false' : 'true');

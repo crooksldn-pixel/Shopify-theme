@@ -75,6 +75,7 @@
     const ctx = canvas.getContext('2d', { alpha: true });
     const getLevel = typeof options.getLevel === 'function' ? options.getLevel : () => 0;
     const maxDpr = options.maxDpr || 1.5;
+    const isLite = lite();   // decided once, at load; not read back from the DOM every frame
     let size = options.size || canvas.clientWidth || 340;
     let reduced = Boolean(options.reducedMotion);
 
@@ -139,11 +140,14 @@
       // Budget: fast while alive, slow while idle, still after a long idle.
       const idleFor = ts - stateChangedAt;
       let fps = target.fps;
-      if (state === 'READY') {
+      // A state left on screen is idle whatever it is called: an error nobody clears, a
+      // success once its mark is drawn. Only the first moments of either earn full frames.
+      const resting = state === 'READY' || state === 'ERROR' || (state === 'SUCCESS' && idleFor > 1500);
+      if (resting) {
         if (idleFor > 600000) { drawStill(); stop(); return; }
         fps = idleFor > 90000 ? 8 : 20;
       }
-      if (lite()) fps = Math.min(fps, 30);
+      if (isLite) fps = Math.min(fps, 30);
       if (ts - lastDrawAt < 1000 / fps - 2) return;
       lastDrawAt = ts;
 

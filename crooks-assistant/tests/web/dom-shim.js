@@ -40,6 +40,9 @@ class Element extends Node {
     this.className = '';
     this.hidden = false;
     this.classList = new ClassList(this);
+    // Inline custom properties only: what the renderer sets (a number of its own making).
+    const props = {};
+    this.style = { setProperty: (k, v) => { props[k] = String(v); }, getPropertyValue: (k) => props[k] || '' };
   }
   appendChild(node) {
     if (!(node instanceof Node)) throw new TypeError('appendChild expects a Node');
