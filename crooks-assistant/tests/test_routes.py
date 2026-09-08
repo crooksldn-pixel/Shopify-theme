@@ -306,12 +306,15 @@ async def test_health_names_the_voice(client):
     assert body["voice"]["voice"] == app.state.runtime.settings.tts_voice_name
     assert body["voice"]["model"] == "eleven_flash_v2_5"
     assert body["voice"]["provider"] == "elevenlabs"
-    assert "Derek" in body["checks"]["tts"]["detail"]
+    assert "Vikram" in body["checks"]["tts"]["detail"]
 
 
 async def test_the_configured_voice_is_the_one_that_was_approved(client):
+    """Vikram — "AI Productivity Assistant" — is the owner's chosen voice. Health showed Derek
+    because Derek was the default; the default is now the approved voice, and .env still wins."""
     settings = app.state.runtime.settings
-    assert settings.tts_voice_id == "Q0Et7LOU7VpeoeCRQAVS"
+    assert settings.tts_voice_id == "9375G6zswFk7v9bKTVQF"
+    assert settings.tts_voice_name == "Vikram"
     assert settings.tts_model == "eleven_flash_v2_5"
     assert settings.tts_output_format == "mp3_44100_128"
 

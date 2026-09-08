@@ -8,7 +8,7 @@ Everything runs on your own Mac except the two services it talks to: Claude, on 
 subscription you already pay for, and ElevenLabs, which hears and speaks on credit. No
 database, no server anywhere else. Claude is reached through the Agent SDK on the Claude Max subscription;
 speech-to-text is ElevenLabs Scribe v2, with whisper.cpp on this Mac as the automatic fallback
-whenever ElevenLabs cannot answer; the answer is spoken back by Derek, an ElevenLabs voice
+whenever ElevenLabs cannot answer; the answer is spoken back by Vikram, an ElevenLabs voice
 generated on this Mac, with the tablet's own Android voice as that fallback.
 
 Built to the fifteen-milestone plan in *CROOKS Assistant Build Plan* (Rev 3, 7 Sept 2026).
@@ -97,7 +97,7 @@ Then, in order:
    policy and sizing files are written from the store's own published content; the one thing
    only you can write is the discretion section of `kb/cs-rules.md`.
 
-8. **Fallback voice** — Derek needs no choosing. In the tablet's settings sheet, pick the
+8. **Fallback voice** — Vikram needs no choosing. In the tablet's settings sheet, pick the
    Android voice that stands in when ElevenLabs cannot answer. If none show "offline",
    install the en-GB voice data: Settings → General management → Text-to-speech → Install
    voice data.
@@ -153,7 +153,7 @@ What Linux could not verify, in the order to try it. Ten minutes.
 2. `make up`, then Ctrl-C, then `make up` again — the second run prints the address while
    the first is still down; with `make install` in place it says the running copy is
    answering and prints the address anyway.
-3. `make voice` — Derek speaks on the Mac. One ElevenLabs request.
+3. `make voice` — Vikram speaks on the Mac. One ElevenLabs request.
 4. On the tablet, Settings → "Show timings" on → Preview voice. The voice should start within
    about a second. `logs/assistant.log` shows `tts ok`; `/health`'s `voice` block counts
    "answers ready before asked" once you have asked a real question.
@@ -162,7 +162,7 @@ What Linux could not verify, in the order to try it. Ten minutes.
 6. Ask something slow (a sales summary over a month), and hold the orb through "keep holding
    to ask something else" — the question is dropped, the orb listens, the Mac's log shows
    the interrupt.
-7. Hold the orb while Derek is mid-sentence — he stops at once and the orb listens.
+7. Hold the orb while Vikram is mid-sentence — he stops at once and the orb listens.
 8. Turn the screen off for a minute, turn it on, ask again — the first word is not clipped
    and the answer is heard, not silent. If it is silent once, the next answer is in the
    Android voice and the log says `audio context suspended`: that is the guard working;
@@ -208,7 +208,7 @@ as the pattern every later change will follow rather than as a feature of its ow
     Claude calls the tool → the gate stages it → the Mac reads the order and decides the exact
     note → a card appears on the tablet → you tap it → the Mac checks the order has not changed,
     sends the one reviewed mutation, reads the order again to prove it → the card says NOTE
-    ADDED, Derek says "Order note added", and an Undo waits for a minute.
+    ADDED, Vikram says "Order note added", and an Undo waits for a minute.
 
 What holds it together, and what the tests hold:
 
@@ -246,7 +246,7 @@ tablet (Chrome)  ──HTTPS via tailscale serve──▶  FastAPI on 127.0.0.1:
         ElevenLabs Scribe v2             Claude Agent SDK        knowledge base
        ↳ whisper.cpp fallback            (Max subscription)         (system prompt)
           (local, port 8910)
-        ElevenLabs TTS (Derek)
+        ElevenLabs TTS (Vikram)
        ↳ Android voice fallback
                                                   │
                                         in-process MCP server
@@ -308,7 +308,7 @@ The answer text is on the tablet's screen the moment the agent finishes. Only th
 tablet post it to `/speak`, which is a separate request for exactly that reason: making `/turn`
 wait for an MP3 would delay the thing that matters for the sake of the thing that does not.
 
-`/speak` sends the text to **ElevenLabs** — voice *Derek*, model `eleven_flash_v2_5`, format
+`/speak` sends the text to **ElevenLabs** — voice *Vikram*, model `eleven_flash_v2_5`, format
 `mp3_44100_128` — and forwards the MP3 to the tablet as it arrives, so the audio is not copied
 into memory on the Mac before it starts moving. The tablet plays it through one `<audio>`
 element that lives for the life of the page. The ElevenLabs key never leaves this Mac: the
@@ -357,7 +357,7 @@ The log is for reading: a line per question, tool call and fault. The tablet's p
 `/state` and `/health`, the static files and the Mac's own outbound requests are not logged
 unless they fail.
 
-Holding the orb stops Derek before the recorder starts, so the assistant can never be
+Holding the orb stops Vikram before the recorder starts, so the assistant can never be
 recorded answering itself, and a new answer cancels the previous one's request and playback.
 `/health` carries a `voice` block and a `tts` check naming the voice, the model and the last
 request's latency and size; it is a key and configuration check only, because a health page
@@ -413,7 +413,7 @@ app/
   routes/            health · turn · speak · admin
   providers/         base.py (ABC) · max_agent_sdk.py · anthropic_api.py (stub, deliberately)
   tools/             registry · gate · dispatch · shopify_tools · gmail_tools · mock
-  clients/           shopify · gmail · whisper · elevenlabs (Scribe) · elevenlabs_tts (Derek)
+  clients/           shopify · gmail · whisper · elevenlabs (Scribe) · elevenlabs_tts (Vikram)
   speech/            decode · transcribe · normalise · speakable (text for a mouth)
   session/           manager · models (issued-id ledger)
   kb/                loader + the system prompt

@@ -244,6 +244,9 @@ def _answer(
         "lost_thread": lost_thread,
         "state": "ERROR" if error_kind else "READY",
         "last_state": _tool_state([c["name"] for c in tool_calls]),
+        # The page files this answer was made for. A tablet running an older page learns it
+        # here, at the end of the turn, rather than at the next health poll.
+        "build": runtime.build,
         "tool_calls": tool_calls,
         "transcript": transcript,
         "timings_ms": {k: round(v, 1) for k, v in timings.items()},

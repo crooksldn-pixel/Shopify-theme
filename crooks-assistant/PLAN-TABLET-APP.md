@@ -124,7 +124,7 @@ These are product ideas, each read-only, each sized. They are what a dedicated p
    packing slips turn out to be read aloud more often than spoken.
 4. **A second pad in the workroom** (Route 2, an afternoon). Same Mac, same conversation
    session per pad, the context stack showing what the other pad last asked about.
-5. **Hands-free follow-ups** (pad, two days). After Derek answers, listen for three seconds
+5. **Hands-free follow-ups** (pad, two days). After Vikram answers, listen for three seconds
    without a hold; a follow-up spoken in that window is sent, silence is not. The warm
    microphone and the level gate make this cheap; the risk is the office's ambient noise,
    which is why it should be a setting, off by default.

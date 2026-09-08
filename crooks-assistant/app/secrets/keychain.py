@@ -16,7 +16,7 @@ KNOWN_KEYS = (
     "shopify_client_secret",
     "shopify_static_token",  # legacy shpat_ fallback (M6 failure path only)
     "gmail_token",  # the authorised-user JSON (refresh token inside); token.json is the fallback
-    # One key, two jobs: Scribe hears the owner and Derek answers him. Absent, the Mac
+    # One key, two jobs: Scribe hears the owner and Vikram answers him. Absent, the Mac
     # listens with whisper.cpp and the tablet answers in its own Android voice.
     "elevenlabs_api_key",
 )

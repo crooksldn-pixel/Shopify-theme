@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove Derek works on this Mac, before the tablet is asked to prove it.
+"""Prove Vikram works on this Mac, before the tablet is asked to prove it.
 
 One short sentence, one real ElevenLabs request, one MP3 played through the Mac's speaker. It
 costs a few characters of credit — deliberately, because "the key is present" is not the same
@@ -69,7 +69,7 @@ async def main() -> int:
     if sys.platform == "darwin":
         print("\nPlaying it on this Mac's speaker…")
         subprocess.run(["afplay", str(out)], check=False)
-    print("\nDerek works on the Mac. Now ask the tablet.")
+    print("\nVikram works on the Mac. Now ask the tablet.")
     return 0
 
 

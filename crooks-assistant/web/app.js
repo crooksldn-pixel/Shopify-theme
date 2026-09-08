@@ -275,7 +275,11 @@ function stopSpeaking() {
 function settle(isError) {
   speakingVia = null;
   if (!busy && !recording) setState(isError ? 'ERROR' : 'READY', isError ? lastErrorTitle : '');
+  // The answer named the build it was made for; if this page is older, take the new one now
+  // that nothing is being said.
+  if (pendingBuild) { const build = pendingBuild; pendingBuild = null; maybeReloadForNewBuild(build); }
 }
+let pendingBuild = null;   // the build id the last /turn answered with, checked once speech ends
 
 function chunkForSpeech(text, limit = 200) {
   // A full stop between digits is a decimal point ("£430.50"), not a sentence end.
@@ -1048,7 +1052,7 @@ const STATE_POLL_TIMEOUT_MS = 5000;
 function startStatePolling() {
   stopStatePolling();
   let inFlight = false;   // a tick while the last poll is still out is skipped, never stacked
-  statePoll = setInterval(async () => {
+  const tick = async () => {
     if (!busy || inFlight || document.hidden) return;
     inFlight = true;
     const controller = new AbortController();
@@ -1064,7 +1068,11 @@ function startStatePolling() {
       clearTimeout(timer);
       inFlight = false;
     }
-  }, STATE_POLL_MS);
+  };
+  // The first look is immediate: the transcript should be on screen the moment the Mac has
+  // it, not one interval later.
+  statePoll = setInterval(tick, STATE_POLL_MS);
+  setTimeout(tick, 60);
 }
 function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
 
@@ -1119,6 +1127,7 @@ async function submit(body, isAudio) {
 
     lastWasError = Boolean(data.error_kind);
     renderTurn(data);
+    if (data.build) pendingBuild = String(data.build);
     // The text is on screen before the voice is asked for; the answer never waits on audio.
     setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
     haptic(lastWasError ? HAPTIC.error : HAPTIC.done);
@@ -1439,7 +1448,7 @@ function wentOnline() {
 
 function wentOffline() {
   reachable = false;
-  // Never over a question in flight, a recording, or Derek mid-sentence: the turn's own
+  // Never over a question in flight, a recording, or Vikram mid-sentence: the turn's own
   // error copy covers those, and the layer takes over once the screen is quiet.
   if (idle()) {
     setSystem('offline', 'System offline', 'Waiting for CROOKS Assistant…', 'Checking quietly · tap to check now');

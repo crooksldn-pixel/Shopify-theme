@@ -24,7 +24,7 @@ HELP = {
     "shopify_client_secret": "Dev Dashboard app → Client secret.",
     "shopify_static_token": "Legacy shpat_… Admin API token. Fallback only — see the README's Shopify step.",
     "gmail_token": "Written by `make gmail`; you never type this one.",
-    "elevenlabs_api_key": "ElevenLabs → Profile → API key. This is what hears you and what speaks (Derek).",
+    "elevenlabs_api_key": "ElevenLabs → Profile → API key. This is what hears you and what speaks (Vikram).",
 }
 
 

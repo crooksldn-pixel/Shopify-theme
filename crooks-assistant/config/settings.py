@@ -50,11 +50,12 @@ class Settings(BaseSettings):
     # --- the assistant's voice (ElevenLabs text-to-speech) ---
     # Off falls the tablet back to Android's own speechSynthesis, which is what it used before.
     tts_enabled: bool = True
-    # "Derek - Fun & Energetic", from the ElevenLabs library — used by id, without being added
-    # to the account. Voice settings are left at his own defaults; there is nothing to tune
-    # here until he has been heard on the tablet's speaker. `make voice` hears a change here.
-    tts_voice_id: str = "Q0Et7LOU7VpeoeCRQAVS"
-    tts_voice_name: str = "Derek"
+    # "Vikram - AI Productivity Assistant", from the ElevenLabs library — used by id, without
+    # being added to the account. This is the assistant's voice; `.env` overrides it and
+    # `make voice` hears a change here. (An earlier default, Derek, is what /health reported
+    # when nothing overrode it; the owner's intended voice is Vikram.)
+    tts_voice_id: str = "9375G6zswFk7v9bKTVQF"
+    tts_voice_name: str = "Vikram"
     tts_model: str = "eleven_flash_v2_5"  # the low-latency model; this is a conversation
     # ~16 kB/s. The 32 kbps stream this replaced was audibly compressed on the tablet
     # speaker, and four times the bytes is nothing next to the generation time.

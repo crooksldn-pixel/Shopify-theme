@@ -9,6 +9,7 @@ has tapped — see app/actions/engine.py.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -853,8 +854,9 @@ async def _observe_order_note(execution: dict) -> Observed:
     """A fingerprint of the order's note as it is now, and the order's detail for the screen.
     One read serves both the precondition and the proof."""
     order_id = str(execution["order_id"])
-    detail = await shopify_order_detail(order_id)
-    node = await _read_order_note(_c(), order_id)
+    # The detail (for the screen; its note is truncated for the card) and the raw note (for
+    # the fingerprint) are two queries; they go out together, not one after the other.
+    detail, node = await asyncio.gather(shopify_order_detail(order_id), _read_order_note(_c(), order_id))
     return Observed(fingerprint=text_fingerprint(_normalise_note(node.get("note"))), entity=detail)
 
 

@@ -24,8 +24,9 @@ written, the assistant is told to defer. Replace it with real rules when you hav
 
 ## What the assistant may and may not do
 
-- The assistant can look up orders, customers, stock and email. It cannot send, refund, edit
-  or change anything. When a customer needs an action taken, the assistant says what needs
+- The assistant can look up orders, customers, stock and email, and can prepare an internal
+  order note for the owner to apply with a tap. It cannot send, refund, edit an order or
+  change anything else. When a customer needs an action taken, the assistant says what needs
   doing and who does it — it never says it has been done.
 - When two customers match a name, ask which one. Never guess at whose order is whose.
 - If an order is more than sixty days old it may not be visible; say so rather than saying it

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Any
 
 from app.actions.models import Prepared
@@ -97,6 +98,7 @@ async def dispatch(
     if decision.disposition is Disposition.STAGE_FOR_OWNER:
         return await _stage(name, args, session=session, timeout_s=timeout_s, calls=calls)
 
+    started = time.perf_counter()
     try:
         payload = await registry.invoke(name, args, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
@@ -104,7 +106,7 @@ async def dispatch(
         # us"). They must reach the model intact, not as "failed unexpectedly".
         log.warning("tool=%s failed: %s", name, exc)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=str(exc)))
+            calls.append(ToolCall(name=name, args=args, ok=False, error=str(exc), duration_ms=_elapsed(started)))
         return (
             f"ERROR: {exc} Say that this lookup failed. Do not invent a result and do not "
             "report success."
@@ -112,7 +114,7 @@ async def dispatch(
     except Exception as exc:  # noqa: BLE001 — a tool must never take the process down
         log.exception("tool=%s raised", name)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=repr(exc)))
+            calls.append(ToolCall(name=name, args=args, ok=False, error=repr(exc), duration_ms=_elapsed(started)))
         return (
             f"ERROR: {name} failed unexpectedly ({type(exc).__name__}). Say the lookup failed. "
             "Do not invent a result."
@@ -180,6 +182,10 @@ async def _stage(
         "It has NOT happened. Tell the owner to tap the card that is already showing. Do not call "
         "this tool again."
     )
+
+
+def _elapsed(started: float) -> float:
+    return round((time.perf_counter() - started) * 1000, 1)
 
 
 def make_pretooluse_hook(session_getter, on_event=None):
