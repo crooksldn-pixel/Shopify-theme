@@ -376,3 +376,19 @@ test('partial payment and partial shipping light the middle of the strip', () =>
   const node = UI.renderItem({ type: 'order', data: { order_number: '#2', payment: 'partially paid', fulfillment: 'partially fulfilled', placed_at: '2026-09-08T09:42:00Z' } });
   assert.equal(node.querySelectorAll('.is-partial').length, 2);
 });
+
+test('a blocked card names who is stopping the tap, by code, and never blames the tablet for the Mac', () => {
+  const words = {};
+  for (const code of ['writes_disabled', 'allow_list_missing', 'not_authorised', 'not_authorised_local', 'scope_missing', 'something_else']) {
+    const node = proposalCard({ commit: { allowed: false, code, reason: 'why' } });
+    const surface = node.querySelector('.action-surface');
+    assert.equal(surface.dataset.state, 'unavailable');
+    words[code] = textOf(surface);
+  }
+  assert.ok(/switched off on the Mac/.test(words.writes_disabled));
+  assert.ok(/No allowed logins/.test(words.allow_list_missing));
+  assert.ok(/tablet's login/.test(words.not_authorised));
+  assert.ok(/Mac itself/.test(words.not_authorised_local) && !/tablet/.test(words.not_authorised_local));
+  assert.ok(/write_orders/.test(words.scope_missing));
+  for (const text of Object.values(words)) assert.ok(!/not allowed/i.test(text), text);
+});

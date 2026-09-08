@@ -100,6 +100,8 @@ class Settings(BaseSettings):
 
     # --- paths ---
     kb_dir: Path = REPO_ROOT / "kb"
+    # The shop's clock: every question carries the date and time in this zone.
+    shop_timezone: str = "Europe/London"
     bench_audio_dir: Path = REPO_ROOT / "bench" / "audio"
     bench_results_dir: Path = REPO_ROOT / "bench" / "results"
     log_dir: Path = REPO_ROOT / "logs"

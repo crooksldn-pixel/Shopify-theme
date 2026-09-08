@@ -136,7 +136,8 @@ async def dispatch(
     if decision.tier is Tier.AMBER:
         text = (
             "AMBER — this result contains customer personal data. Read the identifying detail "
-            "back to the user before acting on it.\n" + text
+            "back to the user before acting on it, unless this conversation has already read this "
+            "same record back; then do not repeat it.\n" + text
         )
     return text
 
@@ -175,11 +176,15 @@ async def _stage(
     )
     label = f"{spec.write.entity_kind} {proposal.entity_label}".strip() if spec.write else proposal.entity_label
     if created:
+        what = str(proposal.summary.get("appended") or "")[:160]
+        read_back = f' The change: "{what}".' if what else ""
         return (
             f"PROPOSED ({proposal.proposal_id}): the change to {label} is prepared and waiting for "
-            "the owner to apply it by tapping the card on the tablet. It has NOT happened. Tell the "
-            "owner it is ready to tap. Do not say it was done, do not ask for a spoken yes (a spoken "
-            "yes cannot apply it), and do not call this tool again while this card is waiting."
+            f"the owner to apply it by tapping the card on the tablet. It has NOT happened.{read_back} "
+            "Tell the owner, in one sentence, what is ready — name the order and say the note in a "
+            "few words — and that tapping the card applies it. Do not say it was done, do not ask "
+            "for a spoken yes (a spoken yes cannot apply it), and do not call this tool again while "
+            "this card is waiting."
         )
     return (
         f"PROPOSED ({proposal.proposal_id}): this same change is already waiting on the tablet. "

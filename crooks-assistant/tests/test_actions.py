@@ -279,7 +279,7 @@ async def test_a_tap_executes_once_verifies_and_offers_undo(store, engine, sessi
     _, proposal = await stage(session)
     result = await engine.commit(proposal.proposal_id, "t1", caller="owner@example.com", spec_lookup=spec_lookup)
     assert result.code == "verified" and proposal.status is ActionStatus.VERIFIED
-    assert result.spoken == "Order note added."
+    assert result.spoken == "Note added to order 1930."
     assert store.mutations == [("order_note_set", {"id": ORDER, "note": "Gift wrap please\nCustomer asked for an exchange"})]
     assert store.note == "Gift wrap please\nCustomer asked for an exchange"
     assert proposal.verified is True and proposal.caller == "owner@example.com"
@@ -388,7 +388,7 @@ async def test_undo_restores_exactly_and_only_while_untouched(store, engine, ses
     await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
     undo = session.proposal(proposal.undo_id)
     result = await engine.commit(undo.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
-    assert result.code == "verified" and result.spoken == "Order note restored."
+    assert result.code == "verified" and result.spoken == "Note on order 1930 put back as it was."
     assert store.note == "Gift wrap please"
     assert len(store.mutations) == 2
     assert undo.undo_id is None, "an undo is not itself undoable"

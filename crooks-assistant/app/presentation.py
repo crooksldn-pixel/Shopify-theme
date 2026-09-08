@@ -450,6 +450,7 @@ _COMMIT_BLOCKED_WORDS = {
     "writes_disabled": "Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).",
     "allow_list_missing": "No allowed logins are set on the Mac (CROOKS_ALLOWED_LOGINS).",
     "not_authorised": "This tablet's login is not on the allowed list. Open /whoami to see it.",
+    "not_authorised_local": "Asked on the Mac itself, which may not apply changes (CROOKS_WRITES_LOCAL_OWNER).",
     "scope_missing": "The Shopify app has not been granted write_orders.",
 }
 

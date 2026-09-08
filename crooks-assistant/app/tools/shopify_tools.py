@@ -80,7 +80,7 @@ _ORDER_FIELDS = """
 @tool(
     name="shopify_find_order",
     description=(
-        "Find a CROOKS order by its order number (for example 4832 or #4832), or by a customer's "
+        "Find a CROOKS order by its order number (with or without the #), or by a customer's "
         "name or email address. Returns the matching orders with their fulfilment status, payment "
         "status, total, date and customer — enough to answer 'has it shipped', 'how much was it' "
         "and 'when was it placed' directly, so answer from this result when it already answers "
@@ -263,7 +263,7 @@ async def shopify_order_detail(order_id: str) -> dict:
             "note": _truncate(node.get("note") or "") or None,
             # Deliberately city/country only — a full address has no place in a spoken answer
             # or in a log file.
-            "ships_to": " ".join(
+            "ships_to": ", ".join(
                 p for p in (address.get("city"), address.get("country")) if p
             ) or None,
         }
@@ -932,8 +932,8 @@ def _undo_order_note(execution: dict) -> dict:
         interaction="tap_commit",
         reversible=True,
         undo=_undo_order_note,
-        spoken_success="Order note added.",
-        spoken_undo_success="Order note restored.",
+        spoken_success="Note added to order {label}.",
+        spoken_undo_success="Note on order {label} put back as it was.",
         spoken_failure="I couldn't confirm that change.",
         spoken_stale="The order changed since this was prepared. I haven't applied the note.",
     ),

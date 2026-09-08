@@ -156,8 +156,12 @@ if WEB_DIR.exists():
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
     @app.get("/")
-    async def index() -> FileResponse:
-        return FileResponse(WEB_DIR / "index.html")
+    async def index(request: Request) -> Response:
+        # The page carries the build it was made for, so a shell opened from the worker's
+        # cache can tell at its first health poll that the Mac has moved on.
+        source = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+        build = getattr(request.app.state.runtime, "build", "unknown")
+        return Response(source.replace("__BUILD__", build), media_type="text/html; charset=utf-8")
 
     @app.get("/manifest.webmanifest", include_in_schema=False)
     async def manifest() -> FileResponse:

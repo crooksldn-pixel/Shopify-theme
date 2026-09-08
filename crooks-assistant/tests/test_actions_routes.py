@@ -167,7 +167,7 @@ async def test_an_authorised_tap_executes_once_and_returns_verified_state(client
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "verified" and body["code"] == "verified"
-    assert body["spoken"] == "Order note added."
+    assert body["spoken"] == "Note added to order 1930."
     assert [i["type"] for i in body["ui"]] == ["success", "order"]
     assert body["ui"][0]["data"]["title"] == "Note added" and body["ui"][0]["data"]["detail"] == "Order #1930"
     assert body["ui"][1]["data"]["note"].endswith("Customer asked for an exchange")
@@ -338,14 +338,39 @@ async def test_a_proposal_from_an_allowed_tablet_arms_and_says_only_that_it_is_r
     assert card["data"]["status"] == "pending" and card["data"]["interaction"]["kind"] == "tap_commit"
     assert body["writes"]["allowed"] is True and body["writes"]["caller"] == OWNER
     assert body["error_kind"] is None and not [i for i in body["ui"] if i["type"] == "error"]
-    for forbidden in ("not allowed", "read-only", "cannot", "added the note"):
+    for forbidden in ("not allowed", "isn't allowed", "aren't allowed", "read-only", "cannot", "permission", "added the note", "note added"):
         assert forbidden not in body["answer"].lower()
+    assert body["revoked"] == [] and client.store.mutations == []
+    assert body["ui"][0]["type"] == "confirmation", "the card is first"
+    assert [i["type"] for i in body["ui"]].count("confirmation") == 1
+    assert card["data"]["risk"] == "amber" and card["data"]["interaction"]["armed_after_ms"] == 650
+    # The ledger shows the proposal and its delivery, and nothing executed.
+    events = [e["event"] for e in client.runtime.actions.ledger.read()]
+    assert events[-2:] == ["PROPOSED", "DELIVERED"] and "EXECUTING" not in events
+
+
+async def test_a_turn_time_refusal_is_logged_and_the_local_case_is_named(client, caplog):
+    """The sentence the owner hears when a tap would be refused is matched by one warning in
+    the log, naming the code; and a request made on the Mac itself is not blamed on 'this
+    tablet's login'."""
+    import logging
+
+    caplog.set_level(logging.WARNING, logger="crooks.actions")
+    configure(client, writes=True, logins=OWNER, local=False)
+    client.runtime.provider = StagingProvider(client.runtime)
+    body = (await client.post("/turn", json={"text": "add a note to order 1938", "session_id": "loc"})).json()
+    assert body["writes"]["allowed"] is False and body["writes"]["code"] == "not_authorised_local"
+    (card,) = [i for i in body["ui"] if i["type"] == "confirmation"]
+    assert card["data"]["commit"]["code"] == "not_authorised_local"
+    assert "Mac itself" in card["data"]["commit"]["reason"] and "tablet" not in card["data"]["commit"]["reason"].lower()
+    lines = [r.getMessage() for r in caplog.records if "tap would be refused" in r.getMessage()]
+    assert len(lines) == 1 and "not_authorised_local" in lines[0] and "proxied=False" in lines[0]
 
 
 @pytest.mark.parametrize("setup, headers, code, phrase", [
     (dict(writes=False), PROXIED, "writes_disabled", "switched off"),
     (dict(writes=True, logins=""), PROXIED, "allow_list_missing", "allowed logins aren't set"),
-    (dict(writes=True, local=False), {}, "not_authorised", "from the Mac itself"),
+    (dict(writes=True, local=False), {}, "not_authorised_local", "from the Mac itself"),
 ])
 async def test_a_proposal_this_tablet_cannot_apply_says_so_at_once(client, setup, headers, code, phrase):
     """The card appears, but its surface never arms, the reason is on it, and the spoken answer
@@ -485,3 +510,26 @@ async def test_a_proxied_request_with_no_login_is_refused_even_with_no_allow_lis
     # And with a list, only its logins pass.
     configure(client, logins="someone-else@example.com")
     assert (await client.get("/ping", headers=PROXIED)).status_code == 403
+
+
+async def test_a_spoken_yes_leaves_the_card_waiting_and_says_what_applies_it(client):
+    """"Yes" while a card is waiting is neither an instruction nor an authorisation: the
+    card stays, the epoch stays, the model is not asked, and a fixed line says to tap."""
+    configure(client)
+    proposal = await staged(client, session_id="s9")
+    epoch_before = client.runtime.sessions.get("s9").epoch
+    turns_before = len(getattr(client.runtime.provider, "turns", []))
+    body = (await client.post("/turn", json={"text": "Yes, go ahead.", "session_id": "s9", "speak": True}, headers=PROXIED)).json()
+    assert body["answer"] == "Nothing happens until you tap the card. It is still waiting on the tablet."
+    assert proposal.status.value == "PENDING" and body["revoked"] == []
+    assert client.runtime.sessions.get("s9").epoch == epoch_before
+    assert len(getattr(client.runtime.provider, "turns", [])) == turns_before
+    assert body["ui"][0]["type"] == "confirmation" and body["ui"][0]["data"]["proposal_id"] == proposal.proposal_id
+    assert body["ui"][0]["data"]["commit"] == {"allowed": True}
+    assert client.store.mutations == []
+    # The next real question withdraws it as before.
+    real = (await client.post("/turn", json={"text": "and what about yesterday?", "session_id": "s9"}, headers=PROXIED)).json()
+    assert real["revoked"] == [proposal.proposal_id]
+    # With nothing waiting, "yes" is an ordinary (if odd) question for the model.
+    again = (await client.post("/turn", json={"text": "yes", "session_id": "s9"}, headers=PROXIED)).json()
+    assert again["answer"] == "fake answer"

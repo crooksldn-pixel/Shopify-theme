@@ -529,7 +529,8 @@
   function blockedLabel(code) {
     return {
       writes_disabled: 'Changes are switched off on the Mac', allow_list_missing: 'No allowed logins set on the Mac',
-      not_authorised: "This tablet's login is not allowed", scope_missing: 'Shopify has not granted write_orders',
+      not_authorised: "This tablet's login is not on the Mac's list", not_authorised_local: 'The Mac itself may not apply changes',
+      scope_missing: 'Shopify has not granted write_orders',
     }[text(code)] || "Can't apply from here";
   }
 

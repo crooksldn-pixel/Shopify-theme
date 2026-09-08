@@ -334,7 +334,9 @@ class ActionEngine:
         if proven.fingerprint == proposal.expected_after:
             proposal.verified = True
             self._finish(proposal, ActionStatus.VERIFIED, "verified")
-            spoken = write.spoken_undo_success if proposal.undo_of else write.spoken_success
+            spoken = (write.spoken_undo_success if proposal.undo_of else write.spoken_success)
+            # The line names what it touched: "{label}" is the entity as a person says it.
+            spoken = spoken.replace("{label}", str(proposal.entity_label).lstrip("#"))
             if proposal.undo_of is None:
                 self.stage_undo(session, spec, proposal)
             return CommitResult(proposal, "verified", spoken)

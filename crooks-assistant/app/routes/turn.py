@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import re
 import time
 import uuid
 
@@ -16,6 +17,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 
 from app.logging.turnlog import redact
 from app.presentation import present
+from app.providers.base import ToolCall
 from app.routes.actions import writes_context
 from app.speech.decode import DecodeError, decode
 from app.speech.speakable import to_speakable
@@ -130,6 +132,20 @@ async def turn(
     # one is withdrawn: a proposal is bound to the conversation position it was made in, and
     # this is a new one. A fumbled hold or a recording that said nothing is not an instruction
     # and withdraws nothing; the card the owner was about to tap survives it.
+    # A bare "yes" while a card is waiting is not a new instruction and applies nothing; it
+    # is answered here, in a fixed sentence, without the model and without withdrawing the
+    # card — the owner is told again what applies it. Anything else said is an instruction.
+    waiting = _waiting_proposal(runtime, live)
+    if waiting is not None and is_affirmation(text):
+        live.heard = text
+        live.set_state("READY")
+        runtime.actions.deliver(waiting.proposal_id)
+        calls = [ToolCall(name=waiting.tool_name, args={}, ok=True, result={}, proposal_id=waiting.proposal_id)]
+        return await _answer(
+            runtime, session_id, AFFIRMATION_ANSWER, request=request, timings=timings, started=started,
+            transcript=transcript_info, question=text, speak=speak, calls=calls, epoch=epoch, revoked=[],
+        )
+
     revoked = runtime.actions.revoke_pending(live, "new instruction")
     epoch = runtime.actions.advance_epoch(live, "new instruction")
 
@@ -142,11 +158,23 @@ async def turn(
     # rather than only once the answer lands — a mis-heard question is visible at once.
     live.heard = text.strip()
 
+    # An order number in the question is looked up before the model is asked: the Mac
+    # already knows it is an order number, the lookup is the model's first step anyway, and
+    # having the record — and its id issued — saves a model round trip and the stumble of a
+    # note proposed for an order that has not been looked up yet.
+    prefetched: list[ToolCall] = []
+    prompt_text = f"{_now_line(runtime)}\n{text.strip()}"
+    lookup = await _prefetch_order(runtime, live, text, prefetched, timings)
+    if lookup:
+        prompt_text = f"{prompt_text}\n\n{lookup}"
+
     t0 = time.perf_counter()
-    result = await runtime.provider.turn(session_id, text.strip())
+    result = await runtime.provider.turn(session_id, prompt_text)
     timings["agent"] = (time.perf_counter() - t0) * 1000
     for step, ms in getattr(result, "steps", None) or []:
         timings[f"step:{step}"] = ms
+    if prefetched:
+        result.tool_calls = prefetched + list(result.tool_calls or [])
 
     answer = result.text or "I could not work out an answer to that."
     if len(answer) > runtime.settings.max_answer_chars:
@@ -190,6 +218,77 @@ async def turn(
 
 
 LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
+
+# What a spoken yes gets while a card is waiting. Fixed, so it is synthesised once and kept;
+# and never a promise — the tap is the only thing that applies anything.
+AFFIRMATION_ANSWER = "Nothing happens until you tap the card. It is still waiting on the tablet."
+
+# A bare affirmation: a few words, nothing else. "Yes, and cancel the order" is not one.
+_AFFIRMATIONS = frozenset({
+    "yes", "yeah", "yep", "yup", "ok", "okay", "sure", "go", "go ahead", "go on", "do it", "do that",
+    "confirm", "confirmed", "please", "yes please", "please do", "apply it", "add it", "go ahead please",
+    "yes do it", "yes go ahead", "ok go ahead", "okay go ahead", "that's right", "correct", "fine", "alright",
+})
+
+
+def is_affirmation(text: str) -> bool:
+    words = re.sub(r"[^a-z' ]+", " ", text.lower()).split()
+    if not words or len(words) > 4:
+        return False
+    return " ".join(words) in _AFFIRMATIONS
+
+
+def _waiting_proposal(runtime, session):
+    """The one proposal a spoken yes could refer to: pending, unexpired, this epoch."""
+    now = time.time()
+    for proposal in reversed(session.proposals):
+        if proposal.status.value == "PENDING" and proposal.epoch == session.epoch and not proposal.expired(now):
+            return proposal
+    return None
+
+
+def _now_line(runtime) -> str:
+    """The clock, in the shop's own time zone, at the top of every question. "Yesterday" and
+    "this morning" then mean what the owner means, whatever day the model believes it is."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    try:
+        tz = ZoneInfo(runtime.settings.shop_timezone)
+    except Exception:  # noqa: BLE001
+        tz = None
+    now = datetime.now(tz)
+    return f"[Now: {now.strftime('%A %-d %B %Y, %H:%M')} {runtime.settings.shop_timezone}]"
+
+
+async def _prefetch_order(runtime, session, text: str, calls: list, timings: dict) -> str:
+    """Look one spoken order number up through the same gate the model uses. Returns the
+    text to hand the model, or nothing when there was no single order number, or the lookup
+    failed (the model then does it itself, as before)."""
+    from app.speech.normalise import extract_order_numbers
+    from app.tools.dispatch import dispatch
+
+    numbers = extract_order_numbers(text)
+    if len(numbers) != 1:
+        return ""
+    number = numbers[0]
+    session.set_state("CHECKING SHOPIFY", "shopify_find_order")
+    t0 = time.perf_counter()
+    try:
+        rendered = await dispatch(
+            "shopify_find_order", {"query": number}, session=session,
+            timeout_s=runtime.settings.tool_timeout_s, calls=calls,
+        )
+    finally:
+        timings["prefetch"] = (time.perf_counter() - t0) * 1000
+    if not calls or not calls[-1].ok:
+        calls.clear()
+        return ""
+    return (
+        f"[The Mac already ran shopify_find_order(query=\"{number}\") for this question. Its result:\n"
+        f"{rendered}\nUse it as if you had called the tool; do not call shopify_find_order for "
+        f"{number} again. Call shopify_order_detail if you need the items or the address.]"
+    )
 
 
 def _loggable_args(call) -> dict:

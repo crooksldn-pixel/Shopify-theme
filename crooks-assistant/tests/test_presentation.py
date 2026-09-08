@@ -33,7 +33,7 @@ DETAIL = {
     "items": [{"title": "Yard Jeans", "variant": "Blue Wash / M", "sku": "YJ-M", "quantity": 1, "total": "60.00 GBP"}],
     "items_truncated": False,
     "fulfillments": [{"status": "SUCCESS", "shipped_at": "2026-09-09", "carrier": "Royal Mail", "number": "RM1"}],
-    "cancelled_at": None, "note": "Leave with neighbour", "ships_to": "London United Kingdom",
+    "cancelled_at": None, "note": "Leave with neighbour", "ships_to": "London, United Kingdom",
     "shipping_address_full": "12 Somewhere Street, E1 6AN",  # must never reach the screen
 }
 
@@ -85,7 +85,7 @@ def test_detail_supersedes_the_summary_of_the_same_order_in_one_turn():
     assert data["detail"] is True
     assert data["items"][0]["variant"] == "Blue Wash / M"
     assert data["fulfillments"][0]["carrier"] == "Royal Mail"
-    assert data["ships_to"] == "London United Kingdom"
+    assert data["ships_to"] == "London, United Kingdom"
     assert "shipping_address_full" not in data  # whitelist, not a copy
 
 

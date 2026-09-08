@@ -45,6 +45,9 @@ def load(kb_dir: Path) -> KnowledgeBase:
             continue
         # Notes to whoever edits the file live in <!-- comments --> and never reach the model.
         body = re.sub(r"<!--.*?-->", "", body, flags=re.S).strip()
+        if path.name == "terminology.md":
+            # Its own format: a line starting with # is a comment to the editor, not a heading.
+            body = "\n".join(line for line in body.splitlines() if not line.lstrip().startswith("#")).strip()
         if not body:
             continue
         if total + len(body) > MAX_KB_CHARS:

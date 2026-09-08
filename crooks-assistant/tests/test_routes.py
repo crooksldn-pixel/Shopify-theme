@@ -13,7 +13,7 @@ import httpx
 import pytest
 
 from app.main import app
-from app.providers.base import ClaudeProvider, TurnResult
+from app.providers.base import ClaudeProvider, ToolCall, TurnResult
 
 
 class FakeProvider(ClaudeProvider):
@@ -132,14 +132,54 @@ async def test_audio_test_reports_decode_failure(client):
 async def test_text_is_capped(client):
     body = (await client.post("/turn", json={"text": "x" * 10_000, "session_id": "cap"})).json()
     assert body["error_kind"] is None
-    assert body["answer"] == "fake answer to 2000 chars"
+    # 2000 chars of question, plus the clock line the Mac puts above every question.
+    session_id, sent = app.state.runtime.provider.turns[-1]
+    assert session_id == "cap" and sent.startswith("[Now: ") and sent.endswith("x" * 2000)
+    assert len(sent.split("\n", 1)[1]) == 2000
     assert body["turns"] == 0  # the fake provider does not bump the session's turn count
 
 
 async def test_turn_goes_through_the_provider_once(client):
     body = (await client.post("/turn", json={"text": "hello", "session_id": "once"})).json()
     assert body["answer"].startswith("fake answer")
-    assert app.state.runtime.provider.turns == [("once", "hello")]
+    (session_id, sent), = app.state.runtime.provider.turns
+    assert session_id == "once"
+    # The question reaches the model once, under the shop's clock — never as bare text.
+    clock, question = sent.split("\n", 1)
+    assert question == "hello" and clock.startswith("[Now: ") and clock.endswith("Europe/London]")
+
+
+async def test_a_spoken_order_number_is_looked_up_before_the_model_is_asked(client, monkeypatch):
+    """The Mac already knows "order 1930" is an order number. It runs the lookup the model
+    would have run first, through the same gate, hands the model the result, and the card
+    still comes from the tool call. A mis-heard number costs one Shopify call, not a turn."""
+    from app.routes import turn as turn_module
+
+    seen = []
+
+    async def fake_dispatch(name, args, *, session, timeout_s, calls=None):
+        seen.append((name, args))
+        session.issue("gid://shopify/Order/1930")
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=True, result={"orders": [{"order_id": "gid://shopify/Order/1930", "order_number": "#1930", "payment": "paid", "fulfillment": "unfulfilled", "total": "£60.00"}]}))
+        return '{"orders": [{"order_number": "#1930", "payment": "paid"}]}'
+
+    monkeypatch.setattr("app.tools.dispatch.dispatch", fake_dispatch)
+    body = (await client.post("/turn", json={"text": "Find order 1930 and add a note saying customer called", "session_id": "pre"})).json()
+    assert seen == [("shopify_find_order", {"query": "1930"})]
+    _, sent = app.state.runtime.provider.turns[-1]
+    assert "already ran shopify_find_order" in sent and "#1930" in sent and "do not call shopify_find_order for 1930 again" in sent
+    assert body["question"] == "Find order 1930 and add a note saying customer called"
+    assert [c["name"] for c in body["tool_calls"]][0] == "shopify_find_order"
+    assert body["ui"] and body["ui"][0]["type"] == "order", body["ui"]
+    assert "prefetch" in body["timings_ms"]
+    assert "gid://shopify/Order/1930" in app.state.runtime.sessions.get("pre").issued_ids
+    # No order number, or two: the model does its own looking up.
+    seen.clear()
+    await client.post("/turn", json={"text": "how many orders today", "session_id": "pre"})
+    await client.post("/turn", json={"text": "compare order 1930 with order 1931", "session_id": "pre"})
+    assert seen == []
+    assert turn_module.is_affirmation("yes") and not turn_module.is_affirmation("yes and cancel it")
 
 
 async def test_real_provider_is_never_started_by_tests(client):

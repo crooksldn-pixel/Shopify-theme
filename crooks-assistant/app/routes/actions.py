@@ -86,10 +86,19 @@ async def writes_context(request: Request) -> dict:
     status = await runtime.write_status()
     if not code and not status.ready:
         code, detail, spoken_key = status.code, status.detail, status.code
+    if code:
+        # The turn-time refusal, in the log as plainly as a refused tap: the owner hears one
+        # sentence, and this line says which and why. The card names the local case as the
+        # Mac's own doing, never as the tablet's login.
+        log.warning(
+            "change proposed but a tap would be refused: %s — %s (login=%s proxied=%s writes=%s)",
+            spoken_key or code, detail, request.headers.get("tailscale-user-login", "") or "-",
+            bool(request.headers.get("x-forwarded-for")), status.state,
+        )
     return {
         "state": status.state,
         "allowed": not code,
-        "code": code,
+        "code": (spoken_key or code) if code else "",
         "detail": detail,
         "spoken": SPOKEN_REFUSALS.get(spoken_key, "") if code else "",
         "caller": caller or None,
@@ -125,7 +134,8 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     log.info("action %s %s → %s (%s)", proposal.proposal_id, proposal.operation, proposal.status.value, result.code)
     if result.spoken:
         # A fixed line, synthesised once and kept: the tablet asks /speak for it next.
-        runtime.voice.prefetch(to_speakable(result.spoken, max_chars=runtime.voice.max_chars), pin=True)
+        # Pinned only when fixed: a success line names the order and is not worth a slot.
+        runtime.voice.prefetch(to_speakable(result.spoken, max_chars=runtime.voice.max_chars), pin=result.code != "verified")
     try:
         session = runtime.sessions.peek(session_id.strip())
     except KeyError:

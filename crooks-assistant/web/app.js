@@ -600,7 +600,15 @@ function faultLabel(checks) {
   return 'Partly offline';
 }
 
-let knownBuild = null;
+// The build this page was made for, stamped into it by the Mac. A page opened from the
+// worker's cache while the Mac was away compares itself against the Mac's first answer.
+let knownBuild = (() => {
+  try {
+    const stamp = document.querySelector('meta[name="crooks-build"]');
+    const value = stamp ? String(stamp.content || '') : '';
+    return value && value !== '__BUILD__' ? value : null;
+  } catch { return null; }
+})();
 function maybeReloadForNewBuild(build) {
   if (!build) return;
   if (knownBuild === null) { knownBuild = build; return; }

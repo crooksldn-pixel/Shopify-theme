@@ -110,6 +110,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._steps: list[tuple[str, float]] = []
         self._turn_started = 0.0
         self._sweep_task: asyncio.Task | None = None
+        self._turn_epoch: int | None = None
         self._started = False
         self._auth_mode = "token"  # "token" (a stored setup-token) or "cli" (the CLI's own login)
         # One turn at a time. The tablet is single-user, and two overlapping turns would
@@ -272,6 +273,9 @@ class MaxAgentSDKProvider(ClaudeProvider):
         session = self._current
         if session is None:
             return "ERROR: no active session for this tool call."
+        if self._turn_epoch is not None and session.epoch != self._turn_epoch:
+            log.info("tool call %s refused: the owner moved on (epoch %s → %s)", tool_name, self._turn_epoch, session.epoch)
+            return "REFUSED: the owner has moved on to another question. Do not act on this one; answer briefly."
         try:
             return await dispatch(
                 tool_name,
@@ -359,6 +363,9 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._steps = []
         started = time.perf_counter()
         self._turn_started = started
+        # The conversation position this turn answers. A /cancel or a later question moves the
+        # session past it; a tool call arriving after that acts for nobody and is refused.
+        self._turn_epoch = session.epoch if session is not None else None
         if session is not None:
             session.set_state("THINKING")
             session.turns += 1

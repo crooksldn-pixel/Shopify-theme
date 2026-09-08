@@ -281,3 +281,22 @@ def test_write_tools_are_withheld_from_the_model_unless_writes_are_on():
     assert "shopify_order_note_append" in off and "mock_danger" in off
     assert "shopify_order_note_append" not in on and "mock_danger" in on
     assert "shopify_order_detail" not in off and "shopify_order_detail" not in on
+
+
+async def test_a_tool_call_from_a_turn_the_owner_has_left_is_refused(monkeypatch):
+    """Claude was still working when the owner cancelled or asked something else: its tool
+    calls now act for nobody, and the dispatcher never sees them."""
+    from app.providers import max_agent_sdk
+    from app.session.models import Session
+
+    async def never(*a, **k):
+        raise AssertionError("dispatch must not run for an abandoned turn")
+
+    monkeypatch.setattr(max_agent_sdk, "dispatch", never)
+    provider = max_agent_sdk.MaxAgentSDKProvider(system_prompt="sys")
+    session = Session(session_id="left")
+    session.epoch = 3
+    provider._current = session
+    provider._turn_epoch = 2
+    text = await provider._dispatch("shopify_find_order", {"query": "1930"})
+    assert text.startswith("REFUSED") and "moved on" in text
