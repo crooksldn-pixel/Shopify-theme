@@ -64,3 +64,14 @@ def test_drop():
     m.get_or_create("a")
     m.drop("a")
     assert not m.exists("a")
+
+
+def test_a_customers_email_on_an_order_is_remembered_as_personal():
+    """customer_email rides on GREEN order results now; the turn log must scrub it by name,
+    not only by the shape of an address."""
+    from app.session.models import Session
+    from app.tools.dispatch import _harvest_ids
+
+    session = Session(session_id="s")
+    _harvest_ids({"orders": [{"order_id": "gid://shopify/Order/1", "order_number": "CROOKS-1", "customer_name": "Jo Bloggs", "customer_email": "jo@example.com"}]}, session)
+    assert {"Jo Bloggs", "jo@example.com"} <= session.pii_seen

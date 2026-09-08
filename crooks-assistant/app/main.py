@@ -97,8 +97,12 @@ async def guard_and_freshness(request: Request, call_next):
     allowed = getattr(request.app.state, "allowed_logins", ())
     if allowed:
         login = request.headers.get("tailscale-user-login", "")
-        if login and login.lower() not in allowed:
-            return JSONResponse(status_code=403, content={"error": "not allowed", "who": login})
+        # `tailscale serve` adds X-Forwarded-For to everything it proxies and a login only for
+        # tailnet users: a proxied request with no login is Funnel or a tagged node, and is
+        # refused. A request with neither header was made on the Mac itself.
+        proxied = bool(request.headers.get("x-forwarded-for"))
+        if (login and login.lower() not in allowed) or (proxied and not login):
+            return JSONResponse(status_code=403, content={"error": "not allowed", "who": login or "unknown"})
     response = await call_next(request)
     path = request.url.path
     if path == "/" or path.startswith("/static/"):

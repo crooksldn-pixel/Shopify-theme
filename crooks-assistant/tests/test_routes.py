@@ -514,5 +514,96 @@ async def test_allowed_logins_refuse_a_stranger_and_admit_the_owner_and_the_mac(
         assert owner.status_code == 200
         local = await client.get("/health")   # no header: the Mac itself
         assert local.status_code == 200
+        # Proxied by Tailscale but carrying no login (Funnel, a tagged node): refused.
+        anonymous = await client.get("/health", headers={"X-Forwarded-For": "100.64.0.9"})
+        assert anonymous.status_code == 403
     finally:
         app.state.allowed_logins = ()
+
+
+async def test_an_abandoned_question_is_not_voiced(client):
+    """/cancel lands while Claude is still thinking; when that turn ends, its answer must not
+    be synthesised for a tablet that has already moved on."""
+    calls = stub_voice(app)
+    provider = app.state.runtime.provider
+    gate = asyncio.Event()
+
+    async def slow_turn(session_id, text):
+        from app.providers.base import TurnResult
+
+        app.state.runtime.sessions.get_or_create(session_id)
+        await gate.wait()
+        return TurnResult(text="Too late to matter.", session_id=session_id)
+
+    provider.turn = slow_turn
+    turn = asyncio.create_task(client.post("/turn", json={"text": "long one", "session_id": "gone", "speak": True}))
+    await asyncio.sleep(0.05)
+    cancelled = (await client.post("/cancel", data={"session_id": "gone"})).json()
+    assert cancelled["cancelled"] is True
+    gate.set()
+    body = (await turn).json()
+    assert body["answer"] == "Too late to matter."
+    await asyncio.sleep(0)
+    assert calls == []
+    # The next question is voiced as normal.
+    provider.turn = FakeProvider().turn
+    await client.post("/turn", json={"text": "next", "session_id": "gone", "speak": True})
+    assert len(calls) == 1
+
+
+async def test_the_last_question_is_not_shown_while_the_next_is_heard(client):
+    await client.post("/turn", json={"text": "first question", "session_id": "stale"})
+    assert (await client.get("/state/stale")).json()["heard"] == "first question"
+    provider = app.state.runtime.provider
+    gate = asyncio.Event()
+
+    async def slow_turn(session_id, text):
+        from app.providers.base import TurnResult
+
+        await gate.wait()
+        return TurnResult(text="ok", session_id=session_id)
+
+    provider.turn = slow_turn
+    turn = asyncio.create_task(client.post("/turn", json={"text": "second question", "session_id": "stale"}))
+    await asyncio.sleep(0.05)
+    # Mid-turn the state carries the new question (or nothing), never the old one.
+    heard = (await client.get("/state/stale")).json()["heard"]
+    assert heard in ("", "second question")
+    gate.set()
+    await turn
+
+
+async def test_a_hold_during_hearing_still_abandons_the_question(client):
+    """/cancel can land before the turn has reached Claude — during transcription, or before
+    the session's first turn exists at all. It must still keep the answer from being voiced."""
+    calls = stub_voice(app)
+    provider = app.state.runtime.provider
+    gate = asyncio.Event()
+
+    async def slow_turn(session_id, text):
+        from app.providers.base import TurnResult
+
+        await gate.wait()
+        return TurnResult(text="Never voiced.", session_id=session_id)
+
+    provider.turn = slow_turn
+    # A brand-new session: /cancel arrives first (the tablet's hold landed while the Mac was
+    # still transcribing), then the turn proceeds.
+    await client.post("/cancel", data={"session_id": "early"})
+    turn = asyncio.create_task(client.post("/turn", json={"text": "long", "session_id": "early", "speak": True}))
+    await asyncio.sleep(0.05)
+    gate.set()
+    await turn
+    await asyncio.sleep(0)
+    # The turn reset the flag at its start, so this cancel was for "before"; the next hold
+    # during the turn is what counts.
+    assert len(calls) == 1
+    calls.clear()
+    gate.clear()
+    turn = asyncio.create_task(client.post("/turn", json={"text": "long again", "session_id": "early", "speak": True}))
+    await asyncio.sleep(0.05)
+    await client.post("/cancel", data={"session_id": "early"})
+    gate.set()
+    await turn
+    await asyncio.sleep(0)
+    assert calls == []

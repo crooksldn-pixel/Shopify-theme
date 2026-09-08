@@ -489,8 +489,26 @@ def usage_limit_line(detail: str) -> str:
         when = match.group(1).strip()
         when = when.rstrip(")").replace("(", "")
         joiner = "in" if re.match(r"^\d+\s*(minutes?|mins?|hours?|hrs?)$", when, re.I) else "at"
+        when = local_clock(when)
         return f"I have hit the Claude usage limit. It resets {joiner} {when}. I will not retry on my own."
     return RESULT_SPOKEN["usage_limit"]
+
+
+_UTC_CLOCK = re.compile(r"^(\d{1,2}):(\d{2})\s*(?:UTC|GMT|Z)$", re.I)
+
+
+def local_clock(when: str) -> str:
+    """"15:00 UTC" as the Mac's own clock: "four o'clock" in London in summer. Anything that
+    is not a bare UTC time is read out as it came."""
+    match = _UTC_CLOCK.match(when.strip())
+    if not match:
+        return when
+    from datetime import UTC, datetime
+
+    hour, minute = int(match.group(1)), int(match.group(2))
+    now = datetime.now(UTC)
+    local = now.replace(hour=hour % 24, minute=minute, second=0, microsecond=0).astimezone()
+    return local.strftime("%H:%M")
 
 
 def _result_text(message) -> str:

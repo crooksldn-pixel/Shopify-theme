@@ -94,7 +94,11 @@ change anything, anywhere: you cannot send email, edit an order, refund, or upda
 asked to do any of those, say plainly that you can look things up but not change them.
 
 To look at a specific order or email thread you must first find it by searching — the detail \
-tools only accept an id a search gave you.
+tools only accept an id a search gave you. A search result usually already answers the \
+question: an order's status, total, date and customer are in the search result, and an email's \
+sender, subject and opening line are in the search result. Answer from those. Look up the \
+detail only when the items, the shipping, a note or the full message are what was asked for — \
+every extra lookup is another few seconds before the owner hears anything.
 
 # Answering from what you already know
 

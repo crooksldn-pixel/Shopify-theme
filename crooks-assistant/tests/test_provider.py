@@ -49,13 +49,25 @@ def test_result_kinds(msg, kind):
     [
         ("Resets at 3pm (UTC)", "resets at 3pm UTC"),
         ("try again in 45 minutes", "resets in 45 minutes"),
-        ("resets at 15:00 UTC", "resets at 15:00 UTC"),
+        ("resets at 15:00 UTC", "resets at " + __import__("app.providers.max_agent_sdk", fromlist=["local_clock"]).local_clock("15:00 UTC")),
         ("limit reached", "rolling five-hour window"),
     ],
 )
 def test_usage_limit_line_reads_back_reset_time(detail, expect):
     assert expect in usage_limit_line(detail)
     assert "retry" in usage_limit_line(detail).lower() or "try again" in usage_limit_line(detail)
+
+
+def test_the_reset_time_is_read_in_the_macs_own_clock():
+    """"15:00 UTC" is four o'clock in London in summer. The owner hears his clock."""
+    from datetime import UTC, datetime
+
+    from app.providers.max_agent_sdk import local_clock
+
+    local = datetime.now(UTC).replace(hour=15, minute=0, second=0, microsecond=0).astimezone()
+    assert local_clock("15:00 UTC") == local.strftime("%H:%M")
+    assert local_clock("3pm UTC") == "3pm UTC"          # not a bare clock: left alone
+    assert local_clock("45 minutes") == "45 minutes"
 
 
 def test_billing_guard(monkeypatch):

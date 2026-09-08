@@ -440,3 +440,57 @@ async def test_an_interrupted_owner_stops_the_synthesis(mock_http):
     assert client.cancel_prefetches() == 1
     await asyncio.sleep(0.05)
     assert client._inflight == {}
+
+
+async def test_a_pinned_line_that_failed_once_is_tried_again(mock_http):
+    """One timeout on "I did not catch that" must not leave every later error line in the
+    Android voice until a restart: a failed line is never kept, pinned or not."""
+    outcomes = [httpx.Response(408, text="timeout"), httpx.Response(200, content=MP3)]
+    holder = mock_http(lambda request: outcomes.pop(0))
+    client = make(cooldown_s=0)
+    client.prefetch("I did not catch that.", pin=True)
+    with pytest.raises(VoiceUnavailable):
+        await client.take_ready("I did not catch that.")
+    assert "I did not catch that." not in client._ready
+    assert client.prefetch("I did not catch that.", pin=True) is True
+    assert await drain(await client.take_ready("I did not catch that.")) == MP3
+    assert len(holder["requests"]) == 2
+    # And now it is kept, free, for good.
+    assert await drain(await client.take_ready("I did not catch that.")) == MP3
+    assert len(holder["requests"]) == 2
+
+
+async def test_a_prefetch_cancelled_before_it_started_cannot_hang_speak(mock_http):
+    """A cancellation that lands during the handshake, or before the task has run, must still
+    finish the entry: otherwise /speak waits on it forever."""
+    import asyncio
+
+    mock_http(lambda request: httpx.Response(200, stream=SlowStream([MP3] * 3, 0.3)))
+    client = make()
+    client.prefetch("I could not work out an answer to that.")
+    assert client.cancel_prefetches() == 1        # before the task has run at all
+    await asyncio.sleep(0.05)
+    assert client._inflight == {}
+    # Nothing is left on the shelf: /speak streams afresh rather than waiting on a dead entry.
+    assert await asyncio.wait_for(client.take_ready("I could not work out an answer to that."), timeout=2) is None
+    client.prefetch("I could not work out an answer to that.")
+    first = await asyncio.wait_for((await client.take_ready("I could not work out an answer to that.")).__anext__(), timeout=2)
+    assert first == MP3
+    client.cancel_prefetches()
+
+
+async def test_the_voice_refuses_to_be_a_credit_tap(mock_http):
+    """A loop against /speak — or a bug — must not spend the account in minutes: past the
+    ceiling for one minute, every further request is a named refusal, not a synthesis."""
+    holder = mock_http(lambda request: httpx.Response(200, content=MP3))
+    client = make(max_per_minute=3)
+    for _ in range(3):
+        assert await client.synthesise("Hello.") == MP3
+    with pytest.raises(VoiceUnavailable) as exc:
+        await client.synthesise("Hello.")
+    assert exc.value.kind == "rate"
+    assert len(holder["requests"]) == 3
+    assert client.prefetch("Again.") is True   # the prefetch task itself is refused the same way
+    with pytest.raises(VoiceUnavailable):
+        await client.take_ready("Again.")
+    assert len(holder["requests"]) == 3

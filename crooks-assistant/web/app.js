@@ -832,8 +832,10 @@ function renderTurn(data) {
     el.errline.textContent = ui.errors[0].recovery || '';
   }
   if (ui.stack) currentStack = ui.stack;
+  // The attention surface shows only what this turn returned; a count from this morning
+  // must not sit on the screen at four o'clock as if it were still true.
   const attention = (data.ui || []).filter((i) => i && i.type === 'attention' && i.data && Array.isArray(i.data.items));
-  attentionItems = attention.length ? attention[0].data.items : attentionItems;
+  attentionItems = attention.length ? attention[0].data.items : [];
   renderAttentionSurface();
 
   const answer = data.answer || '';
@@ -889,7 +891,14 @@ async function submit(body, isAudio) {
   startStatePolling();
   const controller = new AbortController();
   turnAbort = controller;
-  const timeout = setTimeout(() => controller.abort(), TURN_TIMEOUT_MS);
+  const timeout = setTimeout(() => {
+    controller.abort();
+    // The Mac may still be holding the turn; tell it to let go so the next question is not
+    // queued behind a dead one.
+    const form = new FormData();
+    form.append('session_id', sessionId);
+    fetch('/cancel', { method: 'POST', body: form }).catch(() => { /* it will time out on its own */ });
+  }, TURN_TIMEOUT_MS);
   try {
     const options = isAudio
       ? { method: 'POST', body, signal: controller.signal }
@@ -967,6 +976,7 @@ function onHoldStart(event) {
   // Capture the pointer so pointerup reaches this element even if the thumb drifts off it —
   // otherwise a slightly sliding thumb means the recording never stops.
   try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
+  holding = true;
   unlockSpeech();          // must be inside the gesture
   stopSpeaking();          // before anything else: the voice must not be recorded answering itself
   acquireWakeLock();
@@ -982,6 +992,7 @@ function onHoldStart(event) {
 }
 let busyHintTimer = null;
 let cancelHoldTimer = null;
+let holding = false;         // the thumb is down on a hold surface
 const CANCEL_HOLD_MS = 900;   // hold this long through a turn in flight to abandon it
 
 function showBusyHint() {
@@ -1002,12 +1013,14 @@ function cancelTurnAndListen() {
   form.append('session_id', sessionId);
   fetch('/cancel', { method: 'POST', body: form }).catch(() => { /* the abort already freed the tablet */ });
   haptic(HAPTIC.start);
-  // submit()'s finally clears busy once the abort lands; start listening right after it.
-  setTimeout(() => { if (!busy && !recording) { setState('LISTENING'); startRecording(); } }, 60);
+  // submit()'s finally clears busy once the abort lands; start listening right after it —
+  // if the thumb is still down. A thumb that lifted meanwhile just wanted the question gone.
+  setTimeout(() => { if (holding && !busy && !recording) { setState('LISTENING'); startRecording(); } }, 60);
 }
 
 function onHoldEnd(event) {
   event.preventDefault();
+  holding = false;
   try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
   if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }   // a tap, not a hold
   stopRecording();

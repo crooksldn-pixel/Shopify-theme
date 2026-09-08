@@ -32,7 +32,10 @@ while the page is showing. Cheap additions still on the web side:
 
 - **A service worker** so the shell (HTML, CSS, JS, icons) loads instantly and offline; the
   page then shows "the Mac is not answering" as a state of its own rather than a Chrome error.
-  Half a day, offline-testable.
+  Half a day, offline-testable — and the first thing to build, because it is the only part of
+  this route that is code.
+- **An "as of 09:12" stamp on every card.** A fixture's enemy is staleness: a count that was
+  true this morning must not look true at four o'clock. One line in the renderer.
 - **Android's own kiosk mode ("screen pinning")** — Settings → Security → Pin windows — keeps
   Chrome on the page and needs a PIN to leave. Zero code. It does not stop the screen sleeping.
 - **Display never sleeps while charging** — Developer options → Stay awake. Zero code.
@@ -102,18 +105,23 @@ and the read-only gate is the same gate.
 
 These are product ideas, each read-only, each sized. They are what a dedicated pad is for.
 
-1. **The morning brief** (backend, two days). One spoken paragraph on the first question of
-   the day, or on a tap: overnight orders, anything unfulfilled past a day, customer email
-   waiting, stock at zero. Built from the tools that exist, run together, presented as an
-   `attention` card — the component and its footer surface already exist and are fed by
-   nothing. This is the highest-value unbuilt thing in the product.
+1. **The morning brief** (backend, three days). One spoken paragraph on the first question of
+   the day, or on a tap: overnight orders, anything still to ship, customer email waiting,
+   stock at zero. Two of its four parts exist as GREEN tools today (`shopify_list_orders`
+   with `unfulfilled_only` over a 60-day window; `gmail_search`); the third,
+   `shopify_sales_summary`, exists; the fourth — stock at zero across the whole catalogue
+   without naming a product — needs a new GREEN tool and one live-store check of the
+   variant search filter. Composed only from GREEN tools, with a gate test that proves no
+   AMBER handler runs inside it, and presented as an `attention` card — the component and
+   its footer surface already exist and are fed by nothing. This is the highest-value
+   unbuilt thing in the product.
 2. **Unasked arrivals** (backend two days, pad one day; Route 3 for the pad to hear them
    while idle). Shopify's `orders/create` webhook to the Mac (through `tailscale funnel` or a
    small relay), a server-sent-events stream to the pad, and the orb's SUCCESS state with one
    spoken line. Read-only: the Mac is told, it does not act.
-3. **Camera lookups** (pad, three days). Point the pad's camera at a barcode or a packing slip
-   and hear the order or the stock line — the camera is a second microphone for numbers, and
-   the pad has one. Web-capable today (`BarcodeDetector` in Chrome on Android).
+3. **Camera lookups** (pad, three days) — a maybe, not a plan. Point the camera at a barcode
+   and hear the stock line. Scribe already hears numbers well; this earns its place only if
+   packing slips turn out to be read aloud more often than spoken.
 4. **A second pad in the workroom** (Route 2, an afternoon). Same Mac, same conversation
    session per pad, the context stack showing what the other pad last asked about.
 5. **Hands-free follow-ups** (pad, two days). After Derek answers, listen for three seconds

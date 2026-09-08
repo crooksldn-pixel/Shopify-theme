@@ -16,19 +16,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.secrets import keychain  # noqa: E402
 
 HELP = {
-    "claude_oauth_token": "Run `claude setup-token` and paste the one-year token.",
+    "claude_oauth_token": (
+        "Optional. Normally not needed: the assistant uses the login you made with `claude` "
+        "and `/login`. Only if you want a stored token instead: `claude setup-token`, paste it."
+    ),
     "shopify_client_id": "Dev Dashboard app → Client ID (older docs call this the API key).",
     "shopify_client_secret": "Dev Dashboard app → Client secret.",
-    "shopify_static_token": "Legacy shpat_… Admin API token. Fallback only — see M6.",
+    "shopify_static_token": "Legacy shpat_… Admin API token. Fallback only — see the README's Shopify step.",
     "gmail_token": "Written by `make gmail`; you never type this one.",
-    "elevenlabs_api_key": "ElevenLabs → Profile → API key. Scribe v2 hears you; Derek answers.",
+    "elevenlabs_api_key": "ElevenLabs → Profile → API key. This is what hears you and what speaks (Derek).",
 }
 
 
 # The keys `make secrets` walks through, in the order the milestones need them. The two
 # fallbacks are skipped unless asked for by name.
 WALKTHROUGH = (
-    "claude_oauth_token",
     "shopify_client_id",
     "shopify_client_secret",
     "elevenlabs_api_key",

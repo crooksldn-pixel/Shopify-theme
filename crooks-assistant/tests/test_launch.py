@@ -80,7 +80,7 @@ def test_up_runs_without_whisper_when_it_is_not_built_and_says_so(tmp_path):
     children, notes = up.commands(FakeSettings(tmp_path / "nowhere"))
     assert [name for name, _ in children] == ["backend"]
     assert any("whisper-server is NOT starting" in n for n in notes)
-    assert any("Scribe still hears you" in n for n in notes)
+    assert any("ElevenLabs still hears you" in n for n in notes)
 
 
 def test_up_runs_whisper_first_when_it_is_built(tmp_path):
@@ -178,8 +178,9 @@ def test_launchd_path_starts_with_the_interpreter_that_will_run_it():
 def test_health_summary_names_what_is_down():
     data = {"status": "degraded", "checks": {"claude": {"ok": True}, "shopify": {"ok": False}, "gmail": {"ok": True}}}
     line = lc.summarise_health(data)
-    assert line.startswith("degraded") and "ok: claude, gmail" in line and "FAIL: shopify" in line
-    assert lc.summarise_health(None) == "backend not answering"
+    assert line.startswith("partly down") and "working: Claude, Gmail" in line and "NOT working: Shopify" in line
+    assert lc.summarise_health(None) == "the assistant is not answering"
+    assert lc.summarise_health({"status": "ok", "checks": {"claude": {"ok": True}}}) == "all good · Claude"
 
 
 def test_the_makefile_has_the_targets_the_readme_promises():

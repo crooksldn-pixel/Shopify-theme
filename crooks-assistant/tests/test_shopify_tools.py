@@ -187,6 +187,7 @@ async def test_deprecated_customer_email_field_is_not_used():
 
 # --- live store (skipped without credentials) --------------------------------
 
+@pytest.mark.live
 @needs_shopify
 async def test_live_tools_return_expected_shapes():
     from app.clients.shopify import ShopifyClient

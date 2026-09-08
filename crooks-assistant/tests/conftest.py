@@ -24,6 +24,29 @@ def gmail_configured() -> bool:
         return False
 
 
+# No test may reach the network. "Tests never spend ElevenLabs credit" must not rest on every
+# author remembering the transport double: any lookup of a host that is not this machine
+# fails here, loudly, before a socket opens. The live tests are marked and skipped by name.
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0", "t", "testserver", "fake", "x.myshopify.com"}
+
+
+@pytest.fixture(autouse=True)
+def _no_network(request, monkeypatch):
+    import socket
+
+    if request.node.get_closest_marker("live"):
+        return
+    real = socket.getaddrinfo
+
+    def guarded(host, *args, **kwargs):
+        name = str(host or "").lower()
+        if name in _LOCAL_HOSTS or name.startswith("127.") or name.endswith(".local"):
+            return real(host, *args, **kwargs)
+        raise OSError(f"test tried to reach the network: {host!r}")
+
+    monkeypatch.setattr(socket, "getaddrinfo", guarded)
+
+
 needs_shopify = pytest.mark.skipif(
     not shopify_configured(), reason="no Shopify credentials in the Keychain (M6 not done)"
 )

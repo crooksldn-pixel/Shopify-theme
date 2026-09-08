@@ -160,6 +160,7 @@ def test_base_query_excludes_the_obvious_noise():
 
 # --- live inbox (skipped without a token) ------------------------------------
 
+@pytest.mark.live
 @needs_gmail
 async def test_live_search_returns_expected_shape():
     gmail_tools.bind(gmail_tools.GmailClient())

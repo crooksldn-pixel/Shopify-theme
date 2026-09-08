@@ -52,7 +52,7 @@ def commands(
     settings: Settings, *, reload: bool = False, port_open=lc.port_open,
 ) -> tuple[list[tuple[str, list[str]]], list[str]]:
     """(children to run, notes to print). whisper is skipped, with a note, when it is not
-    built: the assistant still hears through Scribe, without its fallback. Either service is
+    built: the assistant still hears through ElevenLabs, without its fallback. Either service is
     also skipped when something already answers on its port — the login-time agents from
     `make install`, usually — rather than started twice."""
     children: list[tuple[str, list[str]]] = []
@@ -66,8 +66,9 @@ def commands(
         children.append(("whisper", resolved.cmd))
     else:
         notes.append(
-            "whisper-server is NOT starting: " + resolved.problem.splitlines()[0]
-            + "\n         Scribe still hears you; there is no local fallback until it is built."
+            "whisper-server is NOT starting. ElevenLabs still hears you; there is no offline "
+            "fallback until it is built:\n         "
+            + resolved.problem.replace("\n", "\n         ")
         )
     if port_open(settings.host, settings.port):
         notes.append(
@@ -170,7 +171,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"  https  not available: {note}\n         run once: tailscale serve --bg {settings.port}")
 
-    health = lc.wait_for_health(f"http://{settings.host}:{settings.port}/health", timeout_s=45)
+    backend = next((c for c in children if c.name == "backend"), None)
+    health = lc.wait_for_health(
+        f"http://{settings.host}:{settings.port}/health", timeout_s=45,
+        still_starting=(lambda: backend.alive) if backend is not None else None,
+    )
     print("─" * 74)
     print(f"  health {lc.summarise_health(health)}")
     print("  Ctrl-C stops everything. Logs: logs/assistant.log (redacted) and this window.")

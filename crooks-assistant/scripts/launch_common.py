@@ -169,27 +169,39 @@ def fetch_health(url: str, timeout_s: float = 8.0) -> dict | None:
         return None
 
 
-def wait_for_health(url: str, timeout_s: float = 45.0) -> dict | None:
+def wait_for_health(url: str, timeout_s: float = 45.0, still_starting=None) -> dict | None:
+    """Poll /health until it answers or the time is up. `still_starting`, when given, is asked
+    each second; False means the thing being waited for has already died, so stop waiting."""
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         data = fetch_health(url, timeout_s=8.0)
         if data is not None:
             return data
+        if still_starting is not None and not still_starting():
+            return None
         time.sleep(1.0)
     return None
 
 
+PLAIN_NAMES = {
+    "claude": "Claude", "speech": "hearing", "scribe": "ElevenLabs hearing", "whisper": "offline hearing",
+    "tts": "the voice", "shopify": "Shopify", "gmail": "Gmail", "knowledge_base": "the knowledge base",
+    "terminology": "product names",
+}
+
+
 def summarise_health(data: dict | None) -> str:
-    """One line: what is up, what is not. The detail is in the settings sheet and the log."""
+    """One line: what is up, what is not, in the owner's words. The detail is in the settings
+    sheet and the log."""
     if not data:
-        return "backend not answering"
+        return "the assistant is not answering"
     checks = data.get("checks") or {}
-    ok = [name for name, check in checks.items() if check.get("ok")]
-    bad = [name for name, check in checks.items() if not check.get("ok")]
-    line = f"{data.get('status', '?')} · ok: {', '.join(ok) or 'nothing'}"
-    if bad:
-        line += f" · FAIL: {', '.join(bad)}"
-    return line
+    name = lambda k: PLAIN_NAMES.get(k, k)  # noqa: E731
+    ok = [name(k) for k, check in checks.items() if check.get("ok")]
+    bad = [name(k) for k, check in checks.items() if not check.get("ok")]
+    if not bad:
+        return "all good · " + ", ".join(ok)
+    return f"partly down · working: {', '.join(ok) or 'nothing'} · NOT working: {', '.join(bad)}"
 
 
 # --------------------------------------------------------------------------- plists

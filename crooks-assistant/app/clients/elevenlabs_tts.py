@@ -148,6 +148,7 @@ class VoiceClient:
         max_chars: int = 1200,
         cooldown_s: float = 300.0,
         enabled: bool = True,
+        max_per_minute: int = 30,
     ) -> None:
         self.voice_id = voice_id
         self.voice_name = voice_name or voice_id
@@ -160,6 +161,10 @@ class VoiceClient:
         self._cooldown_s = cooldown_s
         self._key: str | None = None
         self._cooldown_until = 0.0
+        # A ceiling on requests per minute. One conversation makes a handful; a loop against
+        # the port — or a bug — would otherwise spend the account's credit in minutes.
+        self.max_per_minute = max_per_minute
+        self._recent: list[float] = []
         # One HTTPS connection, reused: the handshake is a good part of the wait before an
         # answer is heard, and it was being paid on every sentence.
         self._http: httpx.AsyncClient | None = None
@@ -289,6 +294,14 @@ class VoiceClient:
                 f"{self.last_error_kind or 'a failure'}",
                 kind="cooldown",
             )
+        now = time.time()
+        self._recent = [t for t in self._recent if now - t < 60.0]
+        if self.max_per_minute and len(self._recent) >= self.max_per_minute:
+            raise VoiceUnavailable(
+                f"more than {self.max_per_minute} requests in a minute; refusing to spend more",
+                kind="rate",
+            )
+        self._recent.append(now)
         return text[: self.max_chars]
 
     async def open_stream(self, text: str) -> VoiceStream:
@@ -351,8 +364,8 @@ class VoiceClient:
         if self.max_chars and len(text) > self.max_chars:
             text = text[: self.max_chars]
         existing = self._ready.get(text)
-        if existing is not None and (existing.pinned or not existing.done or existing.error is None):
-            return True
+        if existing is not None and (not existing.done or existing.error is None):
+            return True   # in flight, or ready (pinned or not); nothing to do
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -361,36 +374,54 @@ class VoiceClient:
         entry = Prefetched(pinned=pin)
         self._ready[text] = entry
         self.prefetches += 1
-        self._inflight[text] = loop.create_task(self._fetch_into(text, entry))
+        task = loop.create_task(self._fetch_into(text, entry))
+        # A task cancelled before it ever ran executes none of its own cleanup; this does it.
+        task.add_done_callback(lambda done, e=entry, t=text: self._settle(e, t))
+        self._inflight[text] = task
         return True
 
+    def _settle(self, entry: Prefetched, text: str) -> None:
+        self._inflight.pop(text, None)
+        if not entry.done:
+            entry.pinned = False
+            try:
+                asyncio.get_running_loop().create_task(
+                    entry.finish(VoiceUnavailable("cancelled", kind="cancelled"))
+                )
+            except RuntimeError:
+                pass
+
     async def _fetch_into(self, text: str, entry: Prefetched) -> None:
+        # However this ends — audio, a named failure, a cancellation that lands before the
+        # request has even been sent — the entry is finished and the in-flight record dropped.
+        # An entry left waiting forever is a /speak that hangs forever.
+        stream = None
         try:
             stream = await self.open_stream(text)
-        except VoiceUnavailable as exc:
-            # Remembered, so /speak reports the shape of the failure at once rather than
-            # paying the same timeout a second time.
-            self._inflight.pop(text, None)
-            await entry.finish(exc)
-            return
-        except Exception:  # noqa: BLE001 — a prefetch must never take the loop down
-            log.exception("tts prefetch failed unexpectedly")
-            self._inflight.pop(text, None)
-            await entry.finish(VoiceUnavailable("prefetch failed", kind="prefetch"))
-            return
-        try:
             async for chunk in stream.chunks():
                 await entry.push(chunk)
+        except VoiceUnavailable as exc:
+            # Remembered, so /speak reports the shape of the failure at once rather than
+            # paying the same timeout a second time. A failed line is never kept: the next
+            # time it is needed it is tried again, whether or not it was meant to be pinned.
+            entry.pinned = False
+            await entry.finish(exc)
         except asyncio.CancelledError:
-            await stream.aclose()
+            entry.pinned = False
+            if stream is not None:
+                await stream.aclose()
             await entry.finish(VoiceUnavailable("cancelled", kind="cancelled"))
             raise
+        except Exception:  # noqa: BLE001 — a prefetch must never take the loop down
+            log.exception("tts prefetch failed unexpectedly")
+            entry.pinned = False
+            await entry.finish(VoiceUnavailable("prefetch failed", kind="prefetch"))
         finally:
             self._inflight.pop(text, None)
+            if not entry.chunks:
+                entry.pinned = False   # nothing worth keeping
             if not entry.done:
                 await entry.finish()
-        if entry.pinned and not entry.chunks:
-            entry.pinned = False   # nothing worth keeping
 
     def _expire_ready(self) -> None:
         now = time.time()
@@ -416,8 +447,14 @@ class VoiceClient:
             return None
         if not entry.pinned:
             del self._ready[text]   # handed out once
-        await entry.wait_first()
+        try:
+            # Bounded: a prefetch that never starts must not become a request that never ends.
+            await asyncio.wait_for(entry.wait_first(), timeout=self._timeout + 1.0)
+        except TimeoutError:
+            self._ready.pop(text, None)
+            raise VoiceUnavailable("prefetch never started", kind="timeout") from None
         if entry.error is not None and not entry.chunks:
+            self._ready.pop(text, None)   # a failed line is never kept, pinned or not
             raise entry.error
         self.prefetch_hits += 1
         return entry.follow()
@@ -429,6 +466,9 @@ class VoiceClient:
             entry = self._ready.get(text)
             if entry is not None and not entry.pinned and not task.done():
                 task.cancel()
+                # Gone from the shelf at once: a later /speak for this text streams afresh
+                # rather than waiting on, or inheriting, a request that was stopped.
+                self._ready.pop(text, None)
                 cancelled += 1
         return cancelled
 

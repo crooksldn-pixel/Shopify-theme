@@ -79,6 +79,12 @@ async def turn(
     if lost_thread:
         runtime.sessions.drop(session_id)
         await runtime.provider.reset_session(session_id)
+    # The session exists from the first moment of the turn: the tablet must not see the last
+    # question while this one is heard, and a hold that abandons this question may land at
+    # any point from here on — during transcription as much as during Claude's thinking.
+    live = runtime.sessions.get_or_create(session_id)
+    live.heard = ""
+    live.abandoned = False
 
     if audio is not None:
         blob = await audio.read()
@@ -118,7 +124,7 @@ async def turn(
 
     # What was heard, on the session now, so the tablet can show it while Claude thinks
     # rather than only once the answer lands — a mis-heard question is visible at once.
-    runtime.sessions.get_or_create(session_id).heard = text.strip()
+    live.heard = text.strip()
 
     t0 = time.perf_counter()
     result = await runtime.provider.turn(session_id, text.strip())
@@ -195,14 +201,6 @@ def _answer(
     speak: bool = False,
 ) -> dict:
     tool_calls = tool_calls or []
-    if speak and answer:
-        # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
-        # is already generating. The same request it would make anyway, just earlier. An
-        # error line is a fixed sentence: synthesised once, kept, free and instant after that.
-        runtime.voice.prefetch(
-            to_speakable(answer, max_chars=runtime.voice.max_chars), pin=bool(error_kind)
-        )
-    timings["total"] = (time.perf_counter() - started) * 1000
     turns = 0
     names: set[str] = set()
     session = None
@@ -212,6 +210,16 @@ def _answer(
         names = set(session.pii_seen)
     except KeyError:
         pass
+    abandoned = bool(session is not None and session.abandoned)
+    if speak and answer and not abandoned:
+        # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
+        # is already generating. The same request it would make anyway, just earlier. An
+        # error line is a fixed sentence: synthesised once, kept, free and instant after that.
+        # A question the owner abandoned (/cancel) gets no voice: nobody will ask for it.
+        runtime.voice.prefetch(
+            to_speakable(answer, max_chars=runtime.voice.max_chars), pin=bool(error_kind)
+        )
+    timings["total"] = (time.perf_counter() - started) * 1000
     # What the screen shows beside the answer: cards chosen from the tool results, never from
     # the prose. See app/presentation.py for the vocabulary and the bounds.
     ui = present(calls, session=session, error_kind=error_kind)
@@ -263,6 +271,9 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
     runtime = request.app.state.runtime
     interrupted = False
     if session_id:
+        # Marked whether or not the turn has reached Claude yet — a hold during transcription
+        # counts — and even before the session's first turn has created it.
+        runtime.sessions.get_or_create(session_id).abandoned = True
         interrupted = await runtime.provider.interrupt(session_id)
     stopped = runtime.voice.cancel_prefetches()
     return {"cancelled": True, "interrupted": interrupted, "prefetches_stopped": stopped}

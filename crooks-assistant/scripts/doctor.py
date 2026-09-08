@@ -110,7 +110,7 @@ def main() -> int:
     whisper_root = Path.home() / "tools" / "whisper.cpp"
     whisper_bin = next((p for p in [whisper_root / "build" / "bin" / "whisper-server", whisper_root / "build" / "whisper-server"] if p.exists()), None)
     vad = next((whisper_root / "models").glob("ggml-silero*.bin"), None) if (whisper_root / "models").exists() else None
-    row(OK if whisper_bin else WARN, "whisper.cpp", str(whisper_bin) if whisper_bin else "not built — make whisper-server prints the steps; Scribe still hears without it")
+    row(OK if whisper_bin else WARN, "whisper.cpp", str(whisper_bin) if whisper_bin else "not built — make whisper-server prints the steps; ElevenLabs still hears without it")
     row(OK if vad else WARN, "whisper vad model", vad.name if vad else "absent — cd ~/tools/whisper.cpp && sh ./models/download-vad-model.sh silero-v5.1.2")
     warnings += (0 if whisper_bin else 1) + (0 if vad else 1)
 
@@ -152,9 +152,10 @@ def main() -> int:
             pass
         for key in keychain.KNOWN_KEYS:
             have = keychain.present(key)
-            optional = key in {"shopify_static_token", "gmail_token", "elevenlabs_api_key"}
+            optional = key in {"claude_oauth_token", "shopify_static_token", "gmail_token", "elevenlabs_api_key"}
             absent = {
-                "elevenlabs_api_key": "not stored (local Whisper listens; the tablet speaks in its own voice)",
+                "elevenlabs_api_key": "not stored (the Mac's own recogniser listens; the tablet speaks in its own voice)",
+                "claude_oauth_token": "not stored (fine: the login you made with `claude` is what is used)",
             }.get(key, "not stored (fallback only)")
             row(
                 OK if have else (WARN if optional else BAD),

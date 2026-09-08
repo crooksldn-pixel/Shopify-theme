@@ -38,6 +38,9 @@ REASONS = {
     "timeout": "ElevenLabs did not answer in time",
     "network": "ElevenLabs could not be reached",
     "server_error": "ElevenLabs had a server error",
+    "rate": "the ElevenLabs voice has been asked for too often this minute",
+    "cancelled": "that answer was abandoned",
+    "prefetch": "the ElevenLabs voice could not be prepared",
 }
 
 

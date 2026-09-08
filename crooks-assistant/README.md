@@ -30,59 +30,6 @@ The first time on a new Mac, before either of those: `make doctor`, then `make v
 
 ---
 
-## Status
-
-The portable code is written and tested. The machine-specific work — the parts that need your
-Mac, your tablet, and your console access — is not, and cannot be done from anywhere else.
-
-| Milestone | State |
-|---|---|
-| M0 Environment | Repo, packaging, `make doctor`. **Run `make doctor` on the Mac.** |
-| M1 Transport | FastAPI + `/health` + the tablet page. **Tailscale setup is yours.** |
-| M2 Microphone | Capture UI, `/audio-test`, decode + level stats. **Needs the tablet.** |
-| M3 Speech | Pipeline **passed against a real whisper-server** here. Normaliser tuned on the real catalogue. **Benchmark needs the Mac and tablet audio.** |
-| M4 Claude provider | **Passed against real Claude.** Billing guard; runs on the CLI's own login (`auth=cli`), from a Terminal or the login-time agents alike. |
-| M5 Tools + gate | **Passed against real Claude** — hook denied a RED call live. Proven by tests on every run. |
-| M6 Shopify auth | Client with token cache and the `shpat_` fallback. **Needs your credentials.** |
-| M7 Shopify tools | Seven tools; queries validated against the schema and search syntax verified on the live store. **Needs your credentials to run.** |
-| M8 Gmail auth | Auth script and refresh handling. **Needs the Google Cloud console work.** |
-| M9 Gmail tools | Two tools, no write path anywhere. |
-| M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **KB written from the store's own policies and metafields**; one discretion section is yours. |
-| M11 Voice in | `/turn` takes audio or text; the tablet polls `/state` so the screen shows the tool actually running. |
-| M12 Voice out | Chunking, unlock, voice picker — all three Android guardrails. |
-| M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check, cached for 20 s; `make up` / `make install`; log rotation; capture cap. |
-| M14 Acceptance | 18-command script; placeholders fill themselves from the live store. **Run it from the tablet.** |
-
-What has actually been verified — here, on Linux, and against the real store:
-
-```
-507 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
-ruff clean                                                       make lint
-8/8 GraphQL queries validated against the Shopify Admin schema
-```
-
-**Against the live CROOKSLDN store** (read-only, through the developer connector — never
-through the assistant): shop domain, timezone, order-name format, order search syntax, product
-search syntax, customer search behaviour, variant title shapes and the real 23-product catalogue.
-Each of these corrected something the plan assumed. See *What the live data changed* below.
-
-**Against whisper.cpp, built and run here** (CPU only, no Core ML): a PyAV-encoded
-`audio/webm;codecs=opus` blob — what the tablet's MediaRecorder sends — decodes to 16 kHz mono,
-transcribes correctly through `app/clients/whisper.py`, and silence stops at the level gate
-before whisper is called. Two server-API mistakes were found and fixed. The Linux timing
-(~6 s for 11 s of speech, no acceleration) is not representative of the M4 Max and is not
-quoted anywhere as if it were.
-
-**Against real Claude on subscription auth** (`bench/results/m4-m5-*.txt`): the plan's M4 and
-M5 success tests pass. With a deliberately bland tool description Claude *attempts* the RED
-tool, the `PreToolUse` hook logs `tier=RED`, the SDK denies it, the handler's counter stays at
-zero, a proposal id is staged, and Claude reports the refusal honestly. No API key was present.
-
-Not verified, because it cannot be from here: the tablet microphone (M2), Core ML timings (M3),
-your Keychain, Tailscale, launchd, and the live Shopify/Gmail tools with your credentials.
-
----
-
 ## Setup on the Mac
 
 Every step is the same shape: open Terminal, `cd ~/crooks-assistant/crooks-assistant`, type
@@ -91,11 +38,11 @@ one line. You never run a Python file directly; `make` does it. `make help` prin
 | Step | You type | Then |
 |---|---|---|
 | Check the Mac | `make doctor` | Install whatever it names, the way it says |
-| Install | `make venv` then `make test` | Expect 507 passed |
+| Install | `make venv` then `make test` | Expect every test to pass |
 | Run it | `make up` | One window: backend, speech and the HTTPS route. Prints the address |
 | Or forget about it | `make install` | Once. The Mac starts everything at login; `make status` to check |
 | Speech | `make whisper-server` | Only to build it: prints the build steps the first time |
-| Tokens and keys | `make secrets` | Asks for the Claude token, Client ID, Client secret and ElevenLabs key, one at a time, hidden |
+| Keys | `make secrets` | Asks for the Shopify Client ID and secret and the ElevenLabs key, one at a time, hidden |
 | Prove Shopify | `make shopify` | Shop name, `Europe/London`, one recent order, cache reused |
 | Gmail | `make gmail` | A browser opens once. Then `make gmail-verify` |
 | Everything at once | `make check` | Doctor, Shopify, Gmail in one go |
@@ -107,7 +54,7 @@ not a `make` line, and it is described step by step below.
 
 Then, in order:
 
-1. **Tailscale** (M1) — install on Mac and tablet, same account. Admin console → DNS → enable
+1. **Tailscale** — install on Mac and tablet, same account. Admin console → DNS → enable
    MagicDNS, then HTTPS. Rename the Mac to something unrevealing: the hostname lands in public
    Certificate Transparency logs. `make up` sets the route itself (`tailscale serve --bg
    8000`, which persists) and prints the `https://<machine>.<tailnet>.ts.net/` address; open
@@ -115,11 +62,12 @@ Then, in order:
    *It must be that address, not the LAN IP* — the microphone and speech APIs both require a
    trusted secure context, and the LAN IP is not one.
 
-2. **whisper.cpp** (M3) — the fallback recogniser, and still required: it is what answers when
+2. **whisper.cpp** — the fallback recogniser, and still required: it is what answers when
    ElevenLabs cannot. `make whisper-server` prints the exact build commands if it is not built
    yet. On the M4 Max the working configuration is `large-v3-turbo` on a build made with
    `-DWHISPER_COREML=OFF` (Metal only): the Core ML path crashed on models without a matching
-   encoder, and Metal alone is fast enough. Put `CROOKS_WHISPER_MODEL=large-v3-turbo` in `.env`
+   encoder, and Metal alone is fast enough. Settings live in a `.env` file next to this
+   README: `cp .env.example .env` once, then put `CROOKS_WHISPER_MODEL=large-v3-turbo` in it
    so plain `make whisper-server` starts the right model. A Silero VAD model must be present;
    the launcher refuses to start without one, because a server without it rejects every
    request that asks for voice detection while the tablet still says "connected".
@@ -130,18 +78,16 @@ Then, in order:
    whisper.cpp becomes the fallback. Without a key the assistant listens entirely locally, as
    it did before — set `CROOKS_STT_PRIMARY=whisper` to choose that on purpose.
 
-4. **Claude** (M4) — run `claude` and sign in with `/login` if you have not. That login is
+4. **Claude** — run `claude` and sign in with `/login` if you have not. That login is
    what the assistant uses (`auth=cli`); no token needs storing. If a turn ever says the
    login is not working, run `claude` and `/login` again.
 
-5. **Shopify** (M6) — check the store is listed under Stores in the Dev Dashboard organisation
-   *first*; if it is not, client credentials fail permanently with `shop_not_permitted` and the
-   `shpat_` fallback is the way out. Scopes are in `SHOPIFY_SCOPES.md`. Then `make secrets`
-   for the Client ID and secret, and `make shopify` to prove it. You do not need to find the
-   Stores list first: `make shopify` either works or names `shop_not_permitted`, which is the
-   same answer in ten seconds.
+5. **Shopify** — `make secrets` for the Client ID and secret, then `make shopify` to prove
+   it. It either works or names `shop_not_permitted`, which means the app and the store are
+   in different Shopify organisations; the fix for that is the `shpat_` fallback described
+   in `SHOPIFY_SCOPES.md`, which also lists the scopes.
 
-6. **Gmail** (M8) — Google Cloud project → enable the Gmail API → Branding → Audience: External
+6. **Gmail** — Google Cloud project → enable the Gmail API → Branding → Audience: External
    → Data Access: `gmail.readonly` only → **Publish app** → Clients → Desktop app → save the
    JSON as `credentials.json` in this folder. Then `make gmail`.
    **Skip "Publish app" and your token dies every seven days.**
@@ -151,10 +97,12 @@ Then, in order:
    policy and sizing files are written from the store's own published content; the one thing
    only you can write is the discretion section of `kb/cs-rules.md`.
 
-8. **Voice** (M12) — settings → audition the voices → pick one. If none show "offline", install
-   the en-GB voice data: Settings → General management → Text-to-speech → Install voice data.
+8. **Fallback voice** — Derek needs no choosing. In the tablet's settings sheet, pick the
+   Android voice that stands in when ElevenLabs cannot answer. If none show "offline",
+   install the en-GB voice data: Settings → General management → Text-to-speech → Install
+   voice data.
 
-9. **Run at login** (M13) — `make install`. It fills in the templates in `launchd/`, loads
+9. **Run at login** — `make install`. It fills in the templates in `launchd/`, loads
    them, sets the Tailscale route and reads `/health` back. `make status`, `make restart`,
    `make uninstall` from then on.
 
@@ -197,12 +145,37 @@ starts serving a newer build. The microphone
 stays open while the page is showing, so the first word is not lost to start-up; it is
 released when the page is hidden and reopened when it returns.
 
+## Proving it on the Mac and the tablet
+
+What Linux could not verify, in the order to try it. Ten minutes.
+
+1. `make test` — every test passes on the Mac too.
+2. `make up`, then Ctrl-C, then `make up` again — the second run prints the address while
+   the first is still down; with `make install` in place it says the running copy is
+   answering and prints the address anyway.
+3. `make voice` — Derek speaks on the Mac. One ElevenLabs request.
+4. On the tablet, Settings → "Show timings" on → Preview voice. The voice should start within
+   about a second. `logs/assistant.log` shows `tts ok`; `/health`'s `voice` block counts
+   "answers ready before asked" once you have asked a real question.
+5. Ask "how many orders today?" — the transcript appears under the orb while the orb is
+   thinking, before the answer.
+6. Ask something slow (a sales summary over a month), and hold the orb through "keep holding
+   to ask something else" — the question is dropped, the orb listens, the Mac's log shows
+   the interrupt.
+7. Hold the orb while Derek is mid-sentence — he stops at once and the orb listens.
+8. Turn the screen off for a minute, turn it on, ask again — the first word is not clipped
+   and the answer is heard, not silent. If it is silent once, the next answer is in the
+   Android voice and the log says `audio context suspended`: that is the guard working;
+   tell me, because it means the tablet needs the whole-file path by default.
+9. `touch web/app.js`, restart the backend — the tablet reloads itself when idle.
+10. "Add to Home screen" from Chrome's menu — the assistant opens full-screen, portrait.
+
 ## Working on it
 
 ```bash
 make dev          # backend alone, with auto-reload (stop the launchd agent first: make uninstall)
 make chat         # terminal REPL — use this, not voice, for repeat testing
-make test         # 507 tests, all offline; the two live API ones skip without credentials
+make test         # every test, all offline; the two live API ones skip without credentials
 make lint
 make bench        # M3 model comparison, on tablet audio
 make acceptance   # M14, 18 commands
@@ -211,7 +184,7 @@ make acceptance   # M14, 18 commands
 **The acceptance script has not been run against real Claude.** It could have been — the store
 was readable and the CLI was logged in — but eighteen live turns come out of your Max allowance
 and nobody had authorised that spend. It is a five-minute decision that is yours: once M6 is
-done, `python scripts/acceptance.py` in typed mode fills the placeholders from the store, costs
+done, `make acceptance` in typed mode fills the placeholders from the store, costs
 about eighteen turns, and turns "the gate holds" into an answer-accuracy score with the
 questions it fumbled listed.
 
@@ -405,6 +378,59 @@ launchd/             templates for the login-time agents; `make install` fills t
 
 whisper.cpp itself lives outside the repo at `~/tools/whisper.cpp` — it is a large third-party
 build tree and does not belong in this history.
+
+---
+
+## Status
+
+The portable code is written and tested. The machine-specific work — the parts that need your
+Mac, your tablet, and your console access — is not, and cannot be done from anywhere else.
+
+| Milestone | State |
+|---|---|
+| M0 Environment | Repo, packaging, `make doctor`. **Run `make doctor` on the Mac.** |
+| M1 Transport | FastAPI + `/health` + the tablet page. **Tailscale setup is yours.** |
+| M2 Microphone | Capture UI, `/audio-test`, decode + level stats. **Needs the tablet.** |
+| M3 Speech | Pipeline **passed against a real whisper-server** here. Normaliser tuned on the real catalogue. **Benchmark needs the Mac and tablet audio.** |
+| M4 Claude provider | **Passed against real Claude.** Billing guard; runs on the CLI's own login (`auth=cli`), from a Terminal or the login-time agents alike. |
+| M5 Tools + gate | **Passed against real Claude** — hook denied a RED call live. Proven by tests on every run. |
+| M6 Shopify auth | Client with token cache and the `shpat_` fallback. **Needs your credentials.** |
+| M7 Shopify tools | Seven tools; queries validated against the schema and search syntax verified on the live store. **Needs your credentials to run.** |
+| M8 Gmail auth | Auth script and refresh handling. **Needs the Google Cloud console work.** |
+| M9 Gmail tools | Two tools, no write path anywhere. |
+| M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **KB written from the store's own policies and metafields**; one discretion section is yours. |
+| M11 Voice in | `/turn` takes audio or text; the tablet polls `/state` so the screen shows the tool actually running. |
+| M12 Voice out | Chunking, unlock, voice picker — all three Android guardrails. |
+| M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check, cached for 45 s; `make up` / `make install`; log rotation; capture cap. |
+| M14 Acceptance | 18-command script; placeholders fill themselves from the live store. **Run it from the tablet.** |
+
+What has actually been verified — here, on Linux, and against the real store:
+
+```
+every test passes, 2 skipped (live Shopify/Gmail), all offline  make test
+ruff clean                                                       make lint
+8/8 GraphQL queries validated against the Shopify Admin schema
+```
+
+**Against the live CROOKSLDN store** (read-only, through the developer connector — never
+through the assistant): shop domain, timezone, order-name format, order search syntax, product
+search syntax, customer search behaviour, variant title shapes and the real 23-product catalogue.
+Each of these corrected something the plan assumed. See *What the live data changed* below.
+
+**Against whisper.cpp, built and run here** (CPU only, no Core ML): a PyAV-encoded
+`audio/webm;codecs=opus` blob — what the tablet's MediaRecorder sends — decodes to 16 kHz mono,
+transcribes correctly through `app/clients/whisper.py`, and silence stops at the level gate
+before whisper is called. Two server-API mistakes were found and fixed. The Linux timing
+(~6 s for 11 s of speech, no acceleration) is not representative of the M4 Max and is not
+quoted anywhere as if it were.
+
+**Against real Claude on subscription auth** (`bench/results/m4-m5-*.txt`): the plan's M4 and
+M5 success tests pass. With a deliberately bland tool description Claude *attempts* the RED
+tool, the `PreToolUse` hook logs `tier=RED`, the SDK denies it, the handler's counter stays at
+zero, a proposal id is staged, and Claude reports the refusal honestly. No API key was present.
+
+Not verified, because it cannot be from here: the tablet microphone (M2), Core ML timings (M3),
+your Keychain, Tailscale, launchd, and the live Shopify/Gmail tools with your credentials.
 
 ---
 

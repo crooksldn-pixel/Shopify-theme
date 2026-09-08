@@ -73,8 +73,11 @@ _ORDER_FIELDS = """
     name="shopify_find_order",
     description=(
         "Find a CROOKS order by its order number (for example 4832 or #4832), or by a customer's "
-        "name or email address. Returns the matching orders with their status and total. Use this "
-        "before asking about a specific order — it is what makes the order available to look at "
+        "name or email address. Returns the matching orders with their fulfilment status, payment "
+        "status, total, date and customer — enough to answer 'has it shipped', 'how much was it' "
+        "and 'when was it placed' directly, so answer from this result when it already answers "
+        "the question. Only call shopify_order_detail when the items, the shipping or tracking, "
+        "or the order's note are actually asked for. This is also what makes an order available "
         "in more detail."
     ),
     input_schema={
