@@ -324,7 +324,8 @@ test('an order carries its progress strip and previews what was bought', () => {
   assert.equal(preview.querySelectorAll('li').length, 4, 'three items and an "and more" line');
   assert.ok(textOf(preview).includes('Yard Jeans · M') && textOf(preview).includes('× 2') && textOf(preview).includes('and 1 more'));
   const cancelled = UI.renderItem({ type: 'order', data: { order_number: '#1', payment: 'refunded', fulfillment: 'unfulfilled', cancelled_at: '2026-09-08T10:00:00Z' } });
-  assert.ok(cancelled.querySelector('.tl-step.is-bad') && textOf(cancelled).includes('Cancelled'));
+  assert.equal(cancelled.querySelectorAll('.is-bad').length, 1);   // the shim reads one class at a time
+  assert.ok(textOf(cancelled).includes('Cancelled'));
 });
 
 test('a customer is a profile: initials, standing, lifetime', () => {
