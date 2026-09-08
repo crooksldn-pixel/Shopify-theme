@@ -392,3 +392,17 @@ test('a blocked card names who is stopping the tap, by code, and never blames th
   assert.ok(/write_orders/.test(words.scope_missing));
   for (const text of Object.values(words)) assert.ok(!/not allowed/i.test(text), text);
 });
+
+test('the wait line counts down while the card is live and clears when it settles', () => {
+  const scheduled = [];
+  let t = 0;
+  const timers = { set: (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; }, clear: () => {} };
+  const node = proposalCard({ ttl_s: 60 }, { now: () => t, blocked: () => false, onCommit: () => {}, timers });
+  const meta = node.querySelector('.action-meta');
+  assert.ok(textOf(meta).startsWith('Waits 60 s'));
+  const tick = scheduled.find((s) => s.ms === 1000);
+  t = 12000; tick.fn();
+  assert.ok(textOf(meta).startsWith('Waits 48 s'), textOf(meta));
+  node.settle('revoked', 'Withdrawn');
+  assert.equal(textOf(meta), '');
+});

@@ -51,7 +51,7 @@ const el = {
   deck: $('deck'), deckBack: $('deck-back'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
   recent: $('recent'), recentLabel: $('recent-label'),
-  svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice') },
+  svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice'), changes: $('svc-changes') },
   talk: $('talk'), talkLabel: $('talk-label'),
   settings: $('settings'), settingsBtn: $('settings-btn'), closeSettings: $('close-settings'),
   voiceStatus: $('voice-status'), voiceName: $('voice-name'),
@@ -629,7 +629,8 @@ function maybeReloadForNewBuild(build) {
 function setService(name, ok) {
   const node = el.svc[name];
   if (!node) return;
-  node.dataset.ok = ok === true ? 'true' : ok === false ? 'false' : 'unknown';
+  // true / false / 'off' (deliberately switched off: not broken, not ready) / unknown.
+  node.dataset.ok = ok === true ? 'true' : ok === false ? 'false' : ok === 'off' ? 'off' : 'unknown';
 }
 
 // One health request in flight at a time, and never one that waits forever. Without both, a
@@ -665,6 +666,10 @@ async function pollHealth(fresh = false) {
     const canHear = !checks.speech || checks.speech.ok;
     const canSpeak = !checks.tts || checks.tts.ok;
     setService('voice', canHear && canSpeak);
+    // Whether a prepared change could be applied from here at all — visible on the ready
+    // screen, before anyone proposes one and taps into a refusal.
+    const writesState = data.writes && data.writes.state;
+    setService('changes', writesState === 'ready' ? true : writesState === 'disabled' ? 'off' : writesState ? false : null);
     renderHealthRows(checks);
     const voice = data.voice || {};
     if (voice.voice) {
@@ -677,7 +682,7 @@ async function pollHealth(fresh = false) {
     el.voiceStatus.className = `badge quiet ${voice.ok === false ? 'bad' : voice.enabled === false ? 'warn' : 'ok'}`;
   } catch {
     setConn('down', 'Offline');
-    setService('shopify', null); setService('gmail', null); setService('voice', null);
+    setService('shopify', null); setService('gmail', null); setService('voice', null); setService('changes', null);
     clear(el.health);
     el.health.appendChild(healthRow(false, 'the Mac', 'Cannot reach the assistant. Is the Mac awake and is it running (make up)?'));
     el.voiceStatus.textContent = 'Unknown';

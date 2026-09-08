@@ -560,10 +560,24 @@
     const expiryTimer = ttlS !== null && ttlS !== undefined ? timers.set(() => {
       if (!committed && (surface.dataset.state === 'arming' || surface.dataset.state === 'armed')) node.settle('expired', 'Expired');
     }, Math.max(0, ttlS * 1000 - 1000)) : null;
+    // "Waits 60 s" counts down, so the line is true for as long as it is shown.
+    const meta = node.querySelector ? node.querySelector('.action-meta') : null;
+    let countdown = null;
+    if (meta && ttlS !== null && ttlS !== undefined) {
+      const tick = () => {
+        const left = Math.max(0, Math.round(ttlS - (now() - shown) / 1000));
+        if (committed) return;
+        meta.textContent = `Waits ${left} s · nothing happens until you tap`;
+        if (left > 0) countdown = timers.set(tick, 1000);
+      };
+      countdown = timers.set(tick, 1000);
+    }
     node.settle = (state, label) => {
       // Called by the app when the Mac has answered, or the proposal has gone stale.
       timers.clear(armTimer);
       if (expiryTimer !== null) timers.clear(expiryTimer);
+      if (countdown !== null) { timers.clear(countdown); countdown = null; }
+      if (meta && state !== 'armed') meta.textContent = '';
       committed = state !== 'armed';
       surface.dataset.state = state;
       surface.setAttribute('aria-disabled', state === 'armed' ? 'false' : 'true');

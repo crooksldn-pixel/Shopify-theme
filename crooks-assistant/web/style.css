@@ -345,6 +345,9 @@ body[data-mode="context"] .bottom{opacity:0;pointer-events:none;transform:transl
 .service-dot{width:5px;height:5px;border-radius:50%;background:var(--ink-4);transition:background var(--t-2)}
 .service[data-ok="true"] .service-dot{background:var(--ok)}
 .service[data-ok="false"] .service-dot{background:var(--bad)}
+.service[data-ok="off"] .service-dot{background:var(--warn)}
+/* Beside the cards the answer is the headline; "System ready." is for the empty stage. */
+body[data-mode="context"] .stage[data-state="READY"] .state-label{display:none}
 .service[data-ok="false"]{color:var(--ink-3)}
 
 /* ------------------------------------------------------------------ hold to speak */
