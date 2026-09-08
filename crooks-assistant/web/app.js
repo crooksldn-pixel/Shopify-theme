@@ -129,6 +129,8 @@ function orbLevel(state) {
   return 0;
 }
 
+const ORB_SIZE = 340;          // drawn size beside nothing
+const ORB_SIZE_DOCKED = 140;   // drawn size beside the cards, where it is shown at ~99 px
 const orb = window.CrooksOrb
   ? window.CrooksOrb.create(el.orb, { size: ORB_SIZE, reducedMotion: REDUCED.matches, getLevel: orbLevel })
   : null;
@@ -192,8 +194,6 @@ function setMode(mode) {
   // rather than painting twelve times the pixels it shows.
   if (orb && typeof orb.setSize === 'function') orb.setSize(mode === 'orb' ? ORB_SIZE : ORB_SIZE_DOCKED);
 }
-const ORB_SIZE = 340;
-const ORB_SIZE_DOCKED = 140;
 
 const HAPTIC = { start: 12, release: 8, done: [10, 60, 10], error: [40, 50, 40] };
 function haptic(pattern) {
