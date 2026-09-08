@@ -187,3 +187,17 @@ test('dates are formatted for reading, and left alone when unparseable', () => {
   assert.equal(UI.formatDate('not a date'), 'not a date');
   assert.equal(UI.formatDate(''), '');
 });
+
+test('sales summary lists the days when the Mac breaks the window down', () => {
+  const node = UI.renderItem({ type: 'sales_summary', data: { title: 'This week', revenue: '£55.50', orders: 3, by_day: [
+    { date: '2026-09-07', orders: 1, revenue: '£40.00' },
+    { date: '2026-09-08', orders: 2, revenue: '£15.50' },
+    'junk', null,
+  ] } });
+  const rows = node.querySelectorAll('.row');
+  assert.equal(rows.length, 2);
+  assert.ok(textOf(rows[0]).includes('£40.00') && textOf(rows[0]).includes('1 order'));
+  assert.ok(textOf(rows[1]).includes('2 orders') && textOf(rows[1]).includes('Tue'));
+  const plain = UI.renderItem({ type: 'sales_summary', data: { title: 'Today', revenue: '£10.00', orders: 1 } });
+  assert.equal(plain.querySelectorAll('.row').length, 0);
+});

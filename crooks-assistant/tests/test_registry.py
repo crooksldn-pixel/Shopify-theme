@@ -73,3 +73,48 @@ def test_every_spec_has_an_object_schema():
     for spec in registry.all_specs():
         assert spec.input_schema.get("type") == "object", spec.name
         assert isinstance(spec.tier, Tier)
+
+
+# --------------------------------------------------------------------------- per-tool ceiling
+
+async def _patient(delay: float = 0.05) -> dict:
+    import asyncio
+
+    await asyncio.sleep(delay)
+    return {"ok": True}
+
+
+@pytest.fixture()
+def patient_tool():
+    """Registered for one test only: the gate treats any tool it does not know as RED, and
+    the registry-wide tier test must keep seeing only the real ones."""
+    registry.tool(
+        name="test_patient_tool", description="slow on purpose",
+        input_schema={"type": "object", "properties": {"delay": {"type": "number"}}},
+        tier=Tier.GREEN, timeout_s=1.0,
+    )(_patient)
+    try:
+        yield "test_patient_tool"
+    finally:
+        registry._REGISTRY.pop("test_patient_tool", None)
+
+
+async def test_a_tool_may_declare_its_own_timeout_ceiling(patient_tool):
+    """A Gmail search is a listing, a batched fetch and sometimes a credential refresh; the
+    operator's 8 s default is the wrong bound for it. A tool's own ceiling replaces the
+    default — and is still a hard bound."""
+    assert registry.get(patient_tool).timeout_s == 1.0
+    # The caller's tighter budget does not apply: the tool's own does.
+    result = await registry.invoke(patient_tool, {"delay": 0.05}, timeout_s=0.01)
+    assert result["ok"] is True
+    # ...and the tool's own ceiling is enforced.
+    with pytest.raises(registry.ToolError, match="did not respond within 1 seconds"):
+        await registry.invoke(patient_tool, {"delay": 1.5}, timeout_s=30)
+
+
+def test_gmail_tools_carry_their_own_ceiling():
+    from app.tools import gmail_tools  # noqa: F401
+
+    assert registry.get("gmail_search").timeout_s == gmail_tools.GMAIL_TIMEOUT_S
+    assert registry.get("gmail_read_thread").timeout_s == gmail_tools.GMAIL_TIMEOUT_S
+    assert registry.get("shopify_find_order").timeout_s is None, "the default still applies elsewhere"

@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import runtime as runtime_module
+from app.logging.quiet import quieten
 from app.logging.turnlog import RedactingFilter
 from app.providers.max_agent_sdk import BillingGuardError, assert_no_payg_credentials
 from app.routes import admin, health, speak, turn
@@ -46,6 +47,7 @@ def configure_logging(log_dir: Path) -> None:
         root.addHandler(rotating)
     except OSError as exc:
         log.warning("file logging disabled: %s", exc)
+    quieten()
     root._crooks_configured = True  # type: ignore[attr-defined]
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -121,3 +123,9 @@ if WEB_DIR.exists():
     @app.get("/")
     async def index() -> FileResponse:
         return FileResponse(WEB_DIR / "index.html")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> FileResponse:
+        # Desktop Chrome asks for this on every visit; the page's own icon answers it rather
+        # than a 404 in the log each time.
+        return FileResponse(WEB_DIR / "icon-192.png", media_type="image/png")

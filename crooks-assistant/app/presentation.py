@@ -41,6 +41,7 @@ MAX_CUSTOMERS = 6
 MAX_PRODUCTS = 4
 MAX_VARIANTS = 16
 MAX_MEASUREMENTS = 8
+MAX_BREAKDOWN_DAYS = 31
 MAX_THREADS = 10
 MAX_MESSAGES = 6
 MAX_BODY_CHARS = 2_000
@@ -177,6 +178,7 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
             "aov": _money_display(revenue / orders, currency) if orders and revenue is not None else None,
             "currency": currency,
             "complete": bool(result.get("complete", True)),
+            "by_day": [_sales_day(d, currency) for d in _list(result.get("by_day"), MAX_BREAKDOWN_DAYS)],
             "basis": _text(result.get("basis"), MAX_NOTE_CHARS),
             "caveat": _text(result.get("caveat"), MAX_NOTE_CHARS),
         })]
@@ -486,6 +488,16 @@ def _money_display(amount: float | None, currency: str) -> str | None:
     if symbol:
         return f"{symbol}{amount:,.2f}"
     return f"{amount:,.2f} {currency}".strip()
+
+
+def _sales_day(day: object, currency: str) -> dict:
+    day = day if isinstance(day, dict) else {}
+    revenue = _float(day.get("revenue"))
+    return {
+        "date": _text(day.get("date")),
+        "orders": _int(day.get("orders")),
+        "revenue": _money_display(revenue, currency) if revenue is not None else None,
+    }
 
 
 def _window_title(result: dict[str, Any]) -> str:

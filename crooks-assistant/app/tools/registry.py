@@ -30,6 +30,10 @@ class ToolSpec:
     handler: Handler
     # Names of arguments carrying an id that must have been issued earlier this session.
     issued_id_args: tuple[str, ...] = field(default=())
+    # A tool's own ceiling, when the operator's default is too tight for what it does (a Gmail
+    # search is a listing plus a batched fetch plus a credential refresh on a cold start).
+    # Still a hard bound; never unlimited.
+    timeout_s: float | None = field(default=None)
 
 
 class ToolError(RuntimeError):
@@ -46,6 +50,7 @@ def tool(
     input_schema: dict[str, Any],
     tier: Tier = Tier.GREEN,
     issued_id_args: tuple[str, ...] = (),
+    timeout_s: float | None = None,
 ) -> Callable[[Handler], Handler]:
     """Register a handler as a tool. The decorated function is returned unchanged so it stays
     directly callable from Python — which is how M5–M9 test tools without spending allowance."""
@@ -60,6 +65,7 @@ def tool(
             tier=tier,
             handler=fn,
             issued_id_args=issued_id_args,
+            timeout_s=timeout_s,
         )
         return fn
 
@@ -106,6 +112,8 @@ async def invoke(name: str, args: dict[str, Any], *, timeout_s: float) -> Any:
     """Run a tool handler with a hard timeout. Does NOT consult the gate — callers must have
     cleared the call first. The single entry point for actually executing a handler."""
     spec = get(name)
+    if spec.timeout_s is not None:
+        timeout_s = spec.timeout_s
     started = time.perf_counter()
     try:
         if inspect.iscoroutinefunction(spec.handler):

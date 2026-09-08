@@ -235,7 +235,7 @@ def test_the_volume_is_normal():
 def test_nothing_runs_while_the_page_is_hidden():
     hidden = section(APP_JS, "document.addEventListener('visibilitychange'", "});")
     assert "orb.stop()" in hidden and "stopSpeaking()" in hidden and "releaseMicStream()" in hidden
-    assert "if (document.hidden) return;" in function_body(APP_JS, "async function pollHealth(")
+    assert "if (document.hidden || healthInFlight) return;" in function_body(APP_JS, "async function pollHealth(")
     orb = (WEB / "orb.js").read_text(encoding="utf-8")
     assert "cancelAnimationFrame" in orb
     assert "prefers-reduced-motion" in APP_JS and "reducedMotion" in orb
@@ -336,3 +336,18 @@ def test_the_voice_request_cannot_hang_the_tablet():
     assert "SPEAK_HEADERS_TIMEOUT_MS" in speak and "controller.timedOut = true" in speak
     assert "if (controller.signal.aborted && !controller.timedOut) return;" in speak
     assert "reason: controller.timedOut ? 'voice timed out'" in speak
+
+
+def test_the_pollers_never_stack_requests():
+    """A pad on a bad link must not queue a poll per tick and release them all at once when
+    the link returns — hundreds of /state and /health hits in one second, each /health a
+    whisper inference on the Mac. One request in flight per poller, and none that waits
+    forever."""
+    health = section(APP_JS, "async function pollHealth", "const HEALTH_NAMES")
+    assert "if (document.hidden || healthInFlight) return;" in health
+    assert "signal: controller.signal" in health and "healthInFlight = false" in health
+    assert "HEALTH_TIMEOUT_MS" in health
+    state = section(APP_JS, "function startStatePolling", "function stopStatePolling")
+    assert "if (!busy || inFlight || document.hidden) return;" in state
+    assert "signal: controller.signal" in state and "inFlight = false" in state
+    assert "STATE_POLL_TIMEOUT_MS" in state

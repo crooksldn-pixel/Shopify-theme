@@ -228,3 +228,21 @@ def test_no_context_stack_for_a_single_entity_or_without_a_session():
     thread = {"thread_id": "t1", "messages": [{"from": "Jo", "subject": "Hi", "body": "hi"}]}
     assert types(present([ok("gmail_read_thread", thread)], session=session)) == ["email_thread"]
     assert types(present([ok("shopify_find_order", {"orders": [ORDER]})])) == ["order"]
+
+
+def test_sales_summary_carries_the_day_rows_bounded_and_formatted():
+    result = {"days": 2, "days_ago": 0, "orders": 3, "revenue": 55.5, "currency": "GBP", "complete": True,
+              "by_day": [{"date": "2026-09-07", "orders": 1, "revenue": 40},
+                         {"date": "2026-09-08", "orders": 2, "revenue": 15.5}]}
+    (card,) = present([ok("shopify_sales_summary", result)])
+    assert card["data"]["by_day"] == [
+        {"date": "2026-09-07", "orders": 1, "revenue": "£40.00"},
+        {"date": "2026-09-08", "orders": 2, "revenue": "£15.50"},
+    ]
+    (many,) = present([ok("shopify_sales_summary", {
+        **result, "by_day": [{"date": f"d{i}", "orders": 1, "revenue": 1} for i in range(60)]})])
+    assert len(many["data"]["by_day"]) == 31
+    (none,) = present([ok("shopify_sales_summary", {**result, "by_day": None})])
+    assert none["data"]["by_day"] == []
+    (junk,) = present([ok("shopify_sales_summary", {**result, "by_day": ["x", 3, {"date": "d", "revenue": "lots"}]})])
+    assert junk["data"]["by_day"][-1] == {"date": "d", "orders": None, "revenue": None}

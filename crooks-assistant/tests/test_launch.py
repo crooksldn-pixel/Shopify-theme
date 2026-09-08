@@ -76,8 +76,13 @@ def test_backend_command_uses_the_configured_address_and_no_reload_by_default(tm
     assert "--reload" in up.backend_command(settings, reload=True)
 
 
+# The port probe is stubbed: on the owner's Mac whisper-server and the backend are usually
+# listening while the suite runs, and `make test` must not depend on what is running.
+NOTHING_LISTENING = lambda host, port: False  # noqa: E731
+
+
 def test_up_runs_without_whisper_when_it_is_not_built_and_says_so(tmp_path):
-    children, notes = up.commands(FakeSettings(tmp_path / "nowhere"))
+    children, notes = up.commands(FakeSettings(tmp_path / "nowhere"), port_open=NOTHING_LISTENING)
     assert [name for name, _ in children] == ["backend"]
     assert any("whisper-server is NOT starting" in n for n in notes)
     assert any("ElevenLabs still hears you" in n for n in notes)
@@ -90,7 +95,7 @@ def test_up_runs_whisper_first_when_it_is_built(tmp_path):
     (root / "build" / "bin" / "whisper-server").write_text("")
     (root / "models" / "ggml-large-v3-turbo.bin").write_text("")
     (root / "models" / "ggml-silero-v5.1.2.bin").write_text("")
-    children, notes = up.commands(FakeSettings(root))
+    children, notes = up.commands(FakeSettings(root), port_open=NOTHING_LISTENING)
     assert [name for name, _ in children] == ["whisper", "backend"]
     whisper_cmd = children[0][1]
     assert whisper_cmd[0].endswith("whisper-server")

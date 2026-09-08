@@ -282,14 +282,24 @@ class ScribeClient:
             return False, f"API key rejected (401) · {note}"
         return False, f"ElevenLabs returned {probe.status_code} · {note}"
 
+    # A key that may not read the account says so with a 401 every time it is asked. Ask once
+    # an hour, not on every poll: the answer does not change and the log should not be a column
+    # of refusals.
+    QUOTA_RECHECK_S = 3600.0
+
     async def _quota(self, client: httpx.AsyncClient, headers: dict[str, str]) -> str:
         """Characters used, when the key is allowed to see them. Never a failure on its own."""
+        remembered = getattr(self, "_quota_memo", None)
+        if remembered is not None and time.monotonic() < remembered[0]:
+            return remembered[1]
         try:
             response = await client.get(
                 f"{self.base_url}/user/subscription", headers=headers, timeout=5.0
             )
             if response.status_code != 200:
-                return ", quota unreadable (restricted key)"
+                note = ", quota unreadable (restricted key)"
+                self._quota_memo = (time.monotonic() + self.QUOTA_RECHECK_S, note)
+                return note
             sub = response.json()
         except (httpx.HTTPError, ValueError):
             return ""

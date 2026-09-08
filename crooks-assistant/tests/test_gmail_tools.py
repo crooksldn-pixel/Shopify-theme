@@ -309,3 +309,65 @@ async def test_a_client_without_batching_fetches_one_by_one(monkeypatch):
 
 async def _no_lookup(email: str):
     return None
+
+
+# --------------------------------------------------------------------------- thread safety
+
+def test_each_thread_gets_its_own_gmail_service(monkeypatch):
+    """googleapiclient's httplib2 transport is not thread-safe. The health check and a search
+    run in different worker threads; sharing one service between them corrupted the TLS state
+    and took the backend down with a double free. One credential, one service per thread."""
+    import threading
+
+    from app.clients import gmail as gmail_client
+
+    built: list[int] = []
+
+    def fake_build(name, version, credentials=None, cache_discovery=True):
+        assert (name, version, credentials) == ("gmail", "v1", "creds")
+        built.append(threading.get_ident())
+        return object()
+
+    monkeypatch.setattr("googleapiclient.discovery.build", fake_build)
+    loads: list[int] = []
+    monkeypatch.setattr(gmail_client, "load_credentials", lambda: loads.append(1) or "creds")
+
+    client = gmail_client.GmailClient()
+    seen: dict[str, tuple[object, object]] = {}
+
+    def grab(key: str) -> None:
+        seen[key] = (client.service(), client.service())
+
+    workers = [threading.Thread(target=grab, args=(f"t{i}",)) for i in range(2)]
+    for w in workers:
+        w.start()
+    for w in workers:
+        w.join()
+    grab("main")
+
+    for pair in seen.values():
+        assert pair[0] is pair[1], "cached within a thread"
+    assert len({id(pair[0]) for pair in seen.values()}) == 3, "distinct across threads"
+    assert len(built) == 3 and len(loads) == 1, "one credential, refreshed once, shared"
+
+    # A reset forgets the credential; the next call on any thread rebuilds around a new one.
+    client.reset()
+    grab("main")
+    assert len(loads) == 2 and len(built) == 4
+    assert seen["main"][0] is not pair[0]
+
+
+def test_an_injected_service_is_used_from_every_thread():
+    """Tests hand the client a fake; it must not be shadowed by a per-thread build."""
+    import threading
+
+    from app.clients import gmail as gmail_client
+
+    client = gmail_client.GmailClient()
+    fake = object()
+    client._service = fake
+    got: list[object] = []
+    t = threading.Thread(target=lambda: got.append(client.service()))
+    t.start()
+    t.join()
+    assert got == [fake] and client.service() is fake

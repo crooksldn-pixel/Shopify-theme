@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.clients.shopify import ShopifyClient, ShopifyError
@@ -20,6 +21,8 @@ log = logging.getLogger("crooks.shopify_tools")
 # Shopify caps a single query at 1,000 cost points on every plan. Nested connections are the
 # expensive part, so line items and similar are capped well below the API's own limit.
 MAX_PAGE = 50
+# A day-by-day sales breakdown is capped here: a month of rows is a chart, a year is a spreadsheet.
+MAX_BREAKDOWN_DAYS = 31
 MAX_LINE_ITEMS = 50
 # products x variants is the expensive nesting; 10 x 50 stays under Shopify's 1,000-point cap.
 MAX_PRODUCTS = 10
@@ -538,9 +541,11 @@ def _size_aliases(size: str) -> set[str]:
 @tool(
     name="shopify_sales_summary",
     description=(
-        "Total CROOKS sales for a period: order count and revenue. Use days=1 for today. Always "
-        "reports which orders it counted and whether the figure is complete, so the number is "
-        "never quoted without its basis."
+        "Total CROOKS sales for a period: order count and revenue. Use days=1 for today. For a "
+        "day-by-day picture ('each day this week', 'which day was best') make ONE call with "
+        "days=7 and by_day=true rather than one call per day. Always reports which orders it "
+        "counted and whether the figure is complete, so the number is never quoted without its "
+        "basis."
     ),
     input_schema={
         "type": "object",
@@ -549,15 +554,28 @@ def _size_aliases(size: str) -> set[str]:
                      "default": 1},
             "days_ago": {"type": "integer", "description": "Shift the window back: 0 = ends today, 1 = ends yesterday. 'Yesterday' is days=1, days_ago=1.",
                          "default": 0},
+            "by_day": {"type": "boolean",
+                       "description": "Also break the window down per shop-local day (windows up to 31 days).",
+                       "default": False},
         },
     },
     tier=Tier.GREEN,
 )
-async def shopify_sales_summary(days: int = 1, days_ago: int = 0) -> dict:
+async def shopify_sales_summary(days: int = 1, days_ago: int = 0, by_day: bool = False) -> dict:
     client = _c()
     days = max(1, min(int(days), 365))
     days_ago = max(0, min(int(days_ago), 365))
+    by_day = bool(by_day)
     start, end = await _window(client, days, days_ago)
+    tz = await client.timezone()
+
+    # Every day in the window is a row, including the ones with nothing in them: "no orders on
+    # Tuesday" is an answer, a missing Tuesday is a question.
+    buckets: dict[str, dict[str, float | int]] = {}
+    if by_day and days <= MAX_BREAKDOWN_DAYS:
+        first = (datetime.now(tz) - timedelta(days=days_ago + days - 1)).date()
+        for offset in range(days):
+            buckets[(first + timedelta(days=offset)).isoformat()] = {"orders": 0, "revenue": 0.0}
 
     total = 0.0
     count = 0
@@ -575,6 +593,7 @@ async def shopify_sales_summary(days: int = 1, days_ago: int = 0) -> dict:
                   cursor
                   node {
                     id
+                    createdAt
                     currentTotalPriceSet { shopMoney { amount currencyCode } }
                     displayFinancialStatus
                   }
@@ -588,16 +607,28 @@ async def shopify_sales_summary(days: int = 1, days_ago: int = 0) -> dict:
         connection = payload["data"]["orders"]
         for edge in connection["edges"]:
             money = (edge["node"].get("currentTotalPriceSet") or {}).get("shopMoney") or {}
-            if money.get("amount") is not None:
-                total += float(money["amount"])
+            amount = float(money["amount"]) if money.get("amount") is not None else None
+            if amount is not None:
+                total += amount
                 currency = currency or money.get("currencyCode", "")
             count += 1
             cursor = edge["cursor"]
+            if buckets:
+                bucket = buckets.get(_local_date(edge["node"].get("createdAt"), tz) or "")
+                if bucket is not None:
+                    bucket["orders"] += 1
+                    bucket["revenue"] += amount or 0.0
         pages += 1
         if not connection["pageInfo"]["hasNextPage"]:
             break
     else:
         complete = False
+
+    caveats: list[str] = []
+    if not complete:
+        caveats.append("More than 500 orders in the period; figure is partial.")
+    if by_day and days > MAX_BREAKDOWN_DAYS:
+        caveats.append(f"A day-by-day breakdown covers at most {MAX_BREAKDOWN_DAYS} days; totals only.")
 
     return {
         # Never a bare number: the source and the precision travel with the figure.
@@ -611,12 +642,26 @@ async def shopify_sales_summary(days: int = 1, days_ago: int = 0) -> dict:
         "revenue": round(total, 2),
         "currency": currency or "GBP",
         "complete": complete,
+        "by_day": [
+            {"date": day, "orders": int(b["orders"]), "revenue": round(float(b["revenue"]), 2)}
+            for day, b in sorted(buckets.items())
+        ] if buckets else None,
         "basis": (
             "Current total per order including tax and shipping, after any refunds. "
             "Cancelled orders are included if they were placed in the period."
         ),
-        "caveat": None if complete else "More than 500 orders in the period; figure is partial.",
+        "caveat": " ".join(caveats) or None,
     }
+
+
+def _local_date(created_at: object, tz) -> str | None:
+    """Shopify's createdAt (UTC ISO-8601) as the shop-local calendar date, or None."""
+    if not isinstance(created_at, str) or not created_at:
+        return None
+    try:
+        return datetime.fromisoformat(created_at.replace("Z", "+00:00")).astimezone(tz).date().isoformat()
+    except ValueError:
+        return None
 
 
 # ------------------------------------------------------------ product info

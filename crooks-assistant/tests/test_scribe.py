@@ -449,3 +449,30 @@ async def test_one_connection_is_reused_across_recordings(monkeypatch):
     assert (await client.transcribe(b"wav")).text == "twelve orders"
     assert len(created) == 1
     await client.aclose()
+
+
+async def test_a_restricted_key_is_asked_about_its_quota_once_an_hour(mock_http):
+    """The real key answers 401 to the account endpoint on every poll. Asking every 45 s
+    changes nothing and fills the log with refusals; ask once, remember the answer."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/models"):
+            return httpx.Response(200, json=[{"model_id": "eleven_v3"}])
+        return httpx.Response(
+            401, json={"detail": {"status": "missing_permissions", "message": "needs user_read"}}
+        )
+
+    holder = mock_http(handler)
+    c = client()
+    for _ in range(3):
+        ok, detail = await c.health()
+        assert ok and "quota unreadable" in detail
+    paths = [str(r.url.path) for r in holder["requests"]]
+    assert paths.count("/v1/models") == 3 or sum(p.endswith("/models") for p in paths) == 3
+    assert sum(p.endswith("/subscription") for p in paths) == 1
+
+    # The memory expires: an hour later it is asked again.
+    c._quota_memo = (0.0, c._quota_memo[1])
+    await c.health()
+    paths = [str(r.url.path) for r in holder["requests"]]
+    assert sum(p.endswith("/subscription") for p in paths) == 2

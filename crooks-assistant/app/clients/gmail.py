@@ -9,6 +9,7 @@ because a token lapsed is worse than one that says so.
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 
 log = logging.getLogger("crooks.gmail")
@@ -104,20 +105,46 @@ def load_credentials():
 
 
 class GmailClient:
+    """One credential, one service object per thread.
+
+    googleapiclient does its HTTP through httplib2, which is not safe to share between threads:
+    the health check's profile call and a search running side by side on one connection
+    corrupt its TLS state, and that has taken the whole backend down with a `malloc: double
+    free`. Every Gmail call already runs in a worker thread, so each thread builds its own
+    service (the discovery document ships with the library; no request is made) around the
+    shared, refreshed credential."""
+
     def __init__(self) -> None:
-        self._service = None
+        self._service = None            # an injected service, used from every thread (tests)
+        self._creds = None
+        self._lock = threading.Lock()
+        self._local = threading.local()
+        self._generation = 0
 
     def service(self):
-        if self._service is None:
-            from googleapiclient.discovery import build
+        if self._service is not None:
+            return self._service
+        local = self._local
+        if getattr(local, "service", None) is None or local.generation != self._generation:
+            local.service = self._build()
+            local.generation = self._generation
+        return local.service
 
-            self._service = build(
-                "gmail", "v1", credentials=load_credentials(), cache_discovery=False
-            )
-        return self._service
+    def _build(self):
+        from googleapiclient.discovery import build
+
+        with self._lock:
+            if self._creds is None:
+                self._creds = load_credentials()
+            creds = self._creds
+        return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
     def reset(self) -> None:
+        """Forget the credential; every thread rebuilds on its next call."""
         self._service = None
+        with self._lock:
+            self._creds = None
+            self._generation += 1
 
     def profile(self) -> dict:
         return self.service().users().getProfile(userId="me").execute()

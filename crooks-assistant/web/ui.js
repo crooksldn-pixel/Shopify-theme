@@ -309,6 +309,7 @@
   }
 
   function renderSales(d, opts) {
+    const days = list(d.by_day, 31).filter((day) => day && typeof day === 'object');
     const stats = [
       [text(d.orders === null || d.orders === undefined ? '—' : d.orders), 'Orders'],
       [text(d.aov, '—'), 'Avg order'],
@@ -318,9 +319,23 @@
       h('div', { class: 'big', text: text(d.revenue, '—') }),
       h('p', { class: 'card-meta', text: num(d.days) === 1 || !d.until ? formatDate(d.since, DAY_FMT) : [formatDate(d.since, DAY_FMT), formatDate(d.until, DAY_FMT)].filter(Boolean).join(' → ') }),
       h('div', { class: 'stats' }, stats.map(([v, k]) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: v }), h('div', { class: 'stat-k', text: k })]))),
+      days.length ? h('ul', { class: 'rows compact' }, days.map((day) => h('li', { class: 'row' }, [
+        h('span', { class: 'row-main', text: formatDate(dayNoon(day.date), DAY_ROW_FMT) || text(day.date, '—') }),
+        h('span', { class: 'row-side' }, [
+          h('strong', { text: text(day.revenue, '—') }),
+          h('span', { class: 'card-meta', text: num(day.orders) === null ? '' : ` · ${day.orders} order${num(day.orders) === 1 ? '' : 's'}` }),
+        ]),
+      ]))) : null,
       d.complete === false ? h('p', { class: 'card-note', text: text(d.caveat, 'Partial figure.') }) : null,
       d.basis ? h('p', { class: 'card-note', text: text(d.basis) }) : null,
     ], opts);
+  }
+  const DAY_ROW_FMT = { weekday: 'short', day: 'numeric', month: 'short' };
+  // A calendar date with no time parses as UTC midnight, which is the previous evening west of
+  // Greenwich; noon local is the same calendar day everywhere.
+  function dayNoon(value) {
+    const raw = text(value);
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T12:00:00` : raw;
   }
 
   function renderEmailList(d, opts) {

@@ -558,10 +558,20 @@ function setService(name, ok) {
   node.dataset.ok = ok === true ? 'true' : ok === false ? 'false' : 'unknown';
 }
 
+// One health request in flight at a time, and never one that waits forever. Without both, a
+// pad on a bad link queues a poll every interval and releases them all at once when the link
+// returns — hundreds of requests in a second, seen on a second pad — and the Mac runs a
+// whisper inference for each.
+let healthInFlight = false;
+const HEALTH_TIMEOUT_MS = 20000;   // the Mac's own checks give up at 6 s each
+
 async function pollHealth(fresh = false) {
-  if (document.hidden) return;
+  if (document.hidden || healthInFlight) return;
+  healthInFlight = true;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   try {
-    const response = await fetch(fresh ? '/health?fresh=1' : '/health', { cache: 'no-store' });
+    const response = await fetch(fresh ? '/health?fresh=1' : '/health', { cache: 'no-store', signal: controller.signal });
     const data = await response.json();
     const checks = data.checks || {};
     const failed = Object.entries(checks).filter(([, c]) => !c.ok).map(([k]) => k);
@@ -590,6 +600,9 @@ async function pollHealth(fresh = false) {
     el.health.appendChild(healthRow(false, 'the Mac', 'Cannot reach the assistant. Is the Mac awake and is it running (make up)?'));
     el.voiceStatus.textContent = 'Unknown';
     el.voiceStatus.className = 'badge quiet';
+  } finally {
+    clearTimeout(timer);
+    healthInFlight = false;
   }
 }
 const HEALTH_NAMES = {
@@ -870,19 +883,28 @@ function renderTimings(timings, transcript) {
 
 // While a turn is in flight, ask the backend what it is actually doing. The state on screen
 // is driven by the tool that is running, never inferred from the question.
+const STATE_POLL_MS = 400;
+const STATE_POLL_TIMEOUT_MS = 5000;
 function startStatePolling() {
   stopStatePolling();
+  let inFlight = false;   // a tick while the last poll is still out is skipped, never stacked
   statePoll = setInterval(async () => {
-    if (!busy) return;
+    if (!busy || inFlight || document.hidden) return;
+    inFlight = true;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), STATE_POLL_TIMEOUT_MS);
     try {
-      const data = await (await fetch(`/state/${encodeURIComponent(sessionId)}`, { cache: 'no-store' })).json();
+      const data = await (await fetch(`/state/${encodeURIComponent(sessionId)}`, { cache: 'no-store', signal: controller.signal })).json();
       if (!busy || !data.known) return;
       if (data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state);
       // The transcript, the moment the Mac has it: a mis-heard question shows before the
       // answer to it is paid for.
       if (data.heard && !el.heard.textContent) el.heard.textContent = `“${data.heard}”`;
-    } catch { /* the turn response will carry the outcome */ }
-  }, 400);
+    } catch { /* the turn response will carry the outcome */ } finally {
+      clearTimeout(timer);
+      inFlight = false;
+    }
+  }, STATE_POLL_MS);
 }
 function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
 

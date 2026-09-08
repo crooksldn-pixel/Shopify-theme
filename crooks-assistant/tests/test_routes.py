@@ -158,6 +158,14 @@ async def test_reset(client):
     assert body == {"reset": True}
 
 
+async def test_the_favicon_is_the_page_icon(client):
+    """Desktop Chrome asks for it on every visit; a 404 per visit is log noise."""
+    response = await client.get("/favicon.ico")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 async def test_index_serves_the_tablet_page(client):
     r = await client.get("/")
     assert r.status_code == 200 and "CROOKS" in r.text

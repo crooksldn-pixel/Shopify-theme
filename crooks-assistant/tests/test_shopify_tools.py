@@ -6,7 +6,7 @@ one guarantees a test that fails for the wrong reason.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -467,3 +467,50 @@ def test_reads_are_not_mutations(doc):
     from app.clients.shopify import _is_mutation
 
     assert not _is_mutation(doc)
+
+
+async def test_sales_summary_can_break_the_window_down_by_day():
+    """'How were sales each day this week' used to cost seven tool calls; one call with
+    by_day=true answers it, bucketed by the shop's own calendar day."""
+    from datetime import UTC
+
+    tz = ZoneInfo("Europe/London")
+    today = datetime.now(tz).date()
+    yesterday = today - timedelta(days=1)
+
+    def node(i, day, amount):
+        created = datetime(day.year, day.month, day.day, 10, 0, tzinfo=tz).astimezone(UTC)
+        return {"cursor": str(i), "node": {
+            "id": str(i), "createdAt": created.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "displayFinancialStatus": "PAID",
+            "currentTotalPriceSet": {"shopMoney": {"amount": amount, "currencyCode": "GBP"}},
+        }}
+
+    client = FakeShopify([{"data": {"orders": {
+        "edges": [node(1, yesterday, "40.00"), node(2, today, "10.00"), node(3, today, "5.50")],
+        "pageInfo": {"hasNextPage": False},
+    }}}])
+    shopify_tools.bind(client)
+    result = await shopify_tools.shopify_sales_summary(days=2, by_day=True)
+    assert result["orders"] == 3 and result["revenue"] == 55.5
+    assert result["by_day"] == [
+        {"date": yesterday.isoformat(), "orders": 1, "revenue": 40.0},
+        {"date": today.isoformat(), "orders": 2, "revenue": 15.5},
+    ]
+    assert "createdAt" in client.queries[0][0]
+    assert result["caveat"] is None
+
+
+async def test_sales_summary_breakdown_lists_empty_days_and_stops_at_a_month():
+    empty = {"data": {"orders": {"edges": [], "pageInfo": {"hasNextPage": False}}}}
+    shopify_tools.bind(FakeShopify([empty]))
+    result = await shopify_tools.shopify_sales_summary(days=3, by_day=True)
+    assert [d["orders"] for d in result["by_day"]] == [0, 0, 0], "a quiet day is a row, not a gap"
+    assert result["by_day"][0]["date"] < result["by_day"][-1]["date"]
+
+    shopify_tools.bind(FakeShopify([empty]))
+    result = await shopify_tools.shopify_sales_summary(days=60, by_day=True)
+    assert result["by_day"] is None and "31" in result["caveat"]
+
+    shopify_tools.bind(FakeShopify([empty]))
+    assert (await shopify_tools.shopify_sales_summary(days=7))["by_day"] is None, "off unless asked"

@@ -22,6 +22,9 @@ from app.tools.registry import ToolError, tool
 log = logging.getLogger("crooks.gmail_tools")
 
 MAX_RESULTS = 25
+# The operator's default tool budget is 8 s; a search is a listing, a batched fetch and, on a
+# cold start, a credential refresh. Its own ceiling, still a hard one.
+GMAIL_TIMEOUT_S = 15.0
 MAX_BODY_CHARS = 1500
 MAX_THREAD_MESSAGES = 12
 
@@ -180,6 +183,7 @@ def _extract_body(payload: dict) -> str:
         },
     },
     tier=Tier.GREEN,
+    timeout_s=GMAIL_TIMEOUT_S,
 )
 async def gmail_search(
     query: str = "", days: int = 1, limit: int = 10, include_bulk: bool = False
@@ -297,6 +301,7 @@ async def gmail_search(
     },
     tier=Tier.AMBER,
     issued_id_args=("thread_id",),
+    timeout_s=GMAIL_TIMEOUT_S,
 )
 async def gmail_read_thread(thread_id: str) -> dict:
     client = _c()

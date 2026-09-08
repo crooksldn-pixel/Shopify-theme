@@ -169,6 +169,8 @@ What Linux could not verify, in the order to try it. Ten minutes.
    tell me, because it means the tablet needs the whole-file path by default.
 9. `touch web/app.js`, restart the backend — the tablet reloads itself when idle.
 10. "Add to Home screen" from Chrome's menu — the assistant opens full-screen, portrait.
+11. Ask "how were sales each day this week" — the log shows one `shopify_sales_summary`
+    call, not seven, and the card lists a row per day.
 
 ## Working on it
 
@@ -303,6 +305,17 @@ rather than sitting through the same timeout twice, and abandoning a question (b
 any synthesis nobody will hear. `CROOKS_TTS_PREFETCH=false` turns the prefetch off; the
 settings sheet's "Start speaking before the whole answer has arrived" turns streaming off;
 either way the older whole-file path is what runs.
+
+Gmail is the one client that is not async: googleapiclient runs in worker threads, and its
+HTTP layer must not be shared between them — the health check and a search on one connection
+once took the whole backend down with a `malloc: double free`. Each thread now builds its own
+service around the one refreshed credential. The Gmail tools also carry a ceiling of their
+own (fifteen seconds; a search is a listing, a batched fetch and, cold, a token refresh)
+where every other tool keeps the eight-second default.
+
+The log is for reading: a line per question, tool call and fault. The tablet's polls of
+`/state` and `/health`, the static files and the Mac's own outbound requests are not logged
+unless they fail.
 
 Holding the orb stops Derek before the recorder starts, so the assistant can never be
 recorded answering itself, and a new answer cancels the previous one's request and playback.

@@ -244,6 +244,10 @@ body[data-mode="context"] .errline{display:none}
 .row.tappable{cursor:pointer}
 .row.tappable:active{background:var(--glass)}
 .row.is-open .row-sub{-webkit-line-clamp:unset}
+/* The sales card's day rows: a figure per line, not a tappable list. */
+.rows.compact{margin-top:12px}
+.rows.compact .row{padding:8px 0;min-height:0}
+.rows.compact .row-side{flex-direction:row;align-items:baseline;gap:2px;font-variant-numeric:tabular-nums}
 
 .tabs{display:flex;gap:6px;margin:0 -4px 12px;overflow-x:auto;scrollbar-width:none;padding:0 4px}
 .tabs::-webkit-scrollbar{display:none}
