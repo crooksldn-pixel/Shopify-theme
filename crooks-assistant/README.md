@@ -4,9 +4,11 @@ A voice assistant for CROOKS LDN. You hold a button on a tablet, ask a question 
 answers out loud — reading from the Shopify store and the email inbox, and never writing to
 either.
 
-Everything runs on your own Mac. No cloud services, no database, no monthly cost. Claude is
-reached through the Agent SDK on the Claude Max subscription; speech-to-text is whisper.cpp
-locally; speech-to-speech is the tablet's own voice.
+Everything runs on your own Mac bar one thing. No database, no monthly cost beyond the ones you
+already have. Claude is reached through the Agent SDK on the Claude Max subscription;
+speech-to-text is ElevenLabs Scribe v2, with whisper.cpp on this Mac as the automatic fallback
+whenever ElevenLabs cannot answer; the answer is spoken back by Derek, an ElevenLabs voice
+generated on this Mac, with the tablet's own Android voice as that fallback.
 
 Built to the fifteen-milestone plan in *CROOKS Assistant Build Plan* (Rev 3, 7 Sept 2026).
 
@@ -73,10 +75,10 @@ run a Python file directly; `make` does it. `make help` prints this list.
 | Step | You type | Then |
 |---|---|---|
 | Check the Mac | `make doctor` | Install whatever it names, the way it says |
-| Install | `make venv` then `make test` | Expect 279 passed |
+| Install | `make venv` then `make test` | Expect 344 passed |
 | Run it | `make dev` | In a second Terminal tab: `tailscale serve 8000` |
 | Speech | `make whisper-server` | It prints the build steps the first time |
-| Tokens and keys | `make secrets` | Asks for the Claude token, Client ID, Client secret, one at a time, hidden |
+| Tokens and keys | `make secrets` | Asks for the Claude token, Client ID, Client secret and ElevenLabs key, one at a time, hidden |
 | Prove Shopify | `make shopify` | Shop name, `Europe/London`, one recent order, cache reused |
 | Gmail | `make gmail` | A browser opens once. Then `make gmail-verify` |
 | Everything at once | `make check` | Doctor, Shopify, Gmail in one go |
@@ -95,26 +97,33 @@ Then, in order:
    *It must be that address, not the LAN IP* — the microphone and speech APIs both require a
    trusted secure context, and the LAN IP is not one.
 
-2. **whisper.cpp** (M3) — `make whisper-server` prints the exact build commands if it is not
-   built yet. On the M4 Max the working configuration is `large-v3-turbo` on a build made with
+2. **whisper.cpp** (M3) — the fallback recogniser, and still required: it is what answers when
+   ElevenLabs cannot. `make whisper-server` prints the exact build commands if it is not built
+   yet. On the M4 Max the working configuration is `large-v3-turbo` on a build made with
    `-DWHISPER_COREML=OFF` (Metal only): the Core ML path crashed on models without a matching
    encoder, and Metal alone is fast enough. Put `CROOKS_WHISPER_MODEL=large-v3-turbo` in `.env`
    so plain `make whisper-server` starts the right model. A Silero VAD model must be present;
    the launcher refuses to start without one, because a server without it rejects every
    request that asks for voice detection while the tablet still says "connected".
 
-3. **Claude token** (M4) — run `claude` and sign in with `/login` if you have not, then `claude setup-token`, then
+3. **ElevenLabs** — `make secrets` and paste the API key at the hidden prompt (a key scoped to
+   speech-to-text is enough; `/health` says "quota unreadable (restricted key)" for one of
+   those, which is not a fault). Nothing else is needed: Scribe becomes the recogniser and
+   whisper.cpp becomes the fallback. Without a key the assistant listens entirely locally, as
+   it did before — set `CROOKS_STT_PRIMARY=whisper` to choose that on purpose.
+
+4. **Claude token** (M4) — run `claude` and sign in with `/login` if you have not, then `claude setup-token`, then
    `make secrets` and paste it at the hidden prompt.
    **The token expires after one year — diary a reminder for month eleven.**
 
-4. **Shopify** (M6) — check the store is listed under Stores in the Dev Dashboard organisation
+5. **Shopify** (M6) — check the store is listed under Stores in the Dev Dashboard organisation
    *first*; if it is not, client credentials fail permanently with `shop_not_permitted` and the
    `shpat_` fallback is the way out. Scopes are in `SHOPIFY_SCOPES.md`. Then `make secrets`
    for the Client ID and secret, and `make shopify` to prove it. You do not need to find the
    Stores list first: `make shopify` either works or names `shop_not_permitted`, which is the
    same answer in ten seconds.
 
-5. **Gmail** (M8) — Google Cloud project → enable the Gmail API → Branding → Audience: External
+6. **Gmail** (M8) — Google Cloud project → enable the Gmail API → Branding → Audience: External
    → Data Access: `gmail.readonly` only → **Publish app** → Clients → Desktop app → save the
    JSON as `credentials.json` in this folder. Then `make gmail`.
    **Skip "Publish app" and your token dies every seven days.**
@@ -177,8 +186,11 @@ tablet (Chrome)  ──HTTPS via tailscale serve──▶  FastAPI on 127.0.0.1:
                                                   │
                     ┌─────────────────────────────┼────────────────────┐
                     ▼                             ▼                    ▼
-             whisper.cpp                  Claude Agent SDK        knowledge base
-          (local, port 8910)            (Max subscription)         (system prompt)
+        ElevenLabs Scribe v2             Claude Agent SDK        knowledge base
+       ↳ whisper.cpp fallback            (Max subscription)         (system prompt)
+          (local, port 8910)
+        ElevenLabs TTS (Derek)
+       ↳ Android voice fallback
                                                   │
                                         in-process MCP server
                                                   │
@@ -199,17 +211,82 @@ auto-approved ones — that is why the gating lives in a `PreToolUse` hook rathe
 `tests/test_gate.py` proves a RED tool's handler never executes, via a module-level counter. If
 that test ever fails, stop and fix it before anything else.
 
+### Hearing you
+
+Two recognisers, one job. Every recording is decoded and level-checked here first — silence and
+distortion never reach a paid API — then sent to **ElevenLabs Scribe v2**, biased with keyterms
+drawn from the same live Shopify catalogue that biases Whisper's prompt. Product words only:
+customer names correct transcripts on this Mac and are held back from anything that leaves it.
+
+Every way Scribe can fail — no key, a rejected key, no credit, a timeout, no network, a reply
+that is not a transcript — falls through to **whisper.cpp** on port 8910 and the speaker is
+never told. What comes back from either engine goes through the same hallucination blocklist,
+the same CROOKS normaliser, the same order-number and ambiguity handling as before. A rejected
+key or an exhausted account also opens a five-minute cooldown, so a broken account costs one
+round trip rather than one per sentence.
+
+Before any of that, the recording has to be worth transcribing: at least 0.3 s long, above the
+noise floor, and not distorted. Distortion is measured as the *proportion* of samples sitting on
+the rail, never the single highest one — a plosive or a knock on the desk reaches full scale in a
+recording that is perfectly intelligible, and gating on the peak refused a third of everything
+the tablet ever recorded. `clipped_ratio` and `clipped_ms` are in the stats and on the
+`/audio-test` page, so a rejection can be argued with rather than guessed at.
+
+Correction is deliberately conservative, because a wrong correction turns a transcript the
+recogniser got right into a wrong answer. Ordinary English is never corrected towards a
+catalogue term — the live catalogue contributes the store's colour options as one-word terms,
+and "what" is one character-pair away from "White", "back" from "Black", "and" from "Sand". A
+short one-word term needs near-exact evidence; an equal phonetic code corroborates a match but
+can never invent one; and a match may not swallow an ordinary word at its edge. Anything below
+that bar keeps the words as spoken.
+
+Which engine actually answered is in the turn log and in the console (`recognised via scribe_v2
+in 1413ms`), and `/health` carries a `speech` block naming the primary, the effective recogniser
+and how many Scribe attempts have succeeded. Scribe being down is `degraded`, never dead: the
+Mac still hears you. `CROOKS_STT_PRIMARY=whisper` turns Scribe off entirely.
+
+### Answering you
+
+The answer text is on the tablet's screen the moment the agent finishes. Only then does the
+tablet post it to `/speak`, which is a separate request for exactly that reason: making `/turn`
+wait for an MP3 would delay the thing that matters for the sake of the thing that does not.
+
+`/speak` sends the text to **ElevenLabs** — voice *Derek*, model `eleven_flash_v2_5`, format
+`mp3_44100_128` — and forwards the MP3 to the tablet as it arrives, so the audio is not copied
+into memory on the Mac before it starts moving. The tablet plays it through one `<audio>`
+element that lives for the life of the page. The ElevenLabs key never leaves this Mac: the
+tablet sends text and receives audio, and `tests/test_web.py` reads every file in `web/` to
+prove no credential, key header or ElevenLabs URL is served to the browser.
+
+Before the text is sent it passes through `app/speech/speakable.py`, which is deliberately
+small. The system prompt already asks Claude for spoken-shaped answers; this is the safety net
+for the two things a synthesiser reliably gets wrong here — `£430.50` becomes "four hundred and
+thirty pounds fifty", `order #1930` becomes "order nineteen thirty" — plus the removal of
+markdown, links and HTML. It never rewrites what the answer says.
+
+Every way ElevenLabs can fail is a 503 with a short reason, and the tablet reads that as "use
+your own voice", not as "say nothing": a bad key, no credit, a timeout, an empty body, or a
+player that will not play all end in Android's speechSynthesis with the reason in the console.
+A rejected key or an exhausted account opens the same five-minute cooldown Scribe uses. A
+broken voice never breaks a turn — Shopify, Gmail and Claude do not depend on it.
+
+Holding the talk button stops Derek before the microphone opens, so the assistant can never be
+recorded answering itself, and a new answer cancels the previous one's request and playback.
+`/health` carries a `voice` block and a `tts` check naming the voice, the model and the last
+request's latency and size; it is a key and configuration check only, because a health page
+that synthesises a sentence every fifteen seconds is a bill rather than a check.
+
 ### Layout
 
 ```
 app/
   main.py            FastAPI app; loopback only
   runtime.py         composition root — everything is wired here
-  routes/            health · turn · admin
+  routes/            health · turn · speak · admin
   providers/         base.py (ABC) · max_agent_sdk.py · anthropic_api.py (stub, deliberately)
   tools/             registry · gate · dispatch · shopify_tools · gmail_tools · mock
-  clients/           shopify · gmail · whisper
-  speech/            decode · transcribe · normalise
+  clients/           shopify · gmail · whisper · elevenlabs (Scribe) · elevenlabs_tts (Derek)
+  speech/            decode · transcribe · normalise · speakable (text for a mouth)
   session/           manager · models (issued-id ledger)
   kb/                loader + the system prompt
   secrets/           keyring wrapper

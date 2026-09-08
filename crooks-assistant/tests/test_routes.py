@@ -44,6 +44,22 @@ async def client(monkeypatch):
         raise RuntimeError("tests never start the real Claude provider")
 
     monkeypatch.setattr(max_agent_sdk.MaxAgentSDKProvider, "start", no_start)
+
+    # /health asks ElevenLabs whether the account is alive. On the owner's Mac the key is in
+    # the Keychain and that would be a real call to a paid API on every test run.
+    from app.clients.elevenlabs import ScribeClient
+
+    async def fake_scribe_health(self):
+        return True, "fake scribe"
+
+    monkeypatch.setattr(ScribeClient, "health", fake_scribe_health)
+
+    # And the voice must not read the owner's real Keychain entry to report itself healthy.
+    from app.clients.elevenlabs_tts import VoiceClient
+
+    monkeypatch.setattr(
+        VoiceClient, "health", lambda self: (True, f"key ok · ElevenLabs {self.voice_name}")
+    )
     async with app.router.lifespan_context(app):
         app.state.runtime.provider = FakeProvider()
         transport = httpx.ASGITransport(app=app)
@@ -54,7 +70,10 @@ async def client(monkeypatch):
 async def test_health_names_each_subsystem(client):
     body = (await client.get("/health")).json()
     assert body["status"] in {"ok", "degraded"}
-    assert {"claude", "whisper", "shopify", "gmail", "knowledge_base", "terminology"} <= body["checks"].keys()
+    assert {
+        "claude", "scribe", "whisper", "speech", "tts", "shopify", "gmail", "knowledge_base",
+        "terminology",
+    } <= body["checks"].keys()
     for check in body["checks"].values():
         assert set(check) == {"ok", "detail"}
     assert "version" in body and "uptime_s" in body
@@ -171,3 +190,112 @@ async def test_tool_calls_carry_redacted_args(client):
     call = body["tool_calls"][0]
     assert call["args"]["days"] == "1"
     assert "jo@example.com" not in call["args"]["query"]
+
+
+# --------------------------------------------------------------------------- POST /speak
+#
+# The voice is an output layer. Every test below is a way it can fail, and in all of them the
+# answer still exists: /turn is untouched, and the tablet is told plainly enough to fall back.
+
+
+class FakeVoiceStream:
+    def __init__(self, body: bytes) -> None:
+        self.body = body
+
+    async def chunks(self):
+        # Two chunks, because the tablet must survive a body arriving in pieces.
+        yield self.body[: len(self.body) // 2]
+        yield self.body[len(self.body) // 2 :]
+
+
+def stub_voice(client_app, *, audio: bytes | None = None, fail: str | None = None):
+    """Replace the runtime's ElevenLabs client. No test may spend a credit."""
+    from app.clients.elevenlabs_tts import VoiceUnavailable
+
+    voice = client_app.state.runtime.voice
+    calls: list[str] = []
+
+    async def open_stream(text: str):
+        calls.append(text)
+        if fail:
+            raise VoiceUnavailable("stubbed failure", kind=fail)
+        return FakeVoiceStream(audio or b"\xff\xfb\x90\x00mp3")
+
+    voice.open_stream = open_stream  # type: ignore[method-assign]
+    return calls
+
+
+async def test_speak_returns_vikram_as_mp3(client):
+    calls = stub_voice(app, audio=b"\xff\xfb\x90\x00" + b"\x00" * 64)
+    response = await client.post("/speak", json={"text": "Twelve orders today."})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("audio/mpeg")
+    assert response.content.startswith(b"\xff\xfb")
+    assert response.headers["x-crooks-model"] == app.state.runtime.voice.model
+    assert calls == ["Twelve orders today."]
+
+
+async def test_speak_says_the_prepared_text_not_the_written_one(client):
+    calls = stub_voice(app)
+    await client.post("/speak", json={"text": "**Order #1930** came to £60."})
+    assert calls == ["Order nineteen thirty came to sixty pounds."]
+
+
+async def test_speak_never_returns_the_key_or_the_account_detail(client):
+    stub_voice(app, fail="rejected")
+    response = await client.post("/speak", json={"text": "Twelve orders today."})
+    assert response.status_code == 503
+    body = response.json()
+    assert body["ok"] is False and body["kind"] == "rejected"
+    # A reason the owner can act on, with nothing from ElevenLabs' own error in it.
+    assert "key" in body["reason"]
+    assert "xi-api-key" not in response.text and "sk_" not in response.text
+
+
+async def test_speak_failure_is_a_503_the_tablet_can_fall_back_from(client):
+    for kind in ("no_key", "credit", "timeout", "network", "cooldown", "off"):
+        stub_voice(app, fail=kind)
+        response = await client.post("/speak", json={"text": "Twelve orders today."})
+        assert response.status_code == 503, kind
+        assert response.json()["kind"] == kind
+
+
+async def test_speak_says_nothing_rather_than_paying_to_say_nothing(client):
+    calls = stub_voice(app)
+    for text in ("", "   ", "...", "***"):
+        response = await client.post("/speak", json={"text": text})
+        assert response.status_code == 204
+    assert calls == []
+
+
+async def test_speak_never_logs_the_answer(client, caplog):
+    import logging
+
+    stub_voice(app)
+    with caplog.at_level(logging.DEBUG, logger="crooks.speak"):
+        await client.post("/speak", json={"text": "Jane Smith's order 1930 is late."})
+    assert "Jane" not in caplog.text
+
+
+async def test_a_turn_still_answers_when_the_voice_is_broken(client):
+    """The point of the whole design: TTS is not a dependency of Shopify, Gmail or Claude."""
+    stub_voice(app, fail="credit")
+    turn = (await client.post("/turn", json={"text": "how many orders today"})).json()
+    assert turn["answer"]
+    assert turn["error_kind"] is None
+    assert (await client.post("/speak", json={"text": turn["answer"]})).status_code == 503
+
+
+async def test_health_names_the_voice(client):
+    body = (await client.get("/health")).json()
+    assert body["voice"]["voice"] == app.state.runtime.settings.tts_voice_name
+    assert body["voice"]["model"] == "eleven_flash_v2_5"
+    assert body["voice"]["provider"] == "elevenlabs"
+    assert "Derek" in body["checks"]["tts"]["detail"]
+
+
+async def test_the_configured_voice_is_the_one_that_was_approved(client):
+    settings = app.state.runtime.settings
+    assert settings.tts_voice_id == "Q0Et7LOU7VpeoeCRQAVS"
+    assert settings.tts_model == "eleven_flash_v2_5"
+    assert settings.tts_output_format == "mp3_44100_128"

@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from app import runtime as runtime_module
 from app.logging.turnlog import RedactingFilter
 from app.providers.max_agent_sdk import BillingGuardError, assert_no_payg_credentials
-from app.routes import admin, health, turn
+from app.routes import admin, health, speak, turn
 from config.settings import get_settings
 
 log = logging.getLogger("crooks")
@@ -76,6 +76,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="CROOKS Assistant", version="0.1.0", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(turn.router)
+app.include_router(speak.router)
 app.include_router(admin.router)
 
 if WEB_DIR.exists():

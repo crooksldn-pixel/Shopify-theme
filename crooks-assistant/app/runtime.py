@@ -7,6 +7,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.clients.elevenlabs import ScribeClient
+from app.clients.elevenlabs_tts import VoiceClient
 from app.clients.gmail import GmailClient
 from app.clients.shopify import ShopifyClient
 from app.clients.whisper import WhisperClient
@@ -29,6 +31,8 @@ class Runtime:
     settings: Settings
     sessions: SessionManager
     whisper: WhisperClient
+    scribe: ScribeClient
+    voice: VoiceClient
     normaliser: Normaliser
     transcriber: Transcriber
     shopify: ShopifyClient
@@ -71,7 +75,15 @@ class Runtime:
         # Live terms first, hand-written seed (with its aliases) LAST: the Whisper prompt is
         # truncated from the front, so the terms the owner wrote must be the ones that survive.
         merged = live + seed
-        self.normaliser.repoint(merged, aliases=self.normaliser.catalogue.aliases)
+        # Everything after the boundary is a person. Those names still correct transcripts on
+        # this Mac; they are held back from the Scribe keyterms, which leave it.
+        # `seed` carries last hour's terms forward, so the names already marked personal are
+        # carried forward with them — a name is never quietly un-marked by the next refresh.
+        # (Catalogue stores personal entries in comparison form; cleaning them twice is a no-op.)
+        customers = live[live_product_count(live) + 1 :] + list(self.normaliser.catalogue.personal)
+        self.normaliser.repoint(
+            merged, aliases=self.normaliser.catalogue.aliases, personal=customers
+        )
         log.info("normaliser repointed at live catalogue: %d terms", len(merged))
 
     def reload_kb(self) -> KnowledgeBase:
@@ -86,10 +98,32 @@ def build(settings: Settings | None = None) -> Runtime:
 
     sessions = get_manager(settings.session_idle_timeout_s)
     whisper = WhisperClient(settings.whisper_url, model=settings.whisper_model)
+    scribe = ScribeClient(
+        model=settings.scribe_model,
+        language=settings.scribe_language,
+        timeout_s=settings.scribe_timeout_s,
+        base_url=settings.elevenlabs_base_url,
+        max_keyterms=settings.scribe_max_keyterms,
+        cooldown_s=settings.scribe_cooldown_s,
+    )
+    voice = VoiceClient(
+        voice_id=settings.tts_voice_id,
+        voice_name=settings.tts_voice_name,
+        model=settings.tts_model,
+        output_format=settings.tts_output_format,
+        timeout_s=settings.tts_timeout_s,
+        base_url=settings.elevenlabs_base_url,
+        max_chars=settings.tts_max_chars,
+        cooldown_s=settings.tts_cooldown_s,
+        enabled=settings.tts_enabled,
+    )
     normaliser = _build_normaliser(settings)
     transcriber = Transcriber(
         whisper,
         normaliser,
+        scribe=scribe,
+        primary=settings.stt_primary,
+        keyterms=settings.scribe_keyterms,
         save_dir=settings.bench_audio_dir if settings.save_captures else None,
         max_saved=settings.max_saved_captures,
     )
@@ -120,6 +154,8 @@ def build(settings: Settings | None = None) -> Runtime:
         settings=settings,
         sessions=sessions,
         whisper=whisper,
+        scribe=scribe,
+        voice=voice,
         normaliser=normaliser,
         transcriber=transcriber,
         shopify=shopify,

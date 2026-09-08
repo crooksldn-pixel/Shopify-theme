@@ -17,6 +17,17 @@ from pathlib import Path
 TARGET_RATE = 16_000
 TARGET_CHANNELS = 1
 
+# A sample this close to full scale is sitting on the rail. Not 1.0: Opus is lossy, so a
+# clipped signal comes back oscillating around the limit rather than exactly at it.
+CLIP_LEVEL = 0.99
+# Reject only when the rail is where the recording LIVES. Measured over 98 real tablet
+# captures: 34 of them touched full scale — a third of everything the tablet ever recorded —
+# and the very worst spent 0.27% of its samples there, about six milliseconds. All were
+# perfectly intelligible. Deliberately clipped audio measures 20–50% by the same count, so
+# 2% sits an order of magnitude clear of real speech and well below real distortion. A peak
+# is a moment; distortion is a proportion.
+CLIPPED_RATIO_LIMIT = 0.02
+
 
 class DecodeError(RuntimeError):
     """The uploaded blob could not be decoded to audio."""
@@ -33,6 +44,21 @@ class AudioStats:
     samples: int
     container: str = ""
     codec: str = ""
+    clipped_samples: int = 0  # samples at or above CLIP_LEVEL of full scale
+
+    @property
+    def clipped_ratio(self) -> float:
+        """The share of the recording spent on the rail. This, not `peak`, is distortion."""
+        return self.clipped_samples / self.samples if self.samples else 0.0
+
+    @property
+    def clipped_ms(self) -> float:
+        return 1000 * self.clipped_samples / self.sample_rate if self.sample_rate else 0.0
+
+    @property
+    def clipped(self) -> bool:
+        """Distorted enough that transcribing it is not worth attempting."""
+        return self.clipped_ratio >= CLIPPED_RATIO_LIMIT
 
     @property
     def peak_dbfs(self) -> float:
@@ -44,8 +70,13 @@ class AudioStats:
 
     @property
     def usable(self) -> bool:
-        """A rough gate for "did the microphone actually hear a person"."""
-        return self.duration_s >= 0.3 and self.rms_dbfs > -50 and self.peak < 0.999
+        """A rough gate for "did the microphone actually hear a person".
+
+        `peak` is deliberately not part of this. One transient at full scale — a knock on the
+        desk, a plosive, a chair — says nothing about whether the speech is intelligible, and
+        rejecting on it threw away a third of all real recordings. A mildly clipped recording
+        is sent to the recogniser; a recording that is mostly rail is not."""
+        return self.duration_s >= 0.3 and self.rms_dbfs > -50 and not self.clipped
 
     def as_dict(self) -> dict:
         return {
@@ -56,6 +87,10 @@ class AudioStats:
             "rms": round(self.rms, 4),
             "peak_dbfs": round(self.peak_dbfs, 1),
             "rms_dbfs": round(self.rms_dbfs, 1),
+            # Why a recording was called distorted, in a form that can be argued with.
+            "clipped_samples": self.clipped_samples,
+            "clipped_ratio": round(self.clipped_ratio, 5),
+            "clipped_ms": round(self.clipped_ms, 1),
             "bytes_in": self.bytes_in,
             "samples": self.samples,
             "container": self.container,
@@ -138,6 +173,8 @@ def _stats(pcm: bytes, *, bytes_in: int, container: str = "", codec: str = "") -
     samples = struct.unpack(f"<{count}h", pcm[: count * 2])
     peak = max((abs(s) for s in samples), default=0) / 32768.0
     rms = math.sqrt(sum(s * s for s in samples) / count) / 32768.0 if count else 0.0
+    rail = int(32767 * CLIP_LEVEL)
+    clipped = sum(1 for s in samples if s >= rail or s <= -rail)
     return AudioStats(
         duration_s=count / TARGET_RATE,
         sample_rate=TARGET_RATE,
@@ -148,6 +185,7 @@ def _stats(pcm: bytes, *, bytes_in: int, container: str = "", codec: str = "") -
         samples=count,
         container=container,
         codec=codec,
+        clipped_samples=clipped,
     )
 
 

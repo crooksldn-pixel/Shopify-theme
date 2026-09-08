@@ -25,12 +25,26 @@ async def health(request: Request) -> dict:
             ok, detail = False, f"{type(exc).__name__}: {exc}"
         checks[name] = {"ok": ok, "detail": detail}
 
-    await asyncio.gather(
+    primary = runtime.transcriber.primary
+    running = [
         check("claude", runtime.provider.health()),
         check("whisper", runtime.whisper.health()),
         check("shopify", runtime.shopify.health()),
         check("gmail", asyncio.to_thread(runtime.gmail.health)),
-    )
+    ]
+    if primary == "scribe":
+        running.append(check("scribe", runtime.scribe.health()))
+    else:
+        # Configured off. Don't call ElevenLabs, and don't report a subsystem nobody is using
+        # as broken — that is how a health page trains people to ignore it.
+        checks["scribe"] = {"ok": True, "detail": "not in use (CROOKS_STT_PRIMARY=whisper)"}
+
+    await asyncio.gather(*running)
+
+    # The voice is a configuration and credential check, never a synthesis: a health page that
+    # spends ElevenLabs credit on every fifteen-second poll is a bill, not a check.
+    ok, detail = runtime.voice.health()
+    checks["tts"] = {"ok": ok, "detail": detail}
 
     # The plan's M3 failure check: Core ML build succeeds but the .mlmodelc is missing, and
     # everything runs twice as slowly with no error. Say so here so it cannot go unnoticed.
@@ -41,6 +55,22 @@ async def health(request: Request) -> dict:
             " · Core ML encoder present" if coreml.exists()
             else " · no Core ML encoder (fine for a Metal-only build; ~2x slower if built with Core ML)"
         )
+
+    # Speech recognition is two engines behind one job, so it gets a verdict of its own:
+    # Scribe down while Whisper is up is a slower assistant, not a deaf one, and the tablet's
+    # page should not read "degraded" as "cannot hear you".
+    primary_check = "scribe" if primary == "scribe" else "whisper"
+    if checks[primary_check]["ok"]:
+        expect = runtime.settings.scribe_model if primary == "scribe" else "whisper"
+        speech_detail = f"{expect} (primary)"
+    elif checks["whisper"]["ok"]:
+        speech_detail = f"whisper_fallback — {primary_check} is unavailable, answers still work"
+    else:
+        speech_detail = "NO recogniser available — the tablet cannot be heard"
+    checks["speech"] = {
+        "ok": checks[primary_check]["ok"] or checks["whisper"]["ok"],
+        "detail": speech_detail,
+    }
 
     checks["knowledge_base"] = {
         "ok": not runtime.kb.empty,
@@ -53,10 +83,44 @@ async def health(request: Request) -> dict:
 
     return {
         # Degraded, not down: Shopify being unreachable should not make the page say the
-        # backend is offline, because Gmail and the knowledge base still work.
+        # backend is offline, because Gmail and the knowledge base still work. Nor should
+        # ElevenLabs — speech falls back to the Mac and the answer still arrives.
         "status": "ok" if all(c["ok"] for c in checks.values()) else "degraded",
         "version": VERSION,
         "uptime_s": round(runtime.uptime_s, 1),
         "sessions": runtime.sessions.count(),
+        # One line for "who is listening", so a spoken problem can be diagnosed at a glance.
+        "speech": {
+            "primary": primary,
+            "scribe_model": runtime.settings.scribe_model,
+            "scribe_ok": checks["scribe"]["ok"],
+            "whisper_ok": checks["whisper"]["ok"],
+            "effective": (
+                (runtime.settings.scribe_model if primary == "scribe" else "whisper")
+                if checks[primary_check]["ok"]
+                else ("whisper_fallback" if checks["whisper"]["ok"] else "none")
+            ),
+            "scribe_attempts": runtime.scribe.attempts,
+            "scribe_successes": runtime.scribe.successes,
+            "scribe_failures": runtime.scribe.failures,
+            "scribe_last_error_kind": runtime.scribe.last_error_kind,
+        },
+        # And one line for "who is speaking". The tablet decides nothing from this — it asks
+        # /speak and falls back if that fails — but it is what makes a silent tablet or an
+        # Android-sounding one diagnosable without reading the log.
+        "voice": {
+            "provider": "elevenlabs" if runtime.voice.enabled else "browser",
+            "voice": runtime.voice.voice_name,
+            "model": runtime.voice.model,
+            "output_format": runtime.voice.output_format,
+            "enabled": runtime.voice.enabled,
+            "ok": ok,
+            "attempts": runtime.voice.attempts,
+            "successes": runtime.voice.successes,
+            "failures": runtime.voice.failures,
+            "last_ms": round(runtime.voice.last_ms, 1),
+            "last_bytes": runtime.voice.last_bytes,
+            "last_error_kind": runtime.voice.last_error_kind,
+        },
         "checks": checks,
     }

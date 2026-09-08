@@ -41,6 +41,60 @@ AMBIGUITY_MARGIN = 3
 # Windows and terms may differ by this many words (compound splits: "wind breaker").
 MAX_WORD_COUNT_DIFF = 2
 
+# A short single-word term — a colour, mostly — is one or two characters away from a dozen
+# ordinary English words, so 85 is not evidence for it. Measured against the live catalogue:
+# "back" scores 89 against "Black", "and" 86 against "Sand", "read" 86 against "Red", "one" 86
+# against "Bone". Every one of those was a sentence the recogniser got RIGHT and we corrupted.
+SHORT_TERM_CHARS = 6
+SHORT_TERM_THRESHOLD = 92
+# Metaphone codes collide constantly on short words ("what" and "white" are both WT), so an
+# equal code is corroboration, never proof. It may only promote a match that already looks
+# alike. "gray"/"Grey" scores 75 and is a real correction; "what"/"White" scores 67 and is not.
+PHONETIC_MIN_RATIO = 70
+
+# Ordinary English. A window made only of these is speech, not a product name: it may still
+# match a catalogue entry exactly — "black" displays as "Black" — but it is never fuzzily or
+# phonetically corrected towards one.
+#
+# This is the general form of the "what" → "White" bug. The live catalogue contributes the
+# store's colour options as one-word terms, and one-word terms are close to ordinary speech;
+# no threshold alone separates them, because the false matches score as high as the true ones.
+# Knowing which words are ordinary English does separate them. Deliberately no colours, no
+# garment nouns and no names in here — those are exactly the words a catalogue owns.
+COMMON_WORDS = frozenset(
+    """
+    a about actually after again against all almost already also always am an and another any
+    anyone anything are around as at away back be because been before being below best better
+    between both but buy by call called came can cannot cant come coming could couldnt cover
+    day days did didnt do does doesnt doing done dont down due during each early either else
+    email emails enough even ever every everyone everything exactly far few find first for
+    found from further get gets getting give given go goes going gone good got had hadnt has
+    hasnt have havent having he her here hers herself hes him himself his how however i id if
+    ill im in into is isnt it its itself ive just keep kept know known last late later least
+    left less let lets like little long look looked looking lot made make makes making many
+    may maybe me mean means might mine month months more morning most much must my myself
+    near need needs never new next night no none nor not nothing now number of off often ok
+    okay old on once one only or order ordered ordering orders other others our ours out over
+    own past pay paid people per perhaps please put quite ran read really right run said same
+    saw say saying says second see seen send sent several shall she shes should shouldnt show
+    showed since so some someone something soon sorry still such take taken tell telling than
+    thank thanks that thats the their theirs them themselves then there theres these they
+    theyre theyve thing things think this those though through time times to today together
+    told too took total two under until up upon us use used very want wanted was wasnt way we
+    week weeks well went were weve what whats when where whether which while who whom whose
+    why will with within without wont would wouldnt yes yesterday yet you your yours youre
+    """.split()
+)
+
+
+def is_common_speech(phrase: str) -> bool:
+    """True when every word of a cleaned phrase is ordinary English.
+
+    Apostrophes are dropped first, so "what's" is judged as "whats"."""
+    words = phrase.split()
+    return bool(words) and all(w.replace("'", "") in COMMON_WORDS for w in words)
+
+
 _UNITS = {
     "zero": 0, "oh": 0, "o": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
     "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
@@ -72,6 +126,30 @@ def clean(text: str) -> str:
 
 def squash(text: str) -> str:
     return text.replace(" ", "")
+
+
+def _swallows_ordinary_words(window: list[str], term: str) -> bool:
+    """True if the window starts or ends on an ordinary English word the term does not have.
+
+    Windows are scored at every offset, so a good match will always also be reachable one word
+    in. Refusing the edge is how "how many Blue Wash Yard Jeans in medium" keeps its "many"
+    and its "in"."""
+    term_words = set(clean(term).split())
+    for edge in (window[0], window[-1]):
+        word = clean(edge)
+        if word and word.replace("'", "") in COMMON_WORDS and word not in term_words:
+            return True
+    return False
+
+
+def threshold_for(key: str) -> int:
+    """How good a match has to be before it may overwrite what was said.
+
+    Short single-word terms need more evidence than long ones: "Black" and "back" are one
+    character apart, "Blue Wash Yard Jeans" and any ordinary phrase are not."""
+    if len(key.split()) == 1 and len(key) <= SHORT_TERM_CHARS:
+        return SHORT_TERM_THRESHOLD
+    return FUZZY_THRESHOLD
 
 
 @dataclass(slots=True)
@@ -107,7 +185,12 @@ class Normalised:
 class Catalogue:
     """The set of terms worth correcting towards. Swappable: M3 loads a file, M7 loads Shopify."""
 
-    def __init__(self, terms: Iterable[str], aliases: Mapping[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        terms: Iterable[str],
+        aliases: Mapping[str, str] | None = None,
+        personal: Iterable[str] | None = None,
+    ) -> None:
         seen: dict[str, str] = {}
         for term in terms:
             term = " ".join(str(term).split())
@@ -124,7 +207,13 @@ class Catalogue:
                 continue
             self.aliases[spoken_key] = canonical
             seen.setdefault(clean(canonical), canonical)
+        # Terms that are somebody's name. They still correct a transcript here on this Mac;
+        # they are excluded from anything sent to a third party — see external_terms().
+        self.personal: frozenset[str] = frozenset(
+            k for k in (clean(p) for p in (personal or ())) if k
+        )
         self.terms: list[str] = list(seen.values())
+        self._by_key: dict[str, str] = dict(seen)  # comparison form -> display form
         self._keys: list[str] = list(seen.keys())
         self._codes: list[str] = [self._code(k) for k in self._keys]
         self._alias_keys: list[tuple[str, str]] = list(self.aliases.items())
@@ -145,13 +234,31 @@ class Catalogue:
         out += [k.title() for k, _ in self._alias_keys]
         return [" ".join(t.split()) for t in dict.fromkeys(out) if t.strip()]
 
+    def external_terms(self) -> list[str]:
+        """prompt_terms() with the personal names removed: the only list allowed off this Mac.
+
+        Whisper runs locally, so biasing it with a customer's name costs nothing. ElevenLabs
+        does not, and a customer's name is personal data, not speech-bias vocabulary."""
+        if not self.personal:
+            return self.prompt_terms()
+        return [t for t in self.prompt_terms() if clean(t) not in self.personal]
+
     def best(self, phrase: str) -> tuple[str, float, str] | None:
         """Best catalogue entry for a heard phrase. Returns ("", score, "ambiguous") on a tie."""
         pc = clean(phrase)
         if not pc:
             return None
         if pc in self.aliases:
+            # A hand-written spoken form is a deliberate instruction and outranks every rule
+            # below it, including the ordinary-English one.
             return self.aliases[pc], 100.0, "alias"
+
+        if is_common_speech(pc):
+            # Ordinary English. An exact catalogue entry may claim it ("black" → "Black"); a
+            # near miss may not. Correcting a word the recogniser got right is the one failure
+            # that turns a good transcript into a wrong answer, so this stays conservative.
+            exact = self._by_key.get(pc)
+            return (exact, 100.0, "exact") if exact else None
 
         p_words = len(pc.split())
         p_code = self._code(pc)
@@ -165,9 +272,17 @@ class Catalogue:
             token_score = fuzz.token_sort_ratio(pc, key)
             squash_score = fuzz.ratio(p_squash, squash(key))
             score, via = max((token_score, "fuzzy"), (squash_score, "squashed"))
-            if score < FUZZY_THRESHOLD and p_code and code and p_code == code:
-                score, via = float(FUZZY_THRESHOLD), "phonetic"
-            if score >= FUZZY_THRESHOLD and score > scored.get(canonical, (0.0, ""))[0]:
+            threshold = threshold_for(key)
+            if (
+                score < threshold
+                and p_code
+                and code
+                and p_code == code
+                # An equal metaphone code promotes a match; it does not invent one.
+                and max(token_score, squash_score) >= PHONETIC_MIN_RATIO
+            ):
+                score, via = float(threshold), "phonetic"
+            if score >= threshold and score > scored.get(canonical, (0.0, ""))[0]:
                 scored[canonical] = (float(score), via)
 
         for canonical, key, code in zip(self.terms, self._keys, self._codes, strict=True):
@@ -189,7 +304,7 @@ class Catalogue:
         scored = []
         for canonical, key in zip(self.terms, self._keys, strict=True):
             score = max(fuzz.token_sort_ratio(pc, key), fuzz.ratio(squash(pc), squash(key)))
-            if score >= FUZZY_THRESHOLD - AMBIGUITY_MARGIN:
+            if score >= threshold_for(key) - AMBIGUITY_MARGIN:
                 scored.append((score, canonical))
         return [c for _, c in sorted(scored, reverse=True)[:limit]]
 
@@ -318,11 +433,19 @@ class Normaliser:
         """Drop the cache so the source is re-read on next use."""
         self._cached = None
 
-    def repoint(self, terms: Iterable[str], aliases: Mapping[str, str] | None = None) -> None:
-        """Swap the catalogue. M7 calls this hourly with the live Shopify list."""
+    def repoint(
+        self,
+        terms: Iterable[str],
+        aliases: Mapping[str, str] | None = None,
+        personal: Iterable[str] | None = None,
+    ) -> None:
+        """Swap the catalogue. M7 calls this hourly with the live Shopify list.
+
+        `personal` names the subset that must not be sent to a third-party recogniser."""
         frozen_terms = list(terms)
         frozen_aliases = dict(aliases or {})
-        self._source = lambda: Catalogue(frozen_terms, frozen_aliases)
+        frozen_personal = list(personal or ())
+        self._source = lambda: Catalogue(frozen_terms, frozen_aliases, frozen_personal)
         self._cached = None
 
     def __call__(self, raw: str) -> Normalised:
@@ -354,9 +477,27 @@ class Normaliser:
                 if len(phrase) < 3:
                     continue
                 best = catalogue.best(phrase)
-                if best is not None:
-                    term, score, via = best
-                    candidates.append((score, n, i, term, via))
+                if best is None:
+                    continue
+                term, score, via = best
+                if via != "alias" and _swallows_ordinary_words(window, term):
+                    # "many blue wash yard jeans" scores well against the four-word product,
+                    # and replacing it would eat "many". A match may not claim an ordinary
+                    # English word at its edge that the term itself does not contain.
+                    continue
+                candidates.append((score, n, i, term, via))
+
+        # A window that sits entirely inside another valid window loses to it. The live
+        # catalogue contributes colour options as one-word terms, and "blue" matches "Blue"
+        # exactly — which used to consume the first word of "blue wash yard genes" and leave
+        # the product name uncorrected. The longer catalogue entry is the more specific claim.
+        spans = [(i, i + n) for _, n, i, _, _ in candidates]
+        candidates = [
+            c
+            for c in candidates
+            if not any(start <= c[2] and c[2] + c[1] <= end and end - start > c[1]
+                       for start, end in spans)
+        ]
 
         # Highest score wins; among near-perfect scores the longer span wins, so the
         # five-word "black blue motiontec socks" beats the three-word alias inside it.
@@ -420,8 +561,13 @@ def from_file(path: Path) -> Normaliser:
     return Normaliser(lambda: Catalogue(*load_terminology(path)))
 
 
-def from_terms(terms: Iterable[str], aliases: Mapping[str, str] | None = None) -> Normaliser:
+def from_terms(
+    terms: Iterable[str],
+    aliases: Mapping[str, str] | None = None,
+    personal: Iterable[str] | None = None,
+) -> Normaliser:
     """Test and M7 entry point: any iterable of terms."""
     frozen = list(terms)
     frozen_aliases = dict(aliases or {})
-    return Normaliser(lambda: Catalogue(frozen, frozen_aliases))
+    frozen_personal = list(personal or ())
+    return Normaliser(lambda: Catalogue(frozen, frozen_aliases, frozen_personal))

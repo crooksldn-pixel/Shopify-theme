@@ -1,8 +1,14 @@
-"""decode → transcribe → filter hallucinations → normalise CROOKS terminology.
+"""decode → recognise → filter hallucinations → normalise CROOKS terminology.
 
 The pipeline's contract is that it never returns text it does not believe. Silence, a decode
 failure and a blocklisted artefact all come back as "no speech", because an assistant that
 answers a question nobody asked is worse than one that says it did not hear.
+
+Recognition has two engines and one rule: the tablet gets an answer. ElevenLabs Scribe runs
+first because it hears this business better; whisper.cpp on this Mac catches every way Scribe
+can fail — no key, no credit, no network, no response in time — and the speaker never hears
+about it. Everything after recognition (hallucination blocklist, CROOKS normalisation, order
+numbers, ambiguity) is engine-independent and runs exactly as it did before.
 """
 
 from __future__ import annotations
@@ -13,6 +19,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.clients.elevenlabs import ScribeClient, ScribeUnavailable
 from app.clients.whisper import Transcript, WhisperClient, WhisperUnavailable
 from app.speech.decode import AudioStats, DecodeError, decode
 from app.speech.normalise import Normalised, Normaliser
@@ -37,6 +44,10 @@ class SpeechResult:
     stats: AudioStats | None = None
     normalised: Normalised | None = None
     timings_ms: dict[str, float] = field(default_factory=dict)
+    # Which recogniser produced this text: "scribe_v2", "whisper_fallback" or "whisper".
+    engine: str = ""
+    fallback: bool = False
+    engine_detail: str = ""  # why the fallback happened; never contains a credential
 
     def as_dict(self) -> dict:
         return {
@@ -50,6 +61,9 @@ class SpeechResult:
                 for m in (self.normalised.matches if self.normalised else [])
             ],
             "order_numbers": self.normalised.order_numbers if self.normalised else [],
+            "engine": self.engine,
+            "fallback": self.fallback,
+            "engine_detail": self.engine_detail,
             "timings_ms": {k: round(v, 1) for k, v in self.timings_ms.items()},
         }
 
@@ -82,13 +96,63 @@ class Transcriber:
         client: WhisperClient,
         normaliser: Normaliser,
         *,
+        scribe: ScribeClient | None = None,
+        primary: str = "whisper",
+        keyterms: bool = True,
         save_dir: Path | None = None,
         max_saved: int = 200,
     ) -> None:
         self._client = client
         self._normaliser = normaliser
+        # No Scribe client, or primary set to "whisper", means the local path exactly as it was.
+        self._scribe = scribe
+        self._primary = "scribe" if (primary == "scribe" and scribe is not None) else "whisper"
+        self._keyterms = keyterms
         self._save_dir = save_dir
         self._max_saved = max_saved
+
+    @property
+    def primary(self) -> str:
+        return self._primary
+
+    async def _whisper(self, wav: bytes) -> Transcript:
+        return await self._client.transcribe(
+            wav, prompt=build_prompt(self._normaliser.catalogue.prompt_terms())
+        )
+
+    async def _recognise(self, wav: bytes, timings: dict[str, float]) -> tuple[Transcript, str, bool, str]:
+        """(transcript, engine, fell_back, why). Raises WhisperUnavailable only when the
+        fallback is down too — at which point there is genuinely nothing to say."""
+        if self._primary == "whisper":
+            t = time.perf_counter()
+            transcript = await self._whisper(wav)
+            timings["whisper"] = _ms(t)
+            return transcript, "whisper", False, ""
+
+        t = time.perf_counter()
+        try:
+            # external_terms(), not prompt_terms(): customer names bias Whisper on this Mac but
+            # are never sent to ElevenLabs.
+            terms = self._normaliser.catalogue.external_terms() if self._keyterms else []
+            transcript = await self._scribe.transcribe(wav, keyterms=terms)
+            timings["scribe"] = _ms(t)
+            return transcript, self._scribe.model, False, ""
+        except ScribeUnavailable as exc:
+            timings["scribe"] = _ms(t)
+            # The kind and the detail are both already scrubbed of the credential.
+            log.warning("scribe unavailable (%s), falling back to whisper: %s", exc.kind, exc)
+            why = f"{exc.kind}: {exc}"[:200]
+        except Exception as exc:  # noqa: BLE001
+            # A bug in the Scribe path is still not a reason for the tablet to get an error.
+            # Only the type is reported: an unexpected exception's message is not ours to trust.
+            timings["scribe"] = _ms(t)
+            log.exception("unexpected error from scribe, falling back to whisper")
+            why = f"unexpected: {type(exc).__name__}"
+
+        t = time.perf_counter()
+        transcript = await self._whisper(wav)
+        timings["whisper"] = _ms(t)
+        return transcript, "whisper_fallback", True, why
 
     async def from_blob(self, blob: bytes, *, filename_hint: str = "") -> SpeechResult:
         timings: dict[str, float] = {}
@@ -111,22 +175,40 @@ class Transcriber:
         if not audio.stats.usable:
             if audio.stats.duration_s < 0.3:
                 reason = "That was too short — hold the button while you speak."
-            elif audio.stats.peak >= 0.999:
+            elif audio.stats.clipped:
+                # Sustained clipping, not a single full-scale sample: a peak is a knock on the
+                # desk, and refusing to transcribe those threw away good recordings.
                 reason = "That came through distorted — a bit further from the microphone."
             else:
                 reason = "I could not hear that clearly — a bit closer to the microphone."
+            log.info(
+                "rejected audio: %s (%.2fs, %.1f dBFS RMS, %.2f%% clipped)",
+                reason, audio.stats.duration_s, audio.stats.rms_dbfs,
+                100 * audio.stats.clipped_ratio,
+            )
             return SpeechResult(ok=False, reason=reason, stats=audio.stats, timings_ms=timings)
 
         t1 = time.perf_counter()
         try:
-            transcript: Transcript = await self._client.transcribe(
-                audio.as_wav(), prompt=build_prompt(self._normaliser.catalogue.prompt_terms())
-            )
+            transcript, engine, fell_back, why = await self._recognise(audio.as_wav(), timings)
         except WhisperUnavailable as exc:
-            # Spoken line for the tablet; the developer detail goes to the log, not the speaker.
-            log.error("whisper unavailable: %s", exc)
-            return SpeechResult(ok=False, reason=exc.spoken, stats=audio.stats, timings_ms=timings)
+            # Both engines are down. Spoken line for the tablet; the developer detail goes to
+            # the log, not the speaker.
+            log.error("no recogniser available: %s", exc)
+            return SpeechResult(
+                ok=False,
+                reason=exc.spoken,
+                stats=audio.stats,
+                timings_ms=timings,
+                engine="none",
+                fallback=self._primary == "scribe",
+                engine_detail=str(exc)[:200],
+            )
         timings["transcribe"] = _ms(t1)
+        log.info(
+            "recognised via %s in %.0fms%s", engine, timings["transcribe"],
+            " (fallback)" if fell_back else "",
+        )
 
         if transcript.is_hallucination:
             log.info("filtered hallucination: %r", transcript.text)
@@ -136,6 +218,9 @@ class Transcriber:
                 reason="I did not catch any speech there.",
                 stats=audio.stats,
                 timings_ms=timings,
+                engine=engine,
+                fallback=fell_back,
+                engine_detail=why,
             )
 
         t2 = time.perf_counter()
@@ -151,6 +236,9 @@ class Transcriber:
             stats=audio.stats,
             normalised=normalised,
             timings_ms=timings,
+            engine=engine,
+            fallback=fell_back,
+            engine_detail=why,
         )
 
 
