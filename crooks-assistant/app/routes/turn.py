@@ -280,7 +280,7 @@ async def state(request: Request, session_id: str) -> dict:
 async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
     """The owner has moved on: he is holding the orb again while the last question is still
     being thought about. Interrupt Claude, and stop synthesising any answer nobody will hear.
-    Nothing is undone — there is nothing to undo; every tool is read-only."""
+    Nothing applied is undone; whatever the abandoned turn had proposed is withdrawn, unsent."""
     runtime = request.app.state.runtime
     interrupted = False
     if session_id:

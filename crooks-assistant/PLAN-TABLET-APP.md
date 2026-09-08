@@ -99,7 +99,7 @@ Take Route 1 now (mostly done), Route 2 the day a second pad appears or the firs
 found asleep once too often, and Route 3 when either the wake word or unasked arrivals
 become the thing the owner wants next. Skip Route 4. In every case the backend on the Mac
 is unchanged: every route here talks to the same `/turn`, `/speak`, `/state` and `/health`,
-and the read-only gate is the same gate.
+and the gate is the same gate.
 
 ## Greater utility on the pad, whichever route
 

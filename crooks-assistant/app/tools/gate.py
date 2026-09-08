@@ -65,8 +65,10 @@ def deny(reason: str) -> Decision:
     return Decision(Tier.RED, reason, Disposition.DENY)
 
 
-# Day 1 is read-only. Any verb that could change state anywhere is refused on sight, before
-# the rule table is consulted, so a write tool cannot be introduced by adding a rule.
+# Any verb that could change state anywhere is caught on sight, before the rule table is
+# consulted. A name that matches is denied unless the registry holds a complete write
+# definition for it (see _classify_write), and even then it is only ever staged for the owner:
+# a write cannot be introduced by adding a rule, only by declaring one, and never executes here.
 _MUTATION_VERBS = (
     "send", "create", "update", "delete", "modify", "write", "draft", "reply", "forward",
     "trash", "archive", "label", "cancel", "refund", "fulfil", "fulfill", "publish",

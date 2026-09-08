@@ -1,7 +1,10 @@
-"""Six read-only Shopify tools.
+"""Six read-only Shopify tools, and one that proposes a change.
 
-Every one is a fixed GraphQL document with bound variables. There is no tool that accepts a
+Every read is a fixed GraphQL document with bound variables. There is no tool that accepts a
 query string from the model, because that is how a read-only integration becomes a write one.
+The one write (the order note, at the bottom of this file) prepares a change and sends
+nothing; the action engine sends the single reviewed mutation later, by name, once the owner
+has tapped — see app/actions/engine.py.
 """
 
 from __future__ import annotations

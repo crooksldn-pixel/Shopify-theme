@@ -373,9 +373,10 @@ never decided from the prose. `/turn` carries a `ui` list — `[{type, data}, �
 `email_thread`, an `error` per failed service, and a `context_stack` once the conversation has
 touched more than one thing. Every item is whitelisted key by key and bounded (ten orders, six
 messages, two thousand characters of email body); a field reaches the screen only when a line
-in that module carries it. `email_draft`, `attention`, `confirmation` and `success` exist in
-the vocabulary and the renderer, with fixtures, but the backend does not produce them: Gmail
-is read-only, there is no attention scan, and there are no writes to confirm.
+in that module carries it. `email_draft` and `attention` exist in the vocabulary and the
+renderer, with fixtures, but the backend does not produce them: Gmail is read-only and there
+is no attention scan. `confirmation` and `success` are produced by the action engine (see
+"Changes to the store" above): a staged proposal, and a change that was verified.
 
 `web/ui.js` renders exactly those types and nothing else, through `textContent` and safe DOM
 construction — a customer's name arriving as `<img onerror>` is shown as that text. Claude
@@ -539,9 +540,12 @@ the closest maintained equivalent and is what the normaliser's thresholds were t
 
 ## Rules this codebase is built on
 
-- **Read-only.** No send, no draft, no label, no edit, no refund, no inventory write. The gate
-  refuses mutation verbs by name; the Gmail scope cannot write; the Shopify scope list has no
-  `write_` entry. A write path would have to defeat all three.
+- **Read-only by default, and a write is a proposal.** With writes off (the default) there is
+  no send, no draft, no label, no edit, no refund, no inventory write: the gate denies mutation
+  verbs by name, the Gmail scope cannot write, and the Shopify client refuses any mutation
+  document. With writes on, the one declared write is staged for the owner's tap, executed
+  once from the Mac's stored copy through a single reviewed mutation, and proved by a re-read.
+  There is no path from a model's call to a mutation.
 - **Never report success that was not verified.** A tool error is reported as an error. This is
   the one failure mode that is not negotiable, because it is the one that destroys trust.
 - **Ask rather than guess.** Two customers called John produce a question, not a choice.
