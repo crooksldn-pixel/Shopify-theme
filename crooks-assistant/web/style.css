@@ -469,3 +469,37 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .system-note{margin:22px 0 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
 @keyframes sys-pulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.system-pulse{animation:none}}
+
+/* ------------------------------------------------------------- actions */
+/* The surface the owner taps. Dim and inert while arming (a thin line fills across it),
+   then lit; pressed compresses; applying pulses; settled states go quiet. */
+.card-confirmation.tier-amber{border-color:rgba(220,178,102,.28)}
+.card-confirmation.tier-red{border-color:rgba(220,127,108,.32)}
+.action-summary{
+  margin:12px 0 0;padding:12px 14px;border-left:2px solid rgba(220,178,102,.55);
+  background:var(--glass);border-radius:0 var(--r-2) var(--r-2) 0;font-size:16px;line-height:1.45;color:var(--ink)
+}
+.action-surface{
+  position:relative;overflow:hidden;margin-top:14px;min-height:var(--tap);padding:0 18px;
+  display:flex;align-items:center;justify-content:center;border-radius:var(--r-2);
+  border:1px solid rgba(220,178,102,.22);background:linear-gradient(180deg,var(--glass-2),var(--glass));
+  color:var(--ink-3);font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;cursor:default;
+  transition:transform var(--t-1),color var(--t-2),border-color var(--t-2),background var(--t-2);
+}
+.action-surface.quiet{margin-top:12px;min-height:44px;font-size:12px;border-color:var(--line);color:var(--ink-3)}
+.action-arm{position:absolute;left:0;bottom:0;height:2px;width:0;background:rgba(220,178,102,.8)}
+.action-surface[data-state="arming"] .action-arm{animation:arm-fill .65s linear forwards}
+.action-surface[data-state="armed"]{color:var(--ink);border-color:rgba(220,178,102,.6);cursor:pointer}
+.action-surface[data-state="armed"] .action-arm{width:100%;opacity:.35}
+.action-surface[data-pressed="true"]{transform:scale(.975);background:var(--glass-3)}
+.action-surface[data-state="committing"]{color:var(--ink-2);animation:sys-pulse 1.2s var(--ease-inout) infinite}
+.action-surface[data-state="verified"]{color:var(--ok);border-color:rgba(120,200,140,.4)}
+.action-surface[data-state="stale"],.action-surface[data-state="expired"],.action-surface[data-state="revoked"],
+.action-surface[data-state="failed"],.action-surface[data-state="unverified"],.action-surface[data-state="unsupported"],
+.action-surface[data-state="unknown"]{color:var(--ink-4);border-style:dashed;border-color:var(--line)}
+.action-surface[data-state="stale"] .action-label,.action-surface[data-state="expired"] .action-label,
+.action-surface[data-state="revoked"] .action-label{text-decoration:line-through;text-decoration-color:var(--ink-4)}
+.action-meta{margin:10px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
+@keyframes arm-fill{from{width:0}to{width:100%}}
+@media (prefers-reduced-motion:reduce){.action-surface[data-state="arming"] .action-arm{animation:none;width:100%;opacity:.2}}

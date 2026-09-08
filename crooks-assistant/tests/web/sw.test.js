@@ -112,6 +112,9 @@ test('nothing but the shell is ever intercepted', async () => {
     { method: 'GET', url: `${ORIGIN}/ping` },
     { method: 'GET', url: `${ORIGIN}/voices` },
     { method: 'GET', url: `${ORIGIN}/tools` },
+    { method: 'POST', url: `${ORIGIN}/actions/prop_abc123/commit` },
+    { method: 'GET', url: `${ORIGIN}/actions/prop_abc123?session_id=s1` },
+    { method: 'GET', url: `${ORIGIN}/whoami` },
     { method: 'GET', url: `${ORIGIN}/static/fixtures.js` },          // dev only, not shell
     { method: 'GET', url: `${ORIGIN}/static/app.js`, mode: 'cors', cross: true },
     { method: 'GET', url: 'https://api.example.com/static/app.js' },
@@ -178,4 +181,12 @@ test('the caches never hold anything but shell paths, whatever was asked for', a
   for (const cache of w.cacheStore.values()) {
     for (const key of cache.keys()) assert.ok(SHELL.includes(key), `${key} must never be cached`);
   }
+});
+
+test('a commit is never queued, synced or replayed by the worker', () => {
+  assert.ok(!/\b(sync|periodicsync|push|indexedDB|localStorage|BackgroundSync)\b/.test(SOURCE), 'no queue, no replay');
+  const w = boot();
+  const event = w.fire('fetch', { method: 'POST', url: `${ORIGIN}/actions/prop_1/commit` });
+  assert.equal(event.response, null, 'a commit goes straight to the Mac, or nowhere');
+  assert.deepEqual(w.fetched, [], 'the worker itself never sent it');
 });

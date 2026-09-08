@@ -24,7 +24,7 @@ from typing import Any
 
 from app.providers.base import ToolCall
 from app.session.models import Session
-from app.tools.gate import Tier, classify
+from app.tools.gate import Disposition, classify
 
 # The component vocabulary. The tablet renders exactly these; anything else is dropped there
 # too, so a typo here cannot become a blank card.
@@ -49,6 +49,14 @@ MAX_SNIPPET_CHARS = 300
 MAX_TEXT_CHARS = 160
 MAX_NOTE_CHARS = 400
 MAX_CONTEXT = 6
+
+# The interaction grammar: how the owner authorises a proposal. The card names one of these
+# and the tablet renders it; a kind the tablet does not implement renders as unavailable, never
+# as a plain button. Phase 1 implements tap_commit only.
+INTERACTIONS = frozenset({"tap_commit", "swipe_commit", "hold_to_arm", "hold_drag_target", "select_then_commit"})
+# The dead time after an action card appears before a tap can count. A finger lifting off the
+# orb must never land on a card that materialised under it.
+ARMED_AFTER_MS = 650
 
 # "What are we low on?" — the threshold that makes a variant an exception, not a row.
 LOW_STOCK_AT = 5
@@ -86,6 +94,13 @@ def present(
         if not call.ok:
             error = _tool_error(call, session)
             errors.setdefault(error["data"]["service"], error)
+            continue
+        if call.proposal_id:
+            proposal = session.proposal(call.proposal_id) if session is not None else None
+            if proposal is not None and not any(
+                i["type"] == "confirmation" and i["data"].get("proposal_id") == proposal.proposal_id for i in items
+            ):
+                items.append(_confirmation(proposal))
             continue
         if not isinstance(call.result, dict):
             continue
@@ -361,7 +376,7 @@ def _message(m: dict[str, Any]) -> dict[str, Any]:
 def _tool_error(call: ToolCall, session: Session | None) -> dict[str, Any]:
     name = call.name or ""
     issued = session.issued_ids if session is not None else ()
-    blocked = classify(name, call.args or {}, issued).tier is Tier.RED
+    blocked = classify(name, call.args or {}, issued).disposition is Disposition.DENY
     if name.startswith("shopify_"):
         service, title = "shopify", "Shopify unavailable"
     elif name.startswith("gmail_"):
@@ -369,12 +384,115 @@ def _tool_error(call: ToolCall, session: Session | None) -> dict[str, Any]:
     else:
         service, title = "assistant", "Lookup failed"
     if blocked:
-        return _error(service, "blocked", "Not allowed", "This assistant is read-only. Nothing was changed.")
+        return _error(service, "blocked", "Not allowed", "That is not something this assistant may do. Nothing was changed.")
     return _error(service, "tool_failed", title, "Ask again in a moment; the answer says what happened.")
 
 
 def _error(service: str, kind: str, title: str, recovery: str) -> dict[str, Any]:
     return _ui("error", {"service": service, "kind": kind, "title": title, "recovery": recovery})
+
+
+# --------------------------------------------------------------------------- actions
+
+
+def _confirmation(proposal) -> dict[str, Any]:
+    """The action card, from the staged proposal and nothing else: the model chose no
+    component and supplied no label. The tool's own `present` names the change; this bounds
+    it and adds what the tablet needs to run the interaction and nothing it does not."""
+    words = _present_words(proposal)
+    interaction = proposal.interaction if proposal.interaction in INTERACTIONS else "unsupported"
+    return _ui("confirmation", {
+        "proposal_id": _text(proposal.proposal_id, 40),
+        "status": _text(proposal.status.value.lower(), 20),
+        "risk": "red" if proposal.risk == "RED" else "amber",
+        "operation": _text(proposal.operation, 60),
+        "title": _text(words.get("title")),
+        "entity": _entity_line(proposal),
+        "entity_kind": _text(proposal.entity_kind, 20),
+        "entity_ref": _text(proposal.entity_ref, 200),
+        "summary": _text(words.get("summary"), MAX_NOTE_CHARS),
+        "detail": _text(words.get("detail")),
+        "interaction": {
+            "kind": interaction,
+            "label": _text(words.get("confirm_label") or "Tap to apply", 40),
+            "armed_after_ms": ARMED_AFTER_MS,
+        },
+        "expires_at": proposal.public()["expires_at"],
+        "ttl_s": proposal.ttl_s(),
+        "reversible": bool(proposal.reversible),
+    })
+
+
+def _present_words(proposal) -> dict[str, Any]:
+    from app.tools import registry
+
+    try:
+        spec = registry.get(proposal.tool_name)
+    except KeyError:
+        return {}
+    if spec.write is None:
+        return {}
+    try:
+        words = spec.write.present(proposal)
+    except Exception:  # noqa: BLE001 — a card with no words is still a card
+        return {}
+    return words if isinstance(words, dict) else {}
+
+
+def _entity_line(proposal) -> str:
+    kind = (proposal.entity_kind or "").capitalize()
+    return _text(f"{kind} {proposal.entity_label}".strip())
+
+
+def present_action(result, *, session: Session | None = None) -> list[dict[str, Any]]:
+    """What the tablet shows once a tap has been answered: a success card and the entity as
+    it now is (from the verifying re-read), or a calm failure. Built from the engine's result,
+    never from the tablet's expectation."""
+    proposal = result.proposal
+    if proposal is None:
+        return []
+    return present_proposal_state(proposal, session=session, code=result.code)
+
+
+def present_proposal_state(proposal, *, session: Session | None = None, code: str | None = None) -> list[dict[str, Any]]:
+    code = code or proposal.code or proposal.status.value.lower()
+    words = _present_words(proposal)
+    entity_line = _entity_line(proposal)
+    items: list[dict[str, Any]] = []
+    status = proposal.status.value.lower()
+    if status == "verified":
+        title = "Note restored" if proposal.undo_of else _text(words.get("done_title") or _done_title(proposal))
+        items.append(_ui("success", {
+            "title": title, "detail": entity_line,
+            "proposal_id": _text(proposal.proposal_id, 40), "operation": _text(proposal.operation, 60),
+        }))
+        if isinstance(proposal.entity, dict) and proposal.entity_kind == "order":
+            items.append(_ui("order", _order(proposal.entity, detail=True)))
+    elif status == "pending":
+        items.append(_confirmation(proposal))
+    else:
+        items.append(_error("shopify", _text(code, 40), *_OUTCOME_WORDS.get(code, _OUTCOME_WORDS["failed"])))
+    if session is not None:
+        _remember(items, session)
+    return items
+
+
+def _done_title(proposal) -> str:
+    return {"order_note_append": "Note added"}.get(proposal.operation, "Done")
+
+
+# What a settled-but-not-successful proposal says on the card. Calm, and nothing from Shopify.
+_OUTCOME_WORDS: dict[str, tuple[str, str]] = {
+    "stale": ("Not applied", "The order changed since this was prepared. Ask again for a fresh one."),
+    "expired": ("Expired", "That action waited too long. Ask again."),
+    "revoked": ("Withdrawn", "You moved on to something else. Ask again if you still want it."),
+    "unverified": ("Could not confirm", "Shopify accepted the change but it could not be confirmed. Check the order."),
+    "verification_failed": ("Could not confirm", "Shopify accepted the change but it could not be confirmed. Check the order."),
+    "service_unavailable": ("Not applied", "Shopify could not be reached or refused it. Nothing was changed."),
+    "already_executed": ("Already applied", "This was applied once already; it is not applied twice."),
+    "in_progress": ("Applying", "Still being applied. Give it a moment."),
+    "failed": ("Not applied", "That did not go through. Nothing was changed."),
+}
 
 
 # --------------------------------------------------------------------------- merging, memory

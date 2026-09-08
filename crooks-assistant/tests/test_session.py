@@ -51,12 +51,15 @@ def test_issue_and_state():
     assert (s.state, s.state_detail) == ("CHECKING SHOPIFY", "shopify_list_orders")
 
 
-def test_staged_proposals_get_ids():
+def test_refusals_are_recorded_apart_from_proposals():
     m = SessionManager()
     s = m.get_or_create("a")
-    p = s.stage("mock_danger", {}, "no")
-    assert p.proposal_id.startswith("prop_")
-    assert s.proposals == [p]
+    r = s.refuse("mock_danger", {}, "no")
+    assert r.refusal_id.startswith("ref_")
+    assert s.refusals == [r]
+    assert s.proposals == []          # a refusal has no path to Shopify
+    assert s.proposal("prop_nothing") is None
+    assert s.epoch == 0
 
 
 def test_drop():

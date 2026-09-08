@@ -12,9 +12,10 @@ import re
 from datetime import datetime, timedelta
 from typing import Any
 
+from app.actions.models import Observed, Prepared, text_fingerprint
 from app.clients.shopify import ShopifyClient, ShopifyError
 from app.tools.gate import Tier
-from app.tools.registry import ToolError, tool
+from app.tools.registry import ToolError, WriteSpec, tool
 
 log = logging.getLogger("crooks.shopify_tools")
 
@@ -791,3 +792,160 @@ async def catalogue_terms(limit: int = 250) -> list[str]:
         log.warning("catalogue: customer fetch failed, continuing: %s", exc)
 
     return [t for t in dict.fromkeys(terms) if t and (len(t) > 2 or t.startswith("\x00"))]
+
+
+# ------------------------------------------------------------ writes: the order note
+#
+# The first change the assistant can propose, and the pattern every later one follows. The
+# handler PREPARES: it reads the order, builds the exact final note, and returns it with a
+# fingerprint of what it read. Nothing is sent. The action engine sends the one reviewed
+# mutation later, with these arguments and no others, once the owner has tapped — after
+# checking the note is still what was read, and before proving the result by reading again.
+
+MAX_ORDER_NOTE_CHARS = 300
+MAX_TOTAL_NOTE_CHARS = 5000   # Shopify's own limit on an order note
+_TAG = re.compile(r"<[^>]*>")
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _clean_note(note: object) -> str:
+    """The note as it will be written: plain text, one to three hundred characters."""
+    if not isinstance(note, str):
+        raise ToolError("The note must be text.")
+    if _TAG.search(note):
+        raise ToolError("The note must be plain text, not HTML.")
+    if _CONTROL.search(note):
+        raise ToolError("The note contains characters that cannot go in a note.")
+    cleaned = " ".join(line.strip() for line in note.strip().splitlines() if line.strip())
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    if not cleaned:
+        raise ToolError("The note is empty.")
+    if len(cleaned) > MAX_ORDER_NOTE_CHARS:
+        raise ToolError(f"The note is longer than {MAX_ORDER_NOTE_CHARS} characters; shorten it.")
+    return cleaned
+
+
+def _normalise_note(value: object) -> str:
+    return (value if isinstance(value, str) else "").replace("\r\n", "\n")
+
+
+async def _read_order_note(client: ShopifyClient, order_id: str) -> dict:
+    payload = await client.graphql(
+        "query CrooksOrderNote($id: ID!) { order(id: $id) { id name note } }", {"id": order_id},
+    )
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+def append_note(existing: str, addition: str) -> str:
+    """The one append rule: the addition on its own line under whatever is there. A model
+    cannot replace a note through this tool; it can only add a line to it."""
+    existing = _normalise_note(existing).rstrip()
+    return f"{existing}\n{addition}" if existing else addition
+
+
+async def _observe_order_note(execution: dict) -> Observed:
+    """A fingerprint of the order's note as it is now, and the order's detail for the screen.
+    One read serves both the precondition and the proof."""
+    order_id = str(execution["order_id"])
+    detail = await shopify_order_detail(order_id)
+    node = await _read_order_note(_c(), order_id)
+    return Observed(fingerprint=text_fingerprint(_normalise_note(node.get("note"))), entity=detail)
+
+
+async def _execute_order_note(execution: dict) -> dict:
+    """The reviewed mutation, with the stored arguments and nothing else."""
+    client = _c()
+    order_id = str(execution["order_id"])
+    desired = str(execution["desired_note"])
+    payload = await client.mutate("order_note_set", {"id": order_id, "note": desired})
+    order = ((payload.get("data") or {}).get("orderUpdate") or {}).get("order") or {}
+    if order.get("id") != order_id:
+        raise ShopifyError("Shopify did not confirm which order it updated.")
+    return {"order_id": order_id}
+
+
+def _present_order_note(proposal) -> dict:
+    """The words on the action card. Bounded, and built here rather than by the model."""
+    summary = proposal.summary
+    if proposal.undo_of:
+        return {
+            "title": "Undo the note",
+            "summary": "",
+            "detail": "Puts the note back exactly as it was.",
+            "confirm_label": "Tap to undo",
+        }
+    return {
+        "title": "Add order note",
+        "summary": str(summary.get("appended", "")),
+        "detail": "Added under the existing note." if summary.get("had_note") else "The order has no note yet.",
+        "confirm_label": "Tap to apply",
+    }
+
+
+def _undo_order_note(execution: dict) -> dict:
+    """The reverse: write back the note that was there. It runs only while the order still
+    shows what the forward action wrote (the engine checks), so nothing newer is lost."""
+    return {
+        "order_id": execution["order_id"],
+        "desired_note": execution["previous_note"],
+        "previous_note": execution["desired_note"],
+    }
+
+
+@tool(
+    name="shopify_order_note_append",
+    description=(
+        "Prepare an internal staff note to add to one order (the customer never sees it). This "
+        "does NOT change the order: it stages the note and the owner applies it by tapping the "
+        "card on the tablet. Use it only when the owner asks for a note to be added. Requires an "
+        "order_id from a previous search. Say the note is ready to tap; never say it was added."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "note": {
+                "type": "string", "minLength": 1, "maxLength": MAX_ORDER_NOTE_CHARS,
+                "description": "The note to add: one to three plain sentences. No HTML.",
+            },
+        },
+        "required": ["order_id", "note"],
+    },
+    tier=Tier.AMBER,
+    issued_id_args=("order_id",),
+    write=WriteSpec(
+        operation="order_note_append",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="order_note_set",
+        observe=_observe_order_note,
+        execute=_execute_order_note,
+        present=_present_order_note,
+        interaction="tap_commit",
+        reversible=True,
+        undo=_undo_order_note,
+        spoken_success="Order note added.",
+        spoken_undo_success="Order note restored.",
+        spoken_failure="I couldn't confirm that change.",
+        spoken_stale="The order changed since this was prepared. I haven't applied the note.",
+    ),
+)
+async def shopify_order_note_append(order_id: str, note: str) -> Prepared:
+    """Prepare, never send. The engine holds what this returns until the owner taps."""
+    addition = _clean_note(note)
+    node = await _read_order_note(_c(), str(order_id))
+    current = _normalise_note(node.get("note"))
+    desired = append_note(current, addition)
+    if len(desired) > MAX_TOTAL_NOTE_CHARS:
+        raise ToolError("The order's note is already as long as Shopify allows; nothing more fits.")
+    return Prepared(
+        execution={"order_id": str(order_id), "desired_note": desired, "previous_note": current},
+        before=text_fingerprint(current),
+        expected_after=text_fingerprint(desired),
+        entity_ref=str(order_id),
+        entity_label=str(node.get("name") or ""),
+        summary={"appended": addition, "had_note": bool(current.strip()), "payload_len": len(addition)},
+    )

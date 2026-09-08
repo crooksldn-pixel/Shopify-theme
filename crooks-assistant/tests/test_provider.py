@@ -154,9 +154,9 @@ def test_red_hook_events_are_recorded_as_tool_calls():
 
     p = MaxAgentSDKProvider(system_prompt="sys")
     session = Session(session_id="s")
-    session.stage("mock_danger", {}, "refused by gate")
+    session.refuse("mock_danger", {}, "refused by gate")
     p._current = session
-    p._on_tool_event("mock_danger", "RED")
+    p._on_tool_event("mock_danger", "RED", "DENY")
     assert p._calls and p._calls[0].name == "mock_danger" and not p._calls[0].ok
     assert session.state == "THINKING" and "refused" in session.state_detail
 
@@ -269,3 +269,15 @@ async def test_prewarm_failure_is_a_warning_not_a_broken_provider(monkeypatch, c
     await p._spare_task
     assert p._spare is None
     assert "could not pre-warm" in caplog.text
+
+
+def test_write_tools_are_withheld_from_the_model_unless_writes_are_on():
+    from app.providers.max_agent_sdk import withheld_tools
+    from app.tools import registry, shopify_tools  # noqa: F401
+
+    specs = registry.all_specs()
+    off = withheld_tools(specs, writes_enabled=False)
+    on = withheld_tools(specs, writes_enabled=True)
+    assert "shopify_order_note_append" in off and "mock_danger" in off
+    assert "shopify_order_note_append" not in on and "mock_danger" in on
+    assert "shopify_order_detail" not in off and "shopify_order_detail" not in on

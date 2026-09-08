@@ -141,12 +141,17 @@ test('a draft never has a send control and says nothing was sent', () => {
   assert.ok(/not sent/i.test(textOf(node)));
 });
 
-test('a confirmation has only disabled controls and names the tier', () => {
-  const amber = UI.renderItem({ type: 'confirmation', data: { title: 'Fulfil?', tier: 'amber' } });
-  const red = UI.renderItem({ type: 'confirmation', data: { title: 'Refund?', tier: 'red' } });
-  for (const node of [amber, red]) for (const b of node.querySelectorAll('button')) assert.equal(b.getAttribute('aria-disabled'), 'true');
-  assert.ok(amber.querySelector('.tier-amber') && red.querySelector('.tier-red'));
-  assert.ok(/read-only/i.test(textOf(red)));
+test('a confirmation without a proposal is inert and names its risk', () => {
+  const amber = UI.renderItem({ type: 'confirmation', data: { title: 'Fulfil?', risk: 'amber' } });
+  const red = UI.renderItem({ type: 'confirmation', data: { title: 'Refund?', risk: 'red' } });
+  assert.ok(amber.classList.contains('tier-amber') && red.classList.contains('tier-red'));
+  for (const node of [amber, red]) {
+    assert.equal(node.querySelectorAll('button').length, 0, 'no generic button that could inherit a click');
+    const surface = node.querySelector('.action-surface');
+    assert.equal(surface.getAttribute('aria-disabled'), 'true');
+    assert.notEqual(surface.dataset.state, 'armed');
+    assert.equal(typeof node.settle, 'undefined', 'nothing to commit without a proposal id');
+  }
 });
 
 test('the context stack comes back as entries and chips, not as a card', () => {
@@ -200,4 +205,108 @@ test('sales summary lists the days when the Mac breaks the window down', () => {
   assert.ok(textOf(rows[1]).includes('2 orders') && textOf(rows[1]).includes('Tue'));
   const plain = UI.renderItem({ type: 'sales_summary', data: { title: 'Today', revenue: '£10.00', orders: 1 } });
   assert.equal(plain.querySelectorAll('.row').length, 0);
+});
+
+// ------------------------------------------------------------------ actions
+
+function proposalCard(overrides, opts) {
+  const data = Object.assign({
+    proposal_id: 'prop_1', status: 'pending', risk: 'amber', operation: 'order_note_append', title: 'Add order note',
+    entity: 'Order #1930', entity_kind: 'order', entity_ref: 'gid://shopify/Order/1', summary: HOSTILE, detail: 'The order has no note yet.',
+    interaction: { kind: 'tap_commit', label: 'Tap to apply', armed_after_ms: 650 }, ttl_s: 60, reversible: true,
+  }, overrides || {});
+  return UI.renderItem({ type: 'confirmation', data }, opts);
+}
+
+function tapHarness(overrides, extra) {
+  let t = 0;
+  const commits = [];
+  const opts = Object.assign({
+    now: () => t, blocked: () => false, onCommit: (id, node) => commits.push(id),
+    timers: { set: () => 0, clear: () => {} },
+  }, extra || {});
+  const node = proposalCard(overrides, opts);
+  const surface = node.querySelector('.action-surface');
+  return { node, surface, commits, at: (ms) => { t = ms; }, arm: () => { surface.dataset.state = 'armed'; } };
+}
+
+test('the action card renders from the proposal, through textContent, with its risk and entity', () => {
+  const { node, surface } = tapHarness();
+  assert.ok(node.classList.contains('tier-amber'));
+  assert.ok(textOf(node).includes('Add order note') && textOf(node).includes('Order #1930') && textOf(node).includes(HOSTILE));
+  assert.equal(node.querySelectorAll('button').length, 0);
+  assert.equal(surface.dataset.state, 'arming');
+  assert.equal(surface.getAttribute('aria-disabled'), 'true');
+  assert.equal(node.dataset.proposal, 'prop_1');
+});
+
+test('a tap during the dead time does nothing', () => {
+  const h = tapHarness();
+  h.at(100); h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  assert.deepEqual(h.commits, []);
+});
+
+test('a press that began before arming cannot commit when it ends after', () => {
+  const h = tapHarness();
+  h.at(100); h.surface.dispatch('pointerdown');
+  h.at(900); h.arm(); h.surface.dispatch('pointerup');
+  assert.deepEqual(h.commits, []);
+});
+
+test('a tap after arming commits once, and only once', () => {
+  const h = tapHarness();
+  h.at(700); h.arm();
+  h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  assert.deepEqual(h.commits, ['prop_1']);
+  assert.equal(h.surface.dataset.state, 'committing');
+});
+
+test('recording or a turn in flight blocks the tap', () => {
+  let busy = true;
+  const h = tapHarness({}, { blocked: () => busy });
+  h.at(700); h.arm();
+  h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  assert.deepEqual(h.commits, []);
+  busy = false;
+  h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+  assert.deepEqual(h.commits, ['prop_1']);
+});
+
+test('a settled card cannot be tapped', () => {
+  for (const state of ['stale', 'expired', 'revoked', 'verified']) {
+    const h = tapHarness();
+    h.at(700); h.arm();
+    h.node.settle(state, 'Not available');
+    h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+    assert.deepEqual(h.commits, [], state);
+    assert.equal(h.surface.dataset.state, state);
+  }
+});
+
+test('a proposal that is not pending, or an interaction the tablet does not know, is inert', () => {
+  for (const data of [{ status: 'expired' }, { interaction: { kind: 'hold_drag_target' } }, { proposal_id: '' }]) {
+    const h = tapHarness(data);
+    h.at(5000);
+    h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
+    assert.deepEqual(h.commits, []);
+  }
+  assert.ok(textOf(tapHarness({ interaction: { kind: 'hold_drag_target' } }).node).includes('newer tablet build'));
+});
+
+test('a success card offers its undo the same way, and success needs a verified answer to exist at all', () => {
+  const commits = [];
+  let t = 0;
+  const node = UI.renderItem({ type: 'success', data: { title: 'Note added', detail: 'Order #1930', proposal_id: 'prop_1', undo: { proposal_id: 'prop_2', label: 'Undo', ttl_s: 60, armed_after_ms: 650 } } },
+    { now: () => t, onCommit: (id) => commits.push(id), timers: { set: () => 0, clear: () => {} } });
+  const surface = node.querySelector('.action-surface');
+  assert.ok(surface && textOf(surface).includes('Undo'));
+  t = 100; surface.dispatch('pointerdown'); surface.dispatch('pointerup');
+  assert.deepEqual(commits, []);
+  t = 700; surface.dataset.state = 'armed';
+  surface.dispatch('pointerdown'); surface.dispatch('pointerup');
+  assert.deepEqual(commits, ['prop_2']);
+  const plain = UI.renderItem({ type: 'success', data: { title: 'Note added' } });
+  assert.equal(plain.querySelector('.action-surface'), null);
 });

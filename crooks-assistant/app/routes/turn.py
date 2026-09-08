@@ -85,6 +85,9 @@ async def turn(
     live = runtime.sessions.get_or_create(session_id)
     live.heard = ""
     live.abandoned = False
+    # A new instruction. Whatever the assistant proposed under the last one is withdrawn: a
+    # proposal is bound to the conversation position it was made in, and this is a new one.
+    runtime.actions.advance_epoch(live, "new instruction")
 
     if audio is not None:
         blob = await audio.read()
@@ -155,8 +158,10 @@ async def turn(
             {
                 "name": c.name, "ok": c.ok, "error": c.error, "ms": c.duration_ms,
                 # Arguments are what make a wrong answer diagnosable in chat.py — redacted,
-                # because the model may have put an email address in them.
-                "args": redact({k: str(v)[:80] for k, v in (c.args or {}).items()}),
+                # because the model may have put an email address in them. A proposed write's
+                # content stays out of the log altogether; the ledger keeps its length.
+                "args": _loggable_args(c),
+                "proposal_id": c.proposal_id,
             }
             for c in result.tool_calls
         ],
@@ -167,6 +172,13 @@ async def turn(
 
 
 LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
+
+
+def _loggable_args(call) -> dict:
+    args = call.args or {}
+    if call.proposal_id:
+        return {k: (str(v)[:80] if k.endswith("_id") else f"<{len(str(v))} chars>") for k, v in args.items()}
+    return redact({k: str(v)[:80] for k, v in args.items()})
 
 
 def _truthy(value) -> bool:
@@ -259,6 +271,7 @@ async def state(request: Request, session_id: str) -> dict:
         "state": session.state,
         "detail": session.state_detail,
         "turns": session.turns,
+        "epoch": session.epoch,
         "heard": session.heard,
     }
 
@@ -272,8 +285,11 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
     interrupted = False
     if session_id:
         # Marked whether or not the turn has reached Claude yet — a hold during transcription
-        # counts — and even before the session's first turn has created it.
-        runtime.sessions.get_or_create(session_id).abandoned = True
+        # counts — and even before the session's first turn has created it. Anything the
+        # abandoned turn proposed is withdrawn with it.
+        live = runtime.sessions.get_or_create(session_id)
+        live.abandoned = True
+        runtime.actions.advance_epoch(live, "turn abandoned")
         interrupted = await runtime.provider.interrupt(session_id)
     stopped = runtime.voice.cancel_prefetches()
     return {"cancelled": True, "interrupted": interrupted, "prefetches_stopped": stopped}
@@ -306,6 +322,7 @@ async def audio_test(request: Request, audio: UploadFile = File(...)) -> dict:
 async def reset(request: Request, session_id: str = Form(default="")) -> dict:
     runtime = request.app.state.runtime
     if session_id:
+        runtime.actions.forget_session(session_id)
         runtime.sessions.drop(session_id)
         await runtime.provider.reset_session(session_id)
     return {"reset": True}

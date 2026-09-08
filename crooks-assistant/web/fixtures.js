@@ -67,7 +67,7 @@
       { kind: 'orders', title: '2 orders unfulfilled since yesterday', detail: '#1929, #1930', level: 'amber' },
       { kind: 'stock', title: 'Blue Wash Yard Jeans S out of stock', detail: 'Sold out this morning', level: 'red' },
     ] } }] },
-    { id: 'confirmation', label: 'Confirmation', items: [{ type: 'confirmation', data: { tier: 'amber', title: 'Mark #1930 as fulfilled?', detail: 'Royal Mail Tracked 24, tracking to follow.', confirm_label: 'Fulfil' } }] },
+    { id: 'confirmation', label: 'Confirmation', items: [{ type: 'confirmation', data: { proposal_id: 'prop_fixture0000', status: 'pending', risk: 'amber', operation: 'order_note_append', title: 'Add order note', entity: 'Order #1930', entity_kind: 'order', entity_ref: 'gid://shopify/Order/0', summary: 'Customer requested a sizing exchange.', detail: 'The order has no note yet.', interaction: { kind: 'tap_commit', label: 'Tap to apply', armed_after_ms: 650 }, ttl_s: 60, reversible: true } }] },
     { id: 'success', label: 'Success', items: [{ type: 'success', data: { title: 'Order #1930 fulfilled', detail: 'Tracking sent to Sam Fixture.' } }] },
     { id: 'error', label: 'Error', items: [{ type: 'error', data: { service: 'shopify', kind: 'tool_failed', title: 'Shopify unavailable', recovery: 'Ask again in a moment.' } }] },
     { id: 'stack', label: 'Context stack', items: [

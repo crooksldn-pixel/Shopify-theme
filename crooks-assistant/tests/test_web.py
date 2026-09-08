@@ -100,15 +100,45 @@ def test_fixtures_are_behind_the_developer_gate():
     assert "@example.com" in fixtures and not re.search(r"@(?!example\.com)[\w.-]+\.\w+", fixtures)
 
 
-def test_no_write_action_is_wired():
-    """Read-only: no card can send, fulfil, refund or cancel anything."""
+def test_the_only_write_path_is_a_proposal_id():
+    """No card can send, fulfil, refund or cancel anything, and the one route to a change
+    carries a proposal id and a session — never an argument."""
     for name in JS_FILES:
         source = (WEB / name).read_text(encoding="utf-8")
         # /cancel abandons a question in flight; it is the only "cancel" here and changes nothing.
         for verb in ("/send", "/fulfil", "/refund", "/cancel-order", "/cancel_order", "mutation"):
             assert verb not in source, f"{name} mentions {verb}"
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
-        assert endpoint.split("?")[0].rstrip("/") in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/"), endpoint
+        base = endpoint.split("?")[0].rstrip("/")
+        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/"), endpoint
+    body = function_body(APP_JS, "async function commitAction(proposalId, node)")
+    assert body.count("form.append(") == 1 and "form.append('session_id', sessionId)" in body
+    assert "/commit`" in body and "method: 'POST'" in body
+    for forbidden in ("note", "order_id", "amount", "desired"):
+        assert f"'{forbidden}'" not in body, f"the tablet must not send {forbidden}"
+
+
+def test_a_lost_connection_asks_what_happened_rather_than_tapping_again():
+    body = function_body(APP_JS, "async function recoverActionState(proposalId)")
+    assert "method: 'POST'" not in body and "/commit" not in body
+    assert "fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=" in body
+    commit = function_body(APP_JS, "async function commitAction(proposalId, node)")
+    assert "payload = await recoverActionState(proposalId);" in commit
+
+
+def test_voice_wins_over_a_tap():
+    body = function_body(APP_JS, "function actionBlocked()")
+    assert "recording || pendingStart || busy" in body
+    submit = function_body(APP_JS, "async function submit(body, isAudio)")
+    assert "settlePendingActions('revoked', 'Withdrawn');" in submit
+    assert "renderOpts()" in function_body(APP_JS, "function renderTurn(data)")
+
+
+def test_success_is_shown_only_from_the_verified_answer():
+    body = function_body(APP_JS, "function settleAction(node, payload, status)")
+    assert "payload.status === 'verified'" in body
+    assert "if (payload.spoken) speakAnswer(String(payload.spoken)" in body
+    assert "window.confirm" not in APP_JS and "alert(" not in APP_JS and "prompt(" not in APP_JS
 
 
 # --------------------------------------------------------------------------- the voice

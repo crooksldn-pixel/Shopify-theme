@@ -46,6 +46,48 @@ class _Token:
         return time.time() < self.expires_at - TOKEN_REFRESH_MARGIN_S
 
 
+# ------------------------------------------------------------ reviewed writes
+#
+# The assistant sends no mutation it did not ship with. `graphql()` refuses any mutation
+# document outright; the only way to change anything is `mutate()`, which takes a NAME from
+# this table — a reviewed document with a fixed, bounded variable set — and never a document.
+# A future action adds its own entry here, individually, with its own review. Nothing here is
+# built from a caller's string.
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewedMutation:
+    name: str
+    document: str
+    # The exact variable names the document takes, and the Python type each must have.
+    variables: dict[str, type]
+    # The Admin API access scope the shop must have granted for this to work.
+    scope: str
+    # Longest string any variable may carry. Shopify's own limit on an order note is 5000.
+    max_chars: int = 5000
+
+
+REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
+    # Phase 1: the order note. `orderUpdate` overwrites the note, which is why the desired
+    # value is built on the Mac from a fresh read and checked against it again before sending.
+    "order_note_set": ReviewedMutation(
+        name="order_note_set",
+        document="""
+            mutation CrooksOrderNoteSet($id: ID!, $note: String!) {
+              orderUpdate(input: {id: $id, note: $note}) {
+                order { id name note }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "note": str},
+        scope="write_orders",
+    ),
+}
+
+SCOPES_TTL_S = 600.0
+
+
 class ShopifyClient:
     def __init__(
         self,
@@ -68,6 +110,9 @@ class ShopifyClient:
         # One HTTPS connection, kept open between calls. A TLS handshake to Shopify costs a
         # few hundred milliseconds; a question that makes two lookups was paying it twice.
         self._http: httpx.AsyncClient | None = None
+        self.mutations_sent = 0   # every reviewed mutation this process has sent
+        self._scopes: frozenset[str] | None = None
+        self._scopes_at = 0.0
 
     def _client(self) -> httpx.AsyncClient:
         if self._http is None or self._http.is_closed:
@@ -147,10 +192,48 @@ class ShopifyClient:
     # ------------------------------------------------------------- graphql
 
     async def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
-        # Read-only is enforced HERE, not only by the scope list the owner types into a console.
-        # A document whose operation is a mutation never leaves this process.
+        # Reads only, enforced HERE and not only by the scope list the owner types into a
+        # console. A document whose operation is a mutation never leaves this process by this
+        # path; the reviewed writes go through `mutate()`, by name.
         if _is_mutation(query):
-            raise ShopifyError("Refused: this assistant never sends a Shopify mutation.")
+            raise ShopifyError("Refused: this path never sends a Shopify mutation.")
+        return await self._post(query, variables)
+
+    async def mutate(self, name: str, variables: dict[str, Any]) -> dict[str, Any]:
+        """Send one reviewed mutation by name. The document comes from REVIEWED_MUTATIONS,
+        the variables must be exactly the set it declares, and every string is bounded. There
+        is no way to pass a document in."""
+        reviewed = REVIEWED_MUTATIONS.get(name)
+        if reviewed is None:
+            raise ShopifyError(f"Refused: {name!r} is not a reviewed mutation.")
+        if not isinstance(variables, dict) or set(variables) != set(reviewed.variables):
+            raise ShopifyError(f"Refused: {name} variables do not match the reviewed set.")
+        for key, kind in reviewed.variables.items():
+            value = variables[key]
+            if not isinstance(value, kind):
+                raise ShopifyError(f"Refused: {name}.{key} has the wrong type.")
+            if isinstance(value, str) and (not value.strip() if key == "id" else len(value) > reviewed.max_chars):
+                raise ShopifyError(f"Refused: {name}.{key} is out of bounds.")
+        self.mutations_sent += 1
+        log.info("mutation %s sent", name)
+        return await self._post(reviewed.document, variables)
+
+    async def access_scopes(self, *, refresh: bool = False) -> frozenset[str]:
+        """What the store has granted this app. A read, cached briefly: the write preflight
+        asks on every health poll and must not cost a query each time."""
+        if self._scopes is not None and not refresh and time.time() - self._scopes_at < SCOPES_TTL_S:
+            return self._scopes
+        payload = await self.graphql(
+            "query CrooksScopes { currentAppInstallation { accessScopes { handle } } }"
+        )
+        installation = (payload.get("data") or {}).get("currentAppInstallation") or {}
+        self._scopes = frozenset(
+            str(s.get("handle", "")) for s in installation.get("accessScopes") or [] if isinstance(s, dict)
+        )
+        self._scopes_at = time.time()
+        return self._scopes
+
+    async def _post(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         token = await self._access_token()
         try:
             response = await self._client().post(

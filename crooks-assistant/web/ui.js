@@ -181,7 +181,9 @@
       ['Note', d.note],
     ], true);
     if (!d.detail) {
-      return card('order', [head, overview, h('p', { class: 'card-note', text: 'Ask for the order to see its items and shipping.' })], opts);
+      const brief = card('order', [head, overview, h('p', { class: 'card-note', text: 'Ask for the order to see its items and shipping.' })], opts);
+      brief.dataset.ref = text(d.order_id);
+      return brief;
     }
     const itemList = h('ul', { class: 'rows' }, items.map((it) => h('li', { class: 'row' }, [
       h('span', { class: 'row-main', text: text(it.title) }),
@@ -200,12 +202,14 @@
       ])))
       : h('p', { class: 'card-note', text: 'Not shipped yet.' });
     const customer = kv([['Name', d.customer_name], ['Email', d.customer_email], ['Ships to', d.ships_to]], true);
-    return card('order', [head, tabs([
+    const full = card('order', [head, tabs([
       { label: 'Overview', node: overview },
       { label: `Items${items.length ? ' · ' + items.length : ''}`, node: itemList },
       { label: 'Shipping', node: shipping },
       { label: 'Customer', node: customer },
     ])], opts);
+    full.dataset.ref = text(d.order_id);
+    return full;
   }
 
   function renderOrderList(d, opts) {
@@ -401,18 +405,111 @@
     ], opts);
   }
 
+  // ------------------------------------------------------------------ actions
+  //
+  // A proposal the Mac has staged. The card shows what the Mac decided; the surface is how
+  // the owner authorises it. The tap sends a proposal id and nothing else — no order, no
+  // note, no argument — and the Mac executes what it stored.
+  //
+  // The dead time: a surface cannot be committed the instant it appears. A finger lifting
+  // off the orb must never count as a tap on a card that materialised beneath it, so a
+  // press that began before the surface armed does not commit when it ends, and nothing
+  // commits while the app says it is busy (recording, submitting, waiting).
+
+  const INTERACTIONS = ['tap_commit'];   // implemented here; the grammar lists more
+
   function renderConfirmation(d, opts) {
-    // The shape a future write would use. Buttons are present so the layout can be judged
-    // and disabled so nothing can be mistaken for a working control.
-    const tier = text(d.tier, 'amber') === 'red' ? 'red' : 'amber';
-    return card('confirmation', [
-      h('div', { class: 'card-head' }, [h('div', { class: `mark ${tier === 'red' ? 'bad' : 'warn'}` }, h('span', { text: '!' })), h('div', {}, [kicker(tier === 'red' ? 'Confirm · destructive' : 'Confirm'), h('h2', { class: 'card-title', text: text(d.title, 'Confirm') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
-      h('div', { class: 'actions' }, [
-        h('button', { class: `action tier-${tier}`, type: 'button', disabled: 'disabled', 'aria-disabled': 'true', text: text(d.confirm_label, 'Confirm') }),
-        h('button', { class: 'action', type: 'button', disabled: 'disabled', 'aria-disabled': 'true', text: 'Cancel' }),
+    opts = opts || {};
+    const risk = text(d.risk, text(d.tier, 'amber')) === 'red' ? 'red' : 'amber';
+    const interaction = d.interaction && typeof d.interaction === 'object' ? d.interaction : {};
+    const kind = text(interaction.kind, 'tap_commit');
+    const supported = INTERACTIONS.indexOf(kind) !== -1;
+    const armedAfter = num(interaction.armed_after_ms) === null ? 650 : Math.max(0, interaction.armed_after_ms);
+    const status = text(d.status, 'pending');
+    const live = supported && status === 'pending' && Boolean(d.proposal_id);
+    const surface = h('div', {
+      class: 'action-surface', role: 'button', tabindex: live ? '0' : '-1', 'aria-disabled': 'true',
+      data: { state: live ? 'arming' : (supported ? status : 'unsupported'), kind },
+    }, [
+      h('span', { class: 'action-label', text: live ? text(interaction.label, 'Tap to apply') : (supported ? settledLabel(status) : 'Needs a newer tablet build') }),
+      h('span', { class: 'action-arm', 'aria-hidden': 'true' }),
+    ]);
+    const node = card('confirmation', [
+      h('div', { class: 'card-head' }, [
+        h('div', { class: `mark ${risk === 'red' ? 'bad' : 'warn'}` }, h('span', { text: '!' })),
+        h('div', {}, [
+          kicker(risk === 'red' ? 'Proposed · needs care' : 'Proposed'),
+          h('h2', { class: 'card-title', text: text(d.title, 'Confirm') }),
+          h('p', { class: 'card-sub', text: text(d.entity, text(d.detail)) }),
+        ]),
       ]),
-      h('p', { class: 'future', text: 'Actions are not connected. This assistant is read-only.' }),
-    ], opts);
+      d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
+      d.detail && d.entity ? h('p', { class: 'card-meta', text: text(d.detail) }) : null,
+      surface,
+      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · nothing happens until you tap` : 'Nothing happens until you tap') : '' }),
+    ], Object.assign({ className: `tier-${risk}` }, opts));
+    node.dataset.proposal = text(d.proposal_id);
+    node.dataset.ref = text(d.entity_ref);
+    if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts);
+    return node;
+  }
+
+  function settledLabel(status) {
+    return { verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', failed: 'Not applied', unverified: 'Not confirmed', executing: 'Applying…' }[status] || 'Not available';
+  }
+
+  function wireTapCommit(node, surface, proposalId, armedAfter, opts) {
+    const now = opts.now || (() => Date.now());
+    const shown = now();
+    let downAt = null;
+    let committed = false;
+    const armed = () => now() - shown >= armedAfter;
+    const blocked = () => (typeof opts.blocked === 'function' ? Boolean(opts.blocked()) : false);
+    // Bound wrappers: a host timer called through a plain object is an illegal invocation in Chromium.
+    const timers = opts.timers || { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) };
+    const armTimer = timers.set(() => {
+      if (!committed && surface.dataset.state === 'arming') {
+        surface.dataset.state = 'armed';
+        surface.setAttribute('aria-disabled', 'false');
+      }
+    }, armedAfter);
+    node.settle = (state, label) => {
+      // Called by the app when the Mac has answered, or the proposal has gone stale.
+      timers.clear(armTimer);
+      committed = state !== 'armed';
+      surface.dataset.state = state;
+      surface.setAttribute('aria-disabled', state === 'armed' ? 'false' : 'true');
+      if (label !== undefined) surface.childNodes[0].textContent = String(label);
+    };
+    surface.addEventListener('pointerdown', () => {
+      // Only a press that STARTS after arming can commit; a press carried over from the orb
+      // (or from before the card existed) has downAt null and ends in nothing.
+      downAt = armed() && !blocked() && !committed && surface.dataset.state === 'armed' ? now() : null;
+      if (downAt !== null) surface.dataset.pressed = 'true';
+    });
+    surface.addEventListener('pointercancel', () => { downAt = null; surface.dataset.pressed = 'false'; });
+    surface.addEventListener('pointerleave', () => { downAt = null; surface.dataset.pressed = 'false'; });
+    surface.addEventListener('pointerup', () => {
+      const ok = downAt !== null && armed() && !blocked() && !committed && surface.dataset.state === 'armed';
+      downAt = null;
+      surface.dataset.pressed = 'false';
+      if (!ok) return;
+      committed = true;
+      surface.dataset.state = 'committing';
+      surface.setAttribute('aria-disabled', 'true');
+      surface.childNodes[0].textContent = 'Applying…';
+      if (typeof opts.onCommit === 'function') opts.onCommit(proposalId, node);
+    });
+    surface.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && armed() && !blocked() && !committed && surface.dataset.state === 'armed') {
+        if (e.preventDefault) e.preventDefault();
+        committed = true;
+        surface.dataset.state = 'committing';
+        surface.setAttribute('aria-disabled', 'true');
+        surface.childNodes[0].textContent = 'Applying…';
+        if (typeof opts.onCommit === 'function') opts.onCommit(proposalId, node);
+      }
+    });
   }
 
   const CHECK = () => {
@@ -428,9 +525,25 @@
   };
 
   function renderSuccess(d, opts) {
-    return card('success', [
+    opts = opts || {};
+    const node = card('success', [
       h('div', { class: 'card-head' }, [h('div', { class: 'mark ok' }, CHECK()), h('div', {}, [kicker('Done'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
     ], Object.assign({ className: 'success' }, opts));
+    if (d.proposal_id) node.dataset.proposal = text(d.proposal_id);
+    // A reversible action offers its undo: a second proposal the Mac staged, authorised the
+    // same way (its own dead time, its own tap) and executed by the same path.
+    const undo = d.undo && typeof d.undo === 'object' && d.undo.proposal_id ? d.undo : null;
+    if (undo) {
+      const armedAfter = num(undo.armed_after_ms) === null ? 650 : undo.armed_after_ms;
+      const surface = h('div', {
+        class: 'action-surface quiet', role: 'button', tabindex: '0', 'aria-disabled': 'true',
+        data: { state: 'arming', kind: 'tap_commit' },
+      }, [h('span', { class: 'action-label', text: text(undo.label, 'Undo') }), h('span', { class: 'action-arm', 'aria-hidden': 'true' })]);
+      node.appendChild(surface);
+      node.appendChild(h('p', { class: 'action-meta', text: num(undo.ttl_s) !== null ? `Undo available for ${Math.round(undo.ttl_s)} s` : '' }));
+      wireTapCommit(node, surface, text(undo.proposal_id), armedAfter, opts);
+    }
+    return node;
   }
 
   function renderError(d, opts) {

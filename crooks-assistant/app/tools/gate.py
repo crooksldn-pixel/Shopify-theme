@@ -1,17 +1,24 @@
 """The permission gate.
 
 classify() is a pure function over (tool name, arguments, ids issued this session). It is the
-only thing standing between Claude and the outside world, so it is deliberately boring:
+only thing standing between Claude and the outside world, so it is deliberately boring. A
+decision has two parts, because risk and what-happens-next are different questions:
 
-  GREEN  execute now
-  AMBER  execute, but the answer must be read back before it is acted on, and the call is
-         logged prominently — used for reads that surface customer personal data
-  RED    never executes; the runtime stages a proposal and tells the assistant it needs
-         confirmation it cannot obtain on Day 1
+  risk         GREEN  a read within bounds
+               AMBER  a read that surfaces a person's details (read it back), or a routine
+                      reversible write
+               RED    a write that is hard to undo, or anything refused
 
-Two rules make it fail closed. An unregistered tool is RED, so adding a tool without adding a
-rule cannot silently grant access. Any tool whose name looks like a mutation is RED regardless
-of the rule table, so a write path introduced by accident is blocked by its own name.
+  disposition  EXECUTE_NOW      run the handler now
+               STAGE_FOR_OWNER  do not run it: prepare the change and wait for the owner
+                                to authorise it on the tablet (app/actions/engine.py)
+               DENY             refuse; nothing is prepared and nothing can be authorised
+
+Three rules make it fail closed. An unregistered tool is denied, so adding a tool without a
+rule cannot grant access. Any tool whose name reads as a mutation is denied unless it is
+registered with a complete write definition (app/tools/registry.py WriteSpec), so a write path
+introduced by accident is blocked by its own name. And a write is only ever staged, never
+executed here: the gate has no path from a tool call to a mutation.
 """
 
 from __future__ import annotations
@@ -29,14 +36,33 @@ class Tier(StrEnum):
     RED = "RED"
 
 
+class Disposition(StrEnum):
+    EXECUTE_NOW = "EXECUTE_NOW"
+    STAGE_FOR_OWNER = "STAGE_FOR_OWNER"
+    DENY = "DENY"
+
+
 @dataclass(slots=True, frozen=True)
 class Decision:
     tier: Tier
     reason: str
+    disposition: Disposition = Disposition.DENY
 
     @property
     def allowed(self) -> bool:
-        return self.tier is not Tier.RED
+        return self.disposition is not Disposition.DENY
+
+    @property
+    def executes(self) -> bool:
+        return self.disposition is Disposition.EXECUTE_NOW
+
+    @property
+    def stages(self) -> bool:
+        return self.disposition is Disposition.STAGE_FOR_OWNER
+
+
+def deny(reason: str) -> Decision:
+    return Decision(Tier.RED, reason, Disposition.DENY)
 
 
 # Day 1 is read-only. Any verb that could change state anywhere is refused on sight, before
@@ -44,7 +70,8 @@ class Decision:
 _MUTATION_VERBS = (
     "send", "create", "update", "delete", "modify", "write", "draft", "reply", "forward",
     "trash", "archive", "label", "cancel", "refund", "fulfil", "fulfill", "publish",
-    "set_", "add_", "remove_", "edit_", "post_", "put_", "patch_", "destroy",
+    "set_", "add_", "remove_", "edit_", "post_", "put_", "patch_", "destroy", "append",
+    "restore", "commit", "approve", "execute",
 )
 
 # Reads that return customer personal data. They run, but the assistant is told to read the
@@ -100,72 +127,127 @@ def classify(
     issued = frozenset(issued_ids or ())
 
     if not name:
-        return Decision(Tier.RED, "Empty tool name.")
+        return deny("Empty tool name.")
 
-    if _looks_like_mutation(name):
-        return Decision(
-            Tier.RED,
-            f"{name} reads as a write operation. Day 1 is strictly read-only.",
-        )
+    spec = _spec(name)
+    if _looks_like_mutation(name) or (spec is not None and spec.write is not None):
+        return _classify_write(name, spec, args, issued)
 
     if name not in _KNOWN_TOOLS:
-        return Decision(Tier.RED, f"{name} is not a registered tool.")
+        return deny(f"{name} is not a registered tool.")
 
     if name == "mock_danger":
-        return Decision(Tier.RED, "mock_danger exists to prove RED tools never execute.")
+        return deny("mock_danger exists to prove RED tools never execute.")
 
     # The registry's ToolSpec is the second source of truth: a tool that declares AMBER or
     # an issued-id argument there gets it here too, so the two tables cannot drift apart.
-    spec_tier, spec_id_args = _spec_hints(name)
+    spec_tier = spec.tier if spec is not None else None
+    spec_id_args = tuple(spec.issued_id_args) if spec is not None else ()
     id_args = tuple(dict.fromkeys(_ISSUED_ID_ARGS.get(name, ()) + spec_id_args))
     if spec_tier is Tier.RED:
-        return Decision(Tier.RED, f"{name} is registered as RED.")
+        return deny(f"{name} is registered as RED.")
 
-    for arg in id_args:
-        value = args.get(arg)
-        if value is None or not str(value).strip():
-            return Decision(Tier.RED, f"{name} requires {arg}, which was not supplied.")
-        value = str(value)
-        if not _ID_SHAPE.match(value):
-            return Decision(Tier.RED, f"{arg}={value!r} is not a well-formed id.")
-        kind = _ID_KIND.get(arg)
-        if kind is not None and not kind.match(value):
-            return Decision(Tier.RED, f"{arg}={value!r} is not the kind of id {name} takes.")
-        if value not in issued:
-            return Decision(
-                Tier.RED,
-                f"{arg}={value!r} was not issued in this session. "
-                "Search for the record first, then use the id that search returned.",
-            )
+    problem = _check_issued_ids(name, id_args, args, issued)
+    if problem:
+        return deny(problem)
 
     limit = args.get("limit")
     if limit is not None:
         try:
             if int(limit) > _MAX_LIMIT or int(limit) < 1:
-                return Decision(Tier.RED, f"limit={limit} is outside 1..{_MAX_LIMIT}.")
+                return deny(f"limit={limit} is outside 1..{_MAX_LIMIT}.")
         except (TypeError, ValueError):
-            return Decision(Tier.RED, f"limit={limit!r} is not a number.")
+            return deny(f"limit={limit!r} is not a number.")
 
     days = args.get("days")
     if days is not None:
         try:
             if int(days) > _MAX_DAYS or int(days) < 1:
-                return Decision(Tier.RED, f"days={days} is outside 1..{_MAX_DAYS}.")
+                return deny(f"days={days} is outside 1..{_MAX_DAYS}.")
         except (TypeError, ValueError):
-            return Decision(Tier.RED, f"days={days!r} is not a number.")
+            return deny(f"days={days!r} is not a number.")
 
     if name in _PII_TOOLS or spec_tier is Tier.AMBER:
-        return Decision(Tier.AMBER, f"{name} returns customer personal data; read it back.")
+        return Decision(
+            Tier.AMBER, f"{name} returns customer personal data; read it back.", Disposition.EXECUTE_NOW,
+        )
 
-    return Decision(Tier.GREEN, "Read-only, in scope, arguments within bounds.")
+    return Decision(Tier.GREEN, "Read-only, in scope, arguments within bounds.", Disposition.EXECUTE_NOW)
 
 
-def _spec_hints(name: str) -> tuple[Tier | None, tuple[str, ...]]:
-    """Tier and issued-id arguments the registry declares for this tool, if registered."""
+def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str]) -> Decision:
+    """A tool that reads as a write. It is staged for the owner only when it is registered
+    with a complete write definition and its arguments pass every bound; otherwise denied."""
+    if spec is None:
+        return deny(f"{name} reads as a write operation and is not a registered tool.")
+    write = spec.write
+    if write is None or not write.complete:
+        return deny(f"{name} reads as a write operation and has no reviewed write definition.")
+    if spec.tier is Tier.GREEN:
+        return deny(f"{name} is a write and cannot be GREEN.")
+    id_args = tuple(dict.fromkeys(spec.issued_id_args))
+    if write.entity_arg not in id_args:
+        return deny(f"{name} must act on an issued {write.entity_arg}.")
+    problem = _check_issued_ids(name, id_args, args, issued)
+    if problem:
+        return deny(problem)
+    problem = _check_schema_bounds(name, spec.input_schema, args)
+    if problem:
+        return deny(problem)
+    return Decision(
+        spec.tier,
+        f"{name} is a change to the store: prepared for the owner to authorise on the tablet.",
+        Disposition.STAGE_FOR_OWNER,
+    )
+
+
+def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any], issued: frozenset[str]) -> str:
+    for arg in id_args:
+        value = args.get(arg)
+        if value is None or not str(value).strip():
+            return f"{name} requires {arg}, which was not supplied."
+        value = str(value)
+        if not _ID_SHAPE.match(value):
+            return f"{arg}={value!r} is not a well-formed id."
+        kind = _ID_KIND.get(arg)
+        if kind is not None and not kind.match(value):
+            return f"{arg}={value!r} is not the kind of id {name} takes."
+        if value not in issued:
+            return (
+                f"{arg}={value!r} was not issued in this session. "
+                "Search for the record first, then use the id that search returned."
+            )
+    return ""
+
+
+def _check_schema_bounds(name: str, schema: dict[str, Any], args: dict[str, Any]) -> str:
+    """The input schema's own bounds, enforced here for writes rather than trusted to the
+    model: required arguments present, no unknown arguments, strings within min and max."""
+    properties = schema.get("properties") if isinstance(schema, dict) else None
+    properties = properties if isinstance(properties, dict) else {}
+    for required in schema.get("required", []) if isinstance(schema, dict) else []:
+        if required not in args:
+            return f"{name} requires {required}, which was not supplied."
+    for key, value in args.items():
+        if key not in properties:
+            return f"{name} does not take an argument called {key}."
+        rule = properties.get(key) or {}
+        if rule.get("type") == "string":
+            if not isinstance(value, str):
+                return f"{name}.{key} must be text."
+            length = len(value.strip())
+            if "minLength" in rule and length < int(rule["minLength"]):
+                return f"{name}.{key} is empty."
+            if "maxLength" in rule and len(value) > int(rule["maxLength"]):
+                return f"{name}.{key} is longer than {rule['maxLength']} characters."
+    return ""
+
+
+def _spec(name: str):
+    """The registered ToolSpec, or None."""
     from app.tools import registry
 
     try:
-        spec = registry.get(name)
+        return registry.get(name)
     except KeyError:
-        return None, ()
-    return spec.tier, tuple(spec.issued_id_args)
+        return None

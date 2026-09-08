@@ -121,7 +121,8 @@ async def test_red_tool_handler_never_runs(session):
     out = await dispatch("mock_danger", {}, session=session, timeout_s=5)
     assert mock.DANGER_CALLS == 0, "RED tool executed — stop the build"
     assert out.startswith("REFUSED")
-    assert session.proposals and session.proposals[0].tool_name == "mock_danger"
+    assert session.refusals and session.refusals[0].tool_name == "mock_danger"
+    assert session.proposals == [], "a refusal is never a proposal: nothing can authorise it"
 
 
 async def test_red_tool_via_mcp_prefix_never_runs(session):

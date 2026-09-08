@@ -8,6 +8,9 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.actions.engine import ActionEngine
+from app.actions.engine import install as install_engine
+from app.actions.ledger import ActionLedger
 from app.clients.elevenlabs import ScribeClient
 from app.clients.elevenlabs_tts import VoiceClient
 from app.clients.gmail import GmailClient
@@ -41,6 +44,7 @@ class Runtime:
     provider: ClaudeProvider
     kb: KnowledgeBase
     turnlog: TurnLog
+    actions: ActionEngine
     started_at: float = field(default_factory=time.time)
     build: str = ""
     _catalogue_refreshed_at: float = 0.0
@@ -120,6 +124,61 @@ class Runtime:
         self.kb = load(self.settings.kb_dir)
         return self.kb
 
+    def system_prompt(self) -> str:
+        return build_system_prompt(self.kb, writes_enabled=self.settings.writes_enabled)
+
+    @property
+    def allowed_logins(self) -> tuple[str, ...]:
+        return tuple(
+            login.strip().lower() for login in self.settings.allowed_logins.split(",") if login.strip()
+        )
+
+    async def write_status(self) -> WriteStatus:
+        """Can a proposal execute here, now? Deterministic and read-only: configuration, the
+        allow-list, and the scopes the store has granted (a query, cached). Never a mutation."""
+        settings = self.settings
+        if not settings.writes_enabled:
+            return WriteStatus("disabled", "disabled — CROOKS_WRITES_ENABLED=false")
+        if not self.allowed_logins:
+            return WriteStatus("blocked", "blocked — CROOKS_ALLOWED_LOGINS not configured")
+        from app.clients.shopify import REVIEWED_MUTATIONS
+        from app.tools.registry import all_specs
+
+        needed = {
+            REVIEWED_MUTATIONS[s.write.mutation].scope
+            for s in all_specs() if s.write is not None and s.write.mutation in REVIEWED_MUTATIONS
+        }
+        try:
+            granted = await self.shopify.access_scopes()
+        except Exception as exc:  # noqa: BLE001
+            return WriteStatus("blocked", f"blocked — could not read the Shopify app's scopes ({type(exc).__name__})")
+        missing = sorted(needed - set(granted))
+        if missing:
+            return WriteStatus("blocked", f"blocked — Shopify {', '.join(missing)} scope missing")
+        names = ", ".join(sorted(s.write.operation.replace("_", " ") for s in all_specs() if s.write is not None))
+        return WriteStatus("ready", f"ready — {names or 'no actions registered'}")
+
+
+@dataclass(frozen=True)
+class WriteStatus:
+    state: str     # "disabled" | "blocked" | "ready"
+    detail: str
+
+    @property
+    def ready(self) -> bool:
+        return self.state == "ready"
+
+    @property
+    def code(self) -> str:
+        """The controlled refusal code a commit answers with while writes are not ready."""
+        if self.state == "ready":
+            return ""
+        if "WRITES_ENABLED" in self.detail:
+            return "writes_disabled"
+        if "ALLOWED_LOGINS" in self.detail:
+            return "allow_list_missing"
+        return "scope_missing"
+
 
 def build(settings: Settings | None = None) -> Runtime:
     settings = settings or get_settings()
@@ -174,12 +233,16 @@ def build(settings: Settings | None = None) -> Runtime:
 
     kb = load(settings.kb_dir)
     provider = MaxAgentSDKProvider(
-        system_prompt=build_system_prompt(kb),
+        system_prompt=build_system_prompt(kb, writes_enabled=settings.writes_enabled),
         model=settings.claude_model,
         session_lookup=sessions.get_or_create,
         tool_timeout_s=settings.tool_timeout_s,
         cli_path=settings.claude_cli_path,
+        writes_enabled=settings.writes_enabled,
     )
+    # The action engine is installed process-wide: the dispatcher stages into it from inside a
+    # Claude turn, and the tablet's tap reaches it through the runtime. One index for both.
+    actions = install_engine(ActionEngine(ledger=ActionLedger(settings.log_dir)))
 
     return Runtime(
         build=web_build_id(),
@@ -195,6 +258,7 @@ def build(settings: Settings | None = None) -> Runtime:
         provider=provider,
         kb=kb,
         turnlog=TurnLog(settings.log_dir),
+        actions=actions,
     )
 
 

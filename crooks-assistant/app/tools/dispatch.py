@@ -11,9 +11,10 @@ import json
 import logging
 from typing import Any
 
+from app.actions.models import Prepared
 from app.session.models import Session
 from app.tools import registry
-from app.tools.gate import Tier, classify
+from app.tools.gate import Disposition, Tier, classify
 from app.tools.registry import ToolError
 
 log = logging.getLogger("crooks.tools")
@@ -79,18 +80,22 @@ async def dispatch(
     name = registry.normalise_tool_name(tool_name)
     decision = classify(name, args, session.issued_ids)
     log.info(
-        "tool=%s tier=%s args=%s", name, decision.tier.value, sorted(args) if args else []
+        "tool=%s tier=%s disposition=%s args=%s",
+        name, decision.tier.value, decision.disposition.value, sorted(args) if args else [],
     )
 
-    if decision.tier is Tier.RED:
-        proposal = session.stage(name, args, decision.reason)
-        log.warning("REFUSED tool=%s proposal=%s reason=%s", name, proposal.proposal_id, decision.reason)
+    if decision.disposition is Disposition.DENY:
+        refusal = session.refuse(name, args, decision.reason)
+        log.warning("REFUSED tool=%s refusal=%s reason=%s", name, refusal.refusal_id, decision.reason)
         if calls is not None:
             calls.append(ToolCall(name=name, args=args, ok=False, error=decision.reason))
         return (
-            f"REFUSED ({proposal.proposal_id}): {decision.reason} "
+            f"REFUSED ({refusal.refusal_id}): {decision.reason} "
             "Tell the user plainly that you could not do this and why. Do not retry."
         )
+
+    if decision.disposition is Disposition.STAGE_FOR_OWNER:
+        return await _stage(name, args, session=session, timeout_s=timeout_s, calls=calls)
 
     try:
         payload = await registry.invoke(name, args, timeout_s=timeout_s)
@@ -130,6 +135,53 @@ async def dispatch(
     return text
 
 
+async def _stage(
+    name: str, args: dict[str, Any], *, session: Session, timeout_s: float, calls: list[Any] | None,
+) -> str:
+    """A write: the handler prepares the exact change from a fresh read and nothing is sent.
+    The proposal waits on the session for the owner's tap; the model is told it is waiting."""
+    from app.actions.engine import current as current_engine
+    from app.providers.base import ToolCall
+
+    spec = registry.get(name)
+    try:
+        prepared = await registry.invoke(name, args, timeout_s=timeout_s)
+    except _READABLE_ERRORS as exc:
+        log.warning("tool=%s could not be prepared: %s", name, exc)
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=False, error=str(exc)))
+        return f"ERROR: {exc} Say that this could not be prepared. Nothing was changed."
+    except Exception as exc:  # noqa: BLE001
+        log.exception("tool=%s raised while preparing", name)
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=False, error=repr(exc)))
+        return f"ERROR: {name} could not be prepared ({type(exc).__name__}). Nothing was changed."
+    if not isinstance(prepared, Prepared):
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=False, error="handler did not prepare a change"))
+        return f"ERROR: {name} did not prepare a change. Nothing was changed."
+
+    proposal, created = current_engine().stage(session, spec, args, prepared)
+    if calls is not None:
+        calls.append(ToolCall(name=name, args=args, ok=True, proposal_id=proposal.proposal_id))
+    log.info(
+        "PROPOSED tool=%s proposal=%s entity=%s new=%s", name, proposal.proposal_id, proposal.entity_label, created,
+    )
+    label = f"{spec.write.entity_kind} {proposal.entity_label}".strip() if spec.write else proposal.entity_label
+    if created:
+        return (
+            f"PROPOSED ({proposal.proposal_id}): the change to {label} is prepared and waiting for "
+            "the owner to apply it by tapping the card on the tablet. It has NOT happened. Tell the "
+            "owner it is ready to tap. Do not say it was done, do not ask for a spoken yes (a spoken "
+            "yes cannot apply it), and do not call this tool again for the same change."
+        )
+    return (
+        f"PROPOSED ({proposal.proposal_id}): this same change is already waiting on the tablet. "
+        "It has NOT happened. Tell the owner to tap the card that is already showing. Do not call "
+        "this tool again."
+    )
+
+
 def make_pretooluse_hook(session_getter, on_event=None):
     """Build the Agent SDK PreToolUse hook.
 
@@ -143,12 +195,12 @@ def make_pretooluse_hook(session_getter, on_event=None):
         args = input_data.get("tool_input", {}) or {}
         session = session_getter()
         decision = classify(name, args, session.issued_ids if session else ())
-        log.info("PreToolUse tool=%s tier=%s", name, decision.tier.value)
+        log.info("PreToolUse tool=%s tier=%s disposition=%s", name, decision.tier.value, decision.disposition.value)
         if on_event is not None:
-            on_event(name, decision.tier.value)
-        if decision.tier is Tier.RED:
+            on_event(name, decision.tier.value, decision.disposition.value)
+        if decision.disposition is Disposition.DENY:
             if session is not None:
-                session.stage(name, args, decision.reason)
+                session.refuse(name, args, decision.reason)
             return {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",

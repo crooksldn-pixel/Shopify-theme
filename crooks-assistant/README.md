@@ -199,6 +199,43 @@ testable directly in Python without spending anything.
 
 ---
 
+## Changes to the store: the first action
+
+The assistant can now propose one change: an internal staff note on an order ("add a note to
+order 1930 saying the customer asked for an exchange"). It is off by default, and it is built
+as the pattern every later change will follow rather than as a feature of its own:
+
+    Claude calls the tool → the gate stages it → the Mac reads the order and decides the exact
+    note → a card appears on the tablet → you tap it → the Mac checks the order has not changed,
+    sends the one reviewed mutation, reads the order again to prove it → the card says NOTE
+    ADDED, Derek says "Order note added", and an Undo waits for a minute.
+
+What holds it together, and what the tests hold:
+
+- **The tool call is the proposal.** Calling the tool changes nothing. Claude is told
+  PROPOSED and that a spoken "yes" cannot apply it. Only the tap can.
+- **The Mac's copy is the action.** The tablet sends a proposal id and the session. The note,
+  the order and the mutation come from what the Mac stored when it staged the proposal.
+- **Once.** Two taps, a retry, a double request: one mutation. A lost connection asks the Mac
+  what happened rather than tapping again.
+- **Bound to now.** A proposal expires after a minute and dies with the next instruction, a
+  cancel or a reset. The order is re-read before the write; if it changed, nothing is sent.
+- **Proven.** Shopify's 200 is not success; the re-read is. Only a verified change shows
+  NOTE ADDED or is spoken as done.
+- **Recorded.** `logs/actions.jsonl` is an append-only ledger of every proposal and outcome:
+  identities, fingerprints and lengths, never the note.
+
+To switch it on, in `.env`:
+
+```
+CROOKS_WRITES_ENABLED=true
+CROOKS_ALLOWED_LOGINS=you@example.com     # open /whoami on the tablet to see the exact login
+```
+
+and grant the Shopify app the `write_orders` scope (Dev Dashboard → the app → Configuration →
+Admin API access scopes → release a new version). The settings sheet's "Changes" row says
+which of those is still missing; nothing executes until it says "ready — order note append".
+
 ## How it is put together
 
 ```

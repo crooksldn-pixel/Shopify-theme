@@ -81,6 +81,17 @@ class Settings(BaseSettings):
     claude_model: str = "sonnet"
     claude_cli_path: str = ""  # absolute path; resolved at startup if blank
 
+    # --- writes ---
+    # The assistant proposes changes; the owner applies them on the tablet. Off (the default)
+    # hides every write tool from the assistant and refuses every commit, so the system is the
+    # read-only one it always was. On is not enough by itself: a commit also needs
+    # CROOKS_ALLOWED_LOGINS to name who may tap, the caller to be one of them, and the store
+    # to have granted the scope the action needs. Each is checked on every commit.
+    writes_enabled: bool = False
+    # A request made on the Mac itself carries no Tailscale login. It may commit only when
+    # this is on — for the owner at the keyboard, deliberately, never by default.
+    writes_local_owner: bool = False
+
     # --- behaviour ---
     tool_timeout_s: float = 8.0
     session_idle_timeout_s: int = 1800

@@ -61,6 +61,15 @@ def assert_no_payg_credentials() -> None:
             )
 
 
+def withheld_tools(specs, *, writes_enabled: bool) -> set[str]:
+    """The tools the model is never offered: a RED read, and every write while writes are off.
+    Pure, so the rule can be checked without an SDK."""
+    return {
+        s.name for s in specs
+        if (s.write is None and s.tier is Tier.RED) or (s.write is not None and not writes_enabled)
+    }
+
+
 class MaxAgentSDKProvider(ClaudeProvider):
     def __init__(
         self,
@@ -73,8 +82,12 @@ class MaxAgentSDKProvider(ClaudeProvider):
         max_turns: int = 12,
         turn_timeout_s: float = 120.0,
         client_idle_timeout_s: float = 1800.0,
+        writes_enabled: bool = False,
     ) -> None:
         self._system_prompt = system_prompt
+        # Off: the write tools are not offered to the model at all, and are disallowed at the
+        # SDK layer as well, so the assistant is the read-only one it always was.
+        self._writes_enabled = writes_enabled
         self._model = model
         self._session_lookup = session_lookup
         self._tool_timeout_s = tool_timeout_s
@@ -190,11 +203,13 @@ class MaxAgentSDKProvider(ClaudeProvider):
 
         server = registry.build_mcp_server(self._dispatch)
         prefix = f"mcp__{registry.MCP_SERVER_NAME}__"
-        # RED tools are refused twice: disallowed at the SDK layer, and denied by the hook if
-        # anything ever reaches it. Belt and braces, because one barrier is one failure away.
-        red = {s.name for s in registry.all_specs() if s.tier is Tier.RED}
-        tool_names = [prefix + n for n in registry.names() if n not in red]
-        disallowed = [prefix + n for n in sorted(red)]
+        # Refused twice: disallowed at the SDK layer, and denied by the hook if anything ever
+        # reaches it. Belt and braces, because one barrier is one failure away. A RED read
+        # never runs; a write is offered only when writes are on, and even then it is only
+        # ever staged (app/tools/dispatch.py), never executed by the model's call.
+        withheld = withheld_tools(registry.all_specs(), writes_enabled=self._writes_enabled)
+        tool_names = [prefix + n for n in registry.names() if n not in withheld]
+        disallowed = [prefix + n for n in sorted(withheld)]
 
         return ClaudeAgentOptions(
             system_prompt=self._system_prompt,
@@ -225,17 +240,18 @@ class MaxAgentSDKProvider(ClaudeProvider):
     def _hook(self):
         return make_pretooluse_hook(lambda: self._current, on_event=self._on_tool_event)
 
-    def _on_tool_event(self, name: str, tier: str) -> None:
+    def _on_tool_event(self, name: str, tier: str, disposition: str = "EXECUTE_NOW") -> None:
         self._states.append(name)
         session = self._current
-        if tier == "RED":
+        denied = disposition == "DENY"
+        if denied:
             # A hook-denied call never reaches dispatch, so record it here or the turn log
             # would show a refusal the model reported but no tool call behind it.
-            reason = session.proposals[-1].reason if session and session.proposals else "refused"
+            reason = session.refusals[-1].reason if session and session.refusals else "refused"
             self._calls.append(ToolCall(name=name, args={}, ok=False, error=reason))
         if session is None:
             return
-        if tier == "RED":
+        if denied:
             session.set_state("THINKING", f"refused {name}")
         elif name.startswith("shopify_"):
             session.set_state("CHECKING SHOPIFY", name)

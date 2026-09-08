@@ -23,8 +23,8 @@ def test_tiers_match_the_gate():
     from app.tools.gate import classify
 
     for spec in registry.all_specs():
-        if spec.name in ("shopify_order_detail", "gmail_read_thread"):
-            continue  # need an issued id to be anything but RED
+        if spec.issued_id_args:
+            continue  # need an issued id to be anything but denied; covered in test_actions.py
         assert classify(spec.name, {"query": "x", "product": "x", "word": "x"}).tier == spec.tier, spec.name
 
 

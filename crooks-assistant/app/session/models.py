@@ -7,14 +7,18 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.actions.models import ActionProposal
 
 
 @dataclass(slots=True)
-class StagedProposal:
-    """A RED tool call that was refused. Recorded so the log shows what was attempted."""
+class Refusal:
+    """A tool call the gate denied. Recorded so the log shows what was attempted. Never
+    executable: a refusal has no proposal, no arguments to run and no path to Shopify."""
 
-    proposal_id: str
+    refusal_id: str
     tool_name: str
     args: dict[str, Any]
     reason: str
@@ -35,7 +39,13 @@ class Session:
     focus: dict[str, str] = field(default_factory=dict)
 
     turns: int = 0
-    proposals: list[StagedProposal] = field(default_factory=list)
+    # The conversation's position. Advanced by every new instruction from the owner; a
+    # proposal is bound to the epoch it was staged in and dies when the epoch moves on.
+    epoch: int = 0
+    # Changes the assistant proposed this session, waiting for or settled by the owner.
+    proposals: list[ActionProposal] = field(default_factory=list)
+    # Calls the gate denied. Kept apart from proposals: a refusal can never be authorised.
+    refusals: list[Refusal] = field(default_factory=list)
 
     # Personal strings tool results exposed this session (customer names, sender addresses).
     # The turn log scrubs these from the free-text answer and question before writing, so a
@@ -79,15 +89,29 @@ class Session:
             if value:
                 self.issued_ids.add(str(value))
 
-    def stage(self, tool_name: str, args: dict[str, Any], reason: str) -> StagedProposal:
-        proposal = StagedProposal(
-            proposal_id=f"prop_{uuid.uuid4().hex[:12]}",
+    def refuse(self, tool_name: str, args: dict[str, Any], reason: str) -> Refusal:
+        refusal = Refusal(
+            refusal_id=f"ref_{uuid.uuid4().hex[:12]}",
             tool_name=tool_name,
-            args=args,
+            args=dict(args or {}),
             reason=reason,
         )
+        self.refusals.append(refusal)
+        del self.refusals[:-50]
+        return refusal
+
+    def stage(self, proposal: ActionProposal) -> ActionProposal:
+        """Hold a staged proposal. Only the action engine builds one (app/actions/engine.py);
+        the session is where it lives so that it goes when the session goes."""
         self.proposals.append(proposal)
+        del self.proposals[:-50]
         return proposal
+
+    def proposal(self, proposal_id: str) -> ActionProposal | None:
+        for candidate in self.proposals:
+            if candidate.proposal_id == proposal_id:
+                return candidate
+        return None
 
     def remember_context(self, kind: str, label: str, ref: str, *, limit: int = 6) -> None:
         """Bring an entity to the front of the context stack (or add it), keeping the stack

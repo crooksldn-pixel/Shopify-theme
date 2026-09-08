@@ -186,7 +186,7 @@ def test_a_refused_tool_shows_as_not_allowed():
     refused = ToolCall(name="shopify_cancel_order", args={"order_id": "x"}, ok=False, error="registered as RED")
     (card,) = present([refused])
     assert card["data"]["kind"] == "blocked" and card["data"]["title"] == "Not allowed"
-    assert "read-only" in card["data"]["recovery"]
+    assert "Nothing was changed" in card["data"]["recovery"]
 
 
 def test_one_error_per_service_and_turn_errors_are_named():
@@ -246,3 +246,65 @@ def test_sales_summary_carries_the_day_rows_bounded_and_formatted():
     assert none["data"]["by_day"] == []
     (junk,) = present([ok("shopify_sales_summary", {**result, "by_day": ["x", 3, {"date": "d", "revenue": "lots"}]})])
     assert junk["data"]["by_day"][-1] == {"date": "d", "orders": None, "revenue": None}
+
+
+# --------------------------------------------------------------------------- actions
+
+
+def _proposal(**overrides):
+    from types import MappingProxyType
+
+    from app.actions.models import ActionProposal, ActionStatus
+
+    fields = dict(
+        proposal_id="prop_abc", session_id="s", epoch=1, tool_name="shopify_order_note_append",
+        operation="order_note_append", risk="AMBER", model_args=MappingProxyType({}),
+        execution=MappingProxyType({"order_id": "gid://shopify/Order/1", "desired_note": "SECRET", "previous_note": ""}),
+        entity_kind="order", entity_ref="gid://shopify/Order/1", entity_label="#1930", interaction="tap_commit",
+        reversible=True, before={"sha": "a", "len": 0}, expected_after={"sha": "b", "len": 5},
+        summary={"appended": "Hold for collection", "had_note": False}, fingerprint="f", created_at=0.0,
+        expires_at=10_000_000_000.0, status=ActionStatus.PENDING,
+    )
+    fields.update(overrides)
+    return ActionProposal(**fields)
+
+
+def test_the_action_card_is_built_from_the_proposal_and_carries_no_execution_data():
+    from app.presentation import present_proposal_state
+
+    (card,) = present_proposal_state(_proposal())
+    assert card["type"] == "confirmation"
+    data = card["data"]
+    assert data["proposal_id"] == "prop_abc" and data["operation"] == "order_note_append"
+    assert data["entity"] == "Order #1930" and data["summary"] == "Hold for collection"
+    assert data["interaction"]["kind"] == "tap_commit" and data["interaction"]["armed_after_ms"] == 650
+    assert "SECRET" not in str(card) and "execution" not in data and "before" not in data
+
+
+def test_an_unknown_interaction_kind_is_sent_as_unsupported_not_as_a_button():
+    from app.presentation import present_proposal_state
+
+    (card,) = present_proposal_state(_proposal(interaction="teleport"))
+    assert card["data"]["interaction"]["kind"] == "unsupported"
+
+
+def test_settled_proposals_present_calmly_and_success_only_when_verified():
+    from app.actions.models import ActionStatus
+    from app.presentation import present_proposal_state
+
+    verified = present_proposal_state(_proposal(status=ActionStatus.VERIFIED, code="verified", entity={
+        "order_id": "gid://shopify/Order/1", "order_number": "#1930", "note": "Hold for collection", "items": [], "fulfillments": [],
+    }))
+    assert [i["type"] for i in verified] == ["success", "order"]
+    assert verified[0]["data"]["title"] == "Note added" and verified[1]["data"]["note"] == "Hold for collection"
+    for status, code in ((ActionStatus.STALE, "stale"), (ActionStatus.EXPIRED, "expired"), (ActionStatus.UNVERIFIED, "unverified"), (ActionStatus.FAILED, "service_unavailable")):
+        (card,) = present_proposal_state(_proposal(status=status, code=code))
+        assert card["type"] == "error" and card["data"]["kind"] == code
+        assert "graphql" not in str(card).lower() and "token" not in str(card).lower()
+
+
+def test_a_summary_is_bounded():
+    from app.presentation import MAX_NOTE_CHARS, present_proposal_state
+
+    (card,) = present_proposal_state(_proposal(summary={"appended": "x" * 5000, "had_note": True}))
+    assert len(card["data"]["summary"]) <= MAX_NOTE_CHARS

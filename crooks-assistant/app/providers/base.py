@@ -25,6 +25,9 @@ class ToolCall:
     # The tool's own bounded result, kept only so app/presentation.py can choose what the
     # tablet shows from data rather than from the prose. Never returned to the tablet raw.
     result: dict[str, Any] | None = None
+    # Set when the call was a write: it did not run, it was staged. The presentation layer
+    # finds the proposal on the session and builds the action card from it.
+    proposal_id: str | None = None
 
 
 @dataclass(slots=True)

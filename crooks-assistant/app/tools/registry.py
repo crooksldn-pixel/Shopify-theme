@@ -22,6 +22,41 @@ Handler = Callable[..., Awaitable[Any]] | Callable[..., Any]
 
 
 @dataclass(slots=True, frozen=True)
+class WriteSpec:
+    """What makes a write tool a write tool.
+
+    The gate stages a mutation-looking tool for the owner only when every field here is
+    present: the tool's own handler is the `prepare` step (it reads the current state and
+    builds the exact arguments the mutation will use), `observe` re-reads the state so the
+    engine can check it before writing and prove it after, `execute` sends the one reviewed
+    mutation with the stored arguments, and `present` names the change for the tablet. A
+    registration missing any of them is not a write tool; it is a refusal.
+    """
+
+    operation: str                      # the ledger's and the card's name for the change
+    entity_kind: str                    # "order"
+    entity_arg: str                     # the argument carrying the entity id; must be issued
+    mutation: str                       # the reviewed mutation document this sends, by name
+    observe: Callable[..., Awaitable[Any]]
+    execute: Callable[..., Awaitable[Any]]
+    present: Callable[..., dict[str, Any]]
+    interaction: str = "tap_commit"     # how the owner authorises it; see app/presentation.py
+    reversible: bool = False
+    undo: Callable[..., Any] | None = None   # execution args for the reverse, from the forward's
+    spoken_success: str = "Done."
+    spoken_undo_success: str = "Undone."
+    spoken_failure: str = "I couldn't confirm that change."
+    spoken_stale: str = "That changed since it was prepared, so I haven't touched it."
+
+    @property
+    def complete(self) -> bool:
+        return bool(
+            self.operation and self.entity_kind and self.entity_arg and self.mutation
+            and callable(self.observe) and callable(self.execute) and callable(self.present)
+        )
+
+
+@dataclass(slots=True, frozen=True)
 class ToolSpec:
     name: str
     description: str
@@ -34,6 +69,8 @@ class ToolSpec:
     # search is a listing plus a batched fetch plus a credential refresh on a cold start).
     # Still a hard bound; never unlimited.
     timeout_s: float | None = field(default=None)
+    # Present only on a write tool. Its handler then prepares a proposal and never mutates.
+    write: WriteSpec | None = field(default=None)
 
 
 class ToolError(RuntimeError):
@@ -51,6 +88,7 @@ def tool(
     tier: Tier = Tier.GREEN,
     issued_id_args: tuple[str, ...] = (),
     timeout_s: float | None = None,
+    write: WriteSpec | None = None,
 ) -> Callable[[Handler], Handler]:
     """Register a handler as a tool. The decorated function is returned unchanged so it stays
     directly callable from Python — which is how M5–M9 test tools without spending allowance."""
@@ -66,6 +104,7 @@ def tool(
             handler=fn,
             issued_id_args=issued_id_args,
             timeout_s=timeout_s,
+            write=write,
         )
         return fn
 

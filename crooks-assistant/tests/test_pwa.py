@@ -23,7 +23,7 @@ STYLE = (WEB / "style.css").read_text(encoding="utf-8")
 APP_JS = (WEB / "app.js").read_text(encoding="utf-8")
 SW_JS = (WEB / "sw.js").read_text(encoding="utf-8")
 
-BACKEND_PATHS = ("/turn", "/speak", "/tts", "/health", "/state", "/cancel", "/reset", "/audio-test", "/voices", "/tools", "/reload-kb", "/ping")
+BACKEND_PATHS = ("/turn", "/speak", "/tts", "/health", "/state", "/cancel", "/reset", "/audio-test", "/voices", "/tools", "/reload-kb", "/ping", "/actions", "/whoami")
 
 
 def function_body(source: str, signature: str) -> str:

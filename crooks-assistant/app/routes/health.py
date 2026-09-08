@@ -117,6 +117,11 @@ async def _health(runtime) -> dict:
         "detail": f"{len(runtime.normaliser.catalogue)} term(s)",
     }
 
+    # Whether a proposal could execute here. Off by configuration is the intended state and
+    # not a fault; on but blocked (no allow-list, no scope) is a fault the owner should see.
+    writes = await runtime.write_status()
+    checks["writes"] = {"ok": writes.state != "blocked", "detail": writes.detail}
+
     return {
         # Degraded, not down: Shopify being unreachable should not make the page say the
         # backend is offline, because Gmail and the knowledge base still work. Nor should
@@ -163,5 +168,6 @@ async def _health(runtime) -> dict:
             "prefetches": runtime.voice.prefetches,
             "prefetch_hits": runtime.voice.prefetch_hits,
         },
+        "writes": {"state": writes.state, "detail": writes.detail},
         "checks": checks,
     }

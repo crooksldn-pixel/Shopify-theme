@@ -619,6 +619,7 @@ async function pollHealth(fresh = false) {
 const HEALTH_NAMES = {
   claude: 'Claude', speech: 'Hearing', scribe: 'ElevenLabs hearing', whisper: 'Offline hearing',
   tts: 'Voice', shopify: 'Shopify', gmail: 'Gmail', knowledge_base: 'Knowledge', terminology: 'Product names',
+  writes: 'Changes',
 };
 function healthRow(ok, name, detail) {
   const row = document.createElement('div');
@@ -632,7 +633,7 @@ function healthRow(ok, name, detail) {
 }
 function renderHealthRows(checks) {
   clear(el.health);
-  const order = ['claude', 'speech', 'tts', 'shopify', 'gmail', 'scribe', 'whisper', 'knowledge_base', 'terminology'];
+  const order = ['claude', 'speech', 'tts', 'shopify', 'gmail', 'writes', 'scribe', 'whisper', 'knowledge_base', 'terminology'];
   for (const key of order) {
     const c = checks[key];
     if (!c) continue;
@@ -854,7 +855,7 @@ function renderAttentionSurface() {
 
 // The answer to a turn: cards first, then the mode they need.
 function renderTurn(data) {
-  const ui = window.CrooksUI ? window.CrooksUI.render(data.ui, {}) : { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
+  const ui = window.CrooksUI ? window.CrooksUI.render(data.ui, renderOpts()) : { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
   if (ui.skipped.length) console.warn('[crooks] skipped ui items:', ui.skipped.join(', '));
   el.errline.textContent = '';
   lastErrorTitle = '';
@@ -880,6 +881,154 @@ function renderTurn(data) {
   } else {
     setMode('orb');
   }
+}
+
+/* ----------------------------------------------------------------- actions */
+
+// The owner tapped a proposal. Send its id — and only its id — to the Mac, which executes
+// what it stored when the proposal was staged, proves it, and answers with what to show.
+// Never sent twice: if the connection drops mid-tap the tablet asks what happened instead.
+const ACTION_TIMEOUT_MS = 30000;   // a precondition read, the change, a verifying read
+
+// A tap counts only when the voice interaction is quiet. Holding to speak wins.
+function actionBlocked() {
+  return recording || pendingStart || busy;
+}
+
+function renderOpts() {
+  return { onCommit: commitAction, blocked: actionBlocked };
+}
+
+async function commitAction(proposalId, node) {
+  if (actionBlocked()) { settleActionNode(node, 'armed'); return; }
+  haptic(HAPTIC.start);
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  let payload = null;
+  let status = 0;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ACTION_TIMEOUT_MS);
+  try {
+    const response = await fetch(`/actions/${encodeURIComponent(proposalId)}/commit`, {
+      method: 'POST', body: form, signal: controller.signal, cache: 'no-store',
+    });
+    status = response.status;
+    payload = await response.json();
+  } catch {
+    // The request may have reached the Mac. It is never resent; the Mac's record decides.
+    payload = await recoverActionState(proposalId);
+  } finally {
+    clearTimeout(timer);
+  }
+  settleAction(node, payload, status);
+}
+
+async function recoverActionState(proposalId) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+    try {
+      const response = await fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (data && data.status && data.status !== 'executing') return data;
+    } catch { /* still unreachable; try again */ }
+  }
+  return null;
+}
+
+// Everything on screen follows from what the Mac answered. Success is shown only when the
+// Mac says VERIFIED; anything else is shown as exactly what it is.
+function settleAction(node, payload, status) {
+  if (!payload) {
+    settleActionNode(node, 'unknown', "Couldn't reach the Mac · check the order");
+    el.errline.textContent = 'The Mac did not confirm that. Check the order before trying again.';
+    haptic(HAPTIC.error);
+    return;
+  }
+  const code = String(payload.code || payload.status || (status >= 400 ? 'not_authorised' : 'failed'));
+  const items = Array.isArray(payload.ui) ? payload.ui : [];
+  if (payload.status === 'verified' && payload.undo && items.length && items[0].type === 'success') {
+    items[0].data.undo = Object.assign({ label: 'Undo', armed_after_ms: 650 }, payload.undo);
+  }
+  const rendered = window.CrooksUI ? window.CrooksUI.render(items, renderOpts()) : { nodes: [] };
+  if (rendered.nodes.length) {
+    replaceCard(node, rendered.nodes);
+  } else {
+    settleActionNode(node, code === 'verified' ? 'verified' : code, ACTION_LABELS[code] || 'Not applied');
+  }
+  if (status >= 400 && !items.length) {
+    el.errline.textContent = ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.');
+  }
+  haptic(payload.status === 'verified' ? HAPTIC.done : HAPTIC.error);
+  if (payload.spoken) speakAnswer(String(payload.spoken), { isError: payload.status !== 'verified' });
+}
+
+const ACTION_LABELS = {
+  verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
+  unverified: 'Not confirmed', service_unavailable: 'Not applied', not_authorised: 'Not allowed', writes_disabled: 'Switched off',
+  allow_list_missing: 'Not configured', scope_missing: 'Not permitted', unknown: 'Unknown', wrong_session: 'Not this conversation',
+};
+const ACTION_REASONS = {
+  not_authorised: 'This tablet is not allowed to apply changes. Check CROOKS_ALLOWED_LOGINS on the Mac.',
+  writes_disabled: 'Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).',
+  allow_list_missing: 'No allowed logins are configured on the Mac (CROOKS_ALLOWED_LOGINS).',
+  scope_missing: 'The Shopify app has not been granted permission to write orders.',
+  unknown: 'The Mac no longer has that proposal. Ask again.',
+  wrong_session: 'That proposal belongs to another conversation.',
+};
+
+function settleActionNode(node, state, label) {
+  if (node && typeof node.settle === 'function') node.settle(state, label);
+}
+
+// Pending surfaces on screen, in every context the deck still holds.
+function settlePendingActions(state, label) {
+  const seen = new Set();
+  const visit = (node) => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
+    if (typeof node.settle === 'function') {
+      const surface = node.querySelector ? node.querySelector('.action-surface') : null;
+      const current = surface ? surface.dataset.state : '';
+      if (current === 'arming' || current === 'armed') node.settle(state, label);
+    }
+  };
+  for (const entry of history) for (const node of entry.nodes) visit(node);
+  if (el.cards) for (const node of Array.from(el.cards.children)) visit(node);
+}
+
+// A settled action replaces its card, and a verified re-read of the entity replaces every
+// card that showed that entity, so the screen shows Shopify as it now is.
+function replaceCard(oldNode, newNodes) {
+  const first = newNodes[0];
+  const rest = newNodes.slice(1);
+  for (const entry of history) {
+    const at = entry.nodes.indexOf(oldNode);
+    if (at !== -1) entry.nodes.splice(at, 1, ...newNodes);
+  }
+  if (oldNode.parentNode) {
+    oldNode.parentNode.replaceChild(first, oldNode);
+    let after = first;
+    for (const node of rest) { after.parentNode.insertBefore(node, after.nextSibling); after = node; }
+  }
+  for (const node of newNodes) {
+    if (node.dataset && node.dataset.type === 'order' && node.dataset.ref) refreshEntityCards(node);
+  }
+}
+
+function refreshEntityCards(fresh) {
+  const ref = fresh.dataset.ref;
+  const replaceIn = (list) => {
+    for (let i = 0; i < list.length; i++) {
+      const node = list[i];
+      if (node !== fresh && node.dataset && node.dataset.type === 'order' && node.dataset.ref === ref) {
+        const copy = fresh.cloneNode(true);
+        copy.dataset.ref = ref;
+        if (node.parentNode) node.parentNode.replaceChild(copy, node);
+        list[i] = copy;
+      }
+    }
+  };
+  for (const entry of history) replaceIn(entry.nodes);
 }
 
 /* -------------------------------------------------------------------- turn */
@@ -926,6 +1075,9 @@ const TURN_TIMEOUT_MS = 130000; // a little over the backend's own 120 s turn ti
 async function submit(body, isAudio) {
   busy = true;
   el.talk.dataset.busy = 'true';
+  // A new instruction withdraws whatever was proposed under the last one. The Mac decides
+  // the same thing on its side; the card goes quiet here so it cannot be tapped meanwhile.
+  settlePendingActions('revoked', 'Withdrawn');
   el.errline.textContent = '';
   el.heard.textContent = '';
   setState('TRANSCRIBING', isAudio ? 'Transcribing' : 'Thinking');
@@ -1198,7 +1350,7 @@ if (DEV) {
       button.textContent = fixture.label;
       button.addEventListener('click', () => {
         el.settings.close();
-        const ui = window.CrooksUI.render(fixture.items, { fixture: true });
+        const ui = window.CrooksUI.render(fixture.items, Object.assign(renderOpts(), { fixture: true }));
         if (ui.stack) { currentStack = ui.stack; }
         el.heard.textContent = `Fixture: ${fixture.label}`;
         el.answer.textContent = '';
