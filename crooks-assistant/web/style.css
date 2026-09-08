@@ -164,6 +164,7 @@ body[data-mode="context"] .errline{display:none}
 }
 .chip:active{transform:scale(.97)}
 .chip[aria-pressed="true"],.chip.is-active{background:var(--glass-3);border-color:var(--line-2);color:var(--ink)}
+.chip[data-dead]{opacity:.45;pointer-events:none}
 .chip .chip-kind{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
 .chip .chip-label{max-width:180px;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;font-size:13px}
 .chip-home{color:var(--ink)}
@@ -507,6 +508,7 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .action-surface[data-state="stale"] .action-label,.action-surface[data-state="expired"] .action-label,
 .action-surface[data-state="revoked"] .action-label{text-decoration:line-through;text-decoration-color:var(--ink-4)}
 .action-meta{margin:10px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
+.action-why{margin:10px 0 0;color:var(--warn)}
 @keyframes arm-fill{from{width:0}to{width:100%}}
 /* Without motion the line does not fill; it appears whole only once the tap can count. */
 @media (prefers-reduced-motion:reduce){

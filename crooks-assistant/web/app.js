@@ -103,6 +103,7 @@ let speakingVia = null;      // 'player' while the ElevenLabs MP3 plays, 'browse
 // One player, for the life of the page. 2ms of silence, used once inside the first touch to
 // prove to Chrome that this element is allowed to make sound.
 const player = new Audio();
+player.addEventListener('playing', () => { if (speakingVia === 'player') setState('SPEAKING'); });
 player.preload = 'auto';
 const SILENT_WAV = 'data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YRAAAACAgICAgICAgICAgICAgICA';
 
@@ -129,7 +130,7 @@ function orbLevel(state) {
 }
 
 const orb = window.CrooksOrb
-  ? window.CrooksOrb.create(el.orb, { size: 340, reducedMotion: REDUCED.matches, getLevel: orbLevel })
+  ? window.CrooksOrb.create(el.orb, { size: ORB_SIZE, reducedMotion: REDUCED.matches, getLevel: orbLevel })
   : null;
 REDUCED.addEventListener('change', (event) => { if (orb) orb.setReducedMotion(event.matches); });
 
@@ -149,12 +150,33 @@ const LABELS = {
   ERROR: ['Something went wrong', 'Hold to try again'],
 };
 
-function setState(state, label) {
+function setState(state, label, sub) {
   el.stage.dataset.state = state;
-  const [title, sub] = LABELS[state] || [state, ''];
+  const [title, defaultSub] = LABELS[state] || [state, ''];
   el.state.textContent = label || title;
-  el.sub.textContent = sub;
+  el.sub.textContent = sub || defaultSub;
+  // The dock says what a hold does right now: cut the voice off, or ask.
+  if (!recording) el.talkLabel.textContent = state === 'SPEAKING' ? 'Hold to interrupt' : 'Hold to speak';
   if (orb) orb.setState(state);
+}
+
+// What the Mac is doing, in the owner's words. The /state poll carries the running tool's
+// name; the screen never shows a tool name.
+const DETAIL_WORDS = {
+  shopify_find_order: 'Finding the order', shopify_order_detail: 'Reading the order', shopify_list_orders: 'Listing orders',
+  shopify_find_customer: 'Finding the customer', shopify_customer_orders: 'Reading their orders', shopify_sales_summary: 'Adding up sales',
+  shopify_inventory: 'Checking stock', shopify_order_note_append: 'Preparing the note',
+  gmail_search: 'Searching the inbox', gmail_read_thread: 'Reading the thread', gmail_recent: 'Reading recent mail',
+};
+const LONG_THINK_MS = 6000;
+let turnStartedAt = 0;
+function detailWords(detail, state) {
+  const name = String(detail || '');
+  if (DETAIL_WORDS[name]) return DETAIL_WORDS[name];
+  if (name.indexOf('refused ') === 0) return 'Trying another way';
+  const waited = turnStartedAt ? Date.now() - turnStartedAt : 0;
+  if (state === 'THINKING' && waited > LONG_THINK_MS) return `Still working · ${Math.round(waited / 1000)} s`;
+  return undefined;
 }
 
 function setConn(state, text) {
@@ -166,7 +188,12 @@ function setMode(mode) {
   if (el.body.dataset.mode === mode) return;
   el.body.dataset.mode = mode;
   el.talk.setAttribute('aria-label', mode === 'orb' ? 'Hold to speak' : 'Hold to speak (dock)');
+  // Beside the cards the orb is shown at under a third of its size; it draws at that size
+  // rather than painting twelve times the pixels it shows.
+  if (orb && typeof orb.setSize === 'function') orb.setSize(mode === 'orb' ? ORB_SIZE : ORB_SIZE_DOCKED);
 }
+const ORB_SIZE = 340;
+const ORB_SIZE_DOCKED = 140;
 
 const HAPTIC = { start: 12, release: 8, done: [10, 60, 10], error: [40, 50, 40] };
 function haptic(pattern) {
@@ -332,12 +359,13 @@ function browserSpeak(text, { isError = false, reason = '' } = {}) {
     if (chosen) { utterance.voice = chosen; utterance.lang = chosen.lang; }
     else utterance.lang = 'en-GB';
     utterance.rate = 1.0;
+    utterance.onstart = () => { if (generation === speakGeneration && speakingVia === 'browser') setState('SPEAKING'); };
     utterance.onend = next;
     utterance.onerror = next;   // a failed chunk moves on; a cancelled chain stops above
     window.speechSynthesis.speak(utterance);
   };
   speakingVia = 'browser';
-  setState('SPEAKING');
+  el.sub.textContent = 'Getting the voice…';
   next();
 }
 
@@ -352,7 +380,9 @@ async function speakAnswer(text, { isError = false } = {}) {
   if (!el.speakToggle.checked) { settle(isError); return; }
   stopSpeaking();
   const generation = speakGeneration;
-  setState('SPEAKING');
+  // The orb says Speaking when sound plays (the player's own event), not now: a voice that
+  // is still being fetched is not speaking, and the screen must not say so over silence.
+  el.sub.textContent = 'Getting the voice…';
   const controller = new AbortController();
   speakAbort = controller;
   // The Mac gives up on ElevenLabs after ten seconds; a voice whose headers have not arrived
@@ -593,7 +623,9 @@ let healthInFlight = false;
 const HEALTH_TIMEOUT_MS = 20000;   // the Mac's own checks give up at 6 s each
 
 async function pollHealth(fresh = false) {
-  if (document.hidden || healthInFlight) return;
+  // Not while a question is in flight: the Mac's checks run whisper and four remote probes,
+  // and the answer is what the owner is waiting for.
+  if (document.hidden || healthInFlight || (busy && !fresh)) return;
   healthInFlight = true;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
@@ -875,7 +907,11 @@ function renderStackChips() {
       }
     },
   });
-  for (const chip of chips) el.stack.appendChild(chip);
+  for (const chip of chips) {
+    const held = history.some((entry) => entry.entities.indexOf(chip.dataset.ref) !== -1);
+    if (!held) { chip.dataset.dead = '1'; chip.setAttribute('aria-disabled', 'true'); chip.title = 'Ask for it again to see it'; }
+    el.stack.appendChild(chip);
+  }
 }
 
 function renderAttentionSurface() {
@@ -905,7 +941,7 @@ function renderTurn(data) {
   const answer = data.answer || '';
   if (ui.hasContext) {
     pushContext(ui.nodes, data.ui, data.question);
-  } else if (answer.length > 260 && window.CrooksUI) {
+  } else if (answer.length > 200 && window.CrooksUI) {
     // Too long to read beneath the orb: give it a card and the room that comes with one.
     const node = window.CrooksUI.renderItem({ type: 'assistant', data: { text: answer } });
     if (node) pushContext([node].concat(ui.nodes), [], data.question);
@@ -976,7 +1012,12 @@ function settleAction(node, payload, status) {
     haptic(HAPTIC.error);
     return;
   }
-  const code = String(payload.code || payload.status || (status >= 400 ? 'not_authorised' : 'failed'));
+  const code = String(payload.code || payload.status || (status >= 400 ? 'refused' : 'failed'));
+  if (code === 'in_progress' && !payload._recovered) {
+    // The Mac is still proving the change: ask again until it knows, never tap again.
+    recoverActionState(node.dataset.proposal || '').then((later) => settleAction(node, later ? Object.assign({ _recovered: true }, later) : null, 200));
+    return;
+  }
   const items = Array.isArray(payload.ui) ? payload.ui : [];
   if (payload.status === 'verified' && payload.undo && items.length && items[0].type === 'success') {
     items[0].data.undo = Object.assign({ label: 'Undo', armed_after_ms: 650 }, payload.undo);
@@ -1001,11 +1042,13 @@ function settleAction(node, payload, status) {
 
 const ACTION_LABELS = {
   verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
-  executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…',
+  executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…', refused: 'Refused',
+  blocked: 'Refused',
   unverified: 'Not confirmed', service_unavailable: 'Not applied', not_authorised: 'Not allowed', writes_disabled: 'Switched off',
   allow_list_missing: 'Not configured', scope_missing: 'Not permitted', unknown: 'Unknown', wrong_session: 'Not this conversation',
 };
 const ACTION_REASONS = {
+  refused: 'The Mac refused that. Check the Mac\'s log for the reason.',
   not_authorised: 'This tablet is not allowed to apply changes. Check CROOKS_ALLOWED_LOGINS on the Mac.',
   writes_disabled: 'Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).',
   allow_list_missing: 'No allowed logins are configured on the Mac (CROOKS_ALLOWED_LOGINS).',
@@ -1095,7 +1138,8 @@ function startStatePolling() {
     try {
       const data = await (await fetch(`/state/${encodeURIComponent(sessionId)}`, { cache: 'no-store', signal: controller.signal })).json();
       if (!busy || !data.known) return;
-      if (data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state);
+      if (data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state, undefined, detailWords(data.detail, data.state));
+      else if (busy && Date.now() - turnStartedAt > LONG_THINK_MS) el.sub.textContent = `Still working · ${Math.round((Date.now() - turnStartedAt) / 1000)} s`;
       // The transcript, the moment the Mac has it: a mis-heard question shows before the
       // answer to it is paid for.
       if (data.heard && !el.heard.textContent) el.heard.textContent = `“${data.heard}”`;
@@ -1111,7 +1155,7 @@ function startStatePolling() {
 }
 function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
 
-const SPEAK_HEADERS_TIMEOUT_MS = 15000;   // the Mac's own TTS timeout is 10 s
+const SPEAK_HEADERS_TIMEOUT_MS = 6000;    // the Mac gives a prefetch 4 s for its first byte; past this, Android speaks
 let turnAbort = null;         // the in-flight /turn, so holding through a slow one can drop it
 const TURN_TIMEOUT_MS = 130000; // a little over the backend's own 120 s turn timeout
 
@@ -1123,6 +1167,7 @@ async function submit(body, isAudio) {
   // a recording that said nothing withdraws nothing.
   el.errline.textContent = '';
   el.heard.textContent = '';
+  turnStartedAt = Date.now();
   setState(isAudio ? 'TRANSCRIBING' : 'THINKING');
   startStatePolling();
   const controller = new AbortController();

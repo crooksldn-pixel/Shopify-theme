@@ -268,7 +268,7 @@ def test_the_volume_is_normal():
 def test_nothing_runs_while_the_page_is_hidden():
     hidden = section(APP_JS, "document.addEventListener('visibilitychange'", "});")
     assert "orb.stop()" in hidden and "stopSpeaking()" in hidden and "releaseMicStream()" in hidden
-    assert "if (document.hidden || healthInFlight) return;" in function_body(APP_JS, "async function pollHealth(")
+    assert "if (document.hidden || healthInFlight || (busy && !fresh)) return;" in function_body(APP_JS, "async function pollHealth(")
     orb = (WEB / "orb.js").read_text(encoding="utf-8")
     assert "cancelAnimationFrame" in orb
     assert "prefers-reduced-motion" in APP_JS and "reducedMotion" in orb
@@ -377,7 +377,7 @@ def test_the_pollers_never_stack_requests():
     whisper inference on the Mac. One request in flight per poller, and none that waits
     forever."""
     health = section(APP_JS, "async function pollHealth", "const HEALTH_NAMES")
-    assert "if (document.hidden || healthInFlight) return;" in health
+    assert "if (document.hidden || healthInFlight || (busy && !fresh)) return;" in health
     assert "signal: controller.signal" in health and "healthInFlight = false" in health
     assert "HEALTH_TIMEOUT_MS" in health
     state = section(APP_JS, "function startStatePolling", "function stopStatePolling")

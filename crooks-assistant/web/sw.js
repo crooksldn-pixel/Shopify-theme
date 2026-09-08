@@ -38,7 +38,12 @@ const SHELL = [
 
 // How long to wait for the Mac before opening from the shell instead. A peer that is off the
 // tailnet can take a while to refuse; the owner should not stare at a blank screen for it.
-const NETWORK_TIMEOUT_MS = 4000;
+const NETWORK_TIMEOUT_MS = 1500;
+
+// When the page itself just had to open from the shell, the Mac is away: its scripts and
+// styles are served from the shell at once for a moment, instead of each waiting its turn.
+const AWAY_GRACE_MS = 10000;
+let awayUntil = 0;
 
 // The very last resort: no worker cache yet (a first visit made while offline). Static text,
 // nothing from any session.
@@ -88,6 +93,10 @@ self.addEventListener('fetch', (event) => {
 // backend is not there — that is "does not answer" too. A 4xx is an answer and is passed on.
 async function networkFirst(path, request) {
   const cache = await caches.open(CACHE);
+  if (path !== '/' && Date.now() < awayUntil) {
+    const held = await cache.match(path);
+    if (held) return held;
+  }
   try {
     const response = await withTimeout(fetch(request), NETWORK_TIMEOUT_MS);
     if (response.status >= 500) throw new Error(`backend ${response.status}`);
@@ -96,6 +105,7 @@ async function networkFirst(path, request) {
     if (response.ok && (path !== '/' || isHtml(response))) cache.put(path, response.clone());
     return response;
   } catch (error) {
+    if (path === '/') awayUntil = Date.now() + AWAY_GRACE_MS;
     const cached = await cache.match(path);
     if (cached) return cached;
     if (path === '/') return new Response(OFFLINE_HTML, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });

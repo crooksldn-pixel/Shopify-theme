@@ -498,14 +498,14 @@
       class: 'action-surface', role: 'button', tabindex: live ? '0' : '-1', 'aria-disabled': 'true',
       data: { state: live ? 'arming' : (blocked ? 'unavailable' : (supported ? status : 'unsupported')), kind },
     }, [
-      h('span', { class: 'action-label', text: live ? text(interaction.label, 'Tap to apply') : (blocked ? "Can't apply from this tablet" : (supported ? settledLabel(status) : 'Needs a newer tablet build')) }),
+      h('span', { class: 'action-label', text: live ? text(interaction.label, 'Tap to apply') : (blocked ? blockedLabel(blocked.code) : (supported ? settledLabel(status) : 'Needs a newer tablet build')) }),
       h('span', { class: 'action-arm', 'aria-hidden': 'true' }),
     ]);
     const node = card('confirmation', [
       h('div', { class: 'card-head' }, [
         h('div', { class: `mark ${risk === 'red' ? 'bad' : 'warn'}` }, h('span', { text: '!' })),
         h('div', {}, [
-          kicker(risk === 'red' ? 'Proposed · needs care' : 'Proposed'),
+          kicker(blocked ? 'Prepared · cannot apply from here' : (risk === 'red' ? 'Proposed · needs care' : 'Proposed')),
           h('h2', { class: 'card-title', text: text(d.title, 'Confirm') }),
           h('p', { class: 'card-sub', text: text(d.entity, text(d.detail)) }),
         ]),
@@ -513,12 +513,24 @@
       d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
       d.detail && d.entity ? h('p', { class: 'card-meta', text: text(d.detail) }) : null,
       surface,
-      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · nothing happens until you tap` : 'Nothing happens until you tap') : (blocked ? text(blocked.reason) : '') }),
+      // The reason a tap would be refused is the one line the owner must read: body size,
+      // not the 11 px caption.
+      blocked ? h('p', { class: 'card-sub action-why', text: text(blocked.reason) }) : null,
+      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · nothing happens until you tap` : 'Nothing happens until you tap') : '' }),
     ], Object.assign({ className: `tier-${risk}` }, opts));
     node.dataset.proposal = text(d.proposal_id);
     node.dataset.ref = text(d.entity_ref);
     if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts, num(d.ttl_s));
     return node;
+  }
+
+  // Who is stopping the tap, in five words: the Mac's switch, its allow-list, this tablet's
+  // login, or Shopify's grant. "This tablet" is blamed only when it is the reason.
+  function blockedLabel(code) {
+    return {
+      writes_disabled: 'Changes are switched off on the Mac', allow_list_missing: 'No allowed logins set on the Mac',
+      not_authorised: "This tablet's login is not allowed", scope_missing: 'Shopify has not granted write_orders',
+    }[text(code)] || "Can't apply from here";
   }
 
   function settledLabel(status) {
