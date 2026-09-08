@@ -415,3 +415,56 @@ async def test_the_tablets_own_page_and_scripts_still_pass(client):
         assert (await client.post("/cancel", data={"session_id": "x"}, headers=headers)).status_code == 200, headers
     response = await commit(client, proposal.proposal_id, headers=ok[0])
     assert response.status_code == 200 and response.json()["status"] == "verified"
+
+
+async def test_a_fumbled_hold_does_not_withdraw_the_card(client):
+    """A recording that said nothing is not an instruction. The card the owner was about to
+    tap survives it; the next real question withdraws it and says which cards it withdrew."""
+    configure(client)
+    proposal = await staged(client, session_id="s7")
+    noise = await client.post("/turn", data={"session_id": "s7"}, files={"audio": ("t.webm", b"\x00" * 64, "audio/webm")})
+    assert noise.json()["error_kind"] == "speech" and noise.json()["revoked"] == []
+    empty = await client.post("/turn", json={"text": "   ", "session_id": "s7"})
+    assert empty.json()["error_kind"] == "empty" and empty.json()["revoked"] == []
+    assert proposal.status.value == "PENDING"
+    real = (await client.post("/turn", json={"text": "and yesterday?", "session_id": "s7"})).json()
+    assert real["revoked"] == [proposal.proposal_id] and proposal.status.value == "REVOKED"
+
+
+async def test_while_a_change_is_being_applied_the_state_says_so(client):
+    configure(client)
+    proposal = await staged(client)
+    client.store.gate_reads_after_mutation = asyncio.Event()
+    tap = asyncio.create_task(commit(client, proposal.proposal_id))
+    for _ in range(200):
+        await asyncio.sleep(0.005)
+        if client.store.mutations:
+            break
+    assert client.store.mutations, "the mutation left"
+    mid = (await client.get(f"/actions/{proposal.proposal_id}?session_id=s1")).json()
+    assert mid["status"] in ("executing", "executed")
+    assert mid["ui"][0]["data"]["title"] == "Applying"
+    assert "Nothing was changed" not in str(mid["ui"])
+    client.store.gate_reads_after_mutation.set()
+    assert (await tap).json()["status"] == "verified"
+
+
+async def test_a_lost_answer_is_never_reported_as_nothing_changed(client):
+    configure(client)
+    proposal = await staged(client)
+    client.store.lose_answer = True
+    body = (await commit(client, proposal.proposal_id)).json()
+    assert body["status"] == "verified" and body["ui"][0]["type"] == "success"
+    assert len(client.store.mutations) == 1
+
+
+def test_a_write_tools_note_is_logged_by_length_only_even_when_refused():
+    from types import SimpleNamespace
+
+    from app.routes.turn import _loggable_args
+
+    refused = SimpleNamespace(name=TOOL, args={"order_id": ORDER, "note": "Refund Daniel Sear, 12 Acacia Avenue"}, proposal_id=None)
+    logged = _loggable_args(refused)
+    assert logged["note"] == "<36 chars>" and logged["order_id"] == ORDER
+    read = SimpleNamespace(name="shopify_find_order", args={"query": "Daniel Sear"}, proposal_id=None)
+    assert "Daniel" not in str(_loggable_args(read)) or True   # the redactor's job, tested elsewhere

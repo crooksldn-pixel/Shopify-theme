@@ -490,6 +490,10 @@ def present_proposal_state(proposal, *, session: Session | None = None, code: st
             items.append(_ui("order", _order(proposal.entity, detail=True)))
     elif status == "pending":
         items.append(_confirmation(proposal))
+    elif status in ("executing", "executed"):
+        # Claimed, sent, or being proven: the outcome is not known yet, and the card must not
+        # say "not applied" about a change that may be on the order this second.
+        items.append(_error("shopify", "in_progress", *_OUTCOME_WORDS["in_progress"]))
     else:
         items.append(_error("shopify", _text(code, 40), *_OUTCOME_WORDS.get(code, _OUTCOME_WORDS["failed"])))
     if session is not None:
@@ -502,13 +506,15 @@ def _done_title(proposal) -> str:
 
 
 # What a settled-but-not-successful proposal says on the card. Calm, and nothing from Shopify.
+# "Nothing was changed" appears only under codes the engine proves: a failure before the
+# mutation left, or a re-read that still shows the order as it was. An ambiguous outcome says
+# to check the order, and never guesses either way.
 _OUTCOME_WORDS: dict[str, tuple[str, str]] = {
     "stale": ("Not applied", "The order changed since this was prepared. Ask again for a fresh one."),
     "expired": ("Expired", "That action waited too long. Ask again."),
     "revoked": ("Withdrawn", "You moved on to something else. Ask again if you still want it."),
-    "unverified": ("Could not confirm", "Shopify accepted the change but it could not be confirmed. Check the order."),
-    "verification_failed": ("Could not confirm", "Shopify accepted the change but it could not be confirmed. Check the order."),
-    "service_unavailable": ("Not applied", "Shopify could not be reached or refused it. Nothing was changed."),
+    "unverified": ("Could not confirm", "The change could not be confirmed. Check the order before asking again."),
+    "service_unavailable": ("Not applied", "Shopify could not be reached. Nothing was changed."),
     "already_executed": ("Already applied", "This was applied once already; it is not applied twice."),
     "in_progress": ("Applying", "Still being applied. Give it a moment."),
     "failed": ("Not applied", "That did not go through. Nothing was changed."),

@@ -179,7 +179,7 @@ async def _stage(
             f"PROPOSED ({proposal.proposal_id}): the change to {label} is prepared and waiting for "
             "the owner to apply it by tapping the card on the tablet. It has NOT happened. Tell the "
             "owner it is ready to tap. Do not say it was done, do not ask for a spoken yes (a spoken "
-            "yes cannot apply it), and do not call this tool again for the same change."
+            "yes cannot apply it), and do not call this tool again while this card is waiting."
         )
     return (
         f"PROPOSED ({proposal.proposal_id}): this same change is already waiting on the tablet. "

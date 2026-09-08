@@ -7,6 +7,7 @@ is that the assistant says "I've lost the thread" rather than pretending to reme
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 
 from app.session.models import Session
 
@@ -20,6 +21,9 @@ class SessionManager:
         self._sessions: dict[str, Session] = {}
         self._idle_timeout_s = idle_timeout_s
         self._lock = threading.Lock()
+        # Told the id of every session this manager lets go — dropped or idled out — so that
+        # nothing else (the action engine's index) keeps it, or its proposals, alive.
+        self.on_drop: list[Callable[[str], None]] = []
 
     def get_or_create(self, session_id: str) -> Session:
         with self._lock:
@@ -56,7 +60,9 @@ class SessionManager:
 
     def drop(self, session_id: str) -> None:
         with self._lock:
-            self._sessions.pop(session_id, None)
+            gone = self._sessions.pop(session_id, None)
+        if gone is not None:
+            self._dropped([session_id])
 
     def count(self) -> int:
         with self._lock:
@@ -69,6 +75,16 @@ class SessionManager:
         ]
         for sid in stale:
             del self._sessions[sid]
+        if stale:
+            self._dropped(stale)
+
+    def _dropped(self, session_ids: list[str]) -> None:
+        for callback in list(self.on_drop):
+            for sid in session_ids:
+                try:
+                    callback(sid)
+                except Exception:  # noqa: BLE001 — a listener's failure is not the store's
+                    pass
 
 
 _manager: SessionManager | None = None

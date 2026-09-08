@@ -86,24 +86,28 @@ async def turn(
     live = runtime.sessions.get_or_create(session_id)
     live.heard = ""
     live.abandoned = False
-    # A new instruction. Whatever the assistant proposed under the last one is withdrawn: a
-    # proposal is bound to the conversation position it was made in, and this is a new one.
-    runtime.actions.advance_epoch(live, "new instruction")
+    # This turn's place in the conversation. A hold that abandons the question, or a later
+    # question, moves the session past it; the answer then goes unspoken.
+    epoch = live.epoch
 
     if audio is not None:
         blob = await audio.read()
         if len(blob) > MAX_UPLOAD_BYTES:
             return await _answer(
                 runtime, session_id, "That recording was too long for me to handle.",
-                request=request, error_kind="audio_too_large", timings=timings, started=started, speak=speak,
+                request=request, error_kind="audio_too_large", timings=timings, started=started, speak=speak, epoch=epoch,
             )
+        # The Mac says what it is doing while it does it: the tablet reads this rather than
+        # guessing from a timer how long the recogniser takes.
+        live.set_state("TRANSCRIBING")
         result = await runtime.transcriber.from_blob(blob, filename_hint=audio.filename or "")
         transcript_info = result.as_dict()
         timings.update(result.timings_ms)
         if not result.ok:
+            live.set_state("READY")
             return await _answer(
                 runtime, session_id, result.reason, request=request, error_kind="speech",
-                timings=timings, started=started, transcript=transcript_info, speak=speak,
+                timings=timings, started=started, transcript=transcript_info, speak=speak, epoch=epoch,
             )
         text = result.text
         # The normaliser refused to guess between near-identical names; tell the model, so it
@@ -115,11 +119,19 @@ async def turn(
             text = f"{text}\n[The speech recogniser was unsure: {notes}. Ask if it matters.]"
 
     if not text or not text.strip():
+        live.set_state("READY")
         return await _answer(
             runtime, session_id, "I did not catch that.", request=request, error_kind="empty",
-            timings=timings, started=started, transcript=transcript_info, speak=speak,
+            timings=timings, started=started, transcript=transcript_info, speak=speak, epoch=epoch,
         )
     text = text.strip()[:MAX_TEXT_CHARS]
+
+    # A new instruction, now that there is one. Whatever the assistant proposed under the last
+    # one is withdrawn: a proposal is bound to the conversation position it was made in, and
+    # this is a new one. A fumbled hold or a recording that said nothing is not an instruction
+    # and withdraws nothing; the card the owner was about to tap survives it.
+    revoked = runtime.actions.revoke_pending(live, "new instruction")
+    epoch = runtime.actions.advance_epoch(live, "new instruction")
 
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
     # in front of it. This question is answered with the catalogue as it stands.
@@ -170,6 +182,8 @@ async def turn(
         calls=result.tool_calls,
         speak=speak,
         lost_thread=lost_thread,
+        epoch=epoch,
+        revoked=revoked,
     )
 
 
@@ -177,10 +191,22 @@ LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 
 
 def _loggable_args(call) -> dict:
+    """What the turn log keeps of a tool call's arguments. A write tool's content — the note
+    the owner dictated — is logged by length only, whether or not it became a proposal: a
+    refused or unpreparable note is still the owner's words about a customer."""
     args = call.args or {}
-    if call.proposal_id:
+    if call.proposal_id or _is_write_tool(call.name):
         return {k: (str(v)[:80] if k.endswith("_id") else f"<{len(str(v))} chars>") for k, v in args.items()}
     return redact({k: str(v)[:80] for k, v in args.items()})
+
+
+def _is_write_tool(name: str) -> bool:
+    from app.tools import registry
+
+    try:
+        return registry.get(name).write is not None
+    except KeyError:
+        return False
 
 
 def _truthy(value) -> bool:
@@ -214,6 +240,8 @@ async def _answer(
     lost_thread: bool = False,
     calls: list | None = None,
     speak: bool = False,
+    epoch: int | None = None,
+    revoked: list[str] | None = None,
 ) -> dict:
     tool_calls = tool_calls or []
     turns = 0
@@ -225,14 +253,20 @@ async def _answer(
         names = set(session.pii_seen)
     except KeyError:
         pass
-    abandoned = bool(session is not None and session.abandoned)
+    # Abandoned: the owner cancelled, or asked something else while this was being answered.
+    # The session's position has moved past this turn's; nobody is waiting for its voice.
+    abandoned = bool(session is not None and (session.abandoned or (epoch is not None and session.epoch != epoch)))
     # A change was proposed this turn. Say, now and in the same breath, whether a tap on THIS
     # tablet could apply it — a card that cannot be applied must never look as if it can.
     writes = None
-    if any(getattr(c, "proposal_id", None) for c in (calls or [])) and request is not None:
+    proposed = [c.proposal_id for c in (calls or []) if getattr(c, "proposal_id", None)]
+    if proposed and request is not None:
         writes = await writes_context(request)
         if not writes["allowed"] and writes["spoken"]:
             answer = f"{answer.rstrip()} {writes['spoken']}"
+    # The card leaves for the tablet now; its wait for the tap starts now.
+    for proposal_id in proposed:
+        runtime.actions.deliver(proposal_id)
     if speak and answer and not abandoned:
         # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
         # is already generating. The same request it would make anyway, just earlier. An
@@ -258,6 +292,8 @@ async def _answer(
         # here, at the end of the turn, rather than at the next health poll.
         "build": runtime.build,
         "writes": writes,
+        # Cards this instruction withdrew. The tablet settles exactly these, no others.
+        "revoked": list(revoked or []),
         "tool_calls": tool_calls,
         "transcript": transcript,
         "timings_ms": {k: round(v, 1) for k, v in timings.items()},

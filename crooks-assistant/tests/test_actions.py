@@ -38,6 +38,9 @@ class FakeStore(ShopifyClient):
         self.fail_mutation = False
         self.note_after_mutation: str | None = None   # what the store shows afterwards, if not the note sent
         self.reads = 0
+        self.gate_reads_after_mutation: asyncio.Event | None = None   # hold the proving re-read
+        self.lose_answer = False          # apply the note, then fail the request: the answer was lost
+        self.fail_reads_after_mutation = False
         self._shop = {"name": "CROOKS LDN", "myshopifyDomain": "fake.myshopify.com", "ianaTimezone": "Europe/London", "currencyCode": "GBP"}
         self._tz = ZoneInfo("Europe/London")
 
@@ -52,6 +55,10 @@ class FakeStore(ShopifyClient):
 
     async def graphql(self, query: str, variables: dict | None = None) -> dict:
         self.reads += 1
+        if self.mutations and self.gate_reads_after_mutation is not None:
+            await self.gate_reads_after_mutation.wait()
+        if self.mutations and self.fail_reads_after_mutation:
+            raise ShopifyError("Shopify is not answering.")
         if "CrooksScopes" in query:
             return {"data": {"currentAppInstallation": {"accessScopes": [{"handle": h} for h in sorted(self.scopes)]}}}
         if (variables or {}).get("id") != ORDER:
@@ -65,6 +72,8 @@ class FakeStore(ShopifyClient):
         if self.fail_mutation:
             raise ShopifyError("Shopify refused it.")
         self.note = variables["note"] if self.note_after_mutation is None else self.note_after_mutation
+        if self.lose_answer:
+            raise ShopifyError("timed out")
         return {"data": {"orderUpdate": {"order": {"id": variables["id"], "name": "#1930", "note": self.note}, "userErrors": []}}}
 
 
@@ -458,3 +467,155 @@ async def test_prepared_carries_a_fingerprint_not_the_note(store):
     assert set(prepared.before) == {"sha", "len"} and prepared.before["len"] == len("Gift wrap please")
     assert prepared.summary == {"appended": "Hello there", "had_note": True, "payload_len": 11}
     assert store.mutations == []
+
+
+# ------------------------------------------------- exactly once, under every timing
+
+
+async def wait_until(predicate, *, timeout_s: float = 2.0) -> None:
+    deadline = asyncio.get_running_loop().time() + timeout_s
+    while not predicate():
+        assert asyncio.get_running_loop().time() < deadline, "condition never held"
+        await asyncio.sleep(0.005)
+
+
+async def test_a_second_tap_while_the_change_is_being_proven_waits_for_the_outcome(store, engine, session):
+    """The window between the mutation and the proving re-read. A second tap there must not
+    re-claim the proposal, must not be judged stale, and must never overwrite the verdict."""
+    _, proposal = await stage(session)
+    store.gate_reads_after_mutation = asyncio.Event()
+    first = asyncio.create_task(engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup))
+    await wait_until(lambda: len(store.mutations) == 1)
+    assert proposal.status is ActionStatus.EXECUTED
+    second = asyncio.create_task(engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup))
+    await asyncio.sleep(0.02)
+    assert not second.done(), "the second tap waits; it does not decide"
+    store.gate_reads_after_mutation.set()
+    a, b = await asyncio.gather(first, second)
+    assert (a.code, b.code) == ("verified", "already_executed")
+    assert proposal.status is ActionStatus.VERIFIED and proposal.undo_id is not None
+    assert len(store.mutations) == 1
+    events = [e["event"] for e in engine.ledger.read()]
+    assert events == ["PROPOSED", "EXECUTING", "EXECUTED", "VERIFIED", "PROPOSED"]
+    assert events.count("EXECUTING") == 1
+
+
+async def test_a_settled_proposal_cannot_be_reopened(store, engine, session):
+    _, proposal = await stage(session)
+    result = await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert result.code == "verified"
+    engine._finish(proposal, ActionStatus.STALE, "stale", reason="a late caller")
+    assert proposal.status is ActionStatus.VERIFIED and proposal.code == "verified"
+    assert [e["event"] for e in engine.ledger.read()].count("STALE") == 0
+
+
+async def test_a_mutation_whose_answer_was_lost_is_settled_by_looking(store, engine, session):
+    """Shopify applied the note but the response never came back. The engine must not say
+    'nothing was changed': it re-reads, sees the note, and reports it as applied."""
+    _, proposal = await stage(session)
+    store.lose_answer = True
+    result = await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert len(store.mutations) == 1
+    assert result.code == "verified" and proposal.status is ActionStatus.VERIFIED
+    assert proposal.verified is True and proposal.undo_id is not None
+    assert store.note == "Gift wrap please\nCustomer asked for an exchange"
+    events = [e["event"] for e in engine.ledger.read()]
+    assert events == ["PROPOSED", "EXECUTING", "EXECUTED", "VERIFIED", "PROPOSED"]
+    # And a re-ask does not append the line a second time: the same request is one proposal
+    # per epoch, and the previous one is settled.
+    _, again = await stage(session)
+    assert again is not proposal and again.before == proposal.after
+
+
+async def test_a_mutation_that_never_landed_is_proven_unchanged(store, engine, session):
+    _, proposal = await stage(session)
+    store.fail_mutation = True
+    reads_before = store.reads
+    result = await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert result.code == "service_unavailable" and proposal.status is ActionStatus.FAILED
+    assert store.reads > reads_before + 2, "the entity was looked at again before saying nothing changed"
+    assert store.note == "Gift wrap please"
+    assert [e["event"] for e in engine.ledger.read()] == ["PROPOSED", "EXECUTING", "FAILED"]
+
+
+async def test_an_ambiguous_mutation_that_cannot_be_re_read_is_unverified_not_failed(store, engine, session):
+    _, proposal = await stage(session)
+    store.lose_answer = True
+    store.fail_reads_after_mutation = True
+    result = await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert result.code == "unverified" and proposal.status is ActionStatus.UNVERIFIED
+    assert proposal.undo_id is None
+    assert [e["event"] for e in engine.ledger.read()] == ["PROPOSED", "EXECUTING", "UNVERIFIED"]
+
+
+async def test_a_precondition_read_that_fails_sends_nothing(store, engine, session):
+    _, proposal = await stage(session)
+
+    async def broken(query, variables=None):
+        raise ShopifyError("Shopify is not answering.")
+
+    store.graphql = broken
+    result = await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert result.code == "service_unavailable" and proposal.status is ActionStatus.FAILED
+    assert store.mutations == []
+
+
+async def test_the_same_request_twice_is_one_ledger_line(store, engine, session):
+    await stage(session)
+    await stage(session)
+    assert [e["event"] for e in engine.ledger.read()] == ["PROPOSED"]
+
+
+async def test_the_undo_belongs_to_the_epoch_the_change_was_authorised_in(store, engine, session):
+    _, proposal = await stage(session)
+    store.gate_reads_after_mutation = asyncio.Event()
+    commit = asyncio.create_task(engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup))
+    await wait_until(lambda: len(store.mutations) == 1)
+    engine.advance_epoch(session, "the owner moved on while it was applying")
+    store.gate_reads_after_mutation.set()
+    result = await commit
+    assert result.code == "verified", "a change that was authorised is finished, not withdrawn"
+    undo = session.proposal(proposal.undo_id)
+    assert undo is not None and undo.epoch == proposal.epoch == 1 and session.epoch == 2
+    undone = await engine.commit(undo.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert undone.code == "revoked" and len(store.mutations) == 1
+
+
+async def test_a_dropped_session_takes_its_proposals_with_it(store, engine, session):
+    from app.session.manager import SessionManager
+
+    manager = SessionManager()
+    manager.on_drop.append(engine.forget_session)
+    live = manager.get_or_create("t1")
+    live.issue(ORDER)
+    live.epoch = 1
+    _, proposal = await stage(live)
+    assert engine.find(proposal.proposal_id) is proposal
+    manager.drop("t1")
+    assert proposal.status is ActionStatus.REVOKED
+    assert engine.find(proposal.proposal_id) is None
+    assert (await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)).code == "unknown"
+
+
+async def test_settled_proposals_leave_the_index_after_a_while(store, engine, session, clock):
+    _, proposal = await stage(session)
+    await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert engine.find(proposal.proposal_id) is proposal
+    clock.now += engine_module.SETTLED_RETENTION_S + 1
+    assert engine.prune() >= 1
+    assert engine.find(proposal.proposal_id) is None
+    assert (await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)).code == "unknown"
+
+
+async def test_the_wait_for_the_tap_starts_when_the_card_is_delivered(store, engine, session, clock):
+    _, proposal = await stage(session)
+    assert proposal.expires_at == clock.now + engine.ttl_s
+    clock.now += 25          # Claude wrote the answer; the voice said it
+    delivered = engine.deliver(proposal.proposal_id)
+    assert delivered is proposal and proposal.expires_at == clock.now + engine.ttl_s
+    assert [e["event"] for e in engine.ledger.read()][-1] == "DELIVERED"
+    clock.now += engine.ttl_s - 1
+    result = await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
+    assert result.code == "verified"
+    # Delivery of a settled proposal changes nothing.
+    assert engine.deliver(proposal.proposal_id) is proposal and proposal.status is ActionStatus.VERIFIED

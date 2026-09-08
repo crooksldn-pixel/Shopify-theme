@@ -692,3 +692,53 @@ async def test_speak_streams_through_the_real_middleware(client):
     assert first.startswith(b"\\xff\\xfb")
     assert first_at < 0.25, f"the middleware held the first chunk for {first_at:.2f}s"
     assert b"".join(chunk for _, chunk in arrivals).endswith(b"\\x02" * 64)
+
+
+async def test_a_question_asked_over_the_last_one_leaves_the_first_unvoiced(client):
+    """The tablet does not wait for /cancel before sending the next question. The first turn's
+    answer, arriving after the second has started, must not be voiced: the conversation has
+    moved past it, whatever the abandoned flag says by then."""
+    calls = stub_voice(app)
+    provider = app.state.runtime.provider
+    gate = asyncio.Event()
+    fake = FakeProvider()
+
+    async def slow_turn(session_id, text):
+        from app.providers.base import TurnResult
+
+        await gate.wait()
+        return TurnResult(text="Never voiced.", session_id=session_id)
+
+    provider.turn = slow_turn
+    first = asyncio.create_task(client.post("/turn", json={"text": "first", "session_id": "over", "speak": True}))
+    await asyncio.sleep(0.05)
+    provider.turn = fake.turn
+    second = (await client.post("/turn", json={"text": "second", "session_id": "over", "speak": True})).json()
+    assert second["answer"].startswith("fake answer")
+    assert len(calls) == 1
+    gate.set()
+    body = (await first).json()
+    assert body["answer"] == "Never voiced."
+    await asyncio.sleep(0)
+    assert len(calls) == 1, "the first answer was not synthesised"
+
+
+async def test_the_state_says_transcribing_while_the_recogniser_runs(client):
+    runtime = app.state.runtime
+    seen = {}
+
+    async def fake_from_blob(blob, filename_hint=""):
+        seen["state"] = (await client.get("/state/hear")).json()["state"]
+        from app.speech.transcribe import SpeechResult
+
+        return SpeechResult(ok=False, reason="I did not catch that.", timings_ms={})
+
+    original = runtime.transcriber.from_blob
+    runtime.transcriber.from_blob = fake_from_blob
+    try:
+        body = (await client.post("/turn", data={"session_id": "hear"}, files={"audio": ("t.webm", b"\x00" * 64, "audio/webm")})).json()
+    finally:
+        runtime.transcriber.from_blob = original
+    assert seen["state"] == "TRANSCRIBING"
+    assert body["error_kind"] == "speech"
+    assert (await client.get("/state/hear")).json()["state"] == "READY"

@@ -243,6 +243,10 @@ def build(settings: Settings | None = None) -> Runtime:
     # The action engine is installed process-wide: the dispatcher stages into it from inside a
     # Claude turn, and the tablet's tap reaches it through the runtime. One index for both.
     actions = install_engine(ActionEngine(ledger=ActionLedger(settings.log_dir)))
+    # A session the store lets go takes its proposals with it: nothing stays tappable, and
+    # nothing of it stays in memory, once the conversation is over.
+    if actions.forget_session not in sessions.on_drop:
+        sessions.on_drop.append(actions.forget_session)
 
     return Runtime(
         build=web_build_id(),

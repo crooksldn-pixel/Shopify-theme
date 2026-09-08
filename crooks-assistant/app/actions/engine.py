@@ -6,7 +6,12 @@ Two invariants live here and nowhere else:
 
   - A proposal executes at most once. The claim from PENDING to EXECUTING is synchronous —
     no await between the checks and the write of the status — so two commits that arrive
-    together cannot both pass it. The second waits for the first's outcome and returns it.
+    together cannot both pass it. A second commit that lands while the first is executing or
+    being proven waits for the first's outcome and returns it; a settled proposal is never
+    re-opened, whoever asks and whatever they saw.
+  - An ambiguous mutation is settled by looking, not guessing. If the request to Shopify
+    fails after it was sent, the entity is re-read once: the fingerprint says whether the
+    change landed, did not, or cannot be told — and the card says exactly that.
   - Nothing is sent that was not stored at staging time. `commit` takes a proposal id and a
     session id; the arguments come from the proposal.
 """
@@ -44,6 +49,10 @@ CODES = frozenset({
     "proposed", "verified", "unverified", "failed", "stale", "expired", "revoked",
     "already_executed", "in_progress", "unknown", "wrong_session", "service_unavailable",
 })
+
+# A settled proposal is kept in the index this long after it finished, so the tablet can
+# still ask about it; then it goes, and its session's copy of the note text with it.
+SETTLED_RETENTION_S = 900.0
 
 
 @dataclass(slots=True)
@@ -83,6 +92,7 @@ class ActionEngine:
         and whether it is new: the same request twice in one epoch is one proposal."""
         assert spec.write is not None
         now = self.clock()
+        self.prune(now)
         fingerprint = args_fingerprint(spec.name, model_args)
         for existing in session.proposals:
             if (
@@ -92,7 +102,7 @@ class ActionEngine:
                 and existing.fingerprint == fingerprint
                 and not existing.expired(now)
             ):
-                self.ledger.record("PROPOSED", existing, deduplicated=True)
+                # The same proposal, not a second one: the ledger already has its line.
                 return existing, False
         proposal = ActionProposal(
             proposal_id=new_proposal_id(),
@@ -135,7 +145,9 @@ class ActionEngine:
         undo = ActionProposal(
             proposal_id=new_proposal_id(),
             session_id=session.session_id,
-            epoch=session.epoch,
+            # The epoch the owner authorised the change in. If they moved on while it was
+            # being applied, the undo is already behind them and a tap on it is refused.
+            epoch=done.epoch,
             tool_name=spec.name,
             operation=f"{write.operation}_undo",
             risk=done.risk,
@@ -170,21 +182,54 @@ class ActionEngine:
         self.revoke_pending(session, reason)
         return session.epoch
 
-    def revoke_pending(self, session: Session, reason: str) -> int:
-        count = 0
+    def revoke_pending(self, session: Session, reason: str) -> list[str]:
+        """Withdraw every proposal still waiting in this session. Returns their ids, so the
+        turn that withdrew them can tell the tablet which cards are dead."""
+        revoked: list[str] = []
         for proposal in session.proposals:
             if proposal.status is ActionStatus.PENDING:
                 self._finish(proposal, ActionStatus.REVOKED, "revoked", reason=reason)
-                count += 1
-        return count
+                revoked.append(proposal.proposal_id)
+        return revoked
+
+    def deliver(self, proposal_id: str) -> ActionProposal | None:
+        """The card is on its way to the tablet. The wait for the tap starts now, not when
+        the model asked: the answer and the spoken line came between, and the owner had no
+        card to tap during them. Still the server's clock; still one TTL."""
+        proposal = self.find(proposal_id)
+        if proposal is None or proposal.status is not ActionStatus.PENDING:
+            return proposal
+        now = self.clock()
+        proposal.expires_at = max(proposal.expires_at, now + self.ttl_s)
+        self.ledger.record("DELIVERED", proposal)
+        return proposal
 
     def forget_session(self, session_id: str) -> None:
+        """The session is gone (reset, restart, idled out): nothing of it may stay tappable
+        or in memory. Called by the session manager whenever it drops one."""
         for pid, session in list(self._index.items()):
             if session.session_id == session_id:
                 for proposal in session.proposals:
                     if proposal.status is ActionStatus.PENDING:
                         self._finish(proposal, ActionStatus.REVOKED, "revoked", reason="session ended")
                 del self._index[pid]
+
+    def prune(self, now: float | None = None) -> int:
+        """Drop settled proposals the tablet has had long enough to ask about, and any whose
+        session no longer holds them. The index is the only thing keeping an old session —
+        and the note text inside its proposals — alive."""
+        now = self.clock() if now is None else now
+        dropped = 0
+        for pid, session in list(self._index.items()):
+            proposal = session.proposal(pid)
+            if proposal is None:
+                del self._index[pid]
+                dropped += 1
+                continue
+            if proposal.terminal and proposal.finished_at is not None and now - proposal.finished_at > SETTLED_RETENTION_S:
+                del self._index[pid]
+                dropped += 1
+        return dropped
 
     # ---------------------------------------------------------------- look up
 
@@ -216,9 +261,10 @@ class ActionEngine:
         spec = spec_lookup(proposal.tool_name)
         write = spec.write if spec is not None else None
 
-        if proposal.status is ActionStatus.EXECUTING:
-            # Someone else's tap, a retried request, an Android double-fire: wait for the
-            # outcome the first commit produces and hand back that, never a second mutation.
+        if proposal.status in (ActionStatus.EXECUTING, ActionStatus.EXECUTED):
+            # Someone else's tap, a retried request, an Android double-fire — arriving while
+            # the first commit is sending the change or proving it: wait for the outcome the
+            # first commit produces and hand back that, never a second mutation.
             try:
                 await asyncio.wait_for(proposal.done.wait(), timeout=WAIT_FOR_OUTCOME_S)
             except TimeoutError:
@@ -242,6 +288,7 @@ class ActionEngine:
         self.ledger.record("EXECUTING", proposal)
 
         started = time.perf_counter()
+        sent = False   # True from the moment the mutation leaves; after that, nothing is assumed
         try:
             execution = dict(proposal.execution)
             # Precondition: the entity must still be what it was when the change was decided.
@@ -251,6 +298,7 @@ class ActionEngine:
                 return CommitResult(proposal, "stale", write.spoken_stale)
 
             self.executions += 1
+            sent = True
             await write.execute(execution)
             proposal.executed_at = self.clock()
             proposal.status = ActionStatus.EXECUTED
@@ -258,27 +306,51 @@ class ActionEngine:
 
             # Verification: a 200 is not proof; the re-read is.
             proven = await write.observe(execution)
-            proposal.after = dict(proven.fingerprint)
-            proposal.entity = proven.entity
-            if proven.fingerprint == proposal.expected_after:
-                proposal.verified = True
-                self._finish(proposal, ActionStatus.VERIFIED, "verified")
-                spoken = write.spoken_undo_success if proposal.undo_of else write.spoken_success
-                if proposal.undo_of is None:
-                    self.stage_undo(session, spec, proposal)
-                return CommitResult(proposal, "verified", spoken)
-            proposal.verified = False
-            self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason="re-read does not match")
-            return CommitResult(proposal, "unverified", write.spoken_failure)
+            return self._prove(proposal, proven, session, spec, write)
         except Exception as exc:  # noqa: BLE001 — every failure is a recorded outcome
-            if proposal.status is ActionStatus.EXECUTED:
-                # Sent and accepted, then the re-read failed: not proven, not a lie either.
-                proposal.verified = False
-                self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason=_short(exc))
-                return CommitResult(proposal, "unverified", write.spoken_failure, detail=_short(exc))
-            log.warning("action %s failed before or during the mutation: %s", proposal.proposal_id, exc)
+            if not sent:
+                # Nothing left this process: the precondition read failed. Proven unchanged.
+                log.warning("action %s could not check the entity: %s", proposal.proposal_id, exc)
+                self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason=_short(exc))
+                return CommitResult(proposal, "service_unavailable", write.spoken_failure, detail=_short(exc))
+            # The mutation left, or its answer did not come back, or the proving read failed.
+            # Shopify may or may not hold the change. Look once; say what was seen.
+            log.warning("action %s is ambiguous after sending: %s", proposal.proposal_id, exc)
+            return await self._settle_by_observation(proposal, execution, session, spec, write, exc)
+
+    def _prove(self, proposal, proven, session, spec, write) -> CommitResult:
+        proposal.after = dict(proven.fingerprint)
+        proposal.entity = proven.entity
+        if proven.fingerprint == proposal.expected_after:
+            proposal.verified = True
+            self._finish(proposal, ActionStatus.VERIFIED, "verified")
+            spoken = write.spoken_undo_success if proposal.undo_of else write.spoken_success
+            if proposal.undo_of is None:
+                self.stage_undo(session, spec, proposal)
+            return CommitResult(proposal, "verified", spoken)
+        proposal.verified = False
+        self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason="re-read does not match")
+        return CommitResult(proposal, "unverified", write.spoken_failure)
+
+    async def _settle_by_observation(self, proposal, execution, session, spec, write, exc) -> CommitResult:
+        """One re-read decides an ambiguous mutation. Landed: verified, as if the answer had
+        come back. Untouched: failed, and 'nothing was changed' is now a fact. Neither, or
+        the re-read fails too: unverified — the card says to check the order, never that
+        nothing happened."""
+        try:
+            proven = await write.observe(execution)
+        except Exception as again:  # noqa: BLE001
+            proposal.verified = False
+            self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason=_short(again))
+            return CommitResult(proposal, "unverified", write.spoken_failure, detail=_short(exc))
+        if proven.fingerprint == proposal.before and proposal.status is ActionStatus.EXECUTING:
             self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason=_short(exc))
             return CommitResult(proposal, "service_unavailable", write.spoken_failure, detail=_short(exc))
+        if proposal.status is ActionStatus.EXECUTING:
+            proposal.executed_at = self.clock()
+            proposal.status = ActionStatus.EXECUTED
+            self.ledger.record("EXECUTED", proposal, reason="settled by re-read")
+        return self._prove(proposal, proven, session, spec, write)
 
     # ---------------------------------------------------------------- helpers
 
@@ -298,6 +370,10 @@ class ActionEngine:
         return CommitResult(proposal, proposal.code or "failed", "")
 
     def _finish(self, proposal: ActionProposal, status: ActionStatus, code: str, *, reason: str = "") -> None:
+        if proposal.terminal:
+            # Settled is settled. A late caller cannot turn a verified change into anything else.
+            log.warning("ignored %s → %s for settled proposal %s", proposal.status.value, status.value, proposal.proposal_id)
+            return
         proposal.status = status
         proposal.code = code
         proposal.reason = reason
