@@ -216,7 +216,18 @@ class ShopifyClient:
                 raise ShopifyError(f"Refused: {name}.{key} is out of bounds.")
         self.mutations_sent += 1
         log.info("mutation %s sent", name)
-        return await self._post(reviewed.document, variables)
+        try:
+            return await self._post(reviewed.document, variables, mutation=True)
+        except ShopifyError as exc:
+            if "ACCESS_DENIED" not in str(exc) or self.auth_mode == "static_token" or self._token is None:
+                raise
+            # A client-credentials token lives a day and carries the scopes granted when it was
+            # minted. The store granted write_orders after that: one fresh token, one retry.
+            # The mutation itself was refused, so nothing has been applied twice.
+            log.warning("mutation %s refused for scope; re-minting the token once", name)
+            self._token = None
+            self._scopes = None
+            return await self._post(reviewed.document, variables, mutation=True)
 
     async def access_scopes(self, *, refresh: bool = False) -> frozenset[str]:
         """What the store has granted this app. A read, cached briefly: the write preflight
@@ -233,7 +244,7 @@ class ShopifyClient:
         self._scopes_at = time.time()
         return self._scopes
 
-    async def _post(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def _post(self, query: str, variables: dict[str, Any] | None = None, *, mutation: bool = False) -> dict[str, Any]:
         token = await self._access_token()
         try:
             response = await self._client().post(
@@ -274,6 +285,10 @@ class ShopifyClient:
                 raise ShopifyError("Shopify is rate-limiting us. Try again in a moment.")
             if "MAX_COST_EXCEEDED" in codes:
                 raise ShopifyError("That query was too expensive for Shopify; narrow it.")
+            if mutation and "ACCESS_DENIED" in codes:
+                # For a read, ACCESS_DENIED is protected customer data coming back redacted and
+                # the rest of the answer stands. For a mutation there is no rest: it was refused.
+                raise ShopifyError(f"Shopify refused the change (ACCESS_DENIED): {messages[:160]}")
             if payload.get("data") is None:
                 raise ShopifyError(f"Shopify rejected the query: {messages}")
             log.warning("Shopify partial errors (likely protected-data redaction): %s", messages)

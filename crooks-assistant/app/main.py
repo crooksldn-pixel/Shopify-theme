@@ -105,14 +105,16 @@ async def guard_and_freshness(request: Request, call_next):
     if request.method in _STATE_CHANGING and _cross_site(request):
         return JSONResponse(status_code=403, content={"error": "cross-site request refused"})
     allowed = getattr(request.app.state, "allowed_logins", ())
-    if allowed:
-        login = request.headers.get("tailscale-user-login", "")
-        # `tailscale serve` adds X-Forwarded-For to everything it proxies and a login only for
-        # tailnet users: a proxied request with no login is Funnel or a tagged node, and is
-        # refused. A request with neither header was made on the Mac itself.
-        proxied = bool(request.headers.get("x-forwarded-for"))
-        if (login and login.lower() not in allowed) or (proxied and not login):
-            return JSONResponse(status_code=403, content={"error": "not allowed", "who": login or "unknown"})
+    login = request.headers.get("tailscale-user-login", "")
+    # `tailscale serve` adds X-Forwarded-For to everything it proxies and a login only for
+    # tailnet users: a proxied request with no login is Funnel or a tagged node, and is
+    # refused whether or not an allow-list is set — nobody anonymous asks this assistant.
+    # A request with neither header was made on the Mac itself.
+    proxied = bool(request.headers.get("x-forwarded-for"))
+    if proxied and not login:
+        return JSONResponse(status_code=403, content={"error": "not allowed", "who": "unknown"})
+    if allowed and login and login.lower() not in allowed:
+        return JSONResponse(status_code=403, content={"error": "not allowed", "who": login})
     response = await call_next(request)
     path = request.url.path
     if path in ("/", "/sw.js", "/manifest.webmanifest") or path.startswith("/static/"):

@@ -78,7 +78,16 @@ const DEV = (() => {
 
 const REDUCED = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false, addEventListener() {} };
 
-let sessionId = store.get('crooks.session', '') || (Math.random().toString(36).slice(2, 14));
+// The id names this conversation to the Mac, and /state answers for it: drawn from the
+// browser's random source, never from Math.random.
+function newSessionId() {
+  try {
+    const bytes = new Uint8Array(9);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  } catch { return Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 6); }
+}
+let sessionId = store.get('crooks.session', '') || newSessionId();
 store.set('crooks.session', sessionId);
 // How many turns this conversation has had, as far as the tablet knows. Sent with each turn
 // so the backend can tell "new conversation" from "I restarted and forgot yours".
@@ -861,6 +870,22 @@ function pushContext(nodes, items, question) {
   while (history.length > MAX_HISTORY) history.shift();
   showHistory(history.length - 1);
   renderRecent();
+  armDeckExpiry();
+}
+
+// The Mac forgets a conversation after half an hour of silence; the screen forgets with it.
+// A customer's name and address do not stay on a desk-top tablet all night.
+const DECK_IDLE_MS = 30 * 60 * 1000;
+let deckExpiryTimer = null;
+function armDeckExpiry() {
+  clearTimeout(deckExpiryTimer);
+  deckExpiryTimer = setTimeout(() => {
+    if (busy || recording || speakingVia || liveActionSurface()) { armDeckExpiry(); return; }
+    history.length = 0; historyIndex = -1; currentStack = [];
+    clear(el.cards); renderStackChips(); renderRecent();
+    el.heard.textContent = ''; el.answer.textContent = '';
+    setMode('orb');
+  }, DECK_IDLE_MS);
 }
 
 function showHistory(index) {
@@ -1193,6 +1218,8 @@ async function submit(body, isAudio) {
         : `The assistant on the Mac answered with an error (${response.status}). Try again.`;
       setState('ERROR', lastErrorTitle);
       haptic(HAPTIC.error);
+      // A voice-first device says its errors: the owner is looking at their hands.
+      speakAnswer(response.status === 403 ? 'This tablet is not allowed to ask.' : 'The Mac hit a problem. Ask again.', { isError: true });
       return;
     }
     const data = await response.json();
@@ -1231,6 +1258,8 @@ async function submit(body, isAudio) {
     setState('ERROR', lastErrorTitle);
     setConn('down', 'Offline');
     haptic(HAPTIC.error);
+    // The Mac did not answer, so this goes to the Android voice by way of a failed /speak.
+    speakAnswer(controller.signal.aborted ? 'That took too long. Ask again.' : 'I cannot reach the Mac.', { isError: true });
     if (!controller.signal.aborted) setTimeout(checkReachable, 0);   // after `finally` clears busy
   } finally {
     clearTimeout(timeout);
@@ -1357,7 +1386,7 @@ el.resetSession.addEventListener('click', async () => {
   const form = new FormData();
   form.append('session_id', sessionId);
   try { await fetch('/reset', { method: 'POST', body: form }); } catch { /* noop */ }
-  sessionId = Math.random().toString(36).slice(2, 14);
+  sessionId = newSessionId();
   store.set('crooks.session', sessionId);
   turns = 0;
   store.set('crooks.turns', '0');

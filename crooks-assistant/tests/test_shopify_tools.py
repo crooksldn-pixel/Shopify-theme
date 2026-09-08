@@ -514,3 +514,80 @@ async def test_sales_summary_breakdown_lists_empty_days_and_stops_at_a_month():
 
     shopify_tools.bind(FakeShopify([empty]))
     assert (await shopify_tools.shopify_sales_summary(days=7))["by_day"] is None, "off unless asked"
+
+
+def test_a_mutation_refused_for_scope_re_mints_the_token_once():
+    """A client-credentials token carries the scopes granted when it was minted. The store
+    granted write_orders afterwards: the first mutation is ACCESS_DENIED, the token is
+    dropped, one fresh token is minted and the mutation sent once more. A read that meets
+    ACCESS_DENIED (protected customer data, redacted) still returns what it got."""
+    import asyncio
+
+    from app.clients.shopify import ShopifyClient, ShopifyError, _Token
+
+    class Denied:
+        status_code = 200
+        text = ""
+
+        def json(self):
+            return {"data": {"orderUpdate": None}, "errors": [{"message": "Access denied for orderUpdate field. Required access: write_orders", "extensions": {"code": "ACCESS_DENIED"}}]}
+
+    class Granted:
+        status_code = 200
+        text = ""
+
+        def json(self):
+            return {"data": {"orderUpdate": {"order": {"id": "gid://shopify/Order/1", "name": "#1", "note": "x"}, "userErrors": []}}}
+
+    class Redacted:
+        status_code = 200
+        text = ""
+
+        def json(self):
+            return {"data": {"order": {"id": "gid://shopify/Order/1", "customer": None}}, "errors": [{"message": "protected", "extensions": {"code": "ACCESS_DENIED"}}]}
+
+    answers = [Denied(), Granted()]
+    posts = []
+    tokens = ["new"]
+
+    class FakeHttp:
+        is_closed = False
+
+        async def post(self, url, *, json=None, headers=None, **k):
+            posts.append((json or {}).get("query", "")[:20] + " " + (headers or {}).get("X-Shopify-Access-Token", ""))
+            if "mutation" in (json or {}).get("query", ""):
+                return answers.pop(0)
+            return Redacted()
+
+    client = ShopifyClient("x.myshopify.com", "2025-07")
+    client._http = FakeHttp()  # type: ignore[assignment]
+    client._token = _Token(value="old", expires_at=9e12, expires_in=86399)
+
+    async def mint():
+        client._token = _Token(value=tokens.pop(0) if tokens else "new", expires_at=9e12, expires_in=86399)
+        return client._token.value
+
+    original = client._access_token
+
+    async def access_token():
+        if client._token is None:
+            return await mint()
+        return client._token.value
+
+    client._access_token = access_token  # type: ignore[assignment]
+
+    async def run():
+        result = await client.mutate("order_note_set", {"id": "gid://shopify/Order/1", "note": "x"})
+        assert result["data"]["orderUpdate"]["order"]["note"] == "x"
+        assert len(posts) == 2 and posts[0].endswith(" old") and posts[1].endswith(" new")
+        # A read with the same code is not a refusal.
+        redacted = await client.graphql("query { order(id: \"gid://shopify/Order/1\") { id } }")
+        assert redacted["data"]["order"]["customer"] is None
+        # A mutation still refused with a fresh token is refused, once more and no more.
+        answers.extend([Denied(), Denied()])
+        with pytest.raises(ShopifyError, match="ACCESS_DENIED"):
+            await client.mutate("order_note_set", {"id": "gid://shopify/Order/1", "note": "x"})
+        assert len(posts) == 5
+
+    asyncio.run(run())
+    del original

@@ -179,3 +179,17 @@ async def test_vad_retry_fires_on_a_bare_500():
     # subsequent calls do not ask for VAD again
     await client.transcribe(b"wav")
     assert calls[-1] is False
+
+
+async def test_the_log_never_carries_what_was_said(caplog):
+    """Names and addresses the owner speaks are not for the operational log: it records
+    lengths and timings, never the words."""
+    import logging
+
+    caplog.set_level(logging.INFO, logger="crooks")
+    caplog.set_level(logging.INFO)
+    t = Transcriber(FakeWhisper("find the blue wash yard genes for daniel sear"), norm())
+    result = await t.from_blob(webm_opus(tone_pcm(1.0)))
+    assert result.ok
+    assert "daniel" not in caplog.text.lower() and "yard genes" not in caplog.text.lower()
+    assert "normalised the transcript" in caplog.text

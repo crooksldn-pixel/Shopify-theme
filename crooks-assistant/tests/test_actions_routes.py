@@ -468,3 +468,20 @@ def test_a_write_tools_note_is_logged_by_length_only_even_when_refused():
     assert logged["note"] == "<36 chars>" and logged["order_id"] == ORDER
     read = SimpleNamespace(name="shopify_find_order", args={"query": "Daniel Sear"}, proposal_id=None)
     assert "Daniel" not in str(_loggable_args(read)) or True   # the redactor's job, tested elsewhere
+
+
+async def test_a_proxied_request_with_no_login_is_refused_even_with_no_allow_list(client):
+    """Funnel, a tagged node, anything reaching tailscale serve without a tailnet identity:
+    refused whether or not CROOKS_ALLOWED_LOGINS is set. The Mac itself (no headers) and a
+    tailnet login (any, when no list is set) still pass."""
+    configure(client, logins="")
+    anonymous = {"X-Forwarded-For": "100.64.0.9"}
+    for path in ("/ping", "/health", "/"):
+        response = await client.get(path, headers=anonymous)
+        assert response.status_code == 403 and response.json() == {"error": "not allowed", "who": "unknown"}, path
+    assert (await client.post("/turn", json={"text": "hi", "session_id": "x"}, headers=anonymous)).status_code == 403
+    assert (await client.get("/ping")).status_code == 200
+    assert (await client.get("/ping", headers=PROXIED)).status_code == 200
+    # And with a list, only its logins pass.
+    configure(client, logins="someone-else@example.com")
+    assert (await client.get("/ping", headers=PROXIED)).status_code == 403

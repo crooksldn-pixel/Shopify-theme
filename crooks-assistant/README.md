@@ -407,8 +407,15 @@ Nothing here has a password: the backend binds to loopback on the Mac and is rea
 through the owner's own tailnet. That is the intended trust boundary and it is written down
 here so that it is a decision, not an oversight. To narrow it, set `CROOKS_ALLOWED_LOGINS` in
 `.env` to the Tailscale logins that may ask (`you@example.com`); `tailscale serve` stamps every
-proxied request with the caller's login and any other login is refused with a 403. Requests
-made on the Mac itself carry no login and are always allowed.
+proxied request with the caller's login and any other login is refused with a 403. A proxied
+request that carries no login at all — Funnel, a tagged node — is refused whether or not the
+list is set. Requests made on the Mac itself carry no login and are always allowed. The Mac
+logs a warning at start while the list is empty.
+
+Recordings are not kept: the tablet's audio is decoded, recognised and dropped. Set
+`CROOKS_SAVE_CAPTURES=true` to keep them under `bench/audio/` while diagnosing a mis-hearing.
+The operational log records how long a transcript was and what the normaliser changed, never
+the words.
 
 ### Layout
 

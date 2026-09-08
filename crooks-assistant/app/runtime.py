@@ -248,6 +248,11 @@ def build(settings: Settings | None = None) -> Runtime:
     if actions.forget_session not in sessions.on_drop:
         sessions.on_drop.append(actions.forget_session)
 
+    if not settings.allowed_logins:
+        log.warning(
+            "CROOKS_ALLOWED_LOGINS is empty: any tailnet login may ask (reads only; changes need "
+            "the allow-list). Open /whoami on the tablet and put its login in .env."
+        )
     return Runtime(
         build=web_build_id(),
         settings=settings,

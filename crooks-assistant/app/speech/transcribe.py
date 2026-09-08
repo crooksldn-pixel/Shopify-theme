@@ -225,7 +225,7 @@ class Transcriber:
         )
 
         if transcript.is_hallucination:
-            log.info("filtered hallucination: %r", transcript.text)
+            log.info("filtered hallucination (%d chars)", len(transcript.text))
             return SpeechResult(
                 ok=False,
                 raw_text=transcript.text,
@@ -241,7 +241,8 @@ class Transcriber:
         normalised = self._normaliser.normalise(transcript.text)
         timings["normalise"] = _ms(t2)
         if normalised.changed:
-            log.info("normalised %r -> %r", normalised.raw, normalised.text)
+            # Counts, not words: what the owner says about customers is not for the log.
+            log.info("normalised the transcript (%d chars -> %d)", len(normalised.raw), len(normalised.text))
 
         return SpeechResult(
             ok=True,

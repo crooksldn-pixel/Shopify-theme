@@ -105,7 +105,9 @@ class Settings(BaseSettings):
     log_dir: Path = REPO_ROOT / "logs"
 
     # --- dev toggles ---
-    save_captures: bool = True
+    # Every recording is a recording of the office. Kept on disk only when asked for
+    # (CROOKS_SAVE_CAPTURES=true), for diagnosing a mis-hearing; never by default.
+    save_captures: bool = False
     # Keep only this many tablet recordings on disk. They are recordings of an office.
     max_saved_captures: int = 200
 
