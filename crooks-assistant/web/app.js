@@ -48,7 +48,7 @@ const el = {
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
   heard: $('heard'), answer: $('answer'), errline: $('errline'), timings: $('timings'),
   context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
-  deck: $('deck'), deckBack: $('deck-back'), cards: $('cards'),
+  deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
   recent: $('recent'), recentLabel: $('recent-label'),
   svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice'), changes: $('svc-changes') },
@@ -1372,7 +1372,6 @@ el.talk.addEventListener('keyup', (event) => {
 
 el.homeBtn.addEventListener('click', goHome);
 el.backBtn.addEventListener('click', goBack);
-el.deckBack.addEventListener('click', goBack);
 el.recent.addEventListener('click', () => { if (history.length) showHistory(history.length - 1); });
 el.attention.addEventListener('click', () => {
   if (!window.CrooksUI || !attentionItems.length) return;

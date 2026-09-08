@@ -177,7 +177,7 @@ body[data-mode="context"] .errline{display:none}
   transition:opacity var(--t-2),transform var(--t-3) var(--ease-spring);pointer-events:none;
 }
 .deck-ghost.g2{left:40px;right:40px;top:-14px;opacity:0}
-.deck[data-depth="1"] .deck-ghost.g1,.deck[data-depth="2"] .deck-ghost.g1{opacity:.55;pointer-events:auto;cursor:pointer}
+.deck[data-depth="1"] .deck-ghost.g1,.deck[data-depth="2"] .deck-ghost.g1{opacity:.55}
 .deck[data-depth="2"] .deck-ghost.g2{opacity:.3}
 
 .cards{

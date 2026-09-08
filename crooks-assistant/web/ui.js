@@ -143,6 +143,13 @@
     return el;
   }
 
+  // The Mac's window ends at the start of the day after it ("until", exclusive). The day the
+  // owner sees as the end is the one before that.
+  function lastDayOf(until) {
+    const ms = Date.parse(String(until || ''));
+    return Number.isFinite(ms) ? new Date(ms - 1).toISOString() : until;
+  }
+
   function tabs(panels) {
     // panels: [{ label, node }]. Touch-native segmented control; the first panel is open.
     const wrap = doc().createDocumentFragment ? doc().createDocumentFragment() : h('div');
@@ -350,7 +357,13 @@
       h('ul', { class: 'rows' }, list(p.variants, 16).map((v) => stockRow(v, false))),
     ]));
     if (all.length) {
-      children.push(tabs([{ label: 'Exceptions', node: h('p', { class: 'card-note', text: exceptions.length ? `${exceptions.length} variant${exceptions.length === 1 ? '' : 's'} listed above.` : 'All variants are above the line.' }) }, { label: 'All variants', node: h('div', {}, all) }]));
+      const full = h('div', { class: 'panel' }, all);
+      full.hidden = true;
+      const toggle = h('button', { class: 'link-btn', type: 'button', text: 'All variants', on: { click: () => {
+        full.hidden = !full.hidden;
+        toggle.textContent = full.hidden ? 'All variants' : 'Hide all variants';
+      } } });
+      children.push(toggle, full);
     }
     return card('inventory', children, opts);
   }
@@ -364,7 +377,7 @@
     return card('sales_summary', [
       kicker(text(d.title, 'Sales')),
       h('div', { class: 'big', text: text(d.revenue, '—') }),
-      h('p', { class: 'card-meta', text: num(d.days) === 1 || !d.until ? formatDate(d.since, DAY_FMT) : [formatDate(d.since, DAY_FMT), formatDate(d.until, DAY_FMT)].filter(Boolean).join(' → ') }),
+      h('p', { class: 'card-meta', text: num(d.days) === 1 || !d.until ? formatDate(d.since, DAY_FMT) : [formatDate(d.since, DAY_FMT), formatDate(lastDayOf(d.until), DAY_FMT)].filter(Boolean).join(' → ') }),
       h('div', { class: 'stats' }, stats.map(([v, k]) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: v }), h('div', { class: 'stat-k', text: k })]))),
       days.length > 1 ? salesBars(days) : null,
       days.length ? h('ul', { class: 'rows compact' }, days.map((day) => h('li', { class: 'row' }, [
@@ -452,7 +465,6 @@
     return card('email_draft', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Draft · not sent'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-sub', text: d.to ? `To ${text(d.to)}` : '' })]), h('div', { class: 'badges' }, [badge('Draft', 'warn')])]),
       h('p', { class: 'msg-body', text: text(d.body) }),
-      h('div', { class: 'actions' }, ['Rewrite', 'Shorter', 'More friendly'].map((label) => h('button', { class: 'action', type: 'button', disabled: 'disabled', 'aria-disabled': 'true', text: label }))),
       h('p', { class: 'future', text: 'Editing and sending are not connected. Nothing has been sent.' }),
     ], opts);
   }

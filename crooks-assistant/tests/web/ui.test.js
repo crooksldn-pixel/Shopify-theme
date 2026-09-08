@@ -132,12 +132,9 @@ test('email thread: last message open, earlier ones collapsed and openable', () 
 
 test('a draft never has a send control and says nothing was sent', () => {
   const node = UI.renderItem({ type: 'email_draft', data: { to: 'x@example.com', subject: 's', body: 'b' } });
-  const buttons = node.querySelectorAll('button');
-  assert.ok(buttons.length > 0);
-  for (const b of buttons) {
-    assert.equal(b.getAttribute('disabled'), 'disabled');
-    assert.ok(!/send/i.test(b.textContent), 'a send button exists');
-  }
+  // No buttons at all: the dead "Rewrite / Shorter" controls went with the space they cost.
+  assert.equal(node.querySelectorAll('button').length, 0);
+  assert.ok(!/send\b/i.test(textOf(node).replace(/not sent|nothing has been sent/gi, '')), 'a send control exists');
   assert.ok(/not sent/i.test(textOf(node)));
 });
 
@@ -405,4 +402,10 @@ test('the wait line counts down while the card is live and clears when it settle
   assert.ok(textOf(meta).startsWith('Waits 48 s'), textOf(meta));
   node.settle('revoked', 'Withdrawn');
   assert.equal(textOf(meta), '');
+});
+
+test('a sales window names the last day it covers, not the morning after', () => {
+  const node = UI.renderItem({ type: 'sales_summary', data: { title: 'Last 7 days', revenue: '£1,000.00', orders: 12, days: 7, since: '2026-09-01T23:00:00Z', until: '2026-09-08T23:00:00Z' } });
+  const meta = textOf(node.querySelector('.card-meta'));
+  assert.ok(meta.indexOf('→') !== -1 && /8 Sept/.test(meta) && !/9 Sept/.test(meta), meta);
 });
