@@ -51,9 +51,11 @@ def main() -> int:
 
     if not coreml.exists():
         print(
-            f"WARNING: {coreml.name} is missing. Inference will run on GPU only — roughly twice\n"
-            "as slow, with no error message. Download the encoder zip from Hugging Face and\n"
-            "unzip it into models/ before trusting any benchmark number.\n"
+            f"Note: {coreml.name} is not present, so the encoder runs on Metal rather than the\n"
+            "Neural Engine. That is correct and fine if whisper.cpp was built with\n"
+            "-DWHISPER_COREML=OFF (the large-v3-turbo build on this Mac). If it was built WITH\n"
+            "Core ML, the missing file makes it about twice as slow with no error — unzip the\n"
+            "encoder from Hugging Face into models/ in that case.\n"
         )
     if vad is None:
         print(
@@ -77,7 +79,12 @@ def main() -> int:
         "--suppress-nst",
     ]
     if vad is not None:
-        cmd += ["--vad", "--vad-model", str(vad)]
+        cmd += [
+            "--vad", "--vad-model", str(vad),
+            # Keep the soft onset of the first word rather than trimming it at the speech
+            # boundary. The tablet fix (a warm microphone stream) removes the other cause.
+            "--vad-speech-pad-ms", str(settings.whisper_vad_pad_ms),
+        ]
 
     print(" ".join(cmd) + "\n")
     return subprocess.call(cmd)

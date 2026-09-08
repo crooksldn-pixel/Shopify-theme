@@ -38,7 +38,8 @@ async def health(request: Request) -> dict:
     coreml = bin_dir / "models" / f"ggml-{runtime.settings.whisper_model}-encoder.mlmodelc"
     if checks["whisper"]["ok"]:
         checks["whisper"]["detail"] += (
-            f" · Core ML encoder {'present' if coreml.exists() else 'MISSING (GPU only, ~2x slower)'}"
+            " · Core ML encoder present" if coreml.exists()
+            else " · no Core ML encoder (fine for a Metal-only build; ~2x slower if built with Core ML)"
         )
 
     checks["knowledge_base"] = {

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     whisper_url: str = "http://127.0.0.1:8910"
     whisper_model: str = "small.en"
     whisper_bin_dir: Path = Path.home() / "tools" / "whisper.cpp"
+    # How much audio to keep either side of detected speech. whisper.cpp's default is 30 ms,
+    # which shaves the soft start of a first word; 200 ms keeps it.
+    whisper_vad_pad_ms: int = 200
 
     # --- Claude ---
     claude_model: str = "sonnet"

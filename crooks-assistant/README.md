@@ -95,12 +95,13 @@ Then, in order:
    *It must be that address, not the LAN IP* — the microphone and speech APIs both require a
    trusted secure context, and the LAN IP is not one.
 
-2. **whisper.cpp** (M3) — `python scripts/whisper_server.py` prints the exact build commands if
-   it is not built yet. Two things to check: the Core ML `.mlmodelc` must sit beside the `.bin`
-   (without it everything works about twice as slowly and says nothing), and a Silero VAD model
-   must be present — the launcher refuses to start without one, because a server without it
-   rejects every request that asks for voice detection and the tablet would say "connected"
-   while every question failed.
+2. **whisper.cpp** (M3) — `make whisper-server` prints the exact build commands if it is not
+   built yet. On the M4 Max the working configuration is `large-v3-turbo` on a build made with
+   `-DWHISPER_COREML=OFF` (Metal only): the Core ML path crashed on models without a matching
+   encoder, and Metal alone is fast enough. Put `CROOKS_WHISPER_MODEL=large-v3-turbo` in `.env`
+   so plain `make whisper-server` starts the right model. A Silero VAD model must be present;
+   the launcher refuses to start without one, because a server without it rejects every
+   request that asks for voice detection while the tablet still says "connected".
 
 3. **Claude token** (M4) — run `claude` and sign in with `/login` if you have not, then `claude setup-token`, then
    `make secrets` and paste it at the hidden prompt.
@@ -130,6 +131,20 @@ Then, in order:
    `launchctl load` both.
 
 ---
+
+## Running it day to day
+
+Three things stay running, each in its own Terminal tab, in this order:
+
+```bash
+cd ~/crooks-assistant/crooks-assistant && make dev              # backend
+cd ~/crooks-assistant/crooks-assistant && make whisper-server   # speech (model from .env)
+tailscale serve 8000                                            # HTTPS for the tablet
+```
+
+Then open the ts.net address on the tablet. Hold the button, speak, release. The microphone
+stays open while the page is showing, so the first word is not lost to start-up; it is
+released when the page is hidden and reopened when it returns.
 
 ## Working on it
 

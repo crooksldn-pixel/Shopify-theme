@@ -44,6 +44,11 @@ let speechUnlocked = false;
 let voices = [];
 let speakGeneration = 0;     // bumped on every cancel(); a chain from an older generation stops itself
 let pendingStart = false;    // true between pointerdown and the recorder actually starting
+// The microphone stream is opened once and kept warm for as long as the page is open. Asking
+// Android Chrome for the microphone on every press costs 300–500 ms of start-up, which is the
+// first word of the question. The stream is released only when the page is hidden or closed.
+let micStream = null;
+let micOpening = null;
 let lastWasError = false;    // so an error stays on screen after it has been read out
 
 /* ------------------------------------------------------------------ state */
@@ -69,9 +74,10 @@ async function acquireWakeLock() {
 }
 // Android drops the lock whenever the page is hidden, so re-acquire on every return.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') acquireWakeLock();
-  else stopSpeaking();
+  if (document.visibilityState === 'visible') { acquireWakeLock(); warmMic(); }
+  else { stopSpeaking(); if (!recording) releaseMicStream(); }
 });
+window.addEventListener('pagehide', () => { releaseMicStream(); });
 
 /* ------------------------------------------------------------------ voices */
 
@@ -196,10 +202,50 @@ function pickMimeType() {
   return '';
 }
 
+const MIC_CONSTRAINTS = {
+  audio: {
+    echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+    channelCount: 1,
+    sampleRate: { ideal: 16000 },   // ideal, never exact — exact fails outright on some devices
+  },
+};
+
+function micIsLive() {
+  return Boolean(micStream) && micStream.getAudioTracks().some((t) => t.readyState === 'live');
+}
+
+// Open the microphone once and keep it. Concurrent callers share the same opening promise.
+async function ensureMicStream() {
+  if (micIsLive()) return micStream;
+  if (micOpening) return micOpening;
+  micOpening = navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS).then((stream) => {
+    micStream = stream;
+    // Android can end a track behind our back (another app takes the mic, a call comes in).
+    // Forget the dead stream so the next press reopens it rather than recording nothing.
+    stream.getAudioTracks().forEach((track) => {
+      track.addEventListener('ended', () => { if (micStream === stream) micStream = null; });
+    });
+    return stream;
+  }).finally(() => { micOpening = null; });
+  return micOpening;
+}
+
+function releaseMicStream() {
+  if (micStream) { micStream.getTracks().forEach((track) => track.stop()); micStream = null; }
+}
+
+// Warm the microphone on the first touch of the page and whenever it comes back into view, so
+// the very first press after opening the page is as quick as every press after it.
+function warmMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  ensureMicStream().catch(() => { /* permission not granted yet; the press will ask again */ });
+}
+
 async function startRecording() {
   if (recording || busy || pendingStart) return;
   pendingStart = true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    pendingStart = false;
     setState('ERROR');
     el.answer.textContent = window.isSecureContext
       ? 'This browser has no microphone support.'
@@ -208,26 +254,22 @@ async function startRecording() {
   }
   stopSpeaking();
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true, noiseSuppression: true, autoGainControl: true,
-        channelCount: 1,
-        sampleRate: { ideal: 16000 },   // ideal, never exact — exact fails outright on some devices
-      },
-    });
+    // With a warm stream this resolves immediately and the recorder starts in the same tick
+    // as the press. Only the very first press ever waits on the permission prompt.
+    const stream = await ensureMicStream();
     if (!pendingStart) {
-      // The thumb lifted while the permission/stream was being set up. Recording now would
-      // capture silence after the question was already asked.
-      stream.getTracks().forEach((track) => track.stop());
+      // The thumb lifted while the microphone was still opening. Recording now would capture
+      // silence after the question was already asked. The stream stays open for next time.
       return;
     }
     const mimeType = pickMimeType();
     mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 32000 } : {});
     chunks = [];
-    mediaRecorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    const myChunks = chunks;
+    mediaRecorder.ondataavailable = (event) => { if (event.data.size) myChunks.push(event.data); };
     mediaRecorder.onstop = () => {
-      stream.getTracks().forEach((track) => track.stop());
-      const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+      // The stream is NOT stopped here — that is the whole point. It stays warm for the next press.
+      const blob = new Blob(myChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
       if (blob.size > 800) sendAudio(blob);
       else { setState('READY'); el.answer.textContent = 'That was too short — hold the button while you speak.'; }
     };
@@ -237,6 +279,7 @@ async function startRecording() {
     el.talkLabel.textContent = 'Listening…';
     setState('LISTENING');
   } catch (error) {
+    micStream = null;
     setState('ERROR');
     el.answer.textContent = error && error.name === 'NotAllowedError'
       ? 'Microphone permission was refused. Allow it in the browser settings, choosing "While using the app".'
@@ -348,7 +391,9 @@ for (const type of ['pointerup', 'pointercancel']) {
 }
 el.talk.addEventListener('contextmenu', (event) => event.preventDefault());
 
-el.settingsBtn.addEventListener('click', () => { unlockSpeech(); loadVoices(); pollHealth(); el.settings.showModal(); });
+el.settingsBtn.addEventListener('click', () => { unlockSpeech(); warmMic(); loadVoices(); pollHealth(); el.settings.showModal(); });
+// Any first touch anywhere warms the microphone, so the first real press is not the slow one.
+document.addEventListener('pointerdown', () => warmMic(), { once: true, passive: true });
 el.closeSettings.addEventListener('click', () => el.settings.close());
 el.preview.addEventListener('click', () => {
   const previous = el.speakToggle.checked;
@@ -376,13 +421,12 @@ el.micTest.addEventListener('click', async () => {
   setState('LISTENING', 'Microphone test');
   el.answer.textContent = 'Recording three seconds…';
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await ensureMicStream();
     const mimeType = pickMimeType();
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     const parts = [];
     recorder.ondataavailable = (e) => { if (e.data.size) parts.push(e.data); };
     recorder.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());
       try {
         const form = new FormData();
         form.append('audio', new Blob(parts, { type: recorder.mimeType }), 'test.webm');
