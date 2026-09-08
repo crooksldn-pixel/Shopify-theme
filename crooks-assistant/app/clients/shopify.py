@@ -65,6 +65,19 @@ class ShopifyClient:
         self._shop: dict[str, Any] | None = None
         self.token_requests = 0  # M6 asserts the second run reuses the cache
         self.last_partial_errors: str | None = None
+        # One HTTPS connection, kept open between calls. A TLS handshake to Shopify costs a
+        # few hundred milliseconds; a question that makes two lookups was paying it twice.
+        self._http: httpx.AsyncClient | None = None
+
+    def _client(self) -> httpx.AsyncClient:
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=self._timeout)
+        return self._http
+
+    async def aclose(self) -> None:
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
+        self._http = None
 
     # ---------------------------------------------------------------- auth
 
@@ -92,15 +105,14 @@ class ShopifyClient:
 
             url = f"https://{self.shop_domain}/admin/oauth/access_token"
             try:
-                async with httpx.AsyncClient(timeout=self._timeout) as http:
-                    response = await http.post(
-                        url,
-                        json={
-                            "client_id": client_id,
-                            "client_secret": client_secret,
-                            "grant_type": "client_credentials",
-                        },
-                    )
+                response = await self._client().post(
+                    url,
+                    json={
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "grant_type": "client_credentials",
+                    },
+                )
             except httpx.HTTPError as exc:
                 raise ShopifyAuthError(f"Could not reach Shopify to mint a token: {exc}") from exc
 
@@ -141,15 +153,14 @@ class ShopifyClient:
             raise ShopifyError("Refused: this assistant never sends a Shopify mutation.")
         token = await self._access_token()
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as http:
-                response = await http.post(
-                    self.graphql_url,
-                    headers={
-                        "X-Shopify-Access-Token": token,
-                        "Content-Type": "application/json",
-                    },
-                    json={"query": query, "variables": variables or {}},
-                )
+            response = await self._client().post(
+                self.graphql_url,
+                headers={
+                    "X-Shopify-Access-Token": token,
+                    "Content-Type": "application/json",
+                },
+                json={"query": query, "variables": variables or {}},
+            )
         except httpx.HTTPError as exc:
             raise ShopifyError(f"Could not reach Shopify: {exc}") from exc
 

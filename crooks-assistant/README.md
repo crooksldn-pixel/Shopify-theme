@@ -12,6 +12,17 @@ generated on this Mac, with the tablet's own Android voice as that fallback.
 
 Built to the fifteen-milestone plan in *CROOKS Assistant Build Plan* (Rev 3, 7 Sept 2026).
 
+## Start here
+
+```bash
+cd ~/crooks-assistant/crooks-assistant
+make up          # everything the tablet needs, in this window; prints the address to open
+```
+
+Or `make install` once and the Mac starts it at login with no window at all (`make status`
+tells you how it is doing). First time on a new Mac: `make doctor`, `make venv`, `make secrets`,
+then the console steps under *Setup on the Mac*. `make help` lists every command.
+
 ---
 
 ## Status
@@ -25,7 +36,7 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 | M1 Transport | FastAPI + `/health` + the tablet page. **Tailscale setup is yours.** |
 | M2 Microphone | Capture UI, `/audio-test`, decode + level stats. **Needs the tablet.** |
 | M3 Speech | Pipeline **passed against a real whisper-server** here. Normaliser tuned on the real catalogue. **Benchmark needs the Mac and tablet audio.** |
-| M4 Claude provider | **Passed against real Claude.** Billing guard, CLI-login fallback. **Needs `claude setup-token` before launchd.** |
+| M4 Claude provider | **Passed against real Claude.** Billing guard; runs on the CLI's own login (`auth=cli`), from a Terminal or the login-time agents alike. |
 | M5 Tools + gate | **Passed against real Claude** — hook denied a RED call live. Proven by tests on every run. |
 | M6 Shopify auth | Client with token cache and the `shpat_` fallback. **Needs your credentials.** |
 | M7 Shopify tools | Seven tools; queries validated against the schema and search syntax verified on the live store. **Needs your credentials to run.** |
@@ -34,13 +45,13 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 | M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **KB written from the store's own policies and metafields**; one discretion section is yours. |
 | M11 Voice in | `/turn` takes audio or text; the tablet polls `/state` so the screen shows the tool actually running. |
 | M12 Voice out | Chunking, unlock, voice picker — all three Android guardrails. |
-| M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check; launchd plists; log rotation; capture cap. |
+| M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check, cached for 20 s; `make up` / `make install`; log rotation; capture cap. |
 | M14 Acceptance | 18-command script; placeholders fill themselves from the live store. **Run it from the tablet.** |
 
 What has actually been verified — here, on Linux, and against the real store:
 
 ```
-268 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
+507 tests pass, 2 skipped (live Shopify/Gmail), all offline     make test
 ruff clean                                                       make lint
 8/8 GraphQL queries validated against the Shopify Admin schema
 ```
@@ -75,7 +86,7 @@ run a Python file directly; `make` does it. `make help` prints this list.
 | Step | You type | Then |
 |---|---|---|
 | Check the Mac | `make doctor` | Install whatever it names, the way it says |
-| Install | `make venv` then `make test` | Expect 344 passed |
+| Install | `make venv` then `make test` | Expect 507 passed |
 | Run it | `make up` | One window: backend, speech and the HTTPS route. Prints the address |
 | Or forget about it | `make install` | Once. The Mac starts everything at login; `make status` to check |
 | Speech | `make whisper-server` | Only to build it: prints the build steps the first time |
@@ -182,7 +193,7 @@ released when the page is hidden and reopened when it returns.
 ```bash
 make dev          # backend alone, with auto-reload (stop the launchd agent first: make uninstall)
 make chat         # terminal REPL — use this, not voice, for repeat testing
-make test         # 268 tests, all offline; the two live API ones skip without credentials
+make test         # 507 tests, all offline; the two live API ones skip without credentials
 make lint
 make bench        # M3 model comparison, on tablet audio
 make acceptance   # M14, 18 commands
@@ -292,6 +303,16 @@ player that will not play all end in Android's speechSynthesis with the reason i
 A rejected key or an exhausted account opens the same five-minute cooldown Scribe uses. A
 broken voice never breaks a turn — Shopify, Gmail and Claude do not depend on it.
 
+Two things shorten the wait before the voice starts. `/turn` is told by the tablet whether it
+will ask `/speak` for this answer (`speak=1`), and when it will, the backend starts synthesising
+the moment it knows the answer, so the MP3 is generating while the JSON crosses the tailnet;
+`/speak` then serves it whole (`X-Crooks-Prefetched: 1`) — the same single request, a round
+trip earlier, never an extra one. And the tablet plays the MP3 as it streams, through Media
+Source Extensions, so the first sentence is heard while the last is still being generated;
+anything that goes wrong mid-stream replays the bytes already received, then falls back to
+Android. Every external client keeps one HTTPS connection open between calls — ElevenLabs
+twice, Shopify, whisper-server — so no sentence pays a TLS handshake.
+
 Holding the orb stops Derek before the recorder starts, so the assistant can never be
 recorded answering itself, and a new answer cancels the previous one's request and playback.
 `/health` carries a `voice` block and a `tts` check naming the voice, the model and the last
@@ -392,7 +413,7 @@ whisper-server and real Claude changed these things — each one would have cost
 | Product names are pronounceable | `CRXST★RZ T-SHIRT`, `MOTIONTEC™️` | Terminology file supports `spoken form => Canonical` aliases; the seed ships with the real catalogue |
 | whisper-server takes `vad_filter` | The field is `vad` | Client fixed; VAD was silently off per request |
 | A bare term list is the right Whisper prompt | It strips capitals and punctuation from transcripts | Prompt is display-case and ends with a period — measured before and after |
-| The Keychain is always reachable | Not from launchd, not on Linux | Provider falls back to the CLI's own login, with a loud warning that launchd needs `setup-token` |
+| The Keychain is always reachable | Not on Linux, not from a system daemon | Provider uses the CLI's own login; the login-time agents `make install` sets up run in the user session, where both work |
 
 ---
 

@@ -3,17 +3,43 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 
 router = APIRouter()
 
 VERSION = "0.1.0"
 
+# The checks are real work: a Shopify query, a Gmail profile, half a second of whisper
+# inference. The tablet polls; the settings sheet, the launcher and `make status` all ask.
+# Answering from a recent result for this long keeps that from becoming a constant hum on the
+# Mac and on the Shopify rate budget. `?fresh=1` skips it, for when someone is looking.
+CACHE_TTL_S = 20.0
+
 
 @router.get("/health")
-async def health(request: Request) -> dict:
+async def health(request: Request, fresh: int = Query(default=0)) -> dict:
     runtime = request.app.state.runtime
+    state = request.app.state
+    cached = getattr(state, "health_cache", None)
+    if not fresh and cached and time.time() - cached[0] < CACHE_TTL_S:
+        return {**cached[1], "cached": True, "age_s": round(time.time() - cached[0], 1)}
+    lock = getattr(state, "health_lock", None)
+    if lock is None:
+        lock = state.health_lock = asyncio.Lock()
+    async with lock:
+        # A second poll arriving while the first is running waits for its answer rather than
+        # doubling the work.
+        cached = getattr(state, "health_cache", None)
+        if not fresh and cached and time.time() - cached[0] < CACHE_TTL_S:
+            return {**cached[1], "cached": True, "age_s": round(time.time() - cached[0], 1)}
+        result = await _health(runtime)
+        state.health_cache = (time.time(), result)
+        return {**result, "cached": False, "age_s": 0.0}
+
+
+async def _health(runtime) -> dict:
     checks: dict[str, dict] = {}
 
     async def check(name: str, coro):
@@ -45,11 +71,12 @@ async def health(request: Request) -> dict:
     # spends ElevenLabs credit on every fifteen-second poll is a bill, not a check.
     ok, detail = runtime.voice.health()
     checks["tts"] = {"ok": ok, "detail": detail}
+    settings = runtime.settings
 
     # The plan's M3 failure check: Core ML build succeeds but the .mlmodelc is missing, and
     # everything runs twice as slowly with no error. Say so here so it cannot go unnoticed.
-    bin_dir = runtime.settings.whisper_bin_dir
-    coreml = bin_dir / "models" / f"ggml-{runtime.settings.whisper_model}-encoder.mlmodelc"
+    bin_dir = settings.whisper_bin_dir
+    coreml = bin_dir / "models" / f"ggml-{settings.whisper_model}-encoder.mlmodelc"
     if checks["whisper"]["ok"]:
         checks["whisper"]["detail"] += (
             " · Core ML encoder present" if coreml.exists()
@@ -61,7 +88,7 @@ async def health(request: Request) -> dict:
     # page should not read "degraded" as "cannot hear you".
     primary_check = "scribe" if primary == "scribe" else "whisper"
     if checks[primary_check]["ok"]:
-        expect = runtime.settings.scribe_model if primary == "scribe" else "whisper"
+        expect = settings.scribe_model if primary == "scribe" else "whisper"
         speech_detail = f"{expect} (primary)"
     elif checks["whisper"]["ok"]:
         speech_detail = f"whisper_fallback — {primary_check} is unavailable, answers still work"
@@ -92,11 +119,11 @@ async def health(request: Request) -> dict:
         # One line for "who is listening", so a spoken problem can be diagnosed at a glance.
         "speech": {
             "primary": primary,
-            "scribe_model": runtime.settings.scribe_model,
+            "scribe_model": settings.scribe_model,
             "scribe_ok": checks["scribe"]["ok"],
             "whisper_ok": checks["whisper"]["ok"],
             "effective": (
-                (runtime.settings.scribe_model if primary == "scribe" else "whisper")
+                (settings.scribe_model if primary == "scribe" else "whisper")
                 if checks[primary_check]["ok"]
                 else ("whisper_fallback" if checks["whisper"]["ok"] else "none")
             ),
@@ -121,6 +148,8 @@ async def health(request: Request) -> dict:
             "last_ms": round(runtime.voice.last_ms, 1),
             "last_bytes": runtime.voice.last_bytes,
             "last_error_kind": runtime.voice.last_error_kind,
+            "prefetches": runtime.voice.prefetches,
+            "prefetch_hits": runtime.voice.prefetch_hits,
         },
         "checks": checks,
     }

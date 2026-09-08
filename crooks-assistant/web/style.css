@@ -322,6 +322,15 @@ body[data-mode="context"] .bottom{opacity:0;pointer-events:none;transform:transl
 .attention .n{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--warn)}
 .attention .t{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
 .attention .arrow{margin-left:auto;color:var(--ink-3)}
+.recent{
+  display:flex;align-items:center;gap:10px;min-height:var(--tap);padding:0 16px;width:100%;
+  border-radius:var(--r-pill);border:1px solid var(--line);background:var(--glass);
+  color:var(--ink-2);cursor:pointer;text-align:left;
+}
+.recent:active{background:var(--glass-3)}
+.recent-kicker{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);flex:none}
+.recent-label{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;font-style:italic}
+.recent .arrow{color:var(--ink-3);flex:none}
 .services{display:flex;justify-content:center;gap:26px;min-height:24px}
 .service{display:inline-flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.22em;color:var(--ink-4);text-transform:uppercase}
 .service-dot{width:5px;height:5px;border-radius:50%;background:var(--ink-4);transition:background var(--t-2)}

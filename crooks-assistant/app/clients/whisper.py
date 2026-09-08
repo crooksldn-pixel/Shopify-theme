@@ -68,6 +68,19 @@ class WhisperClient:
         # Set to False the first time the server rejects per-request VAD (started without a
         # Silero model). We then rely on our own level gate and hallucination blocklist.
         self._server_vad = True
+        # One connection, reused: whisper-server is on this Mac, but a fresh TCP handshake per
+        # question is still a round trip the owner waits for.
+        self._http: httpx.AsyncClient | None = None
+
+    def _client(self) -> httpx.AsyncClient:
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=self._timeout)
+        return self._http
+
+    async def aclose(self) -> None:
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
+        self._http = None
 
     async def transcribe(self, wav: bytes, *, prompt: str = "") -> Transcript:
         """POST a 16 kHz mono WAV to /inference and return the transcript."""
@@ -118,8 +131,7 @@ class WhisperClient:
         if prompt:
             data["prompt"] = prompt
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                return await client.post(f"{self.base_url}/inference", files=files, data=data)
+            return await self._client().post(f"{self.base_url}/inference", files=files, data=data)
         except httpx.ConnectError as exc:
             raise WhisperUnavailable(
                 f"whisper-server is not running at {self.base_url}. Start it with "
@@ -136,8 +148,7 @@ class WhisperClient:
         """Transcribe half a second of silence. "The port answers" is not health; "a request
         goes through the whole inference path" is."""
         try:
-            async with httpx.AsyncClient(timeout=3.0) as client:
-                response = await client.get(f"{self.base_url}/")
+            response = await self._client().get(f"{self.base_url}/", timeout=3.0)
             if response.status_code >= 500:
                 return False, f"whisper-server at {self.base_url} answered {response.status_code}"
         except Exception as exc:  # noqa: BLE001

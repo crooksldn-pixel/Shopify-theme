@@ -233,10 +233,28 @@ def test_the_volume_is_normal():
 def test_nothing_runs_while_the_page_is_hidden():
     hidden = section(APP_JS, "document.addEventListener('visibilitychange'", "});")
     assert "orb.stop()" in hidden and "stopSpeaking()" in hidden and "releaseMicStream()" in hidden
-    assert "if (document.hidden) return;" in function_body(APP_JS, "async function pollHealth()")
+    assert "if (document.hidden) return;" in function_body(APP_JS, "async function pollHealth(")
     orb = (WEB / "orb.js").read_text(encoding="utf-8")
     assert "cancelAnimationFrame" in orb
     assert "prefers-reduced-motion" in APP_JS and "reducedMotion" in orb
+
+
+def test_the_voice_streams_and_every_streaming_failure_plays_whole():
+    """MSE playback starts on the first chunk; anything that goes wrong mid-stream replays the
+    bytes already received rather than asking ElevenLabs again or going silent."""
+    assert "MediaSource.isTypeSupported('audio/mpeg')" in APP_JS
+    stream = function_body(APP_JS, "async function playStream(")
+    assert "received.push(value)" in stream
+    assert "playAudio(new Blob(received, { type: 'audio/mpeg' })" in stream
+    assert "generation !== speakGeneration" in stream
+    assert "reader.cancel()" in stream
+    # The whole-file path and the Android voice remain behind it, untouched.
+    assert "function playAudio(blob, text, generation, isError)" in APP_JS
+
+
+def test_the_turn_says_whether_the_voice_will_be_asked_for():
+    assert "form.append('speak', el.speakToggle.checked ? '1' : '0');" in APP_JS
+    assert "speak: el.speakToggle.checked" in APP_JS
 
 
 def test_the_context_deck_is_bounded():

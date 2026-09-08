@@ -72,6 +72,9 @@ class ScribeClient:
         self._cooldown_s = cooldown_s
         self._key: str | None = None
         self._cooldown_until = 0.0
+        # One HTTPS connection to ElevenLabs, kept open between questions: the TLS handshake
+        # is a few hundred milliseconds the owner would otherwise wait for on every sentence.
+        self._http: httpx.AsyncClient | None = None
         # Non-sensitive diagnostics for /health and the turn log.
         self.attempts = 0
         self.successes = 0
@@ -79,6 +82,18 @@ class ScribeClient:
         self.last_error: str = ""
         self.last_error_kind: str = ""
         self.last_ms: float = 0.0
+
+    # ------------------------------------------------------------------ connection
+
+    def _client(self) -> httpx.AsyncClient:
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=self._timeout)
+        return self._http
+
+    async def aclose(self) -> None:
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
+        self._http = None
 
     # ------------------------------------------------------------------ credential
 
@@ -174,13 +189,12 @@ class ScribeClient:
             data["keyterms"] = terms  # httpx repeats the field once per term, as the API wants
 
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                response = await client.post(
-                    f"{self.base_url}/speech-to-text",
-                    headers={"xi-api-key": key},
-                    files={"file": ("audio.wav", wav, "audio/wav")},
-                    data=data,
-                )
+            response = await self._client().post(
+                f"{self.base_url}/speech-to-text",
+                headers={"xi-api-key": key},
+                files={"file": ("audio.wav", wav, "audio/wav")},
+                data=data,
+            )
         except httpx.TimeoutException as exc:
             raise self._record_failure(
                 ScribeUnavailable(f"no response in {self._timeout:.0f}s", kind="timeout")
@@ -251,11 +265,10 @@ class ScribeClient:
             )
 
         try:
-            async with httpx.AsyncClient(
-                timeout=5.0, headers={"xi-api-key": key}
-            ) as client:
-                probe = await client.get(f"{self.base_url}/models")
-                quota = await self._quota(client) if probe.status_code == 200 else ""
+            client = self._client()
+            headers = {"xi-api-key": key}
+            probe = await client.get(f"{self.base_url}/models", headers=headers, timeout=5.0)
+            quota = await self._quota(client, headers) if probe.status_code == 200 else ""
         except httpx.HTTPError as exc:
             return False, f"ElevenLabs unreachable: {type(exc).__name__} · {note}"
 
@@ -269,10 +282,12 @@ class ScribeClient:
             return False, f"API key rejected (401) · {note}"
         return False, f"ElevenLabs returned {probe.status_code} · {note}"
 
-    async def _quota(self, client: httpx.AsyncClient) -> str:
+    async def _quota(self, client: httpx.AsyncClient, headers: dict[str, str]) -> str:
         """Characters used, when the key is allowed to see them. Never a failure on its own."""
         try:
-            response = await client.get(f"{self.base_url}/user/subscription")
+            response = await client.get(
+                f"{self.base_url}/user/subscription", headers=headers, timeout=5.0
+            )
             if response.status_code != 200:
                 return ", quota unreadable (restricted key)"
             sub = response.json()

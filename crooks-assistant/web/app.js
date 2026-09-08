@@ -36,6 +36,7 @@ const el = {
   context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
   deck: $('deck'), deckBack: $('deck-back'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
+  recent: $('recent'), recentLabel: $('recent-label'),
   svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice') },
   talk: $('talk'), talkLabel: $('talk-label'),
   settings: $('settings'), settingsBtn: $('settings-btn'), closeSettings: $('close-settings'),
@@ -351,6 +352,12 @@ async function speakAnswer(text, { isError = false } = {}) {
       browserSpeak(text, { isError, reason: kind });
       return;
     }
+    if (canStream() && response.body) {
+      // Play as the bytes arrive: the first sentence starts while the last is still being
+      // generated. Every failure inside falls back to the whole-file path, then to Android.
+      await playStream(response, text, generation, isError);
+      return;
+    }
     const blob = await response.blob();
     if (generation !== speakGeneration) return;
     if (!blob.size) { browserSpeak(text, { isError, reason: 'empty audio' }); return; }
@@ -361,6 +368,94 @@ async function speakAnswer(text, { isError = false } = {}) {
     browserSpeak(text, { isError, reason: 'backend unreachable' });
   } finally {
     if (speakAbort === controller) speakAbort = null;
+  }
+}
+
+// Media Source Extensions: the MP3 is appended to the player as it streams from the Mac.
+// Chrome on Android supports the mp3 byte stream; if this tablet ever does not, or anything
+// goes wrong mid-stream, the bytes already received are played whole instead.
+function canStream() {
+  try {
+    return Boolean(window.MediaSource) && typeof MediaSource.isTypeSupported === 'function'
+      && MediaSource.isTypeSupported('audio/mpeg');
+  } catch { return false; }
+}
+
+async function playStream(response, text, generation, isError) {
+  const source = new MediaSource();
+  const url = URL.createObjectURL(source);
+  releaseAudioUrl();
+  currentAudioUrl = url;
+  const received = [];        // every chunk, so a fallback needs no second request
+  const queue = [];
+  let buffer = null;
+  let ended = false;
+  let failed = false;
+  let total = 0;
+
+  const fallback = (reason) => {
+    if (failed) return;
+    failed = true;
+    console.warn(`[crooks] streaming playback stopped (${reason}); playing whole`);
+  };
+  const pump = () => {
+    if (failed || !buffer || buffer.updating) return;
+    if (queue.length) {
+      try { buffer.appendBuffer(queue.shift()); } catch (error) { fallback('append failed'); }
+      return;
+    }
+    if (ended && source.readyState === 'open') {
+      try { source.endOfStream(); } catch { /* already ended */ }
+    }
+  };
+  source.addEventListener('sourceopen', () => {
+    if (generation !== speakGeneration) return;
+    try {
+      buffer = source.addSourceBuffer('audio/mpeg');
+      buffer.addEventListener('updateend', pump);
+      buffer.addEventListener('error', () => fallback('buffer error'));
+      pump();
+    } catch (error) {
+      fallback('no source buffer');
+    }
+  });
+
+  const done = () => {
+    if (generation !== speakGeneration) return;
+    releaseAudioUrl();
+    settle(isError);
+  };
+  player.onended = done;
+  player.onerror = () => {
+    if (generation !== speakGeneration) return;
+    fallback('player error');
+  };
+  if (audio) { audio.resume(); audio.attachPlayer(player); }
+  speakingVia = 'player';
+  player.src = url;
+  player.volume = 1.0;
+  const started = player.play();
+  if (started && started.catch) started.catch(() => fallback('autoplay blocked'));
+
+  const reader = response.body.getReader();
+  try {
+    for (;;) {
+      const { done: finished, value } = await reader.read();
+      if (generation !== speakGeneration) { try { reader.cancel(); } catch { /* noop */ } return; }
+      if (finished) break;
+      if (value && value.length) { received.push(value); queue.push(value); total += value.length; pump(); }
+    }
+  } catch (error) {
+    fallback('stream broke');
+  }
+  ended = true;
+  pump();
+  if (generation !== speakGeneration) return;
+  if (!total) { releaseAudioUrl(); browserSpeak(text, { isError, reason: 'empty audio' }); return; }
+  if (failed) {
+    // Whatever stopped the stream, the answer is in hand: play it the plain way.
+    try { player.pause(); } catch { /* noop */ }
+    playAudio(new Blob(received, { type: 'audio/mpeg' }), text, generation, isError);
   }
 }
 
@@ -416,10 +511,10 @@ function setService(name, ok) {
   node.dataset.ok = ok === true ? 'true' : ok === false ? 'false' : 'unknown';
 }
 
-async function pollHealth() {
+async function pollHealth(fresh = false) {
   if (document.hidden) return;
   try {
-    const response = await fetch('/health', { cache: 'no-store' });
+    const response = await fetch(fresh ? '/health?fresh=1' : '/health', { cache: 'no-store' });
     const data = await response.json();
     const checks = data.checks || {};
     const failed = Object.entries(checks).filter(([, c]) => !c.ok).map(([k]) => k);
@@ -451,7 +546,7 @@ async function pollHealth() {
   }
 }
 pollHealth();
-setInterval(pollHealth, 15000);
+setInterval(() => pollHealth(false), 30000);
 
 /* ------------------------------------------------------------- microphone */
 
@@ -605,6 +700,7 @@ function pushContext(nodes, items, question) {
   history.push({ nodes, entities: entitiesOf(items), question: question || '' });
   while (history.length > MAX_HISTORY) history.shift();
   showHistory(history.length - 1);
+  renderRecent();
 }
 
 function showHistory(index) {
@@ -626,6 +722,16 @@ function goBack() {
 
 function goHome() {
   setMode('orb');
+  renderRecent();
+}
+
+// The orb screen keeps one quiet way back to what was last shown.
+function renderRecent() {
+  const entry = history[history.length - 1];
+  if (!entry) { el.recent.hidden = true; return; }
+  el.recent.hidden = false;
+  el.recentLabel.textContent = entry.question && !entry.question.startsWith('fixture:')
+    ? entry.question : 'Last context';
 }
 
 function renderStackChips() {
@@ -681,10 +787,12 @@ function renderTurn(data) {
 
 /* -------------------------------------------------------------------- turn */
 
-function renderTimings(timings) {
+function renderTimings(timings, transcript) {
   if (!el.timingToggle.checked || !timings) { el.timings.hidden = true; return; }
   el.timings.hidden = false;
-  el.timings.textContent = Object.entries(timings).map(([k, v]) => `${k} ${v}ms`).join('  ·  ');
+  const parts = Object.entries(timings).map(([k, v]) => `${k} ${v}ms`);
+  if (transcript && transcript.engine) parts.unshift(`heard by ${transcript.engine}`);
+  el.timings.textContent = parts.join('  ·  ');
 }
 
 // While a turn is in flight, ask the backend what it is actually doing. The state on screen
@@ -730,7 +838,7 @@ async function submit(body, isAudio) {
     store.set('crooks.turns', String(turns));
     el.heard.textContent = data.question ? `“${data.question}”` : '';
     el.answer.textContent = data.answer;
-    renderTimings(data.timings_ms);
+    renderTimings(data.timings_ms, data.transcript);
 
     lastWasError = Boolean(data.error_kind);
     renderTurn(data);
@@ -759,6 +867,7 @@ function sendAudio(blob) {
   form.append('audio', blob, 'turn.webm');
   form.append('session_id', sessionId);
   form.append('turns', String(turns));
+  form.append('speak', el.speakToggle.checked ? '1' : '0');
   submit(form, true);
 }
 
@@ -775,10 +884,18 @@ function onHoldStart(event) {
   unlockSpeech();          // must be inside the gesture
   stopSpeaking();          // before anything else: the voice must not be recorded answering itself
   acquireWakeLock();
-  if (busy) return;        // a turn is in flight; the label says so
+  if (busy) { showBusyHint(); return; }   // a turn is in flight; say so rather than nothing
   setState('LISTENING');   // the orb wakes on the touch itself, not on the recorder
   startRecording();        // start before any other UI work, or the first word is clipped
 }
+let busyHintTimer = null;
+function showBusyHint() {
+  el.talkLabel.textContent = 'One moment';
+  if (orb) orb.pulse();
+  clearTimeout(busyHintTimer);
+  busyHintTimer = setTimeout(() => { if (!recording) el.talkLabel.textContent = 'Hold to speak'; }, 900);
+}
+
 function onHoldEnd(event) {
   event.preventDefault();
   try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
@@ -803,13 +920,14 @@ el.talk.addEventListener('keyup', (event) => {
 el.homeBtn.addEventListener('click', goHome);
 el.backBtn.addEventListener('click', goBack);
 el.deckBack.addEventListener('click', goBack);
+el.recent.addEventListener('click', () => { if (history.length) showHistory(history.length - 1); });
 el.attention.addEventListener('click', () => {
   if (!window.CrooksUI || !attentionItems.length) return;
   const node = window.CrooksUI.renderItem({ type: 'attention', data: { items: attentionItems } });
   if (node) pushContext([node], [], '');
 });
 
-el.settingsBtn.addEventListener('click', () => { unlockSpeech(); loadVoices(); pollHealth(); el.settings.showModal(); });
+el.settingsBtn.addEventListener('click', () => { unlockSpeech(); loadVoices(); pollHealth(true); el.settings.showModal(); });
 el.closeSettings.addEventListener('click', () => el.settings.close());
 el.settings.addEventListener('click', (event) => { if (event.target === el.settings) el.settings.close(); });
 el.preview.addEventListener('click', () => {
@@ -835,6 +953,7 @@ el.resetSession.addEventListener('click', async () => {
   currentStack = [];
   clear(el.cards);
   renderStackChips();
+  renderRecent();
   el.heard.textContent = '';
   el.answer.textContent = '';
   el.errline.textContent = '';
@@ -932,7 +1051,7 @@ if (DEV) {
     el.settings.close();
     unlockSpeech();
     stopSpeaking();
-    submit({ text, session_id: sessionId, turns }, false);
+    submit({ text, session_id: sessionId, turns, speak: el.speakToggle.checked }, false);
   });
 }
 

@@ -290,3 +290,81 @@ async def test_health_reports_a_cooldown_rather_than_pretending(mock_http):
     ok, detail = client.health()
     assert not ok
     assert "credit" in detail
+
+
+# --------------------------------------------------------------------------- one connection
+
+
+async def test_one_connection_is_reused_across_answers(monkeypatch):
+    """A TLS handshake per sentence was a few hundred milliseconds the owner waited for."""
+    created = []
+    original = httpx.AsyncClient
+
+    def factory(*args, **kwargs):
+        created.append(1)
+        kwargs["transport"] = httpx.MockTransport(lambda request: httpx.Response(200, content=MP3))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", factory)
+    client = make()
+    assert await client.synthesise("One.") == MP3
+    assert await client.synthesise("Two.") == MP3
+    assert await client.synthesise("Three.") == MP3
+    assert len(created) == 1
+    await client.aclose()
+    assert client._http is None
+
+
+# --------------------------------------------------------------------------- prefetch
+
+
+async def test_a_prefetched_answer_is_handed_out_once_and_only_once(mock_http):
+    holder = mock_http(lambda request: httpx.Response(200, content=MP3))
+    client = make()
+    assert client.prefetch("Twelve orders today.") is True
+    assert await client.take_ready("Twelve orders today.") == MP3
+    assert await client.take_ready("Twelve orders today.") is None   # not served twice
+    assert len(holder["requests"]) == 1
+    assert client.prefetches == 1 and client.prefetch_hits == 1
+
+
+async def test_prefetch_is_the_same_single_request_earlier(mock_http):
+    """Asking for it twice while it is in flight is still one request to ElevenLabs."""
+    holder = mock_http(lambda request: httpx.Response(200, content=MP3))
+    client = make()
+    client.prefetch("Hello.")
+    client.prefetch("Hello.")
+    assert await client.take_ready("Hello.") == MP3
+    assert len(holder["requests"]) == 1
+
+
+async def test_prefetch_costs_nothing_when_the_voice_is_off_or_cooling(mock_http):
+    holder = mock_http(lambda request: httpx.Response(200, content=MP3))
+    off = make(enabled=False)
+    assert off.prefetch("Hello.") is False
+    cooling = make(cooldown_s=300)
+    cooling._cooldown_until = 10**12
+    assert cooling.prefetch("Hello.") is False
+    assert make().prefetch("") is False
+    assert holder["requests"] == []
+
+
+async def test_a_failed_prefetch_leaves_speak_to_report_it(mock_http):
+    holder = mock_http(lambda request: httpx.Response(402, json={"detail": {"status": "quota_exceeded"}}))
+    client = make(cooldown_s=0)
+    client.prefetch("Hello.")
+    assert await client.take_ready("Hello.") is None
+    assert len(holder["requests"]) == 1
+    # /speak then tries itself and gets the named failure.
+    with pytest.raises(VoiceUnavailable) as exc:
+        await client.synthesise("Hello.")
+    assert exc.value.kind == "credit"
+
+
+async def test_stale_prefetches_are_dropped(mock_http, monkeypatch):
+    mock_http(lambda request: httpx.Response(200, content=MP3))
+    client = make()
+    client.prefetch("Old.")
+    await client._inflight["Old."]
+    client._ready["Old."] = (MP3, 0.0)   # synthesised long ago
+    assert await client.take_ready("Old.") is None

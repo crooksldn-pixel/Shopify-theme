@@ -97,6 +97,23 @@ def main() -> int:
         failures += 1
         print("       Install it, then open a NEW shell — PATH is only updated for new shells.")
 
+    tailscale = shutil.which("tailscale") or (
+        "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+        if Path("/Applications/Tailscale.app/Contents/MacOS/Tailscale").exists() else None
+    )
+    row(OK if tailscale else WARN, "tailscale", tailscale or "not found — the tablet needs its HTTPS address (make up sets the route)")
+    warnings += 0 if tailscale else 1
+
+    node = shutil.which("node")
+    row(OK if node else WARN, "node", run(["node", "--version"]) or "not found — only the renderer tests need it (they skip)")
+
+    whisper_root = Path.home() / "tools" / "whisper.cpp"
+    whisper_bin = next((p for p in [whisper_root / "build" / "bin" / "whisper-server", whisper_root / "build" / "whisper-server"] if p.exists()), None)
+    vad = next((whisper_root / "models").glob("ggml-silero*.bin"), None) if (whisper_root / "models").exists() else None
+    row(OK if whisper_bin else WARN, "whisper.cpp", str(whisper_bin) if whisper_bin else "not built — make whisper-server prints the steps; Scribe still hears without it")
+    row(OK if vad else WARN, "whisper vad model", vad.name if vad else "absent — cd ~/tools/whisper.cpp && sh ./models/download-vad-model.sh silero-v5.1.2")
+    warnings += (0 if whisper_bin else 1) + (0 if vad else 1)
+
     print("─" * 74)
 
     for module, extra in [

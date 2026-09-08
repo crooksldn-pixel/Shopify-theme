@@ -58,6 +58,21 @@ async def speak(request: Request) -> Response:
         # a paid request is not; 204 tells the tablet so without looking like a failure.
         return Response(status_code=204)
 
+    # /turn started synthesising this answer the moment it knew it (VoiceClient.prefetch).
+    # If that finished, or is about to, the MP3 goes out whole and at once.
+    ready = await voice.take_ready(spoken)
+    if ready:
+        return Response(
+            content=ready,
+            media_type="audio/mpeg",
+            headers={
+                "X-Crooks-Voice": voice.voice_name,
+                "X-Crooks-Model": voice.model,
+                "X-Crooks-Prefetched": "1",
+                "Cache-Control": "no-store",
+            },
+        )
+
     try:
         stream = await voice.open_stream(spoken)
     except VoiceUnavailable as exc:

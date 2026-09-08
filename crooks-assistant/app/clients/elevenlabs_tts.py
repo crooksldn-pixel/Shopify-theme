@@ -16,6 +16,7 @@ buffered here, so the first bytes leave the Mac before the last ones have been g
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -51,10 +52,8 @@ class VoiceStream:
     Constructed only after the response headers have come back 200, so the caller already knows
     the request succeeded before it commits to an audio/mpeg response with no way back."""
 
-    def __init__(self, client: VoiceClient, http: httpx.AsyncClient, response: httpx.Response,
-                 started: float) -> None:
+    def __init__(self, client: VoiceClient, response: httpx.Response, started: float) -> None:
         self._client = client
-        self._http = http
         self._response = response
         self._started = started
         self.bytes_out = 0
@@ -75,10 +74,8 @@ class VoiceStream:
             self._client._finish(self, truncated)
 
     async def aclose(self) -> None:
-        try:
-            await self._response.aclose()
-        finally:
-            await self._http.aclose()
+        # The response only: the connection belongs to the client and is reused.
+        await self._response.aclose()
 
     @property
     def ms(self) -> float:
@@ -110,6 +107,15 @@ class VoiceClient:
         self._cooldown_s = cooldown_s
         self._key: str | None = None
         self._cooldown_until = 0.0
+        # One HTTPS connection, reused: the handshake is a good part of the wait before an
+        # answer is heard, and it was being paid on every sentence.
+        self._http: httpx.AsyncClient | None = None
+        # Answers synthesised ahead of the tablet asking for them — see prefetch(). Keyed by
+        # the spoken text; a handful of entries, a couple of minutes, in memory only.
+        self._ready: dict[str, tuple[bytes, float]] = {}
+        self._inflight: dict[str, asyncio.Task] = {}
+        self.prefetches = 0
+        self.prefetch_hits = 0
         # Non-sensitive diagnostics for /health. Never the text that was spoken.
         self.attempts = 0
         self.successes = 0
@@ -118,6 +124,22 @@ class VoiceClient:
         self.last_error_kind: str = ""
         self.last_ms: float = 0.0
         self.last_bytes: int = 0
+
+    # ------------------------------------------------------------------ connection
+
+    def _client(self) -> httpx.AsyncClient:
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=self._timeout)
+        return self._http
+
+    async def aclose(self) -> None:
+        for task in list(self._inflight.values()):
+            task.cancel()
+        self._inflight.clear()
+        self._ready.clear()
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
+        self._http = None
 
     # ------------------------------------------------------------------ credential
 
@@ -225,7 +247,7 @@ class VoiceClient:
         key = self._api_key()
         self.attempts += 1
         started = time.perf_counter()
-        http = httpx.AsyncClient(timeout=self._timeout)
+        http = self._client()
         request = http.build_request(
             "POST",
             self._url(stream=True),
@@ -235,12 +257,10 @@ class VoiceClient:
         try:
             response = await http.send(request, stream=True)
         except httpx.TimeoutException as exc:
-            await http.aclose()
             raise self._record_failure(
                 VoiceUnavailable(f"no response in {self._timeout:.0f}s", kind="timeout")
             ) from exc
         except httpx.HTTPError as exc:
-            await http.aclose()
             raise self._record_failure(
                 VoiceUnavailable(f"request failed: {type(exc).__name__}", kind="network")
             ) from exc
@@ -253,9 +273,74 @@ class VoiceClient:
                 pass
             finally:
                 await response.aclose()
-                await http.aclose()
             raise self._record_failure(self._http_failure(response.status_code, body))
-        return VoiceStream(self, http, response, started)
+        return VoiceStream(self, response, started)
+
+    # ------------------------------------------------------------------ prefetch
+
+    # How long a synthesised answer waits to be asked for. The tablet asks within a second;
+    # anything older is an answer that was interrupted, and is dropped rather than kept.
+    READY_TTL_S = 120.0
+    READY_MAX = 4
+
+    def prefetch(self, text: str) -> bool:
+        """Start synthesising an answer now, before the tablet asks for it.
+
+        /turn knows the answer a round trip before /speak arrives; starting ElevenLabs on it
+        then means the audio is generating while the JSON crosses the tailnet and the tablet
+        renders. The tablet only says `speak` when it will actually ask, so this is the same
+        single request, earlier — never an extra one. Returns True when a request was started."""
+        if not self.enabled or self.cooling_down or not text:
+            return False
+        if text in self._ready or text in self._inflight:
+            return True
+        if self.max_chars and len(text) > self.max_chars:
+            text = text[: self.max_chars]
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return False
+        self.prefetches += 1
+        task = loop.create_task(self._fetch_into_ready(text))
+        self._inflight[text] = task
+        return True
+
+    async def _fetch_into_ready(self, text: str) -> None:
+        try:
+            audio = await self.synthesise(text)
+        except VoiceUnavailable:
+            return   # /speak will try again and report the shape of the failure itself
+        except Exception:  # noqa: BLE001 — a prefetch must never take the loop down
+            log.exception("tts prefetch failed unexpectedly")
+            return
+        finally:
+            self._inflight.pop(text, None)
+        self._expire_ready()
+        self._ready[text] = (audio, time.time())
+        while len(self._ready) > self.READY_MAX:
+            del self._ready[next(iter(self._ready))]
+
+    def _expire_ready(self) -> None:
+        now = time.time()
+        for key, (_, at) in list(self._ready.items()):
+            if now - at > self.READY_TTL_S:
+                del self._ready[key]
+
+    async def take_ready(self, text: str) -> bytes | None:
+        """The prefetched MP3 for this text, waiting for an in-flight one; None when there is
+        none, in which case the caller streams as before. Each answer is handed out once."""
+        task = self._inflight.get(text)
+        if task is not None:
+            try:
+                await asyncio.shield(task)
+            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                pass
+        self._expire_ready()
+        entry = self._ready.pop(text, None)
+        if entry is None:
+            return None
+        self.prefetch_hits += 1
+        return entry[0]
 
     async def synthesise(self, text: str) -> bytes:
         """The whole MP3, for scripts and tests. The tablet uses open_stream()."""
@@ -302,6 +387,8 @@ class VoiceClient:
                 f" · {self.successes}/{self.attempts} ok, last {self.last_ms:.0f}ms, "
                 f"{self.last_bytes} bytes"
             )
+        if self.prefetches:
+            note += f" · {self.prefetch_hits}/{self.prefetches} answers ready before asked"
         if self.cooling_down:
             return False, (
                 f"{note} · SKIPPING ElevenLabs for {self.cooldown_remaining_s:.0f}s after "

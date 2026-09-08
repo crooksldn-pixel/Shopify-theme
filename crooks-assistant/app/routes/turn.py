@@ -6,6 +6,7 @@ Accepts text (development, and the typed interface that keeps allowance testing 
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import time
@@ -16,6 +17,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 from app.logging.turnlog import redact
 from app.presentation import present
 from app.speech.decode import DecodeError, decode
+from app.speech.speakable import to_speakable
 
 log = logging.getLogger("crooks.turn")
 
@@ -47,6 +49,8 @@ async def turn(
     timings: dict[str, float] = {}
     transcript_info: dict | None = None
     expected_turns: int | None = None
+    # "I will ask /speak for this answer." Lets the backend start the voice a round trip early.
+    speak = False
 
     # JSON bodies are what curl and scripts/chat.py send; multipart is what the tablet sends.
     if text is None and audio is None:
@@ -57,9 +61,12 @@ async def turn(
         text = body.get("text")
         session_id = body.get("session_id") or session_id
         expected_turns = body.get("turns")
+        speak = _truthy(body.get("speak"))
     else:
-        form_turns = (await request.form()).get("turns")
+        form = await request.form()
+        form_turns = form.get("turns")
         expected_turns = int(form_turns) if form_turns not in (None, "") else None
+        speak = _truthy(form.get("speak"))
 
     # The tablet says how many turns it thinks this conversation has had. If the backend has
     # no such session but the tablet believes one exists, the backend restarted (or the
@@ -78,7 +85,7 @@ async def turn(
         if len(blob) > MAX_UPLOAD_BYTES:
             return _answer(
                 runtime, session_id, "That recording was too long for me to handle.",
-                error_kind="audio_too_large", timings=timings, started=started,
+                error_kind="audio_too_large", timings=timings, started=started, speak=speak,
             )
         result = await runtime.transcriber.from_blob(blob, filename_hint=audio.filename or "")
         transcript_info = result.as_dict()
@@ -86,7 +93,7 @@ async def turn(
         if not result.ok:
             return _answer(
                 runtime, session_id, result.reason, error_kind="speech",
-                timings=timings, started=started, transcript=transcript_info,
+                timings=timings, started=started, transcript=transcript_info, speak=speak,
             )
         text = result.text
         # The normaliser refused to guess between near-identical names; tell the model, so it
@@ -100,7 +107,7 @@ async def turn(
     if not text or not text.strip():
         return _answer(
             runtime, session_id, "I did not catch that.", error_kind="empty",
-            timings=timings, started=started, transcript=transcript_info,
+            timings=timings, started=started, transcript=transcript_info, speak=speak,
         )
     text = text.strip()[:MAX_TEXT_CHARS]
 
@@ -110,10 +117,12 @@ async def turn(
             "I've lost the thread of our conversation — either I restarted or it has been a "
             "while. Ask me again from the start.",
             error_kind="lost_thread", timings=timings, started=started,
-            transcript=transcript_info, question=text, lost_thread=True,
+            transcript=transcript_info, question=text, lost_thread=True, speak=speak,
         )
 
-    await runtime.maybe_refresh_catalogue()
+    # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
+    # in front of it. This question is answered with the catalogue as it stands.
+    runtime.refresh_catalogue_soon()
     await _ensure_provider_started(runtime)
 
     t0 = time.perf_counter()
@@ -145,7 +154,12 @@ async def turn(
             for c in result.tool_calls
         ],
         calls=result.tool_calls,
+        speak=speak,
     )
+
+
+def _truthy(value) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 async def _ensure_provider_started(runtime) -> None:
@@ -173,8 +187,13 @@ def _answer(
     tool_calls: list | None = None,
     lost_thread: bool = False,
     calls: list | None = None,
+    speak: bool = False,
 ) -> dict:
     tool_calls = tool_calls or []
+    if speak and answer:
+        # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
+        # is already generating or done. The same request it would make anyway, just earlier.
+        runtime.voice.prefetch(to_speakable(answer, max_chars=runtime.voice.max_chars))
     timings["total"] = (time.perf_counter() - started) * 1000
     turns = 0
     names: set[str] = set()
@@ -236,7 +255,7 @@ async def audio_test(request: Request, audio: UploadFile = File(...)) -> dict:
     suffix = (audio.filename or "").rsplit(".", 1)
     save_to = runtime.settings.bench_audio_dir / f"{stamp}.{suffix[-1] if len(suffix) > 1 else 'webm'}"
     try:
-        decoded = decode(blob, save_to=save_to)
+        decoded = await asyncio.to_thread(decode, blob, save_to=save_to)
     except DecodeError as exc:
         return {"ok": False, "error": str(exc), "bytes_in": len(blob),
                 "mime_type": audio.content_type}

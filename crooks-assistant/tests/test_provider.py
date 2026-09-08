@@ -181,3 +181,79 @@ def test_broader_billing_guard(monkeypatch):
         with pytest.raises(BillingGuardError):
             assert_no_payg_credentials()
         monkeypatch.delenv(name)
+
+
+# --------------------------------------------------------------------------- pre-warming
+
+
+class FakeSDKClient:
+    instances: list = []
+
+    def __init__(self, options=None):
+        self.options = options
+        self.connected = False
+        self.closed = False
+        FakeSDKClient.instances.append(self)
+
+    async def connect(self):
+        self.connected = True
+
+    async def disconnect(self):
+        self.closed = True
+
+    async def get_server_info(self):
+        return {"account": {"apiKeySource": "claude.ai", "apiProvider": "firstParty"}}
+
+
+async def test_a_new_conversation_takes_the_prewarmed_client(monkeypatch):
+    pytest.importorskip("claude_agent_sdk")
+    import claude_agent_sdk
+
+    from app.tools import mock  # noqa: F401 — registers tools
+
+    FakeSDKClient.instances = []
+    monkeypatch.setattr(claude_agent_sdk, "ClaudeSDKClient", FakeSDKClient)
+    p = MaxAgentSDKProvider(system_prompt="sys", cli_path=sys.executable)
+    p._started, p._auth_mode = True, "cli"
+
+    p._prewarm_soon()
+    await p._spare_task
+    spare = p._spare
+    assert spare is not None and spare.connected
+    assert len(FakeSDKClient.instances) == 1
+
+    # The first turn of a conversation adopts it instead of connecting, and a replacement
+    # starts warming for the conversation after this one.
+    client = await p._client_for("s1")
+    assert client is spare and p._spare is None
+    await p._spare_task
+    assert p._spare is not None and p._spare is not spare
+    assert len(FakeSDKClient.instances) == 2
+
+    # A new knowledge base drops both — the spare was connected with the old prompt.
+    await p.set_system_prompt("new")
+    assert spare.closed
+    await p._spare_task
+    assert p._spare is not None and p._spare.options.system_prompt == "new"
+
+    # Stopping disconnects everything and warms nothing more.
+    await p.stop()
+    assert all(c.closed for c in FakeSDKClient.instances)
+    assert p._spare is None and p._spare_task is None
+
+
+async def test_prewarm_failure_is_a_warning_not_a_broken_provider(monkeypatch, caplog):
+    pytest.importorskip("claude_agent_sdk")
+    import claude_agent_sdk
+
+    class Broken(FakeSDKClient):
+        async def connect(self):
+            raise RuntimeError("no cli")
+
+    monkeypatch.setattr(claude_agent_sdk, "ClaudeSDKClient", Broken)
+    p = MaxAgentSDKProvider(system_prompt="sys", cli_path=sys.executable)
+    p._started, p._auth_mode = True, "cli"
+    p._prewarm_soon()
+    await p._spare_task
+    assert p._spare is None
+    assert "could not pre-warm" in caplog.text

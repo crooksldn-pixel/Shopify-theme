@@ -13,6 +13,7 @@ numbers, ambiguity) is engine-independent and runs exactly as it did before.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -165,7 +166,9 @@ class Transcriber:
 
         t0 = time.perf_counter()
         try:
-            audio = decode(blob, save_to=save_to)
+            # PyAV decoding is CPU work; off the event loop so the tablet's /state polls and
+            # the health check keep answering while a long recording is unpacked.
+            audio = await asyncio.to_thread(decode, blob, save_to=save_to)
         except DecodeError as exc:
             return SpeechResult(ok=False, reason=str(exc), timings_ms={"decode": _ms(t0)})
         timings["decode"] = _ms(t0)

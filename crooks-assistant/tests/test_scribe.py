@@ -426,3 +426,26 @@ async def test_scribe_unavailable_is_the_only_error_shape(mock_http):
     with pytest.raises(ScribeUnavailable) as caught:
         await client().transcribe(b"wav", keyterms=[])
     assert caught.value.kind == "http_418"
+
+
+async def test_one_connection_is_reused_across_recordings(monkeypatch):
+    """The handshake to ElevenLabs is paid once per process, not once per sentence."""
+    created = []
+    original = httpx.AsyncClient
+
+    def factory(*args, **kwargs):
+        created.append(1)
+        kwargs["transport"] = httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"text": "twelve orders"})
+        )
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", factory)
+    from app.clients.elevenlabs import ScribeClient
+
+    client = ScribeClient()
+    client._key = "sk_test_key_0123456789abcdef"
+    assert (await client.transcribe(b"wav")).text == "twelve orders"
+    assert (await client.transcribe(b"wav")).text == "twelve orders"
+    assert len(created) == 1
+    await client.aclose()

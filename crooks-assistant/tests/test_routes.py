@@ -7,6 +7,8 @@ Max allowance on every run is exactly the mistake the build plan warns about.
 
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pytest
 
@@ -336,3 +338,48 @@ async def test_error_turns_carry_an_error_card(client):
 async def test_ui_is_always_present_and_a_list(client):
     body = (await client.post("/turn", json={"text": "hello", "session_id": "ui3"})).json()
     assert isinstance(body["ui"], list)
+
+
+# --------------------------------------------------------------------------- speed
+
+
+async def test_the_voice_starts_before_the_tablet_asks_for_it(client):
+    """With speak=1 on /turn the answer is synthesised at once; /speak then serves it whole
+    and no second ElevenLabs request is made."""
+    calls = stub_voice(app, audio=b"\xff\xfb\x90\x00" + b"\x00" * 32)
+    turn = (await client.post("/turn", json={"text": "how many orders today", "session_id": "pf", "speak": True})).json()
+    spoken = (await client.post("/speak", json={"text": turn["answer"]}))
+    assert spoken.status_code == 200
+    assert spoken.headers.get("x-crooks-prefetched") == "1"
+    assert spoken.content.startswith(b"\xff\xfb")
+    assert len(calls) == 1
+    # Asking again is a fresh request: nothing is served twice from memory.
+    again = await client.post("/speak", json={"text": turn["answer"]})
+    assert again.headers.get("x-crooks-prefetched") is None
+    assert len(calls) == 2
+
+
+async def test_no_prefetch_unless_the_caller_will_speak(client):
+    calls = stub_voice(app)
+    await client.post("/turn", json={"text": "hello", "session_id": "nopf"})
+    await client.post("/turn", data={"text": "hello", "session_id": "nopf2", "turns": "0"})
+    await asyncio.sleep(0)
+    assert calls == []
+
+
+async def test_health_is_cached_briefly_and_fresh_on_request(client):
+    first = (await client.get("/health")).json()
+    second = (await client.get("/health")).json()
+    fresh = (await client.get("/health?fresh=1")).json()
+    assert first["cached"] is False and second["cached"] is True and fresh["cached"] is False
+    assert second["checks"] == first["checks"]
+
+
+async def test_the_catalogue_refresh_never_blocks_a_turn(client):
+    runtime = app.state.runtime
+    runtime._catalogue_refreshed_at = 0.0
+    runtime.refresh_catalogue_soon()
+    task = runtime._catalogue_task
+    assert task is not None and not task.done()   # scheduled, not awaited
+    await task
+    assert runtime._catalogue_refreshed_at > 0

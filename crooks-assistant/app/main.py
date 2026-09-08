@@ -60,6 +60,8 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_dir)
     app.state.runtime = runtime_module.build(settings)
+    app.state.health_cache = None   # /health answers from a recent result; none yet
+    app.state.health_lock = None
     try:
         await app.state.runtime.provider.start()
     except BillingGuardError:
@@ -70,7 +72,7 @@ async def lifespan(app: FastAPI):
         log.error("Claude provider did not start: %s", exc)
     log.info("CROOKS Assistant ready (bind address is whatever uvicorn was started with)")
     yield
-    await app.state.runtime.provider.stop()
+    await app.state.runtime.aclose()
 
 
 app = FastAPI(title="CROOKS Assistant", version="0.1.0", lifespan=lifespan)

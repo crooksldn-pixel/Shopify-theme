@@ -84,6 +84,11 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._client_idle_timeout_s = client_idle_timeout_s
         self._clients: dict[str, object] = {}
         self._client_last_used: dict[str, float] = {}
+        # One client connected ahead of the next new conversation. Spawning the `claude`
+        # subprocess and its MCP handshake is one to three seconds; paying it on the first
+        # question of the day, or after "new conversation", is the pause that reads as slow.
+        self._spare: object | None = None
+        self._spare_task: asyncio.Task | None = None
         self._current: Session | None = None
         self._calls: list[ToolCall] = []
         self._states: list[str] = []
@@ -123,11 +128,55 @@ class MaxAgentSDKProvider(ClaudeProvider):
             )
         self._started = True
         log.info("Claude provider ready (model=%s, auth=%s)", self._model, self._auth_mode)
+        self._prewarm_soon()
 
     async def stop(self) -> None:
+        self._started = False   # first, so reset_session does not pre-warm a replacement
         for session_id in list(self._clients):
             await self.reset_session(session_id)
-        self._started = False
+        await self._drop_spare()
+
+    # ------------------------------------------------------------ pre-warming
+
+    def _prewarm_soon(self) -> None:
+        """Connect the next conversation's client in the background, if none is waiting."""
+        if not self._started or self._spare is not None:
+            return
+        if self._spare_task is not None and not self._spare_task.done():
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        self._spare_task = loop.create_task(self._prewarm())
+
+    async def _prewarm(self) -> None:
+        from claude_agent_sdk import ClaudeSDKClient
+
+        try:
+            client = ClaudeSDKClient(options=self._options())
+            await client.connect()
+            await self._verify_auth_source(client)
+        except BillingGuardError:
+            # Cannot be raised from a background task to anyone; the next real connect will
+            # raise it where it stops a turn. Say it loudly here as well.
+            log.critical("pre-warmed claude client is billing an API key; dropped it")
+            return
+        except Exception as exc:  # noqa: BLE001
+            log.warning("could not pre-warm a Claude client: %s", exc)
+            return
+        if self._started and self._spare is None:
+            self._spare = client
+        else:
+            await _disconnect_quietly(client)
+
+    async def _drop_spare(self) -> None:
+        task, self._spare_task = self._spare_task, None
+        if task is not None and not task.done():
+            task.cancel()
+        spare, self._spare = self._spare, None
+        if spare is not None:
+            await _disconnect_quietly(spare)
 
     def _resolve_cli(self) -> str:
         if self._cli_path:
@@ -218,10 +267,15 @@ class MaxAgentSDKProvider(ClaudeProvider):
             # Held open across turns. Recreating it per request costs seconds of subprocess
             # spin-up and throws away the conversation, which is what makes "and how much did
             # that come to?" work.
-            client = ClaudeSDKClient(options=self._options())
-            await client.connect()
+            if self._spare is not None:
+                client, self._spare = self._spare, None   # connected and verified already
+                log.info("new conversation took the pre-warmed client")
+            else:
+                client = ClaudeSDKClient(options=self._options())
+                await client.connect()
+                await self._verify_auth_source(client)
             self._clients[session_id] = client
-            await self._verify_auth_source(client)
+            self._prewarm_soon()   # and the one after this gets the same head start
         self._client_last_used[session_id] = time.time()
         return client
 
@@ -358,15 +412,15 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._system_prompt = prompt
         for session_id in list(self._clients):
             await self.reset_session(session_id)
+        await self._drop_spare()   # it was connected with the old prompt
+        self._prewarm_soon()
 
     async def reset_session(self, session_id: str) -> None:
         client = self._clients.pop(session_id, None)
         self._client_last_used.pop(session_id, None)
         if client is not None:
-            try:
-                await client.disconnect()
-            except Exception:  # noqa: BLE001
-                pass
+            await _disconnect_quietly(client)
+        self._prewarm_soon()   # "new conversation" is about to want one
 
     async def health(self) -> tuple[bool, str]:
         if not self._started:
@@ -453,6 +507,13 @@ def result_kind(message) -> str | None:
     if status is not None and status >= 400:
         return "api_error"
     return "unknown" if is_error else None
+
+
+async def _disconnect_quietly(client) -> None:
+    try:
+        await client.disconnect()
+    except Exception:  # noqa: BLE001 — the subprocess may already be gone
+        pass
 
 
 def cli_logged_in(cli_path: str) -> bool:

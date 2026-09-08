@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
@@ -42,10 +43,38 @@ class Runtime:
     turnlog: TurnLog
     started_at: float = field(default_factory=time.time)
     _catalogue_refreshed_at: float = 0.0
+    _catalogue_task: asyncio.Task | None = None
 
     @property
     def uptime_s(self) -> float:
         return time.time() - self.started_at
+
+    def refresh_catalogue_soon(self) -> None:
+        """Kick the hourly catalogue refresh off beside the current turn rather than in front
+        of it. A turn never waits on Shopify for a list it does not need to answer."""
+        if time.time() - self._catalogue_refreshed_at < CATALOGUE_TTL_S:
+            return
+        if self._catalogue_task is not None and not self._catalogue_task.done():
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        self._catalogue_task = loop.create_task(self.maybe_refresh_catalogue())
+
+    async def aclose(self) -> None:
+        """Release what the process holds open: the provider's subprocesses and every kept
+        HTTPS connection."""
+        if self._catalogue_task is not None and not self._catalogue_task.done():
+            self._catalogue_task.cancel()
+        await self.provider.stop()
+        for client in (self.voice, self.scribe, self.whisper, self.shopify):
+            close = getattr(client, "aclose", None)
+            if close is not None:
+                try:
+                    await close()
+                except Exception:  # noqa: BLE001 — shutting down; nothing to do about it
+                    log.debug("closing %s failed", type(client).__name__, exc_info=True)
 
     async def maybe_refresh_catalogue(self) -> None:
         """Repoint the normaliser at the live Shopify catalogue, hourly, cached to disk.
