@@ -19,6 +19,9 @@ from app.presentation import (
 )
 from app.providers.base import ToolCall
 from app.session.models import Session
+from app.tools import (
+    shopify_tools,  # noqa: F401 — registers the write spec the action cards present
+)
 
 ORDER = {
     "order_id": "gid://shopify/Order/1", "order_number": "CROOKS-1930",
@@ -182,11 +185,32 @@ def test_a_failed_shopify_call_is_a_calm_error_with_no_raw_detail():
     assert "shpat" not in repr(card) and "html" not in repr(card)
 
 
-def test_a_refused_tool_shows_as_not_allowed():
+def test_a_refused_tool_shows_as_refused_by_the_assistants_rules():
     refused = ToolCall(name="shopify_cancel_order", args={"order_id": "x"}, ok=False, error="registered as RED")
     (card,) = present([refused])
-    assert card["data"]["kind"] == "blocked" and card["data"]["title"] == "Not allowed"
+    assert card["data"]["kind"] == "blocked" and card["data"]["title"] == "Refused by the assistant's rules"
     assert "Nothing was changed" in card["data"]["recovery"]
+    assert "not allowed" not in repr(card).lower(), "the owner's permissions had nothing to do with it"
+
+
+def test_a_denial_the_model_recovers_from_is_not_a_card():
+    """The gate refused a note whose order id had not been looked up; the model then found
+    the order and proposed the note properly. The owner sees the proposal, not the stumble —
+    the 'Not allowed' card beside a live proposal was the most likely shape of the perceived
+    refusal."""
+    from app.session.models import Session
+
+    session = Session(session_id="s")
+    session.issue("gid://shopify/Order/1938")
+    # The first call used an id nothing had issued: denied by the gate whatever else is true.
+    stumble = ToolCall(name="shopify_order_note_append", args={"order_id": "gid://shopify/Order/999", "note": "x"}, ok=False, error="not looked up")
+    found = ToolCall(name="shopify_find_order", args={"order_number": "1938"}, ok=True, result={"orders": []})
+    staged = ToolCall(name="shopify_order_note_append", args={"order_id": "gid://shopify/Order/1938", "note": "x"}, ok=True, result={}, proposal_id="prop_x")
+    items = present([stumble, found, staged], session=session)
+    assert all(i["type"] != "error" for i in items), items
+    # Unrecovered, the refusal is shown — as the assistant's rule, not the owner's permission.
+    (card,) = [i for i in present([stumble], session=session) if i["type"] == "error"]
+    assert card["data"]["title"] == "Refused by the assistant's rules"
 
 
 def test_one_error_per_service_and_turn_errors_are_named():

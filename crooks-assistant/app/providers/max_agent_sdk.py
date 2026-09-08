@@ -105,6 +105,11 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._current: Session | None = None
         self._calls: list[ToolCall] = []
         self._states: list[str] = []
+        # Where the time of the current turn went: ("model", ms) as each model step lands,
+        # ("tool:<name>", ms) as each tool call returns. The measurement every later change needs.
+        self._steps: list[tuple[str, float]] = []
+        self._turn_started = 0.0
+        self._sweep_task: asyncio.Task | None = None
         self._started = False
         self._auth_mode = "token"  # "token" (a stored setup-token) or "cli" (the CLI's own login)
         # One turn at a time. The tablet is single-user, and two overlapping turns would
@@ -115,6 +120,9 @@ class MaxAgentSDKProvider(ClaudeProvider):
 
     async def start(self) -> None:
         assert_no_payg_credentials()
+        # The SDK otherwise spawns `claude -v` before every connect and pre-warm: a Node
+        # start-up (200-2000 ms) to learn a version this process pins itself.
+        os.environ.setdefault("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "1")
         cli = self._resolve_cli()
         if not cli:
             raise RuntimeError(
@@ -264,13 +272,16 @@ class MaxAgentSDKProvider(ClaudeProvider):
         session = self._current
         if session is None:
             return "ERROR: no active session for this tool call."
-        return await dispatch(
-            tool_name,
-            args,
-            session=session,
-            timeout_s=self._tool_timeout_s,
-            calls=self._calls,
-        )
+        try:
+            return await dispatch(
+                tool_name,
+                args,
+                session=session,
+                timeout_s=self._tool_timeout_s,
+                calls=self._calls,
+            )
+        finally:
+            self._step(f"tool:{tool_name}")
 
     # ------------------------------------------------------------------ run
 
@@ -345,7 +356,9 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._current = session
         self._calls = []
         self._states = []
+        self._steps = []
         started = time.perf_counter()
+        self._turn_started = started
         if session is not None:
             session.set_state("THINKING")
             session.turns += 1
@@ -360,6 +373,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
                 last = None
                 async for message in client.receive_response():
                     if isinstance(message, AssistantMessage):
+                        self._step("model")
                         for block in message.content:
                             if isinstance(block, TextBlock):
                                 parts.append(block.text)
@@ -414,12 +428,20 @@ class MaxAgentSDKProvider(ClaudeProvider):
 
         if session is not None:
             session.set_state("READY")
+        # The conversation was used to the end of this turn: its subprocess and its session
+        # expire from the same moment, so "that order" cannot be forgotten silently.
+        self._client_last_used[session_id] = time.time()
         log.info(
-            "turn ok in %.0f ms, %d tool call(s)",
+            "turn ok in %.0f ms, %d tool call(s): %s",
             (time.perf_counter() - started) * 1000,
             len(self._calls),
+            " ".join(f"{name}@{ms:.0f}" for name, ms in self._steps) or "-",
         )
-        return TurnResult(text=answer, tool_calls=self._calls, session_id=session_id)
+        return TurnResult(text=answer, tool_calls=self._calls, session_id=session_id, steps=list(self._steps))
+
+    def _step(self, name: str) -> None:
+        if self._turn_started:
+            self._steps.append((name, round((time.perf_counter() - self._turn_started) * 1000, 1)))
 
     async def set_system_prompt(self, prompt: str) -> None:
         """A new knowledge base means a new system prompt, and the SDK fixes the prompt when a

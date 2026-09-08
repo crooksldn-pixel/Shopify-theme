@@ -67,6 +67,12 @@ def caller_check(request: Request) -> tuple[str, str, str, str]:
 def _authorise(request: Request) -> tuple[str, JSONResponse | None]:
     caller, code, detail, spoken_key = caller_check(request)
     if code:
+        # Findable in one grep: the next "it said not allowed" is answered from this line.
+        log.warning(
+            "commit refused: %s — %s (login=%s proxied=%s path=%s)",
+            code, detail, request.headers.get("tailscale-user-login", "") or "-",
+            bool(request.headers.get("x-forwarded-for")), request.url.path,
+        )
         return "", _refuse(403, code, detail, spoken_key)
     return caller, None
 
@@ -98,6 +104,7 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         return refusal
     status = await runtime.write_status()
     if not status.ready:
+        log.warning("commit refused: %s — %s (caller=%s)", status.code, status.detail, caller)
         return _refuse(403, status.code, status.detail, status.code)
     if not session_id.strip():
         return _refuse(400, "wrong_session", "The session is missing.")

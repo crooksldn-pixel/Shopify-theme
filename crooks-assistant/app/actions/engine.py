@@ -192,6 +192,16 @@ class ActionEngine:
                 revoked.append(proposal.proposal_id)
         return revoked
 
+    def revoke_ids(self, proposal_ids: list[str], reason: str) -> int:
+        """Withdraw these proposals, if still waiting, whatever epoch they were staged in."""
+        count = 0
+        for pid in proposal_ids:
+            proposal = self.find(pid)
+            if proposal is not None and proposal.status is ActionStatus.PENDING:
+                self._finish(proposal, ActionStatus.REVOKED, "revoked", reason=reason)
+                count += 1
+        return count
+
     def deliver(self, proposal_id: str) -> ActionProposal | None:
         """The card is on its way to the tablet. The wait for the tap starts now, not when
         the model asked: the answer and the spoken line came between, and the owner had no

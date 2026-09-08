@@ -39,6 +39,9 @@ class TurnResult:
     session_id: str = ""
     stopped_early: bool = False
     error_kind: str | None = None  # None on success; otherwise a stable machine-readable kind
+    # Where the time went, as (step, ms since the turn began): "model" for each model step,
+    # "tool:<name>" for each tool call. Empty for providers that do not measure.
+    steps: list[tuple[str, float]] = field(default_factory=list)
 
 
 class ClaudeProvider(ABC):

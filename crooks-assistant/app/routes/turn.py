@@ -145,6 +145,8 @@ async def turn(
     t0 = time.perf_counter()
     result = await runtime.provider.turn(session_id, text.strip())
     timings["agent"] = (time.perf_counter() - t0) * 1000
+    for step, ms in getattr(result, "steps", None) or []:
+        timings[f"step:{step}"] = ms
 
     answer = result.text or "I could not work out an answer to that."
     if len(answer) > runtime.settings.max_answer_chars:
@@ -256,10 +258,15 @@ async def _answer(
     # Abandoned: the owner cancelled, or asked something else while this was being answered.
     # The session's position has moved past this turn's; nobody is waiting for its voice.
     abandoned = bool(session is not None and (session.abandoned or (epoch is not None and session.epoch != epoch)))
+    proposed = [c.proposal_id for c in (calls or []) if getattr(c, "proposal_id", None)]
+    if abandoned and proposed:
+        # Claude was still running when the owner moved on, and staged a change into the
+        # conversation's new position. Nobody asked for it there: withdrawn, unsent.
+        runtime.actions.revoke_ids(proposed, "the owner moved on")
+        proposed = []
     # A change was proposed this turn. Say, now and in the same breath, whether a tap on THIS
     # tablet could apply it — a card that cannot be applied must never look as if it can.
     writes = None
-    proposed = [c.proposal_id for c in (calls or []) if getattr(c, "proposal_id", None)]
     if proposed and request is not None:
         writes = await writes_context(request)
         if not writes["allowed"] and writes["spoken"]:

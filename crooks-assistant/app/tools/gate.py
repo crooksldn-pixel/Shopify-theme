@@ -216,8 +216,9 @@ def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any],
             return f"{arg}={value!r} is not the kind of id {name} takes."
         if value not in issued:
             return (
-                f"{arg}={value!r} was not issued in this session. "
-                "Search for the record first, then use the id that search returned."
+                f"{arg}={value!r} is not an id this conversation has looked up, so {name} was "
+                "not run. Nothing is refused: find the record first (for an order, "
+                f"shopify_find_order), then call {name} again with the id that lookup returned."
             )
     return ""
 

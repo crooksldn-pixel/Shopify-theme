@@ -57,7 +57,10 @@ def test_mcp_prefixed_names_classify_identically():
 def test_detail_tool_rejects_unissued_id():
     d = classify("shopify_order_detail", {"order_id": "gid://shopify/Order/999"}, issued_ids=[])
     assert d.tier is Tier.RED
-    assert "not issued" in d.reason
+    # The reason tells the model how to recover, and says nothing was refused: a denial the
+    # model recovers from must not read, on the tablet or in its answer, as "not allowed".
+    assert "not an id this conversation has looked up" in d.reason
+    assert "shopify_find_order" in d.reason and "Nothing is refused" in d.reason
 
 
 def test_detail_tool_accepts_issued_id():

@@ -354,6 +354,7 @@ class VoiceClient:
     READY_TTL_S = 120.0
     READY_MAX = 4
     PINNED_MAX = 24
+    FIRST_BYTE_S = 4.0   # how long /speak waits for a prefetch's first byte
 
     def prefetch(self, text: str, *, pin: bool = False) -> bool:
         """Start synthesising an answer now, before the tablet asks for it.
@@ -456,8 +457,10 @@ class VoiceClient:
         if not entry.pinned:
             del self._ready[text]   # handed out once
         try:
-            # Bounded: a prefetch that never starts must not become a request that never ends.
-            await asyncio.wait_for(entry.wait_first(), timeout=self._timeout + 1.0)
+            # Bounded, and tightly: the first byte normally arrives within a second. A voice
+            # that has not started after this is not coming soon, and the tablet's own voice
+            # should take the sentence rather than the screen saying Speaking over silence.
+            await asyncio.wait_for(entry.wait_first(), timeout=min(self.FIRST_BYTE_S, self._timeout + 1.0))
         except TimeoutError:
             self._ready.pop(text, None)
             raise VoiceUnavailable("prefetch never started", kind="timeout") from None

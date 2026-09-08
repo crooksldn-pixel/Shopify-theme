@@ -479,6 +479,27 @@ async def test_a_fixed_error_line_is_never_synthesised_twice(client):
     assert len(calls) == 1
 
 
+async def test_a_prefetch_that_hit_a_blip_is_tried_once_more_but_a_timeout_is_not(client):
+    """A 5xx or a burst refusal a round trip ago says nothing about now: one fresh request,
+    the same one the tablet would have made. A slow ElevenLabs is not asked twice."""
+    from app.clients.elevenlabs_tts import VoiceUnavailable
+
+    voice = app.state.runtime.voice
+    calls: list[str] = []
+
+    async def flaky(text: str):
+        calls.append(text)
+        if len(calls) == 1:
+            raise VoiceUnavailable("stubbed 502", kind="server_error")
+        return FakeVoiceStream(b"\xff\xfb\x90\x00mp3")
+
+    voice.open_stream = flaky  # type: ignore[method-assign]
+    body = (await client.post("/turn", json={"text": "hello", "session_id": "blip", "speak": True})).json()
+    await asyncio.sleep(0)
+    response = await client.post("/speak", json={"text": body["answer"]})
+    assert response.status_code == 200 and len(calls) == 2
+
+
 async def test_a_failed_prefetch_is_reported_at_once_without_a_second_request(client):
     calls = stub_voice(app, fail="timeout")
     body = (await client.post("/turn", json={"text": "hello", "session_id": "tmo", "speak": True})).json()

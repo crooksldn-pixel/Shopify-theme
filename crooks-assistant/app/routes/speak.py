@@ -25,6 +25,12 @@ router = APIRouter()
 
 MAX_TEXT_CHARS = 4_000
 
+# A prefetch that failed for one of these reasons is worth one fresh request: the failure was
+# a moment's, not the account's. Anything sticky (a rejected key, no credit) is not retried,
+# and neither is a timeout — ElevenLabs being slow is not cured by waiting for it twice; the
+# tablet's own voice takes that sentence.
+RETRY_ONCE_KINDS = frozenset({"server_error", "rate", "network", "prefetch", "empty", "truncated"})
+
 # What the tablet is told. The kind is a shape, never an account detail or an API message —
 # those are in the log on the Mac, where they belong.
 REASONS = {
@@ -71,7 +77,16 @@ async def speak(request: Request) -> Response:
         # /turn started synthesising this answer the moment it knew it (VoiceClient.prefetch).
         # What has arrived goes out now and the rest follows as ElevenLabs produces it — the
         # tablet starts playing the opening while the ending is still being generated.
-        ready = await voice.take_ready(spoken)
+        try:
+            ready = await voice.take_ready(spoken)
+        except VoiceUnavailable as exc:
+            if exc.kind in RETRY_ONCE_KINDS and not voice.cooling_down:
+                # The prefetch hit a blip a round trip ago; the network may well answer now.
+                # One fresh request, the same one the tablet would otherwise have made.
+                log.info("prefetch failed (%s); trying the request once more", exc.kind)
+                ready = None
+            else:
+                raise
         if ready is not None:
             return StreamingResponse(
                 ready, media_type="audio/mpeg", headers={**headers, "X-Crooks-Prefetched": "1"}

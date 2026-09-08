@@ -15,6 +15,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 
 from app import runtime as runtime_module
 from app.logging.quiet import quieten
@@ -136,6 +137,11 @@ def _cross_site(request: Request) -> bool:
     }
     return origin_host not in hosts
 
+
+# The page files travel compressed: 140 KB of script and style is 40 KB over the tailnet.
+# Audio is excluded by default (an MP3 does not shrink) and the shell's cache keeps whatever
+# encoding it received. Never a secret in a compressed body, so no compression-oracle concern.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.include_router(health.router)
 app.include_router(turn.router)

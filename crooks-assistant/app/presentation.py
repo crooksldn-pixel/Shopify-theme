@@ -90,9 +90,14 @@ def present(
     failed service, and the context stack when the conversation has accumulated one."""
     items: list[dict[str, Any]] = []
     errors: dict[str, dict[str, Any]] = {}
+    calls = list(calls or [])
 
-    for call in calls or []:
+    for index, call in enumerate(calls):
         if not call.ok:
+            if _recovered(call, calls[index + 1:]):
+                # The gate refused a call and the model then did it properly — looked the
+                # record up, called again. The owner sees the outcome, not the stumble.
+                continue
             error = _tool_error(call, session)
             errors.setdefault(error["data"]["service"], error)
             continue
@@ -374,6 +379,10 @@ def _message(m: dict[str, Any]) -> dict[str, Any]:
 # --------------------------------------------------------------------------- errors
 
 
+def _recovered(call: ToolCall, later: list[ToolCall]) -> bool:
+    return any(c.ok and c.name == call.name for c in later)
+
+
 def _tool_error(call: ToolCall, session: Session | None) -> dict[str, Any]:
     name = call.name or ""
     issued = session.issued_ids if session is not None else ()
@@ -385,7 +394,9 @@ def _tool_error(call: ToolCall, session: Session | None) -> dict[str, Any]:
     else:
         service, title = "assistant", "Lookup failed"
     if blocked:
-        return _error(service, "blocked", "Not allowed", "That is not something this assistant may do. Nothing was changed.")
+        # The assistant's own rules stopped it, not the owner's permissions: it asked for
+        # something it may not do, or in a way it may not. Nothing left the Mac.
+        return _error(service, "blocked", "Refused by the assistant's rules", "The assistant tried something outside what it may do. Nothing was changed.")
     return _error(service, "tool_failed", title, "Ask again in a moment; the answer says what happened.")
 
 
