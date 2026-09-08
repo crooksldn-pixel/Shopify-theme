@@ -95,6 +95,33 @@
 
   function kicker(label) { return h('p', { class: 'card-kicker', text: label }); }
 
+  // Two letters from a name, for the avatar disc that makes a person read as a person.
+  function initials(name) {
+    const parts = text(name).trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '·';
+    return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  function avatar(name, cls) { return h('span', { class: `avatar${cls ? ' ' + cls : ''}`, 'aria-hidden': 'true', text: initials(name) }); }
+
+  // An order's life as a strip of steps, lit as far as it has got. What a packer looks for
+  // first, before the number: has it been paid, has it gone.
+  function orderTimeline(d) {
+    const pay = text(d.payment).toLowerCase();
+    const ful = text(d.fulfillment).toLowerCase();
+    const shipped = list(d.fulfillments, 6).map((f) => f.shipped_at).filter(Boolean)[0];
+    const cancelled = Boolean(d.cancelled_at);
+    const steps = [
+      { label: 'Placed', done: true, when: formatDate(d.placed_at, DAY_FMT) },
+      { label: 'Paid', done: pay === 'paid' || pay === 'partially_refunded' || pay === 'refunded', partial: pay === 'partially_paid' || pay === 'authorized' },
+      cancelled
+        ? { label: 'Cancelled', done: true, bad: true, when: formatDate(d.cancelled_at, DAY_FMT) }
+        : { label: ful === 'fulfilled' ? 'Shipped' : 'To ship', done: ful === 'fulfilled', partial: ful === 'partial' || ful === 'partially_fulfilled', when: shipped ? formatDate(shipped, DAY_FMT) : '' },
+    ];
+    return h('ol', { class: 'tl', 'aria-label': 'Order progress' }, steps.map((st) => h('li', {
+      class: `tl-step${st.done ? ' is-done' : ''}${st.partial ? ' is-partial' : ''}${st.bad ? ' is-bad' : ''}`,
+    }, [h('span', { class: 'tl-dot', 'aria-hidden': 'true' }), h('span', { class: 'tl-label', text: st.label }), st.when ? h('span', { class: 'tl-when', text: st.when }) : null])));
+  }
+
   function kv(pairs, opts) {
     const dl = h('dl', { class: 'kv' });
     for (const [k, v, cls] of pairs) {
@@ -178,13 +205,21 @@
       ['Total', d.total],
       ['Ships to', d.ships_to],
       ['Cancelled', d.cancelled_at ? formatDate(d.cancelled_at) : ''],
-      ['Note', d.note],
     ], true);
+    if (d.note) overview.appendChild(h('dt', { text: 'Note' }));
+    if (d.note) overview.appendChild(h('dd', { class: 'note-quote', text: text(d.note) }));
     if (!d.detail) {
-      const brief = card('order', [head, overview, h('p', { class: 'card-note', text: 'Ask for the order to see its items and shipping.' })], opts);
+      const brief = card('order', [head, orderTimeline(d), overview, h('p', { class: 'card-note', text: 'Ask for the order to see its items and shipping.' })], opts);
       brief.dataset.ref = text(d.order_id);
       return brief;
     }
+    // The first few items in the overview itself: an order should read as an order at a
+    // glance, without a second tap for what was bought.
+    const preview = items.length ? h('ul', { class: 'items-preview' }, items.slice(0, 3).map((it) => h('li', {}, [
+      h('span', { class: 'ip-title', text: [text(it.title), text(it.variant)].filter(Boolean).join(' · ') }),
+      h('span', { class: 'ip-side', text: [num(it.quantity) !== null && it.quantity > 1 ? `× ${it.quantity}` : '', text(it.total)].filter(Boolean).join('  ') }),
+    ])).concat(items.length > 3 ? [h('li', { class: 'ip-more', text: `and ${items.length - 3} more` })] : [])) : null;
+    const overviewPanel = h('div', {}, [preview, overview]);
     const itemList = h('ul', { class: 'rows' }, items.map((it) => h('li', { class: 'row' }, [
       h('span', { class: 'row-main', text: text(it.title) }),
       h('span', { class: 'row-sub', text: [text(it.variant), it.sku ? `SKU ${text(it.sku)}` : ''].filter(Boolean).join(' · ') }),
@@ -202,8 +237,8 @@
       ])))
       : h('p', { class: 'card-note', text: 'Not shipped yet.' });
     const customer = kv([['Name', d.customer_name], ['Email', d.customer_email], ['Ships to', d.ships_to]], true);
-    const full = card('order', [head, tabs([
-      { label: 'Overview', node: overview },
+    const full = card('order', [head, orderTimeline(d), tabs([
+      { label: 'Overview', node: overviewPanel },
       { label: `Items${items.length ? ' · ' + items.length : ''}`, node: itemList },
       { label: 'Shipping', node: shipping },
       { label: 'Customer', node: customer },
@@ -224,14 +259,22 @@
   }
 
   function renderCustomer(d, opts) {
-    return card('customer', [
-      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Customer'), h('h2', { class: 'card-title', text: text(d.name, 'Customer') }), h('p', { class: 'card-sub', text: text(d.email) })])]),
+    const orders = num(d.orders);
+    const standing = orders === null ? '' : orders === 0 ? 'No orders yet' : orders === 1 ? 'First order' : orders >= 4 ? 'Regular' : 'Returning';
+    const node = card('customer', [
+      h('div', { class: 'card-head profile' }, [
+        avatar(d.name, 'lg'),
+        h('div', {}, [kicker('Customer'), h('h2', { class: 'card-title', text: text(d.name, 'Customer') }), h('p', { class: 'card-sub', text: text(d.email) })]),
+        standing ? h('div', { class: 'badges' }, [badge(standing, 'quiet')]) : null,
+      ]),
       h('div', { class: 'stats' }, [
-        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: num(d.orders) === null ? '—' : String(d.orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
-        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Spent' })]),
+        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
+        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Lifetime' })]),
       ]),
       h('p', { class: 'card-note', text: 'Ask for their orders or their emails to see more.' }),
     ], opts);
+    node.dataset.ref = text(d.customer_id);
+    return node;
   }
 
   function renderCustomerList(d, opts) {
@@ -323,6 +366,7 @@
       h('div', { class: 'big', text: text(d.revenue, '—') }),
       h('p', { class: 'card-meta', text: num(d.days) === 1 || !d.until ? formatDate(d.since, DAY_FMT) : [formatDate(d.since, DAY_FMT), formatDate(d.until, DAY_FMT)].filter(Boolean).join(' → ') }),
       h('div', { class: 'stats' }, stats.map(([v, k]) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: v }), h('div', { class: 'stat-k', text: k })]))),
+      days.length > 1 ? salesBars(days) : null,
       days.length ? h('ul', { class: 'rows compact' }, days.map((day) => h('li', { class: 'row' }, [
         h('span', { class: 'row-main', text: formatDate(dayNoon(day.date), DAY_ROW_FMT) || text(day.date, '—') }),
         h('span', { class: 'row-side' }, [
@@ -335,6 +379,23 @@
     ], opts);
   }
   const DAY_ROW_FMT = { weekday: 'short', day: 'numeric', month: 'short' };
+
+  // Revenue per day as bars, from the money strings the Mac formatted. The height is a
+  // clamped number of our own making, never a value from outside written into the page.
+  function moneyValue(value) {
+    const n = parseFloat(text(value).replace(/[^0-9.\-]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+  function salesBars(days) {
+    const values = days.map((d) => moneyValue(d.revenue));
+    const top = Math.max(1, ...values);
+    return h('div', { class: 'bars', 'aria-hidden': 'true' }, days.map((d, i) => {
+      const pct = Math.max(4, Math.min(100, Math.round((values[i] / top) * 100)));
+      const bar = h('span', { class: 'bar', data: { pct: String(pct) } });
+      if (bar.style) bar.style.height = `${pct}%`;
+      return h('span', { class: 'bar-col', title: formatDate(dayNoon(d.date), DAY_ROW_FMT) }, [bar, h('span', { class: 'bar-day', text: formatDate(dayNoon(d.date), { weekday: 'narrow' }) })]);
+    }));
+  }
   // A calendar date with no time parses as UTC midnight, which is the previous evening west of
   // Greenwich; noon local is the same calendar day everywhere.
   function dayNoon(value) {
@@ -367,12 +428,15 @@
     const messages = list(d.messages, 6);
     const nodes = messages.map((m, i) => {
       const last = i === messages.length - 1;
-      const msg = h('div', { class: `msg${last ? '' : ' is-collapsed'}` }, [
-        h('div', { class: 'msg-head' }, [
-          h('div', {}, [h('div', { class: 'msg-from', text: text(m.from, '—') }), h('div', { class: 'msg-addr', text: text(m.from_email) })]),
-          h('div', { class: 'msg-date', text: formatDate(m.date) }),
+      const msg = h('div', { class: `msg${last ? ' is-latest' : ' is-collapsed'}` }, [
+        avatar(m.from),
+        h('div', { class: 'msg-main' }, [
+          h('div', { class: 'msg-head' }, [
+            h('div', {}, [h('div', { class: 'msg-from', text: text(m.from, '—') }), h('div', { class: 'msg-addr', text: text(m.from_email) })]),
+            h('div', { class: 'msg-date', text: formatDate(m.date) }),
+          ]),
+          h('p', { class: 'msg-body', text: text(m.body) }),
         ]),
-        h('p', { class: 'msg-body', text: text(m.body) }),
       ]);
       if (!last) msg.addEventListener('click', () => msg.classList.toggle('is-collapsed'));
       return msg;

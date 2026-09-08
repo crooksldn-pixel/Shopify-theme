@@ -36,12 +36,19 @@
     SUCCESS: { scale: 1.02, breathe: 0.006, breatheHz: 0.3, deform: 0.008, drift: 0.2, spin: 0.03, inner: 0.4, glow: 0.3, tint: 1, fps: 60 },
     ERROR: { scale: 0.94, breathe: 0.004, breatheHz: 0.2, deform: 0.022, drift: 0.25, spin: 0.02, inner: 0.5, glow: 0.22, tint: -1, tension: 1, fps: 60 },
   };
-  STATES['CHECKING SHOPIFY'] = STATES.THINKING;
-  STATES['CHECKING EMAIL'] = STATES.THINKING;
+  // Consulting an outside system is a different act from thinking: the orb tightens, spins
+  // a little faster and takes a faint cast — cool for the store, warm for the inbox — so the
+  // owner can tell from across the desk that it has gone somewhere.
+  STATES['CHECKING SHOPIFY'] = Object.assign({}, STATES.THINKING, { spin: 0.65, drift: 0.5, inner: 0.9, glow: 0.2, tint: 0.5, fps: 30 });
+  STATES['CHECKING EMAIL'] = Object.assign({}, STATES.THINKING, { spin: 0.55, drift: 0.45, inner: 0.9, glow: 0.2, tint: -0.45, fps: 30 });
 
   const NEUTRAL = [205, 208, 218];
   const GREEN = [121, 201, 150];
   const RED = [220, 127, 108];
+
+  // A 2019 tablet cannot draw five radial gradients at sixty frames a second without heating
+  // up and stuttering; the page marks itself lite on such a device and the orb halves its pace.
+  const lite = () => typeof document !== 'undefined' && document.documentElement && document.documentElement.dataset.lite === '1';
 
   const HARMONICS = [
     { k: 2, w: 1.0, speed: 0.9 }, { k: 3, w: 0.7, speed: 1.3 }, { k: 4, w: 0.5, speed: 0.7 },
@@ -136,6 +143,7 @@
         if (idleFor > 600000) { drawStill(); stop(); return; }
         fps = idleFor > 90000 ? 8 : 20;
       }
+      if (lite()) fps = Math.min(fps, 30);
       if (ts - lastDrawAt < 1000 / fps - 2) return;
       lastDrawAt = ts;
 

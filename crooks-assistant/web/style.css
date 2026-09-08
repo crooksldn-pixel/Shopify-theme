@@ -265,8 +265,12 @@ body[data-mode="context"] .errline{display:none}
 .stat-v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .stat-k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
 
-.msg{padding:14px 0;border-top:1px solid var(--line)}
+/* correspondence: a face, then the words; the latest message carries the weight */
+.msg{display:grid;grid-template-columns:36px 1fr;gap:12px;padding:14px 0;border-top:1px solid var(--line);position:relative}
 .msg:first-child{border-top:0;padding-top:4px}
+.msg-main{min-width:0}
+.msg.is-latest .msg-body{color:var(--ink)}
+.msg.is-collapsed .avatar{opacity:.55}
 .msg-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:6px}
 .msg-from{font-weight:600;font-size:15px;word-break:break-word}
 .msg-addr{font-size:12px;color:var(--ink-3);word-break:break-all}
@@ -506,3 +510,55 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .action-meta{margin:10px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
 @keyframes arm-fill{from{width:0}to{width:100%}}
 @media (prefers-reduced-motion:reduce){.action-surface[data-state="arming"] .action-arm{animation:none;width:100%;opacity:.2}}
+
+/* ------------------------------------------------------------- lite device */
+/* Set by app.js on a device that reports few cores or little memory (the 2019 tablet). The
+   design is the same; the blur behind the sheet and the deep card shadows are not. */
+html[data-lite] .sheet{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(16,16,20,.985)}
+html[data-lite] .card{box-shadow:0 4px 14px rgba(0,0,0,.35),var(--inset-hi)}
+html[data-lite] .card::before{display:none}
+html[data-lite] .system-pulse{animation:none;opacity:.8}
+
+/* ------------------------------------------------------------- composition */
+/* People: an initials disc, so a customer reads as a profile and a message as a person. */
+.avatar{
+  display:inline-flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(160deg,var(--glass-3),var(--glass));border:1px solid var(--line-2);
+  color:var(--ink-2);font-size:12px;font-weight:700;letter-spacing:.06em;
+}
+.avatar.lg{width:52px;height:52px;font-size:16px}
+.card-head.profile{align-items:center}
+.card-head.profile .badges{align-self:flex-start}
+
+/* An order's progress: three steps, lit as far as it has got. */
+.tl{display:flex;margin:2px 0 14px;padding:0;list-style:none;gap:0}
+.tl-step{position:relative;flex:1;display:flex;flex-direction:column;align-items:flex-start;padding:10px 8px 0 0;min-width:0}
+.tl-step::before{content:"";position:absolute;left:0;right:0;top:3px;height:2px;background:var(--line-2);border-radius:1px}
+.tl-step.is-done::before{background:var(--ink-3)}
+.tl-step.is-partial::before{background:linear-gradient(90deg,var(--ink-3) 50%,var(--line-2) 50%)}
+.tl-step.is-bad::before{background:var(--bad)}
+.tl-dot{position:absolute;left:0;top:-1px;width:10px;height:10px;border-radius:50%;background:var(--bg-2);border:2px solid var(--line-2)}
+.tl-step.is-done .tl-dot{background:var(--ink);border-color:var(--ink)}
+.tl-step.is-partial .tl-dot{background:var(--warn);border-color:var(--warn)}
+.tl-step.is-bad .tl-dot{background:var(--bad);border-color:var(--bad)}
+.tl-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);margin-top:6px}
+.tl-step.is-done .tl-label,.tl-step.is-partial .tl-label{color:var(--ink-2)}
+.tl-step.is-bad .tl-label{color:var(--bad)}
+.tl-when{font-size:11px;color:var(--ink-4);margin-top:2px;white-space:nowrap}
+
+/* What was bought, in the overview, before any tab. */
+.items-preview{list-style:none;margin:0 0 12px;padding:0;border-bottom:1px solid var(--line)}
+.items-preview li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:15px}
+.ip-title{color:var(--ink);word-break:break-word}
+.ip-side{color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.items-preview .ip-more{font-size:12px;color:var(--ink-3);letter-spacing:.06em;padding-bottom:10px}
+.kv dd.note-quote{
+  font-style:italic;color:var(--ink-2);border-left:2px solid var(--line-2);padding-left:10px;line-height:1.45;
+}
+
+/* Sales as a strip of days: taller is more. */
+.bars{display:flex;align-items:flex-end;gap:6px;height:56px;margin:14px 2px 2px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}
+.bar{display:block;width:100%;max-width:26px;border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,var(--ink-2),var(--ink-4));opacity:.85;min-height:2px}
+.bar-col:last-child .bar{background:linear-gradient(180deg,var(--ink),var(--ink-3));opacity:1}
+.bar-day{font-size:10px;letter-spacing:.1em;color:var(--ink-4);text-transform:uppercase}

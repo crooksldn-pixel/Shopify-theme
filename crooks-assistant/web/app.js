@@ -25,6 +25,19 @@
  * first word of each question being clipped: getUserMedia takes a few hundred milliseconds to
  * hand over a live track, and the owner had already started speaking.
  */
+
+// The Galaxy Tab A 8.0 (2019) has four slow cores and two gigabytes; blur behind the settings
+// sheet and a sixty-frame orb are what make it stutter and warm. A device that reports few
+// cores or little memory is marked lite: same design, fewer effects, half the orb's frames.
+(function markLiteDevice() {
+  try {
+    const cores = navigator.hardwareConcurrency || 8;
+    const memory = navigator.deviceMemory || 8;
+    const tabA = /SM-T29\d/.test(navigator.userAgent || '');
+    if (cores <= 4 || memory <= 3 || tabA) document.documentElement.dataset.lite = '1';
+  } catch { /* leave the defaults */ }
+})();
+
 'use strict';
 
 const $ = (id) => document.getElementById(id);
@@ -122,15 +135,17 @@ REDUCED.addEventListener('change', (event) => { if (orb) orb.setReducedMotion(ev
 
 /* ------------------------------------------------------------------ state */
 
+// What the orb says beneath itself. The first line is the state; the second is what is
+// happening in plain words, so the screen reads before the voice does.
 const LABELS = {
   READY: ['System ready.', 'What do you need?'],
   LISTENING: ['Listening', 'Release to send'],
-  TRANSCRIBING: ['Transcribing', ''],
-  THINKING: ['Thinking', ''],
-  'CHECKING SHOPIFY': ['Checking Shopify', ''],
-  'CHECKING EMAIL': ['Checking email', ''],
+  TRANSCRIBING: ['Heard', 'Working out what you said'],
+  THINKING: ['Thinking', 'Working it out'],
+  'CHECKING SHOPIFY': ['Shopify', 'Reading the store'],
+  'CHECKING EMAIL': ['Email', 'Reading the inbox'],
   SPEAKING: ['Speaking', 'Hold to interrupt'],
-  SUCCESS: ['Done', ''],
+  SUCCESS: ['Done', 'Verified'],
   ERROR: ['Something went wrong', 'Hold to try again'],
 };
 

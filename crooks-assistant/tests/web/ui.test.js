@@ -310,3 +310,45 @@ test('a success card offers its undo the same way, and success needs a verified 
   const plain = UI.renderItem({ type: 'success', data: { title: 'Note added' } });
   assert.equal(plain.querySelector('.action-surface'), null);
 });
+
+// ------------------------------------------------------------------ composition
+
+test('an order carries its progress strip and previews what was bought', () => {
+  const node = UI.renderItem({ type: 'order', data: { order_number: '#1930', payment: 'paid', fulfillment: 'unfulfilled', placed_at: '2026-09-08T09:42:00Z', detail: true,
+    items: [{ title: 'Yard Jeans', variant: 'M', total: '£60.00', quantity: 2 }, { title: 'Convict Sweats', variant: 'L', total: '£55.00', quantity: 1 }, { title: 'Cap', total: '£20.00' }, { title: 'Socks', total: '£8.00' }], fulfillments: [] } });
+  const steps = node.querySelectorAll('.tl-step');
+  assert.equal(steps.length, 3);
+  assert.deepEqual(steps.map((s) => s.classList.contains('is-done')), [true, true, false]);
+  assert.ok(textOf(steps[2]).includes('To ship'));
+  const preview = node.querySelector('.items-preview');
+  assert.equal(preview.querySelectorAll('li').length, 4, 'three items and an "and more" line');
+  assert.ok(textOf(preview).includes('Yard Jeans · M') && textOf(preview).includes('× 2') && textOf(preview).includes('and 1 more'));
+  const cancelled = UI.renderItem({ type: 'order', data: { order_number: '#1', payment: 'refunded', fulfillment: 'unfulfilled', cancelled_at: '2026-09-08T10:00:00Z' } });
+  assert.ok(cancelled.querySelector('.tl-step.is-bad') && textOf(cancelled).includes('Cancelled'));
+});
+
+test('a customer is a profile: initials, standing, lifetime', () => {
+  const node = UI.renderItem({ type: 'customer', data: { customer_id: 'c1', name: 'Daniel Sear', email: 'd@example.com', orders: 4, spent: '£286.00' } });
+  assert.equal(textOf(node.querySelector('.avatar')), 'DS');
+  assert.ok(textOf(node).includes('Regular') && textOf(node).includes('Lifetime'));
+  assert.equal(node.dataset.ref, 'c1');
+  assert.equal(textOf(UI.renderItem({ type: 'customer', data: { name: HOSTILE } }).querySelector('.avatar')).length, 2);
+  assert.ok(textOf(UI.renderItem({ type: 'customer', data: { name: 'Solo', orders: 1 } })).includes('First order'));
+});
+
+test('sales over several days become a strip of bars whose heights are numbers of our own making', () => {
+  const node = UI.renderItem({ type: 'sales_summary', data: { title: 'This week', revenue: '£1,000.00', orders: 10, by_day: [
+    { date: '2026-09-02', orders: 1, revenue: '£100.00' }, { date: '2026-09-03', orders: 2, revenue: '£400.00' }, { date: '2026-09-04', orders: 0, revenue: '£0.00' } ] } });
+  const bars = node.querySelectorAll('.bar');
+  assert.equal(bars.length, 3);
+  assert.deepEqual(bars.map((b) => Number(b.dataset.pct)), [25, 100, 4]);
+  assert.equal(UI.renderItem({ type: 'sales_summary', data: { revenue: '£1', by_day: [{ date: '2026-09-02', revenue: '£1' }] } }).querySelectorAll('.bar').length, 0, 'one day is not a chart');
+});
+
+test('an email thread shows a face per message and lights the latest', () => {
+  const node = UI.renderItem({ type: 'email_thread', data: { subject: 's', messages: [{ from: 'Ada Lovelace', body: 'one' }, { from: 'Sam Fixture', body: 'two' }] } });
+  const msgs = node.querySelectorAll('.msg');
+  assert.equal(msgs.length, 2);
+  assert.deepEqual(msgs.map((m) => textOf(m.querySelector('.avatar'))), ['AL', 'SF']);
+  assert.ok(msgs[0].classList.contains('is-collapsed') && msgs[1].classList.contains('is-latest'));
+});
