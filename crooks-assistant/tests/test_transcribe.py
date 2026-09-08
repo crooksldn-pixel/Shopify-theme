@@ -11,7 +11,7 @@ from app.speech.normalise import from_terms
 from app.speech.transcribe import Transcriber, build_prompt, prune_captures
 
 av = pytest.importorskip("av")
-from tests.test_decode import tone_pcm, webm_opus  # noqa: E402
+from tests.test_decode import speech_pcm, tone_pcm, webm_opus  # noqa: E402
 
 
 class FakeWhisper(WhisperClient):
@@ -59,6 +59,36 @@ async def test_whisper_down_is_spoken_not_crashed():
     assert not result.ok
     assert "speech recognition" in result.reason
     assert "whisper" not in result.reason.lower(), "developer detail must not be spoken aloud"
+
+
+async def test_a_recording_that_only_touches_full_scale_is_transcribed():
+    """The false rejection: the tablet said "that came through distorted" and the saved
+    recording was perfectly intelligible. A peak is a moment; distortion is a proportion."""
+    fake = FakeWhisper("how many yard jeans are left")
+    result = await Transcriber(fake, norm()).from_blob(webm_opus(speech_pcm(drive=1.0)))
+    assert result.stats.peak >= 0.999, "it really does reach the rail"
+    assert result.ok, f"refused a usable recording: {result.reason}"
+    assert fake.prompts, "the recogniser was never given the audio"
+    assert result.text == "how many yard jeans are left"
+
+
+async def test_a_genuinely_distorted_recording_is_still_refused():
+    fake = FakeWhisper("nonsense")
+    result = await Transcriber(fake, norm()).from_blob(webm_opus(speech_pcm(drive=2.0)))
+    assert not result.ok
+    assert "distorted" in result.reason
+    assert fake.prompts == [], "a mangled recording was sent to the recogniser anyway"
+    assert result.stats.clipped_ratio >= 0.02
+
+
+async def test_the_rejection_reason_says_which_check_failed():
+    """Too quiet and too distorted are different problems with different fixes."""
+    quiet = await Transcriber(FakeWhisper(), norm()).from_blob(webm_opus(b"\x00\x00" * 48000))
+    assert "closer to the microphone" in quiet.reason
+    loud = await Transcriber(FakeWhisper(), norm()).from_blob(webm_opus(speech_pcm(drive=2.0)))
+    assert "further from the microphone" in loud.reason
+    short = await Transcriber(FakeWhisper(), norm()).from_blob(webm_opus(tone_pcm(0.1)))
+    assert "too short" in short.reason
 
 
 async def test_undecodable_upload_is_reported():

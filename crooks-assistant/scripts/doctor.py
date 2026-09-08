@@ -135,11 +135,14 @@ def main() -> int:
             pass
         for key in keychain.KNOWN_KEYS:
             have = keychain.present(key)
-            optional = key in {"shopify_static_token", "gmail_token"}
+            optional = key in {"shopify_static_token", "gmail_token", "elevenlabs_api_key"}
+            absent = {
+                "elevenlabs_api_key": "not stored (local Whisper listens; the tablet speaks in its own voice)",
+            }.get(key, "not stored (fallback only)")
             row(
                 OK if have else (WARN if optional else BAD),
                 key,
-                "stored" if have else ("not stored (fallback only)" if optional else "MISSING"),
+                "stored" if have else (absent if optional else "MISSING"),
             )
             if not have and not optional:
                 warnings += 1

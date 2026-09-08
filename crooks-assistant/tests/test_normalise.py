@@ -263,6 +263,114 @@ def test_nineteen_twenty_eight_is_an_order_number(real):
     assert out.order_numbers == ["1928"]
 
 
+# --- ordinary English is not a product name ---------------------------------
+
+# What the live catalogue actually adds on top of the seed file: the store's colour options,
+# as one-word terms. Every false positive below was measured against this list.
+COLOURS = ["White", "Black", "Grey", "Pink", "Blue", "Red", "Charcoal", "Bone", "Sand"]
+
+
+@pytest.fixture()
+def live():
+    """The seed catalogue with the live colour options merged in, as M7 does hourly."""
+    return from_terms(COLOURS + REAL, ALIASES)
+
+
+def test_the_tablet_sentence_that_found_this(live):
+    """The live regression, exactly as Scribe v2 heard it and the normaliser wrecked it:
+    'what' became 'White' twice, because metaphone codes them both WT."""
+    raw = "Order one nine three zero and tell me what they, exactly what they ordered"
+    out = live.normalise(raw)
+    assert out.text == "Order 1930 and tell me what they, exactly what they ordered"
+    assert not out.matches
+    assert out.order_numbers == ["1930"], "the order number must still be recovered"
+
+
+def test_what_never_becomes_white(live):
+    for phrase in [
+        "what",
+        "what did they order",
+        "so what happened there",
+        "tell me what they ordered",
+        "what's the total",
+    ]:
+        assert "White" not in live.normalise(phrase).text, phrase
+
+
+@pytest.mark.parametrize(
+    "heard",
+    [
+        "is that back in stock",       # back  ~ Black,  89
+        "read me the last email",      # read  ~ Red,    86 and an equal metaphone code
+        "and tell me more",            # and   ~ Sand,   86
+        "the address on that one",     # one   ~ Bone,   86
+        "were there any refunds",
+        "who is that from",
+        "did he pay for it",
+        "how much did we take yesterday",
+    ],
+)
+def test_ordinary_english_is_never_replaced(live, heard):
+    """Each of these scored above the old threshold against a one-word colour term."""
+    out = live.normalise(heard)
+    assert out.text == heard, f"normaliser damaged a correct transcript: {out.matches}"
+    assert not out.matches
+
+
+def test_real_corrections_still_happen_with_colours_in_the_catalogue(live):
+    """The protection must be conservative, not inert."""
+    assert "Grey Convict Hoodie" in live.normalise("gray convict hoodie").text
+    assert "Blue Wash Yard Jeans" in live.normalise("blue wash yard genes").text
+    assert "Hydrocuff Windbreaker" in live.normalise("the hydro cuff wind breaker").text
+    assert "CRXST★RZ T-Shirt" == live.normalise("cross stars tee").text
+    assert "Black Convict Hoodie" in live.normalise("black convict hoodie in medium").text
+
+
+def test_a_colour_said_plainly_still_reaches_its_display_form(live):
+    """An ordinary word may still match a catalogue entry exactly — it just may not be
+    corrected towards one."""
+    assert live.normalise("in black").text == "in Black"
+
+
+def test_an_alias_outranks_the_ordinary_english_rule():
+    """A hand-written spoken form is a deliberate instruction, even when it is plain English."""
+    n = from_terms(["Cellblock Set"], {"the set": "Cellblock Set"})
+    assert n.normalise("the set").text == "Cellblock Set"
+
+
+def test_short_terms_need_more_evidence_than_long_ones():
+    from app.speech.normalise import FUZZY_THRESHOLD, SHORT_TERM_THRESHOLD, threshold_for
+
+    assert threshold_for("blue") == SHORT_TERM_THRESHOLD
+    assert threshold_for("charcoal") == FUZZY_THRESHOLD          # long enough to be distinctive
+    assert threshold_for("blue wash yard jeans") == FUZZY_THRESHOLD
+
+
+def test_a_phonetic_code_alone_cannot_invent_a_match():
+    """'what' and 'white' share the metaphone code WT and look 67% alike; 'gray' and 'grey'
+    share theirs and look 75% alike. Only the second is evidence."""
+    n = from_terms(["White", "Grey"])
+    assert n.normalise("what").text == "what"
+    assert n.normalise("gray").text == "Grey"
+
+
+def test_common_word_detection_ignores_apostrophes():
+    from app.speech.normalise import is_common_speech
+
+    assert is_common_speech("what's")
+    assert is_common_speech("what they")
+    assert not is_common_speech("yard genes")
+    assert not is_common_speech("")
+
+
+def test_customer_names_are_not_matched_more_aggressively():
+    """The rule only ever refuses a match. A name that was corrected before still is, and a
+    name that was left alone still is."""
+    n = from_terms(["Anna Denning", "Blue Wash Yard Jeans"])
+    assert "Anna Denning" in n.normalise("anna denning").text
+    assert n.normalise("tell me what they ordered").text == "tell me what they ordered"
+
+
 def test_prose_lines_in_terminology_are_not_terms(tmp_path):
     from app.speech.normalise import load_terminology
 

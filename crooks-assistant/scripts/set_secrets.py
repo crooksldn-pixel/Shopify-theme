@@ -21,12 +21,18 @@ HELP = {
     "shopify_client_secret": "Dev Dashboard app → Client secret.",
     "shopify_static_token": "Legacy shpat_… Admin API token. Fallback only — see M6.",
     "gmail_token": "Written by `make gmail`; you never type this one.",
+    "elevenlabs_api_key": "ElevenLabs → Profile → API key. Scribe v2 hears you; Derek answers.",
 }
 
 
 # The keys `make secrets` walks through, in the order the milestones need them. The two
 # fallbacks are skipped unless asked for by name.
-WALKTHROUGH = ("claude_oauth_token", "shopify_client_id", "shopify_client_secret")
+WALKTHROUGH = (
+    "claude_oauth_token",
+    "shopify_client_id",
+    "shopify_client_secret",
+    "elevenlabs_api_key",
+)
 
 
 def store_one(key: str) -> int:
@@ -59,7 +65,7 @@ def main() -> int:
         return 0
 
     if sys.argv[1] == "--all":
-        print("Storing the three secrets the assistant needs. Press Enter with nothing typed to skip one.")
+        print("Storing the secrets the assistant needs. Press Enter with nothing typed to skip one.")
         failures = 0
         for key in WALKTHROUGH:
             failures += store_one(key)

@@ -1,14 +1,23 @@
 /* CROOKS Assistant — tablet client.
  *
- * Three Android/Chrome behaviours dictate most of the awkward code here, and all three fail
+ * The assistant speaks with Derek, an ElevenLabs voice generated on the Mac and sent here as
+ * an MP3 by POST /speak. The tablet never sees the ElevenLabs credential: it posts the answer
+ * text it already has on screen and gets audio back. Android's own speechSynthesis is still
+ * here, but only as the fallback for when ElevenLabs cannot answer — a silent tablet is a bug.
+ *
+ * Four Android/Chrome behaviours dictate most of the awkward code here, and all four fail
  * silently rather than throwing:
- *   1. speechSynthesis needs a real user gesture before it will ever speak. We fire a
- *      zero-length utterance inside the first touch handler to unlock it.
- *   2. speechSynthesis truncates long utterances. We chunk to ~200 characters on sentence
+ *   1. Media will not play until the user has touched the page. The talk button is that touch:
+ *      the first pointerdown primes both the <audio> element and speechSynthesis.
+ *   2. speechSynthesis needs a real user gesture too, so the same handler fires a zero-length
+ *      utterance to unlock it.
+ *   3. speechSynthesis truncates long utterances. We chunk to ~200 characters on sentence
  *      boundaries and chain on `onend`.
- *   3. getVoices() returns [] on the first call. We read it eagerly AND listen for
+ *   4. getVoices() returns [] on the first call. We read it eagerly AND listen for
  *      `voiceschanged`.
- * pause() is never called: on Android it behaves as cancel(), so a "pause" is unrecoverable.
+ * speechSynthesis.pause() is never called: on Android it behaves as cancel(), so a "pause" is
+ * unrecoverable. One <audio> element is reused for every answer — creating one per turn leaks
+ * a decoder per question and eventually stops playing anything at all.
  */
 'use strict';
 
@@ -42,8 +51,16 @@ let busy = false;
 let wakeLock = null;
 let speechUnlocked = false;
 let voices = [];
-let speakGeneration = 0;     // bumped on every cancel(); a chain from an older generation stops itself
+let speakGeneration = 0;     // bumped on every stop; anything from an older generation gives up
+let speakAbort = null;       // aborts an in-flight /speak so a new answer never queues behind it
+let currentAudioUrl = null;  // the object URL the player is holding, revoked when it is done
 let pendingStart = false;    // true between pointerdown and the recorder actually starting
+
+// One player, for the life of the page. 2ms of silence, used once inside the first touch to
+// prove to Chrome that this element is allowed to make sound.
+const player = new Audio();
+player.preload = 'auto';
+const SILENT_WAV = 'data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YRAAAACAgICAgICAgICAgICAgICA';
 let lastWasError = false;    // so an error stays on screen after it has been read out
 
 /* ------------------------------------------------------------------ state */
@@ -94,8 +111,8 @@ function loadVoices() {
   }
   const anyLocalGB = voices.some((v) => v.lang === 'en-GB' && v.localService);
   el.voiceNote.textContent = anyLocalGB
-    ? 'A British offline voice is installed.'
-    : 'No offline British voice found. Settings → General management → Text-to-speech → Install voice data.';
+    ? 'A British offline fallback voice is installed.'
+    : 'No offline British fallback voice found. Settings → General management → Text-to-speech → Install voice data.';
 }
 if (window.speechSynthesis) {
   loadVoices();
@@ -106,20 +123,53 @@ el.voiceSelect.addEventListener('change', () => store.set('crooks.voice', el.voi
 /* ------------------------------------------------------------------ speech */
 
 function unlockSpeech() {
-  // Must happen inside a user gesture. Chrome M71 removed speech without user activation, and
-  // the failure mode is total silence with no error anywhere.
-  if (speechUnlocked || !window.speechSynthesis) return;
+  // Must happen inside a user gesture, for both engines. Chrome M71 removed speech without
+  // user activation and blocks audio the same way; the failure mode for each is total silence
+  // with no error anywhere, so both are primed on the first touch and never again.
+  if (speechUnlocked) return;
+  speechUnlocked = true;
+  try {
+    player.src = SILENT_WAV;
+    player.volume = 1.0;
+    const primed = player.play();
+    if (primed && primed.then) {
+      primed.then(() => { player.pause(); player.removeAttribute('src'); }).catch(() => {});
+    }
+  } catch { /* the play() below will show whether it mattered */ }
+  if (!window.speechSynthesis) return;
   try {
     const primer = new SpeechSynthesisUtterance('');
     primer.volume = 0;
     window.speechSynthesis.speak(primer);
-    speechUnlocked = true;
   } catch { /* nothing more we can do */ }
 }
 
+function releaseAudioUrl() {
+  if (!currentAudioUrl) return;
+  URL.revokeObjectURL(currentAudioUrl);
+  currentAudioUrl = null;
+}
+
+// Silence, immediately and completely, whichever engine is talking. Called before every
+// recording and before every new answer, so the assistant can never talk over itself or be
+// recorded talking to itself.
 function stopSpeaking() {
-  speakGeneration += 1;   // any chunk chain still running belongs to an old generation now
+  speakGeneration += 1;   // anything still running belongs to an old generation now
+  if (speakAbort) { try { speakAbort.abort(); } catch { /* noop */ } speakAbort = null; }
+  try {
+    player.pause();
+    player.onended = null;
+    player.onerror = null;
+    player.removeAttribute('src');
+    player.load();        // drops the decoder; without this Chrome keeps the last buffer alive
+  } catch { /* nothing was playing */ }
+  releaseAudioUrl();
   if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch { /* noop */ } }
+}
+
+// Where the screen lands once nothing is speaking any more.
+function settle(isError) {
+  if (!busy) setState(isError ? 'ERROR' : 'READY');
 }
 
 function chunkForSpeech(text, limit = 200) {
@@ -141,14 +191,16 @@ function chunkForSpeech(text, limit = 200) {
   return out.filter(Boolean);
 }
 
-function speak(text, { isError = false } = {}) {
-  if (!window.speechSynthesis || !el.speakToggle.checked || !text) return;
-  stopSpeaking();
+// The fallback voice: Android's own, used only when ElevenLabs could not speak this answer.
+// `reason` is logged rather than shown — the owner wants the answer, not an apology.
+function browserSpeak(text, { isError = false, reason = '' } = {}) {
+  if (!window.speechSynthesis || !el.speakToggle.checked || !text) { settle(isError); return; }
+  console.warn(`[crooks] Derek unavailable (${reason || 'unknown'}) — using the Android voice`);
   const generation = speakGeneration;
   const parts = chunkForSpeech(text);
   const chosen = voices.find((v) => v.name === el.voiceSelect.value);
   let index = 0;
-  const finish = () => { if (!busy) setState(isError ? 'ERROR' : 'READY'); };
+  const finish = () => { if (generation === speakGeneration) settle(isError); };
   const next = () => {
     if (generation !== speakGeneration) return;      // cancelled: do not re-arm the chain
     if (index >= parts.length) { finish(); return; }
@@ -162,6 +214,79 @@ function speak(text, { isError = false } = {}) {
   };
   setState('SPEAKING');
   next();
+}
+
+// The normal voice. The answer text is already on screen; this asks the Mac to say it.
+//
+// The MP3 arrives as one response and is played once it is complete. ElevenLabs streams it and
+// the backend forwards it as it arrives, so the wait is the generation, not a second copy of
+// the file — and for a two-sentence answer in eleven_flash_v2_5 that is a few hundred
+// milliseconds. Every way this can fail ends in browserSpeak, never in silence.
+async function speakAnswer(text, { isError = false } = {}) {
+  if (!text) { settle(isError); return; }
+  if (!el.speakToggle.checked) { settle(isError); return; }
+  stopSpeaking();
+  const generation = speakGeneration;
+  setState('SPEAKING');
+  const controller = new AbortController();
+  speakAbort = controller;
+  let response;
+  try {
+    response = await fetch('/speak', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text, session_id: sessionId }),
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    if (generation !== speakGeneration) return;    // interrupted while it was generating
+    if (response.status === 204) { settle(isError); return; }   // nothing worth saying
+    if (!response.ok) {
+      let kind = `http ${response.status}`;
+      try { kind = (await response.json()).kind || kind; } catch { /* not JSON */ }
+      browserSpeak(text, { isError, reason: kind });
+      return;
+    }
+    const blob = await response.blob();
+    if (generation !== speakGeneration) return;
+    if (!blob.size) { browserSpeak(text, { isError, reason: 'empty audio' }); return; }
+    playAudio(blob, text, generation, isError);
+  } catch (error) {
+    // An abort is the owner interrupting, not a failure: they are already holding the button.
+    if (controller.signal.aborted || generation !== speakGeneration) return;
+    browserSpeak(text, { isError, reason: 'backend unreachable' });
+  } finally {
+    if (speakAbort === controller) speakAbort = null;
+  }
+}
+
+function playAudio(blob, text, generation, isError) {
+  const url = URL.createObjectURL(blob);
+  releaseAudioUrl();
+  currentAudioUrl = url;
+  const done = () => {
+    if (generation !== speakGeneration) return;   // a newer answer owns the player now
+    releaseAudioUrl();
+    settle(isError);
+  };
+  player.onended = done;
+  player.onerror = () => {
+    if (generation !== speakGeneration) return;
+    releaseAudioUrl();
+    browserSpeak(text, { isError, reason: 'the tablet could not play the audio' });
+  };
+  player.src = url;
+  player.volume = 1.0;
+  const started = player.play();
+  if (started && started.catch) {
+    started.catch(() => {
+      // Chrome refused to play without a gesture. The talk button is one, so this should not
+      // happen after the first question — but the answer still gets spoken.
+      if (generation !== speakGeneration) return;
+      releaseAudioUrl();
+      browserSpeak(text, { isError, reason: 'autoplay blocked' });
+    });
+  }
 }
 
 /* ------------------------------------------------------------------ health */
@@ -305,8 +430,9 @@ async function submit(body, isAudio) {
     renderTimings(data.timings_ms);
 
     lastWasError = Boolean(data.error_kind);
-    if (data.error_kind) { setState('ERROR'); speak(data.answer, { isError: true }); }
-    else { setState('READY'); speak(data.answer); }
+    // The text is on screen before the voice is asked for; the answer never waits on audio.
+    setState(lastWasError ? 'ERROR' : 'READY');
+    speakAnswer(data.answer, { isError: lastWasError });   // deliberately not awaited
   } catch (error) {
     setState('ERROR');
     el.answer.textContent = 'I lost contact with the backend. It may have restarted.';
@@ -336,6 +462,7 @@ el.talk.addEventListener('pointerdown', (event) => {
   // otherwise a slightly sliding thumb means the recording never stops.
   try { el.talk.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
   unlockSpeech();          // must be inside the gesture
+  stopSpeaking();          // before anything else: Derek must not be recorded answering himself
   acquireWakeLock();
   startRecording();        // start before any other UI work, or the first word is clipped
 });
@@ -351,9 +478,12 @@ el.talk.addEventListener('contextmenu', (event) => event.preventDefault());
 el.settingsBtn.addEventListener('click', () => { unlockSpeech(); loadVoices(); pollHealth(); el.settings.showModal(); });
 el.closeSettings.addEventListener('click', () => el.settings.close());
 el.preview.addEventListener('click', () => {
+  // Previews the real voice, through the real path — which is also the quickest way to tell
+  // whether ElevenLabs is answering from the tablet itself.
+  unlockSpeech();
   const previous = el.speakToggle.checked;
   el.speakToggle.checked = true;
-  speak('Twelve orders today, four hundred and thirty pounds.');
+  speakAnswer('Twelve orders today, four hundred and thirty pounds.');
   el.speakToggle.checked = previous;
 });
 el.timingToggle.addEventListener('change', () => { if (!el.timingToggle.checked) el.timings.hidden = true; });
@@ -391,7 +521,7 @@ el.micTest.addEventListener('click', async () => {
         const data = await response.json();
         setState(data.ok && data.usable ? 'READY' : 'ERROR');
         el.answer.textContent = data.ok
-          ? `${data.duration_s}s, ${data.sample_rate}Hz ${data.channels}ch, peak ${data.peak_dbfs}dBFS, RMS ${data.rms_dbfs}dBFS — ${data.usable ? 'usable' : 'too quiet or clipped'}. Recorded as ${data.mime_type}. Playing back what the backend heard.`
+          ? `${data.duration_s}s, ${data.sample_rate}Hz ${data.channels}ch, peak ${data.peak_dbfs}dBFS, RMS ${data.rms_dbfs}dBFS, clipped ${(data.clipped_ratio * 100).toFixed(2)}% (${data.clipped_ms}ms) — ${data.usable ? 'usable' : 'too quiet or clipped'}. Recorded as ${data.mime_type}. Playing back what the backend heard.`
           : `Decode failed: ${data.error}`;
         if (data.ok && data.wav_base64) {
           // Play back exactly what the backend decoded — the M2 "is it intelligible" check.

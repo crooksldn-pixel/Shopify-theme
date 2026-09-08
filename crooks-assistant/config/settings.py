@@ -27,6 +27,39 @@ class Settings(BaseSettings):
     shopify_auth_mode: str = "client_credentials"
 
     # --- speech ---
+    # Which recogniser runs first: "scribe" (ElevenLabs, the default) or "whisper" (local only).
+    # Whisper is the automatic fallback either way and is never switched off by this setting.
+    stt_primary: str = "scribe"
+    scribe_model: str = "scribe_v2"
+    scribe_language: str = "eng"  # ISO-639-3, as the ElevenLabs API expects
+    scribe_timeout_s: float = 20.0
+    # Bias Scribe with the live/seed product catalogue. Product words only — never customers.
+    scribe_keyterms: bool = True
+    # ElevenLabs bills a 20-second minimum for requests carrying 100 or more keyterms.
+    scribe_max_keyterms: int = 99
+    # After a rejected key or an exhausted account, stop calling Scribe for this long and go
+    # straight to Whisper, so a broken account does not add a round trip to every sentence.
+    scribe_cooldown_s: float = 300.0
+    elevenlabs_base_url: str = "https://api.elevenlabs.io/v1"
+
+    # --- the assistant's voice (ElevenLabs text-to-speech) ---
+    # Off falls the tablet back to Android's own speechSynthesis, which is what it used before.
+    tts_enabled: bool = True
+    # "Derek - Fun & Energetic", from the ElevenLabs library — used by id, without being added
+    # to the account. Voice settings are left at his own defaults; there is nothing to tune
+    # here until he has been heard on the tablet's speaker. `make voice` hears a change here.
+    tts_voice_id: str = "Q0Et7LOU7VpeoeCRQAVS"
+    tts_voice_name: str = "Derek"
+    tts_model: str = "eleven_flash_v2_5"  # the low-latency model; this is a conversation
+    # ~16 kB/s. The 32 kbps stream this replaced was audibly compressed on the tablet
+    # speaker, and four times the bytes is nothing next to the generation time.
+    tts_output_format: str = "mp3_44100_128"
+    tts_timeout_s: float = 20.0
+    # Longer than one answer can be (max_answer_chars is 700) with room for the spoken forms,
+    # which are longer than the digits they replace.
+    tts_max_chars: int = 1200
+    tts_cooldown_s: float = 300.0
+
     whisper_url: str = "http://127.0.0.1:8910"
     whisper_model: str = "small.en"
     whisper_bin_dir: Path = Path.home() / "tools" / "whisper.cpp"

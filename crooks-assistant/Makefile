@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv dev bench test lint chat acceptance whisper-server secrets shopify gmail gmail-verify check
+.PHONY: help doctor venv dev bench test lint chat acceptance whisper-server secrets shopify gmail gmail-verify voice check
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -19,6 +19,7 @@ help:
 	@echo "  make shopify         prove Shopify works and the token cache is used"
 	@echo "  make gmail           authorise Gmail once, in a browser"
 	@echo "  make gmail-verify    prove Gmail refreshes without a browser"
+	@echo "  make voice           hear Vikram on this Mac (one short ElevenLabs request)"
 	@echo "  make check           doctor + shopify + gmail-verify in one go"
 	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
 	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"
@@ -65,5 +66,8 @@ gmail:
 
 gmail-verify:
 	$(PY) scripts/gmail_auth.py --verify
+
+voice:
+	$(PY) scripts/voice_check.py
 
 check: doctor shopify gmail-verify

@@ -103,7 +103,7 @@ def test_options_construct_with_no_builtin_tools(monkeypatch):
     pytest.importorskip("claude_agent_sdk")
     from app.tools import mock  # noqa: F401 — registers tools
 
-    p = MaxAgentSDKProvider(system_prompt="sys", model="sonnet", cli_path="/bin/true")
+    p = MaxAgentSDKProvider(system_prompt="sys", model="sonnet", cli_path="/usr/bin/true")
     p._auth_mode = "cli"
     opts = p._options()
     assert opts.tools == []
@@ -127,7 +127,7 @@ async def test_turn_before_start_is_honest():
 
 
 async def test_health_reports_cli_auth_caveat():
-    p = MaxAgentSDKProvider(system_prompt="sys", cli_path="/bin/true")
+    p = MaxAgentSDKProvider(system_prompt="sys", cli_path="/usr/bin/true")
     p._started, p._auth_mode = True, "cli"
     ok, detail = await p.health()
     assert ok and "launchd" in detail
