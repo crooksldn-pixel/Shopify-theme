@@ -84,6 +84,9 @@ _MONEY = re.compile(r"£\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?")
 def _money_words(match: re.Match) -> str:
     whole = int(match.group(1).replace(",", ""))
     pence_text = match.group(2) or ""
+    # "£430.5" is four hundred and thirty pounds fifty: a lone decimal digit is tenths.
+    if len(pence_text) == 1:
+        pence_text = f"{pence_text}0"
     pence = int(pence_text) if pence_text else 0
     if whole > MAX_SPELLED:
         # Keep the figure exact and let the engine read the digits; "£" alone is what it

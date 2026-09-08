@@ -77,7 +77,13 @@ async def _health(runtime) -> dict:
     await asyncio.gather(*running)
 
     # The voice is a configuration and credential check, never a synthesis: a health page that
-    # spends ElevenLabs credit on every fifteen-second poll is a bill, not a check.
+    # spends ElevenLabs credit on every fifteen-second poll is a bill, not a check. Once an
+    # hour it also asks ElevenLabs what it calls the configured id — free — so a .env still
+    # naming an old voice cannot say "Vikram" here while someone else speaks on the tablet.
+    try:
+        await runtime.voice.verify_voice()
+    except Exception:  # noqa: BLE001 — the name is a courtesy; the check below stands alone
+        pass
     ok, detail = runtime.voice.health()
     checks["tts"] = {"ok": ok, "detail": detail}
     settings = runtime.settings

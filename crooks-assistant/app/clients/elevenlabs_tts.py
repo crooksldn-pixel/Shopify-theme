@@ -57,6 +57,7 @@ class VoiceStream:
         self._response = response
         self._started = started
         self.bytes_out = 0
+        self.truncated = False
 
     async def chunks(self) -> AsyncIterator[bytes]:
         truncated = ""
@@ -69,6 +70,7 @@ class VoiceStream:
             # The tablet already has the opening of the sentence and is playing it; there is
             # no status code left to change. Say so in the log, which is where it is findable.
             truncated = f" TRUNCATED after {type(exc).__name__}"
+            self.truncated = True
         finally:
             await self.aclose()
             self._client._finish(self, truncated)
@@ -168,6 +170,8 @@ class VoiceClient:
         # One HTTPS connection, reused: the handshake is a good part of the wait before an
         # answer is heard, and it was being paid on every sentence.
         self._http: httpx.AsyncClient | None = None
+        self._voice_checked_at: float = 0.0
+        self._voice_actual_name: str | None = None
         # Answers synthesised ahead of the tablet asking for them — see prefetch(). Keyed by
         # the spoken text; a handful of entries, a couple of minutes, in memory only.
         self._ready: dict[str, Prefetched] = {}
@@ -400,6 +404,10 @@ class VoiceClient:
             stream = await self.open_stream(text)
             async for chunk in stream.chunks():
                 await entry.push(chunk)
+            if getattr(stream, "truncated", False):
+                # Half a sentence is not a line worth keeping; a pinned line that was cut
+                # would otherwise be replayed cut for the life of the process.
+                entry.pinned = False
         except VoiceUnavailable as exc:
             # Remembered, so /speak reports the shape of the failure at once rather than
             # paying the same timeout a second time. A failed line is never kept: the next
@@ -489,6 +497,9 @@ class VoiceClient:
         lowered = body.lower()
         if code in (401, 403) or "invalid_api_key" in lowered:
             kind = "rejected" if code == 401 else "forbidden"
+        elif code == 429 and ("concurrent" in lowered or "rate" in lowered or "busy" in lowered):
+            # Too many requests at once, not an empty account: the next one may well work.
+            kind = "rate"
         elif code in (402, 429) or "quota" in lowered or "credit" in lowered:
             kind = "credit"
         elif code == 404 or "voice_not_found" in lowered:
@@ -501,6 +512,45 @@ class VoiceClient:
 
     # ------------------------------------------------------------------ health
 
+    VOICE_NAME_TTL_S = 3600.0
+
+    async def verify_voice(self) -> str | None:
+        """What ElevenLabs calls the configured voice id — asked once an hour, free (no
+        synthesis), and remembered. The configured name is only a label; a .env that still
+        carries an old id would otherwise say "Vikram" on the health page while another
+        voice spoke on the tablet. Returns the name, or None when it cannot be asked."""
+        if not self.enabled:
+            return None
+        now = time.time()
+        if self._voice_checked_at and now - self._voice_checked_at < self.VOICE_NAME_TTL_S:
+            return self._voice_actual_name
+        try:
+            key = self._api_key()
+        except VoiceUnavailable:
+            return None
+        self._voice_checked_at = now
+        try:
+            response = await self._client().get(
+                f"{self.base_url}/voices/{self.voice_id}", headers={"xi-api-key": key}, timeout=5.0,
+            )
+            if response.status_code != 200:
+                self._voice_actual_name = None
+                return None
+            name = response.json().get("name")
+            self._voice_actual_name = str(name)[:60] if name else None
+        except Exception as exc:  # noqa: BLE001 — a name check must never take health down
+            log.info("could not verify the voice id with ElevenLabs: %s", self._scrub(str(exc))[:120])
+            self._voice_actual_name = None
+        return self._voice_actual_name
+
+    @property
+    def voice_mismatch(self) -> str | None:
+        """Set when ElevenLabs names the configured id differently from the configured name."""
+        actual = self._voice_actual_name
+        if not actual or actual.lower() == self.voice_name.lower():
+            return None
+        return actual
+
     def health(self) -> tuple[bool, str]:
         """Is the voice usable? Answered from configuration and the Keychain, with no request:
         a health check that synthesises a sentence on every poll is a bill, not a check. The
@@ -512,6 +562,12 @@ class VoiceClient:
             self._api_key()
         except VoiceUnavailable as exc:
             return False, f"{self._scrub(str(exc))} · {note}"
+        if self.voice_mismatch:
+            return False, (
+                f"CROOKS_TTS_VOICE_ID {self.voice_id} is the voice ElevenLabs calls "
+                f"'{self.voice_mismatch}', not {self.voice_name}: fix or remove the "
+                f"CROOKS_TTS_VOICE_ID and CROOKS_TTS_VOICE_NAME lines in .env · {note}"
+            )
         if self.attempts:
             note += (
                 f" · {self.successes}/{self.attempts} ok, last {self.last_ms:.0f}ms, "

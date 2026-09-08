@@ -36,6 +36,11 @@ log = logging.getLogger("crooks.transcribe")
 PROMPT_MAX_CHARS = 900
 
 
+# Said aloud when the upload could not be turned into audio at all. Fixed, so the voice
+# synthesises it once and keeps it.
+DECODE_FAILED_REASON = "I could not make out that recording. Try once more."
+
+
 @dataclass(slots=True)
 class SpeechResult:
     ok: bool
@@ -170,7 +175,13 @@ class Transcriber:
             # the health check keep answering while a long recording is unpacked.
             audio = await asyncio.to_thread(decode, blob, save_to=save_to)
         except DecodeError as exc:
-            return SpeechResult(ok=False, reason=str(exc), timings_ms={"decode": _ms(t0)})
+            # The owner hears one fixed sentence; the decoder's own words go to the log,
+            # where they are useful and where they cost nothing to keep.
+            log.warning("could not decode the recording: %s", exc)
+            return SpeechResult(
+                ok=False, reason=DECODE_FAILED_REASON, engine_detail=str(exc)[:200],
+                timings_ms={"decode": _ms(t0)},
+            )
         timings["decode"] = _ms(t0)
         if save_to is not None:
             prune_captures(self._save_dir, self._max_saved)

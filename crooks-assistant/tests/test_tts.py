@@ -9,6 +9,7 @@ health string.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import httpx
@@ -151,6 +152,7 @@ async def test_the_stream_yields_before_it_ends(mock_http):
         (401, '{"detail":{"status":"invalid_api_key"}}', "rejected"),
         (403, "missing_permissions", "forbidden"),
         (429, "quota exceeded", "credit"),
+        (429, '{"detail":{"status":"too_many_concurrent_requests"}}', "rate"),
         (402, "payment required", "credit"),
         (404, '{"detail":{"status":"voice_not_found"}}', "no_voice"),
         (500, "upstream exploded", "server_error"),
@@ -494,3 +496,56 @@ async def test_the_voice_refuses_to_be_a_credit_tap(mock_http):
     with pytest.raises(VoiceUnavailable):
         await client.take_ready("Again.")
     assert len(holder["requests"]) == 3
+
+
+async def test_a_burst_is_not_an_empty_account(mock_http):
+    """ElevenLabs answers 429 for too many requests at once as well as for no credit. Only
+    the second parks the voice for five minutes; a burst is tried again next time."""
+    mock_http(error(429, '{"detail":{"status":"too_many_concurrent_requests"}}'))
+    client = make(cooldown_s=300.0)
+    with pytest.raises(VoiceUnavailable) as caught:
+        await client.synthesise("hello")
+    assert caught.value.kind == "rate" and not client.cooling_down
+    mock_http(audio())
+    assert await client.synthesise("hello again")
+
+
+async def test_a_pinned_line_cut_mid_stream_is_not_kept(mock_http):
+    """A fixed line whose stream broke half way would otherwise be replayed clipped for the
+    life of the process."""
+    import httpx as _httpx
+
+    def cut(request):
+        async def body():
+            yield MP3[:2]
+            raise _httpx.ReadError("gone")
+
+        return _httpx.Response(200, content=body(), headers={"content-type": "audio/mpeg"})
+
+    mock_http(cut)
+    client = make()
+    assert client.prefetch("I did not catch that.", pin=True)
+    await asyncio.sleep(0.05)
+    entry = client._ready.get("I did not catch that.")
+    assert entry is None or not entry.pinned
+
+
+async def test_the_voice_id_is_checked_against_elevenlabs_once_an_hour(mock_http):
+    """The configured name is a label. Health asks ElevenLabs what it calls the id — free —
+    and says so when a .env still carries another voice under Vikram's name."""
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        return httpx.Response(200, json={"voice_id": VOICE_ID, "name": "Derek"})
+
+    mock_http(handler)
+    client = make()
+    client.voice_name = "Vikram"
+    assert await client.verify_voice() == "Derek"
+    assert await client.verify_voice() == "Derek" and len(seen) == 1, "remembered for an hour"
+    ok, detail = client.health()
+    assert not ok and "Derek" in detail and "CROOKS_TTS_VOICE_ID" in detail and SECRET not in detail
+    client.voice_name = "Derek"
+    assert client.health()[0]
+    assert not any(p.endswith("/text-to-speech/" + VOICE_ID) or "text-to-speech" in p for p in seen), "no synthesis"

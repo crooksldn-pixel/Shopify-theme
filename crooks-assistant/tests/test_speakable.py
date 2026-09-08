@@ -42,6 +42,7 @@ def test_number_words_refuses_what_it_should_not_spell():
         ("£430.50", "four hundred and thirty pounds fifty"),
         ("£430.00", "four hundred and thirty pounds"),
         ("£430.05", "four hundred and thirty pounds oh five"),
+        ("£430.5", "four hundred and thirty pounds fifty"),
         ("£0.99", "ninety-nine pence"),
         ("£1,204.99", "one thousand two hundred and four pounds ninety-nine"),
         ("£ 60", "sixty pounds"),

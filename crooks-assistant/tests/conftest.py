@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import os
+import tempfile
+
 import pytest
 
-from app.clients.shopify import ShopifyClient
-from app.secrets import keychain
+# Tests must not write into the Mac's own logs/, bench/audio/ or capture store: the turn log
+# is a record of real turns, and the assistant log is where the real voice is diagnosed. Set
+# before any Settings() is built, which is before any app module is imported.
+_TEST_STATE = tempfile.mkdtemp(prefix="crooks-tests-")
+os.environ.setdefault("CROOKS_LOG_DIR", os.path.join(_TEST_STATE, "logs"))
+os.environ.setdefault("CROOKS_BENCH_AUDIO_DIR", os.path.join(_TEST_STATE, "bench"))
+os.environ.setdefault("CROOKS_SAVE_CAPTURES", "false")
+
+from app.clients.shopify import ShopifyClient  # noqa: E402 — after the environment above
+from app.secrets import keychain  # noqa: E402
 
 
 def shopify_configured() -> bool:

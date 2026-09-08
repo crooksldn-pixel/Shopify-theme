@@ -87,7 +87,9 @@ class ScribeClient:
 
     def _client(self) -> httpx.AsyncClient:
         if self._http is None or self._http.is_closed:
-            self._http = httpx.AsyncClient(timeout=self._timeout)
+            # A route to ElevenLabs that does not even connect is known in five seconds; the
+            # read bound is the recogniser's, and whisper is waiting behind it.
+            self._http = httpx.AsyncClient(timeout=httpx.Timeout(self._timeout, connect=min(5.0, self._timeout)))
         return self._http
 
     async def aclose(self) -> None:
@@ -232,6 +234,9 @@ class ScribeClient:
         lowered = body.lower()
         if code in (401, 403) or "invalid_api_key" in lowered or "api key" in lowered:
             kind = "rejected" if code == 401 else "forbidden"
+        elif code == 429 and ("concurrent" in lowered or "rate" in lowered or "busy" in lowered):
+            # A burst, not an empty account: whisper takes this one, Scribe the next.
+            kind = "rate"
         elif code in (402, 429) or "quota" in lowered or "credit" in lowered:
             kind = "credit"
         elif code >= 500:

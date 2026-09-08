@@ -102,6 +102,12 @@ Then, in order:
    install the en-GB voice data: Settings → General management → Text-to-speech → Install
    voice data.
 
+   A `.env` line wins over the default: a `CROOKS_TTS_VOICE_ID` copied from an older
+   `.env.example` keeps that older voice speaking while the health page says "Vikram". The
+   health page now asks ElevenLabs what it calls the configured id, once an hour, and says
+   so when they disagree; `make voice` prints the same. `grep TTS .env` and delete or
+   correct the lines, then `make restart`.
+
 9. **Run at login** — `make install`. It fills in the templates in `launchd/`, loads
    them, sets the Tailscale route and reads `/health` back. `make status`, `make restart`,
    `make uninstall` from then on.

@@ -94,7 +94,10 @@ async def test_the_rejection_reason_says_which_check_failed():
 async def test_undecodable_upload_is_reported():
     result = await Transcriber(FakeWhisper("x"), norm()).from_blob(b"not audio at all")
     assert not result.ok
-    assert "Could not open" in result.reason
+    # The owner hears a fixed sentence (synthesised once, kept); the decoder's words go to
+    # the detail, and the log.
+    assert result.reason == "I could not make out that recording. Try once more."
+    assert "Could not open" in result.engine_detail
 
 
 async def test_prompt_is_display_case_and_ends_with_period():

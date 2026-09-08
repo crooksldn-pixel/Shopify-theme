@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     stt_primary: str = "scribe"
     scribe_model: str = "scribe_v2"
     scribe_language: str = "eng"  # ISO-639-3, as the ElevenLabs API expects
-    scribe_timeout_s: float = 20.0
+    scribe_timeout_s: float = 10.0   # Scribe answers in one to two seconds; past this, whisper takes the turn
     # Bias Scribe with the live/seed product catalogue. Product words only — never customers.
     scribe_keyterms: bool = True
     # ElevenLabs bills a 20-second minimum for requests carrying 100 or more keyterms.
