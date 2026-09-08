@@ -15,7 +15,7 @@ VERSION = "0.1.0"
 # inference. The tablet polls; the settings sheet, the launcher and `make status` all ask.
 # Answering from a recent result for this long keeps that from becoming a constant hum on the
 # Mac and on the Shopify rate budget. `?fresh=1` skips it, for when someone is looking.
-CACHE_TTL_S = 45.0
+CACHE_TTL_S = 90.0
 
 
 @router.get("/ping")

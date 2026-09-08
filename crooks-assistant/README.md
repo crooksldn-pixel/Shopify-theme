@@ -455,7 +455,7 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 | M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **KB written from the store's own policies and metafields**; one discretion section is yours. |
 | M11 Voice in | `/turn` takes audio or text; the tablet polls `/state` so the screen shows the tool actually running. |
 | M12 Voice out | Chunking, unlock, voice picker — all three Android guardrails. |
-| M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check, cached for 45 s; `make up` / `make install`; log rotation; capture cap. |
+| M13 Reliability | Named failures incl. usage-limit reset time and "lost the thread"; per-subsystem `/health` with Core ML check, cached for 90 s; `make up` / `make install`; log rotation; capture cap. |
 | M14 Acceptance | 18-command script; placeholders fill themselves from the live store. **Run it from the tablet.** |
 
 What has actually been verified — here, on Linux, and against the real store:

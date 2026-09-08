@@ -61,8 +61,12 @@ def _harvest_ids(payload: Any, session: Session, *, in_customer: bool = False) -
 
 
 def _render(payload: Any) -> str:
+    """The tool result as the model reads it. Keys that begin with an underscore are the
+    runtime's own bookkeeping (timings) and are not the model's business."""
     if isinstance(payload, str):
         return payload
+    if isinstance(payload, dict):
+        payload = {k: v for k, v in payload.items() if not str(k).startswith("_")}
     return json.dumps(payload, ensure_ascii=False, default=str, indent=None)
 
 

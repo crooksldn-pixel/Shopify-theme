@@ -661,7 +661,7 @@ function renderHealthRows(checks) {
 }
 
 pollHealth();
-setInterval(() => pollHealth(false), 30000);
+setInterval(() => pollHealth(false), 45000);   // /ping watches reachability far more often; this is the detail
 
 /* ------------------------------------------------------------- microphone */
 
