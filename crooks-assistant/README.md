@@ -48,6 +48,7 @@ one line. You never run a Python file directly; `make` does it. `make help` prin
 | Everything at once | `make check` | Doctor, Shopify, Gmail in one go |
 | Ask questions | `make chat` | Typed, so it does not use the tablet or much allowance |
 | Day 1 test | `make acceptance SPOKEN=1` | From the tablet, at your working distance |
+| Prove it here | `make accept` | Lint, Node, the offline suite, a server of its own, latency medians, page sizes, and the page in a real Chromium (when Playwright is installed). No store, no inbox, no credit |
 
 The console work (Tailscale, Shopify Dev Dashboard, Google Cloud) is the only part that is
 not a `make` line, and it is described step by step below.

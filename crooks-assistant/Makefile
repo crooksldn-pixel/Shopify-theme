@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance whisper-server secrets shopify gmail gmail-verify voice check
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept whisper-server secrets shopify gmail gmail-verify voice check
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -32,6 +32,7 @@ help:
 	@echo "  make voice           hear Vikram on this Mac (one short ElevenLabs request)"
 	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
 	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"
+	@echo "  make accept          everything provable without the store: lint, Node, pytest, a server, latency, the page in Chromium"
 	@echo "  make dev             the backend alone, with auto-reload, for working on the code"
 	@echo "  make whisper-server  speech recognition alone (prints build steps if not built yet)"
 	@echo "  make bench           choose the Whisper model from your tablet recordings"
@@ -87,6 +88,9 @@ chat:
 
 acceptance:
 	$(PY) scripts/acceptance.py $(if $(SPOKEN),--spoken,)
+
+accept:
+	$(PY) scripts/accept.py $(if $(SHOTS),--shots $(SHOTS),) $(if $(NO_BROWSER),--no-browser,)
 
 secrets:
 	$(PY) scripts/set_secrets.py --all
