@@ -76,8 +76,9 @@ run a Python file directly; `make` does it. `make help` prints this list.
 |---|---|---|
 | Check the Mac | `make doctor` | Install whatever it names, the way it says |
 | Install | `make venv` then `make test` | Expect 344 passed |
-| Run it | `make dev` | In a second Terminal tab: `tailscale serve 8000` |
-| Speech | `make whisper-server` | It prints the build steps the first time |
+| Run it | `make up` | One window: backend, speech and the HTTPS route. Prints the address |
+| Or forget about it | `make install` | Once. The Mac starts everything at login; `make status` to check |
+| Speech | `make whisper-server` | Only to build it: prints the build steps the first time |
 | Tokens and keys | `make secrets` | Asks for the Claude token, Client ID, Client secret and ElevenLabs key, one at a time, hidden |
 | Prove Shopify | `make shopify` | Shop name, `Europe/London`, one recent order, cache reused |
 | Gmail | `make gmail` | A browser opens once. Then `make gmail-verify` |
@@ -92,8 +93,9 @@ Then, in order:
 
 1. **Tailscale** (M1) — install on Mac and tablet, same account. Admin console → DNS → enable
    MagicDNS, then HTTPS. Rename the Mac to something unrevealing: the hostname lands in public
-   Certificate Transparency logs. Start uvicorn, then `tailscale serve 8000`. Open the
-   `https://<machine>.<tailnet>.ts.net/` address on the tablet and add it to the home screen.
+   Certificate Transparency logs. `make up` sets the route itself (`tailscale serve --bg
+   8000`, which persists) and prints the `https://<machine>.<tailnet>.ts.net/` address; open
+   it on the tablet and add it to the home screen.
    *It must be that address, not the LAN IP* — the microphone and speech APIs both require a
    trusted secure context, and the LAN IP is not one.
 
@@ -136,20 +138,40 @@ Then, in order:
 7. **Voice** (M12) — settings → audition the voices → pick one. If none show "offline", install
    the en-GB voice data: Settings → General management → Text-to-speech → Install voice data.
 
-8. **Run at boot** (M13) — edit `USERNAME` in `launchd/*.plist`, copy to `~/Library/LaunchAgents`,
-   `launchctl load` both.
+8. **Run at login** (M13) — `make install`. It fills in the templates in `launchd/`, loads
+   them, sets the Tailscale route and reads `/health` back. `make status`, `make restart`,
+   `make uninstall` from then on.
 
 ---
 
 ## Running it day to day
 
-Three things stay running, each in its own Terminal tab, in this order:
+One line, one window:
 
 ```bash
-cd ~/crooks-assistant/crooks-assistant && make dev              # backend
-cd ~/crooks-assistant/crooks-assistant && make whisper-server   # speech (model from .env)
-tailscale serve 8000                                            # HTTPS for the tablet
+cd ~/crooks-assistant/crooks-assistant && make up
 ```
+
+That starts the backend and whisper-server as children of one process, prefixes their output
+so the window stays readable, makes sure Tailscale is serving port 8000 over HTTPS (set once,
+in the background, where it survives restarts), waits for `/health` and prints the address to
+open on the tablet. Ctrl-C stops everything; a service that dies is restarted with a short
+back-off. If whisper.cpp is not built, `make up` says so and runs without the fallback
+recogniser rather than refusing to start.
+
+Or no window at all:
+
+```bash
+make install     # once: the Mac starts both services at login, and now
+make status      # running? what /health says, the tablet's address
+make restart     # after a git pull
+make uninstall   # stop and remove
+make logs        # follow their output
+```
+
+These are launchd agents in your login session, so the claude CLI's own login and the Keychain
+work as they do in a Terminal. The Mac must be logged in; stop it sleeping in System Settings
+→ Energy rather than leaving a Terminal open.
 
 Then open the ts.net address on the tablet. Hold the button, speak, release. The microphone
 stays open while the page is showing, so the first word is not lost to start-up; it is
@@ -158,7 +180,7 @@ released when the page is hidden and reopened when it returns.
 ## Working on it
 
 ```bash
-make dev          # backend
+make dev          # backend alone, with auto-reload (stop the launchd agent first: make uninstall)
 make chat         # terminal REPL — use this, not voice, for repeat testing
 make test         # 268 tests, all offline; the two live API ones skip without credentials
 make lint
@@ -326,10 +348,11 @@ config/settings.py   non-secret configuration
 web/                 the tablet client: index.html · style.css (tokens) · app.js (voice,
                      state, deck) · orb.js (canvas) · audio-viz.js · ui.js (renderer) ·
                      fixtures.js (dev only, loaded with ?dev=1)
-scripts/             doctor · set_secrets · gmail_auth · shopify_check · whisper_server
+scripts/             up (one window) · install_launchd (login-time agents) · launch_common
+                     doctor · set_secrets · gmail_auth · shopify_check · whisper_server
                      bench_whisper · chat · acceptance
 tests/               gate · normalise · turnlog · shopify_tools · gmail_tools · bench_decision
-launchd/             run-at-boot plists
+launchd/             templates for the login-time agents; `make install` fills them in
 ```
 
 whisper.cpp itself lives outside the repo at `~/tools/whisper.cpp` — it is a large third-party

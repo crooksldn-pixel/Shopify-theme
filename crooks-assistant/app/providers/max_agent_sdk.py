@@ -88,7 +88,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._calls: list[ToolCall] = []
         self._states: list[str] = []
         self._started = False
-        self._auth_mode = "token"  # "token" (Keychain, works under launchd) or "cli" (login session only)
+        self._auth_mode = "token"  # "token" (a stored setup-token) or "cli" (the CLI's own login)
         # One turn at a time. The tablet is single-user, and two overlapping turns would
         # share _current, _calls and the hook — a race that would misattribute tool calls.
         self._turn_lock = asyncio.Lock()
@@ -107,17 +107,19 @@ class MaxAgentSDKProvider(ClaudeProvider):
             keychain.get("claude_oauth_token")
             self._auth_mode = "token"
         except SecretMissing as exc:
-            # The CLI keeps its own login. That works while a user session is logged in — fine
-            # for `make dev` — but launchd runs outside it and will fail. Say so, loudly, once.
+            # The CLI keeps its own login, in the login Keychain. That is the normal way this
+            # runs: it works from a Terminal and from the login-time LaunchAgents `make
+            # install` sets up, because both live in the user's session. It would not work
+            # from a system daemon, which nothing here uses.
             if not cli_logged_in(cli):
                 raise RuntimeError(
                     f"{exc} (and the claude CLI is not logged in either — run `claude /login`)."
                 ) from exc
             self._auth_mode = "cli"
-            log.warning(
-                "No claude_oauth_token in the Keychain; using the claude CLI's own login. This "
-                "works interactively but NOT under launchd. Before M13: `claude setup-token` "
-                "then `python scripts/set_secrets.py claude_oauth_token`."
+            log.info(
+                "No claude_oauth_token in the Keychain; using the claude CLI's own login "
+                "(auth=cli). This needs the Mac to be logged in, which `make up` and the "
+                "`make install` launchd agents both are."
             )
         self._started = True
         log.info("Claude provider ready (model=%s, auth=%s)", self._model, self._auth_mode)
@@ -376,7 +378,10 @@ class MaxAgentSDKProvider(ClaudeProvider):
                 keychain.get("claude_oauth_token")
             except Exception as exc:  # noqa: BLE001
                 return False, str(exc)
-        note = "" if self._auth_mode == "token" else " — CLI login only; will NOT survive launchd"
+        note = (
+            "" if self._auth_mode == "token"
+            else " — the CLI's own login; needs a logged-in Mac (make up / make install launchd agents)"
+        )
         return True, f"Agent SDK on Max subscription (model={self._model}, auth={self._auth_mode}{note})"
 
     @property

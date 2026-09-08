@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Install:  cp launchd/com.crooks.assistant.plist ~/Library/LaunchAgents/
-            launchctl load ~/Library/LaunchAgents/com.crooks.assistant.plist
-  Replace USERNAME below with your short username (`whoami`).
+  Template. `make install` (scripts/install_launchd.py) fills the placeholders from the
+  current checkout and loads the result into your login session; do not copy this by hand.
 
-  A restart loop here is almost always a wrong WorkingDirectory or a PATH that does not
-  include the `claude` binary — launchd does not read your shell profile.
+  A restart loop here is almost always a wrong WorkingDirectory or a PATH without the `claude`
+  binary — launchd does not read your shell profile, which is why PATH is spelled out and the
+  CLI's absolute path is passed as CROOKS_CLAUDE_CLI_PATH.
 
-  BEFORE loading this: `claude setup-token` and `python scripts/set_secrets.py
-  claude_oauth_token`. Under launchd there is no login session, so the CLI's own login is
-  not available; without the stored token the backend boots but every turn fails.
+  This is a LaunchAgent: it runs inside your login session, so the claude CLI's own login
+  (auth=cli) and the Keychain work exactly as they do in a Terminal.
 -->
 <plist version="1.0">
 <dict>
@@ -18,20 +17,21 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/USERNAME/crooks-assistant/.venv/bin/python</string>
+    <string>{{PYTHON}}</string>
     <string>-m</string><string>uvicorn</string>
     <string>app.main:app</string>
     <string>--host</string><string>127.0.0.1</string>
     <string>--port</string><string>8000</string>
   </array>
 
-  <key>WorkingDirectory</key><string>/Users/USERNAME/crooks-assistant</string>
+  <key>WorkingDirectory</key><string>{{ROOT}}</string>
 
   <key>EnvironmentVariables</key>
   <dict>
-    <!-- launchd starts with a minimal PATH; the SDK spawns `claude` and needs to find it. -->
-    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/USERNAME/.local/bin</string>
-    <key>HOME</key><string>/Users/USERNAME</string>
+    <key>PATH</key><string>{{PATH}}</string>
+    <key>HOME</key><string>{{HOME}}</string>
+    <key>CROOKS_CLAUDE_CLI_PATH</key><string>{{CLAUDE}}</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
   </dict>
 
   <key>RunAtLoad</key><true/>
@@ -43,8 +43,8 @@
   <!-- Without this, a crash loop restarts as fast as the CPU allows. -->
   <key>ThrottleInterval</key><integer>10</integer>
 
-  <key>StandardOutPath</key><string>/Users/USERNAME/crooks-assistant/logs/assistant.out.log</string>
-  <key>StandardErrorPath</key><string>/Users/USERNAME/crooks-assistant/logs/assistant.err.log</string>
+  <key>StandardOutPath</key><string>{{LOGS}}/assistant.out.log</string>
+  <key>StandardErrorPath</key><string>{{LOGS}}/assistant.err.log</string>
   <key>ProcessType</key><string>Interactive</string>
 </dict>
 </plist>

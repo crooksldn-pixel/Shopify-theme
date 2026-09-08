@@ -129,10 +129,12 @@ async def test_turn_before_start_is_honest():
 
 
 async def test_health_reports_cli_auth_caveat():
+    """auth=cli is the normal mode: say what it needs (a logged-in Mac), not that it is broken."""
     p = MaxAgentSDKProvider(system_prompt="sys", cli_path=sys.executable)
     p._started, p._auth_mode = True, "cli"
     ok, detail = await p.health()
-    assert ok and "launchd" in detail
+    assert ok and "auth=cli" in detail and "logged-in" in detail
+    assert "NOT" not in detail
 
 
 def test_red_hook_events_are_recorded_as_tool_calls():

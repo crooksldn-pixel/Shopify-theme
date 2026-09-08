@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -33,8 +34,17 @@ sh ./models/download-vad-model.sh silero-v5.1.2
 """
 
 
-def main() -> int:
-    settings = get_settings()
+@dataclass
+class Resolved:
+    """What starting whisper-server would run, or why it cannot."""
+
+    cmd: list[str] | None
+    problem: str = ""
+    notes: list[str] = field(default_factory=list)
+
+
+def resolve(settings=None) -> Resolved:
+    settings = settings or get_settings()
     root = settings.whisper_bin_dir
     model = root / "models" / f"ggml-{settings.whisper_model}.bin"
     coreml = root / "models" / f"ggml-{settings.whisper_model}-encoder.mlmodelc"
@@ -45,26 +55,25 @@ def main() -> int:
         None,
     )
 
+    notes: list[str] = []
     if binary is None or not model.exists():
-        print(f"whisper.cpp is not built at {root}.\n\nBuild it with:\n{BUILD_COMMAND}")
-        return 1
+        return Resolved(None, f"whisper.cpp is not built at {root}.\n\nBuild it with:\n{BUILD_COMMAND}")
 
     if not coreml.exists():
-        print(
-            f"Note: {coreml.name} is not present, so the encoder runs on Metal rather than the\n"
+        notes.append(
+            f"{coreml.name} is not present, so the encoder runs on Metal rather than the\n"
             "Neural Engine. That is correct and fine if whisper.cpp was built with\n"
             "-DWHISPER_COREML=OFF (the large-v3-turbo build on this Mac). If it was built WITH\n"
             "Core ML, the missing file makes it about twice as slow with no error — unzip the\n"
-            "encoder from Hugging Face into models/ in that case.\n"
+            "encoder from Hugging Face into models/ in that case."
         )
     if vad is None:
-        print(
+        return Resolved(None, (
             "No Silero VAD model found in models/. Without it the server rejects every request\n"
             "that asks for VAD, and silence that slips past the level gate transcribes as\n"
             "'Thank you.' Refusing to start. Fix:\n\n"
-            f"  cd {root} && sh ./models/download-vad-model.sh silero-v5.1.2\n"
-        )
-        return 1
+            f"  cd {root} && sh ./models/download-vad-model.sh silero-v5.1.2"
+        ), notes)
 
     host, port = settings.whisper_url.rsplit(":", 1)
     cmd = [
@@ -86,8 +95,18 @@ def main() -> int:
             "--vad-speech-pad-ms", str(settings.whisper_vad_pad_ms),
         ]
 
-    print(" ".join(cmd) + "\n")
-    return subprocess.call(cmd)
+    return Resolved(cmd, "", notes)
+
+
+def main() -> int:
+    resolved = resolve()
+    for note in resolved.notes:
+        print(f"Note: {note}\n")
+    if resolved.cmd is None:
+        print(resolved.problem)
+        return 1
+    print(" ".join(resolved.cmd) + "\n")
+    return subprocess.call(resolved.cmd)
 
 
 if __name__ == "__main__":
