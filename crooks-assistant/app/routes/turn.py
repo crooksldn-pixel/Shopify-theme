@@ -63,7 +63,11 @@ async def turn(
             body = {}
         text = body.get("text")
         session_id = body.get("session_id") or session_id
-        expected_turns = body.get("turns")
+        # A count, whatever shape the client sent it in; "0" must not read as "one turn".
+        try:
+            expected_turns = int(body.get("turns") or 0) or None
+        except (TypeError, ValueError):
+            expected_turns = None
         speak = _truthy(body.get("speak"))
     else:
         form = await request.form()

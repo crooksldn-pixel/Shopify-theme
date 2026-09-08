@@ -32,6 +32,9 @@ from app.tools.gate import Tier
 
 log = logging.getLogger("crooks.claude")
 
+# How long /cancel waits for the CLI to acknowledge an interrupt before giving up on it.
+INTERRUPT_TIMEOUT_S = 5.0
+
 
 # Every route by which the claude CLI could bill somewhere other than the subscription: a raw
 # key, a bearer token, a key-helper script, or a cloud provider. Any of them set means stop.
@@ -468,7 +471,12 @@ class MaxAgentSDKProvider(ClaudeProvider):
         if client is None or self._current is None or self._current.session_id != session_id:
             return False
         try:
-            await client.interrupt()
+            # The SDK's control request would wait a minute on a wedged CLI; the owner's next
+            # question is already being asked, and the turn lock is what it waits for.
+            await asyncio.wait_for(client.interrupt(), timeout=INTERRUPT_TIMEOUT_S)
+        except TimeoutError:
+            log.warning("interrupt for %s got no answer in %.0fs", session_id, INTERRUPT_TIMEOUT_S)
+            return False
         except Exception as exc:  # noqa: BLE001 — a turn that already ended is not a failure
             log.info("interrupt for %s did nothing: %s", session_id, exc)
             return False
