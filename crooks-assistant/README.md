@@ -270,11 +270,41 @@ player that will not play all end in Android's speechSynthesis with the reason i
 A rejected key or an exhausted account opens the same five-minute cooldown Scribe uses. A
 broken voice never breaks a turn — Shopify, Gmail and Claude do not depend on it.
 
-Holding the talk button stops Derek before the microphone opens, so the assistant can never be
+Holding the orb stops Derek before the recorder starts, so the assistant can never be
 recorded answering itself, and a new answer cancels the previous one's request and playback.
 `/health` carries a `voice` block and a `tts` check naming the voice, the model and the last
 request's latency and size; it is a key and configuration check only, because a health page
 that synthesises a sentence every fifteen seconds is a bill rather than a check.
+
+### Showing you
+
+The tablet is one dark surface with the orb at its centre: hold anywhere on it to speak, and
+the cards for what you asked about appear beneath as the answer is read out. What appears is
+never decided from the prose. `/turn` carries a `ui` list — `[{type, data}, …]` — built by
+`app/presentation.py` from the tool results of that turn: an `order`, an `order_list`, a
+`customer`, `customer_list`, `product`, `inventory`, `sales_summary`, `email_list`,
+`email_thread`, an `error` per failed service, and a `context_stack` once the conversation has
+touched more than one thing. Every item is whitelisted key by key and bounded (ten orders, six
+messages, two thousand characters of email body); a field reaches the screen only when a line
+in that module carries it. `email_draft`, `attention`, `confirmation` and `success` exist in
+the vocabulary and the renderer, with fixtures, but the backend does not produce them: Gmail
+is read-only, there is no attention scan, and there are no writes to confirm.
+
+`web/ui.js` renders exactly those types and nothing else, through `textContent` and safe DOM
+construction — a customer's name arriving as `<img onerror>` is shown as that text. Claude
+cannot ask for a component, supply markup, or put a value on screen that a tool did not
+return. `tests/test_presentation.py` holds the contract on the Mac side; `tests/web/ui.test.js`
+(run by `tests/test_web_js.py` under Node, skipped without it) holds it in the renderer.
+
+The orb is a 2D canvas (`web/orb.js`), drawn once at full size and scaled by CSS when it
+recedes for cards. It reacts to the real audio: one `AudioContext` (`web/audio-viz.js`),
+created on the first touch, with an analyser on the warm microphone stream while LISTENING and
+one `MediaElementAudioSourceNode` on the single player — created once, only after the context
+is confirmed running, and connected on to the destination — while the ElevenLabs voice
+speaks. If either analyser is unavailable the orb approximates; the audio itself is never
+delayed or rerouted for it. Open the page with `?dev=1` for a developer section in Settings
+that renders every component from invented data (marked "Fixture · not live") and lets you ask
+by typing; `?dev=0` hides it again. Production renders only what the backend returns.
 
 ### Layout
 
@@ -282,6 +312,7 @@ that synthesises a sentence every fifteen seconds is a bill rather than a check.
 app/
   main.py            FastAPI app; loopback only
   runtime.py         composition root — everything is wired here
+  presentation.py    the `ui` list: cards chosen from tool results, bounded and whitelisted
   routes/            health · turn · speak · admin
   providers/         base.py (ABC) · max_agent_sdk.py · anthropic_api.py (stub, deliberately)
   tools/             registry · gate · dispatch · shopify_tools · gmail_tools · mock
@@ -292,7 +323,9 @@ app/
   secrets/           keyring wrapper
   logging/           redacted JSONL with rotation
 config/settings.py   non-secret configuration
-web/                 the tablet client
+web/                 the tablet client: index.html · style.css (tokens) · app.js (voice,
+                     state, deck) · orb.js (canvas) · audio-viz.js · ui.js (renderer) ·
+                     fixtures.js (dev only, loaded with ?dev=1)
 scripts/             doctor · set_secrets · gmail_auth · shopify_check · whisper_server
                      bench_whisper · chat · acceptance
 tests/               gate · normalise · turnlog · shopify_tools · gmail_tools · bench_decision

@@ -1,0 +1,86 @@
+/* Development fixtures — sample `ui` payloads for looking at every component on the tablet.
+ *
+ * Loaded only when the page was opened with ?dev=1 (app.js injects this script; index.html
+ * does not reference it). Every name, address and figure here is invented; every card built
+ * from them is marked "Fixture · not live" by the renderer. Production renders only what the
+ * backend returns from /turn.
+ */
+(function (root) {
+  'use strict';
+
+  const ORDER = {
+    order_id: 'gid://shopify/Order/0', order_number: '#1930', placed_at: '2026-09-08T09:42:00Z',
+    fulfillment: 'unfulfilled', payment: 'paid', total: '£145.00', customer_name: 'Sam Fixture',
+    customer_id: 'gid://shopify/Customer/0', customer_email: 'sam@example.com', detail: true,
+    items: [
+      { title: 'Blue Wash Yard Jeans', variant: 'M', sku: 'YJ-BLU-M', quantity: 1, total: '£95.00' },
+      { title: 'Convict Sweats', variant: 'L / Black', sku: 'CS-BLK-L', quantity: 1, total: '£50.00' },
+    ],
+    items_truncated: false,
+    fulfillments: [],
+    cancelled_at: '', note: 'Leave with the neighbour if out.', ships_to: 'London United Kingdom',
+  };
+
+  const list = [
+    { id: 'order', label: 'Order', items: [{ type: 'order', data: ORDER }] },
+    { id: 'order_list', label: 'Orders today', items: [{ type: 'order_list', data: {
+      title: 'Today', count: 3, truncated: false, orders: [
+        { order_number: '#1931', placed_at: '2026-09-08T11:10:00Z', fulfillment: 'fulfilled', payment: 'paid', total: '£60.00', customer_name: 'Ada Sample' },
+        { order_number: '#1930', placed_at: '2026-09-08T09:42:00Z', fulfillment: 'unfulfilled', payment: 'paid', total: '£145.00', customer_name: 'Sam Fixture' },
+        { order_number: '#1929', placed_at: '2026-09-08T08:05:00Z', fulfillment: 'unfulfilled', payment: 'pending', total: '£95.00', customer_name: 'Kit Placeholder' },
+      ] } }] },
+    { id: 'customer', label: 'Customer', items: [{ type: 'customer', data: { customer_id: 'c0', name: 'Sam Fixture', email: 'sam@example.com', orders: 4, spent: '£410.00' } }] },
+    { id: 'customer_list', label: 'Which customer', items: [{ type: 'customer_list', data: { title: 'Which customer?', ambiguous: true, customers: [
+      { customer_id: 'c1', name: 'Dan Sample', email: 'dan.s@example.com', orders: 2, spent: '£120.00' },
+      { customer_id: 'c2', name: 'Dan Fixture', email: 'dan.f@example.com', orders: 7, spent: '£880.00' },
+    ] } }] },
+    { id: 'product', label: 'Product', items: [{ type: 'product', data: { query: 'Yard Jeans', products: [{
+      product_id: 'p0', title: 'Blue Wash Yard Jeans', status: 'active', subtitle: 'Relaxed straight, 14oz selvedge',
+      description: 'A relaxed straight jean cut from 14oz Japanese selvedge denim, washed once for softness. Sits at the waist with a straight leg and a slightly wider hem. Made in Portugal.',
+      fabric: '14oz selvedge denim', cut: 'Relaxed straight', origin: 'Portugal', care: 'Wash cold, inside out, hang dry',
+      measurements: [{ size: 'S', waist: '80', inseam: '78' }, { size: 'M', waist: '84', inseam: '79' }, { size: 'L', waist: '88', inseam: '80' }],
+      measurements_note: 'Garment measurements in centimetres.',
+    }] } }] },
+    { id: 'inventory', label: 'Inventory', items: [{ type: 'inventory', data: { query: 'Yard Jeans', low_stock_at: 5,
+      exceptions: [
+        { product: 'Blue Wash Yard Jeans', variant: 'M', available: 3, oversold_by: 0, tracked: true, level: 'low' },
+        { product: 'Blue Wash Yard Jeans', variant: 'S', available: 0, oversold_by: 0, tracked: true, level: 'out' },
+        { product: 'Convict Sweats', variant: 'L', available: 2, oversold_by: 0, tracked: true, level: 'low' },
+      ],
+      products: [{ product_id: 'p0', title: 'Blue Wash Yard Jeans', status: 'active', total_inventory: 31, variants: [
+        { variant: 'S', sku: 'YJ-S', available: 0, oversold_by: 0, tracked: true, level: 'out' },
+        { variant: 'M', sku: 'YJ-M', available: 3, oversold_by: 0, tracked: true, level: 'low' },
+        { variant: 'L', sku: 'YJ-L', available: 14, oversold_by: 0, tracked: true, level: 'ok' },
+        { variant: 'XL', sku: 'YJ-XL', available: 14, oversold_by: 0, tracked: true, level: 'ok' },
+      ] }] } }] },
+    { id: 'sales', label: 'Sales', items: [{ type: 'sales_summary', data: { title: 'Today', since: '2026-09-08T00:00:00+01:00', until: '2026-09-09T00:00:00+01:00', orders: 12, revenue: '£1,430.00', aov: '£119.17', currency: 'GBP', complete: true, basis: 'Orders created in the period, current totals.' } }] },
+    { id: 'email_list', label: 'Email list', items: [{ type: 'email_list', data: { title: 'Email', count: 2, threads: [
+      { thread_id: 't1', from: 'Sam Fixture', from_email: 'sam@example.com', subject: 'Re: Order #1930', date: 'Tue, 8 Sep 2026 10:12:00 +0100', snippet: 'Hi, just checking whether the jeans have shipped yet, I ordered them on Sunday and have not had a tracking email.', likely_bulk: false, known_customer: true },
+      { thread_id: 't2', from: 'Carrier Updates', from_email: 'no-reply@example.com', subject: 'Your weekly shipping digest', date: 'Mon, 7 Sep 2026 07:00:00 +0100', snippet: 'This week in shipping…', likely_bulk: true, known_customer: false },
+    ] } }] },
+    { id: 'email_thread', label: 'Email thread', items: [{ type: 'email_thread', data: { thread_id: 't1', subject: 'Re: Order #1930', message_count: 2, truncated: false, messages: [
+      { from: 'Sam Fixture', from_email: 'sam@example.com', date: 'Sun, 6 Sep 2026 18:30:00 +0100', subject: 'Order #1930', body: 'Hi,\n\nCould you let me know when order 1930 will ship? I need it for the weekend.\n\nThanks,\nSam' },
+      { from: 'Sam Fixture', from_email: 'sam@example.com', date: 'Tue, 8 Sep 2026 10:12:00 +0100', subject: 'Re: Order #1930', body: 'Hi, just checking whether the jeans have shipped yet — I ordered them on Sunday and have not had a tracking email.\n\nSam' },
+    ] } }] },
+    { id: 'email_draft', label: 'Email draft', items: [{ type: 'email_draft', data: { to: 'sam@example.com', subject: 'Re: Order #1930', body: 'Hi Sam,\n\nThanks for your patience — order 1930 is being packed today and will ship with Royal Mail Tracked 24. You will get the tracking number by email as soon as it is scanned.\n\nCROOKS' } }] },
+    { id: 'attention', label: 'Attention', items: [{ type: 'attention', data: { items: [
+      { kind: 'orders', title: '2 orders unfulfilled since yesterday', detail: '#1929, #1930', level: 'amber' },
+      { kind: 'stock', title: 'Blue Wash Yard Jeans S out of stock', detail: 'Sold out this morning', level: 'red' },
+    ] } }] },
+    { id: 'confirmation', label: 'Confirmation', items: [{ type: 'confirmation', data: { tier: 'amber', title: 'Mark #1930 as fulfilled?', detail: 'Royal Mail Tracked 24, tracking to follow.', confirm_label: 'Fulfil' } }] },
+    { id: 'success', label: 'Success', items: [{ type: 'success', data: { title: 'Order #1930 fulfilled', detail: 'Tracking sent to Sam Fixture.' } }] },
+    { id: 'error', label: 'Error', items: [{ type: 'error', data: { service: 'shopify', kind: 'tool_failed', title: 'Shopify unavailable', recovery: 'Ask again in a moment.' } }] },
+    { id: 'stack', label: 'Context stack', items: [
+      { type: 'order', data: ORDER },
+      { type: 'context_stack', data: { entries: [
+        { kind: 'order', label: '#1930', ref: 'gid://shopify/Order/0' },
+        { kind: 'customer', label: 'Sam Fixture', ref: 'gid://shopify/Customer/0' },
+        { kind: 'email', label: 'Re: Order #1930', ref: 't1' },
+        { kind: 'product', label: 'Blue Wash Yard Jeans', ref: 'p0' },
+      ] } },
+    ] },
+    { id: 'unknown', label: 'Unsupported type', items: [{ type: 'hologram', data: { html: '<b>should never render</b>' } }, { type: 'assistant', data: { text: 'The unsupported item before this one was skipped; only this card should show. <img src=x onerror=alert(1)> stays as text.' } }] },
+  ];
+
+  root.CrooksFixtures = { list };
+})(typeof window !== 'undefined' ? window : globalThis);

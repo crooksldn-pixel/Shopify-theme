@@ -1,0 +1,487 @@
+/* The component vocabulary, rendered by hand.
+ *
+ * The backend sends `ui`: a list of { type, data } items chosen from a fixed vocabulary and
+ * built from what the tools returned (app/presentation.py). This file turns those into DOM,
+ * and it is the only file that does. Two rules hold throughout:
+ *
+ *   - Every string from outside — a customer's name, an email body, a product title — lands
+ *     in the page through textContent. No innerHTML, no template strings into markup, no
+ *     attribute built from data. What arrives as "<img onerror>" is shown as "<img onerror>".
+ *   - Only the types listed in RENDERERS render. Anything else is reported as skipped and
+ *     draws nothing. Claude cannot ask for a component; the presentation layer can.
+ *
+ * The file has no dependency on the rest of the app so that it can be exercised under Node
+ * against a small DOM stand-in (tests/web/), where the two rules above are checked.
+ */
+(function (root, factory) {
+  const api = factory();
+  root.CrooksUI = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis, function () {
+  'use strict';
+
+  const doc = () => (typeof document !== 'undefined' ? document : globalThis.document);
+
+  // ------------------------------------------------------------------ safe DOM
+
+  function h(tag, attrs, children) {
+    const el = doc().createElement(tag);
+    if (attrs) {
+      for (const key in attrs) {
+        const value = attrs[key];
+        if (value === null || value === undefined || value === false) continue;
+        if (key === 'class') el.className = value;
+        else if (key === 'text') el.textContent = String(value);
+        else if (key === 'hidden') el.hidden = Boolean(value);
+        else if (key === 'on' && typeof value === 'object') {
+          for (const type in value) el.addEventListener(type, value[type]);
+        } else if (key === 'data' && typeof value === 'object') {
+          for (const d in value) el.dataset[d] = String(value[d]);
+        } else el.setAttribute(key, String(value));
+      }
+    }
+    append(el, children);
+    return el;
+  }
+
+  function append(el, children) {
+    if (children === null || children === undefined || children === false) return;
+    if (Array.isArray(children)) { for (const c of children) append(el, c); return; }
+    if (typeof children === 'string' || typeof children === 'number') {
+      el.appendChild(doc().createTextNode(String(children)));
+      return;
+    }
+    el.appendChild(children);
+  }
+
+  const text = (value, fallback) => {
+    if (value === null || value === undefined || value === '') return fallback === undefined ? '' : fallback;
+    return String(value);
+  };
+  const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+  const list = (value, limit) => (Array.isArray(value) ? value.slice(0, limit || 50).filter((v) => v && typeof v === 'object') : []);
+
+  // ------------------------------------------------------------------ formatting
+
+  const DATE_FMT = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+  const DAY_FMT = { day: 'numeric', month: 'short' };
+
+  function formatDate(value, opts) {
+    const raw = text(value);
+    if (!raw) return '';
+    const ms = Date.parse(raw);
+    if (!Number.isFinite(ms)) return raw;
+    try {
+      return new Intl.DateTimeFormat('en-GB', opts || DATE_FMT).format(new Date(ms));
+    } catch (error) {
+      return raw;
+    }
+  }
+
+  const STATUS_TONE = {
+    fulfilled: 'ok', paid: 'ok', success: 'ok', delivered: 'ok', active: 'ok',
+    unfulfilled: 'warn', 'partially fulfilled': 'warn', pending: 'warn', authorized: 'warn',
+    'partially paid': 'warn', 'in progress': 'warn', 'on hold': 'warn', scheduled: 'warn',
+    refunded: 'bad', 'partially refunded': 'bad', voided: 'bad', cancelled: 'bad', failure: 'bad',
+    error: 'bad', restocked: 'bad',
+  };
+  const tone = (status) => STATUS_TONE[text(status).toLowerCase()] || '';
+
+  function badge(label, cls) {
+    const value = text(label);
+    if (!value) return null;
+    return h('span', { class: `badge ${cls || tone(value)}`.trim(), text: value });
+  }
+
+  function kicker(label) { return h('p', { class: 'card-kicker', text: label }); }
+
+  function kv(pairs, opts) {
+    const dl = h('dl', { class: 'kv' });
+    for (const [k, v, cls] of pairs) {
+      const value = text(v);
+      if (!value) continue;
+      dl.appendChild(h('dt', { text: k }));
+      dl.appendChild(h('dd', { class: cls || null, text: value }));
+    }
+    return dl.childNodes && dl.childNodes.length === 0 && !opts ? null : dl;
+  }
+
+  function card(kind, children, opts) {
+    opts = opts || {};
+    const el = h('article', { class: `card card-${kind}${opts.className ? ' ' + opts.className : ''}`, data: { type: kind } }, children);
+    if (opts.fixture) {
+      el.classList.add('is-fixture');
+      el.appendChild(h('span', { class: 'fixture-tag', text: 'Fixture · not live' }));
+    }
+    return el;
+  }
+
+  function tabs(panels) {
+    // panels: [{ label, node }]. Touch-native segmented control; the first panel is open.
+    const wrap = doc().createDocumentFragment ? doc().createDocumentFragment() : h('div');
+    const bar = h('div', { class: 'tabs', role: 'tablist' });
+    const bodies = [];
+    panels.forEach((p, i) => {
+      const body = h('div', { class: 'panel', role: 'tabpanel', hidden: i !== 0 }, p.node);
+      const tab = h('button', {
+        class: 'tab', type: 'button', role: 'tab', 'aria-selected': i === 0 ? 'true' : 'false', text: p.label,
+        on: { click: () => {
+          bodies.forEach((b, j) => { b.body.hidden = j !== i; b.tab.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
+        } },
+      });
+      bodies.push({ body, tab });
+      bar.appendChild(tab);
+    });
+    append(wrap, [bar, bodies.map((b) => b.body)]);
+    return wrap;
+  }
+
+  function expandable(el, label) {
+    // A clamp with a "more" control, for long bodies. Nothing is hidden from the reader.
+    el.classList.add('clamp');
+    const btn = h('button', { class: 'link-btn', type: 'button', text: label || 'More', on: { click: () => {
+      const open = el.classList.toggle('is-open');
+      btn.textContent = open ? 'Less' : (label || 'More');
+    } } });
+    return [el, btn];
+  }
+
+  // ------------------------------------------------------------------ components
+
+  function renderAssistant(d) {
+    const body = h('p', { class: 'card-body', text: text(d.text) });
+    return card('assistant', [kicker('Assistant'), text(d.text).length > 420 ? expandable(body) : body]);
+  }
+
+  function orderRow(o) {
+    return h('li', { class: 'row' }, [
+      h('span', { class: 'row-main' }, [h('strong', { text: text(o.order_number, '—') }), ' ', text(o.customer_name)]),
+      h('span', { class: 'row-sub', text: formatDate(o.placed_at) }),
+      h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: text(o.total) }), badge(o.fulfillment)]),
+    ]);
+  }
+
+  function renderOrder(d, opts) {
+    const items = list(d.items, 12);
+    const fulfils = list(d.fulfillments, 6);
+    const head = h('div', { class: 'card-head' }, [
+      h('div', {}, [
+        kicker('Order'),
+        h('h2', { class: 'card-title mono', text: text(d.order_number, '—') }),
+        h('p', { class: 'card-sub', text: text(d.customer_name) }),
+        d.customer_email ? h('p', { class: 'card-meta', text: text(d.customer_email) }) : null,
+      ]),
+      h('div', { class: 'badges' }, [badge(d.fulfillment), badge(d.payment)]),
+    ]);
+    const overview = kv([
+      ['Placed', formatDate(d.placed_at)],
+      ['Total', d.total],
+      ['Ships to', d.ships_to],
+      ['Cancelled', d.cancelled_at ? formatDate(d.cancelled_at) : ''],
+      ['Note', d.note],
+    ], true);
+    if (!d.detail) {
+      return card('order', [head, overview, h('p', { class: 'card-note', text: 'Ask for the order to see its items and shipping.' })], opts);
+    }
+    const itemList = h('ul', { class: 'rows' }, items.map((it) => h('li', { class: 'row' }, [
+      h('span', { class: 'row-main', text: text(it.title) }),
+      h('span', { class: 'row-sub', text: [text(it.variant), it.sku ? `SKU ${text(it.sku)}` : ''].filter(Boolean).join(' · ') }),
+      h('span', { class: 'row-side' }, [
+        h('span', { class: 'amount', text: text(it.total) }),
+        num(it.quantity) !== null ? h('span', { class: 'card-meta', text: `× ${it.quantity}` }) : null,
+      ]),
+    ])));
+    if (d.items_truncated) itemList.appendChild(h('li', { class: 'row card-note', text: 'More items than shown.' }));
+    const shipping = fulfils.length
+      ? h('ul', { class: 'rows' }, fulfils.map((f) => h('li', { class: 'row' }, [
+        h('span', { class: 'row-main', text: [text(f.carrier), text(f.number)].filter(Boolean).join(' · ') || 'Shipment' }),
+        h('span', { class: 'row-sub', text: formatDate(f.shipped_at) }),
+        h('span', { class: 'row-side' }, [badge(f.status)]),
+      ])))
+      : h('p', { class: 'card-note', text: 'Not shipped yet.' });
+    const customer = kv([['Name', d.customer_name], ['Email', d.customer_email], ['Ships to', d.ships_to]], true);
+    return card('order', [head, tabs([
+      { label: 'Overview', node: overview },
+      { label: `Items${items.length ? ' · ' + items.length : ''}`, node: itemList },
+      { label: 'Shipping', node: shipping },
+      { label: 'Customer', node: customer },
+    ])], opts);
+  }
+
+  function renderOrderList(d, opts) {
+    const orders = list(d.orders, 10);
+    const meta = [];
+    if (num(d.count) !== null) meta.push(`${d.count} order${d.count === 1 ? '' : 's'}`);
+    if (d.truncated) meta.push('more not shown');
+    return card('order_list', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Orders'), h('h2', { class: 'card-title', text: text(d.title, 'Orders') }), h('p', { class: 'card-meta', text: meta.join(' · ') })])]),
+      h('ul', { class: 'rows' }, orders.map(orderRow)),
+    ], opts);
+  }
+
+  function renderCustomer(d, opts) {
+    return card('customer', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Customer'), h('h2', { class: 'card-title', text: text(d.name, 'Customer') }), h('p', { class: 'card-sub', text: text(d.email) })])]),
+      h('div', { class: 'stats' }, [
+        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: num(d.orders) === null ? '—' : String(d.orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
+        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Spent' })]),
+      ]),
+      h('p', { class: 'card-note', text: 'Ask for their orders or their emails to see more.' }),
+    ], opts);
+  }
+
+  function renderCustomerList(d, opts) {
+    const customers = list(d.customers, 6);
+    return card('customer_list', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker(d.ambiguous ? 'Which one?' : 'Customers'), h('h2', { class: 'card-title', text: text(d.title, 'Customers') })])]),
+      h('ul', { class: 'rows' }, customers.map((c) => h('li', { class: 'row' }, [
+        h('span', { class: 'row-main', text: text(c.name, '—') }),
+        h('span', { class: 'row-sub', text: text(c.email) }),
+        h('span', { class: 'row-side' }, [
+          num(c.orders) !== null ? h('span', { class: 'card-meta', text: `${c.orders} order${c.orders === 1 ? '' : 's'}` }) : null,
+          c.spent ? h('span', { class: 'amount', text: text(c.spent) }) : null,
+        ]),
+      ]))),
+      d.ambiguous ? h('p', { class: 'card-note', text: 'Say which one you mean.' }) : null,
+    ], opts);
+  }
+
+  function renderProduct(d, opts) {
+    const products = list(d.products, 4);
+    if (!products.length) return null;
+    const p = products[0];
+    const facts = kv([['Fabric', p.fabric], ['Cut', p.cut], ['Origin', p.origin], ['Care', p.care]], true);
+    const desc = p.description ? expandable(h('p', { class: 'card-body', text: text(p.description) }), 'Read more') : null;
+    let table = null;
+    const measurements = list(p.measurements, 8);
+    if (measurements.length) {
+      const cols = Object.keys(measurements[0]);
+      table = h('div', { class: 'table-wrap' }, h('table', { class: 'mtable' }, [
+        h('thead', {}, h('tr', {}, cols.map((c) => h('th', { text: c })))),
+        h('tbody', {}, measurements.map((m) => h('tr', {}, cols.map((c) => h('td', { text: text(m[c]) }))))),
+      ]));
+    }
+    return card('product', [
+      h('div', { class: 'card-head' }, [
+        h('div', {}, [kicker('Product'), h('h2', { class: 'card-title', text: text(p.title, 'Product') }), h('p', { class: 'card-sub', text: text(p.subtitle) })]),
+        h('div', { class: 'badges' }, [badge(p.status)]),
+      ]),
+      facts, desc, table,
+      p.measurements_note && !measurements.length ? h('p', { class: 'card-note', text: text(p.measurements_note) }) : null,
+      products.length > 1 ? h('p', { class: 'card-note', text: `Also matched: ${products.slice(1).map((x) => text(x.title)).filter(Boolean).join(', ')}` }) : null,
+    ], opts);
+  }
+
+  const LEVEL_LABEL = { out: 'Out of stock', low: 'Low stock', oversold: 'Oversold', untracked: 'Not tracked', unknown: 'Unknown', ok: 'In stock' };
+  const LEVEL_TONE = { out: 'bad', low: 'warn', oversold: 'bad', ok: 'ok', untracked: '', unknown: '' };
+
+  function stockRow(v, withProduct) {
+    const avail = num(v.available);
+    const level = text(v.level, 'unknown');
+    let amount = avail === null ? '—' : `${avail} left`;
+    if (level === 'oversold') amount = `−${v.oversold_by}`;
+    if (level === 'untracked') amount = 'untracked';
+    return h('li', { class: 'row' }, [
+      h('span', { class: 'row-main', text: withProduct ? text(v.product, 'Product') : text(v.variant, 'Variant') }),
+      h('span', { class: 'row-sub', text: withProduct ? text(v.variant) : text(v.sku) }),
+      h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: amount }), badge(LEVEL_LABEL[level] || level, LEVEL_TONE[level] || '')]),
+    ]);
+  }
+
+  function renderInventory(d, opts) {
+    const products = list(d.products, 4);
+    const exceptions = list(d.exceptions, 16);
+    const children = [h('div', { class: 'card-head' }, [h('div', {}, [kicker('Inventory'), h('h2', { class: 'card-title', text: text(d.query, 'Stock') }), d.size ? h('p', { class: 'card-meta', text: `Size ${text(d.size)}` }) : null])])];
+    if (exceptions.length) {
+      children.push(h('p', { class: 'card-kicker', text: 'Needs attention' }));
+      children.push(h('ul', { class: 'rows' }, exceptions.map((e) => stockRow(e, true))));
+    } else {
+      children.push(h('p', { class: 'card-note', text: `Nothing at or below ${num(d.low_stock_at) === null ? 'the low-stock line' : d.low_stock_at + ' left'}.` }));
+    }
+    const all = products.map((p) => h('div', {}, [
+      h('p', { class: 'card-kicker', text: [text(p.title), num(p.total_inventory) !== null ? `${p.total_inventory} total` : ''].filter(Boolean).join(' · ') }),
+      h('ul', { class: 'rows' }, list(p.variants, 16).map((v) => stockRow(v, false))),
+    ]));
+    if (all.length) {
+      children.push(tabs([{ label: 'Exceptions', node: h('p', { class: 'card-note', text: exceptions.length ? `${exceptions.length} variant${exceptions.length === 1 ? '' : 's'} listed above.` : 'All variants are above the line.' }) }, { label: 'All variants', node: h('div', {}, all) }]));
+    }
+    return card('inventory', children, opts);
+  }
+
+  function renderSales(d, opts) {
+    const stats = [
+      [text(d.orders === null || d.orders === undefined ? '—' : d.orders), 'Orders'],
+      [text(d.aov, '—'), 'Avg order'],
+    ];
+    return card('sales_summary', [
+      kicker(text(d.title, 'Sales')),
+      h('div', { class: 'big', text: text(d.revenue, '—') }),
+      h('p', { class: 'card-meta', text: num(d.days) === 1 || !d.until ? formatDate(d.since, DAY_FMT) : [formatDate(d.since, DAY_FMT), formatDate(d.until, DAY_FMT)].filter(Boolean).join(' → ') }),
+      h('div', { class: 'stats' }, stats.map(([v, k]) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: v }), h('div', { class: 'stat-k', text: k })]))),
+      d.complete === false ? h('p', { class: 'card-note', text: text(d.caveat, 'Partial figure.') }) : null,
+      d.basis ? h('p', { class: 'card-note', text: text(d.basis) }) : null,
+    ], opts);
+  }
+
+  function renderEmailList(d, opts) {
+    const threads = list(d.threads, 10);
+    return card('email_list', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email'), h('h2', { class: 'card-title', text: text(d.title, 'Email') }), h('p', { class: 'card-meta', text: num(d.count) === null ? '' : `${d.count} thread${d.count === 1 ? '' : 's'}` })])]),
+      h('ul', { class: 'rows' }, threads.map((t) => {
+        const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0' }, [
+          h('span', { class: 'row-main' }, [h('strong', { text: text(t.from, '—') }), ' — ', text(t.subject, '(no subject)')]),
+          h('span', { class: 'row-sub', text: text(t.snippet) }),
+          h('span', { class: 'row-side' }, [
+            h('span', { class: 'card-meta', text: formatDate(t.date) }),
+            t.known_customer ? badge('Customer', 'quiet ok') : null,
+            t.likely_bulk ? badge('Bulk', 'quiet') : null,
+          ]),
+        ]);
+        row.addEventListener('click', () => row.classList.toggle('is-open'));
+        return row;
+      })),
+      h('p', { class: 'card-note', text: 'Say "read that one" to open a thread.' }),
+    ], opts);
+  }
+
+  function renderEmailThread(d, opts) {
+    const messages = list(d.messages, 6);
+    const nodes = messages.map((m, i) => {
+      const last = i === messages.length - 1;
+      const msg = h('div', { class: `msg${last ? '' : ' is-collapsed'}` }, [
+        h('div', { class: 'msg-head' }, [
+          h('div', {}, [h('div', { class: 'msg-from', text: text(m.from, '—') }), h('div', { class: 'msg-addr', text: text(m.from_email) })]),
+          h('div', { class: 'msg-date', text: formatDate(m.date) }),
+        ]),
+        h('p', { class: 'msg-body', text: text(m.body) }),
+      ]);
+      if (!last) msg.addEventListener('click', () => msg.classList.toggle('is-collapsed'));
+      return msg;
+    });
+    return card('email_thread', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email thread'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-meta', text: [num(d.message_count) === null ? '' : `${d.message_count} message${d.message_count === 1 ? '' : 's'}`, d.truncated ? 'older messages not shown' : ''].filter(Boolean).join(' · ') })])]),
+      h('div', {}, nodes),
+    ], opts);
+  }
+
+  function renderEmailDraft(d, opts) {
+    // Architecture only: Gmail is read-only. There is no send here and there must not be one.
+    return card('email_draft', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Draft · not sent'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-sub', text: d.to ? `To ${text(d.to)}` : '' })]), h('div', { class: 'badges' }, [badge('Draft', 'warn')])]),
+      h('p', { class: 'msg-body', text: text(d.body) }),
+      h('div', { class: 'actions' }, ['Rewrite', 'Shorter', 'More friendly'].map((label) => h('button', { class: 'action', type: 'button', disabled: 'disabled', 'aria-disabled': 'true', text: label }))),
+      h('p', { class: 'future', text: 'Editing and sending are not connected. Nothing has been sent.' }),
+    ], opts);
+  }
+
+  function renderAttention(d, opts) {
+    const items = list(d.items, 8);
+    return card('attention', [
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Attention'), h('h2', { class: 'card-title', text: `${items.length} require${items.length === 1 ? 's' : ''} attention` })])]),
+      h('ul', { class: 'rows' }, items.map((a) => h('li', { class: 'row' }, [
+        h('span', { class: 'row-main', text: text(a.title, '—') }),
+        h('span', { class: 'row-sub', text: text(a.detail) }),
+        h('span', { class: 'row-side' }, [badge(text(a.kind), a.level === 'red' ? 'bad' : a.level === 'green' ? 'ok' : 'warn')]),
+      ]))),
+    ], opts);
+  }
+
+  function renderConfirmation(d, opts) {
+    // The shape a future write would use. Buttons are present so the layout can be judged
+    // and disabled so nothing can be mistaken for a working control.
+    const tier = text(d.tier, 'amber') === 'red' ? 'red' : 'amber';
+    return card('confirmation', [
+      h('div', { class: 'card-head' }, [h('div', { class: `mark ${tier === 'red' ? 'bad' : 'warn'}` }, h('span', { text: '!' })), h('div', {}, [kicker(tier === 'red' ? 'Confirm · destructive' : 'Confirm'), h('h2', { class: 'card-title', text: text(d.title, 'Confirm') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
+      h('div', { class: 'actions' }, [
+        h('button', { class: `action tier-${tier}`, type: 'button', disabled: 'disabled', 'aria-disabled': 'true', text: text(d.confirm_label, 'Confirm') }),
+        h('button', { class: 'action', type: 'button', disabled: 'disabled', 'aria-disabled': 'true', text: 'Cancel' }),
+      ]),
+      h('p', { class: 'future', text: 'Actions are not connected. This assistant is read-only.' }),
+    ], opts);
+  }
+
+  const CHECK = () => {
+    const svg = doc().createElementNS ? doc().createElementNS('http://www.w3.org/2000/svg', 'svg') : h('span');
+    if (svg.setAttribute) {
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('aria-hidden', 'true');
+      const path = doc().createElementNS ? doc().createElementNS('http://www.w3.org/2000/svg', 'path') : h('span');
+      if (path.setAttribute) path.setAttribute('d', 'M5 12.5l4.5 4.5L19 7');
+      svg.appendChild(path);
+    }
+    return svg;
+  };
+
+  function renderSuccess(d, opts) {
+    return card('success', [
+      h('div', { class: 'card-head' }, [h('div', { class: 'mark ok' }, CHECK()), h('div', {}, [kicker('Done'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
+    ], Object.assign({ className: 'success' }, opts));
+  }
+
+  function renderError(d, opts) {
+    return card('error', [
+      h('div', { class: 'card-head' }, [h('div', { class: 'mark bad' }, h('span', { text: '×' })), h('div', {}, [kicker(text(d.service, 'assistant')), h('h2', { class: 'card-title', text: text(d.title, 'Something went wrong') }), h('p', { class: 'card-sub', text: text(d.recovery) })])]),
+    ], opts);
+  }
+
+  const RENDERERS = {
+    assistant: renderAssistant,
+    order: renderOrder,
+    order_list: renderOrderList,
+    customer: renderCustomer,
+    customer_list: renderCustomerList,
+    product: renderProduct,
+    inventory: renderInventory,
+    sales_summary: renderSales,
+    email_list: renderEmailList,
+    email_thread: renderEmailThread,
+    email_draft: renderEmailDraft,
+    attention: renderAttention,
+    confirmation: renderConfirmation,
+    success: renderSuccess,
+    error: renderError,
+  };
+  const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
+  const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant'];
+
+  function isValid(item) {
+    return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'
+      && TYPES.indexOf(item.type) !== -1 && item.data !== null && typeof item.data === 'object' && !Array.isArray(item.data);
+  }
+
+  function renderItem(item, opts) {
+    if (!isValid(item) || !RENDERERS[item.type]) return null;
+    try {
+      return RENDERERS[item.type](item.data, opts || {}) || null;
+    } catch (error) {
+      return null;   // a malformed payload draws nothing; the spoken answer still stands
+    }
+  }
+
+  function render(items, opts) {
+    const out = { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
+    if (!Array.isArray(items)) return out;
+    for (const item of items.slice(0, 16)) {   // more than the vocabulary is long is a bug upstream
+      if (!isValid(item)) { out.skipped.push(item && typeof item.type === 'string' ? item.type : 'invalid'); continue; }
+      if (item.type === 'context_stack') { out.stack = list(item.data.entries, 6); continue; }
+      if (item.type === 'error') out.errors.push(item.data);
+      const node = renderItem(item, opts);
+      if (!node) { out.skipped.push(item.type); continue; }
+      out.nodes.push(node);
+      if (CONTEXT_TYPES.indexOf(item.type) !== -1) out.hasContext = true;
+    }
+    return out;
+  }
+
+  function renderStack(entries, opts) {
+    // Chips for the context stack; the active one is pressed. Selection is the app's.
+    opts = opts || {};
+    return list(entries, 6).map((e) => h('button', {
+      class: 'chip', type: 'button', 'aria-pressed': opts.active === e.ref ? 'true' : 'false',
+      data: { kind: text(e.kind), ref: text(e.ref) },
+      on: { click: () => opts.onSelect && opts.onSelect(e) },
+    }, [h('span', { class: 'chip-kind', text: text(e.kind) }), h('span', { class: 'chip-label', text: text(e.label) })]));
+  }
+
+  return { render, renderItem, renderStack, isValid, formatDate, TYPES, CONTEXT_TYPES, h };
+});

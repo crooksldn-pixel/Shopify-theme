@@ -1,0 +1,95 @@
+/* A very small DOM stand-in for exercising web/ui.js under Node.
+ *
+ * It implements exactly what the renderer uses — createElement, textContent, appendChild,
+ * className/classList, dataset, setAttribute, addEventListener — and records everything so a
+ * test can assert what was built. It deliberately has no innerHTML: if the renderer ever
+ * reached for it, the test run would throw.
+ */
+'use strict';
+
+class ClassList {
+  constructor(el) { this.el = el; }
+  _set() { return new Set((this.el.className || '').split(/\s+/).filter(Boolean)); }
+  _write(set) { this.el.className = [...set].join(' '); }
+  add(...names) { const s = this._set(); names.forEach((n) => s.add(n)); this._write(s); }
+  remove(...names) { const s = this._set(); names.forEach((n) => s.delete(n)); this._write(s); }
+  contains(name) { return this._set().has(name); }
+  toggle(name) { const s = this._set(); const had = s.has(name); if (had) s.delete(name); else s.add(name); this._write(s); return !had; }
+}
+
+class Node {
+  constructor(type) { this.nodeType = type; this.parentNode = null; }
+}
+
+class Text extends Node {
+  constructor(data) { super(3); this.data = String(data); }
+  get textContent() { return this.data; }
+  allText() { return this.data; }
+  toString() { return this.data; }
+}
+
+class Element extends Node {
+  constructor(tag, ns) {
+    super(1);
+    this.tagName = String(tag).toUpperCase();
+    this.namespaceURI = ns || null;
+    this.childNodes = [];
+    this.attributes = {};
+    this.dataset = {};
+    this.listeners = {};
+    this.className = '';
+    this.hidden = false;
+    this.classList = new ClassList(this);
+  }
+  appendChild(node) {
+    if (!(node instanceof Node)) throw new TypeError('appendChild expects a Node');
+    if (node.nodeType === 11) {
+      // A fragment empties itself into its new parent, as in the real DOM.
+      for (const child of node.childNodes.slice()) this.appendChild(child);
+      node.childNodes = [];
+      return node;
+    }
+    if (node.parentNode) node.parentNode.removeChild(node);
+    node.parentNode = this;
+    this.childNodes.push(node);
+    return node;
+  }
+  removeChild(node) { const i = this.childNodes.indexOf(node); if (i !== -1) this.childNodes.splice(i, 1); node.parentNode = null; return node; }
+  get firstChild() { return this.childNodes[0] || null; }
+  get children() { return this.childNodes.filter((n) => n.nodeType === 1); }
+  get textContent() { return this.childNodes.map((n) => n.textContent).join(''); }
+  set textContent(value) { this.childNodes = []; if (value !== '' && value !== null && value !== undefined) this.appendChild(new Text(value)); }
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+  getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
+  addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); }
+  dispatch(type) { for (const fn of this.listeners[type] || []) fn({ type, target: this, currentTarget: this, preventDefault() {} }); }
+  querySelectorAll(selector) {
+    // Only what the tests need: ".class" and "tag" selectors, descendants included.
+    const out = [];
+    const match = (el) => (selector.startsWith('.') ? el.classList.contains(selector.slice(1)) : el.tagName === selector.toUpperCase());
+    const walk = (el) => { for (const c of el.children) { if (match(c)) out.push(c); walk(c); } };
+    walk(this);
+    return out;
+  }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+  get innerHTML() { throw new Error('innerHTML must not be used'); }
+  set innerHTML(_) { throw new Error('innerHTML must not be used'); }
+  get outerHTML() { throw new Error('outerHTML must not be used'); }
+  insertAdjacentHTML() { throw new Error('insertAdjacentHTML must not be used'); }
+  // Every string that reached the tree, in order, for assertions.
+  allText() { return this.childNodes.map((n) => n.allText()).join(''); }
+  countNodes() { return 1 + this.childNodes.reduce((n, c) => n + (c.nodeType === 1 ? c.countNodes() : 1), 0); }
+}
+
+class Fragment extends Element {
+  constructor() { super('#document-fragment'); this.nodeType = 11; }
+}
+
+const document = {
+  createElement: (tag) => new Element(tag),
+  createElementNS: (ns, tag) => new Element(tag, ns),
+  createTextNode: (data) => new Text(data),
+  createDocumentFragment: () => new Fragment(),
+};
+
+module.exports = { document, Element, Text, Fragment };

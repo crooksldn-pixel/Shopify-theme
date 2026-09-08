@@ -22,6 +22,9 @@ class ToolCall:
     ok: bool = True
     error: str | None = None
     duration_ms: float | None = None
+    # The tool's own bounded result, kept only so app/presentation.py can choose what the
+    # tablet shows from data rather than from the prose. Never returned to the tablet raw.
+    result: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)

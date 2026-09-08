@@ -1,14 +1,16 @@
-/* CROOKS Assistant — tablet client.
+/* CROOKS — the tablet client.
  *
- * The assistant speaks with Derek, an ElevenLabs voice generated on the Mac and sent here as
- * an MP3 by POST /speak. The tablet never sees the ElevenLabs credential: it posts the answer
- * text it already has on screen and gets audio back. Android's own speechSynthesis is still
- * here, but only as the fallback for when ElevenLabs cannot answer — a silent tablet is a bug.
+ * Voice first: the owner holds the orb, speaks, releases. The backend transcribes, thinks,
+ * looks things up and answers; the answer is spoken by the ElevenLabs voice generated on the
+ * Mac and sent here as an MP3 by POST /speak, and shown beside cards the backend chose from
+ * the tool results (the `ui` list — see app/presentation.py and ui.js). Android's own
+ * speechSynthesis is still here, but only as the fallback for when ElevenLabs cannot answer.
  *
  * Four Android/Chrome behaviours dictate most of the awkward code here, and all four fail
  * silently rather than throwing:
- *   1. Media will not play until the user has touched the page. The talk button is that touch:
- *      the first pointerdown primes both the <audio> element and speechSynthesis.
+ *   1. Media will not play until the user has touched the page. The hold region is that
+ *      touch: the first pointerdown primes the <audio> element, speechSynthesis and the
+ *      AudioContext that lets the orb see the voice.
  *   2. speechSynthesis needs a real user gesture too, so the same handler fires a zero-length
  *      utterance to unlock it.
  *   3. speechSynthesis truncates long utterances. We chunk to ~200 characters on sentence
@@ -18,24 +20,48 @@
  * speechSynthesis.pause() is never called: on Android it behaves as cancel(), so a "pause" is
  * unrecoverable. One <audio> element is reused for every answer — creating one per turn leaks
  * a decoder per question and eventually stops playing anything at all.
+ *
+ * The microphone is opened once and kept warm. Opening it on every press was the cause of the
+ * first word of each question being clipped: getUserMedia takes a few hundred milliseconds to
+ * hand over a live track, and the owner had already started speaking.
  */
 'use strict';
 
 const $ = (id) => document.getElementById(id);
 
 const el = {
-  conn: $('conn'), stage: $('stage'), state: $('state-label'), heard: $('heard'),
-  answer: $('answer'), timings: $('timings'), talk: $('talk'), talkLabel: $('talk-label'),
+  body: document.body, stage: $('stage'), conn: $('conn'), connText: $('conn-text'),
+  orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
+  heard: $('heard'), answer: $('answer'), errline: $('errline'), timings: $('timings'),
+  context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
+  deck: $('deck'), deckBack: $('deck-back'), cards: $('cards'),
+  attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
+  svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice') },
+  talk: $('talk'), talkLabel: $('talk-label'),
   settings: $('settings'), settingsBtn: $('settings-btn'), closeSettings: $('close-settings'),
+  voiceStatus: $('voice-status'), voiceName: $('voice-name'),
   voiceSelect: $('voice-select'), voiceNote: $('voice-note'), preview: $('preview-voice'),
   micTest: $('mic-test'), speakToggle: $('speak-toggle'), timingToggle: $('timing-toggle'),
   health: $('health-detail'), resetSession: $('reset-session'),
+  dev: $('dev'), devGrid: $('dev-grid'), devText: $('dev-text'),
 };
 
 const store = {
   get(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; } },
   set(key, value) { try { localStorage.setItem(key, value); } catch { /* private mode */ } },
 };
+
+// The developer gate. ?dev=1 turns fixtures on for this browser, ?dev=0 turns them off; the
+// choice persists so the URL can be plain afterwards. Nothing else reads this flag.
+const DEV = (() => {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.has('dev')) store.set('crooks.dev', params.get('dev') === '0' ? '0' : '1');
+  } catch { /* no URL API */ }
+  return store.get('crooks.dev', '0') === '1';
+})();
+
+const REDUCED = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false, addEventListener() {} };
 
 let sessionId = store.get('crooks.session', '') || (Math.random().toString(36).slice(2, 14));
 store.set('crooks.session', sessionId);
@@ -55,24 +81,79 @@ let speakGeneration = 0;     // bumped on every stop; anything from an older gen
 let speakAbort = null;       // aborts an in-flight /speak so a new answer never queues behind it
 let currentAudioUrl = null;  // the object URL the player is holding, revoked when it is done
 let pendingStart = false;    // true between pointerdown and the recorder actually starting
+let lastWasError = false;    // so an error stays on screen after it has been read out
+let lastErrorTitle = '';
+let speakingVia = null;      // 'player' while the ElevenLabs MP3 plays, 'browser' for the fallback
 
 // One player, for the life of the page. 2ms of silence, used once inside the first touch to
 // prove to Chrome that this element is allowed to make sound.
 const player = new Audio();
 player.preload = 'auto';
 const SILENT_WAV = 'data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YRAAAACAgICAgICAgICAgICAgICA';
-let lastWasError = false;    // so an error stays on screen after it has been read out
+
+/* ------------------------------------------------------------- orb + audio */
+
+// One AudioContext, created on the first touch. The orb reads two levels from it: the warm
+// microphone while LISTENING, the ElevenLabs playback while SPEAKING. If either analyser is
+// not available the orb falls back to a quiet synthetic pulse — never to silence on screen,
+// and never at the cost of the audio itself.
+const audio = window.CrooksAudio ? window.CrooksAudio.create() : null;
+
+function syntheticLevel() {
+  const t = performance.now();
+  return 0.18 + 0.16 * Math.abs(Math.sin(t / 140)) * Math.abs(Math.sin(t / 310));
+}
+
+function orbLevel(state) {
+  if (state === 'LISTENING') return audio && audio.hasMic ? audio.micLevel() : 0.12;
+  if (state === 'SPEAKING') {
+    if (speakingVia === 'player' && audio && audio.hasPlayer) return audio.playerLevel();
+    return syntheticLevel();
+  }
+  return 0;
+}
+
+const orb = window.CrooksOrb
+  ? window.CrooksOrb.create(el.orb, { size: 340, reducedMotion: REDUCED.matches, getLevel: orbLevel })
+  : null;
+REDUCED.addEventListener('change', (event) => { if (orb) orb.setReducedMotion(event.matches); });
 
 /* ------------------------------------------------------------------ state */
 
+const LABELS = {
+  READY: ['System ready.', 'What do you need?'],
+  LISTENING: ['Listening', 'Release to send'],
+  TRANSCRIBING: ['Transcribing', ''],
+  THINKING: ['Thinking', ''],
+  'CHECKING SHOPIFY': ['Checking Shopify', ''],
+  'CHECKING EMAIL': ['Checking email', ''],
+  SPEAKING: ['Speaking', 'Hold to interrupt'],
+  SUCCESS: ['Done', ''],
+  ERROR: ['Something went wrong', 'Hold to try again'],
+};
+
 function setState(state, label) {
   el.stage.dataset.state = state;
-  el.state.textContent = label || state.toLowerCase().replace(/^./, (c) => c.toUpperCase());
+  const [title, sub] = LABELS[state] || [state, ''];
+  el.state.textContent = label || title;
+  el.sub.textContent = sub;
+  if (orb) orb.setState(state);
 }
 
 function setConn(state, text) {
   el.conn.dataset.state = state;
-  el.conn.textContent = text;
+  el.connText.textContent = text;
+}
+
+function setMode(mode) {
+  if (el.body.dataset.mode === mode) return;
+  el.body.dataset.mode = mode;
+  el.talk.setAttribute('aria-label', mode === 'orb' ? 'Hold to speak' : 'Hold to speak (dock)');
+}
+
+const HAPTIC = { start: 12, done: [10, 60, 10], error: [40, 50, 40] };
+function haptic(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* unsupported */ }
 }
 
 /* -------------------------------------------------------------- wake lock */
@@ -84,20 +165,33 @@ async function acquireWakeLock() {
     wakeLock.addEventListener('release', () => { wakeLock = null; });
   } catch { /* denied or unsupported; the screen will just sleep */ }
 }
-// Android drops the lock whenever the page is hidden, so re-acquire on every return.
+
+// Android drops the lock whenever the page is hidden, so re-acquire on every return. Hidden
+// also means: stop talking, stop drawing, and let go of the microphone unless mid-sentence.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') acquireWakeLock();
-  else stopSpeaking();
+  if (document.visibilityState === 'visible') {
+    acquireWakeLock();
+    if (orb) orb.start();
+    warmMic();
+    pollHealth();
+  } else {
+    stopSpeaking();
+    if (orb) orb.stop();
+    if (!recording) releaseMicStream();
+  }
 });
+window.addEventListener('pagehide', () => { stopSpeaking(); releaseMicStream(); });
 
 /* ------------------------------------------------------------------ voices */
+
+function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
 function loadVoices() {
   const list = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
   if (!list.length) return;                       // first call is empty in Chrome — wait for the event
   voices = list;
   const saved = store.get('crooks.voice', '');
-  el.voiceSelect.innerHTML = '';
+  clear(el.voiceSelect);
   const sorted = [...voices].sort((a, b) => {
     const rank = (v) => (v.lang === 'en-GB' ? 0 : v.lang.startsWith('en') ? 1 : 2);
     return rank(a) - rank(b) || a.name.localeCompare(b.name);
@@ -123,17 +217,24 @@ el.voiceSelect.addEventListener('change', () => store.set('crooks.voice', el.voi
 /* ------------------------------------------------------------------ speech */
 
 function unlockSpeech() {
-  // Must happen inside a user gesture, for both engines. Chrome M71 removed speech without
-  // user activation and blocks audio the same way; the failure mode for each is total silence
-  // with no error anywhere, so both are primed on the first touch and never again.
+  // Must happen inside a user gesture, for both engines and for the AudioContext. Chrome M71
+  // removed speech without user activation and blocks audio the same way; the failure mode
+  // for each is total silence with no error anywhere, so all three are primed on the first
+  // touch and never again.
   if (speechUnlocked) return;
   speechUnlocked = true;
+  if (audio) audio.ensure();
   try {
     player.src = SILENT_WAV;
     player.volume = 1.0;
     const primed = player.play();
     if (primed && primed.then) {
-      primed.then(() => { player.pause(); player.removeAttribute('src'); }).catch(() => {});
+      primed.then(() => {
+        player.pause();
+        player.removeAttribute('src');
+        // The context is running by now if it ever will be; bind the player to it once.
+        if (audio) audio.attachPlayer(player);
+      }).catch(() => {});
     }
   } catch { /* the play() below will show whether it mattered */ }
   if (!window.speechSynthesis) return;
@@ -165,11 +266,13 @@ function stopSpeaking() {
   } catch { /* nothing was playing */ }
   releaseAudioUrl();
   if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch { /* noop */ } }
+  speakingVia = null;
 }
 
 // Where the screen lands once nothing is speaking any more.
 function settle(isError) {
-  if (!busy) setState(isError ? 'ERROR' : 'READY');
+  speakingVia = null;
+  if (!busy && !recording) setState(isError ? 'ERROR' : 'READY', isError ? lastErrorTitle : '');
 }
 
 function chunkForSpeech(text, limit = 200) {
@@ -195,7 +298,7 @@ function chunkForSpeech(text, limit = 200) {
 // `reason` is logged rather than shown — the owner wants the answer, not an apology.
 function browserSpeak(text, { isError = false, reason = '' } = {}) {
   if (!window.speechSynthesis || !el.speakToggle.checked || !text) { settle(isError); return; }
-  console.warn(`[crooks] Derek unavailable (${reason || 'unknown'}) — using the Android voice`);
+  console.warn(`[crooks] ElevenLabs voice unavailable (${reason || 'unknown'}) — using the Android voice`);
   const generation = speakGeneration;
   const parts = chunkForSpeech(text);
   const chosen = voices.find((v) => v.name === el.voiceSelect.value);
@@ -212,6 +315,7 @@ function browserSpeak(text, { isError = false, reason = '' } = {}) {
     utterance.onerror = next;   // a failed chunk moves on; a cancelled chain stops above
     window.speechSynthesis.speak(utterance);
   };
+  speakingVia = 'browser';
   setState('SPEAKING');
   next();
 }
@@ -252,7 +356,7 @@ async function speakAnswer(text, { isError = false } = {}) {
     if (!blob.size) { browserSpeak(text, { isError, reason: 'empty audio' }); return; }
     playAudio(blob, text, generation, isError);
   } catch (error) {
-    // An abort is the owner interrupting, not a failure: they are already holding the button.
+    // An abort is the owner interrupting, not a failure: they are already holding the orb.
     if (controller.signal.aborted || generation !== speakGeneration) return;
     browserSpeak(text, { isError, reason: 'backend unreachable' });
   } finally {
@@ -275,13 +379,28 @@ function playAudio(blob, text, generation, isError) {
     releaseAudioUrl();
     browserSpeak(text, { isError, reason: 'the tablet could not play the audio' });
   };
+  // The analyser path: resume the context if Android suspended it, and bind the player to it
+  // if the first touch did not manage to (the context was still starting). Binding is a
+  // one-off; attachPlayer is a no-op once done. Playback is never delayed for it.
+  if (audio) { audio.resume(); audio.attachPlayer(player); }
+  speakingVia = 'player';
   player.src = url;
   player.volume = 1.0;
   const started = player.play();
   if (started && started.catch) {
-    started.catch(() => {
-      // Chrome refused to play without a gesture. The talk button is one, so this should not
-      // happen after the first question — but the answer still gets spoken.
+    started.then(() => {
+      // A player bound to a context that is not running plays silence. That is the one
+      // failure this path can cause, so it is the one it checks for and hands to the fallback.
+      if (!audio || !audio.hasPlayer || audio.state === 'running') return;
+      setTimeout(() => {
+        if (generation !== speakGeneration || audio.state === 'running') return;
+        try { player.pause(); } catch { /* noop */ }
+        releaseAudioUrl();
+        browserSpeak(text, { isError, reason: 'audio context suspended' });
+      }, 400);
+    }).catch(() => {
+      // Chrome refused to play without a gesture. The hold is one, so this should not happen
+      // after the first question — but the answer still gets spoken.
       if (generation !== speakGeneration) return;
       releaseAudioUrl();
       browserSpeak(text, { isError, reason: 'autoplay blocked' });
@@ -291,25 +410,103 @@ function playAudio(blob, text, generation, isError) {
 
 /* ------------------------------------------------------------------ health */
 
+function setService(name, ok) {
+  const node = el.svc[name];
+  if (!node) return;
+  node.dataset.ok = ok === true ? 'true' : ok === false ? 'false' : 'unknown';
+}
+
 async function pollHealth() {
+  if (document.hidden) return;
   try {
     const response = await fetch('/health', { cache: 'no-store' });
     const data = await response.json();
-    const failed = Object.entries(data.checks).filter(([, c]) => !c.ok).map(([k]) => k);
-    if (!failed.length) setConn('ok', 'Connected');
-    else setConn('degraded', `${failed.join(', ')} down`);
-    el.health.textContent = Object.entries(data.checks)
+    const checks = data.checks || {};
+    const failed = Object.entries(checks).filter(([, c]) => !c.ok).map(([k]) => k);
+    if (!failed.length) setConn('ok', 'Online');
+    else setConn('degraded', 'Degraded');
+    setService('shopify', checks.shopify ? checks.shopify.ok : null);
+    setService('gmail', checks.gmail ? checks.gmail.ok : null);
+    const canHear = !checks.speech || checks.speech.ok;
+    const canSpeak = !checks.tts || checks.tts.ok;
+    setService('voice', canHear && canSpeak);
+    el.health.textContent = Object.entries(checks)
       .map(([k, c]) => `${c.ok ? 'ok  ' : 'FAIL'} ${k.padEnd(15)} ${c.detail}`)
       .join('\n');
+    const voice = data.voice || {};
+    if (voice.voice) {
+      el.voiceName.textContent = voice.enabled
+        ? `${voice.voice} · ElevenLabs ${voice.model || ''}`.trim() + ' · generated on the Mac'
+        : 'ElevenLabs voice switched off · the fallback voice below is in use';
+      el.preview.textContent = voice.enabled ? `Preview ${voice.voice}` : 'Preview fallback voice';
+    }
+    el.voiceStatus.textContent = voice.ok === false ? 'Unavailable' : voice.enabled === false ? 'Off' : 'Ready';
+    el.voiceStatus.className = `badge quiet ${voice.ok === false ? 'bad' : voice.enabled === false ? 'warn' : 'ok'}`;
   } catch {
-    setConn('down', 'Backend unreachable');
+    setConn('down', 'Offline');
+    setService('shopify', null); setService('gmail', null); setService('voice', null);
     el.health.textContent = 'Cannot reach the backend.';
+    el.voiceStatus.textContent = 'Unknown';
+    el.voiceStatus.className = 'badge quiet';
   }
 }
 pollHealth();
 setInterval(pollHealth, 15000);
 
-/* --------------------------------------------------------------- recording */
+/* ------------------------------------------------------------- microphone */
+
+const MIC_CONSTRAINTS = {
+  audio: {
+    echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+    channelCount: 1,
+    sampleRate: { ideal: 16000 },   // ideal, never exact — exact fails outright on some devices
+  },
+};
+let micStream = null;     // the one warm stream; the recorder and the analyser both use it
+let micOpening = null;    // the in-flight getUserMedia, shared so two presses open one stream
+
+function micIsLive() {
+  return Boolean(micStream) && micStream.getAudioTracks().some((track) => track.readyState === 'live');
+}
+
+async function ensureMicStream() {
+  if (micIsLive()) return micStream;
+  if (micOpening) return micOpening;
+  micOpening = (async () => {
+    const stream = await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS);
+    for (const track of stream.getAudioTracks()) {
+      // Android ends the track when another app takes the microphone. Forget the stream so
+      // the next press opens a fresh one rather than recording silence.
+      track.addEventListener('ended', () => {
+        if (micStream === stream) { micStream = null; if (audio) audio.detachMic(); }
+      });
+    }
+    micStream = stream;
+    if (audio) audio.attachMic(stream);   // analysis only; MediaRecorder reads the same tracks
+    return stream;
+  })();
+  try { return await micOpening; } finally { micOpening = null; }
+}
+
+function releaseMicStream() {
+  if (!micStream) return;
+  if (audio) audio.detachMic();
+  for (const track of micStream.getTracks()) track.stop();
+  micStream = null;
+}
+
+function warmMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  ensureMicStream().catch(() => { /* the press will report the real error */ });
+}
+
+// Warm on load when permission is already granted (no prompt), otherwise on the first touch.
+if (navigator.permissions && navigator.permissions.query) {
+  navigator.permissions.query({ name: 'microphone' })
+    .then((status) => { if (status.state === 'granted') warmMic(); })
+    .catch(() => {});
+}
+document.addEventListener('pointerdown', warmMic, { once: true, capture: true });
 
 function pickMimeType() {
   const candidates = [
@@ -321,51 +518,51 @@ function pickMimeType() {
   return '';
 }
 
+function showMicError(message) {
+  lastWasError = true;
+  lastErrorTitle = 'Microphone unavailable';
+  el.errline.textContent = message;
+  setState('ERROR', lastErrorTitle);
+  haptic(HAPTIC.error);
+}
+
 async function startRecording() {
   if (recording || busy || pendingStart) return;
   pendingStart = true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    setState('ERROR');
-    el.answer.textContent = window.isSecureContext
+    pendingStart = false;
+    showMicError(window.isSecureContext
       ? 'This browser has no microphone support.'
-      : 'The microphone needs a secure HTTPS connection. Open the tailscale ts.net address, not the LAN address.';
+      : 'The microphone needs a secure HTTPS connection. Open the tailscale ts.net address, not the LAN address.');
     return;
   }
   stopSpeaking();
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true, noiseSuppression: true, autoGainControl: true,
-        channelCount: 1,
-        sampleRate: { ideal: 16000 },   // ideal, never exact — exact fails outright on some devices
-      },
-    });
-    if (!pendingStart) {
-      // The thumb lifted while the permission/stream was being set up. Recording now would
-      // capture silence after the question was already asked.
-      stream.getTracks().forEach((track) => track.stop());
-      return;
-    }
+    // Warm path: no await, so the recorder starts inside the same task as the touch.
+    const stream = micIsLive() ? micStream : await ensureMicStream();
+    if (!pendingStart) return;   // the thumb lifted while permission was being granted
     const mimeType = pickMimeType();
     mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType, audioBitsPerSecond: 32000 } : {});
     chunks = [];
     mediaRecorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
     mediaRecorder.onstop = () => {
-      stream.getTracks().forEach((track) => track.stop());
+      // The stream stays open: the next press starts recording on the first sample.
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
       if (blob.size > 800) sendAudio(blob);
-      else { setState('READY'); el.answer.textContent = 'That was too short — hold the button while you speak.'; }
+      else { setState('READY'); el.sub.textContent = 'That was too short — hold while you speak.'; }
     };
     mediaRecorder.start(250);
     recording = true;
     el.talk.dataset.recording = 'true';
-    el.talkLabel.textContent = 'Listening…';
+    el.talkLabel.textContent = 'Release to send';
     setState('LISTENING');
+    if (orb) orb.pulse();
+    haptic(HAPTIC.start);
   } catch (error) {
-    setState('ERROR');
-    el.answer.textContent = error && error.name === 'NotAllowedError'
+    showMicError(error && error.name === 'NotAllowedError'
       ? 'Microphone permission was refused. Allow it in the browser settings, choosing "While using the app".'
-      : `Could not open the microphone: ${error}`;
+      : 'Could not open the microphone. Check nothing else is using it.');
+    console.warn('[crooks] microphone', error);
   } finally {
     pendingStart = false;
   }
@@ -376,8 +573,110 @@ function stopRecording() {
   if (!recording) return;
   recording = false;
   el.talk.dataset.recording = 'false';
-  el.talkLabel.textContent = 'Hold to talk';
+  el.talkLabel.textContent = 'Hold to speak';
   try { mediaRecorder.stop(); } catch { /* already stopped */ }
+}
+
+/* ------------------------------------------------------------ context deck */
+
+// What is on the surface, most recent last. Each entry is one turn's cards (or a fixture),
+// kept as DOM so going back is a move, not a re-render. Bounded, because it is DOM.
+const history = [];
+const MAX_HISTORY = 6;
+let historyIndex = -1;
+let currentStack = [];
+let attentionItems = [];
+
+function entitiesOf(items) {
+  const out = [];
+  for (const item of items || []) {
+    const d = item && item.data ? item.data : {};
+    if (item.type === 'order' && d.order_id) out.push(String(d.order_id));
+    if (item.type === 'customer' && d.customer_id) out.push(String(d.customer_id));
+    if (item.type === 'email_thread' && d.thread_id) out.push(String(d.thread_id));
+    if ((item.type === 'inventory' || item.type === 'product') && d.products && d.products[0] && d.products[0].product_id) {
+      out.push(String(d.products[0].product_id));
+    }
+  }
+  return out;
+}
+
+function pushContext(nodes, items, question) {
+  history.push({ nodes, entities: entitiesOf(items), question: question || '' });
+  while (history.length > MAX_HISTORY) history.shift();
+  showHistory(history.length - 1);
+}
+
+function showHistory(index) {
+  if (index < 0 || index >= history.length) return;
+  historyIndex = index;
+  clear(el.cards);
+  for (const node of history[index].nodes) el.cards.appendChild(node);
+  el.cards.scrollTop = 0;
+  el.deck.dataset.depth = String(Math.min(2, index));
+  el.backBtn.hidden = index === 0;
+  renderStackChips();
+  setMode('context');
+}
+
+function goBack() {
+  if (historyIndex > 0) showHistory(historyIndex - 1);
+  else goHome();
+}
+
+function goHome() {
+  setMode('orb');
+}
+
+function renderStackChips() {
+  clear(el.stack);
+  if (!window.CrooksUI || !currentStack.length) return;
+  const active = history[historyIndex] ? history[historyIndex].entities : [];
+  const chips = window.CrooksUI.renderStack(currentStack, {
+    active: active.find((ref) => currentStack.some((e) => e.ref === ref)) || '',
+    onSelect: (entry) => {
+      // Bring the most recent cards for that entity forward, if we still hold them.
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].entities.indexOf(entry.ref) !== -1) { showHistory(i); haptic(HAPTIC.start); return; }
+      }
+    },
+  });
+  for (const chip of chips) el.stack.appendChild(chip);
+}
+
+function renderAttentionSurface() {
+  if (!attentionItems.length) { el.attention.hidden = true; return; }
+  el.attention.hidden = false;
+  el.attentionCount.textContent = String(attentionItems.length);
+  el.attentionText.textContent = attentionItems.length === 1 ? 'Requires attention' : 'Require attention';
+}
+
+// The answer to a turn: cards first, then the mode they need.
+function renderTurn(data) {
+  const ui = window.CrooksUI ? window.CrooksUI.render(data.ui, {}) : { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
+  if (ui.skipped.length) console.warn('[crooks] skipped ui items:', ui.skipped.join(', '));
+  el.errline.textContent = '';
+  lastErrorTitle = '';
+  if (ui.errors.length) {
+    lastErrorTitle = ui.errors[0].title || 'Something went wrong';
+    el.errline.textContent = ui.errors[0].recovery || '';
+  }
+  if (ui.stack) currentStack = ui.stack;
+  const attention = (data.ui || []).filter((i) => i && i.type === 'attention' && i.data && Array.isArray(i.data.items));
+  attentionItems = attention.length ? attention[0].data.items : attentionItems;
+  renderAttentionSurface();
+
+  const answer = data.answer || '';
+  if (ui.hasContext) {
+    pushContext(ui.nodes, data.ui, data.question);
+  } else if (answer.length > 260 && window.CrooksUI) {
+    // Too long to read beneath the orb: give it a card and the room that comes with one.
+    const node = window.CrooksUI.renderItem({ type: 'assistant', data: { text: answer } });
+    if (node) pushContext([node].concat(ui.nodes), [], data.question);
+    else setMode('orb');
+  } else {
+    setMode('orb');
+  }
 }
 
 /* -------------------------------------------------------------------- turn */
@@ -404,7 +703,8 @@ function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePo
 
 async function submit(body, isAudio) {
   busy = true;
-  el.talk.disabled = true;
+  el.talk.dataset.busy = 'true';
+  el.errline.textContent = '';
   setState('TRANSCRIBING', isAudio ? 'Transcribing' : 'Thinking');
   startStatePolling();
   try {
@@ -414,8 +714,11 @@ async function submit(body, isAudio) {
     if (isAudio) setTimeout(() => { if (busy && el.stage.dataset.state === 'TRANSCRIBING') setState('THINKING'); }, 1200);
     const response = await fetch('/turn', options);
     if (!response.ok) {
-      setState('ERROR');
-      el.answer.textContent = `The backend answered with an error (${response.status}). Try again.`;
+      lastWasError = true;
+      lastErrorTitle = 'Backend error';
+      el.errline.textContent = `The backend answered with an error (${response.status}). Try again.`;
+      setState('ERROR', lastErrorTitle);
+      haptic(HAPTIC.error);
       return;
     }
     const data = await response.json();
@@ -430,19 +733,24 @@ async function submit(body, isAudio) {
     renderTimings(data.timings_ms);
 
     lastWasError = Boolean(data.error_kind);
+    renderTurn(data);
     // The text is on screen before the voice is asked for; the answer never waits on audio.
-    setState(lastWasError ? 'ERROR' : 'READY');
+    setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
+    haptic(lastWasError ? HAPTIC.error : HAPTIC.done);
     speakAnswer(data.answer, { isError: lastWasError });   // deliberately not awaited
   } catch (error) {
-    setState('ERROR');
-    el.answer.textContent = 'I lost contact with the backend. It may have restarted.';
-    setConn('down', 'Backend unreachable');
+    lastWasError = true;
+    lastErrorTitle = 'Connection lost';
+    el.errline.textContent = 'I lost contact with the backend. It may have restarted.';
+    setState('ERROR', lastErrorTitle);
+    setConn('down', 'Offline');
+    haptic(HAPTIC.error);
   } finally {
     stopStatePolling();
     busy = false;
-    el.talk.disabled = false;
+    el.talk.dataset.busy = 'false';
     // If speech is off there is no onend to settle the state, so do it here.
-    if (!el.speakToggle.checked) setState(lastWasError ? 'ERROR' : 'READY');
+    if (!el.speakToggle.checked) setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
   }
 }
 
@@ -456,27 +764,54 @@ function sendAudio(blob) {
 
 /* ------------------------------------------------------------------ events */
 
-el.talk.addEventListener('pointerdown', (event) => {
+// The hold. Attached to the talk region (the whole stage in orb mode, the dock in context
+// mode) and to the orb itself, so the small orb still answers to a thumb when cards are up.
+function onHoldStart(event) {
+  if (event.button !== undefined && event.button !== 0) return;
   event.preventDefault();
-  // Capture the pointer so pointerup reaches this button even if the thumb drifts off it —
+  // Capture the pointer so pointerup reaches this element even if the thumb drifts off it —
   // otherwise a slightly sliding thumb means the recording never stops.
-  try { el.talk.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
+  try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
   unlockSpeech();          // must be inside the gesture
-  stopSpeaking();          // before anything else: Derek must not be recorded answering himself
+  stopSpeaking();          // before anything else: the voice must not be recorded answering itself
   acquireWakeLock();
+  if (busy) return;        // a turn is in flight; the label says so
+  setState('LISTENING');   // the orb wakes on the touch itself, not on the recorder
   startRecording();        // start before any other UI work, or the first word is clipped
-});
-for (const type of ['pointerup', 'pointercancel']) {
-  el.talk.addEventListener(type, (event) => {
-    event.preventDefault();
-    try { el.talk.releasePointerCapture(event.pointerId); } catch { /* noop */ }
-    stopRecording();
-  });
 }
-el.talk.addEventListener('contextmenu', (event) => event.preventDefault());
+function onHoldEnd(event) {
+  event.preventDefault();
+  try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
+  stopRecording();
+}
+for (const target of [el.talk, el.orbFrame]) {
+  target.addEventListener('pointerdown', onHoldStart);
+  target.addEventListener('pointerup', onHoldEnd);
+  target.addEventListener('pointercancel', onHoldEnd);
+  target.addEventListener('contextmenu', (event) => event.preventDefault());
+}
+// Keyboard: hold Space or Enter on the talk control.
+el.talk.addEventListener('keydown', (event) => {
+  if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
+    event.preventDefault(); unlockSpeech(); stopSpeaking(); if (!busy) { setState('LISTENING'); startRecording(); }
+  }
+});
+el.talk.addEventListener('keyup', (event) => {
+  if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); stopRecording(); }
+});
+
+el.homeBtn.addEventListener('click', goHome);
+el.backBtn.addEventListener('click', goBack);
+el.deckBack.addEventListener('click', goBack);
+el.attention.addEventListener('click', () => {
+  if (!window.CrooksUI || !attentionItems.length) return;
+  const node = window.CrooksUI.renderItem({ type: 'attention', data: { items: attentionItems } });
+  if (node) pushContext([node], [], '');
+});
 
 el.settingsBtn.addEventListener('click', () => { unlockSpeech(); loadVoices(); pollHealth(); el.settings.showModal(); });
 el.closeSettings.addEventListener('click', () => el.settings.close());
+el.settings.addEventListener('click', (event) => { if (event.target === el.settings) el.settings.close(); });
 el.preview.addEventListener('click', () => {
   // Previews the real voice, through the real path — which is also the quickest way to tell
   // whether ElevenLabs is answering from the tablet itself.
@@ -495,31 +830,43 @@ el.resetSession.addEventListener('click', async () => {
   store.set('crooks.session', sessionId);
   turns = 0;
   store.set('crooks.turns', '0');
+  history.length = 0;
+  historyIndex = -1;
+  currentStack = [];
+  clear(el.cards);
+  renderStackChips();
   el.heard.textContent = '';
-  el.answer.textContent = 'Started a new conversation.';
+  el.answer.textContent = '';
+  el.errline.textContent = '';
+  lastWasError = false;
   el.settings.close();
+  setMode('orb');
+  setState('SUCCESS', 'New conversation');
+  haptic(HAPTIC.done);
+  setTimeout(() => { if (!busy && !recording && el.stage.dataset.state === 'SUCCESS') setState('READY'); }, 1400);
 });
 
-// M2's diagnostic, kept: records three seconds and reports what the backend actually decoded.
+// M2's diagnostic, kept: records three seconds through the warm stream and reports what the
+// backend actually decoded, then plays it back.
 el.micTest.addEventListener('click', async () => {
   el.settings.close();
+  setMode('orb');
   setState('LISTENING', 'Microphone test');
-  el.answer.textContent = 'Recording three seconds…';
+  el.sub.textContent = 'Recording three seconds…';
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await ensureMicStream();
     const mimeType = pickMimeType();
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     const parts = [];
     recorder.ondataavailable = (e) => { if (e.data.size) parts.push(e.data); };
     recorder.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());
       try {
         const form = new FormData();
         form.append('audio', new Blob(parts, { type: recorder.mimeType }), 'test.webm');
         const response = await fetch('/audio-test', { method: 'POST', body: form });
         if (!response.ok) throw new Error(`backend answered ${response.status}`);
         const data = await response.json();
-        setState(data.ok && data.usable ? 'READY' : 'ERROR');
+        setState(data.ok && data.usable ? 'READY' : 'ERROR', data.ok && data.usable ? 'Microphone OK' : 'Microphone problem');
         el.answer.textContent = data.ok
           ? `${data.duration_s}s, ${data.sample_rate}Hz ${data.channels}ch, peak ${data.peak_dbfs}dBFS, RMS ${data.rms_dbfs}dBFS, clipped ${(data.clipped_ratio * 100).toFixed(2)}% (${data.clipped_ms}ms) — ${data.usable ? 'usable' : 'too quiet or clipped'}. Recorded as ${data.mime_type}. Playing back what the backend heard.`
           : `Decode failed: ${data.error}`;
@@ -527,22 +874,68 @@ el.micTest.addEventListener('click', async () => {
           // Play back exactly what the backend decoded — the M2 "is it intelligible" check.
           const bytes = Uint8Array.from(atob(data.wav_base64), (c) => c.charCodeAt(0));
           const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
-          const player = new Audio(url);
-          player.onended = () => URL.revokeObjectURL(url);
-          player.play().catch(() => { /* autoplay blocked: the stats still tell the story */ });
+          const playback = new Audio(url);
+          playback.onended = () => URL.revokeObjectURL(url);
+          playback.onerror = () => URL.revokeObjectURL(url);
+          playback.play().catch(() => { /* autoplay blocked: the stats still tell the story */ });
         }
       } catch (error) {
-        setState('ERROR');
-        el.answer.textContent = `Microphone test failed: ${error}`;
+        setState('ERROR', 'Microphone test failed');
+        el.errline.textContent = String(error && error.message ? error.message : error);
       }
     };
     recorder.start(250);
     setTimeout(() => recorder.stop(), 3000);
   } catch (error) {
-    setState('ERROR');
-    el.answer.textContent = `Microphone test failed: ${error}`;
+    showMicError('Microphone test failed: the microphone could not be opened.');
   }
 });
 
+/* ------------------------------------------------------------- developer */
+
+if (DEV) {
+  el.dev.hidden = false;
+  const banner = document.createElement('div');
+  banner.className = 'dev-banner';
+  banner.textContent = 'Developer mode · fixtures are not live data';
+  document.body.appendChild(banner);
+  const script = document.createElement('script');
+  script.src = '/static/fixtures.js';
+  script.onload = () => {
+    const fixtures = window.CrooksFixtures ? window.CrooksFixtures.list : [];
+    for (const fixture of fixtures) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn';
+      button.textContent = fixture.label;
+      button.addEventListener('click', () => {
+        el.settings.close();
+        const ui = window.CrooksUI.render(fixture.items, { fixture: true });
+        if (ui.stack) { currentStack = ui.stack; }
+        el.heard.textContent = `Fixture: ${fixture.label}`;
+        el.answer.textContent = '';
+        if (fixture.id === 'success') setState('SUCCESS');
+        else if (fixture.id === 'error') setState('ERROR', ui.errors[0] ? ui.errors[0].title : '');
+        else setState('READY');
+        pushContext(ui.nodes, fixture.items, `fixture:${fixture.id}`);
+      });
+      el.devGrid.appendChild(button);
+    }
+  };
+  document.body.appendChild(script);
+  el.devText.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || busy) return;
+    event.preventDefault();   // closing the sheet moves focus to a button; Enter must not press it
+    const text = el.devText.value.trim();
+    if (!text) return;
+    el.devText.value = '';
+    el.settings.close();
+    unlockSpeech();
+    stopSpeaking();
+    submit({ text, session_id: sessionId, turns }, false);
+  });
+}
+
 acquireWakeLock();
+setMode('orb');
 setState('READY');

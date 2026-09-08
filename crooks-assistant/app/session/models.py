@@ -47,6 +47,11 @@ class Session:
     state: str = "READY"
     state_detail: str = ""
 
+    # The entities this conversation has touched — an order, a customer, an email thread, a
+    # product — most recent first. Presentation state for the tablet's context stack and
+    # nothing else: no permission decision reads it (that is issued_ids, above).
+    context: list[dict[str, str]] = field(default_factory=list)
+
     def set_state(self, state: str, detail: str = "") -> None:
         self.state = state
         self.state_detail = detail
@@ -78,6 +83,16 @@ class Session:
         )
         self.proposals.append(proposal)
         return proposal
+
+    def remember_context(self, kind: str, label: str, ref: str, *, limit: int = 6) -> None:
+        """Bring an entity to the front of the context stack (or add it), keeping the stack
+        short: six entries is already more than a screen can usefully show."""
+        if not (kind and label and ref):
+            return
+        ref = str(ref)
+        self.context = [c for c in self.context if not (c["kind"] == kind and c["ref"] == ref)]
+        self.context.insert(0, {"kind": kind, "label": str(label)[:80], "ref": ref})
+        del self.context[limit:]
 
     def set_focus(self, kind: str, value: str) -> None:
         if value:

@@ -116,7 +116,10 @@ async def dispatch(
     _harvest_ids(payload, session)
     if calls is not None:
         ms = payload.get("_ms") if isinstance(payload, dict) else None
-        calls.append(ToolCall(name=name, args=args, ok=True, duration_ms=ms))
+        calls.append(ToolCall(
+            name=name, args=args, ok=True, duration_ms=ms,
+            result=payload if isinstance(payload, dict) else None,
+        ))
 
     text = _render(payload)
     if decision.tier is Tier.AMBER:

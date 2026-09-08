@@ -2,59 +2,119 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0d0d0e">
-<title>CROOKS Assistant</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,interactive-widget=resizes-content">
+<meta name="theme-color" content="#07070a">
+<meta name="color-scheme" content="dark">
+<title>CROOKS</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body data-mode="orb">
+<div class="app" id="app">
 
-<header class="bar">
-  <span class="wordmark">CROOKS</span>
-  <span id="conn" class="conn" data-state="connecting">Connecting…</span>
-  <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">⚙</button>
-</header>
+  <header class="top">
+    <span class="wordmark">CROOKS</span>
+    <span id="conn" class="conn" data-state="connecting" role="status">
+      <span class="conn-dot" aria-hidden="true"></span><span id="conn-text">Connecting</span>
+    </span>
+    <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings and diagnostics">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
 
-<main>
-  <section id="stage" class="stage" data-state="READY">
-    <p id="state-label" class="state-label">Ready</p>
-    <p id="heard" class="heard" aria-live="polite"></p>
-    <p id="answer" class="answer" aria-live="polite">Hold the button and ask me something.</p>
-    <p id="timings" class="timings" hidden></p>
-  </section>
+  <main id="stage" class="stage" data-state="READY">
 
-  <button id="talk" class="talk" type="button" aria-label="Hold to talk">
-    <span class="talk-inner"><span id="talk-label">Hold&nbsp;to&nbsp;talk</span></span>
-  </button>
-</main>
+    <section id="orb-zone" class="orb-zone">
+      <div class="orb-frame" id="orb-frame">
+        <canvas id="orb" class="orb" width="340" height="340" aria-hidden="true"></canvas>
+      </div>
+      <div class="orb-caption">
+        <p id="state-label" class="state-label" role="status" aria-live="polite">System ready.</p>
+        <p id="state-sub" class="state-sub">What do you need?</p>
+        <p id="heard" class="heard"></p>
+        <p id="answer" class="answer" aria-live="polite"></p>
+        <p id="errline" class="errline"></p>
+      </div>
+    </section>
 
-<dialog id="settings" class="settings">
-  <h2>Settings</h2>
+    <section id="context" class="context" aria-label="Context">
+      <nav id="context-nav" class="context-nav" aria-label="Context navigation">
+        <button id="home-btn" class="chip chip-home" type="button" aria-label="Back to the assistant">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Assistant</span>
+        </button>
+        <button id="back-btn" class="chip" type="button" hidden>Back</button>
+        <div id="stack" class="stack" aria-label="Active context"></div>
+      </nav>
+      <div id="deck" class="deck" data-depth="0">
+        <div class="deck-ghost g2" aria-hidden="true"></div>
+        <button class="deck-ghost g1" id="deck-back" type="button" aria-label="Previous context"></button>
+        <div id="cards" class="cards" aria-live="polite"></div>
+      </div>
+      <p id="timings" class="timings" hidden></p>
+    </section>
 
-  <p class="note">Answers are spoken by Derek, generated on the Mac. The voice below is only
-  used if ElevenLabs cannot answer.</p>
-  <label class="field">
-    <span>Fallback voice</span>
-    <select id="voice-select"></select>
-  </label>
-  <p id="voice-note" class="note"></p>
-  <div class="row">
-    <button id="preview-voice" class="btn" type="button">Preview Derek</button>
-    <button id="mic-test" class="btn" type="button">Microphone test</button>
-  </div>
+    <!-- The hold-to-speak region. Transparent and much larger than anything it sits over: the
+         whole stage in orb mode, a dock along the bottom in context mode. -->
+    <button id="talk" class="talk" type="button" aria-label="Hold to speak">
+      <span id="talk-label" class="talk-label">Hold to speak</span>
+    </button>
 
-  <label class="check"><input type="checkbox" id="speak-toggle" checked> Speak answers aloud</label>
-  <label class="check"><input type="checkbox" id="timing-toggle"> Show timings</label>
+  </main>
 
-  <h3>Backend</h3>
-  <pre id="health-detail" class="health">…</pre>
+  <footer class="bottom">
+    <button id="attention" class="attention" type="button" hidden>
+      <span class="n" id="attention-count">0</span>
+      <span class="t" id="attention-text">Require attention</span>
+      <span class="arrow" aria-hidden="true">›</span>
+    </button>
+    <div class="services" id="services" aria-label="Service status">
+      <span class="service" id="svc-shopify" data-ok="unknown"><span>Shopify</span><span class="service-dot" aria-hidden="true"></span></span>
+      <span class="service" id="svc-gmail" data-ok="unknown"><span>Gmail</span><span class="service-dot" aria-hidden="true"></span></span>
+      <span class="service" id="svc-voice" data-ok="unknown"><span>Voice</span><span class="service-dot" aria-hidden="true"></span></span>
+    </div>
+  </footer>
 
-  <div class="row">
-    <button id="reset-session" class="btn" type="button">New conversation</button>
-    <button id="close-settings" class="btn primary" type="button">Done</button>
+</div>
+
+<dialog id="settings" class="sheet" aria-label="Settings">
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-scroll">
+    <div class="sheet-head">
+      <h2>Settings</h2>
+      <button id="close-settings" class="btn primary" type="button" style="flex:0 0 auto;min-width:96px">Done</button>
+    </div>
+
+    <h3>Voice</h3>
+    <p class="voice-line"><span id="voice-status" class="badge quiet">Checking</span><span id="voice-name">ElevenLabs voice, generated on the Mac</span></p>
+    <label class="check"><input type="checkbox" id="speak-toggle" checked> Speak answers aloud</label>
+    <div class="row-btns">
+      <button id="preview-voice" class="btn" type="button">Preview voice</button>
+      <button id="mic-test" class="btn" type="button">Microphone test</button>
+    </div>
+    <p class="note" style="margin-top:14px">If the ElevenLabs voice cannot answer, the tablet speaks with the voice below.</p>
+    <label class="field"><span>Fallback voice</span><select id="voice-select"></select></label>
+    <p id="voice-note" class="note"></p>
+
+    <h3>Diagnostics</h3>
+    <label class="check"><input type="checkbox" id="timing-toggle"> Show timings</label>
+    <pre id="health-detail" class="health">…</pre>
+
+    <h3>Conversation</h3>
+    <div class="row-btns">
+      <button id="reset-session" class="btn" type="button">New conversation</button>
+    </div>
+
+    <section id="dev" class="dev" hidden>
+      <h3>Developer · fixtures are not live data</h3>
+      <p class="note">Renders sample components with made-up data, marked as fixtures. Open the page with <span style="font-family:var(--mono)">?dev=1</span> to show this section, <span style="font-family:var(--mono)">?dev=0</span> to hide it.</p>
+      <div id="dev-grid" class="dev-grid"></div>
+      <label class="field" style="margin-top:14px"><span>Ask by typing</span><input id="dev-text" type="text" autocomplete="off" placeholder="Show me order 1930"></label>
+    </section>
   </div>
 </dialog>
 
+<script src="/static/orb.js"></script>
+<script src="/static/audio-viz.js"></script>
+<script src="/static/ui.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

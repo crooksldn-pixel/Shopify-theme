@@ -299,3 +299,40 @@ async def test_the_configured_voice_is_the_one_that_was_approved(client):
     assert settings.tts_voice_id == "Q0Et7LOU7VpeoeCRQAVS"
     assert settings.tts_model == "eleven_flash_v2_5"
     assert settings.tts_output_format == "mp3_44100_128"
+
+
+# --------------------------------------------------------------------------- the ui contract
+
+
+async def test_turn_returns_structured_ui_chosen_from_tool_results(client):
+    """The cards come from the tool payloads, and the payloads themselves stay on the Mac."""
+    from app.providers.base import ToolCall, TurnResult
+
+    async def turn(session_id, text):
+        app.state.runtime.sessions.get_or_create(session_id)   # as the real provider does
+        return TurnResult(text="Order 1930 is unfulfilled.", session_id=session_id, tool_calls=[
+            ToolCall(name="shopify_find_order", args={"query": "1930"}, result={"orders": [{
+                "order_id": "gid://shopify/Order/1", "order_number": "CROOKS-1930", "total": "60.00 GBP",
+                "fulfillment": "UNFULFILLED", "payment": "PAID", "customer_name": "Jo Bloggs",
+                "customer_id": "gid://shopify/Customer/2", "placed_at": "2026-09-08T10:00:00Z",
+            }]}),
+        ])
+
+    app.state.runtime.provider.turn = turn
+    body = (await client.post("/turn", json={"text": "show me order 1930", "session_id": "ui1"})).json()
+    assert [item["type"] for item in body["ui"]] == ["order", "context_stack"]
+    assert body["ui"][0]["data"]["order_number"] == "#1930"
+    assert body["ui"][0]["data"]["total"] == "£60.00"
+    assert "result" not in body["tool_calls"][0]
+
+
+async def test_error_turns_carry_an_error_card(client):
+    body = (await client.post("/turn", json={"text": "  ", "session_id": "ui2"})).json()
+    assert body["ui"] == [{"type": "error", "data": {
+        "service": "speech", "kind": "empty", "title": "Didn't catch that", "recovery": "Hold the orb while you speak.",
+    }}]
+
+
+async def test_ui_is_always_present_and_a_list(client):
+    body = (await client.post("/turn", json={"text": "hello", "session_id": "ui3"})).json()
+    assert isinstance(body["ui"], list)

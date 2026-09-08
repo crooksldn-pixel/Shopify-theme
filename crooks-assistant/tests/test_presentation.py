@@ -1,0 +1,230 @@
+"""The `ui` contract: what the tablet is told to show, and the bounds on it.
+
+Every card is built from a tool result, by key. These tests hold the two properties the tablet
+relies on — nothing outside the vocabulary, nothing unbounded — and the two the office relies
+on: a card never carries a field the whitelist does not name, and a refused tool shows as
+"not allowed", never as a result.
+"""
+
+from __future__ import annotations
+
+from app.presentation import (
+    LOW_STOCK_AT,
+    MAX_BODY_CHARS,
+    MAX_MESSAGES,
+    MAX_ORDERS,
+    MAX_THREADS,
+    UI_TYPES,
+    present,
+)
+from app.providers.base import ToolCall
+from app.session.models import Session
+
+ORDER = {
+    "order_id": "gid://shopify/Order/1", "order_number": "CROOKS-1930",
+    "placed_at": "2026-09-08T10:00:00Z", "fulfillment": "UNFULFILLED", "payment": "PAID",
+    "total": "60.00 GBP", "customer_name": "Daniel Sear", "customer_id": "gid://shopify/Customer/7",
+}
+DETAIL = {
+    **ORDER,
+    "items": [{"title": "Yard Jeans", "variant": "Blue Wash / M", "sku": "YJ-M", "quantity": 1, "total": "60.00 GBP"}],
+    "items_truncated": False,
+    "fulfillments": [{"status": "SUCCESS", "shipped_at": "2026-09-09", "carrier": "Royal Mail", "number": "RM1"}],
+    "cancelled_at": None, "note": "Leave with neighbour", "ships_to": "London United Kingdom",
+    "shipping_address_full": "12 Somewhere Street, E1 6AN",  # must never reach the screen
+}
+
+
+def ok(name: str, result: dict) -> ToolCall:
+    return ToolCall(name=name, args={}, ok=True, result=result)
+
+
+def types(items: list[dict]) -> list[str]:
+    return [i["type"] for i in items]
+
+
+# --------------------------------------------------------------------------- vocabulary
+
+
+def test_every_item_has_a_type_from_the_vocabulary_and_a_data_dict():
+    items = present([ok("shopify_find_order", {"orders": [ORDER]}), ok("gmail_search", {"threads": [
+        {"thread_id": "t1", "from": "Jo", "subject": "Hi", "date": "Mon", "snippet": "…"}]})])
+    assert items
+    for item in items:
+        assert set(item) == {"type", "data"}
+        assert item["type"] in UI_TYPES
+        assert isinstance(item["data"], dict)
+
+
+def test_unknown_tools_and_non_dict_results_produce_nothing():
+    assert present([ok("mock_echo", {"echo": "hi"}), ToolCall(name="shopify_find_order", args={}, ok=True, result=None)]) == []
+    assert present([]) == []
+    assert present(None) == []
+
+
+# --------------------------------------------------------------------------- orders
+
+
+def test_one_order_is_an_order_card_with_the_hash_number_and_pounds():
+    (card,) = present([ok("shopify_find_order", {"orders": [ORDER]})])
+    assert card["type"] == "order"
+    assert card["data"]["order_number"] == "#1930"
+    assert card["data"]["total"] == "£60.00"
+    assert card["data"]["fulfillment"] == "unfulfilled"
+    assert card["data"]["customer_name"] == "Daniel Sear"
+    assert card["data"]["detail"] is False
+
+
+def test_detail_supersedes_the_summary_of_the_same_order_in_one_turn():
+    items = present([ok("shopify_find_order", {"orders": [ORDER]}), ok("shopify_order_detail", DETAIL)])
+    assert types(items) == ["order"]
+    data = items[0]["data"]
+    assert data["detail"] is True
+    assert data["items"][0]["variant"] == "Blue Wash / M"
+    assert data["fulfillments"][0]["carrier"] == "Royal Mail"
+    assert data["ships_to"] == "London United Kingdom"
+    assert "shipping_address_full" not in data  # whitelist, not a copy
+
+
+def test_several_orders_are_a_bounded_list():
+    orders = [{**ORDER, "order_id": f"gid://shopify/Order/{i}", "order_number": f"CROOKS-{i}"} for i in range(40)]
+    (card,) = present([ok("shopify_list_orders", {"days": 1, "days_ago": 0, "count": 40, "truncated": True, "orders": orders})])
+    assert card["type"] == "order_list"
+    assert card["data"]["title"] == "Today"
+    assert len(card["data"]["orders"]) == MAX_ORDERS
+    assert card["data"]["count"] == 40 and card["data"]["truncated"] is True
+
+
+def test_an_ambiguous_customer_search_asks_which_customer():
+    result = {
+        "query": "dan", "orders": [], "ambiguous": True,
+        "customers_matched": [{"customer_id": "c1", "name": "Dan A"}, {"customer_id": "c2", "name": "Dan B"}],
+    }
+    (card,) = present([ok("shopify_find_order", result)])
+    assert card["type"] == "customer_list" and card["data"]["ambiguous"] is True
+    assert [c["name"] for c in card["data"]["customers"]] == ["Dan A", "Dan B"]
+
+
+# --------------------------------------------------------------------------- customers, stock, sales
+
+
+def test_customer_card_and_list():
+    one = {"customers": [{"customer_id": "c1", "name": "Jo", "email": "jo@example.com", "orders": 3, "spent": "180.00 GBP"}]}
+    (card,) = present([ok("shopify_find_customer", one)])
+    assert card["type"] == "customer" and card["data"]["spent"] == "£180.00" and card["data"]["orders"] == 3
+    many = {"customers": one["customers"] * 2, "ambiguous": True}
+    (card,) = present([ok("shopify_find_customer", many)])
+    assert card["type"] == "customer_list" and card["data"]["title"] == "Which customer?"
+
+
+def test_inventory_marks_exceptions_by_level():
+    result = {"product": "Yard Jeans", "products": [{
+        "product_id": "p1", "title": "Blue Wash Yard Jeans", "status": "ACTIVE", "total_inventory": 9,
+        "variants": [
+            {"variant_id": "v1", "variant": "S", "available": 0, "oversold_by": 0, "tracked": True},
+            {"variant_id": "v2", "variant": "M", "available": 3, "oversold_by": 0, "tracked": True},
+            {"variant_id": "v3", "variant": "L", "available": 0, "oversold_by": 2, "tracked": True},
+            {"variant_id": "v4", "variant": "XL", "available": 40, "oversold_by": 0, "tracked": True},
+            {"variant_id": "v5", "variant": "XXL", "available": None, "oversold_by": 0, "tracked": False},
+        ],
+    }]}
+    (card,) = present([ok("shopify_inventory", result)])
+    assert card["type"] == "inventory"
+    levels = {v["variant"]: v["level"] for v in card["data"]["products"][0]["variants"]}
+    assert levels == {"S": "out", "M": "low", "L": "oversold", "XL": "ok", "XXL": "untracked"}
+    assert [e["variant"] for e in card["data"]["exceptions"]] == ["S", "M", "L"]
+    assert card["data"]["low_stock_at"] == LOW_STOCK_AT
+    assert "_exceptions" not in card["data"]["products"][0]
+
+
+def test_sales_summary_derives_aov_from_real_figures_only():
+    result = {"days": 1, "days_ago": 0, "orders": 12, "revenue": 430.5, "currency": "GBP", "complete": True,
+              "basis": "orders created in the period"}
+    (card,) = present([ok("shopify_sales_summary", result)])
+    assert card["type"] == "sales_summary"
+    assert card["data"]["revenue"] == "£430.50" and card["data"]["aov"] == "£35.88"
+    assert card["data"]["title"] == "Today"
+    (empty,) = present([ok("shopify_sales_summary", {**result, "orders": 0, "revenue": 0})])
+    assert empty["data"]["aov"] is None
+    (yesterday,) = present([ok("shopify_sales_summary", {**result, "days_ago": 1})])
+    assert yesterday["data"]["title"] == "Yesterday"
+
+
+# --------------------------------------------------------------------------- email
+
+
+def test_email_list_and_thread_are_bounded():
+    threads = [{"thread_id": f"t{i}", "from": "Jo", "from_email": "jo@example.com", "subject": "Re: order",
+                "date": "Mon", "snippet": "x" * 900, "likely_bulk": False, "known_customer": True} for i in range(30)]
+    (card,) = present([ok("gmail_search", {"query": "newer_than:1d", "count": 30, "threads": threads})])
+    assert card["type"] == "email_list"
+    assert len(card["data"]["threads"]) == MAX_THREADS
+    assert len(card["data"]["threads"][0]["snippet"]) <= 300
+    messages = [{"from": "Jo", "from_email": "jo@example.com", "date": "Mon", "subject": "Re: order",
+                 "body": "b" * 10_000} for _ in range(20)]
+    (card,) = present([ok("gmail_read_thread", {"thread_id": "t1", "message_count": 20, "messages_shown": 20, "messages": messages})])
+    assert card["type"] == "email_thread"
+    assert len(card["data"]["messages"]) == MAX_MESSAGES
+    assert len(card["data"]["messages"][0]["body"]) <= MAX_BODY_CHARS
+    assert card["data"]["truncated"] is True
+    assert card["data"]["subject"] == "Re: order"
+
+
+# --------------------------------------------------------------------------- errors
+
+
+def test_a_failed_shopify_call_is_a_calm_error_with_no_raw_detail():
+    failed = ToolCall(name="shopify_find_order", args={"query": "1930"}, ok=False,
+                      error="ShopifyError: 502 Bad Gateway <html>…</html> token=shpat_secret")
+    (card,) = present([failed])
+    assert card["type"] == "error"
+    assert card["data"]["service"] == "shopify" and card["data"]["title"] == "Shopify unavailable"
+    assert "shpat" not in repr(card) and "html" not in repr(card)
+
+
+def test_a_refused_tool_shows_as_not_allowed():
+    refused = ToolCall(name="shopify_cancel_order", args={"order_id": "x"}, ok=False, error="registered as RED")
+    (card,) = present([refused])
+    assert card["data"]["kind"] == "blocked" and card["data"]["title"] == "Not allowed"
+    assert "read-only" in card["data"]["recovery"]
+
+
+def test_one_error_per_service_and_turn_errors_are_named():
+    calls = [ToolCall(name="gmail_search", args={}, ok=False, error="a"), ToolCall(name="gmail_read_thread", args={}, ok=False, error="b")]
+    items = present(calls, error_kind="timeout")
+    assert types(items) == ["error", "error"]
+    assert {i["data"]["service"] for i in items} == {"gmail", "assistant"}
+    (speech,) = present([], error_kind="speech")
+    assert speech["data"]["title"] == "Couldn't understand that"
+    (unknown,) = present([], error_kind="something_new")
+    assert unknown["data"]["title"] == "Something went wrong"
+
+
+# --------------------------------------------------------------------------- context stack
+
+
+def test_context_stack_appears_once_the_conversation_has_two_entities():
+    session = Session(session_id="s")
+    items = present([ok("shopify_find_order", {"orders": [ORDER]})], session=session)
+    # One order carries its customer too: two entries, most specific first.
+    assert types(items) == ["order", "context_stack"]
+    stack = items[-1]["data"]["entries"]
+    assert [(e["kind"], e["label"]) for e in stack] == [("customer", "Daniel Sear"), ("order", "#1930")]
+
+    thread = {"thread_id": "t1", "messages": [{"from": "Jo", "subject": "Re: order 1930", "body": "hi", "date": "Mon"}]}
+    items = present([ok("gmail_read_thread", thread)], session=session)
+    stack = items[-1]["data"]["entries"]
+    assert stack[0] == {"kind": "email", "label": "Re: order 1930", "ref": "t1"}
+    assert len(stack) == 3
+
+    # Touching the order again brings it to the front rather than duplicating it.
+    present([ok("shopify_order_detail", DETAIL)], session=session)
+    assert [e["kind"] for e in session.context] == ["customer", "order", "email"]
+    assert len(session.context) == 3
+
+
+def test_no_context_stack_for_a_single_entity_or_without_a_session():
+    session = Session(session_id="s")
+    thread = {"thread_id": "t1", "messages": [{"from": "Jo", "subject": "Hi", "body": "hi"}]}
+    assert types(present([ok("gmail_read_thread", thread)], session=session)) == ["email_thread"]
+    assert types(present([ok("shopify_find_order", {"orders": [ORDER]})])) == ["order"]

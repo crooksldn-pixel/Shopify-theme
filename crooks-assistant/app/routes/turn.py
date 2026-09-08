@@ -14,6 +14,7 @@ import uuid
 from fastapi import APIRouter, File, Form, Request, UploadFile
 
 from app.logging.turnlog import redact
+from app.presentation import present
 from app.speech.decode import DecodeError, decode
 
 log = logging.getLogger("crooks.turn")
@@ -143,6 +144,7 @@ async def turn(
             }
             for c in result.tool_calls
         ],
+        calls=result.tool_calls,
     )
 
 
@@ -170,17 +172,22 @@ def _answer(
     question: str = "",
     tool_calls: list | None = None,
     lost_thread: bool = False,
+    calls: list | None = None,
 ) -> dict:
     tool_calls = tool_calls or []
     timings["total"] = (time.perf_counter() - started) * 1000
     turns = 0
     names: set[str] = set()
+    session = None
     try:
         session = runtime.sessions.get(session_id)
         turns = session.turns
         names = set(session.pii_seen)
     except KeyError:
         pass
+    # What the screen shows beside the answer: cards chosen from the tool results, never from
+    # the prose. See app/presentation.py for the vocabulary and the bounds.
+    ui = present(calls, session=session, error_kind=error_kind)
     payload = {
         "session_id": session_id,
         "turns": turns,
@@ -193,8 +200,11 @@ def _answer(
         "tool_calls": tool_calls,
         "transcript": transcript,
         "timings_ms": {k: round(v, 1) for k, v in timings.items()},
+        "ui": ui,
     }
-    runtime.turnlog.write(payload, names=names)
+    # The cards repeat what the tools returned, which the log already has in redacted form;
+    # the log keeps only which kinds were shown.
+    runtime.turnlog.write({**payload, "ui": [item["type"] for item in ui]}, names=names)
     return payload
 
 
