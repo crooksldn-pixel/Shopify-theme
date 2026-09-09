@@ -85,6 +85,7 @@ class ActionProposal:
     reason: str = ""
     code: str = ""                             # controlled outcome code, once terminal
     caller: str = ""                           # who authorised it, when someone did
+    delivered_at: float | None = None          # when its card first left for the tablet
     executed_at: float | None = None
     finished_at: float | None = None
     verified: bool | None = None

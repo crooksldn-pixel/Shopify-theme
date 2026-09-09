@@ -384,3 +384,12 @@ def test_the_pollers_never_stack_requests():
     assert "if (!busy || inFlight || document.hidden) return;" in state
     assert "signal: controller.signal" in state and "inFlight = false" in state
     assert "STATE_POLL_TIMEOUT_MS" in state
+
+
+def test_a_card_already_on_screen_is_not_pushed_again():
+    """A spoken yes re-presents the waiting card; the tablet keeps the one it shows (and the
+    order beside it) rather than pushing a second copy onto the deck."""
+    body = function_body(APP_JS, "function renderTurn(data)")
+    assert "if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui))" in body
+    keep = function_body(APP_JS, "function onlyLiveCardsAlreadyShown(items)")
+    assert "'confirmation'" in keep and "'arming'" in keep and "'armed'" in keep

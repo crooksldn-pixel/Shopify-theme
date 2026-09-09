@@ -143,7 +143,8 @@ async def turn(
     if waiting is not None and is_affirmation(text):
         live.heard = text
         live.set_state("READY")
-        runtime.actions.deliver(waiting.proposal_id)
+        # The card is re-presented as it stands: its clock started when it was delivered and
+        # a spoken yes does not wind it back. The tablet keeps the card it already shows.
         calls = [ToolCall(name=waiting.tool_name, args={}, ok=True, result={}, proposal_id=waiting.proposal_id)]
         return await _answer(
             runtime, session_id, AFFIRMATION_ANSWER, request=request, timings=timings, started=started,
@@ -227,11 +228,13 @@ LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 # and never a promise — the tap is the only thing that applies anything.
 AFFIRMATION_ANSWER = "Nothing happens until you tap the card. It is still waiting on the tablet."
 
-# A bare affirmation: a few words, nothing else. "Yes, and cancel the order" is not one.
+# A bare affirmation: a few words that mean "apply it", nothing else. "Yes, and cancel the
+# order" is not one; neither is "fine" or "correct", which may answer a question the model
+# asked, and must reach it.
 _AFFIRMATIONS = frozenset({
-    "yes", "yeah", "yep", "yup", "ok", "okay", "sure", "go", "go ahead", "go on", "do it", "do that",
-    "confirm", "confirmed", "please", "yes please", "please do", "apply it", "add it", "go ahead please",
-    "yes do it", "yes go ahead", "ok go ahead", "okay go ahead", "that's right", "correct", "fine", "alright",
+    "yes", "yeah", "yep", "yup", "ok", "okay", "go", "go ahead", "go on", "do it", "do that",
+    "confirm", "confirmed", "yes please", "please do", "apply it", "add it", "go ahead please",
+    "yes do it", "yes go ahead", "ok go ahead", "okay go ahead",
 })
 
 
@@ -243,10 +246,15 @@ def is_affirmation(text: str) -> bool:
 
 
 def _waiting_proposal(runtime, session):
-    """The one proposal a spoken yes could refer to: pending, unexpired, this epoch."""
+    """The one proposal a spoken yes could refer to: pending, unexpired, this epoch, and a
+    change the owner asked for — never the undo the Mac offered after a success, or "okay"
+    said to "Note added" would be answered as if a card were waiting to be tapped."""
     now = time.time()
     for proposal in reversed(session.proposals):
-        if proposal.status.value == "PENDING" and proposal.epoch == session.epoch and not proposal.expired(now):
+        if (
+            proposal.status.value == "PENDING" and proposal.epoch == session.epoch
+            and not proposal.expired(now) and proposal.undo_of is None
+        ):
             return proposal
     return None
 
@@ -267,14 +275,40 @@ def _now_line(runtime) -> str:
     return f"[Now: {now.strftime('%A')} {now.day} {now.strftime('%B %Y, %H:%M')} {runtime.settings.shop_timezone}]"
 
 
+# The lookup ahead of the model gets less time than a tool call the model makes: past this,
+# the model does its own looking up and nothing was lost but the head start.
+PREFETCH_TIMEOUT_S = 2.5
+
+# An order number the owner SAID: the cue, then the number, and nothing between them but
+# "number", "no." or "#". Four digits, because that is what CROOKS issues; not a year unless
+# written as a number ("order number 2025", "#2025"); and never "orders over 500 pounds",
+# "orders from 2025" or "orders in the last 100 days", which name no order.
+_SPOKEN_ORDER = re.compile(
+    r"\b(?:order|invoice)\b(?!s\b)\s*(?P<explicit>(?:number|no\.?|#)\s*#?\s*)?(?P<digits>\d{4})\b(?!\s*(?:pounds?|quid|days?|items?|units?|percent|%|per\b))",
+    re.I,
+)
+
+
+def spoken_order_numbers(text: str) -> list[str]:
+    found: list[str] = []
+    for match in _SPOKEN_ORDER.finditer(text):
+        digits = match.group("digits")
+        if digits[:2] in ("19", "20") and 1900 <= int(digits) <= 2099 and not match.group("explicit"):
+            # "orders from 2025": a year. "order 1938" is an order, and so is "order number 2025".
+            if int(digits) >= 2000:
+                continue
+        if digits not in found:
+            found.append(digits)
+    return found
+
+
 async def _prefetch_order(runtime, session, text: str, calls: list, timings: dict) -> str:
     """Look one spoken order number up through the same gate the model uses. Returns the
     text to hand the model, or nothing when there was no single order number, or the lookup
     failed (the model then does it itself, as before)."""
-    from app.speech.normalise import extract_order_numbers
     from app.tools.dispatch import dispatch
 
-    numbers = extract_order_numbers(text)
+    numbers = spoken_order_numbers(text)
     if len(numbers) != 1:
         return ""
     number = numbers[0]
@@ -283,7 +317,7 @@ async def _prefetch_order(runtime, session, text: str, calls: list, timings: dic
     try:
         rendered = await dispatch(
             "shopify_find_order", {"query": number}, session=session,
-            timeout_s=runtime.settings.tool_timeout_s, calls=calls,
+            timeout_s=min(PREFETCH_TIMEOUT_S, runtime.settings.tool_timeout_s), calls=calls,
         )
     finally:
         timings["prefetch"] = (time.perf_counter() - t0) * 1000

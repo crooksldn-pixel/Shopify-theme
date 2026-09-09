@@ -180,6 +180,23 @@ async def test_a_spoken_order_number_is_looked_up_before_the_model_is_asked(clie
     await client.post("/turn", json={"text": "compare order 1930 with order 1931", "session_id": "pre"})
     assert seen == []
     assert turn_module.is_affirmation("yes") and not turn_module.is_affirmation("yes and cancel it")
+    # Words that may answer a question the model asked are not affirmations.
+    for word in ("fine", "correct", "that's right", "alright", "please"):
+        assert not turn_module.is_affirmation(word), word
+
+
+def test_only_an_order_the_owner_named_is_looked_up_ahead():
+    from app.routes.turn import spoken_order_numbers as spoken
+
+    assert spoken("find order 1938 and add a note") == ["1938"]
+    assert spoken("Order number 1938, has it shipped?") == ["1938"]
+    assert spoken("invoice no. 1905") == ["1905"]
+    assert spoken("order number 2025") == ["2025"], "written as a number, it is an order"
+    assert spoken("order #2031") == ["2031"]
+    for phrase in ("orders over 500 pounds", "orders from 2025", "orders in the last 100 days", "how many orders in 2025",
+                   "order 2025 pounds worth", "the order came in 2025", "order 500 units", "orders today"):
+        assert spoken(phrase) == [], phrase
+    assert spoken("compare order 1930 with order 1931") == ["1930", "1931"]
 
 
 async def test_real_provider_is_never_started_by_tests(client):

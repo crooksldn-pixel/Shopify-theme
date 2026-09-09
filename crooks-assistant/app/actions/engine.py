@@ -207,9 +207,10 @@ class ActionEngine:
         the model asked: the answer and the spoken line came between, and the owner had no
         card to tap during them. Still the server's clock; still one TTL."""
         proposal = self.find(proposal_id)
-        if proposal is None or proposal.status is not ActionStatus.PENDING:
-            return proposal
+        if proposal is None or proposal.status is not ActionStatus.PENDING or proposal.delivered_at is not None:
+            return proposal   # once: a card shown again is not a card shown afresh
         now = self.clock()
+        proposal.delivered_at = now
         proposal.expires_at = max(proposal.expires_at, now + self.ttl_s)
         self.ledger.record("DELIVERED", proposal)
         return proposal

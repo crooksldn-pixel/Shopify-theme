@@ -977,6 +977,11 @@ function renderTurn(data) {
   renderAttentionSurface();
 
   const answer = data.answer || '';
+  if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui)) {
+    // The Mac re-presented a card that is already live on this screen (a spoken yes): the
+    // deck stays as it is, the order beside it included.
+    return;
+  }
   if (ui.hasContext) {
     pushContext(ui.nodes, data.ui, data.question);
   } else if (answer.length > 200 && window.CrooksUI) {
@@ -1097,6 +1102,17 @@ const ACTION_REASONS = {
 
 function settleActionNode(node, state, label) {
   if (node && typeof node.settle === 'function') node.settle(state, label);
+}
+
+// True when every card in this answer is a confirmation whose surface is already arming or
+// armed on the current screen: nothing new to show.
+function onlyLiveCardsAlreadyShown(items) {
+  const cards = (items || []).filter((i) => i && i.type !== 'context_stack');
+  if (!cards.length || cards.some((i) => i.type !== 'confirmation')) return false;
+  return cards.every((i) => {
+    const node = el.cards ? el.cards.querySelector(`[data-proposal="${String(i.data && i.data.proposal_id || '').replace(/["\\]/g, '')}"] .action-surface`) : null;
+    return Boolean(node) && (node.dataset.state === 'arming' || node.dataset.state === 'armed');
+  });
 }
 
 // The cards the Mac named, wherever the deck still holds them.

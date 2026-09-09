@@ -533,3 +533,23 @@ async def test_a_spoken_yes_leaves_the_card_waiting_and_says_what_applies_it(cli
     # With nothing waiting, "yes" is an ordinary (if odd) question for the model.
     again = (await client.post("/turn", json={"text": "yes", "session_id": "s9"}, headers=PROXIED)).json()
     assert again["answer"] == "fake answer"
+
+
+async def test_a_spoken_yes_does_not_wind_the_clock_back_and_ignores_the_undo(client):
+    """The card's minute runs from its first delivery; saying yes again and again does not
+    keep it alive. And "okay" said after "Note added" is not about the undo card."""
+    configure(client)
+    proposal = await staged(client, session_id="s10")
+    first = (await client.post("/turn", json={"text": "yes", "session_id": "s10"}, headers=PROXIED)).json()
+    assert first["ui"][0]["type"] == "confirmation"
+    expires = proposal.expires_at
+    second = (await client.post("/turn", json={"text": "okay", "session_id": "s10"}, headers=PROXIED)).json()
+    assert second["ui"][0]["type"] == "confirmation" and proposal.expires_at == expires, "no second minute"
+    events = [e["event"] for e in client.runtime.actions.ledger.read() if e["proposal_id"] == proposal.proposal_id]
+    assert events.count("DELIVERED") == 1
+    # Applied; the undo now waits. "Okay" is for the model, not the undo.
+    body = (await commit(client, proposal.proposal_id, session_id="s10")).json()
+    assert body["status"] == "verified" and body["undo"]["proposal_id"]
+    after = (await client.post("/turn", json={"text": "okay", "session_id": "s10"}, headers=PROXIED)).json()
+    assert after["answer"] == "fake answer" and not [i for i in after["ui"] if i["type"] == "confirmation"]
+    assert client.runtime.sessions.get("s10").proposal(body["undo"]["proposal_id"]).status.value == "REVOKED"
