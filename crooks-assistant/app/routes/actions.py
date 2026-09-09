@@ -446,7 +446,11 @@ async def states(request: Request, session_id: str = "", ids: str = "") -> JSONR
         # The Mac has never heard of it, or it belonged to a conversation that has gone.
         # Either way the tablet must stop showing it as live.
         unknown.append(proposal_id)
-    return {"session_id": session_id, "states": found, "unknown": unknown, "epoch": getattr(session, "epoch", 0)}
+    # Whether the Mac is holding this conversation at all. When it is not — it restarted, or
+    # the conversation idled out — the answer is not authoritative about which proposals
+    # exist, and the tablet must not settle a card on the strength of it.
+    return {"session_id": session_id, "session_known": session is not None, "states": found,
+            "unknown": unknown, "epoch": getattr(session, "epoch", 0)}
 
 
 @router.get("/{proposal_id}", response_model=None)

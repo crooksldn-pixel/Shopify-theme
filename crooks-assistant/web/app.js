@@ -1585,9 +1585,11 @@ async function reconcileActions(reason) {
       const settled = RECONCILE_SETTLED[String(states[id].status || '').toLowerCase()];
       if (settled) { settleProposals([id], settled[0], settled[1]); corrected += 1; }
     }
-    // An id the Mac has never heard of, or whose conversation has gone: it cannot be applied
-    // by any gesture, so it must stop looking as though it can.
-    const unknown = Array.isArray(data && data.unknown) ? data.unknown : [];
+    // An id the Mac has never heard of cannot be applied by any gesture, so it must stop
+    // looking as though it can — but only when the Mac is holding this conversation. A Mac
+    // that has restarted, or a conversation that idled out, knows nothing about any
+    // proposal, and its silence is not evidence that a card is dead.
+    const unknown = data && data.session_known ? (Array.isArray(data.unknown) ? data.unknown : []) : [];
     if (unknown.length) settleProposals(unknown, 'settled', 'No longer waiting');
     if (corrected || unknown.length) T.record('reconcile', { reason, count: ids.length, kept: corrected, cancelled: unknown.length });
   } catch {

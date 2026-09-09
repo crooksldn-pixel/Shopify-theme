@@ -220,3 +220,59 @@ def test_a_change_in_a_backgrounded_half_cannot_be_committed():
     assert "put aside" in _branch_may_commit(session, Proposal())
     branch.status = "CANCELLED"
     assert "closed" in _branch_may_commit(session, Proposal())
+
+
+# --------------------------------------------------- what the Mac says is true
+
+async def test_the_screen_can_ask_what_became_of_every_card_at_once(client):
+    from types import MappingProxyType
+
+    from app.actions.models import ActionProposal, ActionStatus
+
+    session = client.runtime.sessions.get("br")
+
+    def proposal(pid: str, status: ActionStatus) -> ActionProposal:
+        return ActionProposal(
+            proposal_id=pid, session_id="br", epoch=session.epoch, tool_name="shopify_order_note_append",
+            operation="order_note_append", risk="AMBER", model_args=MappingProxyType({}), execution=MappingProxyType({}),
+            entity_kind="order", entity_ref="o1", entity_label="#1938", interaction="tap_commit", reversible=True,
+            before={}, expected_after={}, summary={}, fingerprint=pid, created_at=0.0, expires_at=9e9, status=status,
+        )
+
+    waiting, done = proposal("prop_waiting", ActionStatus.PENDING), proposal("prop_done", ActionStatus.VERIFIED)
+    session.proposals.extend([waiting, done])
+    # The engine's index is proposal id -> the session holding it, which is how `find` gets
+    # from an id the tablet named to the proposal without trusting the tablet's session.
+    client.runtime.actions._index.update({p.proposal_id: session for p in (waiting, done)})
+
+    body = (await client.get("/actions/states", params={"session_id": "br", "ids": "prop_waiting,prop_done,prop_invented"})).json()
+    assert body["session_known"] is True
+    assert body["states"]["prop_waiting"]["status"] == "pending" and body["states"]["prop_waiting"]["kind"] == "action"
+    assert body["states"]["prop_done"]["status"] == "verified"
+    assert body["unknown"] == ["prop_invented"], "an id the Mac never issued comes back named"
+    # Public fields only: no arguments, no fingerprint, nothing a card said.
+    assert "execution" not in body["states"]["prop_waiting"] and "model_args" not in body["states"]["prop_waiting"]
+
+
+async def test_a_conversation_the_mac_has_lost_says_so_rather_than_denying_every_card(client):
+    body = (await client.get("/actions/states", params={"session_id": "never-existed", "ids": "prop_a"})).json()
+    assert body["session_known"] is False
+    assert body["unknown"] == ["prop_a"]
+
+
+async def test_another_login_learns_nothing_about_the_cards(client):
+    session = client.runtime.sessions.get("br")
+    session.login = "someone-else@example.com"
+    refused = await client.get(
+        "/actions/states", params={"session_id": "br", "ids": "prop_a"},
+        headers={"Tailscale-User-Login": "george@example.com", "X-Forwarded-For": "100.64.0.9"},
+    )
+    assert refused.status_code == 403
+
+
+async def test_a_reconciliation_is_bounded(client):
+    from app.routes.actions import MAX_RECONCILE
+
+    many = ",".join(f"prop_{i}" for i in range(MAX_RECONCILE + 40))
+    body = (await client.get("/actions/states", params={"session_id": "br", "ids": many})).json()
+    assert len(body["unknown"]) == MAX_RECONCILE

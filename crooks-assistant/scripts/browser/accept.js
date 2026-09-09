@@ -180,6 +180,10 @@ async function main() {
   await page.unroute('**/turn');
 
   // 8b. A spoken yes re-presents the waiting card; the tablet keeps the one it shows.
+  // The Mac that answers /turn here is a stand-in, so it answers the reconciliation too:
+  // the page asks what became of every card it shows, and a double that says "pending" on
+  // one route and knows nothing on another is not a Mac, it is two.
+  await page.route('**/actions/states*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ session_known: true, states: { prop_again: { proposal_id: 'prop_again', status: 'pending', kind: 'action' } }, unknown: [] }) }));
   await page.evaluate(() => {
     const items = [{ type: 'confirmation', data: { proposal_id: 'prop_again', status: 'pending', risk: 'amber', operation: 'order_note_append', title: 'Add order note', entity: 'Order #1930', entity_kind: 'order', entity_ref: 'gid://shopify/Order/0', summary: 'Kept.', interaction: { kind: 'tap_commit', label: 'Tap to apply', armed_after_ms: 100 }, ttl_s: 60, reversible: true } }];
     const r = window.CrooksUI.render(items, renderOpts()); pushContext(r.nodes, items, 'again');
@@ -193,6 +197,22 @@ async function main() {
   const after = await page.evaluate(() => ({ cards: document.querySelectorAll('#cards .card').length, state: document.querySelector('[data-proposal="prop_again"] .action-surface').dataset.state, copies: document.querySelectorAll('[data-proposal="prop_again"]').length }));
   check('a spoken yes keeps the card that is already on screen', before.node && after.cards === before.cards && after.copies === 1 && after.state === 'armed', JSON.stringify({ before, after }));
   await page.unroute('**/turn');
+
+  // 8c. The same card, and a Mac that says it is no longer holding it: the card stops
+  // claiming to be tappable. This is the September discrepancy in the other direction — the
+  // tablet reported a commit the Mac never claimed — and the page now asks rather than
+  // remembers. A Mac that does not know the conversation is not evidence either way.
+  await page.route('**/actions/states*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ session_known: false, states: {}, unknown: ['prop_again'] }) }));
+  await page.evaluate(() => reconcileActions('test'));
+  await sleep(200);
+  const unknownButUnheld = await page.evaluate(() => document.querySelector('[data-proposal="prop_again"] .action-surface').dataset.state);
+  check('a Mac that has lost the conversation does not settle the cards on screen', unknownButUnheld === 'armed', unknownButUnheld);
+  await page.route('**/actions/states*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ session_known: true, states: {}, unknown: ['prop_again'] }) }));
+  await page.evaluate(() => reconcileActions('test'));
+  await sleep(200);
+  const settled = await page.evaluate(() => document.querySelector('[data-proposal="prop_again"] .action-surface').dataset.state);
+  check('a card the Mac is not holding stops claiming it can be applied', settled === 'settled', settled);
+  await page.unroute('**/actions/states*');
 
   // 9. The Mac away, then refused, then back — in the page's own words. The health poll is
   // routed the same way as the ping, as a real absent or refusing Mac would answer both.
