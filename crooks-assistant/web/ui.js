@@ -532,7 +532,7 @@
     ], Object.assign({ className: `tier-${risk}` }, opts));
     node.dataset.proposal = text(d.proposal_id);
     node.dataset.ref = text(d.entity_ref);
-    if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts, num(d.ttl_s));
+    if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts, num(d.ttl_s), (left) => `Waits ${left} s · nothing happens until you tap`);
     return node;
   }
 
@@ -550,7 +550,7 @@
     return { verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', failed: 'Not applied', unverified: 'Not confirmed', executing: 'Applying…', executed: 'Applying…' }[status] || 'Not available';
   }
 
-  function wireTapCommit(node, surface, proposalId, armedAfter, opts, ttlS) {
+  function wireTapCommit(node, surface, proposalId, armedAfter, opts, ttlS, word) {
     const now = opts.now || (() => Date.now());
     const shown = now();
     let downAt = null;
@@ -572,14 +572,15 @@
     const expiryTimer = ttlS !== null && ttlS !== undefined ? timers.set(() => {
       if (!committed && (surface.dataset.state === 'arming' || surface.dataset.state === 'armed')) node.settle('expired', 'Expired');
     }, Math.max(0, ttlS * 1000 - 1000)) : null;
-    // "Waits 60 s" counts down, so the line is true for as long as it is shown.
-    const meta = node.querySelector ? node.querySelector('.action-meta') : null;
+    // The waiting line counts down, so it is true for as long as it is shown.
+    const metas = node.querySelectorAll ? node.querySelectorAll('.action-meta') : [];
+    const meta = metas.length ? metas[metas.length - 1] : null;
     let countdown = null;
-    if (meta && ttlS !== null && ttlS !== undefined) {
+    if (meta && word && ttlS !== null && ttlS !== undefined) {
       const tick = () => {
         const left = Math.max(0, Math.round(ttlS - (now() - shown) / 1000));
         if (committed) return;
-        meta.textContent = `Waits ${left} s · nothing happens until you tap`;
+        meta.textContent = word(left);
         if (left > 0) countdown = timers.set(tick, 1000);
       };
       countdown = timers.set(tick, 1000);
@@ -655,7 +656,8 @@
       }, [h('span', { class: 'action-label', text: text(undo.label, 'Undo') }), h('span', { class: 'action-arm', 'aria-hidden': 'true' })]);
       node.appendChild(surface);
       node.appendChild(h('p', { class: 'action-meta', text: num(undo.ttl_s) !== null ? `Undo available for ${Math.round(undo.ttl_s)} s` : '' }));
-      wireTapCommit(node, surface, text(undo.proposal_id), armedAfter, opts);
+      // The undo has its own minute on the Mac's clock, and says how much of it is left.
+      wireTapCommit(node, surface, text(undo.proposal_id), armedAfter, opts, num(undo.ttl_s), (left) => (left > 0 ? `Undo available for ${left} s` : 'The undo has expired.'));
     }
     return node;
   }

@@ -409,3 +409,20 @@ test('a sales window names the last day it covers, not the morning after', () =>
   const meta = textOf(node.querySelector('.card-meta'));
   assert.ok(meta.indexOf('→') !== -1 && /8 Sept/.test(meta) && !/9 Sept/.test(meta), meta);
 });
+
+test('the undo counts down too, and stops offering itself when its minute is up', () => {
+  const scheduled = [];
+  let t = 0;
+  const timers = { set: (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; }, clear: () => {} };
+  const node = UI.renderItem({ type: 'success', data: { title: 'Note added', detail: 'Order #1930', proposal_id: 'p1', undo: { proposal_id: 'p2', label: 'Undo', armed_after_ms: 100, ttl_s: 60 } } },
+    { now: () => t, blocked: () => false, onCommit: () => {}, timers });
+  const meta = node.querySelectorAll('.action-meta').pop();
+  assert.ok(textOf(meta).indexOf('Undo available for') === 0, textOf(meta));
+  const tick = scheduled.find((s) => s.ms === 1000);
+  t = 20000; tick.fn();
+  assert.equal(textOf(meta), 'Undo available for 40 s');
+  const expiry = scheduled.find((s) => s.ms > 1000);
+  assert.ok(expiry && expiry.ms === 59000);
+  expiry.fn();
+  assert.equal(node.querySelector('.action-surface').dataset.state, 'expired');
+});
