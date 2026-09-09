@@ -23,7 +23,10 @@ log = logging.getLogger("crooks.tools")
 
 def _readable_errors() -> tuple[type[BaseException], ...]:
     from app.clients.gmail import GmailAuthRequired, GmailError
-    from app.clients.shopify import ShopifyAuthError, ShopifyError
+    from app.clients.shopify import (  # noqa: F401 — subclasses are caught by the base
+        ShopifyAuthError,
+        ShopifyError,
+    )
     from app.clients.whisper import WhisperUnavailable
 
     return (ToolError, ShopifyError, ShopifyAuthError, GmailError, GmailAuthRequired, WhisperUnavailable)
@@ -193,32 +196,34 @@ async def _stage(
     log.info(
         "PROPOSED tool=%s proposal=%s entity=%s new=%s", name, proposal.proposal_id, proposal.entity_label, created,
     )
+    from app.actions.grammar import words_for
+
     label = f"{spec.write.entity_kind} {proposal.entity_label}".strip() if spec.write else proposal.entity_label
+    verb = words_for(proposal.interaction)["verb"]
     if created:
-        what = str(proposal.summary.get("appended") or "")[:160]
+        what = str(proposal.summary.get("appended") or proposal.summary.get("read_back") or "")[:200]
         read_back = f' The change: "{what}".' if what else ""
         if session.writes_blocked:
-            # Prepared, but a tap from where the owner is would be refused. Saying "tap the
-            # card" would be a promise the Mac has already decided it cannot keep.
+            # Prepared, but a gesture from where the owner is would be refused. Saying "tap
+            # the card" would be a promise the Mac has already decided it cannot keep.
             return (
                 f"PROPOSED ({proposal.proposal_id}): the change to {label} is prepared, but it "
                 f"cannot be applied from where the owner is: {session.writes_blocked} It has NOT "
                 f"happened.{read_back} Tell the owner, in one sentence, what is ready and that it "
-                "cannot be applied from there. Do NOT tell them to tap the card. Do not say it was "
+                "cannot be applied from there. Do NOT tell them to use the card. Do not say it was "
                 "done, and do not call this tool again for this change."
             )
         return (
-            f"PROPOSED ({proposal.proposal_id}): the change to {label} is prepared and waiting for "
-            f"the owner to apply it by tapping the card on the tablet. It has NOT happened.{read_back} "
-            "Tell the owner, in one sentence, what is ready — name the order and say the note in a "
-            "few words — and that tapping the card applies it. Do not say it was done, do not ask "
-            "for a spoken yes (a spoken yes cannot apply it), and do not call this tool again while "
-            "this card is waiting."
+            f"PROPOSED ({proposal.proposal_id}): the change to {label} is prepared and waiting on "
+            f"the tablet; {verb}. It has NOT happened.{read_back} "
+            "Tell the owner, in one sentence, what is ready — name the order and say the change in a "
+            f"few words — and that {verb}. Do not say it was done, do not ask for a spoken yes (a "
+            "spoken yes cannot apply it), and do not call this tool again while this card is waiting."
         )
     return (
         f"PROPOSED ({proposal.proposal_id}): this same change is already waiting on the tablet. "
-        "It has NOT happened. Tell the owner to tap the card that is already showing. Do not call "
-        "this tool again."
+        f"It has NOT happened. Tell the owner the card is already showing and that {verb}. Do not "
+        "call this tool again."
     )
 
 

@@ -254,6 +254,16 @@ def _check_schema_bounds(name: str, schema: dict[str, Any], args: dict[str, Any]
         if key not in properties:
             return f"{name} does not take an argument called {key}."
         rule = properties.get(key) or {}
+        if rule.get("type") == "array":
+            if not isinstance(value, list):
+                return f"{name}.{key} must be a list."
+            if "maxItems" in rule and len(value) > int(rule["maxItems"]):
+                return f"{name}.{key} has more than {rule['maxItems']} items."
+            if "minItems" in rule and len(value) < int(rule["minItems"]):
+                return f"{name}.{key} is empty."
+            item_rule = rule.get("items") or {}
+            if item_rule.get("type") == "string" and any(not isinstance(v, str) or ("maxLength" in item_rule and len(v) > int(item_rule["maxLength"])) for v in value):
+                return f"{name}.{key} has an item that is not short text."
         if rule.get("type") == "string":
             if not isinstance(value, str):
                 return f"{name}.{key} must be text."

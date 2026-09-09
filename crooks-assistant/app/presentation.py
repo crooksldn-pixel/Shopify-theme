@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.actions import grammar
 from app.providers.base import ToolCall
 from app.session.models import Session
 from app.tools.gate import Disposition, classify
@@ -52,11 +53,11 @@ MAX_CONTEXT = 6
 
 # The interaction grammar: how the owner authorises a proposal. The card names one of these
 # and the tablet renders it; a kind the tablet does not implement renders as unavailable, never
-# as a plain button. Phase 1 implements tap_commit only.
-INTERACTIONS = frozenset({"tap_commit", "swipe_commit", "hold_to_arm", "hold_drag_target", "select_then_commit"})
+# as a plain button. The table and its words live in app/actions/grammar.py.
+INTERACTIONS = frozenset(grammar.KINDS)
 # The dead time after an action card appears before a tap can count. A finger lifting off the
 # orb must never land on a card that materialised under it.
-ARMED_AFTER_MS = 650
+ARMED_AFTER_MS = grammar.ARMED_AFTER_MS
 
 # "What are we low on?" — the threshold that makes a variant an exception, not a row.
 LOW_STOCK_AT = 5
@@ -582,6 +583,7 @@ def _confirmation(proposal, *, writes: dict[str, Any] | None = None) -> dict[str
     of arming a surface that would fail."""
     words = _present_words(proposal)
     interaction = proposal.interaction if proposal.interaction in INTERACTIONS else "unsupported"
+    gesture = grammar.words_for(interaction)
     commit = None
     if isinstance(writes, dict) and writes.get("allowed") is False:
         commit = {
@@ -600,10 +602,22 @@ def _confirmation(proposal, *, writes: dict[str, Any] | None = None) -> dict[str
         "entity_ref": _text(proposal.entity_ref, 200),
         "summary": _text(words.get("summary"), MAX_NOTE_CHARS),
         "detail": _text(words.get("detail")),
+        # The facts the gesture authorises, printed above it: what the change will do and to
+        # whom, built by the tool from what it read. Never a place for the model's words.
+        "facts": [
+            {"label": _text(f.get("label"), 40), "value": _text(f.get("value"), 120), "tone": _text(f.get("tone"), 10)}
+            for f in _list(words.get("facts"), 8)
+        ],
         "interaction": {
             "kind": interaction,
-            "label": _text(words.get("confirm_label") or "Tap to apply", 40),
+            "label": _text(words.get("confirm_label") or gesture["label"], 60),
+            "footer": _text(gesture["footer"], 120),
+            # The words on the target or the handle — the consequence, from the tool.
+            "target": _text(words.get("target"), 60),
             "armed_after_ms": ARMED_AFTER_MS,
+            "hold_ms": grammar.HOLD_MS,
+            "armed_for_s": grammar.ARMED_FOR_S,
+            "swipe_fraction": grammar.SWIPE_FRACTION,
         },
         "expires_at": proposal.public()["expires_at"],
         "ttl_s": proposal.ttl_s(),
@@ -663,7 +677,7 @@ def present_proposal_state(
     items: list[dict[str, Any]] = []
     status = proposal.status.value.lower()
     if status == "verified":
-        title = "Note restored" if proposal.undo_of else _text(words.get("done_title") or _done_title(proposal))
+        title = _text(words.get("undone_title") or _undone_title(proposal)) if proposal.undo_of else _text(words.get("done_title") or _done_title(proposal))
         items.append(_ui("success", {
             "title": title, "detail": entity_line,
             "proposal_id": _text(proposal.proposal_id, 40), "operation": _text(proposal.operation, 60),
@@ -686,7 +700,11 @@ def present_proposal_state(
 
 
 def _done_title(proposal) -> str:
-    return {"order_note_append": "Note added"}.get(proposal.operation, "Done")
+    return {"order_note_append": "Note added", "order_tags_add": "Tags added"}.get(proposal.operation, "Done")
+
+
+def _undone_title(proposal) -> str:
+    return {"order_note_append_undo": "Note restored", "order_tags_add_undo": "Tags removed"}.get(proposal.operation, "Undone")
 
 
 # What a settled-but-not-successful proposal says on the card. Calm, and nothing from Shopify.

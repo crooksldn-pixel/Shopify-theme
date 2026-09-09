@@ -1,4 +1,4 @@
-"""Seven read-only Shopify tools, and one that proposes a change.
+"""Seven read-only Shopify tools, and the tools that propose a change.
 
 Every read is a fixed GraphQL document with bound variables. There is no tool that accepts a
 query string from the model, because that is how a read-only integration becomes a write one.
@@ -10,6 +10,7 @@ has tapped — see app/actions/engine.py.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -950,4 +951,139 @@ async def shopify_order_note_append(order_id: str, note: str) -> Prepared:
         entity_ref=str(order_id),
         entity_label=str(node.get("name") or ""),
         summary={"appended": addition, "had_note": bool(current.strip()), "payload_len": len(addition)},
+    )
+
+
+# ------------------------------------------------------------------ writes: order tags
+#
+# The second change, and the first customer of the engine's hooks at AMBER: read the tags,
+# merge, write the union — tagsAdd never overwrites — prove by re-reading, and offer the
+# removal of exactly what was added as the undo.
+
+MAX_TAGS = 5
+MAX_TAG_CHARS = 40
+_TAG_SHAPE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _:.\-]{0,39}$")
+
+
+def _clean_tags(tags: object) -> list[str]:
+    if not isinstance(tags, list) or not tags:
+        raise ToolError("Give one to five tags.")
+    if len(tags) > MAX_TAGS:
+        raise ToolError(f"No more than {MAX_TAGS} tags at once.")
+    out: list[str] = []
+    for tag in tags:
+        if not isinstance(tag, str):
+            raise ToolError("A tag must be text.")
+        cleaned = " ".join(tag.strip().split())
+        if not cleaned or len(cleaned) > MAX_TAG_CHARS or not _TAG_SHAPE.match(cleaned):
+            raise ToolError(f"{tag!r} is not a tag: letters, numbers, spaces, dashes, up to {MAX_TAG_CHARS} characters.")
+        if cleaned.lower() not in {t.lower() for t in out}:
+            out.append(cleaned)
+    return out
+
+
+def tags_fingerprint(tags: list[str]) -> dict:
+    canonical = "\n".join(sorted(t.strip().lower() for t in tags if isinstance(t, str) and t.strip()))
+    return {"sha": hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16], "n": len(canonical.split("\n")) if canonical else 0}
+
+
+async def _read_order_tags(client: ShopifyClient, order_id: str) -> dict:
+    payload = await client.graphql("query CrooksOrderTags($id: ID!) { order(id: $id) { id name tags } }", {"id": order_id})
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+async def _observe_order_tags(execution: dict) -> Observed:
+    node = await _read_order_tags(_c(), str(execution["order_id"]))
+    return Observed(fingerprint=tags_fingerprint(list(node.get("tags") or [])), entity=None)
+
+
+async def _entity_after_tags(execution: dict) -> dict:
+    return await hydrator().order(str(execution["order_id"]), budget_s=0.0, fresh=True)
+
+
+async def _execute_order_tags(execution: dict) -> dict:
+    client = _c()
+    order_id = str(execution["order_id"])
+    if execution.get("remove"):
+        payload = await client.mutate("order_tags_remove", {"id": order_id, "tags": list(execution["remove"])})
+        node = ((payload.get("data") or {}).get("tagsRemove") or {}).get("node") or {}
+    else:
+        payload = await client.mutate("order_tags_add", {"id": order_id, "tags": list(execution["add"])})
+        node = ((payload.get("data") or {}).get("tagsAdd") or {}).get("node") or {}
+    hydrator().forget(order_id)
+    if node.get("id") != order_id:
+        raise ShopifyError("Shopify did not confirm which order it tagged.")
+    return {"order_id": order_id}
+
+
+def _present_order_tags(proposal) -> dict:
+    summary = proposal.summary
+    if proposal.undo_of:
+        return {"title": "Remove the tags again", "summary": "", "detail": "Takes off exactly the tags this added.", "confirm_label": "Tap to undo", "undone_title": "Tags removed"}
+    tags = [str(t) for t in summary.get("tags") or []]
+    return {
+        "title": "Add tags", "summary": ", ".join(tags), "detail": "Added to the order's tags; nothing is removed.",
+        "facts": [{"label": "Tags", "value": ", ".join(tags)}], "done_title": "Tags added",
+    }
+
+
+def _undo_order_tags(execution: dict) -> dict:
+    return {"order_id": execution["order_id"], "remove": list(execution["add"]), "previous_tags": list(execution.get("previous_tags") or [])}
+
+
+@tool(
+    name="shopify_order_tags_add",
+    description=(
+        "Prepare tags to add to one order (internal labels such as 'exchange-requested' or "
+        "'hold'; the customer never sees them). Stages the change for the owner to apply on the "
+        "tablet; nothing is changed by calling it. Requires an order_id from a previous search."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "tags": {"type": "array", "items": {"type": "string", "maxLength": MAX_TAG_CHARS}, "minItems": 1, "maxItems": MAX_TAGS,
+                     "description": "One to five short tags, e.g. [\"exchange-requested\"]."},
+        },
+        "required": ["order_id", "tags"],
+    },
+    tier=Tier.AMBER,
+    issued_id_args=("order_id",),
+    write=WriteSpec(
+        operation="order_tags_add",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="order_tags_add",
+        observe=_observe_order_tags,
+        execute=_execute_order_tags,
+        present=_present_order_tags,
+        entity=_entity_after_tags,
+        op_class="reversible",
+        reversible=True,
+        undo=_undo_order_tags,
+        spoken_success="Tagged order {label}.",
+        spoken_undo_success="Tags taken off order {label} again.",
+        spoken_failure="I couldn't confirm that change.",
+        spoken_stale="The order's tags changed since this was prepared. I haven't touched them.",
+    ),
+)
+async def shopify_order_tags_add(order_id: str, tags: list) -> Prepared:
+    """Prepare, never send: the union of what is there and what was asked for."""
+    wanted = _clean_tags(tags)
+    node = await _read_order_tags(_c(), str(order_id))
+    current = [str(t) for t in node.get("tags") or []]
+    have = {t.lower() for t in current}
+    new = [t for t in wanted if t.lower() not in have]
+    if not new:
+        raise ToolError("The order already has those tags.")
+    return Prepared(
+        execution={"order_id": str(order_id), "add": new, "previous_tags": current},
+        before=tags_fingerprint(current),
+        expected_after=tags_fingerprint(current + new),
+        entity_ref=str(order_id),
+        entity_label=str(node.get("name") or ""),
+        summary={"tags": new, "read_back": "tags " + ", ".join(new), "payload_len": sum(len(t) for t in new)},
     )

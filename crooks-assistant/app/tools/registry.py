@@ -40,13 +40,37 @@ class WriteSpec:
     observe: Callable[..., Awaitable[Any]]
     execute: Callable[..., Awaitable[Any]]
     present: Callable[..., dict[str, Any]]
-    interaction: str = "tap_commit"     # how the owner authorises it; see app/presentation.py
+    interaction: str = "tap_commit"     # the gesture at the tool's own tier; recomputed at staging
+    # What kind of change this is, for the gesture table (app/actions/grammar.py):
+    # "reversible" (an undo card follows), "irreversible", or "money" (money leaves, or an
+    # order ends). Defaults from `reversible` when not set.
+    op_class: str = ""
     reversible: bool = False
     undo: Callable[..., Any] | None = None   # execution args for the reverse, from the forward's
     spoken_success: str = "Done."
     spoken_undo_success: str = "Undone."
     spoken_failure: str = "I couldn't confirm that change."
     spoken_stale: str = "That changed since it was prepared, so I haven't touched it."
+    # Proof. By default the re-read must equal `expected_after` exactly, which suits a note.
+    # A cancel, an address or a fulfilment cannot say in advance what Shopify will write
+    # (a timestamp, a normalised address, a new id), so they prove by predicate:
+    # verify(before, observed, execution) -> (ok, note). The note, when there is one, is
+    # spoken after the success line ("the refund isn't showing yet").
+    verify: Callable[..., tuple[bool, str]] | None = None
+    # Some mutations finish later (orderCancel returns a job). `settle(execution, sent)` waits
+    # for it, bounded, before the proving read; with it set, an ambiguous send is never
+    # written off as "nothing changed" on the strength of one early re-read.
+    settle: Callable[..., Awaitable[Any]] | None = None
+    # The entity for the card after a proven change: a fuller read than the fingerprint the
+    # proof needs. Optional; without it the card shows what `observe` returned.
+    entity: Callable[..., Awaitable[Any]] | None = None
+    # Contextual risk: the tier this change should carry given what was prepared. May raise
+    # the tool's own tier to RED; never lowers it. Optional.
+    risk: Callable[..., Any] | None = None
+
+    @property
+    def kind(self) -> str:
+        return self.op_class or ("reversible" if self.reversible else "irreversible")
 
     @property
     def complete(self) -> bool:

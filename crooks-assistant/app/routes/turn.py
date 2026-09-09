@@ -16,6 +16,8 @@ import uuid
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.actions.grammar import AFFIRMATION_BLOCKED, affirmation_for, words_for
+from app.actions.grammar import FIXED_LINES as GRAMMAR_FIXED_LINES
 from app.logging.turnlog import redact
 from app.presentation import present
 from app.providers.base import ToolCall
@@ -153,7 +155,7 @@ async def turn(
         # a spoken yes does not wind it back. The tablet keeps the card it already shows.
         calls = [ToolCall(name=waiting.tool_name, args={}, ok=True, result={}, proposal_id=waiting.proposal_id)]
         return await _answer(
-            runtime, session_id, _affirmation_answer(live), request=request, timings=timings, started=started,
+            runtime, session_id, _affirmation_answer(live, waiting), request=request, timings=timings, started=started,
             transcript=transcript_info, question=text, speak=speak, calls=calls, epoch=epoch, revoked=[],
         )
 
@@ -239,26 +241,22 @@ async def turn(
 
 LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 
-# What a spoken yes gets while a card is waiting. Fixed, so it is synthesised once and kept;
-# and never a promise — the tap is the only thing that applies anything.
-AFFIRMATION_ANSWER = "Nothing happens until you tap the card. It is still waiting on the tablet."
-
-# Answers that are always these exact words. Synthesised once and kept, so they are free and
-# instant every time after that; anything variable would only evict them from the shelf.
-AFFIRMATION_BLOCKED_ANSWER = (
-    "That is prepared, but it cannot be applied from this tablet. The card says why."
-)
-
-FIXED_LINES = frozenset({AFFIRMATION_ANSWER, AFFIRMATION_BLOCKED_ANSWER})
+# What a spoken yes gets while a card is waiting: the waiting card's own gesture, in a fixed
+# sentence — synthesised once and kept, and never a promise: the gesture is the only thing
+# that applies anything. The sentences live with the grammar (app/actions/grammar.py).
+AFFIRMATION_ANSWER = words_for("tap_commit")["affirmation"]
+AFFIRMATION_BLOCKED_ANSWER = AFFIRMATION_BLOCKED
+FIXED_LINES = GRAMMAR_FIXED_LINES
 
 def _blocked_words(writes: dict) -> str:
     """Why a tap would be refused, in a clause the model can put in a sentence."""
     return str(writes.get("detail") or "changes cannot be applied from there.").rstrip(".") + "."
 
 
-def _affirmation_answer(session) -> str:
-    """What a spoken yes gets. Fixed either way, so both lines are synthesised once and kept."""
-    return AFFIRMATION_BLOCKED_ANSWER if session.writes_blocked else AFFIRMATION_ANSWER
+def _affirmation_answer(session, waiting=None) -> str:
+    """What a spoken yes gets: the waiting card's own gesture, in its fixed sentence."""
+    kind = getattr(waiting, "interaction", "tap_commit") if waiting is not None else "tap_commit"
+    return affirmation_for(kind, blocked=bool(session.writes_blocked))
 
 
 # A bare affirmation: a few words that mean "apply it", nothing else. "Yes, and cancel the

@@ -93,6 +93,10 @@ class ActionProposal:
     entity: dict[str, Any] | None = None       # the bounded re-read after the change
     undo_of: str | None = None                 # set on an undo proposal
     undo_id: str | None = None                 # set on a verified proposal that can be undone
+    sent: dict[str, Any] | None = None         # what the mutation answered (a job id), never content
+    note: str = ""                             # a caveat proven alongside success, spoken after it
+    armed_at: float | None = None              # when the owner's hold armed it on the Mac's clock
+    arm_nonce: str = ""                        # the single-use token the arming handed the tablet
     # Set once the proposal is terminal, so a second commit that arrived while the first was
     # executing can wait for the real outcome instead of guessing.
     done: asyncio.Event = field(default_factory=asyncio.Event)
@@ -123,6 +127,7 @@ class ActionProposal:
             "ttl_s": self.ttl_s(now),
             "undo_of": self.undo_of,
             "undo_id": self.undo_id,
+            "note": self.note,
         }
 
 

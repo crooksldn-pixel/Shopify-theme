@@ -21,11 +21,13 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import secrets
 import time
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
+from app.actions.grammar import ARMED_FOR_S, dwell_ms, gesture_for
 from app.actions.ledger import ActionLedger, NullLedger
 from app.actions.models import (
     PROPOSAL_TTL_S,
@@ -43,11 +45,14 @@ log = logging.getLogger("crooks.actions")
 
 # A commit that finds the proposal already executing waits this long for the outcome.
 WAIT_FOR_OUTCOME_S = 25.0
+# A commit after an arming may arrive this much later than the armed window, for the
+# tablet's own round trip and a slow hand.
+ARM_SLACK_MS = 2500
 
 # Codes the tablet turns into calm states. The set is closed; a new code is a new line here.
 CODES = frozenset({
     "proposed", "verified", "unverified", "failed", "stale", "expired", "revoked",
-    "already_executed", "in_progress", "unknown", "wrong_session", "service_unavailable",
+    "already_executed", "in_progress", "unknown", "wrong_session", "service_unavailable", "not_armed",
 })
 
 # A settled proposal is kept in the index this long after it finished, so the tablet can
@@ -104,19 +109,29 @@ class ActionEngine:
             ):
                 # The same proposal, not a second one: the ledger already has its line.
                 return existing, False
+        risk = spec.tier.value
+        if spec.write.risk is not None:
+            try:
+                raised = spec.write.risk(prepared)
+            except Exception as exc:  # noqa: BLE001 — a risk hook that fails escalates, never relaxes
+                log.warning("risk hook for %s failed (%s); treating as RED", spec.name, exc)
+                raised = "RED"
+            if str(getattr(raised, "value", raised) or "").upper() == "RED":
+                risk = "RED"   # only ever upward: a tool's own tier is its floor
+        interaction = gesture_for(risk, spec.write.kind)
         proposal = ActionProposal(
             proposal_id=new_proposal_id(),
             session_id=session.session_id,
             epoch=session.epoch,
             tool_name=spec.name,
             operation=spec.write.operation,
-            risk=spec.tier.value,
+            risk=risk,
             model_args=MappingProxyType(copy.deepcopy(model_args)),
             execution=MappingProxyType(copy.deepcopy(prepared.execution)),
             entity_kind=spec.write.entity_kind,
             entity_ref=prepared.entity_ref,
             entity_label=prepared.entity_label,
-            interaction=spec.write.interaction,
+            interaction=interaction,
             reversible=spec.write.reversible,
             before=dict(prepared.before),
             expected_after=dict(prepared.expected_after),
@@ -156,7 +171,8 @@ class ActionEngine:
             entity_kind=done.entity_kind,
             entity_ref=done.entity_ref,
             entity_label=done.entity_label,
-            interaction="tap_commit",
+            # The undo is as grave as the change it reverses: the same tier, the same gesture.
+            interaction=gesture_for(done.risk, write.kind),
             reversible=False,
             # It may only run while the entity still shows what this action wrote.
             before=dict(done.after or done.expected_after),
@@ -261,9 +277,28 @@ class ActionEngine:
             return None
         return proposal
 
+    # ------------------------------------------------------------------- arming
+
+    def arm(self, proposal_id: str, session_id: str) -> tuple[ActionProposal | None, str]:
+        """The owner's hold began. For a change whose gesture is a hold, the Mac remembers when,
+        and hands the tablet a single-use token; the commit that follows must carry it, and
+        must come after the hold's dwell and before the arming lapses. So a hold is a fact on
+        the Mac, and a stray request — an Android double-fire, a script — is not a gesture."""
+        proposal = self.find(proposal_id)
+        if proposal is None:
+            return None, "unknown"
+        if proposal.session_id != session_id:
+            return None, "wrong_session"
+        if proposal.status is not ActionStatus.PENDING:
+            return proposal, proposal.code or proposal.status.value.lower()
+        proposal.armed_at = self.clock()
+        proposal.arm_nonce = secrets.token_urlsafe(12)
+        self.ledger.record("ARMED", proposal)
+        return proposal, ""
+
     # ----------------------------------------------------------------- commit
 
-    async def commit(self, proposal_id: str, session_id: str, *, caller: str, spec_lookup) -> CommitResult:
+    async def commit(self, proposal_id: str, session_id: str, *, caller: str, spec_lookup, nonce: str = "") -> CommitResult:
         """The owner tapped. Validate, claim atomically, check the entity has not moved, send
         the one reviewed mutation with the stored arguments, prove it, record it."""
         proposal = self.find(proposal_id)
@@ -273,6 +308,10 @@ class ActionEngine:
             return CommitResult(None, "wrong_session", "")
         spec = spec_lookup(proposal.tool_name)
         write = spec.write if spec is not None else None
+        if proposal.status is ActionStatus.PENDING and not self._armed(proposal, nonce):
+            # A hold kind, without the hold: nothing is claimed, nothing settles. The card
+            # stays live for the hold that was meant.
+            return CommitResult(proposal, "not_armed", "")
 
         if proposal.status in (ActionStatus.EXECUTING, ActionStatus.EXECUTED):
             # Someone else's tap, a retried request, an Android double-fire — arriving while
@@ -312,14 +351,23 @@ class ActionEngine:
 
             self.executions += 1
             sent = True
-            await write.execute(execution)
+            answer = await write.execute(execution)
+            proposal.sent = _public_answer(answer)
             proposal.executed_at = self.clock()
             proposal.status = ActionStatus.EXECUTED
-            self.ledger.record("EXECUTED", proposal, ms=round((time.perf_counter() - started) * 1000, 1))
+            self.ledger.record("EXECUTED", proposal, ms=round((time.perf_counter() - started) * 1000, 1), job=(proposal.sent or {}).get("job_id"))
 
+            # Some changes finish later on Shopify's side: wait for that, bounded, first.
+            if write.settle is not None:
+                await write.settle(execution, proposal.sent or {})
             # Verification: a 200 is not proof; the re-read is.
             proven = await write.observe(execution)
-            return self._prove(proposal, proven, session, spec, write)
+            return await self._prove(proposal, proven, session, spec, write)
+        except PreconditionFailed as exc:
+            # Shopify itself said the entity was not as expected (a compare-and-swap that
+            # found another number, an order already cancelled). Nothing was applied: stale.
+            self._finish(proposal, ActionStatus.STALE, "stale", reason=_short(exc))
+            return CommitResult(proposal, "stale", write.spoken_stale, detail=_short(exc))
         except asyncio.CancelledError as exc:
             # The task was cancelled (a shutdown, a client that went away) between sending the
             # change and proving it. It must not be left claimed for ever: look once, record
@@ -340,15 +388,28 @@ class ActionEngine:
             log.warning("action %s is ambiguous after sending: %s", proposal.proposal_id, exc)
             return await self._settle_by_observation(proposal, execution, session, spec, write, exc)
 
-    def _prove(self, proposal, proven, session, spec, write) -> CommitResult:
+    async def _prove(self, proposal, proven, session, spec, write) -> CommitResult:
         proposal.after = dict(proven.fingerprint)
         proposal.entity = proven.entity
-        if proven.fingerprint == proposal.expected_after:
+        if write.verify is not None and proposal.undo_of is None:
+            ok, note = write.verify(proposal.before, proven.fingerprint, dict(proposal.execution))
+        else:
+            ok, note = proven.fingerprint == proposal.expected_after, ""
+        if ok:
             proposal.verified = True
+            proposal.note = str(note or "")
+            if write.entity is not None:
+                # The card shows the entity as it now is: a fuller read than the proof needed.
+                try:
+                    proposal.entity = await write.entity(dict(proposal.execution))
+                except Exception as exc:  # noqa: BLE001 — proven is proven; the card is a courtesy
+                    log.warning("could not re-read %s for the card: %s", proposal.proposal_id, _short(exc))
             self._finish(proposal, ActionStatus.VERIFIED, "verified")
             spoken = (write.spoken_undo_success if proposal.undo_of else write.spoken_success)
             # The line names what it touched: "{label}" is the entity as a person says it.
             spoken = spoken.replace("{label}", str(proposal.entity_label).lstrip("#"))
+            if proposal.note:
+                spoken = f"{spoken} {proposal.note}"
             if proposal.undo_of is None:
                 self.stage_undo(session, spec, proposal)
             return CommitResult(proposal, "verified", spoken)
@@ -358,9 +419,18 @@ class ActionEngine:
 
     async def _settle_by_observation(self, proposal, execution, session, spec, write, exc) -> CommitResult:
         """One re-read decides an ambiguous mutation. Landed: verified, as if the answer had
-        come back. Untouched: failed, and 'nothing was changed' is now a fact. Neither, or
-        the re-read fails too: unverified — the card says to check the order, never that
-        nothing happened."""
+        come back. Untouched: failed, and 'nothing was changed' is now a fact — except for a
+        change Shopify finishes later (a cancel's job), where an unchanged re-read proves
+        nothing yet: that one is waited for, bounded, and then unverified if still unchanged,
+        never "nothing was changed". Neither, or the re-read fails too: unverified — the card
+        says to check the order, never that nothing happened."""
+        if write.settle is not None and proposal.status is ActionStatus.EXECUTING:
+            # The send may have landed even though its answer did not: give Shopify the time
+            # the change takes before looking.
+            try:
+                await write.settle(execution, proposal.sent or {})
+            except Exception as waiting:  # noqa: BLE001
+                log.warning("action %s: the wait after an ambiguous send failed: %s", proposal.proposal_id, _short(waiting))
         try:
             proven = await write.observe(execution)
         except Exception as again:  # noqa: BLE001
@@ -368,15 +438,34 @@ class ActionEngine:
             self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason=_short(again))
             return CommitResult(proposal, "unverified", write.spoken_failure, detail=_short(exc))
         if proven.fingerprint == proposal.before and proposal.status is ActionStatus.EXECUTING:
+            if write.settle is not None:
+                # Unchanged after the wait — but a job Shopify accepted may still be running.
+                # Saying "nothing was changed" would be a guess about the future.
+                proposal.verified = False
+                self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason=f"unchanged after an ambiguous send: {_short(exc)}")
+                return CommitResult(proposal, "unverified", write.spoken_failure, detail=_short(exc))
             self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason=_short(exc))
             return CommitResult(proposal, "service_unavailable", write.spoken_failure, detail=_short(exc))
         if proposal.status is ActionStatus.EXECUTING:
             proposal.executed_at = self.clock()
             proposal.status = ActionStatus.EXECUTED
             self.ledger.record("EXECUTED", proposal, reason="settled by re-read")
-        return self._prove(proposal, proven, session, spec, write)
+        return await self._prove(proposal, proven, session, spec, write)
 
     # ---------------------------------------------------------------- helpers
+
+    def _armed(self, proposal: ActionProposal, nonce: str) -> bool:
+        """Whether a commit may proceed for this gesture: a tap or a swipe needs no arming; a
+        hold needs the token the arming handed out, after the dwell, before the arming lapses."""
+        required_ms = dwell_ms(proposal.interaction)
+        if required_ms <= 0:
+            return True
+        if not nonce or not proposal.arm_nonce or proposal.armed_at is None:
+            return False
+        if not secrets.compare_digest(str(nonce), proposal.arm_nonce):
+            return False
+        held_ms = (self.clock() - proposal.armed_at) * 1000
+        return required_ms <= held_ms <= (ARMED_FOR_S * 1000 + required_ms + ARM_SLACK_MS)
 
     def _terminal(self, proposal: ActionProposal, write) -> CommitResult:
         """What to say about a proposal that is already settled. Never a second mutation."""
@@ -405,6 +494,23 @@ class ActionEngine:
         proposal.finished_at = self.clock()
         self.ledger.record(status.value, proposal, reason=reason or None)
         proposal.done.set()
+
+
+class PreconditionFailed(RuntimeError):
+    """Shopify refused the change because the entity was not as the proposal expected — a
+    compare-and-swap that found a different quantity, an order that is already cancelled.
+    Nothing was applied. Raised by a write's execute; the engine settles it as STALE."""
+
+
+def _public_answer(answer: Any) -> dict[str, Any] | None:
+    """What a mutation's answer leaves on the proposal: ids and flags, never content."""
+    if not isinstance(answer, dict):
+        return None
+    out: dict[str, Any] = {}
+    for key, value in answer.items():
+        if isinstance(value, (str, int, float, bool)) and (key.endswith("_id") or key in ("done", "status")):
+            out[key] = value
+    return out or None
 
 
 def _payload_len(prepared: Prepared) -> int | None:
@@ -437,4 +543,4 @@ def current() -> ActionEngine:
     return _engine
 
 
-__all__ = ["ActionEngine", "CommitResult", "CODES", "Observed", "Prepared", "current", "install"]
+__all__ = ["ActionEngine", "CommitResult", "CODES", "Observed", "Prepared", "PreconditionFailed", "current", "install"]

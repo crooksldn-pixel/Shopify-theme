@@ -118,3 +118,21 @@ def test_gmail_tools_carry_their_own_ceiling():
     assert registry.get("gmail_search").timeout_s == gmail_tools.GMAIL_TIMEOUT_S
     assert registry.get("gmail_read_thread").timeout_s == gmail_tools.GMAIL_TIMEOUT_S
     assert registry.get("shopify_find_order").timeout_s is None, "the default still applies elsewhere"
+
+
+def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
+    """Every description is read by the model on every turn. A budget, held here: the shared
+    staging rules live in the system prompt once, not in each description."""
+    import json
+
+    from app.providers.max_agent_sdk import withheld_tools
+    from app.tools import gmail_tools, shopify_tools  # noqa: F401
+
+    specs = registry.all_specs()
+    offered = [s for s in specs if s.name not in withheld_tools(specs, writes_enabled=True)]
+    assert offered, "nothing offered"
+    for spec in offered:
+        assert len(spec.description) <= 600, f"{spec.name}: {len(spec.description)} chars of description"
+        assert "spoken yes" not in spec.description, f"{spec.name}: the staging rules belong in the prompt"
+    total = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered)
+    assert total <= 16_000, f"the tool block is {total} bytes"

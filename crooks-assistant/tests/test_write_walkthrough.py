@@ -148,7 +148,8 @@ async def test_the_owner_asks_for_a_note_and_gets_a_card_that_says_only_that_it_
     (card,) = [i["data"] for i in body["ui"] if i["type"] == "confirmation"]
     assert card["risk"] == "amber" and card["status"] == "pending"
     assert card["commit"] == {"allowed": True} and card["summary"] == NOTE
-    assert card["interaction"] == {"kind": "tap_commit", "label": "Tap to apply", "armed_after_ms": 650}
+    assert card["interaction"]["kind"] == "tap_commit" and card["interaction"]["label"] == "Tap to apply"
+    assert card["interaction"]["armed_after_ms"] == 650 and card["interaction"]["footer"] == "nothing happens until you tap"
     assert body["writes"]["allowed"] is True and body["writes"]["caller"] == OWNER
     assert "execution" not in card and "before" not in card
 
@@ -209,7 +210,7 @@ async def test_a_tablet_that_may_not_apply_changes_is_told_before_it_taps(walk):
     assert walk.store.mutations == []
     # The model was told before it spoke, so it never offers a tap the Mac would refuse.
     told = walk.runtime.provider.tool_results[-1]
-    assert "cannot be applied from where the owner is" in told and "Do NOT tell them to tap" in told
+    assert "cannot be applied from where the owner is" in told and "Do NOT tell them to use the card" in told
     # And a spoken yes over a blocked card says the same thing, in its own fixed line.
     said_yes = (await walk.post("/turn", json={"text": "go ahead", "session_id": "w3", "speak": True}, headers=PROXIED)).json()
     assert said_yes["answer"].startswith("That is prepared, but it cannot be applied from this tablet.")

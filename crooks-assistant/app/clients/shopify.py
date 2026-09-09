@@ -43,6 +43,19 @@ class ShopifyThrottled(ShopifyError):
         self.wait_s = wait_s
 
 
+class ShopifyPreconditionFailed(ShopifyError):
+    """Shopify refused a change because the entity was not as the sender assumed — a
+    compare-and-swap that found another quantity, an order that cannot be cancelled as it
+    stands. Nothing was applied, and the sender's picture of the entity is out of date."""
+
+
+# The user-error codes that mean "the entity is not as you thought", across payloads.
+PRECONDITION_CODES = frozenset({
+    "CHANGE_FROM_QUANTITY_STALE", "COMPARE_QUANTITY_STALE", "ORDER_NOT_CANCELLABLE", "ALREADY_CANCELLED",
+    "ORDER_ALREADY_CANCELLED", "NOT_CANCELLABLE", "INVALID_FULFILLMENT_ORDER", "FULFILLMENT_ORDER_NOT_FOUND",
+})
+
+
 class ShopifyScopeRefused(ShopifyError):
     """Shopify refused a mutation for want of a scope, and said so in the response. Proof that
     nothing was applied — which is what makes one retry with a freshly minted token safe. No
@@ -79,6 +92,17 @@ class ReviewedMutation:
     scope: str
     # Longest string any variable may carry. Shopify's own limit on an order note is 5000.
     max_chars: int = 5000
+    # Whether sending it twice with the same variables leaves the same state (setting a note
+    # to a value: yes; a refund, a cancel, an adjustment by a delta: no). Only an idempotent
+    # mutation is ever sent a second time, and then only after a proven scope refusal.
+    idempotent: bool = False
+    # The payload's root field, so a refusal can be told from a redaction: a root that came
+    # back null was refused; a root that came back with a redacted field inside it ran.
+    root: str = ""
+    # For a mutation that takes a nested input object: validate(variable name, value) walks it
+    # against the reviewed shape — known keys, enum values, numeric bounds — and refuses the
+    # rest. A nested input is never sent on the strength of the top-level check alone.
+    validate: Any = None
 
 
 REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
@@ -96,6 +120,42 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         """,
         variables={"id": str, "note": str},
         scope="write_orders",
+        idempotent=True,
+        root="orderUpdate",
+    ),
+    # Tags. tagsAdd and tagsRemove are set operations: sending either twice leaves the same
+    # tags, so both may be retried after a proven scope refusal.
+    "order_tags_add": ReviewedMutation(
+        name="order_tags_add",
+        document="""
+            mutation CrooksOrderTagsAdd($id: ID!, $tags: [String!]!) {
+              tagsAdd(id: $id, tags: $tags) {
+                node { id }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "tags": list},
+        scope="write_orders",
+        max_chars=40,
+        idempotent=True,
+        root="tagsAdd",
+    ),
+    "order_tags_remove": ReviewedMutation(
+        name="order_tags_remove",
+        document="""
+            mutation CrooksOrderTagsRemove($id: ID!, $tags: [String!]!) {
+              tagsRemove(id: $id, tags: $tags) {
+                node { id }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "tags": list},
+        scope="write_orders",
+        max_chars=40,
+        idempotent=True,
+        root="tagsRemove",
     ),
 }
 
@@ -250,24 +310,34 @@ class ShopifyClient:
             raise ShopifyError(f"Refused: {name} variables do not match the reviewed set.")
         for key, kind in reviewed.variables.items():
             value = variables[key]
-            if not isinstance(value, kind):
+            if not isinstance(value, kind) or isinstance(value, bool) and kind is not bool:
                 raise ShopifyError(f"Refused: {name}.{key} has the wrong type.")
             if isinstance(value, str) and (not value.strip() if key == "id" else len(value) > reviewed.max_chars):
                 raise ShopifyError(f"Refused: {name}.{key} is out of bounds.")
+            if isinstance(value, list):
+                # A list carries strings only, each bounded, and not too many of them.
+                if not value or len(value) > 20 or any(not isinstance(v, str) or not v.strip() or len(v) > reviewed.max_chars for v in value):
+                    raise ShopifyError(f"Refused: {name}.{key} is out of bounds.")
+            if isinstance(value, dict) and reviewed.validate is not None and not reviewed.validate(key, value):
+                raise ShopifyError(f"Refused: {name}.{key} does not match the reviewed shape.")
         self.mutations_sent += 1
         log.info("mutation %s sent", name)
         try:
-            return await self._post(reviewed.document, variables, mutation=True)
+            return await self._post(reviewed.document, variables, mutation=True, root=reviewed.root)
         except ShopifyScopeRefused:
-            if self.auth_mode == "static_token" or self._token is None:
+            if self.auth_mode == "static_token" or self._token is None or not reviewed.idempotent:
+                # Never a second send of a change that could apply twice. The scope refusal
+                # is reported; the owner grants the scope and asks again.
                 raise
             # A client-credentials token lives a day and carries the scopes granted when it was
-            # minted. The store granted write_orders after that: one fresh token, one retry.
-            # The mutation itself was refused, so nothing has been applied twice.
+            # minted. The store granted write_orders after that: one fresh token, one retry —
+            # for a mutation that leaves the same state however many times it is sent, and
+            # only after a refusal that proved nothing ran (the root came back null).
             log.warning("mutation %s refused for scope; re-minting the token once", name)
             self._token = None
             self._scopes = None
-            return await self._post(reviewed.document, variables, mutation=True)
+            self.mutations_sent += 1
+            return await self._post(reviewed.document, variables, mutation=True, root=reviewed.root)
 
     async def access_scopes(self, *, refresh: bool = False) -> frozenset[str]:
         """What the store has granted this app. A read, cached briefly: the write preflight
@@ -294,7 +364,7 @@ class ShopifyClient:
         self._scopes_failed_at = 0.0
         return self._scopes
 
-    async def _post(self, query: str, variables: dict[str, Any] | None = None, *, mutation: bool = False) -> dict[str, Any]:
+    async def _post(self, query: str, variables: dict[str, Any] | None = None, *, mutation: bool = False, root: str = "") -> dict[str, Any]:
         token = await self._access_token()
         try:
             response = await self._client().post(
@@ -336,12 +406,17 @@ class ShopifyClient:
                 raise ShopifyThrottled("Shopify is rate-limiting us. Try again in a moment.", wait_s=_refill_wait(self.last_cost))
             if "MAX_COST_EXCEEDED" in codes:
                 raise ShopifyError("That query was too expensive for Shopify; narrow it.")
-            if mutation and "ACCESS_DENIED" in codes:
+            data = payload.get("data")
+            root_value = (data or {}).get(root) if isinstance(data, dict) and root else None
+            if mutation and "ACCESS_DENIED" in codes and (data is None or (root and root_value is None)):
                 # For a read, ACCESS_DENIED is protected customer data coming back redacted and
-                # the rest of the answer stands. For a mutation there is no rest: it was refused,
-                # and this type says so — no other failure may be taken for a refusal.
+                # the rest of the answer stands. For a mutation it is a refusal ONLY when the
+                # mutation's own root came back null: a root that came back, with a redacted
+                # field inside it, is a change that RAN. This type is raised for the refusal
+                # alone — it is what permits a second send, and a second send of a change
+                # that ran would be a second change.
                 raise ShopifyScopeRefused(f"Shopify refused the change (ACCESS_DENIED): {messages[:160]}")
-            if payload.get("data") is None:
+            if data is None:
                 raise ShopifyError(f"Shopify rejected the query: {messages}")
             log.warning("Shopify partial errors (likely protected-data redaction): %s", messages)
             payload.setdefault("_partial_errors", messages)
@@ -349,7 +424,11 @@ class ShopifyClient:
 
         user_errors = _collect_user_errors(payload.get("data") or {})
         if user_errors:
-            raise ShopifyError("; ".join(user_errors))
+            codes = {str(e.get("code") or "").upper() for e in user_errors if isinstance(e, dict)}
+            messages = "; ".join(str(e.get("message", e)) for e in user_errors)
+            if codes & PRECONDITION_CODES:
+                raise ShopifyPreconditionFailed(messages)
+            raise ShopifyError(messages)
 
         return payload
 
@@ -456,12 +535,19 @@ def _iso_utc(dt: datetime) -> str:
     return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _collect_user_errors(node: Any, found: list[str] | None = None) -> list[str]:
+def _collect_user_errors(node: Any, found: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Every user error in a payload, whatever the payload calls its list: `userErrors`,
+    `orderCancelUserErrors`, `inventoryAdjustQuantitiesUserErrors` — any key ending in
+    UserErrors. Each is a dict with at least a message, and a code when Shopify gave one."""
     found = found if found is not None else []
     if isinstance(node, dict):
         for key, value in node.items():
-            if key == "userErrors" and isinstance(value, list):
-                found.extend(str(e.get("message", e)) for e in value if isinstance(e, dict))
+            if key.endswith("UserErrors") or key == "userErrors":
+                if isinstance(value, list):
+                    found.extend(
+                        {"message": str(e.get("message", e)), "code": e.get("code"), "field": e.get("field")}
+                        for e in value if isinstance(e, dict)
+                    )
             else:
                 _collect_user_errors(value, found)
     elif isinstance(node, list):

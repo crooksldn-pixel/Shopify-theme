@@ -167,7 +167,8 @@ class Runtime:
 
         return {
             s.write.operation: REVIEWED_MUTATIONS[s.write.mutation].scope
-            for s in all_specs() if s.write is not None and s.write.mutation in REVIEWED_MUTATIONS
+            for s in all_specs()
+            if s.write is not None and s.write.mutation in REVIEWED_MUTATIONS and not s.name.startswith("mock_")
         }
 
     def gmail_send_capability(self) -> dict[str, str]:

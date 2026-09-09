@@ -153,7 +153,7 @@ async def test_health_says_when_writes_are_off_and_when_they_are_ready(client):
     configure(client, writes=True, logins="")
     assert (await client.get("/health?fresh=1")).json()["writes"]["detail"] == "blocked — CROOKS_ALLOWED_LOGINS not configured"
     configure(client)
-    assert (await client.get("/health?fresh=1")).json()["writes"] == {"state": "ready", "detail": "ready — order note append"}
+    assert (await client.get("/health?fresh=1")).json()["writes"] == {"state": "ready", "detail": "ready — order note append, order tags add"}
     assert client.store.mutations == [], "health never mutates"
 
 
@@ -173,7 +173,7 @@ async def test_an_authorised_tap_executes_once_and_returns_verified_state(client
     assert body["ui"][1]["data"]["note"].endswith("Customer asked for an exchange")
     assert body["undo"]["status"] == "pending" and body["undo"]["undo_of"] == proposal.proposal_id
     assert set(body) <= {"proposal_id", "status", "code", "operation", "risk", "entity_kind", "entity_label", "interaction",
-                         "reversible", "expires_at", "ttl_s", "undo_of", "undo_id", "spoken", "ui", "undo"}
+                         "reversible", "expires_at", "ttl_s", "undo_of", "undo_id", "note", "spoken", "ui", "undo"}
     assert client.store.mutations == [("order_note_set", {"id": ORDER, "note": "Gift wrap please\nCustomer asked for an exchange"})]
 
 
@@ -279,7 +279,8 @@ async def test_a_turn_response_carries_the_confirmation_card_not_a_result(client
     card = ui[0]["data"]
     assert card["proposal_id"] == proposal.proposal_id and card["risk"] == "amber" and card["status"] == "pending"
     assert card["title"] == "Add order note" and card["entity"] == "Order #1930" and card["summary"] == "Hold for collection"
-    assert card["interaction"] == {"kind": "tap_commit", "label": "Tap to apply", "armed_after_ms": 650}
+    assert card["interaction"]["kind"] == "tap_commit" and card["interaction"]["label"] == "Tap to apply"
+    assert card["interaction"]["armed_after_ms"] == 650 and card["interaction"]["footer"] == "nothing happens until you tap"
     assert card["ttl_s"] <= 60 and card["reversible"] is True
     assert "PROPOSED" in text
     from app.routes.turn import _loggable_args
@@ -727,3 +728,62 @@ async def test_a_conversation_belongs_to_the_login_that_started_it(client):
     assert client.runtime.sessions.peek("fresh").login == ""
     assert (await client.get("/state/fresh", headers=stranger)).status_code == 200
     assert (await client.get("/state/fresh", headers=PROXIED)).status_code == 403
+
+
+# --------------------------------------------------------------------------- arming
+
+
+async def test_a_hold_is_armed_on_the_mac_and_the_commit_carries_the_token_in_a_header(client, monkeypatch):
+    """A RED hold: the tablet arms when the hold begins, the Mac hands back a single-use
+    token, and the commit must carry it — in a header, so the body stays the session alone."""
+    import tests.test_engine_hooks as hooks
+    from app.actions.models import Prepared
+    from app.tools import registry
+    from app.tools.gate import Tier
+    from app.tools.registry import ToolSpec, WriteSpec
+    from tests.test_engine_hooks import World
+    from tests.test_engine_hooks import execute as probe_execute
+    from tests.test_engine_hooks import observe as probe_observe
+    from tests.test_engine_hooks import present as probe_present
+    from tests.test_engine_hooks import settle as probe_settle
+    from tests.test_engine_hooks import verify as probe_verify
+
+    hooks.world = World()
+    configure(client)
+
+    async def prepare(order_id: str, refund: str = "60.00") -> Prepared:
+        return Prepared(execution={"order_id": order_id, "refund": refund}, before=dict(hooks.world.state()), expected_after={"cancelled": True},
+                        entity_ref=order_id, entity_label="#1930", summary={"read_back": "cancel"})
+
+    spec = ToolSpec(name="shopify_cancel_probe", description="d", input_schema={"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]},
+                    tier=Tier.RED, handler=prepare, issued_id_args=("order_id",),
+                    write=WriteSpec(operation="cancel_probe", entity_kind="order", entity_arg="order_id", mutation="order_note_set", observe=probe_observe,
+                                    execute=probe_execute, present=probe_present, op_class="money", verify=probe_verify, settle=probe_settle, spoken_success="Order {label} cancelled."))
+    monkeypatch.setitem(registry._REGISTRY, "shopify_cancel_probe", spec)
+    session = client.runtime.sessions.get_or_create("h1")
+    session.issue(ORDER)
+    session.epoch = max(session.epoch, 1)
+    text = await dispatch("shopify_cancel_probe", {"order_id": ORDER}, session=session, timeout_s=5)
+    assert text.startswith("PROPOSED")
+    proposal = session.proposals[-1]
+    assert proposal.interaction == "hold_drag_target"
+
+    # Without the hold: refused, and the card is still waiting.
+    refused = await commit(client, proposal.proposal_id, session_id="h1")
+    assert refused.status_code == 409 and refused.json()["code"] == "not_armed" and proposal.status.value == "PENDING"
+    # The hold begins: a token. A stranger cannot arm it; nor can an unlisted login.
+    stranger = {"Tailscale-User-Login": "x@example.com", "X-Forwarded-For": "100.64.0.3"}
+    assert (await client.post(f"/actions/{proposal.proposal_id}/arm", data={"session_id": "h1"}, headers=stranger)).status_code == 403
+    armed = await client.post(f"/actions/{proposal.proposal_id}/arm", data={"session_id": "h1"}, headers=PROXIED)
+    assert armed.status_code == 200 and armed.json()["hold_ms"] == 900
+    nonce = armed.json()["nonce"]
+    # Too soon: the dwell has not passed.
+    early = await client.post(f"/actions/{proposal.proposal_id}/commit", data={"session_id": "h1"}, headers={**PROXIED, "X-Crooks-Arm": nonce})
+    assert early.status_code == 409 and early.json()["code"] == "not_armed"
+    proposal.armed_at -= 1.0   # the dwell passes
+    done = await client.post(f"/actions/{proposal.proposal_id}/commit", data={"session_id": "h1"}, headers={**PROXIED, "X-Crooks-Arm": nonce})
+    assert done.status_code == 200 and done.json()["status"] == "verified", done.text
+    assert done.json()["spoken"] == "Order 1930 cancelled."
+    assert len(hooks.world.mutations) == 1
+    # Arming a settled card is refused.
+    assert (await client.post(f"/actions/{proposal.proposal_id}/arm", data={"session_id": "h1"}, headers=PROXIED)).status_code == 409

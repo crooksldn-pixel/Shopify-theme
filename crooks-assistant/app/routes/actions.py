@@ -17,6 +17,7 @@ import time
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse
 
+from app.actions import grammar
 from app.presentation import present_action, present_proposal_state
 from app.speech.speakable import to_speakable
 
@@ -191,6 +192,32 @@ async def writes_context(request: Request, operation: str | None = None) -> dict
     }
 
 
+@router.post("/{proposal_id}/arm", response_model=None)
+async def arm(request: Request, proposal_id: str, session_id: str = Form(default="")) -> JSONResponse | dict:
+    """The owner's hold began on a card whose gesture is a hold. The Mac notes when, and
+    answers with a single-use token the commit must carry. Same refusals as a commit: a login
+    that may not apply changes may not arm one either."""
+    runtime = request.app.state.runtime
+    caller, refusal = _authorise(request)
+    if refusal is not None:
+        return refusal
+    if not session_id.strip():
+        return _refuse(400, "wrong_session", "The session is missing.")
+    try:
+        owner_session = runtime.sessions.peek(session_id.strip())
+    except KeyError:
+        owner_session = None
+    if owner_session is not None and not session_matches(owner_session, request):
+        return _refuse(403, "wrong_session", "That conversation belongs to another login.")
+    proposal, code = runtime.actions.arm(proposal_id, session_id.strip())
+    if proposal is None:
+        return _refuse(404 if code == "unknown" else 403, code, "No such proposal for this session.")
+    if code:
+        return _refuse(409, code, "That change is no longer waiting.")
+    log.info("action %s armed by %s", proposal.proposal_id, caller)
+    return {"proposal_id": proposal.proposal_id, "nonce": proposal.arm_nonce, "hold_ms": grammar.HOLD_MS, "armed_for_s": grammar.ARMED_FOR_S}
+
+
 @router.post("/{proposal_id}/commit", response_model=None)
 async def commit(request: Request, proposal_id: str, session_id: str = Form(default="")) -> JSONResponse | dict:
     runtime = request.app.state.runtime
@@ -222,9 +249,15 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         except KeyError:
             return None
 
-    result = await runtime.actions.commit(proposal_id, session_id.strip(), caller=caller, spec_lookup=spec_lookup)
+    # The arming token travels as a header: the body carries the session and nothing else,
+    # and the token is an authorisation, not an argument.
+    nonce = request.headers.get("x-crooks-arm", "").strip()[:64]
+    result = await runtime.actions.commit(proposal_id, session_id.strip(), caller=caller, spec_lookup=spec_lookup, nonce=nonce)
     if result.proposal is None:
         return _refuse(404 if result.code == "unknown" else 403, result.code, "No such proposal for this session.")
+    if result.code == "not_armed":
+        log.warning("commit refused: not_armed — a hold gesture without its hold (caller=%s)", caller)
+        return _refuse(409, "not_armed", "Hold the card first.")
 
     proposal = result.proposal
     log.info("action %s %s → %s (%s)", proposal.proposal_id, proposal.operation, proposal.status.value, result.code)

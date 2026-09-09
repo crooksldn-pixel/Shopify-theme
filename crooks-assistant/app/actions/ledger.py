@@ -85,7 +85,7 @@ class ActionLedger:
             return []
 
 
-_EXTRA_ALLOWED = frozenset({"reason", "ms", "payload_len", "detail", "deduplicated"})
+_EXTRA_ALLOWED = frozenset({"reason", "ms", "payload_len", "detail", "deduplicated", "job", "facts"})
 
 
 def _fingerprint_only(value: dict[str, Any] | None) -> dict[str, Any] | None:
