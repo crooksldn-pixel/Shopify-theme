@@ -177,23 +177,45 @@ async function main() {
   check('a new instruction withdraws the card the Mac names', withdrawn === 'revoked', withdrawn);
   await page.unroute('**/turn');
 
-  // 9. The Mac away, then refused, then back — in the page's own words.
+  // 8b. A spoken yes re-presents the waiting card; the tablet keeps the one it shows.
+  await page.evaluate(() => {
+    const items = [{ type: 'confirmation', data: { proposal_id: 'prop_again', status: 'pending', risk: 'amber', operation: 'order_note_append', title: 'Add order note', entity: 'Order #1930', entity_kind: 'order', entity_ref: 'gid://shopify/Order/0', summary: 'Kept.', interaction: { kind: 'tap_commit', label: 'Tap to apply', armed_after_ms: 100 }, ttl_s: 60, reversible: true } }];
+    const r = window.CrooksUI.render(items, renderOpts()); pushContext(r.nodes, items, 'again');
+  });
+  await sleep(300);
+  const before = await page.evaluate(() => ({ cards: document.querySelectorAll('#cards .card').length, node: Boolean(document.querySelector('[data-proposal="prop_again"]')) }));
+  await page.route('**/turn', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(Object.assign({}, ORDER_TURN, { answer: 'Nothing happens until you tap the card. It is still waiting on the tablet.', revoked: [], ui: [{ type: 'confirmation', data: { proposal_id: 'prop_again', status: 'pending', risk: 'amber', operation: 'order_note_append', title: 'Add order note', entity: 'Order #1930', entity_kind: 'order', entity_ref: 'gid://shopify/Order/0', summary: 'Kept.', interaction: { kind: 'tap_commit', label: 'Tap to apply', armed_after_ms: 100 }, ttl_s: 55, reversible: true, commit: { allowed: true } } }] })) }));
+  await page.click('#settings-btn'); await page.waitForSelector('#dev-text');
+  await page.evaluate(() => { const input = document.getElementById('dev-text'); input.value = 'yes'; input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+  await sleep(900);
+  const after = await page.evaluate(() => ({ cards: document.querySelectorAll('#cards .card').length, state: document.querySelector('[data-proposal="prop_again"] .action-surface').dataset.state, copies: document.querySelectorAll('[data-proposal="prop_again"]').length }));
+  check('a spoken yes keeps the card that is already on screen', before.node && after.cards === before.cards && after.copies === 1 && after.state === 'armed', JSON.stringify({ before, after }));
+  await page.unroute('**/turn');
+
+  // 9. The Mac away, then refused, then back — in the page's own words. The health poll is
+  // routed the same way as the ping, as a real absent or refusing Mac would answer both.
+  const settleReconnect = async () => { await page.evaluate(() => { clearTimeout(reconnectTimer); }); await sleep(250); };
   await page.route('**/ping', (r) => r.abort());
-  await page.evaluate(() => { reconnectDelay = 0; checkReachable(); });
+  await page.route('**/health**', (r) => r.abort());
+  await settleReconnect();
+  await page.evaluate(() => { reconnectDelay = 300; checkReachable(); });
   let offline = false;
   try { await page.waitForFunction(() => document.getElementById('system').dataset.phase === 'offline', null, { timeout: 8000 }); offline = true; } catch { /* below */ }
   const offlineWords = await page.evaluate(() => document.getElementById('system-title').textContent);
   check('an absent Mac is SYSTEM OFFLINE', offline && /offline/i.test(offlineWords), offlineWords);
   await shot('07-offline');
-  await page.unroute('**/ping');
+  await page.unroute('**/ping'); await page.unroute('**/health**');
+  await settleReconnect();
   await page.route('**/ping', (r) => r.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"not allowed"}' }));
-  await page.evaluate(() => { reconnectDelay = 0; checkReachable(); });
+  await page.route('**/health**', (r) => r.fulfill({ status: 403, contentType: 'application/json', body: '{"error":"not allowed"}' }));
+  await page.evaluate(() => { reconnectDelay = 300; checkReachable(); });
   let refused = false;
   try { await page.waitForFunction(() => document.getElementById('system').dataset.phase === 'refused', null, { timeout: 8000 }); refused = true; } catch { /* below */ }
   check('a refused login is NOT ALLOWED, not offline', refused, await page.evaluate(() => document.getElementById('system-title').textContent));
   await shot('08-refused');
-  await page.unroute('**/ping');
-  await page.evaluate(() => { reconnectDelay = 0; checkReachable(); });
+  await page.unroute('**/ping'); await page.unroute('**/health**');
+  await settleReconnect();
+  await page.evaluate(() => { reconnectDelay = 300; checkReachable(); });
   let back = false;
   try { await page.waitForFunction(() => document.getElementById('system').dataset.phase === 'online', null, { timeout: 8000 }); back = true; } catch { /* below */ }
   check('the page comes back when the Mac does', back);

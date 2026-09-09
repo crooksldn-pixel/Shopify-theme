@@ -1538,8 +1538,16 @@ let reconnectTimer = null;
 let reconnectDelay = RECONNECT_MIN_MS;
 let pingInFlight = false;
 
+// Nothing is being asked, heard or said. The system layer (offline, refused) may take the
+// screen when this holds — a live card is no reason to hide that the Mac has gone.
+function quiet() {
+  return !busy && !recording && !speakingVia && !pendingStart && !el.settings.open;
+}
+
+// Quiet, and no card the owner may be about to tap or has just tapped: what a reload or a
+// worker takeover must wait for.
 function idle() {
-  return !busy && !recording && !speakingVia && !pendingStart && !el.settings.open && !liveActionSurface();
+  return quiet() && !liveActionSurface();
 }
 
 // A card the owner may be about to tap, or has just tapped. A reload under it would lose
@@ -1597,7 +1605,7 @@ function wentOnline() {
 // configuration to fix on the Mac, not an outage, and the screen must not call it one.
 function wentRefused() {
   reachable = false;
-  if (idle()) {
+  if (quiet()) {
     setSystem('refused', 'Not allowed', "This tablet's login is not on the Mac's allowed list.", 'CROOKS_ALLOWED_LOGINS on the Mac · open /whoami · tap to check again');
   }
   clearTimeout(reconnectTimer);
@@ -1608,7 +1616,7 @@ function wentOffline() {
   reachable = false;
   // Never over a question in flight, a recording, or Vikram mid-sentence: the turn's own
   // error copy covers those, and the layer takes over once the screen is quiet.
-  if (idle()) {
+  if (quiet()) {
     setSystem('offline', 'System offline', 'Waiting for CROOKS Assistant…', 'Checking quietly · tap to check now');
   }
   clearTimeout(reconnectTimer);

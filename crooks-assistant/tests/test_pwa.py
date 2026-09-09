@@ -154,11 +154,15 @@ def test_the_page_asks_the_mac_whether_it_is_there_and_never_hangs_on_it():
 
 def test_offline_is_shown_only_over_a_quiet_screen_and_retries_quietly():
     body = function_body(APP_JS, "function wentOffline()")
-    assert "if (idle()) {" in body
+    assert "if (quiet()) {" in body
     assert "'System offline', 'Waiting for CROOKS Assistant…'" in body
     assert "reconnectTimer = setTimeout(checkReachable, reconnectDelay);" in body
-    idle = function_body(APP_JS, "function idle()")
-    assert "!busy && !recording && !speakingVia" in idle
+    quiet = function_body(APP_JS, "function quiet()")
+    assert "!busy && !recording && !speakingVia" in quiet
+    # The offline and refused layers wait for quiet, never for a live card to go: a card the
+    # Mac cannot answer is no reason to hide that the Mac has gone.
+    assert "if (quiet()) {" in function_body(APP_JS, "function wentOffline()")
+    assert "if (quiet()) {" in function_body(APP_JS, "function wentRefused()")
     assert "const RECONNECT_MAX_MS = 15000;" in APP_JS
 
 
@@ -194,7 +198,7 @@ def test_a_new_build_on_the_mac_goes_through_the_worker_when_there_is_one():
     # recorder, and a card the owner may be about to tap, both hold the reload back.
     assert "if (!idle()) return;" in body
     idle = function_body(APP_JS, "function idle()")
-    assert "!pendingStart" in idle and "!liveActionSurface()" in idle
+    assert "quiet()" in idle and "!liveActionSurface()" in idle
     surfaces = function_body(APP_JS, "function liveActionSurface()")
     for state in ("arming", "armed", "committing"):
         assert f'[data-state="{state}"]' in surfaces
