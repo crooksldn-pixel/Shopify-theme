@@ -288,19 +288,21 @@ PREFETCH_TIMEOUT_S = 2.5
 # written as a number ("order number 2025", "#2025"); and never "orders over 500 pounds",
 # "orders from 2025" or "orders in the last 100 days", which name no order.
 _SPOKEN_ORDER = re.compile(
-    r"\b(?:order|invoice)\b(?!s\b)\s*(?P<explicit>(?:number|no\.?|#)\s*#?\s*)?(?P<digits>\d{4})\b(?!\s*(?:pounds?|quid|days?|items?|units?|percent|%|per\b))",
+    r"\b(?:order|invoice)\b\s*(?P<explicit>(?:number|no\.?|#)\s*#?\s*)?(?P<digits>\d{4})\b"
+    r"(?!\s*(?:pounds?|quid|days?|items?|units?|percent|%|per\b))",
     re.I,
 )
 
 
 def spoken_order_numbers(text: str) -> list[str]:
+    """The order numbers the owner named, if any. CROOKS issues four digits; "order 2025" is
+    read as the year unless it was said as a number ("order number 2025", "order #2025")."""
     found: list[str] = []
     for match in _SPOKEN_ORDER.finditer(text):
         digits = match.group("digits")
-        if digits[:2] in ("19", "20") and 1900 <= int(digits) <= 2099 and not match.group("explicit"):
-            # "orders from 2025": a year. "order 1938" is an order, and so is "order number 2025".
-            if int(digits) >= 2000:
-                continue
+        looks_like_a_year = 2000 <= int(digits) <= 2099
+        if looks_like_a_year and not match.group("explicit"):
+            continue
         if digits not in found:
             found.append(digits)
     return found
