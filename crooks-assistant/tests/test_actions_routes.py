@@ -535,6 +535,20 @@ async def test_a_spoken_yes_leaves_the_card_waiting_and_says_what_applies_it(cli
     assert again["answer"] == "fake answer"
 
 
+async def test_the_spoken_yes_line_is_synthesised_once_and_kept(client):
+    """It is said often and always in the same words: one ElevenLabs request, ever."""
+    from tests.test_routes import stub_voice
+
+    configure(client)
+    calls = stub_voice(app)
+    await staged(client, session_id="s11")
+    for _ in range(3):
+        body = (await client.post("/turn", json={"text": "yes", "session_id": "s11", "speak": True}, headers=PROXIED)).json()
+        assert body["answer"].startswith("Nothing happens until you tap")
+        assert (await client.post("/speak", json={"text": body["answer"]})).status_code == 200
+    assert len(calls) == 1
+
+
 async def test_a_spoken_yes_does_not_wind_the_clock_back_and_ignores_the_undo(client):
     """The card's minute runs from its first delivery; saying yes again and again does not
     keep it alive. And "okay" said after "Note added" is not about the undo card."""

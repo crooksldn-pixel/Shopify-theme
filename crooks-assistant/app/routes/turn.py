@@ -228,6 +228,10 @@ LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 # and never a promise — the tap is the only thing that applies anything.
 AFFIRMATION_ANSWER = "Nothing happens until you tap the card. It is still waiting on the tablet."
 
+# Answers that are always these exact words. Synthesised once and kept, so they are free and
+# instant every time after that; anything variable would only evict them from the shelf.
+FIXED_LINES = frozenset({AFFIRMATION_ANSWER})
+
 # A bare affirmation: a few words that mean "apply it", nothing else. "Yes, and cancel the
 # order" is not one; neither is "fine" or "correct", which may answer a question the model
 # asked, and must reach it.
@@ -419,7 +423,7 @@ async def _answer(
         # error line is a fixed sentence: synthesised once, kept, free and instant after that.
         # A question the owner abandoned (/cancel) gets no voice: nobody will ask for it.
         runtime.voice.prefetch(
-            to_speakable(answer, max_chars=runtime.voice.max_chars), pin=bool(error_kind)
+            to_speakable(answer, max_chars=runtime.voice.max_chars), pin=bool(error_kind) or answer in FIXED_LINES
         )
     timings["total"] = (time.perf_counter() - started) * 1000
     # What the screen shows beside the answer: cards chosen from the tool results, never from
