@@ -550,7 +550,13 @@ class VoiceClient:
     def voice_mismatch(self) -> str | None:
         """Set when ElevenLabs names the configured id differently from the configured name."""
         actual = self._voice_actual_name
-        if not actual or actual.lower() == self.voice_name.lower():
+        if not actual:
+            return None
+        # ElevenLabs library voices carry a description after the name — "Vikram - AI
+        # Productivity Assistant" is the voice configured as "Vikram". The name is what must
+        # match; a different voice entirely is what this is for.
+        theirs, ours = actual.strip().lower(), self.voice_name.strip().lower()
+        if theirs == ours or theirs.split(" - ")[0].strip() == ours or theirs.startswith(f"{ours} "):
             return None
         return actual
 

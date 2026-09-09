@@ -61,6 +61,10 @@ class Session:
     # Set by /cancel while a turn is in flight: the owner has moved on. The turn still ends,
     # but its answer is not synthesised for a tablet that will never ask for it.
     abandoned: bool = False
+    # Why a tap from the tablet asking this turn would be refused, if it would: set by /turn
+    # before the model runs, so a change proposed while changes are off is never announced as
+    # something to tap. Empty when a tap would work.
+    writes_blocked: str = ""
 
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and

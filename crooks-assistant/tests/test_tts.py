@@ -542,6 +542,10 @@ async def test_the_voice_id_is_checked_against_elevenlabs_once_an_hour(mock_http
     mock_http(handler)
     client = make()
     client.voice_name = "Vikram"
+    # The library name carries a description; that is the same voice, not a mismatch.
+    client._voice_actual_name = "Vikram - AI Productivity Assistant"
+    assert client.voice_mismatch is None and client.health()[0]
+    client._voice_checked_at = 0.0
     assert await client.verify_voice() == "Derek"
     assert await client.verify_voice() == "Derek" and len(seen) == 1, "remembered for an hour"
     ok, detail = client.health()

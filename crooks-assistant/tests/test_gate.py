@@ -61,6 +61,10 @@ def test_detail_tool_rejects_unissued_id():
     # model recovers from must not read, on the tablet or in its answer, as "not allowed".
     assert "not an id this conversation has looked up" in d.reason
     assert "shopify_find_order" in d.reason and "Nothing is refused" in d.reason
+    # And the decision itself says this is a wrong turning, not a rule: the dispatcher tells
+    # the model to put it right rather than to announce a refusal to the owner.
+    assert d.recoverable is True
+    assert classify("shopify_cancel_order", {"order_id": "gid://shopify/Order/1"}, ["gid://shopify/Order/1"]).recoverable is False
 
 
 def test_detail_tool_accepts_issued_id():
@@ -145,14 +149,18 @@ async def test_timeout_is_reported_not_raised(session):
     assert "did not respond" in out
 
 
-async def test_unissued_detail_call_is_refused_end_to_end(session):
+async def test_unissued_detail_call_is_not_run_end_to_end(session):
+    """Nothing is read for an id this conversation has not looked up. The model is told to
+    look it up rather than to tell the owner it could not — that is a step it skipped, not a
+    permission it lacks, and the difference is what the owner hears."""
     out = await dispatch(
         "shopify_order_detail",
         {"order_id": "gid://shopify/Order/1"},
         session=session,
         timeout_s=5,
     )
-    assert out.startswith("REFUSED")
+    assert out.startswith("NOT YET") and "shopify_find_order" in out
+    assert "could not do this" not in out
 
 
 async def test_ids_from_a_result_become_usable(session):

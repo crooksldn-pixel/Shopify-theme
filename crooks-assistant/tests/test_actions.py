@@ -619,3 +619,19 @@ async def test_the_wait_for_the_tap_starts_when_the_card_is_delivered(store, eng
     assert result.code == "verified"
     # Delivery of a settled proposal changes nothing.
     assert engine.deliver(proposal.proposal_id) is proposal and proposal.status is ActionStatus.VERIFIED
+
+
+async def test_a_wrong_turning_is_not_announced_to_the_owner(store, engine, session):
+    """The model asked for a note on an order this conversation had not looked up. That is
+    not a refusal to report; it is a step it skipped. The words it gets back say so — this is
+    the last path by which "not allowed" could reach the owner's ears for a change that was
+    only ever staged wrongly."""
+    fresh = Session(session_id="t2")
+    fresh.epoch = 1
+    text = await dispatch(TOOL, {"order_id": ORDER, "note": "Customer called"}, session=fresh, timeout_s=5)
+    assert text.startswith("NOT YET") and "Do this now, without mentioning it to the owner" in text
+    assert "could not do this" not in text and "REFUSED" not in text
+    assert store.mutations == [] and fresh.proposals == []
+    # A rule, by contrast, is still reported plainly.
+    denied = await dispatch("shopify_cancel_order", {"order_id": ORDER}, session=session, timeout_s=5)
+    assert denied.startswith("REFUSED") and "Tell the user plainly" in denied

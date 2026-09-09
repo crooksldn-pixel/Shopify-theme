@@ -207,6 +207,13 @@ async def test_a_tablet_that_may_not_apply_changes_is_told_before_it_taps(walk):
     assert body["answer"].endswith("Changes are switched off on the Mac, so I can't apply that.")
     assert "not allowed" not in body["answer"].lower()
     assert walk.store.mutations == []
+    # The model was told before it spoke, so it never offers a tap the Mac would refuse.
+    told = walk.runtime.provider.tool_results[-1]
+    assert "cannot be applied from where the owner is" in told and "Do NOT tell them to tap" in told
+    # And a spoken yes over a blocked card says the same thing, in its own fixed line.
+    said_yes = (await walk.post("/turn", json={"text": "go ahead", "session_id": "w3", "speak": True}, headers=PROXIED)).json()
+    assert said_yes["answer"].startswith("That is prepared, but it cannot be applied from this tablet.")
+    assert "tap the card" not in said_yes["answer"].lower()
     # And the tap, if it happens anyway, is refused with the same words and no mutation.
     refused = await walk.post(f"/actions/{card['proposal_id']}/commit", data={"session_id": "w3"}, headers=PROXIED)
     assert refused.status_code == 403 and refused.json()["code"] == "writes_disabled"

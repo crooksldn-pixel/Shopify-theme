@@ -147,7 +147,7 @@ async def turn(
         # a spoken yes does not wind it back. The tablet keeps the card it already shows.
         calls = [ToolCall(name=waiting.tool_name, args={}, ok=True, result={}, proposal_id=waiting.proposal_id)]
         return await _answer(
-            runtime, session_id, AFFIRMATION_ANSWER, request=request, timings=timings, started=started,
+            runtime, session_id, _affirmation_answer(live), request=request, timings=timings, started=started,
             transcript=transcript_info, question=text, speak=speak, calls=calls, epoch=epoch, revoked=[],
         )
 
@@ -162,6 +162,12 @@ async def turn(
     # What was heard, on the session now, so the tablet can show it while Claude thinks
     # rather than only once the answer lands — a mis-heard question is visible at once.
     live.heard = text.strip()
+
+    # What the Mac already knows about applying a change from this request, before the model
+    # is asked: a change proposed while changes are off must never be announced as something
+    # to tap. Asked once per turn (the scope answer is cached), and reused for the card.
+    writes = await writes_context(request) if request is not None else None
+    live.writes_blocked = "" if writes is None or writes["allowed"] else _blocked_words(writes)
 
     # An order number in the question is looked up before the model is asked: the Mac
     # already knows it is an order number, the lookup is the model's first step anyway, and
@@ -219,6 +225,7 @@ async def turn(
         lost_thread=lost_thread,
         epoch=epoch,
         revoked=revoked,
+        writes=writes,
     )
 
 
@@ -230,7 +237,21 @@ AFFIRMATION_ANSWER = "Nothing happens until you tap the card. It is still waitin
 
 # Answers that are always these exact words. Synthesised once and kept, so they are free and
 # instant every time after that; anything variable would only evict them from the shelf.
-FIXED_LINES = frozenset({AFFIRMATION_ANSWER})
+AFFIRMATION_BLOCKED_ANSWER = (
+    "That is prepared, but it cannot be applied from this tablet. The card says why."
+)
+
+FIXED_LINES = frozenset({AFFIRMATION_ANSWER, AFFIRMATION_BLOCKED_ANSWER})
+
+def _blocked_words(writes: dict) -> str:
+    """Why a tap would be refused, in a clause the model can put in a sentence."""
+    return str(writes.get("detail") or "changes cannot be applied from there.").rstrip(".") + "."
+
+
+def _affirmation_answer(session) -> str:
+    """What a spoken yes gets. Fixed either way, so both lines are synthesised once and kept."""
+    return AFFIRMATION_BLOCKED_ANSWER if session.writes_blocked else AFFIRMATION_ANSWER
+
 
 # A bare affirmation: a few words that mean "apply it", nothing else. "Yes, and cancel the
 # order" is not one; neither is "fine" or "correct", which may answer a question the model
@@ -392,6 +413,7 @@ async def _answer(
     speak: bool = False,
     epoch: int | None = None,
     revoked: list[str] | None = None,
+    writes: dict | None = None,
 ) -> dict:
     tool_calls = tool_calls or []
     turns = 0
@@ -414,11 +436,12 @@ async def _answer(
         proposed = []
     # A change was proposed this turn. Say, now and in the same breath, whether a tap on THIS
     # tablet could apply it — a card that cannot be applied must never look as if it can.
-    writes = None
-    if proposed and request is not None:
+    if proposed and writes is None and request is not None:
         writes = await writes_context(request)
-        if not writes["allowed"] and writes["spoken"]:
-            answer = f"{answer.rstrip()} {writes['spoken']}"
+    if proposed and writes is not None and not writes["allowed"] and writes["spoken"]:
+        answer = f"{answer.rstrip()} {writes['spoken']}"
+    elif not proposed:
+        writes = None
     # The card leaves for the tablet now; its wait for the tap starts now.
     for proposal_id in proposed:
         runtime.actions.deliver(proposal_id)

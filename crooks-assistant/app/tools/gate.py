@@ -47,6 +47,10 @@ class Decision:
     tier: Tier
     reason: str
     disposition: Disposition = Disposition.DENY
+    # True when the call was refused for something the model can put right by itself — an id
+    # it has not looked up yet. Nothing is forbidden; it went about it the wrong way, and it
+    # must not tell the owner it could not do this.
+    recoverable: bool = False
 
     @property
     def allowed(self) -> bool:
@@ -61,8 +65,8 @@ class Decision:
         return self.disposition is Disposition.STAGE_FOR_OWNER
 
 
-def deny(reason: str) -> Decision:
-    return Decision(Tier.RED, reason, Disposition.DENY)
+def deny(reason: str, *, recoverable: bool = False) -> Decision:
+    return Decision(Tier.RED, reason, Disposition.DENY, recoverable=recoverable)
 
 
 # Any verb that could change state anywhere is caught on sight, before the rule table is
@@ -151,7 +155,7 @@ def classify(
 
     problem = _check_issued_ids(name, id_args, args, issued)
     if problem:
-        return deny(problem)
+        return deny(problem.lstrip(_RECOVERABLE), recoverable=problem.startswith(_RECOVERABLE))
 
     limit = args.get("limit")
     if limit is not None:
@@ -192,7 +196,7 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
         return deny(f"{name} must act on an issued {write.entity_arg}.")
     problem = _check_issued_ids(name, id_args, args, issued)
     if problem:
-        return deny(problem)
+        return deny(problem.lstrip(_RECOVERABLE), recoverable=problem.startswith(_RECOVERABLE))
     problem = _check_schema_bounds(name, spec.input_schema, args)
     if problem:
         return deny(problem)
@@ -201,6 +205,11 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
         f"{name} is a change to the store: prepared for the owner to authorise on the tablet.",
         Disposition.STAGE_FOR_OWNER,
     )
+
+
+# Prefixed to the one refusal reason the model can put right on its own. Stripped before the
+# words reach the model; what it marks is whether this was a rule or a wrong turning.
+_RECOVERABLE = "\x00"
 
 
 def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any], issued: frozenset[str]) -> str:
@@ -215,7 +224,7 @@ def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any],
         if kind is not None and not kind.match(value):
             return f"{arg}={value!r} is not the kind of id {name} takes."
         if value not in issued:
-            return (
+            return _RECOVERABLE + (
                 f"{arg}={value!r} is not an id this conversation has looked up, so {name} was "
                 "not run. Nothing is refused: find the record first (for an order, "
                 f"shopify_find_order), then call {name} again with the id that lookup returned."

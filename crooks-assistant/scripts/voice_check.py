@@ -39,7 +39,7 @@ async def main() -> int:
     )
     print(f"voice       : {settings.tts_voice_name} ({settings.tts_voice_id})")
     actual = await client.verify_voice()
-    if actual and actual.lower() != settings.tts_voice_name.lower():
+    if actual and client.voice_mismatch:
         print(f"              !! ElevenLabs calls that id '{actual}'. Check CROOKS_TTS_VOICE_ID in .env.")
     elif actual:
         print(f"              ElevenLabs agrees: {actual}")
