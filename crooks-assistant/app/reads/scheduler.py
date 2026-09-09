@@ -157,6 +157,25 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
     order = plan.names()
     calls_by_name: dict[str, Any] = {}
 
+    done_count = 0
+    total = len(plan.reads)
+
+    def progress(read: Read) -> None:
+        """What the Mac is doing, in the owner's words, while it does it (brief section 12).
+
+        Counts and source names only — "2 of 3 checked", "reading the inbox". Never the
+        model's reasoning, which the timeline does not carry and this cannot reach.
+        """
+        nonlocal done_count
+        done_count += 1
+        try:
+            session.set_state(
+                "CHECKING EMAIL" if read.source == "gmail" else "CHECKING SHOPIFY",
+                f"{done_count} of {total} read" if total > 1 else read.tool,
+            )
+        except AttributeError:
+            pass
+
     async def one(read: Read) -> None:
         args = read.args(dict(result.values)) if callable(read.args) else dict(read.args or {})
         if args is None:
@@ -177,6 +196,7 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
             except Exception as exc:  # noqa: BLE001 — a failed read is a reported read
                 result.errors[read.name] = str(exc)[:200]
         ms = (time.perf_counter() - t0) * 1000
+        progress(read)
         result.ms[read.name] = round(ms, 1)
         result.serial_ms += ms
         if own:

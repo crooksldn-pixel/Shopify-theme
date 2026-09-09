@@ -164,3 +164,53 @@ async def test_a_source_budget_that_is_spent_stops_asking(session, monkeypatch):
     ), session=session)
     assert len(ran) == 1
     assert "budget for this answer is spent" in " ".join(result.skipped.values())
+
+
+async def test_the_owner_is_told_what_is_being_read_while_it_is_read(session, monkeypatch):
+    """Counts and source names only (brief section 12). Never a word about reasoning: the
+    scheduler has none to expose, and this is the only thing it writes to the session."""
+    import app.tools.gmail_tools  # noqa: F401
+    import app.tools.shopify_tools  # noqa: F401
+    from app.providers.base import ToolCall
+
+    # Session is a slots dataclass, so the watcher goes on a subclass rather than the
+    # instance — which is also closer to how the real thing is called.
+    seen: list[tuple[str, str]] = []
+
+    class Watched(type(session)):
+        __slots__ = ()
+
+        def set_state(self, state, detail=""):
+            seen.append((state, detail))
+            super().set_state(state, detail)
+
+    session.__class__ = Watched
+
+    async def fake_dispatch(name, args, *, session, timeout_s, calls=None):
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=True, result={}))
+        return "{}"
+
+    monkeypatch.setattr("app.tools.dispatch.dispatch", fake_dispatch)
+    await run_plan(plan_of(
+        Read("a", "shopify_find_order", {}),
+        Read("b", "gmail_search", {}, source="gmail"),
+        Read("c", "shopify_find_customer", {}),
+    ), session=session)
+    details = [d for _, d in seen]
+    assert details == ["1 of 3 read", "2 of 3 read", "3 of 3 read"]
+    assert {s for s, _ in seen} <= {"CHECKING SHOPIFY", "CHECKING EMAIL"}
+
+
+async def test_a_single_read_names_the_tool_rather_than_counting_to_one(session, monkeypatch):
+    import app.tools.shopify_tools  # noqa: F401
+    from app.providers.base import ToolCall
+
+    async def fake_dispatch(name, args, *, session, timeout_s, calls=None):
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=True, result={}))
+        return "{}"
+
+    monkeypatch.setattr("app.tools.dispatch.dispatch", fake_dispatch)
+    await run_plan(plan_of(Read("only", "shopify_find_order", {})), session=session)
+    assert session.state_detail == "shopify_find_order"

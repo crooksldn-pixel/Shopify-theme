@@ -194,9 +194,15 @@ const DETAIL_WORDS = {
 };
 const LONG_THINK_MS = 6000;
 let turnStartedAt = 0;
+// "2 of 3 read" — the Mac's own count of the reads it is making for this answer
+// (app/reads/scheduler.py). Matched as a shape, not a phrase, so a wider plan still reads.
+const COUNTED = /^(\d+) of (\d+) read$/;
+
 function detailWords(detail, state) {
   const name = String(detail || '');
   if (DETAIL_WORDS[name]) return DETAIL_WORDS[name];
+  const counted = COUNTED.exec(name);
+  if (counted) return `${counted[1]} of ${counted[2]} checked`;
   if (name.indexOf('refused ') === 0) return 'Trying another way';
   const waited = turnStartedAt ? Date.now() - turnStartedAt : 0;
   if (state === 'THINKING' && waited > LONG_THINK_MS) return `Still working · ${Math.round(waited / 1000)} s`;
