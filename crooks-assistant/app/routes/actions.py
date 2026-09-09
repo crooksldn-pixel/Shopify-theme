@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse
@@ -87,17 +88,28 @@ def _authorise(request: Request) -> tuple[str, JSONResponse | None]:
 WRITE_STATUS_TIMEOUT_S = 1.5
 
 
+# When the preflight has just timed out, this is how long before it is tried again. Without
+# it a Shopify that hangs costs the bound on the answer AND again on the tap.
+PREFLIGHT_QUIET_S = 30.0
+_preflight_timed_out_at = 0.0
+_SLOW = "ready, unverified — the Shopify scope check was slow"
+
+
 async def _write_status_soon(runtime):
     """The preflight, bounded. It runs before the answer's voice and before a tap; neither may
     wait on a slow Shopify. Past the bound the change is treated as applicable — Shopify has
     the last word on the mutation itself, and refuses it there if the scope is really missing."""
+    global _preflight_timed_out_at
     from app.runtime import WriteStatus
 
+    if time.time() - _preflight_timed_out_at < PREFLIGHT_QUIET_S:
+        return WriteStatus("unknown", _SLOW)
     try:
         return await asyncio.wait_for(runtime.write_status(), timeout=WRITE_STATUS_TIMEOUT_S)
     except TimeoutError:
+        _preflight_timed_out_at = time.time()
         log.warning("the write preflight took longer than %.1fs; treated as ready", WRITE_STATUS_TIMEOUT_S)
-        return WriteStatus("unknown", "ready, unverified — the Shopify scope check was slow")
+        return WriteStatus("unknown", _SLOW)
 
 
 async def writes_context(request: Request) -> dict:

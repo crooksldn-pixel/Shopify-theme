@@ -617,3 +617,36 @@ async def test_a_card_recovered_after_a_lost_connection_is_honest_about_the_tap(
     blocked = (await client.get(f"/actions/{proposal.proposal_id}?session_id=s13", headers=PROXIED)).json()
     assert blocked["ui"][0]["data"]["commit"]["allowed"] is False
     assert blocked["ui"][0]["data"]["commit"]["code"] == "writes_disabled"
+
+
+async def test_a_slow_shopify_costs_the_preflight_bound_once(client):
+    """A scope check that hangs must not be paid twice — once before the answer's voice and
+    again when the owner taps. The bound is paid once, then remembered for a while."""
+    import time as _time
+
+    from app.routes import actions as actions_module
+
+    configure(client)
+    actions_module._preflight_timed_out_at = 0.0
+    hang = asyncio.Event()
+
+    async def slow_scopes(*a, **k):
+        await hang.wait()
+        return frozenset({"write_orders"})
+
+    client.store.access_scopes = slow_scopes  # type: ignore[method-assign]
+    client.runtime.provider = StagingProvider(client.runtime)
+    started = _time.perf_counter()
+    body = (await client.post("/turn", json={"text": "add a note to order 1938", "session_id": "slow"}, headers=PROXIED)).json()
+    first_ms = (_time.perf_counter() - started) * 1000
+    assert body["writes"]["allowed"] is True and body["writes"]["state"] == "unknown"
+    assert first_ms < actions_module.WRITE_STATUS_TIMEOUT_S * 1000 + 800, first_ms
+
+    proposal = client.runtime.sessions.get("slow").proposals[-1]
+    started = _time.perf_counter()
+    tapped = (await commit(client, proposal.proposal_id, session_id="slow")).json()
+    tap_ms = (_time.perf_counter() - started) * 1000
+    assert tapped["status"] == "verified"
+    assert tap_ms < 500, f"the tap paid the bound again: {tap_ms:.0f} ms"
+    hang.set()
+    actions_module._preflight_timed_out_at = 0.0
