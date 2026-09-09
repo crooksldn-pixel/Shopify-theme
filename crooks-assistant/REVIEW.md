@@ -114,3 +114,55 @@ A refuted verdict does not by itself close a finding here; several refuted findi
 ## Still open
 
 Nothing. The four accepted items are trade-offs, written down above, not omissions. Session-id authentication is one of them: on a single-user tailnet the trust is in Tailscale; if the backend is ever exposed more widely, add a shared token before anything else.
+
+## Council pass C — the read layer, working sets, batches, observability intelligence
+
+Five advisors (executor, outsider, first-principles, contrarian, expansionist), five peer
+reviewers, one chairman; every finding read against the code before anything changed. Held
+by `tests/test_council_fixes.py`.
+
+Confirmed and fixed:
+- The order cache's page (forty orders with a dozen line items) would have cost ~3,600
+  points against Shopify's 1,000-point cap per query and been refused on the live store:
+  eight orders of ten items a page now, halved when Shopify says a page is too expensive,
+  paced on the bucket Shopify reports, one order per id re-read (`app/analytics/cache.py`).
+- A batch member could expire on the card's clock while the batch was still applying it,
+  and a word spoken mid-run withdrew every member not yet reached: the claim now freezes the
+  members' clocks and the engine leaves a running batch's members alone
+  (`app/actions/engine.py`, `app/actions/batch.py`).
+- The undo batch was staged at a stale position after a mid-run turn, and its members were
+  ordinary proposals for a moment: born as batch members now, staged at the current position.
+- Fifty courtesy order reads per batch and no pacing: skipped for a batch; the run waits for
+  the bucket by Shopify's own refill figures.
+- The tablet gave up on a batch at thirty seconds and the state route lost the count and the
+  undo: two minutes, polling while it runs, and the state carries both.
+- After a batch the cache dropped up to thirty of fifty orders for five minutes and called
+  itself complete: stale rows are kept, re-read in full across syncs, and the view says so;
+  a walk or a delta that stops at its page bound is reported partial.
+- "This week" was compared with the whole of last week; order-level refunds and unfulfilled
+  value were folded into every product bucket: compared to the same point now, money is
+  the line's own, a shared refund is derived, the basis is named.
+- FALSE_UNSUPPORTED fired when the tool had run and found nothing; the model was never told a
+  batch's outcome; "these" drifted to a derived set after the inbox read; drafts were counted
+  per customer for a per-order plan; three denominators on one change; sets issued every
+  member's id; the inbox read kicked a year's backfill and dropped unheld members silently.
+  All changed as the tests say.
+
+Findings the reviewers showed to be wrong, not acted on: the DST week (same-zone
+subtraction is wall-clock); `_PERIOD_DESC` lacking `last_90_days` (only the prompt lacked it);
+"the report forces failed" (only with no tool having run); "the page retries blind" (it
+sleeps Shopify's own wait).
+
+Clashes, settled: a set holds every match, except when the model asked for a number, when
+it is exactly those rows (the owner said "the five oldest"). The pre-turn capability hint
+ships, and a decline after it is counted apart from an unaided one.
+
+Still open (proposals, not changes): chips on the working-set card ("Tag all of these"),
+catalogue examples generated from the claims map, a morning brief from the cache, a ledger
+replay after a Mac restart mid-batch, per-turn bounds for the inbox read and batch staging,
+refunds by the date they were made, and bulk versions of refund, cancel, fulfilment and stock
+once the first three batches have proved themselves on the tablet.
+
+First thing to run on the Mac: one order page against the live store and read
+`extensions.cost.requestedQueryCost`; the page size is right when that number is under a
+thousand with room to spare.
