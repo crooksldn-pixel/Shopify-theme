@@ -153,7 +153,8 @@ async def test_health_says_when_writes_are_off_and_when_they_are_ready(client):
     configure(client, writes=True, logins="")
     assert (await client.get("/health?fresh=1")).json()["writes"]["detail"] == "blocked — CROOKS_ALLOWED_LOGINS not configured"
     configure(client)
-    assert (await client.get("/health?fresh=1")).json()["writes"] == {"state": "ready", "detail": "ready — order note append, order tags add"}
+    ready = (await client.get("/health?fresh=1")).json()["writes"]
+    assert ready["state"] == "ready" and ready["detail"].startswith("ready — ") and "order note append" in ready["detail"]
     assert client.store.mutations == [], "health never mutates"
 
 

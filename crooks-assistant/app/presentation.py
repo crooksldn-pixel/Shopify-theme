@@ -700,7 +700,7 @@ def present_proposal_state(
 
 
 def _done_title(proposal) -> str:
-    return {"order_note_append": "Note added", "order_tags_add": "Tags added"}.get(proposal.operation, "Done")
+    return {"order_note_append": "Note added", "order_tags_add": "Tags added", "order_cancel": "Cancelled"}.get(proposal.operation, "Done")
 
 
 def _undone_title(proposal) -> str:

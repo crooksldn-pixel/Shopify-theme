@@ -38,6 +38,7 @@ from app.actions.models import (
     args_fingerprint,
     new_proposal_id,
 )
+from app.clients.shopify import ShopifyPreconditionFailed
 from app.session.models import Session
 from app.tools.registry import ToolSpec
 
@@ -142,7 +143,7 @@ class ActionEngine:
         )
         session.stage(proposal)
         self._index[proposal.proposal_id] = session
-        self.ledger.record("PROPOSED", proposal, payload_len=_payload_len(prepared))
+        self.ledger.record("PROPOSED", proposal, payload_len=_payload_len(prepared), facts=_ledger_facts(prepared))
         return proposal, True
 
     def stage_undo(self, session: Session, spec: ToolSpec, done: ActionProposal) -> ActionProposal | None:
@@ -363,7 +364,7 @@ class ActionEngine:
             # Verification: a 200 is not proof; the re-read is.
             proven = await write.observe(execution)
             return await self._prove(proposal, proven, session, spec, write)
-        except PreconditionFailed as exc:
+        except (PreconditionFailed, ShopifyPreconditionFailed) as exc:
             # Shopify itself said the entity was not as expected (a compare-and-swap that
             # found another number, an order already cancelled). Nothing was applied: stale.
             self._finish(proposal, ActionStatus.STALE, "stale", reason=_short(exc))
@@ -511,6 +512,15 @@ def _public_answer(answer: Any) -> dict[str, Any] | None:
         if isinstance(value, (str, int, float, bool)) and (key.endswith("_id") or key in ("done", "status")):
             out[key] = value
     return out or None
+
+
+def _ledger_facts(prepared: Prepared) -> dict[str, Any] | None:
+    """The amounts and flags a change turns on — a refund amount, a restock count — which the
+    tool put under summary["ledger"]. Numbers and short words only; never a name, never text."""
+    facts = prepared.summary.get("ledger")
+    if not isinstance(facts, dict):
+        return None
+    return {str(k)[:24]: v for k, v in facts.items() if isinstance(v, (int, float, bool)) or (isinstance(v, str) and len(v) <= 24)} or None
 
 
 def _payload_len(prepared: Prepared) -> int | None:

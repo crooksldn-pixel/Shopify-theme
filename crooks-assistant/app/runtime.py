@@ -283,7 +283,7 @@ def build(settings: Settings | None = None) -> Runtime:
     gmail = GmailClient()
 
     # Register the tool modules. Importing them is what runs the @tool decorators.
-    from app.tools import gmail_tools, mock, shopify_tools  # noqa: F401
+    from app.tools import gmail_tools, mock, shopify_tools, shopify_writes  # noqa: F401
 
     shopify_tools.bind(shopify)
     gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(shopify))
@@ -310,7 +310,7 @@ def build(settings: Settings | None = None) -> Runtime:
             "CROOKS_ALLOWED_LOGINS is empty: any tailnet login may ask (reads only; changes need "
             "the allow-list). Open /whoami on the tablet and put its login in .env."
         )
-    return Runtime(
+    runtime = Runtime(
         build=web_build_id(),
         settings=settings,
         sessions=sessions,
@@ -326,6 +326,10 @@ def build(settings: Settings | None = None) -> Runtime:
         turnlog=TurnLog(settings.log_dir),
         actions=actions,
     )
+    # The write policy (refund on cancel, restock, notify) is the runtime's settings, read
+    # at prepare time, so a test's configured runtime is what the card prints.
+    shopify_writes.bind_policy(lambda: runtime.settings)
+    return runtime
 
 
 def live_product_count(live: list[str]) -> int:

@@ -141,6 +141,26 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         idempotent=True,
         root="tagsAdd",
     ),
+    # Cancellation. Shopify cancels in a job that finishes later; the engine waits for it
+    # (app/tools/shopify_writes.py settle) and proves the cancellation by re-reading. Not
+    # idempotent — never sent twice. The refund method is a fixed shape validated below.
+    "order_cancel": ReviewedMutation(
+        name="order_cancel",
+        document="""
+            mutation CrooksOrderCancel($orderId: ID!, $reason: OrderCancelReason!, $refundMethod: OrderCancelRefundMethodInput!, $restock: Boolean!, $notifyCustomer: Boolean!, $staffNote: String) {
+              orderCancel(orderId: $orderId, reason: $reason, refundMethod: $refundMethod, restock: $restock, notifyCustomer: $notifyCustomer, staffNote: $staffNote) {
+                job { id done }
+                orderCancelUserErrors { field message code }
+              }
+            }
+        """,
+        variables={"orderId": str, "reason": str, "refundMethod": dict, "restock": bool, "notifyCustomer": bool, "staffNote": str},
+        scope="write_orders",
+        max_chars=200,
+        idempotent=False,
+        root="orderCancel",
+        validate=lambda key, value: key == "refundMethod" and set(value) == {"originalPaymentMethodsRefund"} and isinstance(value["originalPaymentMethodsRefund"], bool),
+    ),
     "order_tags_remove": ReviewedMutation(
         name="order_tags_remove",
         document="""
@@ -338,6 +358,14 @@ class ShopifyClient:
             self._scopes = None
             self.mutations_sent += 1
             return await self._post(reviewed.document, variables, mutation=True, root=reviewed.root)
+
+    async def job_done(self, job_id: str) -> bool | None:
+        """Whether a job Shopify started has finished. None when Shopify no longer knows it."""
+        payload = await self.graphql("query CrooksJob($id: ID!) { job(id: $id) { id done } }", {"id": job_id})
+        job = (payload.get("data") or {}).get("job")
+        if not isinstance(job, dict):
+            return None
+        return bool(job.get("done"))
 
     async def access_scopes(self, *, refresh: bool = False) -> frozenset[str]:
         """What the store has granted this app. A read, cached briefly: the write preflight

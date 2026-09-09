@@ -92,6 +92,12 @@ class Settings(BaseSettings):
     # A request made on the Mac itself carries no Tailscale login. It may commit only when
     # this is on — for the owner at the keyboard, deliberately, never by default.
     writes_local_owner: bool = False
+    # What a cancellation does, beyond cancelling: policy, not a model argument, and printed
+    # on the card the owner holds. A customer who asked to cancel expects the email; a
+    # cancellation for fraud or a declined payment sends none whatever this says.
+    cancel_refund: bool = True
+    cancel_restock: bool = True
+    cancel_notify: bool = True
     # Sending email. Off (the default): the assistant drafts and the draft stays a card.
     # On is not enough by itself: the inbox must have been re-authorised with the send scope
     # (scripts/gmail_auth.py --send), which is a deliberate step the owner takes once.

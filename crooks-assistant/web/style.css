@@ -666,3 +666,5 @@ html[data-lite] .orb-zone{transition:none}
 .facts dd.bad{color:var(--bad)}
 .facts dd.warn{color:var(--warn)}
 .facts dd.ok{color:var(--ok)}
+.action-surface.kind-hold_drag_target[data-state="held"] .action-label,.action-surface.kind-swipe_commit[data-pressed="true"] .action-label{opacity:0;transition:opacity var(--t-1)}
+.action-target{white-space:normal;font-size:9px;width:40%}
