@@ -46,11 +46,11 @@ const el = {
   body: document.body, stage: $('stage'), conn: $('conn'), connText: $('conn-text'),
   system: $('system'), systemTitle: $('system-title'), systemSub: $('system-sub'), systemNote: $('system-note'),
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
-  heard: $('heard'), answer: $('answer'), errline: $('errline'), timings: $('timings'),
+  heard: $('heard'), answer: $('answer'), errline: $('errline'), toast: $('toast'), timings: $('timings'),
   context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
-  recent: $('recent'), recentLabel: $('recent-label'),
+  recent: $('recent'), recentLabel: $('recent-label'), branchBar: $('branch-bar'), orbZone: $('orb-zone'),
   svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice'), changes: $('svc-changes') },
   talk: $('talk'), talkLabel: $('talk-label'),
   settings: $('settings'), settingsBtn: $('settings-btn'), closeSettings: $('close-settings'),
@@ -218,6 +218,9 @@ function setMode(mode) {
 }
 
 const TOO_SHORT = 'That was too short — hold while you speak.';
+// Answers that are about the microphone rather than about the shop. They get a line, not a
+// screen: whatever the owner was looking at stays where it is.
+const TRANSIENT_ERRORS = ['speech', 'empty', 'audio_too_large'];
 const HAPTIC = { start: 12, release: 8, done: [10, 60, 10], error: [40, 50, 40] };
 function haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* unsupported */ }
@@ -241,6 +244,9 @@ document.addEventListener('visibilitychange', () => {
     if (orb) orb.start();
     warmMic();
     pollHealth();
+    // Coming back to a tablet that has been asleep: ask the Mac what actually happened to
+    // every card still on screen before believing any of them.
+    reconcileActions('wake');
   } else {
     stopSpeaking();
     if (orb) orb.stop();
@@ -804,6 +810,38 @@ function pickMimeType() {
   return '';
 }
 
+// A transient line, and nothing else. A speech recogniser that heard nothing is not an
+// event worth a new screen: the September session answered "I did not catch that" with a
+// full surface, which threw away what was on it. This says the words, keeps the context,
+// and goes.
+const TOAST_MS = 4000;
+let toastTimer = null;
+function toast(message, kind) {
+  const words = String(message || '').trim();
+  const node = el.toast;
+  if (!words || !node) return;
+  node.textContent = words;
+  node.className = kind === 'bad' ? 'toast is-bad' : 'toast';
+  node.hidden = false;
+  T.record('toast', { message: words.slice(0, 120), name: kind || 'note' });
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    node.textContent = '';
+    node.hidden = true;
+  }, TOAST_MS);
+}
+
+// Heard nothing, or nothing usable. Say so on one line and leave the screen alone: the
+// cards, the tab and the scroll are all exactly where the owner left them. A recogniser
+// that missed a word must not cost him what he was reading.
+function sayAndStay(data) {
+  toast(data.answer, 'bad');
+  el.answer.textContent = '';
+  setState('READY', '');
+  speakAnswer(data.answer, { isError: true });
+  renderTimings(data.timings_ms, data.transcript);
+}
+
 function showMicError(message) {
   lastWasError = true;
   lastErrorTitle = 'Microphone unavailable';
@@ -1112,7 +1150,202 @@ function actionBlocked() {
 }
 
 function renderOpts() {
-  return { onCommit: commitAction, onArm: armAction, blocked: actionBlocked, onAction: primeAction };
+  return {
+    onCommit: commitAction, onArm: armAction, blocked: actionBlocked, onAction: primeAction,
+    // Which tab a card opens on, when the branch was left on one, and where a change of tab
+    // is reported. Both are the Mac's state, not the page's: see /branches/{id}/mark.
+    tab: branchState && branchState.tab ? branchState.tab : '',
+    onTab: noteTab,
+    // A button beside a row. The tablet posts which action and which row and nothing else.
+    onRowAction: rowAction,
+  };
+}
+
+// ------------------------------------------------------- where the branch is
+
+// The halves of this conversation, as the Mac last listed them. The page draws them; it
+// does not decide what they are, and it never keeps a branch the Mac has closed.
+let branches = [];
+let focusedBranch = '';
+
+// Semantic states only. A background half says what it is doing in a word — the brief is
+// explicit that there are no fake percentages, because nothing here can compute one.
+const TASK_WORDS = { queued: 'queued', working: 'working', waiting: 'waiting', ready: 'ready', failed: 'failed' };
+
+function applyBranches(shape) {
+  if (!shape || typeof shape !== 'object' || !Array.isArray(shape.branches)) return;
+  branches = shape.branches;
+  focusedBranch = String(shape.focused || '');
+  const one = branches.find((b) => b.branch_id === focusedBranch);
+  if (one) branchState = one;
+  drawBranchBar();
+  const split = branches.length > 1 ? 1 : 0;
+  const which = branches.length > 1 && branches[1] && branches[1].branch_id === focusedBranch ? 1 : 0;
+  if (orb && typeof orb.setSplit === 'function') orb.setSplit(split, which);
+  T.record('branches', { count: branches.length, id: focusedBranch });
+}
+
+function drawBranchBar() {
+  if (!el.branchBar) return;
+  clear(el.branchBar);
+  if (branches.length < 2) { el.branchBar.hidden = true; return; }
+  el.branchBar.hidden = false;
+  branches.forEach((b, i) => {
+    const task = b.task && typeof b.task === 'object' ? String(b.task.state || '').toLowerCase() : '';
+    const word = TASK_WORDS[task] || (b.status === 'BACKGROUND' ? 'aside' : '');
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `branch-chip${task === 'ready' ? ' is-ready' : ''}${task === 'failed' ? ' is-failed' : ''}`;
+    chip.setAttribute('aria-pressed', b.branch_id === focusedBranch ? 'true' : 'false');
+    const name = document.createElement('span');
+    name.textContent = b.label || (b.entity && b.entity.label) || (i === 0 ? 'First' : 'Second');
+    chip.appendChild(name);
+    if (word) {
+      const state = document.createElement('span');
+      state.className = 'branch-state';
+      state.textContent = word;
+      chip.appendChild(state);
+    }
+    chip.addEventListener('click', () => branchCommand(b.branch_id, 'focus'));
+    el.branchBar.appendChild(chip);
+  });
+  for (const [label, verb] of [['Aside', 'background'], ['Merge', 'merge'], ['Close', 'cancel']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'branch-act';
+    button.textContent = label;
+    // Aside and Close act on the half that is NOT being talked to, which is what the words
+    // mean when you are looking at one of them; Merge folds the other back into this one.
+    const target = () => (verb === 'background' ? focusedBranch : (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id);
+    button.addEventListener('click', () => branchCommand(target(), verb));
+    el.branchBar.appendChild(button);
+  }
+}
+
+// Every branch verb is one POST and one answer the page redraws itself from. The tablet
+// never decides that a half has moved, merged or closed.
+async function branchCommand(branchId, verb) {
+  if (!branchId && verb !== 'fork') return;
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  const path = verb === 'fork' ? '/branches/fork' : `/branches/${encodeURIComponent(branchId)}/${verb}`;
+  try {
+    const response = await fetch(path, { method: 'POST', body: form, cache: 'no-store' });
+    const data = await response.json().catch(() => ({}));
+    T.record('branch_command', { action: verb, status: response.status, id: branchId || undefined });
+    if (!response.ok) { toast(String(data.detail || 'That is not possible just now.')); return; }
+    applyBranches(data);
+    if (verb === 'merge' && data.merged) {
+      const waiting = Array.isArray(data.merged.still_waiting) ? data.merged.still_waiting.length : 0;
+      const looked = Array.isArray(data.merged.looked_at) ? data.merged.looked_at.length : 0;
+      toast(waiting
+        ? `Merged. ${waiting} change${waiting === 1 ? '' : 's'} still waiting over there.`
+        : `Merged. ${looked} thing${looked === 1 ? '' : 's'} it looked at came back.`);
+    }
+    if (verb === 'cancel' && Array.isArray(data.revoked) && data.revoked.length) {
+      settleProposals(data.revoked, 'revoked', 'Withdrawn');
+    }
+  } catch {
+    toast('The Mac did not answer.');
+  }
+}
+
+// The gestures the orb itself carries. Two fingers pulled apart divide it; pinched together
+// they merge it. A tap on a half while it is divided is how the owner chooses which one he
+// is talking to. Everything a gesture does, the chips below do too — an eight-inch tablet on
+// a workbench should never have exactly one way to do a thing.
+const SPLIT_TRAVEL = 90;      // px of separation before a pull counts as a pull
+let pinchFrom = 0;
+let pinchDone = false;
+
+function pinchDistance(event) {
+  const points = event && event.touches ? event.touches : null;
+  if (!points || points.length < 2) return 0;
+  return Math.hypot(points[0].clientX - points[1].clientX, points[0].clientY - points[1].clientY);
+}
+
+function wireOrbGestures() {
+  const zone = el.orbZone;
+  if (!zone || !zone.addEventListener) return;
+  zone.addEventListener('touchstart', (event) => {
+    if (event.touches && event.touches.length === 2) { pinchFrom = pinchDistance(event); pinchDone = false; }
+  }, { passive: true });
+  zone.addEventListener('touchmove', (event) => {
+    if (pinchDone || !pinchFrom || !event.touches || event.touches.length !== 2) return;
+    const travel = pinchDistance(event) - pinchFrom;
+    if (travel > SPLIT_TRAVEL && branches.length < 2) { pinchDone = true; branchCommand('', 'fork'); }
+    else if (travel < -SPLIT_TRAVEL && branches.length > 1) {
+      pinchDone = true;
+      const other = (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
+      branchCommand(other, 'merge');
+    }
+  }, { passive: true });
+  zone.addEventListener('touchend', () => { pinchFrom = 0; }, { passive: true });
+  zone.addEventListener('click', (event) => {
+    if (branches.length < 2) return;
+    const box = zone.getBoundingClientRect ? zone.getBoundingClientRect() : null;
+    if (!box) return;
+    const half = event.clientX < box.left + box.width / 2 ? 0 : 1;
+    const wanted = branches[half];
+    if (wanted && wanted.branch_id !== focusedBranch) branchCommand(wanted.branch_id, 'focus');
+  });
+}
+
+// The half of the orb this screen belongs to, as the Mac last described it. Every /turn
+// answers with it; nothing here is inferred from what is on screen.
+let branchState = null;
+
+function noteBranch(branch) {
+  if (!branch || typeof branch !== 'object' || !branch.branch_id) return;
+  branchState = branch;
+  focusedBranch = branch.branch_id;
+  branches = branches.map((b) => (b.branch_id === branch.branch_id ? branch : b));
+  if (!branches.some((b) => b.branch_id === branch.branch_id)) branches = [branch];
+  drawBranchBar();
+  el.backBtn.hidden = !branch.can_back && historyIndex <= 0;
+  T.record('branch', { id: branch.branch_id, name: branch.status, depth: branch.depth, label: branch.label || undefined });
+}
+
+// A tab was chosen. The Mac keeps it against the branch's current stop, so going back and
+// coming forward again puts the card back on the tab it was left on.
+function noteTab(kind, name, label) {
+  T.record('tab', { name: kind, label: label || name });
+  if (!branchState) return;
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  form.append('tab', name);
+  fetch(`/branches/${encodeURIComponent(branchState.branch_id)}/mark`, { method: 'POST', body: form, cache: 'no-store' }).catch(() => {});
+}
+
+// A row's own button. The answer is a staged change with its card; it still waits for a
+// gesture, exactly as one the assistant proposed does.
+async function rowAction(action, ref, button) {
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  form.append('action', action);
+  form.append('ref', ref);
+  try {
+    const response = await fetch('/actions/row', { method: 'POST', body: form, cache: 'no-store' });
+    const data = await response.json().catch(() => ({}));
+    T.record('row_action', { action, status: response.status, outcome: response.ok ? 'staged' : 'refused', proposal_id: data && data.proposal_id });
+    if (!response.ok) {
+      toast(String((data && data.detail) || 'That could not be prepared.'));
+      if (button) { button.disabled = false; button.textContent = 'Archive'; }
+      return;
+    }
+    if (button) button.textContent = 'Waiting for you';
+    if (data && Array.isArray(data.ui) && data.ui.length) {
+      const rendered = window.CrooksUI.render(data.ui, renderOpts());
+      if (rendered.nodes.length) {
+        pushContext(rendered.nodes, data.ui, 'Archive');
+        speakAnswer('That one is ready to archive. Tap the card.');
+      }
+    }
+  } catch {
+    T.record('row_action', { action, status: 0, outcome: 'refused' });
+    toast('The Mac did not answer.');
+    if (button) { button.disabled = false; button.textContent = 'Archive'; }
+  }
 }
 
 // A proposal and a batch are authorised by the same gestures at different routes. The id
@@ -1252,8 +1485,10 @@ function settleAction(node, payload, status) {
     settleActionNode(node, code === 'verified' ? 'verified' : code, ACTION_LABELS[code] || 'Not applied');
   }
   if (status >= 400 && !items.length) {
-    el.errline.textContent = ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.');
+    toast(ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.'), 'bad');
   }
+  // Whatever this page believes just happened, ask the Mac. It is the only one that knows.
+  reconcileActions('gesture');
   haptic(proven ? HAPTIC.done : HAPTIC.error);
   if (proven && !busy && !recording) {
     // The one moment the green orb is for: the Mac proved the change — every member of it.
@@ -1311,6 +1546,57 @@ function cancelTurn(form, whyItIsSafeToIgnore) {
 }
 
 // The cards the Mac named, wherever the deck still holds them.
+// ------------------------------------------------- what the Mac says is true
+
+// Every card on this screen that is still waiting or still in flight, by proposal id.
+function liveProposalIds() {
+  const ids = new Set();
+  const visit = (node) => {
+    if (node && node.dataset && node.dataset.proposal) {
+      const surface = node.querySelector ? node.querySelector('.action-surface') : null;
+      const state = surface ? surface.dataset.state : '';
+      if (state !== 'done' && state !== 'failed' && state !== 'settled') ids.add(String(node.dataset.proposal));
+    }
+  };
+  for (const entry of history) for (const node of entry.nodes) visit(node);
+  if (el.cards) for (const node of Array.from(el.cards.children)) visit(node);
+  return Array.from(ids);
+}
+
+// The September session ended with two batches this page reported committed that the Mac
+// never claimed. A gesture is a request; only the Mac knows what became of it. So the page
+// asks — after every gesture and whenever it comes back to itself — and believes the answer.
+// Nothing here infers an outcome from the fact that a finger moved.
+const RECONCILE_SETTLED = { verified: ['done', 'Done'], executed: ['done', 'Done'], unverified: ['failed', 'Not confirmed'],
+  failed: ['failed', 'Failed'], stale: ['failed', 'It changed first'], expired: ['settled', 'Expired'], revoked: ['revoked', 'Withdrawn'] };
+let reconciling = false;
+
+async function reconcileActions(reason) {
+  const ids = liveProposalIds();
+  if (!ids.length || reconciling) return;
+  reconciling = true;
+  try {
+    const response = await fetch(`/actions/states?session_id=${encodeURIComponent(sessionId)}&ids=${encodeURIComponent(ids.join(','))}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    const states = (data && data.states) || {};
+    let corrected = 0;
+    for (const id of Object.keys(states)) {
+      const settled = RECONCILE_SETTLED[String(states[id].status || '').toLowerCase()];
+      if (settled) { settleProposals([id], settled[0], settled[1]); corrected += 1; }
+    }
+    // An id the Mac has never heard of, or whose conversation has gone: it cannot be applied
+    // by any gesture, so it must stop looking as though it can.
+    const unknown = Array.isArray(data && data.unknown) ? data.unknown : [];
+    if (unknown.length) settleProposals(unknown, 'settled', 'No longer waiting');
+    if (corrected || unknown.length) T.record('reconcile', { reason, count: ids.length, kept: corrected, cancelled: unknown.length });
+  } catch {
+    // The Mac did not answer. The cards stay as they are and the next reconcile tries again.
+  } finally {
+    reconciling = false;
+  }
+}
+
 function settleProposals(ids, state, label) {
   const wanted = new Set(ids.map(String));
   const seen = new Set();
@@ -1469,12 +1755,19 @@ async function submit(body, isAudio) {
     haptic(lastWasError ? HAPTIC.error : HAPTIC.done);
     // The cards first, so the headline is this answer's and not the last one's; then the
     // state; then the voice, which never waits on audio.
+    noteBranch(data.branch);
+    if (data.branches) applyBranches(data.branches);
+    if (TRANSIENT_ERRORS.indexOf(String(data.error_kind || '')) !== -1) {
+      sayAndStay(data);
+      return;
+    }
     renderTurn(data);
     setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
     speakAnswer(data.answer, { isError: lastWasError });   // deliberately not awaited
     renderTimings(data.timings_ms, data.transcript);
     // Exactly the cards this instruction withdrew, as the Mac decided; no others.
     if (Array.isArray(data.revoked) && data.revoked.length) settleProposals(data.revoked, 'revoked', 'Withdrawn');
+    reconcileActions('turn');
   } catch (error) {
     if (controller.signal.aborted && controller.cancelled) {
       // The owner moved on: nothing to report, the next question is already being asked.
@@ -1513,6 +1806,9 @@ function sendAudio(blob) {
   form.append('session_id', sessionId);
   form.append('turns', String(turns));
   form.append('speak', el.speakToggle.checked ? '1' : '0');
+  // Which half of a divided orb is being spoken to. Empty is the one the Mac has focused,
+  // which is the usual case and the case when there is only one.
+  if (focusedBranch) form.append('branch_id', focusedBranch);
   submit(form, true);
 }
 
@@ -1935,6 +2231,7 @@ function registerServiceWorker() {
   });
 }
 
+wireOrbGestures();
 registerServiceWorker();
 checkReachable();
 acquireWakeLock();

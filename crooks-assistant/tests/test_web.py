@@ -110,7 +110,7 @@ def test_the_only_write_path_is_a_proposal_id():
             assert verb not in source, f"{name} mentions {verb}"
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
         base = endpoint.split("?")[0].rstrip("/")
-        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/"), endpoint
+        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/") or endpoint.startswith("/branches/"), endpoint
     # The context read carries the session and an order id and nothing else, and is a GET.
     body = function_body(APP_JS, "function collectPending(node, attempt = 0)")
     assert "method:" not in body and "session_id=" in body and "body:" not in body

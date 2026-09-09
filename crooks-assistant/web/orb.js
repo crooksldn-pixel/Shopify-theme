@@ -91,6 +91,12 @@
     let level = 0;
     let kick = 0;
     let mark = null;          // { kind: 'check' | 'cross', progress: 0..1 }
+    // How far the orb has divided (0 = one, 1 = two) and which half the owner is talking to
+    // (0 = left, 1 = right). Animated towards `splitWanted`, so pulling apart and pinching
+    // back together are the same motion in reverse.
+    let split = 0;
+    let splitWanted = 0;
+    let focus = 0;
     let disposed = false;
     const phases = HARMONICS.map((h, i) => (i * 1.7 + 0.4) % TAU);
 
@@ -119,6 +125,16 @@
 
     function pulse() { kick = 1; if (!reduced) start(); }
 
+    // Two halves, or one. `amount` 0..1 is how far apart; `which` is the half being talked
+    // to. Nothing about the split is state the page keeps: the Mac owns which branch is
+    // focused, and this only draws it.
+    function setSplit(amount, which) {
+      splitWanted = Math.max(0, Math.min(1, Number(amount) || 0));
+      focus = which === 1 || which === '1' ? 1 : 0;
+      if (reduced) { split = splitWanted; drawStill(); return; }
+      start();
+    }
+
     function start() {
       if (running || disposed || reduced) return;
       running = true;
@@ -142,7 +158,7 @@
       let fps = target.fps;
       // A state left on screen is idle whatever it is called: an error nobody clears, a
       // success once its mark is drawn. Only the first moments of either earn full frames.
-      const resting = state === 'READY' || state === 'ERROR' || (state === 'SUCCESS' && idleFor > 1500);
+      const resting = (state === 'READY' || state === 'ERROR' || (state === 'SUCCESS' && idleFor > 1500)) && split === splitWanted;
       if (resting) {
         if (idleFor > 600000) { drawStill(); stop(); return; }
         fps = idleFor > 90000 ? 8 : 20;
@@ -161,6 +177,10 @@
       const lk = raw > level ? 1 - Math.exp(-dt * 28) : 1 - Math.exp(-dt * 7);
       level += (raw - level) * lk;
       kick *= Math.exp(-dt * 9);
+      // The divide eases like everything else: pulling apart and pinching together are the
+      // same motion in reverse, so neither ever reads as a redraw.
+      split += (splitWanted - split) * (1 - Math.exp(-dt * 7));
+      if (Math.abs(splitWanted - split) < 0.004) split = splitWanted;
       if (mark) mark.progress = Math.min(1, mark.progress + dt * 2.6);
       draw();
     }
@@ -170,6 +190,7 @@
       Object.assign(cur, target);
       const keepLevel = level; level = 0;
       const keepDeform = cur.deform; cur.deform = 0;
+      split = splitWanted;
       if (mark) mark.progress = 1;
       draw();
       cur.deform = keepDeform; level = keepLevel;
@@ -205,16 +226,36 @@
       return path;
     }
 
+    // The orb, drawn once — or twice, when the conversation has been pulled in two. The
+    // SAME orb either way: two lobes of one thing, offset and a little smaller, the half the
+    // owner is talking to at full strength and the other dimmed. Not a second widget, and
+    // not two little panes: the brief is explicit about both.
     function draw() {
+      const W = canvas.width;
+      ctx.clearRect(0, 0, W, W);
+      if (split < 0.01) { paintBody(1, 1); return; }
+      const gap = W * 0.16 * split;
+      const dim = 1 - 0.42 * split;
+      for (const side of [-1, 1]) {
+        const focused = (focus === 1 ? 1 : -1) === side;
+        ctx.save();
+        ctx.translate(gap * side, 0);
+        paintBody(focused ? 1 : dim, 1 - 0.22 * split);
+        ctx.restore();
+      }
+    }
+
+    function paintBody(alpha, shrink) {
       const W = canvas.width;
       const c = W / 2;
       const tint = mixTint(cur.tint);
       const react = cur.react * level;
       const s = cur.scale * (1 + cur.breathe * Math.sin(t * TAU * cur.breatheHz)) * (1 + react * 0.06 + kick * 0.03);
-      const R = W * 0.31 * s;
+      const R = W * 0.31 * s * shrink;
       const glow = cur.glow + react * 0.28 + kick * 0.1;
 
-      ctx.clearRect(0, 0, W, W);
+      ctx.save();
+      ctx.globalAlpha = alpha;
 
       // Halo: the light the glass throws on the surface it sits on.
       const halo = ctx.createRadialGradient(c, c, R * 0.86, c, c, R * 1.5);
@@ -301,6 +342,7 @@
       ctx.stroke(path);
 
       if (mark) drawMark(c, R, tint);
+      ctx.restore();
     }
 
     function drawMark(c, R, tint) {
@@ -352,10 +394,12 @@
     if (reduced) drawStill();
 
     return {
-      setState, pulse, start, stop, setSize, setReducedMotion, destroy,
+      setState, pulse, start, stop, setSize, setReducedMotion, setSplit, destroy,
       get state() { return state; },
       get running() { return running; },
       get level() { return level; },
+      get split() { return splitWanted; },
+      get focus() { return focus; },
     };
   }
 

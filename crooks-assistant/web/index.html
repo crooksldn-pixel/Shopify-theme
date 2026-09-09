@@ -54,7 +54,15 @@
         <p id="answer" class="answer" aria-live="polite"></p>
         <p id="errline" class="errline"></p>
       </div>
+      <!-- The two halves, named, when there are two. The gestures are the quick way; this is
+           the way that always works, and the way a half working in the background says so. -->
+      <div id="branch-bar" class="branch-bar" hidden></div>
     </section>
+
+    <!-- A line that says something and goes. Above everything, over any screen, and never
+         a surface of its own: a recogniser that heard nothing must not cost the owner the
+         card he was reading. -->
+    <p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
 
     <section id="context" class="context" aria-label="Context">
       <nav id="context-nav" class="context-nav" aria-label="Context navigation">

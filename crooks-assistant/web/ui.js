@@ -151,22 +151,44 @@
     return Number.isFinite(ms) ? new Date(ms - 1).toISOString() : until;
   }
 
-  function tabs(panels) {
-    // panels: [{ label, node }]. Touch-native segmented control; the first panel is open.
-    const wrap = doc().createDocumentFragment ? doc().createDocumentFragment() : h('div');
+  // A card of tabs. panels: [{ name, label, node }]. One panel is open at a time, which is
+  // what keeps an order card the height of the screen instead of seven thousand pixels.
+  //
+  // `opts.initial` opens a named panel — how the back stack puts a card back on the tab it
+  // was left on. `opts.onChange(name)` is called when the owner moves, so the app can tell
+  // the Mac where the branch now is. The wrapper carries data-tab, so nothing has to be
+  // scraped out of the DOM to know.
+  function tabs(panels, opts) {
+    const settings = opts || {};
+    const kept = panels.filter((p) => p && p.node);
+    const wrap = h('div', { class: 'tabbed' });
+    if (!kept.length) return wrap;
+    let open = 0;
+    if (settings.initial) {
+      const found = kept.findIndex ? kept.findIndex((p) => p.name === settings.initial) : -1;
+      if (found >= 0) open = found;
+    }
     const bar = h('div', { class: 'tabs', role: 'tablist' });
     const bodies = [];
-    panels.forEach((p, i) => {
-      const body = h('div', { class: 'panel', role: 'tabpanel', hidden: i !== 0 }, p.node);
+    const show = (i) => {
+      bodies.forEach((b, j) => {
+        b.body.hidden = j !== i;
+        b.tab.setAttribute('aria-selected', j === i ? 'true' : 'false');
+      });
+      wrap.dataset.tab = kept[i].name || String(i);
+      if (typeof settings.onChange === 'function') settings.onChange(kept[i].name || String(i), kept[i].label);
+    };
+    kept.forEach((p, i) => {
+      const body = h('div', { class: 'panel', role: 'tabpanel', hidden: i !== open, data: { panel: p.name || String(i) } }, p.node);
       const tab = h('button', {
-        class: 'tab', type: 'button', role: 'tab', 'aria-selected': i === 0 ? 'true' : 'false', text: p.label,
-        on: { click: () => {
-          bodies.forEach((b, j) => { b.body.hidden = j !== i; b.tab.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
-        } },
+        class: 'tab', type: 'button', role: 'tab', 'aria-selected': i === open ? 'true' : 'false', text: p.label,
+        data: { tab: p.name || String(i) },
+        on: { click: () => show(i) },
       });
       bodies.push({ body, tab });
       bar.appendChild(tab);
     });
+    wrap.dataset.tab = kept[open].name || String(open);
     append(wrap, [bar, bodies.map((b) => b.body)]);
     return wrap;
   }
@@ -409,17 +431,27 @@
     const historyBody = pending.indexOf('history') !== -1 ? [pendingLine('Reading their history…')] : historyBlock(d.history);
     const emailBody = pending.indexOf('email') !== -1 ? [pendingLine('Checking the inbox…')] : relatedEmailBlock(d.email);
     const standing = d.history && typeof d.history === 'object' ? text(d.history.standing) : '';
+    // Five tabs, one open. The September session drew order cards 7,524 pixels tall against
+    // 655 pixels of screen and recorded 131 scrolls; the same facts, one at a time, fit.
+    const panels = [
+      { name: 'overview', label: 'Overview', node: [
+        overview,
+        section('money', 'Money', [moneyBlock(d)]),
+        d.note ? section('note', 'Note', [h('blockquote', { class: 'note-quote', text: text(d.note) })]) : null,
+      ] },
+      { name: 'items', label: `Items${items.length ? ' · ' + items.length : ''}`, node: [
+        section('items', `Items${items.length ? ' · ' + items.length : ''}`, [items.length ? itemsList(items, opts, Boolean(d.items_truncated)) : h('p', { class: 'card-note', text: 'No items on the order.' })]),
+      ] },
+      { name: 'shipping', label: 'Shipping', node: [section('shipping', 'Shipping', shippingBlock(d))] },
+      { name: 'customer', label: 'Customer', node: [section('history', 'Customer', historyBody, standing ? badge(standing, 'quiet') : null)] },
+      { name: 'email', label: 'Email', node: [section('email', 'Email', emailBody)] },
+    ];
     const full = card('order', [
       head,
       orderTimeline(d),
       d.cancelled_at ? h('p', { class: 'card-note bad', text: `Cancelled ${formatDate(d.cancelled_at)}${d.cancel_reason ? ' · ' + text(d.cancel_reason) : ''}` }) : null,
       rail(d.actions, opts),
-      section('items', `Items${items.length ? ' · ' + items.length : ''}`, [items.length ? itemsList(items, opts, Boolean(d.items_truncated)) : h('p', { class: 'card-note', text: 'No items on the order.' })]),
-      section('money', 'Money', [moneyBlock(d)]),
-      section('shipping', 'Shipping', shippingBlock(d)),
-      section('history', 'Customer', historyBody, standing ? badge(standing, 'quiet') : null),
-      section('email', 'Email', emailBody),
-      d.note ? section('note', 'Note', [h('blockquote', { class: 'note-quote', text: text(d.note) })]) : null,
+      tabs(panels, { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('order', name, label) : null }),
     ], opts);
     full.dataset.ref = text(d.order_id);
     full.dataset.pending = pending.join(' ');
@@ -487,17 +519,29 @@
         h('div', {}, [kicker('Customer'), h('h2', { class: 'card-title', text: text(d.name, 'Customer') }), h('p', { class: 'card-sub', text: text(d.email) })]),
         standing ? h('div', { class: 'badges' }, [badge(standing, 'quiet')]) : null,
       ]),
-      d.history && typeof d.history === 'object'
-        ? section('history', 'History', historyBlock(d.history))
-        : h('div', { class: 'stats' }, [
-          h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
-          h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Lifetime' })]),
-        ]),
-      d.related_email && typeof d.related_email === 'object' ? section('email', 'Email', relatedEmailBlock(d.related_email)) : null,
-      d.history ? null : h('p', { class: 'card-note', text: 'Ask for their orders or their emails to see more.' }),
+      customerPanels(d, orders, opts),
     ], opts);
     node.dataset.ref = text(d.customer_id);
     return node;
+  }
+
+  // Overview, Orders, Email — and only the tabs there is something to put behind. A customer
+  // card with nothing but a name is a card, not a tab bar with two empty panels.
+  function customerPanels(d, orders, opts) {
+    const overview = h('div', { class: 'stats' }, [
+      h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
+      h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Lifetime' })]),
+    ]);
+    const history = d.history && typeof d.history === 'object' ? section('history', 'Orders', historyBlock(d.history)) : null;
+    const mail = d.related_email && typeof d.related_email === 'object' ? section('email', 'Email', relatedEmailBlock(d.related_email)) : null;
+    if (!history && !mail) {
+      return [overview, h('p', { class: 'card-note', text: 'Ask for their orders or their emails to see more.' })];
+    }
+    return tabs([
+      { name: 'overview', label: 'Overview', node: [overview] },
+      history ? { name: 'orders', label: 'Orders', node: [history] } : null,
+      mail ? { name: 'email', label: 'Email', node: [mail] } : null,
+    ].filter(Boolean), { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('customer', name, label) : null });
   }
 
   function renderCustomerList(d, opts) {
@@ -637,7 +681,7 @@
     return card('email_list', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email'), h('h2', { class: 'card-title', text: text(d.title, 'Email') }), h('p', { class: 'card-meta', text: num(d.count) === null ? '' : `${d.count} thread${d.count === 1 ? '' : 's'}` })])]),
       h('ul', { class: 'rows' }, threads.map((t) => {
-        const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0' }, [
+        const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { ref: text(t.thread_id) } }, [
           h('span', { class: 'row-main' }, [h('strong', { text: text(t.from, '—') }), ' — ', text(t.subject, '(no subject)')]),
           h('span', { class: 'row-sub', text: text(t.snippet) }),
           h('span', { class: 'row-side' }, [
@@ -645,12 +689,40 @@
             t.known_customer ? badge('Customer', 'quiet ok') : null,
             t.likely_bulk ? badge('Bulk', 'quiet') : null,
           ]),
+          rowActions(t, opts),
         ]);
         row.addEventListener('click', () => row.classList.toggle('is-open'));
         return row;
       })),
       h('p', { class: 'card-note', text: 'Say "read that one" to open a thread.' }),
     ], opts);
+  }
+
+  // The buttons beside a row, exactly as the Mac listed them (app/actions/rows.py). The
+  // tablet renders what it is given and posts back only WHICH action and WHICH row: the
+  // arguments are built on the Mac, from a fresh read, and the change that comes back still
+  // waits for a gesture. Nothing here decides what a button means.
+  function rowActions(row, opts) {
+    const actions = Array.isArray(row && row.actions) ? row.actions.slice(0, 3) : [];
+    const ref = text(row && row.thread_id);
+    if (!actions.length || !ref) return null;
+    const onRow = opts && typeof opts.onRowAction === 'function' ? opts.onRowAction : null;
+    return h('span', { class: 'row-actions' }, actions.map((a) => {
+      const id = text(a && a.id);
+      const button = h('button', {
+        class: 'row-btn', type: 'button', text: text(a && a.label, 'Do'),
+        title: text(a && a.detail), data: { action: id, ref },
+        disabled: a && a.enabled === false ? 'disabled' : null,
+      });
+      button.addEventListener('click', (event) => {
+        if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (!onRow || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Preparing…';
+        onRow(id, ref, button);
+      });
+      return button;
+    }));
   }
 
   function renderEmailThread(d, opts) {

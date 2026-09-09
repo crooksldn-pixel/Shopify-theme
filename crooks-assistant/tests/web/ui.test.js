@@ -95,9 +95,15 @@ test('an order is composed by entity: number and status, then items, money, ship
   assert.equal(node.querySelector('.card-title').textContent, '#1930');
   const badges = node.querySelectorAll('.badges')[0].querySelectorAll('.badge').map((b) => [b.textContent, b.className]);
   assert.deepEqual(badges, [['unfulfilled', 'badge warn'], ['paid', 'badge ok']]);
-  assert.equal(node.querySelectorAll('.tab').length, 0, 'nothing is behind a tab');
+  // Five tabs, one open. The same facts as before, one screenful at a time: the September
+  // session drew these cards 7,524 px tall against 655 px of screen.
+  assert.deepEqual(node.querySelectorAll('.tab').map((t) => t.textContent),
+    ['Overview', 'Items · 1', 'Shipping', 'Customer', 'Email']);
+  assert.equal(node.querySelectorAll('.panel').filter((p) => !p.hidden).length, 1, 'one panel at a time');
+  assert.equal(node.querySelector('.tabbed').dataset.tab, 'overview');
   const sections = node.querySelectorAll('.sec').map((s) => s.querySelector('.sec-kicker').textContent);
-  assert.deepEqual(sections, ['Items · 1', 'Money', 'Shipping', 'Customerreturning', 'Email']);
+  assert.deepEqual(sections, ['Money', 'Items · 1', 'Shipping', 'Customerreturning', 'Email'],
+    'every section is still there, behind its own tab');
   const items = node.querySelector('.items');
   assert.ok(textOf(items).includes('Yard Jeans') && textOf(items).includes('3 left'));
   assert.equal(node.querySelectorAll('.thumb-img').length, 0, 'no image without a signed path');
@@ -819,4 +825,69 @@ test('a batch result counts what was proven, lists each member with its outcome,
   assert.equal(node.querySelector('.action-surface').dataset.kind, 'hold_to_arm');
   const clean = UI.renderItem({ type: 'batch_result', data: { batch_id: 'b', title: 'Archived: 3 of 3', all_verified: true, counts: { requested: 3, eligible: 3, verified: 3 }, rows: [] } });
   assert.ok(textOf(clean).includes('Done') && !textOf(clean).includes('in part'));
+});
+
+/* ---------------------------------------------------- the compact tabbed cards */
+
+test('an order is five tabs with one open, and the tab it opens on is the Mac\'s to choose', () => {
+  const data = {
+    order_id: 'gid://shopify/Order/9', order_number: '#1938', detail: true, total: '£60.00',
+    items: [{ title: 'Jeans', quantity: 1 }], shipping_address: { lines: ['12 Elm Road'], city: 'Leeds' },
+    history: { orders: 2, spent: '£120.00' }, email: { available: true, threads: [] }, pending: [],
+  };
+  const first = UI.renderItem({ type: 'order', data });
+  assert.equal(first.querySelector('.tabbed').dataset.tab, 'overview');
+  const restored = UI.renderItem({ type: 'order', data }, { tab: 'shipping' });
+  assert.equal(restored.querySelector('.tabbed').dataset.tab, 'shipping', 'a card comes back on the tab it was left on');
+  const open = restored.querySelectorAll('.panel').filter((p) => !p.hidden);
+  assert.equal(open.length, 1);
+  assert.equal(open[0].dataset.panel, 'shipping');
+});
+
+test('moving between tabs tells the Mac, and only ever names the tab', () => {
+  const told = [];
+  const node = UI.renderItem({ type: 'order', data: {
+    order_id: 'o1', order_number: '#1', detail: true, items: [], pending: [],
+  } }, { onTab: (kind, name, label) => told.push([kind, name, label]) });
+  const email = node.querySelectorAll('.tab').find((t) => t.dataset.tab === 'email');
+  email.dispatch('click');
+  assert.deepEqual(told, [['order', 'email', 'Email']]);
+  assert.equal(node.querySelector('.tabbed').dataset.tab, 'email');
+});
+
+test('a customer with nothing behind a tab is not given a tab bar', () => {
+  const bare = UI.renderItem({ type: 'customer', data: { name: 'Millie Rogers', orders: 2, spent: '£120.00' } });
+  assert.equal(bare.querySelectorAll('.tab').length, 0);
+  const full = UI.renderItem({ type: 'customer', data: {
+    name: 'Millie Rogers', orders: 2, spent: '£120.00', history: { orders: 2, spent: '£120.00', recent: [] },
+    related_email: { available: true, threads: [] },
+  } });
+  assert.deepEqual(full.querySelectorAll('.tab').map((t) => t.textContent), ['Overview', 'Orders', 'Email']);
+});
+
+/* -------------------------------------------------------- a button beside a row */
+
+test('an email row carries the buttons the Mac listed, and posts only which and which', () => {
+  const asked = [];
+  const node = UI.renderItem({ type: 'email_list', data: { threads: [
+    { thread_id: 't1', from: 'Millie', subject: 'Where is it', actions: [{ id: 'email_archive', label: 'Archive', mode: 'stage', enabled: true, detail: 'Out of the inbox; nothing is deleted.' }] },
+    { thread_id: 't2', from: 'Gus', subject: 'Thanks' },
+  ] } }, { onRowAction: (action, ref) => asked.push([action, ref]) });
+  const rows = node.querySelectorAll('.row');
+  const button = rows[0].querySelector('.row-btn');
+  assert.equal(button.textContent, 'Archive');
+  assert.equal(button.dataset.action, 'email_archive');
+  assert.equal(button.dataset.ref, 't1');
+  assert.equal(rows[1].querySelectorAll('.row-btn').length, 0, 'a row the Mac gave no action has no button');
+  button.dispatch('click', { stopPropagation() {} });
+  assert.deepEqual(asked, [['email_archive', 't1']], 'the id and the row, and nothing else');
+  assert.ok(button.disabled, 'and the button cannot be pressed twice while it is being prepared');
+});
+
+test('a row action is inert when the page has nowhere to send it', () => {
+  const node = UI.renderItem({ type: 'email_list', data: { threads: [
+    { thread_id: 't1', from: 'M', subject: 's', actions: [{ id: 'email_archive', label: 'Archive', enabled: true }] },
+  ] } }, {});
+  const button = node.querySelector('.row-btn');
+  assert.doesNotThrow(() => button.dispatch('click', { stopPropagation() {} }));
 });

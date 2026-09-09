@@ -737,3 +737,49 @@ html[data-lite] .orb-zone{transition:none}
 .stat.ok .stat-v{color:var(--ok)}
 .stat.warn .stat-v{color:var(--warn)}
 .card-batch_result.partial .mark{background:var(--warn-dim,rgba(220,178,102,.18))}
+
+
+/* The toast. Fixed above every screen, out of the way of the orb, gone in four seconds. */
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);transform:translateX(-50%);
+  max-width:min(92vw,560px);margin:0;padding:10px 16px;border-radius:14px;
+  background:var(--surface-2,#1d1f24);color:var(--ink-1,#f4f4f5);border:1px solid var(--line,#33363d);
+  font-size:14px;line-height:1.35;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:60}
+.toast[hidden]{display:none}
+.toast.is-bad{border-color:var(--bad,#b4462f)}
+@media (prefers-reduced-motion: no-preference){.toast{animation:toast-in 140ms ease-out}}
+@keyframes toast-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* A row's own buttons. Small, on the right, and only where the Mac put one. */
+.row-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex:0 0 auto}
+.row-btn{min-height:34px;padding:6px 12px;border-radius:10px;border:1px solid var(--line,#33363d);
+  background:var(--surface-2,#1d1f24);color:var(--ink-1,#f4f4f5);font-size:13px;font-weight:600}
+.row-btn[disabled]{opacity:.55}
+.row-btn:active{transform:translateY(1px)}
+
+/* A card of tabs: one panel at a time, so an order is a screenful and not a scroll. */
+.tabbed{margin-top:10px}
+.tabbed .tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;scrollbar-width:none}
+.tabbed .tabs::-webkit-scrollbar{display:none}
+.tabbed .tab{flex:0 0 auto;min-height:38px;padding:8px 14px;border-radius:999px;border:1px solid var(--line,#33363d);
+  background:transparent;color:var(--ink-2,#b6b9c0);font-size:13px;font-weight:600;white-space:nowrap}
+.tabbed .tab[aria-selected="true"]{background:var(--surface-2,#1d1f24);color:var(--ink-1,#f4f4f5);border-color:var(--ink-3,#6b6f78)}
+.tabbed .panel{padding-top:4px}
+.tabbed .panel[hidden]{display:none}
+
+
+/* The two halves. A chip each, the focused one lit; the background one says what it is
+   doing in words — queued, working, waiting, ready — and never in a percentage. */
+.branch-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.branch-bar[hidden]{display:none}
+.branch-chip{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border-radius:999px;
+  border:1px solid var(--line,#33363d);background:transparent;color:var(--ink-2,#b6b9c0);font-size:13px;font-weight:600}
+.branch-chip[aria-pressed="true"]{background:var(--surface-2,#1d1f24);color:var(--ink-1,#f4f4f5);border-color:var(--ink-3,#6b6f78)}
+.branch-chip .branch-state{font-weight:500;color:var(--ink-3,#6b6f78);text-transform:lowercase}
+.branch-chip.is-ready .branch-state{color:var(--ok,#4f9d69)}
+.branch-chip.is-failed .branch-state{color:var(--bad,#b4462f)}
+@media (prefers-reduced-motion: no-preference){
+  .branch-chip.is-ready{animation:branch-ready 1200ms ease-out 2}
+}
+@keyframes branch-ready{0%,100%{box-shadow:0 0 0 0 rgba(79,157,105,0)}50%{box-shadow:0 0 0 4px rgba(79,157,105,.22)}}
+.branch-act{min-height:40px;padding:8px 14px;border-radius:999px;border:1px solid var(--line,#33363d);
+  background:transparent;color:var(--ink-2,#b6b9c0);font-size:13px;font-weight:600}

@@ -877,6 +877,13 @@ async def _answer(
         "lane": lane,
         "recipe_id": recipe_id or None,
         "branch": branch.public() if branch is not None else None,
+        # Both halves, when there are two, so the tablet draws what the Mac holds rather
+        # than what it remembers doing.
+        "branches": (
+            {"focused": session.focused_branch,
+             "branches": [b.public() for b in session.branches.values() if b.status in ("ACTIVE", "BACKGROUND")]}
+            if session is not None and session.branches else None
+        ),
         "partial": bool(partial),
         "performance": performance,
     }

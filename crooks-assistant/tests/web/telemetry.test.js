@@ -105,7 +105,9 @@ test('the screen is read as structure: card types, tabs, the rail, the surface, 
   assert.equal(first.type, 'order');
   assert.equal(first.ref, 'gid://shopify/Order/1');
   assert.ok(first.sections.length >= 2 && first.sections.some((s) => /^Items/.test(s)), `the order card's sections are named: ${first.sections}`);
-  assert.equal(first.tabs, undefined, 'no tab control on this card');
+  // The order card is now five tabs with one open, so the snapshot names them: this is how
+  // the report can tell "the owner never found the Email tab" from "there was no Email tab".
+  assert.deepEqual(first.tabs, ['Overview', 'Items · 1', 'Shipping', 'Customer', 'Email']);
   assert.deepEqual(first.actions, [{ id: 'note', enabled: true }, { id: 'cancel', enabled: false, reason: 'already shipped' }]);
   assert.equal(first.images.count, 1);
   assert.equal(snap.cards[1].proposal_id, 'prop_1');
