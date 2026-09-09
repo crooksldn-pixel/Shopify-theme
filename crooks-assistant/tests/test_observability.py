@@ -454,7 +454,11 @@ async def test_the_mocked_hour_is_reconstructed_interaction_by_interaction_and_r
     assert "order" in order.ui and {"type": "order", "ref": ORDER} in order.ui_entities
     assert order.latency("total") > 0 and order.latency("shopify") is not None and order.latency("round_trip") == 900
     assert order.latency("tts_first_byte") == 700, "the tablet's own measure, when ElevenLabs is not there"
-    assert order.tts and order.tts[0]["ok"] is False and order.tts[0]["failure"] == "no_key" and order.tts[0]["chars"] == len(order.answer)
+    # The TTS record counts what was SPOKEN; the timeline's copy of the answer is redacted,
+    # so the two are no longer the same length — and that difference is the point.
+    assert order.tts and order.tts[0]["ok"] is False and order.tts[0]["failure"] == "no_key" and order.tts[0]["chars"] >= len(order.answer)
+    assert CUSTOMER_NODE["displayName"] not in order.answer, "a customer's name is not written down"
+    assert "[name]" in order.answer and "CROOKS-1938" in order.answer, "redacted by name, not by wholesale removal"
     render_ = order.render
     assert render_["screen"] == "context" and render_["cards"][0]["type"] == "order" and render_["cards"][0]["actions"][0] == {"id": "note", "enabled": True}
     assert render_["overflow"]["long_scroll"] is True and order.tablet_events("scroll")[0]["depth"] == 640

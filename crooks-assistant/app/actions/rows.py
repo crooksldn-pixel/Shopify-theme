@@ -84,10 +84,17 @@ class UnknownRowAction(KeyError):
 
 
 def resolve(action_id: str, ref: str) -> tuple[RowAction, dict[str, Any]]:
-    """The write tool and the arguments for one row action. Raises rather than guessing."""
+    """The write tool and the arguments for one row action. Raises rather than guessing.
+
+    The action must be one BY_KIND offers for a row of its own kind. Today there is one
+    action and one kind, so the check cannot fail; it is here so that adding a second kind
+    does not silently let the tablet pair any action with any row.
+    """
     action = ROW_ACTIONS.get(str(action_id or ""))
     if action is None:
         raise UnknownRowAction(str(action_id or ""))
+    if action.id not in BY_KIND.get(action.kind, ()):
+        raise UnknownRowAction(f"{action.id} is not offered on a {action.kind} row")
     ref = str(ref or "").strip()
     if not ref:
         raise UnknownRowAction("no row was named")

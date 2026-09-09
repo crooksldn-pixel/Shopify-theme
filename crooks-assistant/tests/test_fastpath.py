@@ -7,6 +7,8 @@ and chose not to.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app.analytics import sets as working_sets
@@ -133,6 +135,10 @@ def test_the_dimension_map_declines_two_and_declines_the_unknown():
 
 
 def test_every_recipe_is_read_only_and_declared():
+    import app.tools.analytics_tools  # noqa: F401
+    import app.tools.gmail_tools  # noqa: F401
+    import app.tools.shopify_tools  # noqa: F401
+
     assert_read_only()
     for recipe in RECIPES.values():
         assert recipe.plan is not None and recipe.render is not None, recipe.recipe_id
@@ -348,3 +354,143 @@ async def test_u_every_turn_records_which_lane_answered_it(turning):
     assert slow["performance"]["fast_path_hit"] is False and slow["performance"]["model_calls"] == 1
     assert slow["performance"]["model_input_chars"] > 0 and slow["performance"]["tool_schema_bytes"] > 0
     assert fast["performance"]["branch_id"] and fast["performance"]["turn_total_ms"] > 0
+
+
+# ------------------------------------------- what the adversarial review found (pass D)
+
+DIRECTION_IS_NOT_A_DIRECTION = [
+    ("what's the last order", "an order, not the one before this one"),
+    ("next week's sales", "a period, not the next member"),
+    ("read me the last email", "an email, not the one before this one"),
+    ("back to the previous customer", "a customer"),
+]
+
+
+@pytest.mark.parametrize(("text", "why"), DIRECTION_IS_NOT_A_DIRECTION)
+def test_a_direction_word_beside_a_thing_is_not_a_direction(text, why, branch):
+    """"Next" is a direction. "Next week's sales" is a question about sales, and was being
+    answered by walking a working set — a question about an order answered with a customer,
+    at "0 of 3", with the owner's place in the set moved."""
+    from app.session.branch import Workflow
+
+    branch.workflow = Workflow(workflow_id="wf", set_id="set_a", kind="customers", total=3, cursor=0)
+    intent = resolve(text, branch=branch)
+    assert intent.family not in ("working_set_next", "working_set_previous", "navigation_back"), f"{text!r}: {why}"
+
+
+def test_the_bare_directions_still_work(branch):
+    from app.session.branch import Workflow
+
+    branch.workflow = Workflow(workflow_id="wf", set_id="set_a", kind="orders", total=3, cursor=0)
+    assert resolve("next", branch=branch).family == "working_set_next"
+    assert resolve("previous", branch=branch).family == "working_set_previous"
+    assert resolve("the one before", branch=branch).family == "working_set_previous"
+    assert resolve("the one before that", branch=branch).family == "working_set_previous"
+    assert resolve("back", branch=branch).family == "navigation_back"
+
+
+def test_a_customer_is_described_from_the_shape_shopify_actually_returns():
+    """`shape_customer_history` gives `orders` (a count) and `spent` (money as a string).
+    Reading them as `orders_count` and `total_spent` announced every customer as having zero
+    orders and no lifetime spend — a confident sentence that was simply false."""
+    from app.fastpath.library import _customer_line
+
+    real = {"name": "Millie Rogers", "orders": 3, "spent": "410.00 GBP", "recent": []}
+    assert _customer_line(real) == "Millie Rogers: 3 orders, 410.00 GBP in total."
+    assert _customer_line({"name": "Gus", "orders": 1, "spent": "60.00 GBP"}) == "Gus: 1 order, 60.00 GBP in total."
+    assert _customer_line({"name": "New", "orders": 0, "spent": ""}) == "New: no orders yet."
+    # Shopify did not say. Nothing is invented in either direction.
+    unknown = _customer_line({"name": "Unknown", "orders": None, "spent": "120.00 GBP"})
+    assert "0 order" not in unknown and "120.00 GBP" in unknown
+
+
+def test_a_comparison_that_was_asked_for_is_spoken():
+    """The engine's shape is {metric: {from, to, delta, pct}}. Reading a `revenue_pct` that
+    has never existed meant the comparison was paid for in query cost and thrown away."""
+    from app.fastpath.library import _breakdown_render
+    from app.fastpath.models import Ctx
+    from app.reads.scheduler import ReadResult
+
+    body = {
+        "period": {"label": "this week"}, "totals": {"revenue": 1240.5, "orders": 42, "aov": 29.54},
+        "currency": "GBP",
+        "compare": {"period": {"label": "last week"}, "change": {"revenue": {"from": 1000.0, "to": 1240.5, "delta": 240.5, "pct": 24.1}}},
+    }
+    result = ReadResult(values={"agg": body})
+    ctx = Ctx(runtime=None, session=Session(session_id="s"), branch=Branch(branch_id="b"), intent=resolve("how were sales this week", branch=None), text="x")
+    answer = _breakdown_render(ctx, result).answer
+    assert "£1,240.50" in answer and "42 orders" in answer
+    assert "24% up on last week" in answer
+    assert "this_week" not in answer, "a slug is not how a person says a period"
+
+
+def test_a_count_is_how_many_there_are_not_how_many_fitted():
+    from app.fastpath.library import _how_many
+
+    assert _how_many({"row_count": 61, "truncated": True}, 25) == "61 (showing 25)"
+    assert _how_many({"row_count": 4}, 4) == "4"
+    assert _how_many({}, 7) == "7"
+
+
+def test_a_read_that_is_not_complete_says_so_in_the_answer():
+    from app.fastpath.library import _hedge
+
+    assert _hedge({"complete": True}) == ""
+    assert _hedge({}) == ""
+    hedged = _hedge({"complete": False, "note": "Shopify could not be read fully; figures cover what the Mac holds."})
+    assert "cover what the Mac holds" in hedged
+    assert "still reading" in _hedge({"complete": False})
+
+
+def test_the_two_period_guard_is_not_defeated_by_a_default(branch):
+    """`period_from` declines an ambiguous two-period question so the turn goes to Claude.
+    Defaulting to thirty days over that decline answered a question about two named windows
+    with a month."""
+    from app.fastpath.library import _best_sellers_plan
+    from app.fastpath.models import Ctx
+
+    session = Session(session_id="s")
+    for text in ("what sold best this week compared to last week", "what sold best today or yesterday"):
+        intent = resolve(text, branch=branch)
+        if intent.family != "best_sellers_period":
+            continue
+        assert _best_sellers_plan(Ctx(runtime=None, session=session, branch=branch, intent=intent, text=text)) is None, text
+    # With no period named at all, the default is still there and still sensible.
+    plan = _best_sellers_plan(Ctx(runtime=None, session=session, branch=branch, intent=resolve("what sold best", branch=branch), text="x"))
+    assert plan is not None and plan.reads[0].args["period"] == "last_30_days"
+
+
+def test_a_name_the_branch_resolved_is_never_written_down(branch):
+    """`Signals.as_dict()` goes to the timeline on every turn. A customer's name is not an
+    id, a count or a controlled word, and telemetry carries only those."""
+    branch.learn("millie rogers", "customer", "c1", "Millie Rogers")
+    recorded = resolve("has millie rogers bought before", branch=branch).public()
+    assert recorded["signals"]["known_name"] is True
+    assert "millie" not in json.dumps(recorded).lower()
+
+
+def test_what_did_you_do_is_not_a_question_about_capabilities(branch):
+    for text in ("what did you do", "what have you done", "what did you change"):
+        assert resolve(text, branch=branch).family != "capability_summary", text
+    assert resolve("what can you do", branch=branch).family == "capability_summary"
+    assert resolve("what else are you able to do", branch=branch).family == "capability_summary"
+
+
+def test_money_is_one_format_whichever_shape_it_arrived_in():
+    from app.fastpath.library import _money
+
+    assert _money("45.00 GBP") == "£45.00"
+    assert _money(1240.5) == "£1,240.50"
+    assert _money(99.0, "USD") == "$99.00"
+    assert _money("12.00 EUR") == "€12.00"
+    assert _money(None) == ""
+
+
+def test_a_recipe_naming_a_tool_the_build_does_not_carry_is_a_crash():
+    from dataclasses import replace
+
+    from app.fastpath.recipes import RECIPES, assert_read_only
+
+    victim = replace(RECIPES["order_lookup"], read_primitives=("shopify_invented_tool",))
+    with pytest.raises(RuntimeError, match="not a registered tool"):
+        assert_read_only({"victim": victim})

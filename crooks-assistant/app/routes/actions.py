@@ -213,7 +213,7 @@ async def writes_context(request: Request, operation: str | None = None) -> dict
 
 
 @router.post("/row", response_model=None)
-async def row(request: Request, session_id: str = Form(default=""), action: str = Form(default=""), ref: str = Form(default="")) -> JSONResponse | dict:
+async def row(request: Request, session_id: str = Form(default=""), action: str = Form(default=""), ref: str = Form(default=""), branch_id: str = Form(default="")) -> JSONResponse | dict:
     """A button beside a row on a card was tapped.
 
     The tablet posts WHICH action and WHICH row, and nothing else. The Mac looks the action
@@ -238,6 +238,10 @@ async def row(request: Request, session_id: str = Form(default=""), action: str 
 
     from app.actions import rows as row_actions
 
+    # The change belongs to the half of the orb the row was on, not to whichever half happens
+    # to be focused when the finger lands.
+    if branch_id.strip():
+        owner_session.focus_branch(branch_id.strip())
     try:
         spec, args = row_actions.resolve(action, ref)
     except row_actions.UnknownRowAction:
@@ -284,6 +288,13 @@ async def arm(request: Request, proposal_id: str, session_id: str = Form(default
     # A hold is refused where the tap would be: a change the store has not granted is never
     # armed, so the tablet never says "armed" about a tap the Mac already knows it will refuse.
     pending = runtime.actions.state(proposal_id, session_id.strip())
+    # And the same branch refusal, so the tablet is never told "armed" about a card the
+    # commit will refuse a moment later. The docstring promised this; now it is true.
+    if pending is not None:
+        elsewhere = _branch_may_commit(owner_session, pending)
+        if elsewhere:
+            timeline.emit("action_arm_refused", session_id=session_id.strip(), proposal_id=proposal_id, code="branch_not_focused", detail=elsewhere)
+            return _refuse(409, "branch_not_focused", elsewhere)
     status = await _write_status_soon(runtime, pending.operation if pending is not None else None)
     if not status.ready:
         log.warning("arm refused: %s — %s (caller=%s)", status.code, status.detail, caller)
@@ -309,11 +320,17 @@ def _branch_may_commit(session, proposal) -> str:
     part is that nothing in the background calls this route at all.
     """
     branch_id = str(getattr(proposal, "branch_id", "") or "")
-    if not branch_id or session is None:
+    if session is None:
         return ""
+    live = [b for b in getattr(session, "branches", {}).values() if b.status in ("ACTIVE", "BACKGROUND")]
+    if not branch_id:
+        # A change with no half named belongs to an undivided conversation. Once the orb has
+        # divided there is no such thing, and a card that cannot say where it came from is
+        # not one a gesture may apply.
+        return "" if len(live) <= 1 else "That change was made before the orb divided. Ask again in the half you want it in."
     branch = getattr(session, "branches", {}).get(branch_id)
     if branch is None:
-        return ""
+        return "That change belongs to a half of the conversation that is gone."
     if branch.status == "BACKGROUND":
         return "That change belongs to the half you put aside. Tap it to come back to it first."
     if branch.status in ("CANCELLED", "MERGED"):

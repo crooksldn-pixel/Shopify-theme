@@ -165,6 +165,9 @@ class ActionEngine:
         undo = ActionProposal(
             proposal_id=new_proposal_id(),
             session_id=session.session_id,
+            # The half of the orb the change it reverses was asked for in: an undo belongs
+            # exactly where its forward change did, and is held to the same branch rules.
+            branch_id=str(getattr(done, "branch_id", "") or ""),
             # The epoch the owner authorised the change in. If they moved on while it was
             # being applied, the undo is already behind them and a tap on it is refused.
             epoch=done.epoch,
@@ -200,23 +203,37 @@ class ActionEngine:
 
     # -------------------------------------------------------- invalidation
 
-    def advance_epoch(self, session: Session, reason: str) -> int:
-        """A new instruction from the owner. Everything still waiting belongs to the last one
-        and is revoked; a proposal never outlives the conversation position it was made in.
-        The one exception is an undo: it belongs to the change that was just made, not to
-        an instruction, and "okay" said to "Note added" must not take it away. It moves to
-        the new position and dies by its own clock."""
+    def advance_epoch(self, session: Session, reason: str, *, branch_id: str = "") -> int:
+        """A new instruction from the owner. Everything still waiting IN THE HALF HE SPOKE TO
+        belongs to the last one and is revoked; a proposal never outlives the conversation
+        position it was made in.
+
+        Two exceptions, and both are about not taking away a card nobody replaced:
+
+        * an undo belongs to the change that was just made, not to an instruction, and
+          "okay" said to "Note added" must not withdraw it;
+        * a change waiting in the OTHER half of a divided orb was asked for there, and a
+          question asked over here is not a new instruction to it.
+
+        Both are carried to the new position rather than left behind at the old one, because
+        the position is the conversation's and the commit is checked against it.
+        """
         session.epoch += 1
-        self.revoke_pending(session, reason)
+        self.revoke_pending(session, reason, branch_id=branch_id)
         for proposal in session.proposals:
-            if proposal.status is ActionStatus.PENDING and proposal.undo_of is not None:
+            if proposal.status is ActionStatus.PENDING:
                 proposal.epoch = session.epoch
         return session.epoch
 
-    def revoke_pending(self, session: Session, reason: str, *, undos: bool = False) -> list[str]:
-        """Withdraw every proposal still waiting in this session (the undos only when asked:
+    def revoke_pending(self, session: Session, reason: str, *, undos: bool = False, branch_id: str = "") -> list[str]:
+        """Withdraw the proposals still waiting in this session (the undos only when asked:
         a new instruction keeps them, a reset or a cancel takes everything). Returns their
-        ids, so the turn that withdrew them can tell the tablet which cards are dead."""
+        ids, so the turn that withdrew them can tell the tablet which cards are dead.
+
+        With `branch_id`, only that half's: a change belongs to the half of the orb it was
+        asked for in, and a question asked in the other half withdraws nothing of it. Without
+        it — a reset, a cancel, a session going — the whole conversation's.
+        """
         revoked: list[str] = []
         running = _running_batches(session)
         for proposal in session.proposals:
@@ -224,6 +241,8 @@ class ActionEngine:
                 if proposal.batch_id and proposal.batch_id in running:
                     # A member of a batch the owner has already gestured for: the batch is
                     # applying it now, and a word spoken meanwhile withdraws nothing of it.
+                    continue
+                if branch_id and str(getattr(proposal, "branch_id", "") or "") not in ("", branch_id):
                     continue
                 self._finish(proposal, ActionStatus.REVOKED, "revoked", reason=reason)
                 revoked.append(proposal.proposal_id)

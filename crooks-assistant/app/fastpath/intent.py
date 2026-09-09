@@ -75,7 +75,11 @@ _BACK = frozenset({"back", "return"})
 _HOME = frozenset({"home", "start", "top", "beginning"})
 
 # Meta: questions about the assistant rather than the shop.
-_SELF = frozenset({"you", "your", "yourself", "capabilities", "capability", "abilities", "able"})
+_SELF = frozenset({"you", "your", "yourself"})
+# A question about what it CAN do. "You" alone is not one: "what did you do" and "what have
+# you done" are questions about the last turn, and were being answered with a capability
+# blurb.
+_ABLE = frozenset({"can", "could", "capable", "capabilities", "capability", "abilities", "ability", "able", "handle", "manage", "know"})
 _MORE = frozenset({"more", "new", "newly", "extra", "now", "changed", "gained", "added", "since", "update", "updated", "upgrade", "upgraded"})
 
 _PERIOD = frozenset({
@@ -103,7 +107,10 @@ _ORDER = frozenset({"order", "orders", "invoice", "purchase"})
 _CUSTOMER = frozenset({"customer", "customers", "buyer", "buyers", "client", "clients", "people", "person", "someone"})
 _STATUS = frozenset({"status", "where", "shipped", "dispatched", "tracking", "delivered", "arrived", "fulfilled"})
 _ADDRESS = frozenset({"address", "street", "addresses", "postcode", "house", "number", "door", "line"})
-_BOUGHT = frozenset({"bought", "buy", "buys", "ordered", "purchased", "spent", "spend", "history", "before", "previously"})
+# "Before" is deliberately absent: "has she bought before" already carries "bought", and
+# "the one before" is a direction. A word that means two things belongs to the reading that
+# needs it, not to both.
+_BOUGHT = frozenset({"bought", "buy", "buys", "ordered", "purchased", "spent", "spend", "history", "previously"})
 
 # Complexity markers: a request with two clauses is not a fast path, whatever its words say.
 _JOIN = frozenset({"and", "then", "also", "plus", "after", "afterwards", "but", "however", "while", "whilst", "if", "unless", "because"})
@@ -139,8 +146,17 @@ class Signals:
     has_workflow: bool = False
     known_name: str = ""
 
+    # Never written to the timeline, whatever it holds. `known_name` is a customer's name as
+    # the owner said it; the observability rule is that telemetry carries ids, counts and
+    # controlled words, and this is none of those. The router still uses it; the record says
+    # only that a name was recognised.
+    PRIVATE = ("words", "known_name")
+
     def as_dict(self) -> dict[str, Any]:
-        return {k: v for k, v in ((f, getattr(self, f)) for f in self.__slots__) if v and k != "words"}
+        out = {k: v for k, v in ((f, getattr(self, f)) for f in self.__slots__) if v and k not in self.PRIVATE}
+        if self.known_name:
+            out["known_name"] = True
+        return out
 
 
 _DEIXIS = frozenset({"that", "this", "it", "them", "those", "these", "they", "him", "her", "their"})
@@ -159,7 +175,7 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         question=bool(have & _QUESTION) or lowered.strip().endswith("?"),
         joins=sum(1 for w in words if w in _JOIN),
         order_numbers=tuple(spoken_order_numbers(text or "")),
-        meta_self=bool(have & _SELF),
+        meta_self=bool(have & _SELF) and bool(have & _ABLE),
         meta_more=bool(have & _MORE),
         period=bool(have & _PERIOD),
         metric=bool(have & _METRIC),
@@ -176,14 +192,23 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         bought=bool(have & _BOUGHT),
         deixis=bool(have & _DEIXIS),
     )
-    if have & _NEXT:
-        sig.direction = "next"
-    elif have & _BACK and not (have & _ORDER) and not (have & _EMAIL) and len(words) <= 4:
-        sig.direction = "back"
-    elif have & _PREV and not sig.period:
-        sig.direction = "previous"
-    elif have & _HOME and len(words) <= 3:
-        sig.direction = "home"
+    # A direction is a direction only when the request names NOTHING ELSE. "Next" is a
+    # direction; "next week's sales" is a question about sales, "what's the last order" is a
+    # question about an order, and "has she bought before" is a question about a customer.
+    # Every one of those was routed to the set-walker before this check existed, and the
+    # walker would have answered a question about an order with a customer.
+    bare = not (sig.order or sig.customer or sig.email or sig.metric or sig.ranking
+                or sig.stock or sig.running_out or sig.period or sig.status or sig.address
+                or sig.bought or sig.delayed or sig.meta_self or sig.order_numbers)
+    if bare and len(words) <= 5:
+        if have & _NEXT:
+            sig.direction = "next"
+        elif have & _BACK:
+            sig.direction = "back"
+        elif have & _PREV:
+            sig.direction = "previous"
+        elif have & _HOME and len(words) <= 3:
+            sig.direction = "home"
     if branch is not None:
         sig.has_entity = bool(getattr(branch, "entity", None))
         sig.has_set = bool(getattr(branch, "set_id", ""))
@@ -243,7 +268,7 @@ FAMILIES: tuple[Family, ...] = (
     Family("delayed_orders", needs=("delayed", "order"), boosts=("question", "period"), blocks=("mutation", "order_number"), base=0.72, max_words=14),
     Family("stock_cover_analysis", needs=("running_out",), boosts=("question", "period", "metric", "stock"), blocks=("mutation", "email", "order_number"), base=0.7, floor=0.72, max_words=12),
     Family("needs_reply", needs=("email", "waiting"), boosts=("customer", "question"), blocks=("mutation", "metric", "order_number", "ranking"), base=0.7, floor=0.74, max_words=14),
-    Family("inbox_state", needs=("email", "question"), blocks=("mutation", "metric", "customer", "waiting", "ranking"), base=0.66, floor=0.74, max_words=12),
+    Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number"), base=0.7, floor=0.74, max_words=12),
 )
 
 # Signal names as the families spell them, mapped to how they are read off Signals.

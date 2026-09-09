@@ -95,9 +95,49 @@ def _order_of(result: ReadResult, name: str = "find") -> dict[str, Any] | None:
     return None
 
 
-def _money(value: Any) -> str:
+def _hedge(body: dict[str, Any]) -> str:
+    """What the read itself says about its own completeness, added to the answer rather than
+    left in the payload for nobody. The order cache says `complete: False` with a `note`
+    while it is still filling — which is exactly the first questions after a restart."""
+    if not isinstance(body, dict) or body.get("complete") is not False:
+        return ""
+    note = " ".join(str(body.get("note") or "").split())
+    return f" {note}" if note else " The Mac is still reading recent orders, so this is what it holds so far."
+
+
+def _how_many(body: dict[str, Any], shown: int) -> str:
+    """How many there are, not how many fitted. A limit of 25 against 61 matching orders was
+    being spoken as "25 orders are unfulfilled"."""
+    total = body.get("row_count")
+    if isinstance(total, int) and total > shown:
+        return f"{total} (showing {shown})"
+    return str(shown)
+
+
+def _period_words(body: dict[str, Any], fallback: str = "the period") -> str:
+    """The period as a person says it. The read layer's own label first; its slug, spelled
+    out, second — "last_30_days" was being read aloud with the underscores in it."""
+    period = body.get("period") if isinstance(body.get("period"), dict) else {}
+    label = str(period.get("label") or "").strip()
+    if label:
+        return label
+    slug = str(period.get("name") or period.get("period") or "").strip()
+    return slug.replace("_", " ") if slug else fallback
+
+
+# What the Mac's own reads call money. Shopify's shape is already a string with its currency
+# in it ("45.00 GBP"); the read layer's is a bare number with the currency beside it. One
+# answer must not contain both shapes.
+_SYMBOL = {"GBP": "£", "USD": "$", "EUR": "€"}
+
+
+def _money(value: Any, currency: str = "GBP") -> str:
+    if isinstance(value, str):
+        parts = value.split()
+        if len(parts) == 2 and parts[1].isalpha():
+            value, currency = parts[0], parts[1].upper()
     try:
-        return f"£{float(value):,.2f}"
+        return f"{_SYMBOL.get(currency.upper(), currency.upper() + ' ')}{float(value):,.2f}"
     except (TypeError, ValueError):
         return str(value or "")
 
@@ -139,7 +179,12 @@ def _capability_summary(ctx: Ctx, result: ReadResult) -> FastAnswer:   # noqa: A
     from app.capabilities.manifest import build as build_manifest
     from app.capabilities.manifest import spoken_summary
 
-    manifest = getattr(ctx.runtime, "manifest", None) or build_manifest(build_id=getattr(ctx.runtime, "build", ""))
+    manifest = getattr(ctx.runtime, "manifest", None)
+    if not manifest:
+        # Built here only if the runtime has none, and never with writes assumed on: saying
+        # "I can change things" while changes are switched off is the worst answer available.
+        settings = getattr(ctx.runtime, "settings", None)
+        manifest = build_manifest(build_id=getattr(ctx.runtime, "build", ""), writes_enabled=bool(getattr(settings, "writes_enabled", False)))
     return FastAnswer(answer=spoken_summary(manifest), trace={"source": "manifest", "fingerprint": manifest.get("fingerprint")})
 
 
@@ -232,7 +277,7 @@ def _member_answer(ctx: Ctx, result: ReadResult) -> FastAnswer:
 
     workflow = ctx.branch.workflow
     ws = working_sets.get(ctx.session, workflow.set_id) if workflow else None
-    if workflow is None or ws is None:
+    if workflow is None or ws is None or not ws.members:
         return FastAnswer(answer="", defer="the set this was working through has gone")
     ref = ws.members[min(max(workflow.cursor, 0), len(ws.members) - 1)]
     label = ws.labels.get(ref) or ref
@@ -246,7 +291,7 @@ def _member_answer(ctx: Ctx, result: ReadResult) -> FastAnswer:
         if ws.kind == "orders":
             head = _order_line(body)
         elif ws.kind == "customers":
-            head = f"{body.get('name') or label}: {body.get('orders_count') or 0} orders, {_money(body.get('total_spent'))} in total."
+            head = _customer_line(body, label)
         else:
             head = f"{body.get('subject') or label}."
         return FastAnswer(answer=f"{head} {where}.", calls=list(result.calls), partial=result.partial,
@@ -298,7 +343,7 @@ def _order_plan(ctx: Ctx) -> ReadPlan | None:
 def _detail_args(values: dict[str, Any]) -> dict[str, Any] | None:
     found = values.get("find")
     orders = found.get("orders") if isinstance(found, dict) else None
-    if isinstance(orders, list) and len(orders) == 1 and orders[0].get("order_id"):
+    if isinstance(orders, list) and len(orders) == 1 and isinstance(orders[0], dict) and orders[0].get("order_id"):
         return {"order_id": str(orders[0]["order_id"])}
     return None
 
@@ -403,9 +448,24 @@ def _customer_plan(ctx: Ctx) -> ReadPlan | None:
 def _history_args(values: dict[str, Any]) -> dict[str, Any] | None:
     found = values.get("find")
     people = found.get("customers") if isinstance(found, dict) else None
-    if isinstance(people, list) and len(people) == 1 and people[0].get("customer_id"):
+    if isinstance(people, list) and len(people) == 1 and isinstance(people[0], dict) and people[0].get("customer_id"):
         return {"customer_id": str(people[0]["customer_id"])}
     return None
+
+
+def _customer_line(history: dict[str, Any], fallback: str = "") -> str:
+    """A customer in a sentence, from the shape `shape_customer_history` actually returns:
+    `orders` is a COUNT (an int, or None when Shopify did not say) and `spent` is already
+    money as a string. Reading them as a list and a number produced "0 orders, in total" for
+    every customer walked with "Next" — a confident sentence that was simply false."""
+    name = str(history.get("name") or fallback or "They").strip()
+    count = history.get("orders")
+    spent = str(history.get("spent") or "").strip()
+    if not isinstance(count, int):
+        # Shopify did not give a count. Say what is known and nothing more.
+        return f"{name}." if not spent else f"{name}, {spent} spent with us."
+    orders = "no orders yet" if count == 0 else f"{count} order{'' if count == 1 else 's'}"
+    return f"{name}: {orders}" + (f", {spent} in total." if spent else ".")
 
 
 def _customer_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
@@ -417,17 +477,17 @@ def _customer_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     _remember(ctx, "customer", ref, name, tab="orders")
     if ctx.intent.slots.get("name"):
         ctx.branch.learn(ctx.intent.slots["name"], "customer", ref, name)
-    orders = history.get("orders") or []
-    count = history.get("orders_count") if history.get("orders_count") is not None else len(orders)
-    spent = _money(history.get("total_spent"))
-    last = orders[0] if orders and isinstance(orders[0], dict) else {}
+    recent = [o for o in (history.get("recent") or []) if isinstance(o, dict)]
+    last = recent[0] if recent else {}
     tail = ""
     if last:
-        tail = f" The last was {str(last.get('order_number') or '').lstrip('#')}, {_money(last.get('total'))}"
+        tail = f" The last was {str(last.get('order_number') or '').lstrip('#')}"
+        if last.get("total"):
+            tail += f", {_money(last['total'])}"
         if last.get("placed_at"):
             tail += f" on {str(last['placed_at'])[:10]}"
         tail += "."
-    return FastAnswer(answer=f"{name or 'They'} has {count} order(s), {spent} in total.{tail}", calls=list(result.calls),
+    return FastAnswer(answer=_customer_line(history, name) + tail, calls=list(result.calls),
                       partial=result.partial, trace={"customer_id": ref})
 
 
@@ -444,7 +504,14 @@ register(Recipe(
 
 def _best_sellers_plan(ctx: Ctx) -> ReadPlan | None:
     words = ctx.intent.signals.words
-    period = period_from(words) or "last_30_days"
+    period = period_from(words)
+    if period is None:
+        # No period named at all is "recently" and has a sensible default; a period the map
+        # DECLINED (two of them, an ambiguity) must not be defaulted over — that is exactly
+        # the case it declined for. The sibling recipe honours this and so must this one.
+        if ctx.intent.signals.period:
+            return None
+        period = "last_30_days"
     # "By colour" and "by size" are the same question with one dimension changed, which is
     # what the read layer is for. A "by" the map does not know is not guessed at: the plan
     # declines and Claude takes the turn.
@@ -476,14 +543,15 @@ def _aggregate_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     body = result.values.get("agg")
     if not isinstance(body, dict):
         return FastAnswer(answer="", defer="the read layer did not answer")
-    ctx.session.last_query = body.get("query") if isinstance(body.get("query"), dict) else None
+    # The analytics tool itself records the query it ran (app/tools/analytics_tools.py); the
+    # payload has no `query` key, and writing one from it set the follow-up hint to None.
     rows = [r for r in (body.get("rows") or []) if isinstance(r, dict)]
-    period = (body.get("period") or {}).get("label") or "the period"
+    period = _period_words(body)
     if not rows:
         totals = body.get("totals") or {}
         if totals:
-            return FastAnswer(answer=_totals_line(totals, period), calls=list(result.calls), trace={"rows": 0})
-        return FastAnswer(answer=f"Nothing sold in {period}.", calls=list(result.calls), trace={"rows": 0})
+            return FastAnswer(answer=_totals_line(totals, period, str(body.get("currency") or "GBP")) + _hedge(body), calls=list(result.calls), trace={"rows": 0})
+        return FastAnswer(answer=f"Nothing sold in {period}." + _hedge(body), calls=list(result.calls), trace={"rows": 0})
     top = rows[0]
     label = str(top.get("label") or top.get("product") or "").strip()
     units = top.get("units")
@@ -491,40 +559,45 @@ def _aggregate_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     if units is not None:
         words += f", {int(units)} units"
     if top.get("revenue") is not None:
-        words += f" and {_money(top['revenue'])}"
+        words += f" and {_money(top['revenue'], str(body.get('currency') or 'GBP'))}"
     if len(rows) > 1:
         second = rows[1]
         words += f". Then {str(second.get('label') or '').strip()}"
         if second.get("units") is not None:
             words += f" on {int(second['units'])}"
-    return FastAnswer(answer=words + ".", calls=list(result.calls), partial=result.partial, trace={"rows": len(rows), "period": period})
+    return FastAnswer(answer=words + "." + _hedge(body), calls=list(result.calls), partial=result.partial, trace={"rows": len(rows), "period": period})
 
 
-def _totals_line(totals: dict[str, Any], period: str) -> str:
+def _totals_line(totals: dict[str, Any], period: str, currency: str = "GBP") -> str:
     bits = []
     if totals.get("revenue") is not None:
-        bits.append(_money(totals["revenue"]))
+        bits.append(_money(totals["revenue"], currency))
     if totals.get("orders") is not None:
         bits.append(f"{int(totals['orders'])} orders")
     if totals.get("aov") is not None:
-        bits.append(f"{_money(totals['aov'])} average")
-    return (f"{period.capitalize()}: " + ", ".join(bits) + ".") if bits else f"Nothing to report for {period}."
+        bits.append(f"{_money(totals['aov'], currency)} average")
+    head = period[:1].upper() + period[1:] if period else "The period"
+    return (f"{head}: " + ", ".join(bits) + ".") if bits else f"Nothing to report for {period}."
 
 
 def _breakdown_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     body = result.values.get("agg")
     if not isinstance(body, dict):
         return FastAnswer(answer="", defer="the read layer did not answer")
-    ctx.session.last_query = body.get("query") if isinstance(body.get("query"), dict) else None
     totals = body.get("totals") or {}
-    period = (body.get("period") or {}).get("label") or "the period"
-    line = _totals_line(totals, period)
-    compare = body.get("compare") or body.get("previous") or {}
-    change = (compare.get("change") or {}) if isinstance(compare, dict) else {}
-    if isinstance(change.get("revenue_pct"), (int, float)):
-        pct = change["revenue_pct"]
-        line += f" That is {abs(pct):.0f}% {'up on' if pct >= 0 else 'down on'} the period before."
-    return FastAnswer(answer=line, calls=list(result.calls), partial=result.partial, trace={"period": period})
+    period = _period_words(body)
+    line = _totals_line(totals, period, str(body.get("currency") or "GBP"))
+    # The engine's shape is {metric: {"from", "to", "delta", "pct"}}. Reading a `revenue_pct`
+    # that has never existed meant the comparison was requested, paid for in query cost, and
+    # thrown away — half an answer to the question actually asked.
+    compare = body.get("compare") if isinstance(body.get("compare"), dict) else {}
+    change = compare.get("change") if isinstance(compare.get("change"), dict) else {}
+    moved = change.get("revenue") if isinstance(change.get("revenue"), dict) else change.get("orders")
+    if isinstance(moved, dict) and isinstance(moved.get("pct"), (int, float)):
+        pct = moved["pct"]
+        before = _period_words(compare, fallback="the period before")
+        line += f" That is {abs(pct):.0f}% {'up on' if pct >= 0 else 'down on'} {before}."
+    return FastAnswer(answer=line + _hedge(body), calls=list(result.calls), partial=result.partial, trace={"period": period})
 
 
 register(Recipe(
@@ -545,8 +618,11 @@ register(Recipe(
 
 
 def _delayed_plan(ctx: Ctx) -> ReadPlan | None:
+    # Ninety days, as the read layer's own catalogue answers this question: an order that has
+    # been waiting forty-five days is the one that matters most, and a thirty-day window is
+    # exactly the window that cannot see it.
     return ReadPlan([Read("late", "commerce_query", {
-        "entity": "orders", "period": "last_30_days", "filters": {"fulfillment": "unfulfilled", "older_than_days": 5},
+        "entity": "orders", "period": "last_90_days", "filters": {"fulfillment": "unfulfilled", "older_than_days": 5},
         "sort": [{"metric": "age_days", "direction": "desc"}], "limit": 25, "title": "Waiting to go out",
     }, source="shopify", cost=120.0)], label="delayed_orders")
 
@@ -558,11 +634,11 @@ def _delayed_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     rows = [r for r in (body.get("rows") or []) if isinstance(r, dict)]
     _open_workflow(ctx, body, kind="orders", operation="review")
     if not rows:
-        return FastAnswer(answer="Nothing is sitting unfulfilled past five days.", calls=list(result.calls), trace={"rows": 0})
+        return FastAnswer(answer="Nothing is sitting unfulfilled past five days." + _hedge(body), calls=list(result.calls), trace={"rows": 0})
     oldest = rows[0]
     return FastAnswer(
-        answer=f"{len(rows)} orders are unfulfilled past five days; the oldest is {str(oldest.get('order_number') or '').lstrip('#')} at {int(oldest.get('age_days') or 0)} days.",
-        calls=list(result.calls), partial=result.partial, trace={"rows": len(rows)},
+        answer=f"{_how_many(body, len(rows))} orders are unfulfilled past five days; the oldest is {str(oldest.get('order_number') or '').lstrip('#')} at {int(oldest.get('age_days') or 0)} days." + _hedge(body),
+        calls=list(result.calls), partial=result.partial, trace={"rows": len(rows), "row_count": body.get("row_count")},
     )
 
 
@@ -576,7 +652,7 @@ def _stock_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         return FastAnswer(answer="", defer="the read layer did not answer")
     rows = [r for r in (body.get("rows") or []) if isinstance(r, dict)]
     if not rows:
-        return FastAnswer(answer="Nothing is close to running out on recent sales.", calls=list(result.calls), trace={"rows": 0})
+        return FastAnswer(answer="Nothing is close to running out on recent sales." + _hedge(body), calls=list(result.calls), trace={"rows": 0})
     first = rows[0]
     cover = first.get("days_cover")
     words = f"Closest to running out: {str(first.get('label') or '').strip()}"
@@ -584,7 +660,7 @@ def _stock_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         words += f", about {cover:.0f} days of cover"
     if first.get("stock") is not None:
         words += f" on {int(first['stock'])} in stock"
-    return FastAnswer(answer=words + f". {len(rows)} on the list.", calls=list(result.calls), partial=result.partial, trace={"rows": len(rows)})
+    return FastAnswer(answer=words + f". {_how_many(body, len(rows))} on the list." + _hedge(body), calls=list(result.calls), partial=result.partial, trace={"rows": len(rows)})
 
 
 register(Recipe(
@@ -653,15 +729,21 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     waiting = [r for r in rows if r.get("needs_reply")]
     counts = body.get("counts") or {}
     unchecked = int(counts.get("unchecked") or 0)
-    _open_workflow(ctx, body, kind="customers", operation="reply", set_id=_set_id_of(body, "set_needs_reply"))
+    total = int(counts.get("contacted") or 0) + int(counts.get("not_contacted") or 0) + unchecked or len(rows)
+    # Only when there IS a set of people waiting. Falling back to the parent set would leave
+    # the branch walking twenty-five customers under an operation called "reply", most of whom
+    # are not waiting for one.
+    waiting_set = _set_id_of(body, "set_needs_reply")
+    if waiting_set:
+        _open_workflow(ctx, body, kind="customers", operation="reply", set_id=waiting_set)
     if not waiting:
         tail = f" {unchecked} could not be checked." if unchecked else ""
-        return FastAnswer(answer=f"Nobody is waiting on a reply — {len(rows)} customers checked.{tail}", calls=list(result.calls),
+        return FastAnswer(answer=f"Nobody is waiting on a reply — {len(rows)} of {total} customers checked.{tail}", calls=list(result.calls),
                           partial=bool(unchecked) or result.partial, trace={"rows": len(rows), "waiting": 0, "unchecked": unchecked})
     names = ", ".join(str(r.get("customer_name") or "someone") for r in waiting[:3])
     tail = f" {unchecked} could not be checked." if unchecked else ""
     return FastAnswer(
-        answer=f"{len(waiting)} of {len(rows)} customers are waiting on a reply: {names}{' and others' if len(waiting) > 3 else ''}.{tail}",
+        answer=f"{len(waiting)} of {len(rows)} customers checked are waiting on a reply: {names}{' and others' if len(waiting) > 3 else ''}.{tail}",
         calls=list(result.calls), partial=bool(unchecked) or result.partial,
         trace={"rows": len(rows), "waiting": len(waiting), "unchecked": unchecked},
     )
@@ -680,7 +762,9 @@ def _open_workflow(ctx: Ctx, body: dict[str, Any], *, kind: str, operation: str,
     if ws is None or not ws.members:
         return
     ctx.branch.set_id = ws.set_id
-    ctx.branch.workflow = Workflow(workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=kind, operation=operation, cursor=0, total=len(ws.members))
+    # Before the first member, so the first "Next" lands on it — the same place a set adopted
+    # by a bare "Next" starts from (app/fastpath/runner.py).
+    ctx.branch.workflow = Workflow(workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=kind, operation=operation, cursor=-1, total=len(ws.members))
 
 
 register(Recipe(

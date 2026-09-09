@@ -54,8 +54,11 @@ class Workflow:
 
     @property
     def position(self) -> int:
-        """The cursor as a person counts: one-based, and never past the end."""
-        return min(self.cursor + 1, self.total) if self.total else 0
+        """The cursor as a person counts: one-based, never past the end, and zero before the
+        first "Next" has landed on anything (the cursor starts at -1, waiting)."""
+        if not self.total or self.cursor < 0:
+            return 0
+        return min(self.cursor + 1, self.total)
 
     def at_end(self) -> bool:
         return self.total > 0 and self.cursor >= self.total - 1

@@ -170,7 +170,10 @@ async def turn(
     # A bare "yes" while a card is waiting is not a new instruction and applies nothing; it
     # is answered here, in a fixed sentence, without the model and without withdrawing the
     # card — the owner is told again what applies it. Anything else said is an instruction.
-    waiting = _waiting_proposal(runtime, live)
+    # Which half of the orb is being spoken to, before anything is withdrawn: a question
+    # asked over here is not a new instruction to a card waiting over there.
+    branch = live.branch(branch_id)
+    waiting = _waiting_proposal(runtime, live, branch.branch_id)
     if waiting is not None and is_affirmation(text):
         live.heard = text
         live.set_state("READY")
@@ -182,8 +185,8 @@ async def turn(
             transcript=transcript_info, question=text, speak=speak, calls=calls, epoch=epoch, revoked=[],
         )
 
-    revoked = runtime.actions.revoke_pending(live, "new instruction") + runtime.batches.revoke_pending(live, "new instruction")
-    epoch = runtime.actions.advance_epoch(live, "new instruction")
+    revoked = runtime.actions.revoke_pending(live, "new instruction", branch_id=branch.branch_id) + runtime.batches.revoke_pending(live, "new instruction")
+    epoch = runtime.actions.advance_epoch(live, "new instruction", branch_id=branch.branch_id)
     runtime.batches.advance_epoch(live)
 
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
@@ -195,7 +198,6 @@ async def turn(
     # the procedure for this one — an order, a customer, a period, "next", "what can you do"
     # — it runs it and answers, with no model on the critical path. A recipe that is not sure
     # defers, and the turn carries on to Claude exactly as it did before.
-    branch = live.branch(branch_id)
     live.heard = text.strip()
     lane, lane_why, intent, recipe = _route(text, branch)
     if timeline.current().active is not None:
@@ -320,6 +322,17 @@ async def turn(
 
 
 LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
+
+
+def _written(text: str, names: set[str]) -> str:
+    """What the timeline keeps of something spoken. The spoken answer is the owner's and may
+    carry a customer's name, an email address or a street; the file it would land in is read
+    later, by a person, and may be handed to somebody else. The turn log has always redacted
+    by shape and by the exact names this turn's tools returned — this is that, applied to the
+    other place an answer is written."""
+    from app.logging.turnlog import redact_text
+
+    return redact_text(str(text or ""), names) if text else ""
 
 
 def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict) -> dict:
@@ -576,15 +589,17 @@ def is_affirmation(text: str) -> bool:
     return " ".join(words) in _AFFIRMATIONS
 
 
-def _waiting_proposal(runtime, session):
-    """The one proposal a spoken yes could refer to: pending, unexpired, this epoch, and a
-    change the owner asked for — never the undo the Mac offered after a success, or "okay"
-    said to "Note added" would be answered as if a card were waiting to be tapped."""
+def _waiting_proposal(runtime, session, branch_id: str = ""):
+    """The one proposal a spoken yes could refer to: pending, unexpired, this epoch, staged
+    in THIS half of the orb, and a change the owner asked for — never the undo the Mac
+    offered after a success, or "okay" said to "Note added" would be answered as if a card
+    were waiting to be tapped; and never the other half's, which he is not looking at."""
     now = time.time()
     for proposal in reversed(session.proposals):
         if (
             proposal.status.value == "PENDING" and proposal.epoch == session.epoch
             and not proposal.expired(now) and proposal.undo_of is None and not proposal.batch_id
+            and (not branch_id or str(getattr(proposal, "branch_id", "") or "") in ("", branch_id))
         ):
             return proposal
     # A batch's members are not cards of their own; the batch is the card.
@@ -875,8 +890,11 @@ async def _answer(
         )
         timeline.emit(
             "turn_finished", session_id=session_id, turn_id=turn_id or None, ms=round(timings["total"], 1),
-            timings={k: round(v, 1) for k, v in timings.items()}, question=question or (transcript or {}).get("text") or None,
-            answer=answer, error_kind=error_kind, lost_thread=lost_thread, abandoned=abandoned,
+            timings={k: round(v, 1) for k, v in timings.items()}, question=_written(question or (transcript or {}).get("text") or "", names) or None,
+            # Redacted by the same rule the turn log uses, and for the same reason: the
+            # answer may carry a street address the owner asked to be read out. He may hear
+            # it; the timeline and the report built from it get "[address]".
+            answer=_written(answer, names), error_kind=error_kind, lost_thread=lost_thread, abandoned=abandoned,
             ui=[item["type"] for item in ui], ui_entities=_ui_entities(ui), proposed=proposed or None, revoked=list(revoked or []) or None,
             writes_code=(None if writes is None or writes.get("allowed") else writes.get("code")),
             speak_requested=speak, tts_prefetched=bool(speak and answer and not abandoned),

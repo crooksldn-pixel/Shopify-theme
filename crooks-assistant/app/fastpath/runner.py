@@ -95,6 +95,9 @@ def _adopt_latest_set(ctx: Ctx) -> bool:
     if ws is None or not ws.members:
         return False
     ctx.branch.set_id = ws.set_id
+    # Positioned BEFORE the first member, so the first "Next" lands on it. `_open_workflow`
+    # in the recipe library does the same: a set opened by a listing and a set adopted by a
+    # "Next" must count from the same place, or the same word means two different things.
     ctx.branch.workflow = Workflow(
         workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=ws.kind,
         operation="review", cursor=-1, total=len(ws.members),
@@ -110,7 +113,7 @@ def _advance(recipe: recipe_mod.Recipe, ctx: Ctx) -> None:
         return
     if recipe.recipe_id == "working_set_next" and not workflow.at_end():
         workflow.cursor += 1
-    elif recipe.recipe_id == "working_set_previous" and not workflow.at_start():
+    elif recipe.recipe_id == "working_set_previous" and workflow.cursor > 0:
         workflow.cursor -= 1
 
 

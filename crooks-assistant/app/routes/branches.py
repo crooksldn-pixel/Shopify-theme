@@ -61,6 +61,18 @@ def _live(session) -> list[Branch]:
     return [b for b in session.branches.values() if b.status in ("ACTIVE", "BACKGROUND")]
 
 
+# Halves that are over are kept only long enough for a card still on the tablet to be settled
+# against them, then dropped. Without this a fork/close loop would grow the session for as
+# long as it lasted.
+KEEP_CLOSED = 2
+
+
+def _prune(session) -> None:
+    closed = [b for b in session.branches.values() if b.status in ("MERGED", "CANCELLED")]
+    for branch in sorted(closed, key=lambda b: b.created_at)[: max(0, len(closed) - KEEP_CLOSED)]:
+        session.branches.pop(branch.branch_id, None)
+
+
 def _shape(session) -> dict[str, Any]:
     return {
         "session_id": session.session_id,
@@ -71,10 +83,12 @@ def _shape(session) -> dict[str, Any]:
 
 
 def _waiting(session, branch_id: str) -> list[str]:
-    """Changes staged in this branch that are still waiting for a gesture."""
+    """Every change staged in this branch that is still waiting for a gesture — INCLUDING the
+    undo the Mac offered after a change was proven here, which is a change like any other and
+    must not be left committable in a half that is closing."""
     return [
         p.proposal_id for p in session.proposals
-        if getattr(p, "branch_id", "") == branch_id and p.status.value == "PENDING"
+        if str(getattr(p, "branch_id", "") or "") == branch_id and p.status.value == "PENDING"
     ]
 
 
@@ -186,6 +200,7 @@ async def merge(request: Request, branch_id: str, session_id: str = Form(default
         "still_waiting": waiting,
     }
     branch.status = "MERGED"
+    _prune(session)
     keeper = session.branch()
     for entity in reversed(branch.recent_entities[:6]):
         keeper.remember_entity(entity["kind"], entity["ref"], entity["label"])
@@ -221,6 +236,7 @@ async def cancel(request: Request, branch_id: str, session_id: str = Form(defaul
         session.focused_branch = next((b.branch_id for b in _live(session)), "")
         if not session.focused_branch:
             session.branch()
+    _prune(session)
     timeline.emit("branch_cancelled", session_id=session.session_id, branch_id=branch_id, prefetches=dropped, revoked=len(revoked) or None)
     return {**_shape(session), "revoked": revoked, "prefetches_stopped": dropped}
 

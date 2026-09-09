@@ -117,8 +117,12 @@ def assert_read_only(recipes: dict[str, Recipe] | None = None) -> None:
         for tool in recipe.read_primitives:
             try:
                 spec = registry.get(tool)
-            except KeyError:
-                continue    # a tool this build does not carry; the plan will skip it
+            except KeyError as exc:
+                # Fail closed. A name the registry does not carry is a name nobody has
+                # checked, and "it will be skipped at plan time" is a guess about a plan
+                # that has not been written yet. This runs at start-up, with every tool
+                # module imported (app/runtime.py), so an unknown name is a mistake.
+                raise RuntimeError(f"recipe {recipe.recipe_id} names {tool}, which is not a registered tool") from exc
             if spec.write is not None or spec.batch is not None:
                 raise RuntimeError(f"recipe {recipe.recipe_id} names the write tool {tool}; the fast lane cannot write")
 

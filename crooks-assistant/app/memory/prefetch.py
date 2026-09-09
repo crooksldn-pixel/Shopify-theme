@@ -61,7 +61,10 @@ class Prefetcher:
         if key in self._tasks and not self._tasks[key].done():
             return False
         self._reap()
-        if len(self._tasks) >= MAX_IN_FLIGHT:
+        # In flight, not held: `_reap` keeps a finished task for a while so `collect` can
+        # still find it, and counting those against the limit would stop prefetching for
+        # twelve seconds after three quick reads.
+        if sum(1 for t in self._tasks.values() if not t.done()) >= MAX_IN_FLIGHT:
             return False
         try:
             loop = asyncio.get_running_loop()
