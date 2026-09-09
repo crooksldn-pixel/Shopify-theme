@@ -367,13 +367,36 @@ async def test_health_names_the_voice(client):
 
 
 async def test_the_configured_voice_is_the_one_that_was_approved(client):
-    """Vikram — "AI Productivity Assistant" — is the owner's chosen voice. Health showed Derek
-    because Derek was the default; the default is now the approved voice, and .env still wins."""
+    """Vikram — "AI Productivity Assistant" — is the owner's chosen voice, from the default in
+    the code to the URL the request goes to. Health showed Derek because Derek was the old
+    default; a .env line still wins over this, which is why /health asks ElevenLabs whose
+    voice the id really is and fails the check when they disagree."""
+    from config.settings import Settings
+
+    # 1. the default in the code, with nothing configured at all
+    bare = Settings(_env_file=None)
+    assert (bare.tts_voice_id, bare.tts_voice_name) == ("9375G6zswFk7v9bKTVQF", "Vikram")
+    assert (bare.tts_model, bare.tts_output_format) == ("eleven_flash_v2_5", "mp3_44100_128")
+
+    # 2. the settings this process is running with
     settings = app.state.runtime.settings
     assert settings.tts_voice_id == "9375G6zswFk7v9bKTVQF"
     assert settings.tts_voice_name == "Vikram"
     assert settings.tts_model == "eleven_flash_v2_5"
     assert settings.tts_output_format == "mp3_44100_128"
+
+    # 3. the client the runtime built, and the request it would send
+    voice = app.state.runtime.voice
+    assert (voice.voice_id, voice.voice_name) == ("9375G6zswFk7v9bKTVQF", "Vikram")
+    url = voice._url(stream=True)
+    assert url.endswith("/text-to-speech/9375G6zswFk7v9bKTVQF/stream?output_format=mp3_44100_128")
+    assert voice._payload("hello")["model_id"] == "eleven_flash_v2_5"
+
+    # 4. what the health page says, and what the tablet is told
+    body = (await client.get("/health?fresh=1")).json()
+    assert body["voice"]["voice"] == "Vikram"
+    assert body["voice"]["model"] == "eleven_flash_v2_5"
+    assert body["voice"]["output_format"] == "mp3_44100_128"
 
 
 # --------------------------------------------------------------------------- the ui contract
