@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence commands commands-remove update watch
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -46,6 +46,14 @@ help:
 	@echo "  make test-session-report [SESSION=ts-…]       write reports/<session>.md from logs/test-sessions/<session>.jsonl"
 	@echo "  make test-session-proposals [SESSION=ts-…]    write reports/<session>-proposals.md: improvement candidates, cited by turn, never applied"
 	@echo "  make bench-intelligence                       time the read layer, the working sets and batch staging against a fake store"
+	@echo "  make watch [SESSION=ts-…]                     follow what it is doing, live, one line per thing"
+	@echo ""
+	@echo "Three words on the PATH, so none of this needs a folder or a make:"
+	@echo "  make commands        install crooks-update, crooks-status and crooks-watch into ~/.local/bin"
+	@echo "  crooks-update        pull, install what changed, restart, verify — fast-forward only, never destructive"
+	@echo "  crooks-status        one screen: build, voice, Claude, Shopify, Gmail, orders, the tablet's address"
+	@echo "  crooks-watch         the live trace"
+	@echo "  make commands-remove take them off again"
 
 doctor:
 	@$(PY) scripts/doctor.py 2>/dev/null || python3 scripts/doctor.py
@@ -115,6 +123,18 @@ test-session-report:
 
 test-session-proposals:
 	$(PY) scripts/test_session.py proposals $(SESSION)
+
+commands:
+	@$(PY) scripts/install_commands.py
+
+commands-remove:
+	@$(PY) scripts/install_commands.py --remove
+
+update:
+	@$(PY) scripts/update.py $(if $(CHECK),--check,)
+
+watch:
+	@$(PY) scripts/watch.py $(SESSION)
 
 bench-intelligence:
 	$(PY) scripts/bench_intelligence.py

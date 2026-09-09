@@ -83,14 +83,19 @@ def cmd_status(args) -> int:
             last = store.last()
             print("no test session running (backend not running)" + (f"; last: {last.test_session_id}" if last else ""))
             return 0
-        print(f"{active.test_session_id}  (marked on disk; backend not running)")
+        from app.observability.timeline import count_events
+
+        held = count_events(store.timeline_path(active))
+        print(f"{active.test_session_id}  events={held}  (marked on disk; backend not running)")
         return 0
     if not answer.get("active"):
         last = answer.get("last") or {}
         print("no test session running" + (f"; last: {last.get('test_session_id')}" if last else ""))
         return 0
     counts = answer.get("events") or {}
-    print(f"{answer['test_session_id']}  name={answer.get('name')!r}  events written={counts.get('written', '?')} queued={counts.get('queued', '?')} dropped={counts.get('dropped', '?')}")
+    written, queued = counts.get("written", "?"), counts.get("queued", "?")
+    dropped, mine = counts.get("dropped", "?"), counts.get("this_process", "?")
+    print(f"{answer['test_session_id']}  name={answer.get('name')!r}  events={written} (on disk {counts.get('on_disk', '?')}, queued {queued}, dropped {dropped}; {mine} written by the backend running now)")
     print(f"timeline: {answer.get('path')}")
     return 0
 

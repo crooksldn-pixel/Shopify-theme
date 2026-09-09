@@ -189,8 +189,29 @@ class Timeline:
         return self._queue.empty()
 
     @property
-    def counts(self) -> dict[str, int]:
-        return {"written": self._written, "dropped": self._dropped, "queued": self._queue.qsize()}
+    def counts(self) -> dict[str, Any]:
+        """How many events this session actually holds.
+
+        `written` is counted from the FILE, not from a counter in memory. The counters are
+        per-process and a restart zeroes them, which is how `make test-session-status`
+        reported "events written=0" against a session that already held a thousand — the
+        supervisor had restarted the backend mid-session and the timeline kept growing
+        underneath it. The file is the session; the counters describe this process's part
+        in it, and are reported as such.
+        """
+        # The session this is about: the one running, or — just after `stop`, which is when
+        # the count is most often asked for — the one that has just ended.
+        session = self.active or self.sessions.last()
+        on_disk = count_events(self.sessions.timeline_path(session)) if session is not None else 0
+        queued = self._queue.qsize()
+        return {
+            "written": on_disk + queued,          # what the session holds once the queue lands
+            "on_disk": on_disk,
+            "queued": queued,
+            "dropped": self._dropped,
+            "this_process": self._written,
+            "test_session_id": session.test_session_id if session is not None else "",
+        }
 
 
 class NullTimeline(Timeline):
@@ -210,6 +231,10 @@ class NullTimeline(Timeline):
 
     def flush(self, timeout_s: float = 0.0) -> bool:  # noqa: ARG002
         return True
+
+    @property
+    def counts(self) -> dict[str, Any]:
+        return {"written": 0, "on_disk": 0, "queued": 0, "dropped": 0, "this_process": 0, "test_session_id": ""}
 
 
 _current: Timeline = NullTimeline()
@@ -233,6 +258,16 @@ def emit(kind: str, **fields: Any) -> dict[str, Any] | None:
 
 def new_id(prefix: str) -> str:
     return f"{prefix}_{os.urandom(6).hex()}"
+
+
+def count_events(path: Path) -> int:
+    """The number of events in a timeline, counted from the file. Cheap: lines, not JSON.
+    Zero for a file that is not there yet, which is what an unwritten session looks like."""
+    try:
+        with Path(path).open("rb") as handle:
+            return sum(1 for line in handle if line.strip())
+    except OSError:
+        return 0
 
 
 def read_events(path: Path) -> list[dict[str, Any]]:

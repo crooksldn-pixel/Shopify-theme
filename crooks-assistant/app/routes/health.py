@@ -187,6 +187,12 @@ async def _health(runtime) -> dict:
         },
         "writes": {"state": writes.state, "detail": writes.detail},
         "capabilities": capabilities,
+        # What this build can do, from the generated manifest (app/capabilities): counts for
+        # crooks-status, and the fingerprint so a build can be told apart from its neighbour.
+        "manifest": (
+            {**(runtime.manifest or {}).get("counts", {}), "fingerprint": (runtime.manifest or {}).get("fingerprint", "")}
+            if getattr(runtime, "manifest", None) else None
+        ),
         # The recent orders the read layer answers from: how many, how far back, how fresh.
         "orders_cache": runtime.order_cache.status() if getattr(runtime, "order_cache", None) is not None else None,
         "checks": checks,

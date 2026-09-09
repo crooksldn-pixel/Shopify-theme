@@ -25,6 +25,21 @@ make up          # everything the tablet needs, in this window; prints the addre
 Or `make install` once, and the Mac starts it at login with no window at all (`make status`
 tells you how it is doing).
 
+### Three words, from anywhere
+
+Run `make commands` once and these work from any folder, in any Terminal:
+
+```bash
+crooks-status    # one screen: build, voice, Claude, Shopify, Gmail, orders, the tablet's address
+crooks-update    # pull, install what changed, restart, verify — and stop rather than lose work
+crooks-watch     # what it is doing right now, one line per thing
+```
+
+`crooks-update` fast-forwards only. It will not merge, rebase, reset or force anything; if the
+tree is dirty or the branch has commits the remote does not, it says so, changes nothing, and
+tells you what to do. It never touches `.env`, `logs/` or any credential. Nothing inside
+CROOKS OS runs it — it updates when you type it, and not otherwise.
+
 The first time on a new Mac, before either of those: `make doctor`, then `make venv`, then
 `make secrets`, then the console steps under *Setup on the Mac*. `make help` lists every command.
 
@@ -48,6 +63,7 @@ one line. You never run a Python file directly; `make` does it. `make help` prin
 | Everything at once | `make check` | Doctor, Shopify, Gmail in one go |
 | Ask questions | `make chat` | Typed, so it does not use the tablet or much allowance |
 | Day 1 test | `make acceptance SPOKEN=1` | From the tablet, at your working distance |
+| Three words on the PATH | `make commands` | `crooks-status`, `crooks-update`, `crooks-watch` from any folder |
 | Prove it here | `make accept` | Lint, Node, the offline suite, a server of its own, latency medians, page sizes, and the page in a real Chromium (when Playwright is installed). No store, no inbox, no credit |
 
 The console work (Tailscale, Shopify Dev Dashboard, Google Cloud) is the only part that is
