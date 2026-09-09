@@ -203,6 +203,9 @@ async def turn(
             "lane", session_id=session_id, turn_id=live.turn_id, lane=lane, why=lane_why,
             branch_id=branch.branch_id, recipe_id=(recipe.recipe_id if recipe else None), **intent.public(),
         )
+    # What this half is doing, in the owner's words, while it does it. A half he has put
+    # aside says this on its own chip rather than taking his attention (brief section 17).
+    branch.working(_working_words(lane, intent))
     if lane == "FAST" and recipe is not None:
         fast = await _fast(runtime, live, branch, intent, recipe, text)
         if fast is not None:
@@ -424,6 +427,25 @@ async def _fast(runtime, session, branch, intent, recipe, text: str):
         session.turns -= 1
         return None
     return answer
+
+
+# What a lane is doing, said once, in words. Deliberately vague about the work and exact
+# about the source: the owner does not need to know which tool, and must never be told what
+# the model is thinking.
+_WORKING = {
+    "order_lookup": "reading the order", "order_status_lookup": "reading the order",
+    "order_address_lookup": "reading the order", "customer_purchase_lookup": "reading the customer",
+    "best_sellers_period": "adding up the sales", "sales_breakdown_period": "adding up the sales",
+    "delayed_orders": "listing what is late", "stock_cover_analysis": "checking stock",
+    "needs_reply": "checking the inbox", "inbox_state": "checking the inbox",
+    "working_set_next": "reading the next one", "working_set_previous": "reading the last one",
+}
+
+
+def _working_words(lane: str, intent) -> str:
+    if lane == "DEEP":
+        return "working through it"
+    return _WORKING.get(getattr(intent, "family", ""), "working it out")
 
 
 def _fast_tool_calls(calls) -> list[dict]:
@@ -824,6 +846,15 @@ async def _answer(
     turn_id = getattr(session, "turn_id", "") if session is not None else ""
     if branch is None and session is not None:
         branch = session.branch()
+    if branch is not None:
+        # The answer is here. A half the owner is looking at simply goes quiet; one he has
+        # put aside says "ready" on its chip and pulses once, and does not take his attention.
+        if error_kind:
+            branch.failed("that did not work")
+        elif branch.status == "BACKGROUND":
+            branch.ready("there is an answer")
+        else:
+            branch.idle()
     for call in calls or []:
         if branch is not None and getattr(call, "ok", False):
             branch.remember_result(call.name, summary=_call_summary(call), ref=_call_ref(call), ms=float(getattr(call, "duration_ms", 0.0) or 0.0))

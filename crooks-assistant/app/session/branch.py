@@ -121,8 +121,31 @@ class Branch:
     resolutions: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     # Work running for this branch that the owner is not waiting on. Semantic states only:
-    # QUEUED, WORKING, WAITING, READY, FAILED — never a percentage nobody can compute.
+    # QUEUED, WORKING, WAITING, READY, FAILED — never a percentage nobody can compute,
+    # because nothing here can compute one honestly.
     task: dict[str, Any] | None = None
+
+    # ------------------------------------------------------------------ work
+
+    def working(self, what: str, *, clock=time.time) -> None:
+        """This branch has taken on a piece of work. `what` is a short phrase in the owner's
+        words — never a tool name, never the model's reasoning."""
+        self.task = {"state": "WORKING", "what": str(what)[:80], "since": clock()}
+
+    def waiting(self, what: str = "", *, clock=time.time) -> None:
+        """Working, but on something outside the Mac: a source that has not answered yet."""
+        self.task = {"state": "WAITING", "what": str(what or (self.task or {}).get("what") or "")[:80], "since": clock()}
+
+    def ready(self, what: str = "", *, clock=time.time) -> None:
+        """There is an answer here whenever the owner wants it. This is what makes the
+        background half pulse; it never takes his attention (app/routes/branches.py)."""
+        self.task = {"state": "READY", "what": str(what or (self.task or {}).get("what") or "")[:80], "since": clock()}
+
+    def failed(self, why: str, *, clock=time.time) -> None:
+        self.task = {"state": "FAILED", "what": str(why)[:80], "since": clock()}
+
+    def idle(self) -> None:
+        self.task = None
 
     # ------------------------------------------------------------- navigation
 

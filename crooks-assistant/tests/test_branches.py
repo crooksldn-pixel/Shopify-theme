@@ -276,3 +276,45 @@ async def test_a_reconciliation_is_bounded(client):
     many = ",".join(f"prop_{i}" for i in range(MAX_RECONCILE + 40))
     body = (await client.get("/actions/states", params={"session_id": "br", "ids": many})).json()
     assert len(body["unknown"]) == MAX_RECONCILE
+
+
+# ------------------------------------------------- what a half is doing, in words
+
+def test_a_branch_says_what_it_is_doing_in_words_and_never_in_a_percentage(session):
+    branch = session.branch()
+    assert branch.public()["task"] is None
+    branch.working("reading the order")
+    assert branch.public()["task"] == {"state": "WORKING", "what": "reading the order", "since": branch.task["since"]}
+    branch.waiting()
+    assert branch.task["state"] == "WAITING" and branch.task["what"] == "reading the order"
+    branch.ready("there is an answer")
+    assert branch.task["state"] == "READY"
+    branch.failed("Shopify would not answer")
+    assert branch.task["state"] == "FAILED" and branch.task["what"] == "Shopify would not answer"
+    branch.idle()
+    assert branch.task is None
+    for state in ("WORKING", "WAITING", "READY", "FAILED"):
+        assert state in ("QUEUED", "WORKING", "WAITING", "READY", "FAILED")
+
+
+def test_nothing_in_a_branchs_words_is_a_number_out_of_a_number(session):
+    from pathlib import Path
+
+    source = Path("app/routes/turn.py").read_text(encoding="utf-8")
+    words = source[source.index("_WORKING = {"): source.index("def _working_words")]
+    assert "%" not in words and "percent" not in words
+    assert all(not any(ch.isdigit() for ch in line) for line in words.splitlines())
+
+
+async def test_the_half_being_talked_to_goes_quiet_and_the_one_aside_says_ready(client):
+    session = client.runtime.sessions.get("br")
+    body = (await client.post("/branches/fork", data={"session_id": "br"})).json()
+    other = session.branches[body["branch_id"]]
+    other.status = "BACKGROUND"
+    session.focused_branch = [b for b in session.branches if b != other.branch_id][0]
+
+    await client.post("/turn", json={"text": "hello", "session_id": "br"})
+    assert session.branch().task is None, "the half he is looking at simply goes quiet"
+
+    await client.post("/turn", json={"text": "hello", "session_id": "br", "branch_id": other.branch_id})
+    assert other.task["state"] == "READY", "the one put aside says so on its own chip"
