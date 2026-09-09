@@ -35,6 +35,12 @@ class Session:
     # nothing else, so the assistant cannot look up a record it was never shown.
     issued_ids: set[str] = field(default_factory=set)
 
+    # Whose conversation this is: the Tailscale login that started it, or "local" for one
+    # started on the Mac itself. A session id is a bearer the tablet made up; this is what
+    # stops another login on the tailnet using it. Empty only for a session made outside a
+    # request (tests), which binds to the first caller.
+    login: str = ""
+
     # What "that order" / "that customer" currently refers to, for conversational follow-ups.
     focus: dict[str, str] = field(default_factory=dict)
 

@@ -93,6 +93,9 @@ class Store(FakeShopify):
 
     async def graphql(self, query, variables=None):
         self.queries.append((query, variables or {}))
+        if "CrooksOrderByName" in query:
+            digits = str((variables or {}).get("q", "")).split(":")[-1]
+            return {"data": {"orders": {"edges": [{"node": self.order_node}] if digits and self.order_node["name"].endswith(digits) else []}}}
         if "CrooksOrderContext" in query:
             return {"data": {"order": self.order_node if (variables or {}).get("id") == self.order_node["id"] else None}}
         if "CrooksCustomerOrders" in query:
@@ -230,10 +233,44 @@ async def test_a_slow_inbox_is_not_waited_for_and_is_collected_afterwards():
     assert sum(1 for q, _ in store.queries if "CrooksOrderContext" in q) == 1
 
 
-async def test_a_second_look_re_reads_the_order_but_reuses_the_history():
+async def test_the_search_by_number_carries_the_whole_order_and_the_detail_that_follows_costs_nothing():
     store = Store()
     h = Hydrator(lambda: store, threads_for=inbox())
+    found = await h.find_by_number("1938")
+    assert len(found) == 1 and found[0]["order_id"] == ORDER and found[0]["money"]["total"] == "60.00 GBP"
+    assert store.queries[0][0].strip().split("(")[0] == "query CrooksOrderByName"
+    o = await h.order(ORDER, budget_s=1.0)
+    assert o["history"]["orders"] == 3 and o["pending"] == []
+    assert sum(1 for q, _ in store.queries if "CrooksOrderContext" in q) == 0, "the order was in hand from the search"
+    assert sum(1 for q, _ in store.queries if "CrooksCustomerOrders" in q) == 1, "the enrichment began with the search"
+    assert await h.find_by_number("0000") == []
+    # After the reuse window the order is read afresh: its state is what every change turns on.
+    h.clock = lambda: 1e12
+    await h.order(ORDER, budget_s=0)
+    assert sum(1 for q, _ in store.queries if "CrooksOrderContext" in q) == 1
+
+
+async def test_the_models_own_detail_call_waits_only_a_moment_for_the_rest():
+    import time as _time
+
+    store = Store(delay_customer_s=0.6)
+    shopify_tools.bind(store, threads_for=inbox(delay_s=0.6))
+    session = Session(session_id="b")
+    session.issue(ORDER)
+    calls: list[ToolCall] = []
+    started = _time.perf_counter()
+    text = await dispatch("shopify_order_detail", {"order_id": ORDER}, session=session, timeout_s=5, calls=calls)
+    waited = _time.perf_counter() - started
+    assert waited < 0.5, waited
+    assert "still being read" in text and calls[0].result["pending"] == ["history", "email"]
+
+
+async def test_a_second_look_re_reads_the_order_but_reuses_the_history():
+    store = Store()
+    clock = [1000.0]
+    h = Hydrator(lambda: store, threads_for=inbox(), clock=lambda: clock[0])
     await h.order(ORDER)
+    clock[0] += 30   # past the few seconds an order is held, within the minute its history is
     await h.order(ORDER)
     assert sum(1 for q, _ in store.queries if "CrooksOrderContext" in q) == 2
     assert sum(1 for q, _ in store.queries if "CrooksCustomerOrders" in q) == 1
@@ -364,8 +401,6 @@ async def client(monkeypatch):
         base = store.graphql
 
         async def graphql(query, variables=None):
-            if "FindOrders" in query:
-                return {"data": {"orders": {"edges": [{"node": ORDER_NODE}]}}}
             return await base(query, variables)
 
         store.graphql = graphql
@@ -385,6 +420,9 @@ async def test_a_spoken_order_number_hydrates_the_whole_order_beside_the_model(c
     prompt = client.runtime.provider.prompts[-1]
     assert "being read beside you" in prompt and "shopify_order_detail" in prompt
     assert [c["name"] for c in body["tool_calls"]] == ["shopify_find_order", "shopify_order_detail"]
+    # One document for the search and the order; the customer's history once; nothing twice.
+    kinds = [q.strip().split("(")[0].replace("query ", "") for q, _ in client.store.queries]
+    assert kinds.count("CrooksOrderByName") == 1 and kinds.count("CrooksOrderContext") == 0 and kinds.count("CrooksCustomerOrders") == 1
     card = next(i for i in body["ui"] if i["type"] == "order")
     assert card["data"]["detail"] is True and card["data"]["history"]["orders"] == 3
     assert card["data"]["items"][0]["image"].startswith("/media/shopify/")

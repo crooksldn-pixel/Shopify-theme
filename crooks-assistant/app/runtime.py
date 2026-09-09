@@ -133,21 +133,19 @@ class Runtime:
             login.strip().lower() for login in self.settings.allowed_logins.split(",") if login.strip()
         )
 
-    async def write_status(self) -> WriteStatus:
+    async def write_status(self, operation: str | None = None) -> WriteStatus:
         """Can a proposal execute here, now? Deterministic and read-only: configuration, the
-        allow-list, and the scopes the store has granted (a query, cached). Never a mutation."""
+        allow-list, and the scopes the store has granted (a query, cached). Never a mutation.
+        With an operation, only that change's own scope counts: a fulfilment scope the store
+        has not granted does not stop a note."""
         settings = self.settings
         if not settings.writes_enabled:
             return WriteStatus("disabled", "disabled — CROOKS_WRITES_ENABLED=false")
         if not self.allowed_logins:
             return WriteStatus("blocked", "blocked — CROOKS_ALLOWED_LOGINS not configured")
-        from app.clients.shopify import REVIEWED_MUTATIONS
-        from app.tools.registry import all_specs
-
-        needed = {
-            REVIEWED_MUTATIONS[s.write.mutation].scope
-            for s in all_specs() if s.write is not None and s.write.mutation in REVIEWED_MUTATIONS
-        }
+        needed = {scope for op, scope in self._write_scopes().items() if operation is None or op == operation}
+        if operation is not None and operation not in self._write_scopes():
+            return WriteStatus("blocked", f"blocked — {operation.replace('_', ' ')} is not a change this Mac can make")
         try:
             granted = await self.shopify.access_scopes()
         except Exception as exc:  # noqa: BLE001
@@ -159,8 +157,60 @@ class Runtime:
         missing = sorted(needed - set(granted))
         if missing:
             return WriteStatus("blocked", f"blocked — Shopify {', '.join(missing)} scope missing")
-        names = ", ".join(sorted(s.write.operation.replace("_", " ") for s in all_specs() if s.write is not None))
+        names = ", ".join(sorted(op.replace("_", " ") for op in self._write_scopes() if operation is None or op == operation))
         return WriteStatus("ready", f"ready — {names or 'no actions registered'}")
+
+    def _write_scopes(self) -> dict[str, str]:
+        """operation → the Admin API scope its reviewed mutation needs, for every registered write."""
+        from app.clients.shopify import REVIEWED_MUTATIONS
+        from app.tools.registry import all_specs
+
+        return {
+            s.write.operation: REVIEWED_MUTATIONS[s.write.mutation].scope
+            for s in all_specs() if s.write is not None and s.write.mutation in REVIEWED_MUTATIONS
+        }
+
+    def gmail_send_capability(self) -> dict[str, str]:
+        """Whether an email could be sent from here. The inbox is authorised read-only until
+        the owner runs the send authorisation deliberately (scripts/gmail_auth.py --send),
+        and until then this says so rather than offering a send that would fail."""
+        from app.clients.gmail import send_scope_granted
+
+        if not self.settings.writes_enabled:
+            return {"state": "disabled", "detail": "disabled — CROOKS_WRITES_ENABLED=false", "scope": "gmail.send"}
+        if not self.settings.gmail_send_enabled:
+            return {"state": "disabled", "detail": "disabled — CROOKS_GMAIL_SEND=false", "scope": "gmail.send"}
+        try:
+            granted = send_scope_granted()
+        except Exception as exc:  # noqa: BLE001
+            return {"state": "unknown", "detail": f"unverified — the Gmail credential could not be read ({type(exc).__name__})", "scope": "gmail.send"}
+        if not granted:
+            return {"state": "blocked", "detail": "Gmail send unavailable — scope missing (run: python scripts/gmail_auth.py --send)", "scope": "gmail.send"}
+        return {"state": "ready", "detail": "ready — gmail send reply", "scope": "gmail.send"}
+
+    async def capabilities(self) -> dict[str, dict[str, str]]:
+        """Every change the Mac knows how to make, and whether it could make it now: the
+        table /health shows and the order card's rail is built from. One scope read, cached,
+        serves all of them; no mutation is ever sent to find out."""
+        settings = self.settings
+        scopes = self._write_scopes()
+        out: dict[str, dict[str, str]] = {}
+        if not settings.writes_enabled:
+            state, detail, granted = "disabled", "disabled — CROOKS_WRITES_ENABLED=false", None
+        elif not self.allowed_logins:
+            state, detail, granted = "blocked", "blocked — CROOKS_ALLOWED_LOGINS not configured", None
+        else:
+            state, detail = "ready", ""
+            try:
+                granted = set(await self.shopify.access_scopes())
+            except Exception as exc:  # noqa: BLE001
+                state, detail, granted = "unknown", f"ready, unverified — Shopify did not answer the scope check ({type(exc).__name__})", None
+        for operation, scope in sorted(scopes.items()):
+            if state == "ready" and granted is not None and scope not in granted:
+                out[operation] = {"state": "blocked", "detail": f"blocked — Shopify {scope} scope missing", "scope": scope}
+            else:
+                out[operation] = {"state": state, "detail": detail or f"ready — {operation.replace('_', ' ')}", "scope": scope}
+        return out
 
 
 @dataclass(frozen=True)

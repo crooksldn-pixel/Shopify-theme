@@ -356,6 +356,27 @@
     }))];
   }
 
+  // ---- the rail: the changes the Mac says make sense for this order. A chip is not a
+  // button that does something; it primes the hold with the words that ask for the change,
+  // so the ask, the proposal and the gesture stay exactly what they are by voice. A chip the
+  // Mac disabled shows its one reason and does nothing.
+  function rail(actions, opts) {
+    const list_ = list(actions, 6);
+    if (!list_.length) return null;
+    return h('div', { class: 'rail', role: 'group', 'aria-label': 'Changes' }, list_.map((a) => {
+      const enabled = a.enabled === true && Boolean(text(a.instruction));
+      const chip = h('button', {
+        class: `rail-chip risk-${text(a.risk) === 'red' ? 'red' : 'amber'}${enabled ? '' : ' is-off'}`, type: 'button',
+        'aria-disabled': enabled ? 'false' : 'true', data: { action: text(a.id), mode: text(a.mode, 'ask') },
+      }, [
+        h('span', { class: 'rail-label', text: text(a.label, '—') }),
+        !enabled && a.reason ? h('span', { class: 'rail-why', text: text(a.reason) }) : null,
+      ]);
+      if (enabled) chip.addEventListener('click', () => { if (opts && typeof opts.onAction === 'function') opts.onAction(a, chip); });
+      return chip;
+    }));
+  }
+
   function pendingLine(what) {
     return h('p', { class: 'card-note pending-line', text: what });
   }
@@ -392,6 +413,7 @@
       head,
       orderTimeline(d),
       d.cancelled_at ? h('p', { class: 'card-note bad', text: `Cancelled ${formatDate(d.cancelled_at)}${d.cancel_reason ? ' · ' + text(d.cancel_reason) : ''}` }) : null,
+      rail(d.actions, opts),
       section('items', `Items${items.length ? ' · ' + items.length : ''}`, [items.length ? itemsList(items, opts, Boolean(d.items_truncated)) : h('p', { class: 'card-note', text: 'No items on the order.' })]),
       section('money', 'Money', [moneyBlock(d)]),
       section('shipping', 'Shipping', shippingBlock(d)),

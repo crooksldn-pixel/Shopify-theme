@@ -65,11 +65,13 @@ def assert_no_payg_credentials() -> None:
 
 
 def withheld_tools(specs, *, writes_enabled: bool) -> set[str]:
-    """The tools the model is never offered: a RED read, and every write while writes are off.
-    Pure, so the rule can be checked without an SDK."""
+    """The tools the model is never offered: a RED read, every write while writes are off,
+    and the diagnostic mocks, which exist for the test suite and cost schema bytes on every
+    turn. Pure, so the rule can be checked without an SDK."""
     return {
         s.name for s in specs
         if (s.write is None and s.tier is Tier.RED) or (s.write is not None and not writes_enabled)
+        or s.name.startswith("mock_")
     }
 
 

@@ -18,7 +18,7 @@ from typing import Any
 
 from app.actions.models import Observed, Prepared, text_fingerprint
 from app.clients.shopify import ShopifyClient, ShopifyError
-from app.context.order import Hydrator, model_view
+from app.context.order import MODEL_BUDGET_S, Hydrator, model_view, summary
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, WriteSpec, tool
 
@@ -132,6 +132,20 @@ async def shopify_find_order(query: str, limit: int = 5) -> dict:
     search = f"name:{term}" if term.isdigit() else None
     ambiguous_customers: list[dict] = []
 
+    if search is not None:
+        # One round trip carries the whole order: the summary for the model, the order for
+        # the card, and — for a single match — its history and inbox already on their way.
+        found = await hydrator().find_by_number(term, limit=min(limit, 2))
+        result: dict[str, Any] = {"query": query, "matched_on": search, "orders": [summary(o) for o in found]}
+        if found and found[0].get("partial"):
+            result["partial"] = found[0]["partial"]
+        if not found:
+            result["note"] = (
+                f"No order found for {query!r}. Note that without the read_all_orders scope only "
+                "the last 60 days of orders are visible."
+            )
+        return result
+
     if search is None:
         # There is no `customer_name:` filter on orders. Resolve the customer first, then
         # search by customer_id — searching orders by a name string silently returns nothing.
@@ -224,7 +238,10 @@ def _order_summary(node: dict) -> dict:
     model_view=model_view,
 )
 async def shopify_order_detail(order_id: str) -> dict:
-    return await hydrator().order(str(order_id))
+    # A short wait for the history and the inbox: the card collects what is still on its way,
+    # and the model is told so. The order itself is read fresh, or reused from a search a
+    # moment ago.
+    return await hydrator().order(str(order_id), budget_s=MODEL_BUDGET_S)
 
 
 @tool(
@@ -835,7 +852,7 @@ async def _observe_order_note(execution: dict) -> Observed:
     order_id = str(execution["order_id"])
     # The detail (for the screen; its note is truncated for the card) and the raw note (for
     # the fingerprint) are two queries; they go out together, not one after the other.
-    detail, node = await asyncio.gather(hydrator().order(order_id, budget_s=0.0), _read_order_note(_c(), order_id))
+    detail, node = await asyncio.gather(hydrator().order(order_id, budget_s=0.0, fresh=True), _read_order_note(_c(), order_id))
     return Observed(fingerprint=text_fingerprint(_normalise_note(node.get("note"))), entity=detail)
 
 
@@ -845,6 +862,7 @@ async def _execute_order_note(execution: dict) -> dict:
     order_id = str(execution["order_id"])
     desired = str(execution["desired_note"])
     payload = await client.mutate("order_note_set", {"id": order_id, "note": desired})
+    hydrator().forget(order_id)   # whatever was held of the order is no longer the order
     order = ((payload.get("data") or {}).get("orderUpdate") or {}).get("order") or {}
     if order.get("id") != order_id:
         raise ShopifyError("Shopify did not confirm which order it updated.")

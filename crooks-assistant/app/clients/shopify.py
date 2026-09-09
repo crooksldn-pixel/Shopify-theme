@@ -35,6 +35,14 @@ class ShopifyError(RuntimeError):
     """A query failed. Carries the message the assistant should read out."""
 
 
+class ShopifyThrottled(ShopifyError):
+    """The query cost bucket was short. Carries how long Shopify said it takes to refill."""
+
+    def __init__(self, message: str, wait_s: float = 0.5) -> None:
+        super().__init__(message)
+        self.wait_s = wait_s
+
+
 class ShopifyScopeRefused(ShopifyError):
     """Shopify refused a mutation for want of a scope, and said so in the response. Proof that
     nothing was applied — which is what makes one retry with a freshly minted token safe. No
@@ -91,6 +99,12 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
     ),
 }
 
+KEEPALIVE_CONNECTIONS = 4
+KEEPALIVE_EXPIRY_S = 120.0
+# When Shopify says the query cost bucket is short, a read waits this long at most for it
+# to refill, once, before being reported as throttled.
+THROTTLE_WAIT_MAX_S = 1.5
+
 SCOPES_TTL_S = 600.0
 # How long a failed scope check is remembered as failed, so a Shopify that is not answering
 # is not asked again on every turn and every tap.
@@ -123,10 +137,18 @@ class ShopifyClient:
         self._scopes: frozenset[str] | None = None
         self._scopes_at = 0.0
         self._scopes_failed_at = 0.0
+        # What the last answer said about the query cost bucket: requested, actual, and how
+        # much is left. For the timings, and for waiting rather than failing when it is short.
+        self.last_cost: dict[str, float] = {}
 
     def _client(self) -> httpx.AsyncClient:
         if self._http is None or self._http.is_closed:
-            self._http = httpx.AsyncClient(timeout=self._timeout)
+            # Kept warm for minutes, not httpx's five seconds: the order, the customer's
+            # history and the scope check go out together and must not each open a socket.
+            self._http = httpx.AsyncClient(
+                timeout=self._timeout,
+                limits=httpx.Limits(max_keepalive_connections=KEEPALIVE_CONNECTIONS, keepalive_expiry=KEEPALIVE_EXPIRY_S),
+            )
         return self._http
 
     async def aclose(self) -> None:
@@ -207,7 +229,15 @@ class ShopifyClient:
         # path; the reviewed writes go through `mutate()`, by name.
         if _is_mutation(query):
             raise ShopifyError("Refused: this path never sends a Shopify mutation.")
-        return await self._post(query, variables)
+        try:
+            return await self._post(query, variables)
+        except ShopifyThrottled as exc:
+            # The bucket was short. A read is safe to send again: wait for the refill Shopify
+            # itself described (bounded), then once more. A mutation never takes this path.
+            wait = min(max(exc.wait_s, 0.2), THROTTLE_WAIT_MAX_S)
+            log.info("Shopify throttled a read; waiting %.1fs once", wait)
+            await asyncio.sleep(wait)
+            return await self._post(query, variables)
 
     async def mutate(self, name: str, variables: dict[str, Any]) -> dict[str, Any]:
         """Send one reviewed mutation by name. The document comes from REVIEWED_MUTATIONS,
@@ -282,11 +312,12 @@ class ShopifyClient:
             self._token = None
             raise ShopifyAuthError("Shopify rejected the token (401). It may have been revoked.")
         if response.status_code == 429:
-            raise ShopifyError("Shopify is rate-limiting us. Try again in a moment.")
+            raise ShopifyThrottled("Shopify is rate-limiting us. Try again in a moment.", wait_s=_retry_after(response))
         if response.status_code != 200:
             raise ShopifyError(f"Shopify returned {response.status_code}: {response.text[:200]}")
 
         payload = response.json()
+        self.last_cost = _cost_of(payload)
 
         # A 200 with an `errors` array is normal for protected customer data: fields come back
         # null and the reason is in `errors`. Reading only `data` makes that look like an outage.
@@ -302,7 +333,7 @@ class ShopifyClient:
             }
             # Throttling and cost overruns come back as HTTP 200 with an errors array, not 429.
             if "THROTTLED" in codes:
-                raise ShopifyError("Shopify is rate-limiting us. Try again in a moment.")
+                raise ShopifyThrottled("Shopify is rate-limiting us. Try again in a moment.", wait_s=_refill_wait(self.last_cost))
             if "MAX_COST_EXCEEDED" in codes:
                 raise ShopifyError("That query was too expensive for Shopify; narrow it.")
             if mutation and "ACCESS_DENIED" in codes:
@@ -383,6 +414,41 @@ def _is_mutation(document: str) -> bool:
     return bool(_MUTATION_RE.match(document or "")) or bool(
         re.search(r"(?:^|[\s};])mutation\b\s*(?:\w+\s*)?[({]", document or "", re.I)
     )
+
+
+def _cost_of(payload: dict[str, Any]) -> dict[str, float]:
+    """The cost extension, as numbers: requested, actual, available, restore rate."""
+    cost = (payload.get("extensions") or {}).get("cost") if isinstance(payload, dict) else None
+    if not isinstance(cost, dict):
+        return {}
+    throttle = cost.get("throttleStatus") or {}
+    out: dict[str, float] = {}
+    for key, value in (
+        ("requested", cost.get("requestedQueryCost")), ("actual", cost.get("actualQueryCost")),
+        ("available", throttle.get("currentlyAvailable")), ("restore_rate", throttle.get("restoreRate")),
+        ("maximum", throttle.get("maximumAvailable")),
+    ):
+        try:
+            if value is not None:
+                out[key] = float(value)
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def _refill_wait(cost: dict[str, float]) -> float:
+    """How long until the bucket holds what the last query asked for, by Shopify's own numbers."""
+    requested, available, rate = cost.get("requested"), cost.get("available"), cost.get("restore_rate")
+    if requested is None or available is None or not rate:
+        return 0.5
+    return max(0.0, (requested - available) / rate)
+
+
+def _retry_after(response: httpx.Response) -> float:
+    try:
+        return float(response.headers.get("retry-after", "0.5"))
+    except ValueError:
+        return 0.5
 
 
 def _iso_utc(dt: datetime) -> str:

@@ -338,3 +338,19 @@ def test_a_summary_is_bounded():
 
     (card,) = present_proposal_state(_proposal(summary={"appended": "x" * 5000, "had_note": True}))
     assert len(card["data"]["summary"]) <= MAX_NOTE_CHARS
+
+
+# --------------------------------------------------------------------------- the rail
+
+
+def test_the_order_card_carries_the_rail_only_from_the_macs_capabilities():
+    caps = {"order_note_append": {"state": "ready"}, "order_cancel": {"state": "ready"}}
+    open_order = {**DETAIL, "fulfillment": "UNFULFILLED", "fulfillments": [], "items": [{"title": "Yard Jeans", "unfulfilled_quantity": 1}], "refundable": True}
+    with_rail = present([ok("shopify_order_detail", open_order)], writes={"allowed": True, "capabilities": caps})
+    actions = with_rail[0]["data"]["actions"]
+    assert [a["id"] for a in actions] == ["note", "cancel"] and actions[1]["instruction"] == "Cancel order 1930"
+    assert set(actions[0]) == {"id", "label", "operation", "risk", "enabled", "reason", "instruction", "mode"}
+    without = present([ok("shopify_order_detail", open_order)])
+    assert without[0]["data"]["actions"] == []
+    summary = present([ok("shopify_find_order", {"orders": [ORDER]})], writes={"allowed": True, "capabilities": caps})
+    assert "actions" not in summary[0]["data"], "a summary card has no rail; the order is not known well enough"

@@ -485,3 +485,21 @@ test('the undo counts down too, and stops offering itself when its minute is up'
   expiry.fn();
   assert.equal(node.querySelector('.action-surface').dataset.state, 'expired');
 });
+
+test('the rail shows only the Mac\'s chips, primes the words on tap, and a disabled chip says why and does nothing', () => {
+  const primed = [];
+  const node = UI.renderItem({ type: 'order', data: { detail: true, order_number: '#1938', items: [], pending: [], actions: [
+    { id: 'note', label: 'Note', risk: 'amber', enabled: true, instruction: 'Add a note to order 1938', mode: 'ask' },
+    { id: 'cancel', label: 'Cancel', risk: 'red', enabled: true, instruction: 'Cancel order 1938', mode: 'ask' },
+    { id: 'refund', label: 'Refund', risk: 'red', enabled: false, reason: 'not paid', instruction: 'Refund order 1938', mode: 'ask' },
+    { id: 'evil', label: HOSTILE, risk: 'red', enabled: true, instruction: HOSTILE, mode: 'ask' },
+  ] } }, { onAction: (a) => primed.push(a.id) });
+  const chips = node.querySelectorAll('.rail-chip');
+  assert.equal(chips.length, 4);
+  assert.deepEqual(chips.map((c) => c.getAttribute('aria-disabled')), ['false', 'false', 'true', 'false']);
+  assert.ok(textOf(chips[2]).includes('not paid'));
+  chips[0].dispatch('click'); chips[1].dispatch('click'); chips[2].dispatch('click'); chips[3].dispatch('click');
+  assert.deepEqual(primed, ['note', 'cancel', 'evil']);
+  assert.ok(textOf(chips[3]).includes(HOSTILE) && !node.querySelectorAll('img').length);
+  assert.equal(UI.renderItem({ type: 'order', data: { detail: true, items: [], actions: [] } }).querySelectorAll('.rail').length, 0, 'no rail without chips');
+});

@@ -128,7 +128,8 @@ def test_options_construct_with_no_builtin_tools(monkeypatch):
     # RED tools are disallowed at the SDK layer too, not only denied by the hook.
     assert "mcp__crooks__mock_danger" in opts.disallowed_tools
     assert "mcp__crooks__mock_danger" not in opts.allowed_tools
-    assert "mcp__crooks__mock_echo" in opts.allowed_tools
+    # The diagnostic mocks are for the test suite: never offered, never a schema byte.
+    assert "mcp__crooks__mock_echo" not in opts.allowed_tools and "mcp__crooks__mock_echo" in opts.disallowed_tools
     assert "PreToolUse" in opts.hooks
     assert opts.env == {}  # CLI mode injects nothing
     assert opts.system_prompt == "sys"
@@ -278,8 +279,8 @@ def test_write_tools_are_withheld_from_the_model_unless_writes_are_on():
     specs = registry.all_specs()
     off = withheld_tools(specs, writes_enabled=False)
     on = withheld_tools(specs, writes_enabled=True)
-    assert "shopify_order_note_append" in off and "mock_danger" in off
-    assert "shopify_order_note_append" not in on and "mock_danger" in on
+    assert "shopify_order_note_append" in off and "mock_danger" in off and "mock_echo" in off
+    assert "shopify_order_note_append" not in on and "mock_danger" in on and "mock_slow" in on
     assert "shopify_order_detail" not in off and "shopify_order_detail" not in on
 
 

@@ -39,11 +39,18 @@ ENRICH_BUDGET_S = 1.5
 ENRICH_REUSE_S = 60.0
 JOB_RETENTION_S = 600.0
 
-# One document, validated against the Admin API schema (2025-07). Items, fulfilments,
-# refunds and events are capped well under the 1,000-point query cost.
-ORDER_CONTEXT_QUERY = """
-query CrooksOrderContext($id: ID!, $n: Int!) {
-  order(id: $id) {
+# How long a freshly read order is reused for: the search the Mac runs ahead of the model
+# already holds the whole order, and the model's own detail call a moment later must not
+# read it again. Short, because an order's state is what every change turns on.
+CORE_REUSE_S = 5.0
+# What a detail call made BY THE MODEL waits for the history and the inbox: the card
+# collects the rest, and the model is told what is still on its way.
+MODEL_BUDGET_S = 0.25
+
+# One selection, validated against the Admin API schema (2025-07), used by both documents
+# below. Items, fulfilments, refunds and events are capped well under the 1,000-point cost.
+# The image is asked for at the width the card draws, so the CDN's own rendition is served.
+_ORDER_SELECTION = """
     id
     name
     createdAt
@@ -88,7 +95,7 @@ query CrooksOrderContext($id: ID!, $n: Int!) {
         sku
         originalTotalSet { shopMoney { amount currencyCode } }
         discountedTotalSet { shopMoney { amount currencyCode } }
-        image { url width height }
+        image { url(transform: {maxWidth: 320}) width height }
         variant {
           id
           inventoryQuantity
@@ -114,8 +121,22 @@ query CrooksOrderContext($id: ID!, $n: Int!) {
     events(first: 5, sortKey: CREATED_AT, reverse: true) {
       edges { node { id message createdAt } }
     }
-  }
-}
+"""
+
+ORDER_CONTEXT_QUERY = f"""
+query CrooksOrderContext($id: ID!, $n: Int!) {{
+  order(id: $id) {{ {_ORDER_SELECTION} }}
+}}
+"""
+
+# The search by order number, carrying the whole order: one round trip yields the summary
+# the model is handed AND the order the card is built from.
+ORDER_BY_NAME_QUERY = f"""
+query CrooksOrderByName($q: String!, $n: Int!) {{
+  orders(first: 2, query: $q, sortKey: CREATED_AT, reverse: true) {{
+    edges {{ node {{ {_ORDER_SELECTION} }} }}
+  }}
+}}
 """
 
 CUSTOMER_ORDERS_QUERY = """
@@ -292,6 +313,11 @@ def shape_order(node: dict[str, Any]) -> dict[str, Any]:
         "shipping_address": shape_address(address) if address else None,
         "events": events,
     }
+
+
+def summary(order: dict[str, Any]) -> dict[str, Any]:
+    """The thin shape a search returns: the same keys shopify_find_order always had."""
+    return {k: order.get(k) for k in ("order_id", "order_number", "placed_at", "fulfillment", "payment", "total", "customer_name", "customer_id", "customer_email")}
 
 
 def shape_address(address: dict[str, Any]) -> dict[str, Any]:
@@ -488,14 +514,20 @@ class Hydrator:
         self._threads_for = threads_for
         self.clock = clock
         self._jobs: dict[str, _Job] = {}
-        self._cores: dict[str, asyncio.Task] = {}   # an order read in flight, so two callers share it
+        # An order read in flight, or just read: two callers share it, and the model's detail
+        # call a moment after the search finds the order already in hand.
+        self._cores: dict[str, tuple[asyncio.Future, float]] = {}
         self.core_reads = 0
 
     # -------------------------------------------------------------- order
 
-    async def order(self, order_id: str, *, budget_s: float = ENRICH_BUDGET_S) -> dict[str, Any]:
-        """The order, fresh, with as much of its history and inbox as arrives within the
-        budget. `pending` names what is still on its way."""
+    async def order(self, order_id: str, *, budget_s: float = ENRICH_BUDGET_S, fresh: bool = False) -> dict[str, Any]:
+        """The order, with as much of its history and inbox as arrives within the budget.
+        `pending` names what is still on its way. An order read a moment ago is reused;
+        `fresh` reads it again regardless — what a change is checked against, and proved
+        by, is never a copy."""
+        if fresh:
+            self._cores.pop(order_id, None)
         core = await self._core(order_id)
         job = self._enrich(order_id, core)
         if budget_s > 0 and job.task is not None and not job.task.done():
@@ -522,18 +554,47 @@ class Hydrator:
         email = await self._email(history.get("email"), digits="")
         return {**history, "email_threads": email}
 
+    def forget(self, order_id: str) -> None:
+        """The order has just been changed: whatever was held of it is no longer it."""
+        self._cores.pop(order_id, None)
+
     # --------------------------------------------------------- internals
 
+    async def find_by_number(self, digits: str, *, limit: int = 2) -> list[dict[str, Any]]:
+        """The orders named by a number, whole. Each is kept as read for a few seconds, so
+        the detail call that follows a search costs nothing; a single match starts its
+        history and inbox at once, beside whatever happens next."""
+        payload = await self._shopify().graphql(ORDER_BY_NAME_QUERY, {"q": f"name:{digits}", "n": MAX_ITEMS})
+        edges = ((payload.get("data") or {}).get("orders") or {}).get("edges") or []
+        orders: list[dict[str, Any]] = []
+        now = self.clock()
+        for edge in edges[:limit]:
+            node = edge.get("node") if isinstance(edge, dict) else None
+            if not isinstance(node, dict) or not node.get("id"):
+                continue
+            shaped = shape_order(node)
+            if payload.get("_partial_errors"):
+                shaped["partial"] = str(payload["_partial_errors"])[:200]
+            done: asyncio.Future = asyncio.get_running_loop().create_future()
+            done.set_result(shaped)
+            self._cores[str(node["id"])] = (done, now)
+            orders.append(shaped)
+        if len(orders) == 1:
+            self._enrich(orders[0]["order_id"], orders[0])
+        return orders
+
     async def _core(self, order_id: str) -> dict[str, Any]:
-        task = self._cores.get(order_id)
-        if task is None or task.done():
-            task = asyncio.ensure_future(self._read_order(order_id))
-            self._cores[order_id] = task
+        held = self._cores.get(order_id)
+        now = self.clock()
+        if held is not None and (not held[0].done() or now - held[1] < CORE_REUSE_S) and not (held[0].done() and held[0].exception() is not None):
+            return await held[0]
+        task = asyncio.ensure_future(self._read_order(order_id))
+        self._cores[order_id] = (task, now)
         try:
             return await task
-        finally:
-            if self._cores.get(order_id) is task and task.done():
-                self._cores.pop(order_id, None)
+        except Exception:
+            self._cores.pop(order_id, None)
+            raise
 
     async def _read_order(self, order_id: str) -> dict[str, Any]:
         self.core_reads += 1
@@ -618,6 +679,9 @@ class Hydrator:
                 if job.task is not None and not job.task.done():
                     job.task.cancel()
                 del self._jobs[order_id]
+        for order_id, (future, started) in list(self._cores.items()):
+            if future.done() and now - started > CORE_REUSE_S:
+                del self._cores[order_id]
 
 
 def _short(value: Any, limit: int = MAX_TEXT) -> str | None:

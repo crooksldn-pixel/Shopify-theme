@@ -650,3 +650,80 @@ async def test_a_slow_shopify_costs_the_preflight_bound_once(client):
     assert tap_ms < 500, f"the tap paid the bound again: {tap_ms:.0f} ms"
     hang.set()
     actions_module._preflight_timed_out_at = 0.0
+
+
+# --------------------------------------------------------------------------- capabilities
+
+
+async def test_health_names_every_change_and_whether_it_could_be_made(client):
+    configure(client)
+    health = (await client.get("/health?fresh=1")).json()
+    caps = health["capabilities"]
+    assert caps["order_note_append"] == {"state": "ready", "detail": "ready — order note append", "scope": "write_orders"}
+    assert caps["gmail_send"]["state"] == "disabled" and "CROOKS_GMAIL_SEND" in caps["gmail_send"]["detail"]
+    client.store.scopes = {"read_orders"}
+    client.store._scopes = None
+    health = (await client.get("/health?fresh=1")).json()
+    assert health["capabilities"]["order_note_append"]["state"] == "blocked"
+    assert "write_orders scope missing" in health["capabilities"]["order_note_append"]["detail"]
+    configure(client, writes=False)
+    assert (await client.get("/health?fresh=1")).json()["capabilities"]["order_note_append"]["state"] == "disabled"
+
+
+async def test_the_commit_preflight_is_for_the_proposals_own_scope(client, monkeypatch):
+    """A fulfilment scope the store has not granted does not stop a note."""
+    from app.clients.shopify import REVIEWED_MUTATIONS, ReviewedMutation
+    from app.tools import registry
+    from app.tools.gate import Tier
+    from app.tools.registry import ToolSpec, WriteSpec
+
+    configure(client)
+    client.store.scopes = {"read_orders", "write_orders"}
+    client.store._scopes = None
+    monkeypatch.setitem(REVIEWED_MUTATIONS, "probe_fulfil", ReviewedMutation(name="probe_fulfil", document="mutation X { x }", variables={}, scope="write_merchant_managed_fulfillment_orders"))
+
+    async def never(*a, **k):
+        raise AssertionError("never runs")
+
+    spec = ToolSpec(name="shopify_fulfil_probe", description="d", input_schema={"type": "object", "properties": {"order_id": {"type": "string"}}}, tier=Tier.RED, handler=never,
+                    issued_id_args=("order_id",), write=WriteSpec(operation="fulfillment_probe", entity_kind="order", entity_arg="order_id", mutation="probe_fulfil", observe=never, execute=never, present=lambda p: {}))
+    monkeypatch.setitem(registry._REGISTRY, "shopify_fulfil_probe", spec)
+    health = (await client.get("/health?fresh=1")).json()
+    assert health["writes"]["state"] == "blocked" and "write_merchant_managed_fulfillment_orders" in health["writes"]["detail"]
+    assert health["capabilities"]["order_note_append"]["state"] == "ready"
+    assert health["capabilities"]["fulfillment_probe"]["state"] == "blocked"
+    proposal = await staged(client)
+    response = await commit(client, proposal.proposal_id)
+    assert response.status_code == 200 and response.json()["status"] == "verified", response.text
+
+
+# --------------------------------------------------------------------------- one conversation, one login
+
+
+async def test_a_conversation_belongs_to_the_login_that_started_it(client):
+    """Two logins the Mac admits; one conversation. The other login gets none of it."""
+    configure(client, logins=f"{OWNER}, other@example.com")
+    stranger = {"Tailscale-User-Login": "other@example.com", "X-Forwarded-For": "100.64.0.3"}
+    started = await client.post("/turn", json={"text": "hello", "session_id": "mine"}, headers=PROXIED)
+    assert started.status_code == 200
+    assert client.runtime.sessions.peek("mine").login == OWNER
+    for path in ("/state/mine",):
+        assert (await client.get(path, headers=stranger)).status_code == 403
+        assert (await client.get(path, headers=PROXIED)).status_code == 200
+    assert (await client.post("/turn", json={"text": "and mine?", "session_id": "mine"}, headers=stranger)).status_code == 403
+    assert (await client.post("/cancel", data={"session_id": "mine"}, headers=stranger)).status_code == 403
+    assert (await client.post("/reset", data={"session_id": "mine"}, headers=stranger)).status_code == 403
+    assert client.runtime.sessions.exists("mine"), "the stranger's reset reset nothing"
+    proposal = await staged(client, session_id="mine")
+    refused = await commit(client, proposal.proposal_id, session_id="mine", headers=stranger)
+    assert refused.status_code == 403 and refused.json()["code"] == "wrong_session"
+    assert (await client.get(f"/actions/{proposal.proposal_id}", params={"session_id": "mine"}, headers=stranger)).status_code == 403
+    assert client.store.mutations == []
+    # The Mac itself is the owner's own machine: it may look, and binds nothing.
+    assert (await client.get("/state/mine")).status_code == 200
+    # A session made outside a request binds to its first tailnet caller, and to nobody after.
+    client.runtime.sessions.get_or_create("fresh")
+    assert (await client.get("/state/fresh")).status_code == 200
+    assert client.runtime.sessions.peek("fresh").login == ""
+    assert (await client.get("/state/fresh", headers=stranger)).status_code == 200
+    assert (await client.get("/state/fresh", headers=PROXIED)).status_code == 403

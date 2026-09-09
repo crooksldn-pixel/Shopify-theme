@@ -36,6 +36,12 @@
     shipping_method: 'Royal Mail Tracked 24',
     shipping_address: { name: 'Sam Fixture', lines: ['12 Somewhere Street', 'Flat 3'], city: 'London', zip: 'E1 6AN', country: 'United Kingdom', country_code: 'GB' },
     history: HISTORY, email: EMAIL, pending: [],
+    actions: [
+      { id: 'note', label: 'Note', operation: 'order_note_append', risk: 'amber', enabled: true, reason: '', instruction: 'Add a note to order 1930', mode: 'ask' },
+      { id: 'cancel', label: 'Cancel', operation: 'order_cancel', risk: 'red', enabled: true, reason: '', instruction: 'Cancel order 1930', mode: 'ask' },
+      { id: 'address', label: 'Address', operation: 'order_shipping_address_set', risk: 'red', enabled: true, reason: '', instruction: 'Change the address on order 1930', mode: 'ask' },
+      { id: 'refund', label: 'Refund', operation: 'refund_create', risk: 'red', enabled: false, reason: 'not paid', instruction: 'Refund order 1930', mode: 'ask' },
+    ],
     cancelled_at: '', note: 'Leave with the neighbour if out.', ships_to: 'London, United Kingdom',
   };
   const ORDER_READING = Object.assign({}, ORDER, { history: null, email: null, pending: ['history', 'email'] });

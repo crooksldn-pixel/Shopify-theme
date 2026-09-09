@@ -15,6 +15,9 @@ from pathlib import Path
 log = logging.getLogger("crooks.gmail")
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+# The one write scope this project will ever ask for, and only when the owner runs the send
+# authorisation deliberately: send, not compose or modify — a sent reply and nothing else.
+SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CREDENTIALS_PATH = REPO_ROOT / "credentials.json"
@@ -46,6 +49,20 @@ def _read_token_json() -> tuple[str, str]:
     if TOKEN_PATH.exists():
         return TOKEN_PATH.read_text(encoding="utf-8"), "file"
     raise GmailAuthRequired("No Gmail token stored.")
+
+
+def send_scope_granted() -> bool:
+    """Whether the stored credential was authorised with the send scope. Reads the stored
+    JSON only; never refreshes, never opens a browser, never sends."""
+    import json
+
+    raw, _ = _read_token_json()
+    try:
+        info = json.loads(raw)
+    except ValueError:
+        return False
+    scopes = info.get("scopes") or []
+    return SEND_SCOPE in scopes
 
 
 def store_token_json(payload: str) -> str:

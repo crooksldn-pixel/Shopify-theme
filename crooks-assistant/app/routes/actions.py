@@ -69,6 +69,29 @@ def caller_check(request: Request) -> tuple[str, str, str, str]:
     return "", "not_authorised_local", "Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).", "not_authorised_local"
 
 
+def caller_identity(request: Request) -> str:
+    """Who is asking, for binding a conversation to them: the proxied login, or "local" for
+    a request made on the Mac itself. The middleware has already refused a proxied request
+    with no login, so this is never empty."""
+    login = request.headers.get("tailscale-user-login", "").strip().lower()
+    proxied = bool(request.headers.get("x-forwarded-for"))
+    return login if proxied and login else "local"
+
+
+def session_matches(session, request: Request) -> bool:
+    """Whether this request may use this session. A session binds to the tailnet login that
+    first used it; every later proxied request must carry the same one. A request made on
+    the Mac itself is the owner at the keyboard — it may look at any conversation (and is
+    still held to CROOKS_WRITES_LOCAL_OWNER before it can apply anything) and binds none."""
+    identity = caller_identity(request)
+    if identity == "local":
+        return True
+    if not session.login:
+        session.login = identity
+        return True
+    return session.login == identity
+
+
 def _authorise(request: Request) -> tuple[str, JSONResponse | None]:
     caller, code, detail, spoken_key = caller_check(request)
     if code:
@@ -95,7 +118,7 @@ _preflight_timed_out_at = 0.0
 _SLOW = "ready, unverified — the Shopify scope check was slow"
 
 
-async def _write_status_soon(runtime):
+async def _write_status_soon(runtime, operation: str | None = None):
     """The preflight, bounded. It runs before the answer's voice and before a tap; neither may
     wait on a slow Shopify. Past the bound the change is treated as applicable — Shopify has
     the last word on the mutation itself, and refuses it there if the scope is really missing."""
@@ -105,20 +128,45 @@ async def _write_status_soon(runtime):
     if time.time() - _preflight_timed_out_at < PREFLIGHT_QUIET_S:
         return WriteStatus("unknown", _SLOW)
     try:
-        return await asyncio.wait_for(runtime.write_status(), timeout=WRITE_STATUS_TIMEOUT_S)
+        return await asyncio.wait_for(runtime.write_status(operation), timeout=WRITE_STATUS_TIMEOUT_S)
     except TimeoutError:
         _preflight_timed_out_at = time.time()
         log.warning("the write preflight took longer than %.1fs; treated as ready", WRITE_STATUS_TIMEOUT_S)
         return WriteStatus("unknown", _SLOW)
 
 
-async def writes_context(request: Request) -> dict:
+def _unknown_capabilities(runtime) -> dict:
+    return {op: {"state": "unknown", "detail": _SLOW, "scope": scope} for op, scope in runtime._write_scopes().items()}
+
+
+async def _preflight_soon(runtime, operation: str | None = None):
+    """The status and the per-change table together, under ONE bound: the two read the same
+    cached scope answer, and a Shopify that hangs costs the turn the bound once, not twice.
+    Past it every built change is "unknown": offered, with Shopify deciding the tap."""
+    global _preflight_timed_out_at
+    from app.runtime import WriteStatus
+
+    if time.time() - _preflight_timed_out_at < PREFLIGHT_QUIET_S:
+        return WriteStatus("unknown", _SLOW), _unknown_capabilities(runtime)
+    try:
+        status, capabilities = await asyncio.wait_for(
+            asyncio.gather(runtime.write_status(operation), runtime.capabilities()), timeout=WRITE_STATUS_TIMEOUT_S,
+        )
+    except TimeoutError:
+        _preflight_timed_out_at = time.time()
+        log.warning("the write preflight took longer than %.1fs; treated as ready", WRITE_STATUS_TIMEOUT_S)
+        return WriteStatus("unknown", _SLOW), _unknown_capabilities(runtime)
+    return status, capabilities
+
+
+async def writes_context(request: Request, operation: str | None = None) -> dict:
     """What the tablet needs to know about applying changes from this request's identity:
-    whether writes are ready on the Mac and whether this caller may tap. Sent with every turn
-    that proposes something, so the card can say up front when a tap would be refused."""
+    whether writes are ready on the Mac, whether this caller may tap, and which changes the
+    Mac could make right now (for the order card's rail). Sent with every turn that proposes
+    something, so the card can say up front when a tap would be refused."""
     runtime = request.app.state.runtime
     caller, code, detail, spoken_key = caller_check(request)
-    status = await _write_status_soon(runtime)
+    status, capabilities = await _preflight_soon(runtime, operation)
     if not code and not status.ready:
         code, detail, spoken_key = status.code, status.detail, status.code
     if code:
@@ -137,6 +185,9 @@ async def writes_context(request: Request) -> dict:
         "detail": detail,
         "spoken": SPOKEN_REFUSALS.get(spoken_key, "") if code else "",
         "caller": caller or None,
+        # The rail's source: which changes this Mac could make now, by operation. Empty when
+        # the caller may not tap at all, so no chip is offered to a login that cannot use it.
+        "capabilities": capabilities if not code or code == status.code else {},
     }
 
 
@@ -146,12 +197,22 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     caller, refusal = _authorise(request)
     if refusal is not None:
         return refusal
-    status = await _write_status_soon(runtime)
+    if not session_id.strip():
+        return _refuse(400, "wrong_session", "The session is missing.")
+    try:
+        owner_session = runtime.sessions.peek(session_id.strip())
+    except KeyError:
+        owner_session = None
+    if owner_session is not None and not session_matches(owner_session, request):
+        log.warning("commit refused: wrong_session — another login's conversation (caller=%s)", caller)
+        return _refuse(403, "wrong_session", "That conversation belongs to another login.")
+    # The preflight is for THIS change's scope: a fulfilment scope the store has not granted
+    # does not stop a note. The proposal is looked at, not claimed; the engine claims it.
+    pending = runtime.actions.state(proposal_id, session_id.strip())
+    status = await _write_status_soon(runtime, pending.operation if pending is not None else None)
     if not status.ready:
         log.warning("commit refused: %s — %s (caller=%s)", status.code, status.detail, caller)
         return _refuse(403, status.code, status.detail, status.code)
-    if not session_id.strip():
-        return _refuse(400, "wrong_session", "The session is missing.")
 
     from app.tools import registry
 
@@ -184,7 +245,7 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         **proposal.public(),
         "code": result.code,
         "spoken": result.spoken,
-        "ui": present_action(result, session=session, writes=await writes_context(request)),
+        "ui": present_action(result, session=session, writes=await writes_context(request, proposal.operation)),
         "undo": undo,
     }
 
@@ -201,7 +262,9 @@ async def state(request: Request, proposal_id: str, session_id: str = "") -> JSO
         session = runtime.sessions.peek(session_id.strip())
     except KeyError:
         session = None
+    if session is not None and not session_matches(session, request):
+        return _refuse(403, "wrong_session", "That conversation belongs to another login.")
     # The same preflight the commit route runs: a card recovered after a lost connection is
     # only shown as tappable when a tap from this request could actually work.
-    writes = await writes_context(request)
+    writes = await writes_context(request, proposal.operation)
     return {**proposal.public(), "ui": present_proposal_state(proposal, session=session, writes=writes)}

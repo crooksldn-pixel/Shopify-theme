@@ -1039,7 +1039,22 @@ function actionBlocked() {
 }
 
 function renderOpts() {
-  return { onCommit: commitAction, blocked: actionBlocked };
+  return { onCommit: commitAction, blocked: actionBlocked, onAction: primeAction };
+}
+
+// A rail chip: the Mac says this change makes sense for the order. The chip does not stage
+// anything — it puts the words in the owner's mouth. The dock says what to say; the hold
+// asks; the Mac prepares; the gesture applies. Nothing shortcuts that.
+let primedInstruction = '';
+function primeAction(action) {
+  const words = String(action && action.instruction || '').trim();
+  if (!words || busy || recording) return;
+  primedInstruction = words;
+  el.talkLabel.textContent = `Hold and say: “${words}”`;
+  el.sub.textContent = `Hold and say: “${words}”`;
+  haptic(HAPTIC.start);
+  clearTimeout(busyHintTimer);
+  busyHintTimer = setTimeout(() => { if (!recording && primedInstruction === words) { primedInstruction = ''; el.talkLabel.textContent = 'Hold to speak'; } }, 8000);
 }
 
 async function commitAction(proposalId, node) {

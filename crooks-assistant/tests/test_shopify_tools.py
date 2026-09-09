@@ -403,17 +403,36 @@ def test_throttled_extension_code_is_detected():
         import httpx
 
         class FakeHttp:
+            is_closed = False
+            posts = 0
             def __init__(self, *a, **k): pass
             async def __aenter__(self): return self
             async def __aexit__(self, *a): return False
-            async def post(self, *a, **k): return FakeResponse()
+            async def post(self, *a, **k):
+                FakeHttp.posts += 1
+                return FakeResponse()
 
         original = httpx.AsyncClient
         httpx.AsyncClient = FakeHttp
+        waited = []
+
+        async def sleep(seconds):
+            waited.append(seconds)
+
         try:
             client._access_token = lambda: _coro("tok")  # type: ignore[assignment]
-            with pytest.raises(ShopifyError, match="rate-limiting"):
-                await client.graphql("query { shop { name } }")
+            from app.clients import shopify as shopify_module
+
+            real_sleep = shopify_module.asyncio.sleep
+            shopify_module.asyncio.sleep = sleep
+            try:
+                with pytest.raises(ShopifyError, match="rate-limiting"):
+                    await client.graphql("query { shop { name } }")
+            finally:
+                shopify_module.asyncio.sleep = real_sleep
+            # A read that is throttled waits once for the refill and is sent once more; a
+            # second throttle is the answer.
+            assert FakeHttp.posts == 2 and len(waited) == 1
         finally:
             httpx.AsyncClient = original
 
@@ -620,3 +639,53 @@ def test_a_scope_check_that_failed_is_not_asked_again_at_once():
         assert len(asks) == 2
 
     asyncio.run(run())
+
+
+# --- the cost bucket ---------------------------------------------------------
+
+async def test_a_throttled_read_waits_for_the_refill_once_and_a_mutation_never_does(monkeypatch):
+    from app.clients.shopify import ShopifyClient, ShopifyThrottled
+
+    calls = []
+    client = ShopifyClient("x.myshopify.com", "2025-07")
+
+    always = [False]
+
+    async def post(query, variables=None, *, mutation=False):
+        calls.append(mutation)
+        if len(calls) == 1 or always[0]:
+            client.last_cost = {"requested": 400.0, "available": 100.0, "restore_rate": 1000.0}
+            raise ShopifyThrottled("throttled", wait_s=0.3)
+        return {"data": {"ok": True}}
+
+    slept = []
+
+    async def sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr(client, "_post", post)
+    monkeypatch.setattr("app.clients.shopify.asyncio.sleep", sleep)
+    assert (await client.graphql("query { shop { name } }"))["data"] == {"ok": True}
+    assert calls == [False, False] and slept == [0.3]
+    calls.clear()
+    always[0] = True
+    with pytest.raises(ShopifyThrottled):
+        await client.graphql("query { shop { name } }")   # a second throttle is reported, not waited on again
+    assert len(calls) == 2 and len(slept) == 2
+
+
+def test_the_cost_extension_is_read_and_the_wait_is_shopifys_own_number():
+    from app.clients.shopify import _cost_of, _refill_wait
+
+    cost = _cost_of({"extensions": {"cost": {"requestedQueryCost": 420, "actualQueryCost": 210, "throttleStatus": {"maximumAvailable": 1000, "currentlyAvailable": 20, "restoreRate": 50}}}})
+    assert cost == {"requested": 420.0, "actual": 210.0, "available": 20.0, "restore_rate": 50.0, "maximum": 1000.0}
+    assert _refill_wait(cost) == 8.0 and _refill_wait({}) == 0.5
+    assert _cost_of({"data": {}}) == {}
+
+
+def test_the_connection_is_kept_warm_between_the_reads_of_one_turn():
+    from app.clients.shopify import KEEPALIVE_EXPIRY_S, ShopifyClient
+
+    http = ShopifyClient("x.myshopify.com", "2025-07")._client()
+    limits = http._transport._pool._max_keepalive_connections, http._transport._pool._keepalive_expiry
+    assert limits == (4, KEEPALIVE_EXPIRY_S) and KEEPALIVE_EXPIRY_S >= 60

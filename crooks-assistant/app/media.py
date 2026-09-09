@@ -26,7 +26,26 @@ DEFAULT_WIDTH = 160
 MAX_URL_CHARS = 600
 PATH_PREFIX = "/media/shopify/"
 
-_KEY = secrets.token_bytes(32)
+
+
+def _load_key() -> bytes:
+    """The signing key: kept in the Keychain so image paths stay valid across a restart and
+    the tablet's own image cache keeps its thumbnails. Without a Keychain (tests, Linux)
+    a key for this process only, which is still safe — a restart just means fresh paths."""
+    try:
+        from app.secrets import keychain
+
+        stored = keychain.get_optional("media_signing_key")
+        if stored and len(stored) >= 32:
+            return stored.encode("utf-8")
+        fresh = secrets.token_hex(32)
+        keychain.set_secret("media_signing_key", fresh)
+        return fresh.encode("utf-8")
+    except Exception:  # noqa: BLE001 — no keychain here
+        return secrets.token_bytes(32)
+
+
+_KEY = _load_key()
 
 
 def allowed_url(url: object) -> str | None:

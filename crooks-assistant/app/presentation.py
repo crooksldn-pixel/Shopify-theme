@@ -91,6 +91,7 @@ def present(
     items: list[dict[str, Any]] = []
     errors: dict[str, dict[str, Any]] = {}
     calls = list(calls or [])
+    capabilities = writes.get("capabilities") if isinstance(writes, dict) and isinstance(writes.get("capabilities"), dict) else {}
 
     for index, call in enumerate(calls):
         if not call.ok:
@@ -111,6 +112,10 @@ def present(
         if not isinstance(call.result, dict):
             continue
         for item in _from_result(call.name, call.result):
+            if item["type"] == "order" and item["data"].get("detail"):
+                # The rail: which changes make sense for this order, decided on the Mac from
+                # the order's own state and what the store has granted this Mac.
+                item["data"]["actions"] = _actions(call.result, capabilities)
             items.append(item)
 
     items = _merge(items)
@@ -293,6 +298,19 @@ def _order(o: dict[str, Any], *, detail: bool = False) -> dict[str, Any]:
             "pending": [_text(p, 20) for p in (o.get("pending") or [])[:4] if isinstance(p, str)],
         })
     return out
+
+
+def _actions(order: dict[str, Any], capabilities: dict[str, Any]) -> list[dict[str, Any]]:
+    from app.actions.available import available_actions
+
+    return [
+        {
+            "id": _text(a.get("id"), 20), "label": _text(a.get("label"), 20), "operation": _text(a.get("operation"), 40),
+            "risk": "red" if a.get("risk") == "red" else "amber", "enabled": bool(a.get("enabled")),
+            "reason": _text(a.get("reason"), 60), "instruction": _text(a.get("instruction"), 120), "mode": _text(a.get("mode"), 12) or "ask",
+        }
+        for a in available_actions(order, capabilities)[:6]
+    ]
 
 
 def _item(i: dict[str, Any]) -> dict[str, Any]:

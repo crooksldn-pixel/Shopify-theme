@@ -14,11 +14,12 @@ import time
 import uuid
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi.responses import JSONResponse
 
 from app.logging.turnlog import redact
 from app.presentation import present
 from app.providers.base import ToolCall
-from app.routes.actions import writes_context
+from app.routes.actions import session_matches, writes_context
 from app.speech.decode import DecodeError, decode
 from app.speech.speakable import to_speakable
 
@@ -90,6 +91,11 @@ async def turn(
     # question while this one is heard, and a hold that abandons this question may land at
     # any point from here on — during transcription as much as during Claude's thinking.
     live = runtime.sessions.get_or_create(session_id)
+    if not session_matches(live, request):
+        # A conversation is its first caller's. Another login on the tailnet that learns the
+        # id gets nothing of it: not the thread, not the cards, not the tap.
+        log.warning("turn refused: session belongs to another login")
+        return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
     live.heard = ""
     live.abandoned = False
     # This turn's place in the conversation. A hold that abandons the question, or a later
@@ -166,16 +172,18 @@ async def turn(
     # What the Mac already knows about applying a change from this request, before the model
     # is asked: a change proposed while changes are off must never be announced as something
     # to tap. Asked once per turn (the scope answer is cached), and reused for the card.
-    writes = await writes_context(request) if request is not None else None
-    live.writes_blocked = "" if writes is None or writes["allowed"] else _blocked_words(writes)
-
     # An order number in the question is looked up before the model is asked: the Mac
     # already knows it is an order number, the lookup is the model's first step anyway, and
     # having the record — and its id issued — saves a model round trip and the stumble of a
-    # note proposed for an order that has not been looked up yet.
+    # note proposed for an order that has not been looked up yet. It runs beside the scope
+    # preflight, which does not depend on it.
     prefetched: list[ToolCall] = []
     prompt_text = f"{_now_line(runtime)}\n{text.strip()}"
-    lookup = await _prefetch_order(runtime, live, text, prefetched, timings)
+    writes, lookup = await asyncio.gather(
+        writes_context(request) if request is not None else _none(),
+        _prefetch_order(runtime, live, text, prefetched, timings),
+    )
+    live.writes_blocked = "" if writes is None or writes["allowed"] else _blocked_words(writes)
     if lookup:
         prompt_text = f"{prompt_text}\n\n{lookup}"
 
@@ -425,6 +433,10 @@ def _is_write_tool(name: str) -> bool:
         return False
 
 
+async def _none():
+    return None
+
+
 def _truthy(value) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
@@ -542,6 +554,8 @@ async def state(request: Request, session_id: str) -> dict:
         session = runtime.sessions.peek(session_id)
     except KeyError:
         return {"session_id": session_id, "known": False, "state": "READY", "detail": ""}
+    if not session_matches(session, request):
+        return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
     return {
         "session_id": session_id,
         "known": True,
@@ -566,6 +580,8 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
         # counts — and even before the session's first turn has created it. Anything the
         # abandoned turn proposed is withdrawn with it.
         live = runtime.sessions.get_or_create(session_id)
+        if not session_matches(live, request):
+            return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
         live.abandoned = True
         # Named, so the tablet settles exactly the cards this withdrew rather than guessing.
         revoked = runtime.actions.revoke_pending(live, "turn abandoned")
@@ -606,6 +622,12 @@ async def audio_test(request: Request, audio: UploadFile = File(...)) -> dict:
 async def reset(request: Request, session_id: str = Form(default="")) -> dict:
     runtime = request.app.state.runtime
     if session_id:
+        try:
+            existing = runtime.sessions.peek(session_id)
+        except KeyError:
+            existing = None
+        if existing is not None and not session_matches(existing, request):
+            return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
         runtime.actions.forget_session(session_id)
         runtime.sessions.drop(session_id)
         await runtime.provider.reset_session(session_id)

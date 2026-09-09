@@ -32,6 +32,10 @@ async def order_extension(request: Request, order_id: str, session_id: str = "")
         session = runtime.sessions.peek(session_id.strip())
     except KeyError:
         return JSONResponse(status_code=404, content={"code": "unknown", "detail": "No such session."})
+    from app.routes.actions import session_matches
+
+    if not session_matches(session, request):
+        return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
     from app.tools.gate import id_kind_ok
 
     if order_id not in session.issued_ids or not id_kind_ok("order_id", order_id):
