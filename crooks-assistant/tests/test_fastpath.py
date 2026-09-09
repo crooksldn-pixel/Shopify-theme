@@ -221,3 +221,130 @@ def test_a_branch_remembers_a_name_it_resolved_and_forgets_it_when_it_is_old(bra
     branch.learn("millie rogers", "customer", "c1", "Millie Rogers", clock=lambda: 1000.0)
     assert branch.resolve("Millie Rogers", clock=lambda: 1100.0)["ref"] == "c1"
     assert branch.resolve("millie rogers", clock=lambda: 9000.0) is None
+
+
+# ------------------------------------------------- the acceptance scenarios, in miniature
+
+@pytest.fixture()
+async def turning(monkeypatch):
+    """/turn over a real app with fake sources: what the tablet would actually get."""
+    import httpx
+
+    from app.clients.elevenlabs import ScribeClient
+    from app.clients.elevenlabs_tts import VoiceClient
+    from app.main import app
+    from app.providers import max_agent_sdk
+    from app.providers.base import TurnResult
+    from app.session.manager import SessionManager
+    from app.tools import shopify_tools
+    from tests.test_context import Store, inbox
+
+    async def no_start(self):
+        raise RuntimeError("tests never start the real Claude provider")
+
+    monkeypatch.setattr(max_agent_sdk.MaxAgentSDKProvider, "start", no_start)
+    monkeypatch.setattr(ScribeClient, "health", lambda self: (True, "fake scribe"))
+    monkeypatch.setattr(VoiceClient, "health", lambda self: (True, "fake voice"))
+
+    class Provider:
+        prompts: list[str] = []
+
+        async def start(self): pass
+        async def stop(self): pass
+        async def health(self): return True, "fake"
+        async def reset_session(self, session_id): pass
+        async def set_system_prompt(self, prompt): pass
+        async def interrupt(self, session_id): return True
+
+        async def turn(self, session_id, text):
+            Provider.prompts.append(text)
+            return TurnResult(text="the model answered", session_id=session_id)
+
+    Provider.prompts = []
+    async with app.router.lifespan_context(app):
+        runtime = app.state.runtime
+        runtime.provider = Provider()
+        runtime.sessions = SessionManager()
+        store = Store()
+        runtime.shopify = store
+        shopify_tools.bind(store, threads_for=inbox())
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            c.runtime = runtime
+            c.provider = Provider
+            yield c
+
+
+async def ask(client, text: str, session_id: str = "acc") -> dict:
+    response = await client.post("/turn", json={"text": text, "session_id": session_id})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_a_the_capability_question_is_answered_from_the_manifest_not_the_model(turning):
+    body = await ask(turning, "what can you do?")
+    assert body["lane"] == "FAST" and body["recipe_id"] == "capability_summary"
+    assert turning.provider.prompts == []
+    assert "I can " in body["answer"] and "shopify_" not in body["answer"]
+    assert body["performance"]["model_calls"] == 0
+
+
+async def test_b_an_order_lookup_is_two_reads_a_card_and_no_model(turning):
+    body = await ask(turning, "show me order 1938")
+    assert body["lane"] == "FAST"
+    assert [c["name"] for c in body["tool_calls"]] == ["shopify_find_order", "shopify_order_detail"]
+    assert any(i["type"] == "order" for i in body["ui"])
+    assert turning.provider.prompts == []
+
+
+async def test_g_the_full_address_is_read_when_it_is_asked_for(turning):
+    await ask(turning, "show me order 1938")
+    body = await ask(turning, "read me the full address on that order")
+    assert body["lane"] == "FAST" and body["recipe_id"] == "order_address_lookup"
+    assert "ships to" in body["answer"].lower()
+    assert any(char.isdigit() for char in body["answer"]), "a street number is a street number"
+
+
+async def test_l_next_is_a_cursor_move_not_a_question_for_the_model(turning):
+    from app.analytics import sets as working_sets
+
+    await ask(turning, "show me order 1938")
+    session = turning.runtime.sessions.get("acc")
+    entity = session.branch().entity
+    working_sets.create(session, kind="orders", members=[entity["ref"]], label="to work through")
+    body = await ask(turning, "next")
+    assert body["lane"] == "FAST" and body["recipe_id"] == "working_set_next"
+    assert turning.provider.prompts == [], "no model call for a cursor increment"
+    assert "1 of 1" in body["answer"]
+    assert body["branch"]["workflow"]["position"] == 1
+
+
+async def test_m_a_change_is_never_the_fast_lanes(turning):
+    body = await ask(turning, "add a note to order 1938 saying he called")
+    assert body["lane"] == "NORMAL"
+    assert turning.provider.prompts, "a change goes to Claude, and through the gate"
+
+
+async def test_r_navigation_is_answered_from_where_the_conversation_is(turning):
+    await ask(turning, "show me order 1938")
+    body = await ask(turning, "go back")
+    assert body["lane"] == "FAST" and body["recipe_id"] == "navigation_back"
+    assert turning.provider.prompts == []
+
+
+async def test_s_no_speech_keeps_the_context_and_says_so_briefly(turning):
+    await ask(turning, "show me order 1938")
+    before = turning.runtime.sessions.get("acc").branch().entity
+    body = await ask(turning, "   ")
+    assert body["error_kind"] == "empty" and body["answer"] == "I did not catch that."
+    assert body["ui"] == [] or all(i["type"] != "order" for i in body["ui"])
+    assert turning.runtime.sessions.get("acc").branch().entity == before, "the screen keeps its place"
+
+
+async def test_u_every_turn_records_which_lane_answered_it(turning):
+    fast = await ask(turning, "what can you do?")
+    slow = await ask(turning, "add a note to order 1938 saying he called")
+    assert fast["performance"]["fast_path_hit"] is True and fast["performance"]["model_calls"] == 0
+    assert slow["performance"]["fast_path_hit"] is False and slow["performance"]["model_calls"] == 1
+    assert slow["performance"]["model_input_chars"] > 0 and slow["performance"]["tool_schema_bytes"] > 0
+    assert fast["performance"]["branch_id"] and fast["performance"]["turn_total_ms"] > 0
