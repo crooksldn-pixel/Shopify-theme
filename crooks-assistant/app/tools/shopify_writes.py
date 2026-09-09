@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import time
+import uuid
 from email.utils import parsedate_to_datetime
 from typing import Any
 
@@ -1348,5 +1349,200 @@ async def shopify_order_fulfil(order_id: str, tracking_number: str = "", carrier
             "ledger": {
                 "lines": len(chosen), "units": units, "carrier": carrier_name[:24], "tracked": bool(tracking), "notify": notify, "complete": complete,
             },
+        },
+    )
+
+
+# ------------------------------------------------------------------------- stock
+#
+# One variant's available quantity at the one location the store keeps stock at, moved by a
+# small number for a reason Shopify records. The Mac reads the quantity now and asks Shopify
+# to set the new one only if the old one still stands (compareQuantity): a sale between the
+# read and the hold makes the change stale, never wrong. Bounded: a hundred units at a time,
+# never below zero, never at a store with more than one stock location (a guess between
+# warehouses is not a stock count). Reversible: the undo moves it back the same guarded way.
+
+VARIANT_STOCK_QUERY = """
+query CrooksVariantStock($id: ID!) {
+  productVariant(id: $id) {
+    id
+    title
+    sku
+    inventoryQuantity
+    product { id title }
+    inventoryItem {
+      id
+      tracked
+      inventoryLevels(first: 5) {
+        edges { node { id location { id name isActive } quantities(names: ["available", "on_hand"]) { name quantity } } }
+      }
+    }
+  }
+}
+"""
+MAX_STOCK_DELTA = 100
+STOCK_REASONS = {
+    "correction": "correction", "count": "correction", "recount": "correction", "received": "received", "delivery": "received",
+    "damaged": "damaged", "restock": "restock", "returned": "restock", "return": "restock", "shrinkage": "shrinkage",
+    "lost": "shrinkage", "stolen": "shrinkage", "other": "other",
+}
+REASON_SPOKEN = {"correction": "a recount", "received": "a delivery", "damaged": "damage", "restock": "a return to stock", "shrinkage": "shrinkage", "other": "no stated reason"}
+
+
+async def _read_stock(client: ShopifyClient, variant_id: str) -> dict[str, Any]:
+    payload = await client.graphql(VARIANT_STOCK_QUERY, {"id": variant_id})
+    node = (payload.get("data") or {}).get("productVariant")
+    if not isinstance(node, dict) or node.get("id") != variant_id:
+        raise ToolError(f"No variant with id {variant_id}.")
+    return node
+
+
+def _stock_levels(node: dict[str, Any]) -> list[dict[str, Any]]:
+    out = []
+    for edge in (((node.get("inventoryItem") or {}).get("inventoryLevels") or {}).get("edges") or []):
+        level = edge.get("node") or {}
+        location = level.get("location") or {}
+        quantities = {str(q.get("name")): q.get("quantity") for q in level.get("quantities") or [] if isinstance(q, dict)}
+        if location.get("id"):
+            out.append({
+                "location_id": str(location["id"]), "location": str(location.get("name") or ""), "active": bool(location.get("isActive", True)),
+                "available": quantities.get("available"), "on_hand": quantities.get("on_hand"),
+            })
+    return out
+
+
+def stock_fingerprint(node: dict[str, Any], location_id: str) -> dict[str, Any]:
+    level = next((lv for lv in _stock_levels(node) if lv["location_id"] == location_id), None)
+    return {
+        "available": int(level["available"]) if level and level.get("available") is not None else None,
+        "tracked": bool((node.get("inventoryItem") or {}).get("tracked")), "levels": len(_stock_levels(node)),
+    }
+
+
+async def _observe_stock(execution: dict) -> Observed:
+    node = await _read_stock(_c(), str(execution["variant_id"]))
+    return Observed(fingerprint=stock_fingerprint(node, str(execution["location_id"])), entity=None)
+
+
+async def _execute_stock(execution: dict) -> dict:
+    client = _c()
+    payload = await client.mutate("inventory_set_quantities", {"input": dict(execution["input"])})
+    group = ((payload.get("data") or {}).get("inventorySetQuantities") or {}).get("inventoryAdjustmentGroup") or {}
+    if not group.get("id"):
+        raise ShopifyError("Shopify did not confirm the stock change.")
+    return {"adjustment_id": str(group["id"])}
+
+
+def _verify_stock(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
+    return observed.get("available") == int(execution.get("to")), ""
+
+
+def _undo_stock(execution: dict) -> dict:
+    reverse = dict(execution)
+    reverse["from"], reverse["to"], reverse["delta"] = execution["to"], execution["from"], -int(execution["delta"])
+    reverse["input"] = {
+        **execution["input"], "referenceDocumentUri": f"gid://crooks-assistant/StockAdjustment/{uuid.uuid4().hex[:12]}",
+        "quantities": [{**execution["input"]["quantities"][0], "quantity": int(execution["from"]), "compareQuantity": int(execution["to"])}],
+    }
+    return reverse
+
+
+def _present_stock(proposal) -> dict:
+    s = proposal.summary
+    ex = dict(proposal.execution)
+    if proposal.undo_of:
+        return {"title": "Put the stock back", "summary": "", "detail": f"{ex.get('from')} → {ex.get('to')} at {ex.get('location') or 'the store'}.", "confirm_label": "Hold to undo", "undone_title": "Stock put back"}
+    facts = [
+        {"label": "Item", "value": str(s.get("item") or "")},
+        {"label": "Location", "value": str(s.get("location") or "")},
+        {"label": "Available", "value": f"{ex.get('from')} → {ex.get('to')}", "tone": "warn"},
+        {"label": "Reason", "value": str(s.get("reason_words") or "")},
+    ]
+    if s.get("oversold"):
+        facts.append({"label": "Note", "value": "This variant is oversold: more sold than were in stock.", "tone": "bad"})
+    return {"title": "Adjust stock", "summary": "", "detail": "Changes what the shop can sell now. The undo puts it back.", "facts": facts, "done_title": "Stock adjusted"}
+
+
+@tool(
+    name="shopify_inventory_adjust",
+    description=(
+        "Prepare a change to one variant's available stock by a small number, up or down, for a "
+        'reason (correction, received, damaged, restock, shrinkage). Needs a variant_id from a stock '
+        'check or an order. Applied by a hold on the tablet; nothing changes by calling it.'
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "variant_id": {"type": "string", "description": "The variant_id from a stock check or an order."},
+            "delta": {"type": "integer", "minimum": -MAX_STOCK_DELTA, "maximum": MAX_STOCK_DELTA, "description": "How many to add (positive) or remove (negative)."},
+            "reason": {"type": "string", "maxLength": 12, "description": "correction, received, damaged, restock, shrinkage or other."},
+        },
+        "required": ["variant_id", "delta"],
+    },
+    tier=Tier.RED,
+    issued_id_args=("variant_id",),
+    write=WriteSpec(
+        operation="inventory_set",
+        entity_kind="variant",
+        entity_arg="variant_id",
+        mutation="inventory_set_quantities",
+        observe=_observe_stock,
+        execute=_execute_stock,
+        present=_present_stock,
+        verify=_verify_stock,
+        reversible=True,
+        undo=_undo_stock,
+        op_class="reversible",
+        spoken_success="Stock for {label} is now {to}.",
+        spoken_undo_success="Stock for {label} is back to {to}.",
+        spoken_failure="I couldn't confirm the stock change. Check the variant before asking again.",
+        spoken_stale="The stock moved since this was prepared — a sale, or a change in Admin. Nothing was sent.",
+    ),
+)
+async def shopify_inventory_adjust(variant_id: str, delta: int, reason: str = "correction") -> Prepared:
+    """Prepare, never send: the quantity as it is now at the one location, the new number
+    decided here, and the compare quantity Shopify will hold it to."""
+    try:
+        change = int(delta)
+    except (TypeError, ValueError):
+        raise ToolError("delta must be a whole number.") from None
+    if change == 0 or abs(change) > MAX_STOCK_DELTA:
+        raise ToolError(f"Move stock by 1 to {MAX_STOCK_DELTA} units at a time.")
+    reason_code = STOCK_REASONS.get(str(reason or "correction").strip().lower())
+    if reason_code is None:
+        raise ToolError("The reason must be one of: correction, received, damaged, restock, shrinkage, other.")
+    node = await _read_stock(_c(), str(variant_id))
+    item = (node.get("inventoryItem") or {})
+    title = " ".join(p for p in (str((node.get("product") or {}).get("title") or ""), str(node.get("title") or "")) if p and p.lower() != "default title")
+    if not item.get("tracked"):
+        raise ToolError(f"Stock is not tracked for {title}; turn tracking on in Admin first.")
+    levels = [lv for lv in _stock_levels(node) if lv["active"]]
+    if len(levels) != 1:
+        raise ToolError(f"{title} is stocked at {len(levels)} locations; adjust it in Admin." if levels else f"{title} is not stocked at any location.")
+    level = levels[0]
+    current = level.get("available")
+    if current is None:
+        raise ToolError(f"Shopify did not say how many {title} are available.")
+    current = int(current)
+    new = current + change
+    if new < 0:
+        raise ToolError(f"Only {max(current, 0)} {title} are available; the stock cannot go below zero.")
+    reference = f"gid://crooks-assistant/StockAdjustment/{uuid.uuid4().hex[:12]}"
+    stock_input = {
+        "name": "available", "reason": reason_code, "referenceDocumentUri": reference, "ignoreCompareQuantity": False,
+        "quantities": [{"inventoryItemId": str(item["id"]), "locationId": level["location_id"], "quantity": new, "compareQuantity": current}],
+    }
+    words = f"{'add' if change > 0 else 'remove'} {abs(change)}"
+    read_back = f"{words} {title} at {level['location']}: {current} to {new}, {REASON_SPOKEN[reason_code]}"
+    return Prepared(
+        execution={"variant_id": str(variant_id), "location_id": level["location_id"], "location": level["location"], "from": current, "to": new, "delta": change, "input": stock_input},
+        before=stock_fingerprint(node, level["location_id"]),
+        expected_after={"available": new},
+        entity_ref=str(variant_id),
+        entity_label=title or str(node.get("sku") or "the variant"),
+        summary={
+            "item": title, "sku": str(node.get("sku") or ""), "location": level["location"], "reason_words": REASON_SPOKEN[reason_code],
+            "oversold": current < 0, "spoken_to": str(new), "read_back": read_back,
+            "ledger": {"delta": change, "was": current, "now": new, "reason": reason_code},
         },
     )

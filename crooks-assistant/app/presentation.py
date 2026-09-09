@@ -713,7 +713,7 @@ def _done_title(proposal) -> str:
         "order_note_append": "Note added", "order_tags_add": "Tags added", "order_cancel": "Cancelled",
         "refund_create": "Refunded", "order_shipping_address_set": "Address changed", "fulfillment_create": "Shipped",
         "gmail_draft_reply": "Draft saved", "gmail_draft_new": "Draft saved", "gmail_send_reply": "Reply sent", "gmail_send_new": "Email sent",
-        "gmail_thread_archive": "Archived",
+        "gmail_thread_archive": "Archived", "inventory_set": "Stock adjusted",
     }.get(proposal.operation, "Done")
 
 
@@ -721,6 +721,7 @@ def _undone_title(proposal) -> str:
     return {
         "order_note_append_undo": "Note restored", "order_tags_add_undo": "Tags removed",
         "gmail_draft_reply_undo": "Draft deleted", "gmail_draft_new_undo": "Draft deleted", "gmail_thread_archive_undo": "Back in the inbox",
+        "inventory_set_undo": "Stock put back",
     }.get(proposal.operation, "Undone")
 
 

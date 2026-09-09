@@ -324,10 +324,9 @@ async def message_evidence(message_id: str) -> dict[str, Any]:
 @tool(
     name="gmail_search",
     description=(
-        "Search recent email in the CROOKS inbox. Returns the sender, subject, date and a short "
-        "snippet for each thread, with bulk and marketing mail flagged, and senders that match a "
-        "Shopify customer marked as known customers. Use this before reading a thread — it is "
-        "what makes a thread available to read."
+        'Search recent email in the CROOKS inbox: sender, subject, date and a snippet per thread, '
+        'bulk mail flagged, senders matching a Shopify customer marked. Call it before reading a '
+        'thread — it is what makes a thread available.'
     ),
     input_schema={
         "type": "object",

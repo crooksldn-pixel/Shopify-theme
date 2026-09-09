@@ -234,6 +234,26 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         root="fulfillmentCreate",
         validate=lambda key, value: key == "fulfillment" and fulfillment_input_ok(value),
     ),
+    # Phase I: one variant's available stock at one location, set to a number decided on the
+    # Mac from a fresh read, guarded by Shopify's own compare-and-swap: the quantity is only
+    # written if the store still holds the number the Mac read (COMPARE_QUANTITY_STALE
+    # otherwise, and nothing changes). Never resent. API 2025-07 shape; 2026-04 and later
+    # rename compareQuantity to changeFromQuantity and require an @idempotent key.
+    "inventory_set_quantities": ReviewedMutation(
+        name="inventory_set_quantities",
+        document="""
+            mutation CrooksInventorySet($input: InventorySetQuantitiesInput!) {
+              inventorySetQuantities(input: $input) {
+                inventoryAdjustmentGroup { id reason changes { name delta quantityAfterChange } }
+                userErrors { field message code }
+              }
+            }
+        """,
+        variables={"input": dict},
+        scope="write_inventory",
+        root="inventorySetQuantities",
+        validate=lambda key, value: key == "input" and inventory_input_ok(value),
+    ),
 }
 
 _GID = re.compile(r"^gid://shopify/[A-Za-z]+/\d+$")
@@ -350,6 +370,34 @@ def fulfillment_input_ok(value: Any) -> bool:
             if not isinstance(line["quantity"], int) or isinstance(line["quantity"], bool) or not 1 <= line["quantity"] <= 500:
                 return False
     return True
+
+
+_STOCK_REASONS = frozenset({"correction", "received", "damaged", "restock", "shrinkage", "other"})
+MAX_STOCK_QUANTITY = 100_000
+
+
+def inventory_input_ok(value: Any) -> bool:
+    """The InventorySetQuantitiesInput shape this project sends: one available quantity at
+    one location, with the compare quantity always present. Never on_hand, never several."""
+    if not isinstance(value, dict) or set(value) != {"name", "reason", "referenceDocumentUri", "ignoreCompareQuantity", "quantities"}:
+        return False
+    if value["name"] != "available" or value["reason"] not in _STOCK_REASONS or value["ignoreCompareQuantity"] is not False:
+        return False
+    uri = value["referenceDocumentUri"]
+    if not isinstance(uri, str) or not re.match(r"^gid://crooks-assistant/[A-Za-z]+/[A-Za-z0-9-]{1,40}$", uri):
+        return False
+    quantities = value["quantities"]
+    if not isinstance(quantities, list) or len(quantities) != 1:
+        return False
+    q = quantities[0]
+    if not isinstance(q, dict) or set(q) != {"inventoryItemId", "locationId", "quantity", "compareQuantity"}:
+        return False
+    if not _GID.match(str(q["inventoryItemId"])) or not _GID.match(str(q["locationId"])):
+        return False
+    for key in ("quantity", "compareQuantity"):
+        if not isinstance(q[key], int) or isinstance(q[key], bool) or not -MAX_STOCK_QUANTITY <= q[key] <= MAX_STOCK_QUANTITY:
+            return False
+    return q["quantity"] >= 0
 
 
 KEEPALIVE_CONNECTIONS = 4

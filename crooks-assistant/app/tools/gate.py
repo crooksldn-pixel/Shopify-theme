@@ -77,7 +77,7 @@ _MUTATION_VERBS = (
     "send", "create", "update", "delete", "modify", "write", "draft", "reply", "forward",
     "trash", "archive", "label", "cancel", "refund", "fulfil", "fulfill", "publish",
     "set_", "add_", "remove_", "edit_", "post_", "put_", "patch_", "destroy", "append",
-    "restore", "commit", "approve", "execute",
+    "restore", "commit", "approve", "execute", "adjust",
 )
 
 # Reads that return customer personal data. They run, but the assistant is told to read the
@@ -258,7 +258,8 @@ def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any],
 
 def _check_schema_bounds(name: str, schema: dict[str, Any], args: dict[str, Any]) -> str:
     """The input schema's own bounds, enforced here for writes rather than trusted to the
-    model: required arguments present, no unknown arguments, strings within min and max."""
+    model: required arguments present, no unknown arguments, strings and numbers within
+    their bounds."""
     properties = schema.get("properties") if isinstance(schema, dict) else None
     properties = properties if isinstance(properties, dict) else {}
     for required in schema.get("required", []) if isinstance(schema, dict) else []:
@@ -286,6 +287,13 @@ def _check_schema_bounds(name: str, schema: dict[str, Any], args: dict[str, Any]
                 return f"{name}.{key} is empty."
             if "maxLength" in rule and len(value) > int(rule["maxLength"]):
                 return f"{name}.{key} is longer than {rule['maxLength']} characters."
+        if rule.get("type") in ("integer", "number"):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return f"{name}.{key} must be a number."
+            if "minimum" in rule and value < rule["minimum"]:
+                return f"{name}.{key} is below {rule['minimum']}."
+            if "maximum" in rule and value > rule["maximum"]:
+                return f"{name}.{key} is above {rule['maximum']}."
     return ""
 
 
