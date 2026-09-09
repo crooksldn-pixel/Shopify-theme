@@ -381,10 +381,26 @@ def test_an_injected_service_is_used_from_every_thread():
 
 @pytest.mark.parametrize("value,expected", [
     ("mx.google.com; dkim=pass header.i=@example.com; spf=pass", True),
-    ("mx.google.com; spf=pass (google.com: domain of x designates y as permitted sender)", True),
+    ("mx.google.com; dkim=pass header.d=mail.example.com; spf=pass", True),
+    ("mx.google.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=example.com", True),
+    ("mx.google.com; spf=pass (google.com: domain of x designates y as permitted sender)", False),
+    ("mx.google.com; dkim=pass header.i=@evil.example; spf=pass smtp.mailfrom=bounce@evil.example", False),
+    ("mx.google.com; dkim=fail header.i=@example.com; spf=pass", False),
     ("mx.google.com; dkim=fail; spf=softfail", False),
     ("", False),
 ])
-def test_a_sender_is_verified_only_by_the_receiving_servers_authentication_results(value, expected):
-    assert gmail_tools._authenticated({"authentication-results": value}) is expected
-    assert gmail_tools._authenticated({}) is False
+def test_a_sender_is_verified_by_dmarc_or_a_dkim_signature_aligned_with_the_from_domain_never_spf_alone(value, expected):
+    assert gmail_tools.authenticated({"authentication-results": value}, "daniel@example.com") is expected
+    assert gmail_tools.authenticated({}, "daniel@example.com") is False
+    assert gmail_tools.authenticated({"authentication-results": "mx.google.com; dkim=pass header.i=@example.com"}, "") is False, "no From domain, no alignment"
+
+
+def test_the_first_authentication_results_header_is_the_one_read():
+    """Gmail's own line is the outermost; a sender can append one further in that says pass."""
+    message = {"payload": {"headers": [
+        {"name": "Authentication-Results", "value": "mx.google.com; dkim=fail header.i=@example.com; spf=fail"},
+        {"name": "Authentication-Results", "value": "attacker.example; dkim=pass header.i=@example.com"},
+        {"name": "From", "value": "Daniel <daniel@example.com>"},
+    ]}}
+    headers = gmail_tools._headers(message)
+    assert headers["authentication-results"].startswith("mx.google.com") and gmail_tools.authenticated(headers, "daniel@example.com") is False

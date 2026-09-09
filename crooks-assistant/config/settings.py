@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     # A request made on the Mac itself carries no Tailscale login. It may commit only when
     # this is on — for the owner at the keyboard, deliberately, never by default.
     writes_local_owner: bool = False
+    # Before a change is applied, the login `tailscale serve` stamped is confirmed against
+    # `tailscale whois` for the forwarded address: a header is a claim, and anything on the
+    # Mac can write one. Off only on a machine without the CLI, knowingly.
+    tailscale_verify: bool = True
+    tailscale_cli: str = ""
     # What a cancellation does, beyond cancelling: policy, not a model argument, and printed
     # on the card the owner holds. A customer who asked to cancel expects the email; a
     # cancellation for fraud or a declined payment sends none whatever this says.

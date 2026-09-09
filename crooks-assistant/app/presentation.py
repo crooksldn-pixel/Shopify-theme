@@ -610,13 +610,7 @@ def _confirmation(proposal, *, writes: dict[str, Any] | None = None) -> dict[str
     words = _present_words(proposal)
     interaction = proposal.interaction if proposal.interaction in INTERACTIONS else "unsupported"
     gesture = grammar.words_for(interaction)
-    commit = None
-    if isinstance(writes, dict) and writes.get("allowed") is False:
-        commit = {
-            "allowed": False,
-            "code": _text(writes.get("code"), 40),
-            "reason": _text(_COMMIT_BLOCKED_WORDS.get(str(writes.get("code")), "Changes cannot be applied from this tablet.")),
-        }
+    commit = _commit_words(proposal, writes)
     return _ui("confirmation", {
         "proposal_id": _text(proposal.proposal_id, 40),
         "status": _text(proposal.status.value.lower(), 20),
@@ -660,7 +654,9 @@ _COMMIT_BLOCKED_WORDS = {
     "allow_list_missing": "No allowed logins are set on the Mac (CROOKS_ALLOWED_LOGINS).",
     "not_authorised": "This tablet's login is not on the allowed list. Open /whoami to see it.",
     "not_authorised_local": "Asked on the Mac itself, which may not apply changes (CROOKS_WRITES_LOCAL_OWNER).",
-    "scope_missing": "The Shopify app has not been granted write_orders.",
+    "scope_missing": "The store has not granted the permission this change needs.",
+    "gmail_scope_missing": "The Gmail credential cannot make this change yet.",
+    "identity_unverified": "The Mac could not confirm this tablet's identity with Tailscale.",
 }
 
 
@@ -692,12 +688,21 @@ def present_action(result, *, session: Session | None = None, writes: dict[str, 
     proposal = result.proposal
     if proposal is None:
         return []
-    return present_proposal_state(proposal, session=session, code=result.code, writes=writes)
+    recovery = result.spoken if result.code in ("stale", "unverified", "failed", "service_unavailable") else ""
+    return present_proposal_state(proposal, session=session, code=result.code, writes=writes, recovery=recovery)
+
+
+def _service_of(proposal) -> str:
+    return "gmail" if str(proposal.tool_name or "").startswith("gmail_") else "shopify"
+
+
+def _service_name(proposal) -> str:
+    return "Gmail" if _service_of(proposal) == "gmail" else "Shopify"
 
 
 def present_proposal_state(
     proposal, *, session: Session | None = None, code: str | None = None,
-    writes: dict[str, Any] | None = None,
+    writes: dict[str, Any] | None = None, recovery: str = "",
 ) -> list[dict[str, Any]]:
     code = code or proposal.code or proposal.status.value.lower()
     words = _present_words(proposal)
@@ -709,6 +714,9 @@ def present_proposal_state(
         items.append(_ui("success", {
             "title": title, "detail": entity_line,
             "proposal_id": _text(proposal.proposal_id, 40), "operation": _text(proposal.operation, 60),
+            # What the proof could not yet see ("the refund isn't showing yet"): on the card,
+            # not only in the voice.
+            "note": _text(proposal.note, 200),
         }))
         if isinstance(proposal.entity, dict) and proposal.entity_kind == "order":
             items.append(_ui("order", _order(proposal.entity, detail=True)))
@@ -725,12 +733,49 @@ def present_proposal_state(
     elif status in ("executing", "executed"):
         # Claimed, sent, or being proven: the outcome is not known yet, and the card must not
         # say "not applied" about a change that may be on the order this second.
-        items.append(_error("shopify", "in_progress", *_OUTCOME_WORDS["in_progress"]))
+        items.append(_error(_service_of(proposal), "in_progress", *_OUTCOME_WORDS["in_progress"]))
     else:
-        items.append(_error("shopify", _text(code, 40), *_OUTCOME_WORDS.get(code, _OUTCOME_WORDS["failed"])))
+        title, words = _OUTCOME_WORDS.get(code, _OUTCOME_WORDS["failed"])
+        if code == "refused":
+            # The service answered and said no: its reason, bounded, is the one useful line.
+            words = f"{_service_name(proposal)} refused it: {_text(proposal.reason, 140)}. Nothing was changed."
+        elif code == "revoked" and proposal.undo_of:
+            words = "The undo was withdrawn when you moved on."
+        elif recovery:
+            # The tool's own words for this outcome (the voice says the same): "a new message
+            # arrived in that thread", "the stock moved" — never "the order" for an email.
+            words = recovery
+        items.append(_error(_service_of(proposal), _text(code, 40), title, _text(words, 200)))
     if session is not None:
         _remember(items, session)
     return items
+
+
+def _commit_words(proposal, writes: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Whether a gesture on THIS card could work, from this request's identity and from the
+    capability of this card's own change — a fulfilment scope the store has not granted must
+    not mark a note as blocked, and write_orders being granted must not mark an email as
+    tappable. When it could not, the words name the permission the status carries."""
+    if not isinstance(writes, dict):
+        return None
+    code, detail = "", ""
+    if writes.get("allowed") is False:
+        code, detail = str(writes.get("code") or ""), str(writes.get("detail") or "")
+    else:
+        capabilities = writes.get("capabilities") if isinstance(writes.get("capabilities"), dict) else {}
+        operation = str(proposal.operation or "").removesuffix("_undo")
+        entry = capabilities.get(operation)
+        if isinstance(entry, dict) and entry.get("state") not in ("ready", "unknown"):
+            from app.runtime import WriteStatus
+
+            detail = str(entry.get("detail") or "")
+            code = WriteStatus(str(entry.get("state") or "blocked"), detail).code
+    if not code:
+        return None
+    reason = _COMMIT_BLOCKED_WORDS.get(code, "Changes cannot be applied from this tablet.")
+    if code in ("scope_missing", "gmail_scope_missing") and detail:
+        reason = f"{reason} ({_text(detail.replace('blocked — ', '', 1), 140)})"
+    return {"allowed": False, "code": _text(code, 40), "reason": _text(reason, 200)}
 
 
 def _done_title(proposal) -> str:
@@ -738,7 +783,8 @@ def _done_title(proposal) -> str:
         "order_note_append": "Note added", "order_tags_add": "Tags added", "order_cancel": "Cancelled",
         "refund_create": "Refunded", "order_shipping_address_set": "Address changed", "fulfillment_create": "Shipped",
         "gmail_draft_reply": "Draft saved", "gmail_draft_new": "Draft saved", "gmail_send_reply": "Reply sent", "gmail_send_new": "Email sent",
-        "gmail_thread_archive": "Archived", "inventory_set": "Stock adjusted",
+        "gmail_thread_archive": "Archived", "inventory_set": "Stock adjusted", "order_tags_remove": "Tags removed",
+        "fulfillment_tracking_set": "Tracking added",
     }.get(proposal.operation, "Done")
 
 
@@ -746,7 +792,7 @@ def _undone_title(proposal) -> str:
     return {
         "order_note_append_undo": "Note restored", "order_tags_add_undo": "Tags removed",
         "gmail_draft_reply_undo": "Draft deleted", "gmail_draft_new_undo": "Draft deleted", "gmail_thread_archive_undo": "Back in the inbox",
-        "inventory_set_undo": "Stock put back",
+        "inventory_set_undo": "Stock put back", "order_tags_remove_undo": "Tags put back",
     }.get(proposal.operation, "Undone")
 
 
@@ -763,6 +809,7 @@ _OUTCOME_WORDS: dict[str, tuple[str, str]] = {
     "already_executed": ("Already applied", "This was applied once already; it is not applied twice."),
     "in_progress": ("Applying", "Still being applied. Give it a moment."),
     "failed": ("Not applied", "That did not go through. Nothing was changed."),
+    "refused": ("Refused", "The service answered and said no. Nothing was changed."),
 }
 
 

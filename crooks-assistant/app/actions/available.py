@@ -19,7 +19,11 @@ MAX_ENABLED = 3
 
 SHIPPED = frozenset({"FULFILLED"})
 PART_SHIPPED = frozenset({"PARTIALLY_FULFILLED"})
-PAID = frozenset({"PAID", "PARTIALLY_REFUNDED", "PARTIALLY_PAID"})
+PAID = frozenset({"PAID", "PARTIALLY_REFUNDED"})
+# What an order in each state needs first. The note is always offered and never counted.
+_NEED_OPEN = ("fulfil", "address", "cancel", "refund", "email")
+_NEED_CANCELLED = ("refund", "email", "fulfil", "address", "cancel")
+_NEED_SHIPPED = ("refund", "email", "address", "fulfil", "cancel")
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,7 +107,7 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     if f["refunded_all"]:
         refund_reason = "fully refunded"
     elif f["payment"] not in PAID or not f["refundable"]:
-        refund_reason = "nothing to refund" if f["payment"] in {"REFUNDED", "VOIDED"} else "not paid"
+        refund_reason = "nothing to refund" if f["payment"] in {"REFUNDED", "VOIDED"} or (f["payment"] in PAID and not f["refundable"]) else "not paid"
     else:
         refund_reason = ""
     add("refund", "Refund", "refund_create", "red", not refund_reason, refund_reason, f"Refund order {n}")
@@ -116,9 +120,14 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     else:
         fulfil_reason = ""
     add("fulfil", "Fulfil", "fulfillment_create", "red", not fulfil_reason, fulfil_reason, f"Fulfil order {n}")
-    add("email", "Email", "gmail_send_reply", "amber", f["has_email"], "no email address", f"Email the customer about order {n}")
+    # The chip primes a draft (the safe first step, a tap); sending is a second ask, a hold.
+    add("email", "Email", "gmail_draft_new", "amber", f["has_email"], "no email address", f"Email the customer about order {n}")
 
-    enabled = [a for a in candidates if a.enabled][:MAX_ENABLED]
+    order_of_need = _NEED_CANCELLED if f["cancelled"] else _NEED_OPEN if f["unfulfilled"] else _NEED_SHIPPED
+    enabled_all = [a for a in candidates if a.enabled]
+    note = [a for a in enabled_all if a.id == "note"]
+    rest = sorted((a for a in enabled_all if a.id != "note"), key=lambda a: order_of_need.index(a.id) if a.id in order_of_need else 99)
+    enabled = note + rest[:MAX_ENABLED]
     # A disabled chip is shown only where the owner would otherwise ask and be told no.
     disabled = [a for a in candidates if not a.enabled and a.id in ("cancel", "refund", "fulfil") and a.reason][:2]
     return [a.public() for a in enabled + disabled]

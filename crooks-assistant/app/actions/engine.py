@@ -194,17 +194,24 @@ class ActionEngine:
 
     def advance_epoch(self, session: Session, reason: str) -> int:
         """A new instruction from the owner. Everything still waiting belongs to the last one
-        and is revoked; a proposal never outlives the conversation position it was made in."""
+        and is revoked; a proposal never outlives the conversation position it was made in.
+        The one exception is an undo: it belongs to the change that was just made, not to
+        an instruction, and "okay" said to "Note added" must not take it away. It moves to
+        the new position and dies by its own clock."""
         session.epoch += 1
         self.revoke_pending(session, reason)
+        for proposal in session.proposals:
+            if proposal.status is ActionStatus.PENDING and proposal.undo_of is not None:
+                proposal.epoch = session.epoch
         return session.epoch
 
-    def revoke_pending(self, session: Session, reason: str) -> list[str]:
-        """Withdraw every proposal still waiting in this session. Returns their ids, so the
-        turn that withdrew them can tell the tablet which cards are dead."""
+    def revoke_pending(self, session: Session, reason: str, *, undos: bool = False) -> list[str]:
+        """Withdraw every proposal still waiting in this session (the undos only when asked:
+        a new instruction keeps them, a reset or a cancel takes everything). Returns their
+        ids, so the turn that withdrew them can tell the tablet which cards are dead."""
         revoked: list[str] = []
         for proposal in session.proposals:
-            if proposal.status is ActionStatus.PENDING:
+            if proposal.status is ActionStatus.PENDING and (undos or proposal.undo_of is None):
                 self._finish(proposal, ActionStatus.REVOKED, "revoked", reason=reason)
                 revoked.append(proposal.proposal_id)
         return revoked
@@ -345,10 +352,12 @@ class ActionEngine:
         try:
             execution = dict(proposal.execution)
             # Precondition: the entity must still be what it was when the change was decided.
+            # A write may name the keys that count (a courtesy read that can fail on its own
+            # must not make a change it does not touch look changed).
             observed = await write.observe(execution)
-            if observed.fingerprint != proposal.before:
+            if not _same_state(observed.fingerprint, proposal.before, write.precondition_keys):
                 self._finish(proposal, ActionStatus.STALE, "stale", reason="entity changed since staging")
-                return CommitResult(proposal, "stale", write.spoken_stale)
+                return CommitResult(proposal, "stale", _stale_words(proposal, write))
 
             self.executions += 1
             sent = True
@@ -368,7 +377,7 @@ class ActionEngine:
             # Shopify itself said the entity was not as expected (a compare-and-swap that
             # found another number, an order already cancelled). Nothing was applied: stale.
             self._finish(proposal, ActionStatus.STALE, "stale", reason=_short(exc))
-            return CommitResult(proposal, "stale", write.spoken_stale, detail=_short(exc))
+            return CommitResult(proposal, "stale", _stale_words(proposal, write), detail=_short(exc))
         except asyncio.CancelledError as exc:
             # The task was cancelled (a shutdown, a client that went away) between sending the
             # change and proving it. It must not be left claimed for ever: look once, record
@@ -383,7 +392,7 @@ class ActionEngine:
                 # Nothing left this process: the precondition read failed. Proven unchanged.
                 log.warning("action %s could not check the entity: %s", proposal.proposal_id, exc)
                 self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason=_short(exc))
-                return CommitResult(proposal, "service_unavailable", write.spoken_failure, detail=_short(exc))
+                return CommitResult(proposal, "service_unavailable", _failure_words(proposal, write), detail=_short(exc))
             # The mutation left, or its answer did not come back, or the proving read failed.
             # Shopify may or may not hold the change. Look once; say what was seen.
             log.warning("action %s is ambiguous after sending: %s", proposal.proposal_id, exc)
@@ -405,7 +414,7 @@ class ActionEngine:
                     proposal.entity = await write.entity(dict(proposal.execution))
                 except Exception as exc:  # noqa: BLE001 — proven is proven; the card is a courtesy
                     log.warning("could not re-read %s for the card: %s", proposal.proposal_id, _short(exc))
-            self._finish(proposal, ActionStatus.VERIFIED, "verified")
+            self._finish(proposal, ActionStatus.VERIFIED, "verified", reason=proposal.note or "")
             spoken = (write.spoken_undo_success if proposal.undo_of else write.spoken_success)
             # The line names what it touched: "{label}" is the entity as a person says it, and
             # "{amount}" the money a change moved, as the tool summarised it.
@@ -423,7 +432,7 @@ class ActionEngine:
             return CommitResult(proposal, "verified", spoken)
         proposal.verified = False
         self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason="re-read does not match")
-        return CommitResult(proposal, "unverified", write.spoken_failure)
+        return CommitResult(proposal, "unverified", _failure_words(proposal, write))
 
     async def _settle_by_observation(self, proposal, execution, session, spec, write, exc) -> CommitResult:
         """One re-read decides an ambiguous mutation. Landed: verified, as if the answer had
@@ -444,16 +453,23 @@ class ActionEngine:
         except Exception as again:  # noqa: BLE001
             proposal.verified = False
             self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason=_short(again))
-            return CommitResult(proposal, "unverified", write.spoken_failure, detail=_short(exc))
+            return CommitResult(proposal, "unverified", _failure_words(proposal, write), detail=_short(exc))
         if proven.fingerprint == proposal.before and proposal.status is ActionStatus.EXECUTING:
+            if getattr(exc, "refused", False):
+                # The service answered and said no, and the re-read shows nothing moved: a
+                # refusal, with the reason it gave — not "could not be reached", which is false.
+                reason = _short(exc, 140)
+                self._finish(proposal, ActionStatus.FAILED, "refused", reason=reason)
+                service = "Gmail" if str(proposal.tool_name).startswith("gmail_") else "Shopify"
+                return CommitResult(proposal, "refused", f"{service} refused that: {reason}. Nothing was changed.", detail=reason)
             if write.settle is not None:
                 # Unchanged after the wait — but a job Shopify accepted may still be running.
                 # Saying "nothing was changed" would be a guess about the future.
                 proposal.verified = False
                 self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason=f"unchanged after an ambiguous send: {_short(exc)}")
-                return CommitResult(proposal, "unverified", write.spoken_failure, detail=_short(exc))
+                return CommitResult(proposal, "unverified", _failure_words(proposal, write), detail=_short(exc))
             self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason=_short(exc))
-            return CommitResult(proposal, "service_unavailable", write.spoken_failure, detail=_short(exc))
+            return CommitResult(proposal, "service_unavailable", _failure_words(proposal, write), detail=_short(exc))
         if proposal.status is ActionStatus.EXECUTING:
             proposal.executed_at = self.clock()
             proposal.status = ActionStatus.EXECUTED
@@ -482,9 +498,9 @@ class ActionEngine:
             return CommitResult(proposal, "already_executed", "")
         if status is ActionStatus.UNVERIFIED:
             # Sent, and not proven. Saying "already applied" would claim more than was seen.
-            return CommitResult(proposal, "unverified", write.spoken_failure if write else "")
+            return CommitResult(proposal, "unverified", _failure_words(proposal, write) if write else "")
         if status is ActionStatus.STALE:
-            return CommitResult(proposal, "stale", write.spoken_stale if write else "")
+            return CommitResult(proposal, "stale", _stale_words(proposal, write) if write else "")
         if status is ActionStatus.EXPIRED:
             return CommitResult(proposal, "expired", "That action expired. Ask again.")
         if status is ActionStatus.REVOKED:
@@ -508,6 +524,26 @@ class PreconditionFailed(RuntimeError):
     """Shopify refused the change because the entity was not as the proposal expected — a
     compare-and-swap that found a different quantity, an order that is already cancelled.
     Nothing was applied. Raised by a write's execute; the engine settles it as STALE."""
+
+
+def _stale_words(proposal: ActionProposal, write) -> str:
+    """The tool's own stale line — or, for an undo, words about the undo: "nothing was saved"
+    said of a draft delete would be false."""
+    if proposal.undo_of:
+        return "That can't be undone now: it changed since. Nothing was touched."
+    return write.spoken_stale
+
+
+def _failure_words(proposal: ActionProposal, write) -> str:
+    if proposal.undo_of:
+        return "I couldn't confirm the undo. Check before asking again."
+    return write.spoken_failure
+
+
+def _same_state(observed: dict[str, Any], before: dict[str, Any], keys: tuple[str, ...] | None) -> bool:
+    if not keys:
+        return observed == before
+    return all(observed.get(k) == before.get(k) for k in keys)
 
 
 def _public_answer(answer: Any) -> dict[str, Any] | None:
@@ -545,8 +581,8 @@ def _payload_len(prepared: Prepared) -> int | None:
     return int(value) if isinstance(value, int) else None
 
 
-def _short(exc: BaseException) -> str:
-    return f"{type(exc).__name__}: {str(exc)[:120]}"
+def _short(exc: BaseException, limit: int = 120) -> str:
+    return f"{type(exc).__name__}: {str(exc)[:limit]}"
 
 
 # ------------------------------------------------------------ the process's engine

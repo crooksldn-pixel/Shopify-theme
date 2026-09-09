@@ -72,10 +72,12 @@ def _is_auth_failure(exc: Exception) -> bool:
 
 
 def _headers(message: dict) -> dict[str, str]:
-    return {
-        h["name"].lower(): h["value"]
-        for h in (message.get("payload", {}).get("headers") or [])
-    }
+    """Header name → value, the FIRST of each: the receiving server's own Authentication-Results
+    is the outermost, and a sender can append one of their own further in."""
+    out: dict[str, str] = {}
+    for h in (message.get("payload", {}).get("headers") or []):
+        out.setdefault(str(h.get("name", "")).lower(), str(h.get("value", "")))
+    return out
 
 
 def _is_bulk(headers: dict[str, str]) -> bool:
@@ -157,17 +159,35 @@ def _extract_body(payload: dict, *, limit: int = MAX_BODY_CHARS) -> str:
 
 
 _METADATA_HEADERS = [
-    "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
+    "From", "Reply-To", "Subject", "Date", "List-Unsubscribe", "List-Id",
     "Precedence", "Auto-Submitted", "List-Post", "Authentication-Results",
 ]
 
-_AUTH_PASS = re.compile(r"\b(?:dkim|spf)=pass\b", re.I)
+_AUTH_CLAUSE = re.compile(r"\b(dmarc|dkim|spf)=(pass|fail|none|neutral|softfail|temperror|permerror|policy)\b([^;]*)", re.I)
+_SIGNER = re.compile(r"header\.(?:d|i)=@?([A-Za-z0-9.-]+)", re.I)
 
 
-def _authenticated(headers: dict[str, str]) -> bool:
-    """Whether the receiving server's own Authentication-Results say the message passed
-    DKIM or SPF. A From header is written by the sender; this line is written by Gmail."""
-    return bool(_AUTH_PASS.search(headers.get("authentication-results", "")))
+def authenticated(headers: dict[str, str], from_email: str = "") -> bool:
+    """Whether the receiving server's own Authentication-Results vouch for the From address:
+    a DMARC pass, or a DKIM pass whose signing domain is the From domain (or a parent of
+    it). SPF alone proves the envelope sender's relay, not the From header a person reads,
+    and is never enough. A From header is written by the sender; this line is Gmail's."""
+    domain = from_email.rsplit("@", 1)[-1].strip().lower() if "@" in str(from_email or "") else ""
+    for method, result, rest in _AUTH_CLAUSE.findall(headers.get("authentication-results", "")):
+        if result.lower() != "pass":
+            continue
+        if method.lower() == "dmarc":
+            return True
+        if method.lower() == "dkim" and domain:
+            match = _SIGNER.search(rest)
+            signer = match.group(1).lower().strip(".") if match else ""
+            if signer and (signer == domain or domain.endswith("." + signer) or signer.endswith("." + domain)):
+                return True
+    return False
+
+
+def _authenticated(headers: dict[str, str], from_email: str = "") -> bool:
+    return authenticated(headers, from_email)
 
 
 async def _list_metadata(client: GmailClient, full_query: str, limit: int) -> list[dict]:
@@ -241,7 +261,7 @@ def _summary(thread_id: str, headers: dict[str, str], message: dict) -> dict[str
         "date": headers.get("date", ""),
         "snippet": (message.get("snippet") or "")[:300],
         "likely_bulk": _is_bulk(headers),
-        "authenticated": _authenticated(headers),
+        "authenticated": authenticated(headers, sender_email),
     }
 
 
@@ -316,7 +336,7 @@ async def message_evidence(message_id: str) -> dict[str, Any]:
         "from_email": sender_email.strip().lower(),
         "date": headers.get("date", ""),
         "subject": headers.get("subject", ""),
-        "authenticated": _authenticated(headers),
+        "authenticated": authenticated(headers, sender_email),
         "body": _extract_body(message.get("payload", {}), limit=EVIDENCE_BODY_CHARS),
     }
 
@@ -326,17 +346,17 @@ async def message_evidence(message_id: str) -> dict[str, Any]:
     description=(
         'Search recent email in the CROOKS inbox: sender, subject, date and a snippet per thread, '
         'bulk mail flagged, senders matching a Shopify customer marked. Call it before reading a '
-        'thread — it is what makes a thread available.'
+        'thread.'
     ),
     input_schema={
         "type": "object",
         "properties": {
             "query": {
                 "type": "string",
-                "description": "Optional Gmail search terms, e.g. 'jeans' or 'from:jo@example.com'.",
+                "description": "Gmail search terms, e.g. 'jeans' or 'from:jo@example.com'.",
                 "default": "",
             },
-            "days": {"type": "integer", "description": "How many days back to look.",
+            "days": {"type": "integer", "description": "Days back to look.",
                      "default": 1},
             "limit": {"type": "integer", "description": "Maximum threads (1-25).", "default": 10},
             "include_bulk": {
@@ -384,9 +404,8 @@ async def gmail_search(
 @tool(
     name="gmail_read_thread",
     description=(
-        "Read the messages in one email thread. Requires a thread_id from gmail_search — you "
-        "cannot guess one. Prefer the snippet from gmail_search when it already answers the "
-        "question; only read the thread when the detail matters."
+        "Read the messages in one email thread. Needs a thread_id from gmail_search. Prefer the "
+        "search snippet when it already answers; read the thread only when the detail matters."
     ),
     input_schema={
         "type": "object",

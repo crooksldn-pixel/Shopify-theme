@@ -207,7 +207,15 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
     id_args = tuple(dict.fromkeys(spec.issued_id_args))
     if write.entity_arg not in id_args:
         return deny(f"{name} must act on an issued {write.entity_arg}.")
-    problem = _check_issued_ids(name, id_args, args, issued, optional=_optional_args(spec, id_args) - {write.entity_arg})
+    optional = _optional_args(spec, id_args)
+    if write.entity_arg in optional:
+        # The schema lets the entity id go unsaid (an email to a customer with no order):
+        # then another issued id must name who it acts on. Never none.
+        if not any(str(args.get(arg) or "").strip() for arg in id_args):
+            return deny(f"{name} requires one of {', '.join(id_args)}, which was not supplied.")
+    else:
+        optional = optional - {write.entity_arg}
+    problem = _check_issued_ids(name, id_args, args, issued, optional=optional)
     if problem:
         return deny(problem.lstrip(_RECOVERABLE), recoverable=problem.startswith(_RECOVERABLE))
     problem = _check_schema_bounds(name, spec.input_schema, args)

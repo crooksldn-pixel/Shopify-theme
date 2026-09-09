@@ -54,6 +54,7 @@ MODEL_BUDGET_S = 0.25
 _ORDER_SELECTION = """
     id
     name
+    email
     createdAt
     processedAt
     cancelledAt
@@ -278,7 +279,9 @@ def shape_order(node: dict[str, Any]) -> dict[str, Any]:
         "total": money(total),
         "customer_name": customer.get("displayName"),
         "customer_id": customer.get("id"),
-        "customer_email": email,
+        # The address on the order first: a customer who changed their account email after
+        # ordering wrote in from the one on the order, and is answered there.
+        "customer_email": (str(node.get("email") or "").strip().lower() or email),
         "customer": {
             "customer_id": customer.get("id"),
             "name": customer.get("displayName"),

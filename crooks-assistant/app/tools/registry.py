@@ -67,6 +67,10 @@ class WriteSpec:
     # Contextual risk: the tier this change should carry given what was prepared. May raise
     # the tool's own tier to RED; never lowers it. Optional.
     risk: Callable[..., Any] | None = None
+    # The fingerprint keys the precondition holds the entity to. Unset: every key. Set when a
+    # fingerprint also carries a courtesy reading (a fulfilment destination) that may fail on
+    # its own and must not make the entity look changed.
+    precondition_keys: tuple[str, ...] | None = None
 
     @property
     def kind(self) -> str:

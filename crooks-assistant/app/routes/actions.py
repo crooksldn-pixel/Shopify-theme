@@ -33,7 +33,9 @@ SPOKEN_REFUSALS = {
     "allow_list_missing": "Nobody is allowed to apply changes yet: the allowed logins aren't set on the Mac.",
     "not_authorised": "This tablet isn't allowed to apply changes.",
     "not_authorised_local": "Requests from the Mac itself aren't allowed to apply changes.",
-    "scope_missing": "Shopify hasn't given the app permission to write orders yet.",
+    "scope_missing": "The store hasn't granted the permission this change needs; the card says which.",
+    "gmail_scope_missing": "The Gmail credential can't make that change yet; the card says what it needs.",
+    "identity_unverified": "I couldn't confirm which tablet this is with Tailscale, so I can't apply that.",
 }
 
 
@@ -62,6 +64,13 @@ def caller_check(request: Request) -> tuple[str, str, str, str]:
     proxied = bool(request.headers.get("x-forwarded-for"))
     if proxied:
         if login and login.lower() in allowed:
+            if settings.tailscale_verify:
+                # The header is a claim; Tailscale is asked who holds the forwarded address.
+                from app import identity
+
+                ok, why = identity.verify(request.headers.get("x-forwarded-for", ""), login, cli=identity.cli_path(settings.tailscale_cli))
+                if not ok:
+                    return "", "identity_unverified", f"Tailscale could not confirm this tablet's identity: {why}.", "identity_unverified"
             return login.lower(), "", "", ""
         return "", "not_authorised", "This login may not apply changes.", "not_authorised"
     # Not proxied: a request made on the Mac itself, whatever headers it carries.
@@ -209,6 +218,13 @@ async def arm(request: Request, proposal_id: str, session_id: str = Form(default
         owner_session = None
     if owner_session is not None and not session_matches(owner_session, request):
         return _refuse(403, "wrong_session", "That conversation belongs to another login.")
+    # A hold is refused where the tap would be: a change the store has not granted is never
+    # armed, so the tablet never says "armed" about a tap the Mac already knows it will refuse.
+    pending = runtime.actions.state(proposal_id, session_id.strip())
+    status = await _write_status_soon(runtime, pending.operation if pending is not None else None)
+    if not status.ready:
+        log.warning("arm refused: %s — %s (caller=%s)", status.code, status.detail, caller)
+        return _refuse(403, status.code, status.detail, status.code)
     proposal, code = runtime.actions.arm(proposal_id, session_id.strip())
     if proposal is None:
         return _refuse(404 if code == "unknown" else 403, code, "No such proposal for this session.")

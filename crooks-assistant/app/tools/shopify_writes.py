@@ -227,17 +227,15 @@ def _present_cancel(proposal) -> dict:
 @tool(
     name="shopify_order_cancel",
     description=(
-        "Prepare the cancellation of one order that has not shipped. Stages it for the owner to "
-        "apply on the tablet with a hold and a drag; nothing is cancelled by calling it. Whether it "
-        "refunds, restocks and emails the customer is the Mac's policy, shown on the card — not "
-        "yours to choose. Requires an order_id from a previous search."
+        "Prepare the cancellation of one order that has not shipped. Whether it refunds, restocks "
+        "and emails the customer is the Mac's policy, shown on the card — not yours to choose."
     ),
     input_schema={
         "type": "object",
         "properties": {
-            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "order_id": {"type": "string", "description": "The order_id from a search."},
             "reason": {"type": "string", "maxLength": 12, "description": "One of: customer, inventory, fraud, declined, staff, other. Default customer."},
-            "staff_note": {"type": "string", "maxLength": MAX_STAFF_NOTE_CHARS, "description": "Optional internal note on the cancellation, one sentence."},
+            "staff_note": {"type": "string", "maxLength": MAX_STAFF_NOTE_CHARS, "description": "Internal note on the cancellation, one sentence."},
         },
         "required": ["order_id"],
     },
@@ -444,6 +442,7 @@ def _present_refund(proposal) -> dict:
     currency = str(s.get("currency") or "GBP")
     amount = float(s.get("amount") or 0)
     facts = [
+        {"label": "Customer", "value": str(s.get("customer") or "")},
         {"label": "Amount", "value": f"{_display(amount, currency)} to the original payment", "tone": "bad"},
         {"label": "Of", "value": f"{_display(float(s.get('paid') or 0), currency)} paid · {_display(float(s.get('remaining_after') or 0), currency)} remains refundable after"},
         {"label": "Items", "value": str(s.get("items_words") or "none · goodwill")},
@@ -463,13 +462,12 @@ def _present_refund(proposal) -> dict:
     name="shopify_refund_create",
     description=(
         "Prepare a refund on one order, priced by Shopify: a plain amount, the returned items (with "
-        "restock), or the postage. Applied by a hold and drag on the tablet; nothing is refunded by "
-        "calling it. Needs an order_id from a search; item ids come from shopify_order_detail."
+        "restock), or the postage. Item ids come from shopify_order_detail."
     ),
     input_schema={
         "type": "object",
         "properties": {
-            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "order_id": {"type": "string", "description": "The order_id from a search."},
             "amount": {"type": "string", "maxLength": 12, "description": "A plain amount, e.g. \"20.00\"; leave out when refunding items."},
             "items": {
                 "type": "array", "maxItems": 12,
@@ -609,7 +607,8 @@ async def shopify_refund_create(
     restock_words = f"{'returned to' if restock_kind == 'RETURN' else 'back into'} stock at {location[1]}" if location else "no"
     label = str(node.get("name") or state.get("name") or "")
     digits = label.rsplit("-", 1)[-1].lstrip("#")
-    read_back = f"refund {_spoken_money(total, currency)} on order {digits}"
+    customer = str(order.get("customer_name") or "")
+    read_back = f"refund {_spoken_money(total, currency)} to {customer or 'the customer'} on order {digits}"
     if refund_lines:
         read_back += f" for {items_words}"
     if shipping_full or shipping_amount is not None:
@@ -622,6 +621,7 @@ async def shopify_refund_create(
         entity_ref=str(order_id),
         entity_label=label,
         summary={
+            "customer": customer,
             "amount": f"{total:.2f}", "currency": currency, "paid": f"{paid:.2f}", "remaining_after": f"{max(0.0, (maximum if maximum is not None else paid - refunded_so_far) - total):.2f}",
             "items_words": items_words, "shipping_words": shipping_words, "restock_words": restock_words, "notify": notify, "reason": reason,
             "shipping_priced": f"{shipping_priced:.2f}" if shipping_priced is not None else "", "read_back": read_back,
@@ -683,6 +683,8 @@ query CrooksFulfillmentDestination($id: ID!) {
 """
 
 REPRINT_NOTE = "ADDRESS CHANGED — reprint label"
+# How long the address change waits for the order's email reading, to notice an uncited email about the address.
+ADDRESS_EMAIL_BUDGET_S = 1.0
 MAX_ADDRESS_CHARS = 100
 # Shopify's MailingAddressInput, in its own names. The read side answers with countryCodeV2.
 _ADDRESS_INPUT_KEYS = ("firstName", "lastName", "company", "address1", "address2", "city", "provinceCode", "zip", "countryCode", "phone")
@@ -795,7 +797,12 @@ async def _read_destination(client: ShopifyClient, order_id: str) -> str:
             _destination_reads = False
         log.info("fulfilment destination not readable for %s: %s", order_id, text[:120])
         return "unknown"
-    edges = (((payload.get("data") or {}).get("order") or {}).get("fulfillmentOrders") or {}).get("edges") or []
+    order = (payload.get("data") or {}).get("order") or {}
+    if order.get("fulfillmentOrders") is None:
+        # A read the store's scopes do not cover comes back as a null field, not an error.
+        _destination_reads = False
+        return "unknown"
+    edges = (order.get("fulfillmentOrders") or {}).get("edges") or []
     places = []
     for edge in edges:
         node = edge.get("node") or {}
@@ -856,7 +863,7 @@ def _present_address(proposal) -> dict:
         {"label": "From", "value": str(s.get("from_line") or "")},
         {"label": "To", "value": str(s.get("to_line") or ""), "tone": "warn"},
         {"label": "Changes", "value": ", ".join(str(c) for c in s.get("changes") or [])},
-        {"label": "Cited", "value": str(s.get("cited") or ""), "tone": "" if s.get("evidence") else "warn"},
+        {"label": "Cited", "value": str(s.get("cited") or ""), "tone": str(s.get("cited_tone") or ("" if s.get("evidence") else "warn"))},
         {"label": "Note", "value": REPRINT_NOTE},
     ]
     return {
@@ -873,25 +880,100 @@ def _when(date_header: str) -> str:
         return str(date_header or "")[:16]
 
 
-def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[str], list[str]]:
-    """Which of the changed parts the message's own text contains, and which it does not.
-    The postcode with its spaces removed; the street by its number and its longest word,
-    so "12 Baker St" in the mail matches "12 Baker Street" on the card."""
+_UNIT_WORDS = frozenset({"flat", "apartment", "apt", "unit", "floor", "fl", "suite", "room", "house", "building", "block", "level", "the"})
+_SUFFIXES = {
+    "street": "st", "road": "rd", "avenue": "ave", "lane": "ln", "row": "rw", "close": "cl", "drive": "dr", "place": "pl", "square": "sq",
+    "court": "ct", "terrace": "ter", "gardens": "gdns", "crescent": "cres", "grove": "gr", "way": "way", "hill": "hill", "park": "park",
+    "walk": "walk", "mews": "mews", "yard": "yd", "estate": "est",
+}
+_SUFFIX_WORDS = frozenset(_SUFFIXES) | frozenset(_SUFFIXES.values())
+
+
+def _street_parts(line: object) -> tuple[str, list[str]]:
+    """A street line as its number and its name: "Flat 3, 12 Baker Street" → ("3"? no: the
+    first token with a digit that is not a unit's, and the words that are neither unit
+    words nor street suffixes — "baker"). The suffix is never required: "St" and "Street"
+    are the same street."""
+    tokens = _WORD.findall(str(line or "").casefold())
+    number = ""
+    for i, t in enumerate(tokens):
+        if any(ch.isdigit() for ch in t) and not (i > 0 and tokens[i - 1] in _UNIT_WORDS):
+            number = t
+            break
+    if not number:
+        number = next((t for t in tokens if any(ch.isdigit() for ch in t)), "")
+    name = [t for t in tokens if t != number and t not in _UNIT_WORDS and t not in _SUFFIX_WORDS and not t.isdigit() and len(t) >= 3]
+    return number, name
+
+
+def _list_words(words: list[str]) -> str:
+    return words[0] if len(words) == 1 else ", ".join(words[:-1]) + " and " + words[-1] if words else ""
+
+
+def _in_text(token: str, text: str) -> bool:
+    return bool(token) and re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", text) is not None
+
+
+def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[str], list[str], list[str]]:
+    """Which of the changed parts the message's own text contains (found), which it does not
+    (missing), and which cannot be checked against text at all (unchecked). The postcode
+    with its spaces removed; a street by its number and every word of its name, never its
+    suffix, so "12 Baker St" in the mail matches "12 Baker Street" on the card and "12 Oak
+    Street" does not; the second line, the town, the name, the phone and the company each
+    by what they contain."""
     text = " ".join(str(body or "").split()).casefold()
     squashed = text.replace(" ", "")
-    found, missing = [], []
+    digits_only = re.sub(r"\D", "", text)
+    found: list[str] = []
+    missing: list[str] = []
+    unchecked: list[str] = []
+
+    def judge(word: str, ok: bool) -> None:
+        (found if ok else missing).append(word)
+
     if "zip" in changed:
-        (found if _canon(new.get("zip"), "zip") and _canon(new.get("zip"), "zip") in squashed else missing).append("postcode")
+        code = _canon(new.get("zip"), "zip")
+        judge("postcode", bool(code) and code in squashed)
     if "address1" in changed:
-        tokens = _WORD.findall(str(new.get("address1") or "").casefold())
-        number = tokens[0] if tokens else ""
-        word = max((t for t in tokens if t.isalpha() and len(t) >= 3), key=len, default="")
-        ok = bool(tokens) and re.search(rf"(?<![a-z0-9]){re.escape(number)}(?![a-z0-9])", text) is not None and (not word or word in text)
-        (found if ok else missing).append("street")
-    if "city" in changed and not ({"zip", "address1"} & changed):
+        number, name = _street_parts(new.get("address1"))
+        if not number and not name:
+            unchecked.append("street")
+        else:
+            judge("street", (not number or _in_text(number, text)) and bool(name or number) and all(_in_text(t, text) or t in squashed for t in name))
+    if "address2" in changed and new.get("address2"):
+        number, name = _street_parts(new.get("address2"))
+        if not number and not name:
+            unchecked.append("second line")
+        else:
+            judge("second line", (not number or _in_text(number, text)) and all(_in_text(t, text) for t in name))
+    if "city" in changed:
         city = _canon(new.get("city"), "city")
-        (found if city and city in text else missing).append("town")
-    return found, missing
+        judge("town", bool(city) and city in text)
+    if {"firstName", "lastName"} & changed:
+        words = [t for t in _WORD.findall(f"{new.get('firstName', '')} {new.get('lastName', '')}".casefold()) if len(t) >= 2]
+        judge("name", bool(words) and all(_in_text(t, text) for t in words))
+    if "phone" in changed:
+        digits = re.sub(r"\D", "", str(new.get("phone") or ""))
+        judge("phone", len(digits) >= 6 and digits[-6:] in digits_only)
+    if "company" in changed and new.get("company"):
+        words = [t for t in _WORD.findall(str(new.get("company")).casefold()) if len(t) >= 3]
+        judge("company", bool(words) and any(_in_text(t, text) for t in words))
+    for key, word in (("countryCode", "country"), ("provinceCode", "region")):
+        if key in changed:
+            unchecked.append(word)
+    return found, missing, unchecked
+
+
+async def _address_threads(order_id: str) -> list[dict[str, Any]]:
+    """The emails about this order that mention an address, from the order's own reading."""
+    from app.context.attention import _ADDRESS
+
+    try:
+        order = await hydrator().order(order_id, budget_s=ADDRESS_EMAIL_BUDGET_S)
+    except Exception:  # noqa: BLE001 — the check is a courtesy; the refusal below never depends on a failed read
+        return []
+    email = order.get("email") if isinstance(order.get("email"), dict) else {}
+    return [t for t in (email.get("threads") or []) if isinstance(t, dict) and _ADDRESS.search(f"{t.get('subject') or ''} {t.get('snippet') or ''}")]
 
 
 @tool(
@@ -900,23 +982,23 @@ def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[s
         "Prepare a change to an order's shipping address before it ships: give only the parts that "
         "change; the Mac merges them into the current address and prints the difference. If the "
         "address came from an email, pass its message_id: the Mac reads that message and refuses "
-        "unless the postcode and street are in it. Applied by a hold on the tablet; nothing changes "
-        "by calling it."
+        "unless the postcode and street are in it."
     ),
     input_schema={
         "type": "object",
         "properties": {
-            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
-            "evidence_message_id": {"type": "string", "maxLength": 40, "description": "message_id of the customer's email giving the new address, if any."},
-            "address1": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "New first line: number and street."},
-            "address2": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "New second line, if any."},
-            "city": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "New town."},
-            "postcode": {"type": "string", "maxLength": 12, "description": "New postcode."},
-            "country_code": {"type": "string", "maxLength": 2, "description": "Two letters, only if the country changes."},
-            "province_code": {"type": "string", "maxLength": 5, "description": "Region code, only if the country needs one."},
-            "name": {"type": "string", "maxLength": 80, "description": "Recipient's name, only if it changes."},
-            "company": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Company or building, only if it changes."},
-            "phone": {"type": "string", "maxLength": 20, "description": "Delivery phone, only if it changes."},
+            "order_id": {"type": "string", "description": "The order_id from a search."},
+            "evidence_message_id": {"type": "string", "maxLength": 40, "description": "message_id of the customer's email giving the address."},
+            "address1": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Number and street."},
+            "address2": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Second line."},
+            "city": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Town."},
+            "postcode": {"type": "string", "maxLength": 12, "description": "Postcode."},
+            "country_code": {"type": "string", "maxLength": 2, "description": "Two letters, if the country changes."},
+            "province_code": {"type": "string", "maxLength": 5, "description": "Region code, if the country needs one."},
+            "name": {"type": "string", "maxLength": 80, "description": "Recipient's name, if it changes."},
+            "company": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Company or building, if it changes."},
+            "phone": {"type": "string", "maxLength": 20, "description": "Delivery phone, if it changes."},
+            "from_owner": {"type": "boolean", "description": "True when the owner gave the address, not an email."},
         },
         "required": ["order_id"],
     },
@@ -924,6 +1006,7 @@ def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[s
     issued_id_args=("order_id", "evidence_message_id"),
     write=WriteSpec(
         operation="order_shipping_address_set",
+        precondition_keys=("address", "note", "fulfillment", "cancelled"),
         entity_kind="order",
         entity_arg="order_id",
         mutation="order_shipping_address_set",
@@ -941,7 +1024,7 @@ def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[s
 )
 async def shopify_order_shipping_address_set(
     order_id: str, evidence_message_id: str = "", address1: str = "", address2: str = "", city: str = "", postcode: str = "",
-    country_code: str = "", province_code: str = "", name: str = "", company: str = "", phone: str = "",
+    country_code: str = "", province_code: str = "", name: str = "", company: str = "", phone: str = "", from_owner: bool = False,
 ) -> Prepared:
     """Prepare, never send: the address as it is now, the parts that change merged in, the
     evidence read and checked, the diff printed, and the fingerprint the engine must see
@@ -1020,6 +1103,7 @@ async def shopify_order_shipping_address_set(
     # The evidence: read here, never trusted from the model's summary of it.
     customer_email = str(node.get("email") or ((node.get("customer") or {}).get("defaultEmailAddress") or {}).get("emailAddress") or "").strip().lower()
     evidence = None
+    cited_tone = ""
     message_id = str(evidence_message_id or "").strip()
     if message_id:
         evidence = await _evidence(message_id)
@@ -1029,18 +1113,43 @@ async def shopify_order_shipping_address_set(
                 f"That email is from {sender or 'an unknown sender'}, not the customer on order {label}. "
                 "The address was not changed; do it in Admin if you are sure."
             )
-        found, missing = _mentions(str(evidence.get("body") or ""), new, changed)
+        body = str(evidence.get("body") or "")
+        found, missing, unchecked = _mentions(body, new, changed)
         if missing:
             raise ToolError(
                 f"The email does not contain the new {' or '.join(missing)}. Read it again, or change the address in Admin."
             )
+        if not found:
+            raise ToolError(
+                f"Nothing in that email can be checked against this change ({', '.join(unchecked) or 'nothing checkable changed'}). "
+                "Change it in Admin, or say the owner gave the address."
+            )
+        if "address1" in changed and "zip" not in changed:
+            # A new street keeps the old postcode only if the email says so: a street
+            # without its postcode is a parcel to the wrong town.
+            squashed = " ".join(body.split()).casefold().replace(" ", "")
+            if not _canon(current.get("zip"), "zip") or _canon(current.get("zip"), "zip") not in squashed:
+                raise ToolError("A new street needs its postcode: the email does not repeat the order's. Say the postcode, or read it from the email.")
         cited = (
             f"Email from {sender}, {_when(str(evidence.get('date') or ''))} · "
             f"{'verified sender' if evidence.get('authenticated') else 'sender not verified'}"
-            + (f" · {' and '.join(found)} found in the message" if found else "")
+            f" · {_list_words(found)} found in the message" + (f" · not checked: {_list_words(unchecked)}" if unchecked else "")
         )
+        cited_tone = "" if evidence.get("authenticated") else "warn"
     else:
-        cited = "none — as dictated"
+        about = await _address_threads(str(order_id))
+        if about and not from_owner:
+            t = about[0]
+            raise ToolError(
+                f"An email about this order's address is in the inbox (from {t.get('from_email') or 'an unknown sender'}, "
+                f"{_when(str(t.get('date') or ''))}). Cite its message_id so the Mac can check it, or say from_owner if the owner gave the address."
+            )
+        cited = "none — given by the owner"
+        cited_tone = "warn"
+        if about:
+            t = about[0]
+            cited += f"; an email about the address from {t.get('from_email') or 'an unknown sender'} was NOT checked"
+            cited_tone = "bad"
 
     note = append_note(str(node.get("note") or ""), REPRINT_NOTE) if REPRINT_NOTE not in str(node.get("note") or "") else str(node.get("note") or "")
     destination = await _read_destination(client, str(order_id))
@@ -1062,7 +1171,7 @@ async def shopify_order_shipping_address_set(
         entity_label=label,
         summary={
             "customer": str((node.get("customer") or {}).get("displayName") or ""),
-            "from_line": from_line, "to_line": to_line, "changes": changes, "cited": cited,
+            "from_line": from_line, "to_line": to_line, "changes": changes, "cited": cited, "cited_tone": cited_tone,
             "evidence": bool(evidence), "verified_sender": bool(evidence and evidence.get("authenticated")),
             "read_back": read_back, "pii": pii,
             "ledger": {
@@ -1118,7 +1227,7 @@ _CARRIER_BY_KEY = {re.sub(r"[^a-z0-9]", "", c.casefold()): c for c in CARRIERS}
 _ROYAL_MAIL_S10 = re.compile(r"^[A-Z]{2}\d{9}GB$")
 _TRACKING_NUMBER = re.compile(r"^[A-Za-z0-9\-]{8,34}$")
 _FULFILLABLE = frozenset({"OPEN", "IN_PROGRESS"})
-_PAID_FOR_SHIPPING = frozenset({"PAID", "PARTIALLY_REFUNDED", "PARTIALLY_PAID"})
+_PAID_FOR_SHIPPING = frozenset({"PAID", "PARTIALLY_REFUNDED"})
 
 
 async def _read_fulfillment_state(client: ShopifyClient, order_id: str) -> dict[str, Any]:
@@ -1199,6 +1308,7 @@ def _present_fulfil(proposal) -> dict:
     s = proposal.summary
     tracking = str(s.get("tracking") or "")
     facts = [
+        {"label": "Customer", "value": str(s.get("customer") or "")},
         {"label": "Items", "value": str(s.get("items_words") or "")},
         {"label": "From", "value": str(s.get("location") or "")},
         {"label": "Carrier", "value": str(s.get("carrier") or "")},
@@ -1217,14 +1327,14 @@ def _present_fulfil(proposal) -> dict:
     description=(
         "Prepare to mark an order shipped: everything still to ship, or only the items named (by "
         "line_item_id), with the carrier and tracking number. Store policy decides whether the "
-        "customer is emailed. Applied by a hold on the tablet; nothing ships by calling it."
+        "customer is emailed."
     ),
     input_schema={
         "type": "object",
         "properties": {
-            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "order_id": {"type": "string", "description": "The order_id from a search."},
             "tracking_number": {"type": "string", "maxLength": 40, "description": "The tracking number, if any."},
-            "carrier": {"type": "string", "maxLength": 40, "description": "Royal Mail, Evri, DPD…; leave out for the store's usual one."},
+            "carrier": {"type": "string", "maxLength": 40, "description": "Royal Mail, Evri, DPD…; default the store's usual."},
             "items": {
                 "type": "array", "maxItems": 12,
                 "items": {"type": "object", "properties": {"line_item_id": {"type": "string"}, "quantity": {"type": "integer"}}, "required": ["line_item_id", "quantity"]},
@@ -1276,6 +1386,8 @@ async def shopify_order_fulfil(order_id: str, tracking_number: str = "", carrier
     if node.get("cancelledAt"):
         raise ToolError(f"Order {label} is cancelled; it cannot be shipped.")
     financial = str(node.get("displayFinancialStatus") or "").upper()
+    if financial == "PARTIALLY_PAID":
+        raise ToolError(f"Order {label} is partly paid; take the balance first.")
     if financial not in _PAID_FOR_SHIPPING:
         raise ToolError(f"Order {label} is {financial.lower().replace('_', ' ') or 'not paid'}; it should not ship yet.")
     open_orders = [fo for fo in _fulfillment_orders(node) if fo["status"] in _FULFILLABLE and any(line["remaining"] > 0 for line in fo["lines"])]
@@ -1331,7 +1443,8 @@ async def shopify_order_fulfil(order_id: str, tracking_number: str = "", carrier
     )
     notify = fulfillment_input["notifyCustomer"]
     digits = label.rsplit("-", 1)[-1].lstrip("#")
-    read_back = f"mark order {digits} as shipped{'' if complete else ' in part'} with {carrier_name}"
+    customer = str((node.get("customer") or {}).get("displayName") or "")
+    read_back = f"mark order {digits}{f' for {customer}' if customer else ''} as shipped{'' if complete else ' in part'} with {carrier_name}"
     read_back += f", tracking {tracking}" if tracking else ", no tracking number"
     read_back += ", emailing the customer" if notify else ", without emailing the customer"
     return Prepared(
@@ -1468,7 +1581,7 @@ def _present_stock(proposal) -> dict:
     description=(
         "Prepare a change to one variant's available stock by a small number, up or down, for a "
         'reason (correction, received, damaged, restock, shrinkage). Needs a variant_id from a stock '
-        'check or an order. Applied by a hold on the tablet; nothing changes by calling it.'
+        'check or an order.'
     ),
     input_schema={
         "type": "object",
@@ -1544,5 +1657,168 @@ async def shopify_inventory_adjust(variant_id: str, delta: int, reason: str = "c
             "item": title, "sku": str(node.get("sku") or ""), "location": level["location"], "reason_words": REASON_SPOKEN[reason_code],
             "oversold": current < 0, "spoken_to": str(new), "read_back": read_back,
             "ledger": {"delta": change, "was": current, "now": new, "reason": reason_code},
+        },
+    )
+
+
+# ------------------------------------------------------------------- tracking
+#
+# A shipment already marked shipped without its number — Click & Drop prints the label, the
+# number arrives afterwards — gets the number here. The Mac reads the order's shipments,
+# takes the one shipment without a number, names the carrier as Shopify names it, and proves
+# the change by re-reading that shipment's tracking. Setting a value, so never harmful to
+# repeat; RED with a hold because the shipping email, when policy sends it, cannot be unsent.
+
+TRACKING_STATE_QUERY = """
+query CrooksFulfillmentsForTracking($id: ID!) {
+  order(id: $id) {
+    id
+    name
+    cancelledAt
+    displayFulfillmentStatus
+    customer { displayName }
+    fulfillments(first: 10) { id status displayStatus trackingInfo { company number url } }
+  }
+}
+"""
+
+
+async def _read_tracking_state(client: ShopifyClient, order_id: str) -> dict[str, Any]:
+    payload = await client.graphql(TRACKING_STATE_QUERY, {"id": order_id})
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+def _shipments(node: dict[str, Any]) -> list[dict[str, Any]]:
+    out = []
+    for f in node.get("fulfillments") or []:
+        if not isinstance(f, dict) or not f.get("id"):
+            continue
+        tracking = (f.get("trackingInfo") or [{}])[0] or {}
+        out.append({
+            "id": str(f["id"]), "status": str(f.get("status") or "").upper(),
+            "number": str(tracking.get("number") or "").replace(" ", "").upper(), "company": str(tracking.get("company") or ""),
+        })
+    return out
+
+
+def tracking_fingerprint(node: dict[str, Any], fulfillment_id: str) -> dict[str, Any]:
+    shipment = next((s for s in _shipments(node) if s["id"] == fulfillment_id), None)
+    return {
+        "number": shipment["number"] if shipment else "", "company": shipment["company"][:24] if shipment else "",
+        "status": shipment["status"] if shipment else "", "cancelled": bool(node.get("cancelledAt")),
+    }
+
+
+async def _observe_tracking(execution: dict) -> Observed:
+    node = await _read_tracking_state(_c(), str(execution["order_id"]))
+    return Observed(fingerprint=tracking_fingerprint(node, str(execution["fulfillment_id"])), entity=None)
+
+
+async def _execute_tracking(execution: dict) -> dict:
+    client = _c()
+    payload = await client.mutate(
+        "fulfillment_tracking_set",
+        {"fulfillmentId": str(execution["fulfillment_id"]), "trackingInfoInput": dict(execution["input"]), "notifyCustomer": bool(execution["notify"])},
+    )
+    hydrator().forget(str(execution["order_id"]))
+    fulfillment = ((payload.get("data") or {}).get("fulfillmentTrackingInfoUpdate") or {}).get("fulfillment") or {}
+    if fulfillment.get("id") != str(execution["fulfillment_id"]):
+        raise ShopifyError("Shopify did not confirm which shipment it updated.")
+    return {"fulfillment_id": str(fulfillment["id"])}
+
+
+def _verify_tracking(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
+    return str(observed.get("number") or "") == str(execution.get("number") or ""), ""
+
+
+def _present_tracking(proposal) -> dict:
+    s = proposal.summary
+    tracking = str(s.get("tracking") or "")
+    facts = [
+        {"label": "Customer", "value": str(s.get("customer") or "")},
+        {"label": "Shipment", "value": str(s.get("shipment") or "")},
+        {"label": "Carrier", "value": str(s.get("carrier") or "")},
+        {"label": "Tracking", "value": tracking + (f" · {s['tracking_warning']}" if s.get("tracking_warning") else ""), "tone": "warn" if s.get("tracking_warning") else ""},
+        {"label": "Customer emailed", "value": "yes — with the tracking link" if s.get("notify") else "no"},
+    ]
+    return {"title": "Add tracking", "summary": "", "detail": "Puts the number on the shipment already marked shipped.", "facts": facts, "done_title": "Tracking added"}
+
+
+@tool(
+    name="shopify_fulfillment_tracking_set",
+    description=(
+        "Prepare to add a tracking number to an order already marked shipped without one, with the "
+        "carrier. Store policy decides whether the customer is emailed."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "The order_id from a search."},
+            "tracking_number": {"type": "string", "maxLength": 40, "description": "The tracking number."},
+            "carrier": {"type": "string", "maxLength": 40, "description": "Royal Mail, Evri, DPD…; default the store's usual."},
+        },
+        "required": ["order_id", "tracking_number"],
+    },
+    tier=Tier.RED,
+    issued_id_args=("order_id",),
+    write=WriteSpec(
+        operation="fulfillment_tracking_set",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="fulfillment_tracking_set",
+        observe=_observe_tracking,
+        execute=_execute_tracking,
+        present=_present_tracking,
+        entity=_entity_after,
+        verify=_verify_tracking,
+        op_class="irreversible",
+        reversible=False,
+        spoken_success="Tracking added to order {label}.",
+        spoken_failure="I couldn't confirm the tracking was added. Check the order before asking again.",
+        spoken_stale="The shipment changed since this was prepared. Nothing was sent.",
+    ),
+)
+async def shopify_fulfillment_tracking_set(order_id: str, tracking_number: str, carrier: str = "") -> Prepared:
+    """Prepare, never send: the one shipment without a number, the carrier as Shopify names
+    it, and the number as it will be stored."""
+    settings = policy()
+    carrier_key = re.sub(r"[^a-z0-9]", "", str(carrier or getattr(settings, "carrier", "Royal Mail") or "").casefold())
+    carrier_name = _CARRIER_BY_KEY.get(carrier_key)
+    if carrier_name is None:
+        raise ToolError("The carrier must be one Shopify knows: " + ", ".join(CARRIERS[:8]) + ", …")
+    tracking = re.sub(r"\s+", "", str(tracking_number or "")).upper()
+    if not _TRACKING_NUMBER.match(tracking):
+        raise ToolError("The tracking number must be letters, digits and dashes, 8 to 34 characters.")
+    tracking_warning = "not the usual Royal Mail form (two letters, nine digits, GB)" if carrier_name == "Royal Mail" and not _ROYAL_MAIL_S10.match(tracking) else ""
+    node = await _read_tracking_state(_c(), str(order_id))
+    label = str(node.get("name") or "")
+    if node.get("cancelledAt"):
+        raise ToolError(f"Order {label} is cancelled.")
+    shipments = [s for s in _shipments(node) if s["status"] == "SUCCESS"]
+    if not shipments:
+        raise ToolError(f"Order {label} has no shipment marked shipped; fulfil it first, with the number.")
+    without = [s for s in shipments if not s["number"]]
+    if not without:
+        raise ToolError(f"Order {label} already has tracking {shipments[-1]['number']} on its shipment.")
+    if len(without) > 1:
+        raise ToolError(f"Order {label} has {len(without)} shipments without tracking; add it in Admin.")
+    shipment = without[0]
+    notify = bool(getattr(settings, "fulfil_notify", False))
+    digits = label.rsplit("-", 1)[-1].lstrip("#")
+    customer = str((node.get("customer") or {}).get("displayName") or "")
+    read_back = f"add tracking {tracking} with {carrier_name} to order {digits}{f' for {customer}' if customer else ''}" + (", emailing the customer" if notify else ", without emailing the customer")
+    return Prepared(
+        execution={"order_id": str(order_id), "fulfillment_id": shipment["id"], "input": {"company": carrier_name, "number": tracking}, "notify": notify, "number": tracking},
+        before=tracking_fingerprint(node, shipment["id"]),
+        expected_after={"number": tracking},
+        entity_ref=str(order_id),
+        entity_label=label,
+        summary={
+            "customer": customer, "shipment": f"{len(shipments)} of {len(shipments)}" if len(shipments) == 1 else f"the one of {len(shipments)} without a number",
+            "carrier": carrier_name, "tracking": tracking, "tracking_warning": tracking_warning, "notify": notify, "read_back": read_back,
+            "ledger": {"carrier": carrier_name[:24], "notify": notify},
         },
     )

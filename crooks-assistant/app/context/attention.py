@@ -133,14 +133,15 @@ def attention_for(order: dict[str, Any], *, now: float | None = None) -> list[di
         text = f"{t.get('subject') or ''} {t.get('snippet') or ''}"
         who = f"from {t.get('from_email') or 'the customer'}" + (f", {_when(t.get('date'))}" if _when(t.get("date")) else "")
         provenance = f"{who} · {'verified sender' if t.get('verified_sender') else 'sender not verified'}"
+        read = f"read the customer's email on order {n}"
         if _ADDRESS.search(text) and not f["shipped"] and not f["cancelled"]:
-            add("email", "amber", "Customer emailed about the address", f"{provenance} — check before shipping", f"change the address on order {n} to the one in their email")
+            add("email", "amber", "Customer emailed — mentions an address", f"{provenance} — check before shipping", read)
         elif _CANCEL.search(text) and not f["shipped"] and not f["cancelled"]:
-            add("email", "amber", "Customer emailed asking to cancel", provenance, f"cancel order {n}")
+            add("email", "amber", "Customer emailed — mentions cancelling", provenance, read)
         elif _REFUND.search(text):
-            add("email", "amber", "Customer emailed about a refund", provenance, f"refund order {n}" if f["refundable"] else "")
+            add("email", "amber", "Customer emailed — mentions a refund", provenance, read)
         elif _RETURN.search(text):
-            add("email", "amber", "Customer emailed about a return", provenance, f"reply to the customer about order {n}")
+            add("email", "amber", "Customer emailed — mentions a return", provenance, read)
         else:
             add("email", "amber", f"Customer emailed: {str(t.get('subject') or '(no subject)')[:50]}", provenance, f"reply to the customer about order {n}")
     others = [t for t in threads if not t.get("sender_match")]

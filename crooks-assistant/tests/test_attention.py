@@ -75,12 +75,13 @@ def test_an_email_from_the_customer_becomes_a_line_that_says_what_it_is_about_ne
     thread = {"thread_id": "t1", "from_email": "daniel@example.com", "subject": "New address for 1930", "snippet": "I've moved — please send it to 4 Example Row",
               "date": "Tue, 8 Sep 2026 10:12:00 +0100", "sender_match": True, "verified_sender": True}
     lines = attention_for(order(email={"available": True, "threads": [thread]}), now=NOW)
-    assert titles(lines) == ["Customer emailed about the address"]
+    assert titles(lines) == ["Customer emailed — mentions an address"]
     assert lines[0]["detail"] == "from daniel@example.com, 8 Sep · verified sender — check before shipping"
-    assert lines[0]["say"] == "change the address on order 1930 to the one in their email"
+    assert lines[0]["say"] == "read the customer's email on order 1930"
     assert "4 Example Row" not in str(lines) and "operation" not in str(lines) and "proposal" not in str(lines), "the email's words stage nothing"
-    cancel = attention_for(order(email={"available": True, "threads": [{**thread, "subject": "Please cancel", "snippet": "changed my mind", "verified_sender": False}]}), now=NOW)
-    assert cancel[0]["title"] == "Customer emailed asking to cancel" and cancel[0]["say"] == "cancel order 1930" and "sender not verified" in cancel[0]["detail"]
+    cancel = attention_for(order(email={"available": True, "threads": [{**thread, "subject": "Please DON'T cancel my order", "snippet": "I still want it", "verified_sender": False}]}), now=NOW)
+    assert cancel[0]["title"] == "Customer emailed — mentions cancelling" and cancel[0]["say"] == "read the customer's email on order 1930" and "sender not verified" in cancel[0]["detail"]
+    assert "cancel order" not in str(cancel), "what the customer meant is theirs to read; the line never puts a cancel in the owner's mouth"
     shipped = attention_for(order(fulfillment="FULFILLED", items=[{"title": "x", "unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS", "number": "AB1"}],
                                   email={"available": True, "threads": [{**thread, "subject": "Please cancel", "snippet": "changed my mind"}]}), now=NOW)
     assert shipped[0]["title"] == "Customer emailed: Please cancel" and shipped[0]["say"] == "reply to the customer about order 1930", "a shipped order cannot be cancelled from here; the line does not suggest it"
@@ -122,18 +123,18 @@ def test_the_model_reads_the_lines_and_the_hydrator_computes_them_with_its_clock
         return o, ext
 
     o, ext = asyncio.run(run())
-    assert [line["title"] for line in o["attention"]] == ["Unfulfilled for 3 days", "Customer emailed about the address", "Email about this order from someone else", "1 other order waiting to ship"]
+    assert [line["title"] for line in o["attention"]] == ["Unfulfilled for 3 days", "Customer emailed — mentions an address", "Email about this order from someone else", "1 other order waiting to ship"]
     assert model_view(o)["attention"] == o["attention"]
     assert [line["title"] for line in ext["attention"]] == [line["title"] for line in o["attention"]]
 
 
 def test_the_card_gets_an_attention_card_after_the_order_and_the_extension_carries_it():
-    detail = order(attention=[{"kind": "email", "level": "amber", "title": "Customer emailed about the address", "detail": "from daniel@example.com, 8 Sep · verified sender", "say": "change the address on order 1930 to the one in their email"}])
+    detail = order(attention=[{"kind": "email", "level": "amber", "title": "Customer emailed — mentions an address", "detail": "from daniel@example.com, 8 Sep · verified sender", "say": "read the customer's email on order 1930"}])
     items = present([ToolCall(name="shopify_order_detail", args={"order_id": detail["order_id"]}, ok=True, result=detail)])
     assert [i["type"] for i in items] == ["order", "attention"]
     card = items[1]["data"]
-    assert card["for"] == "gid://shopify/Order/1930" and card["items"][0]["title"] == "Customer emailed about the address"
-    assert card["items"][0]["detail"].endswith("— say “change the address on order 1930 to the one in their email”") and card["items"][0]["level"] == "amber"
+    assert card["for"] == "gid://shopify/Order/1930" and card["items"][0]["title"] == "Customer emailed — mentions an address"
+    assert card["items"][0]["detail"].endswith("— say “read the customer's email on order 1930”") and card["items"][0]["level"] == "amber"
     assert present([ToolCall(name="shopify_order_detail", args={}, ok=True, result=order())])[0]["type"] == "order"
     assert "attention" not in present_extension({"order_id": "x", "pending": []})
     assert present_extension({"order_id": "x", "pending": [], "attention": []})["attention"] == []

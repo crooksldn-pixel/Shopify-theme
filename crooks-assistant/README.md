@@ -1,8 +1,8 @@
 # CROOKS Assistant
 
 A voice assistant for CROOKS LDN. You hold a button on a tablet, ask a question out loud, and it
-answers out loud — reading from the Shopify store and the email inbox, and never writing to
-either.
+answers out loud — reading from the Shopify store and the email inbox, and proposing changes
+you apply with a gesture on the tablet. It never writes on its own.
 
 Everything runs on your own Mac except the two services it talks to: Claude, on the Max
 subscription you already pay for, and ElevenLabs, which hears and speaks on credit. No
@@ -458,9 +458,14 @@ app/
   main.py            FastAPI app; loopback only
   runtime.py         composition root — everything is wired here
   presentation.py    the `ui` list: cards chosen from tool results, bounded and whitelisted
-  routes/            health · turn · speak · admin
+  identity.py        the tablet's login confirmed with `tailscale whois` before a change
+  media.py           signed same-origin image paths for the tablet; never a raw CDN URL
+  routes/            health · turn · speak · admin · actions (arm, commit) · context · media
+  actions/           engine (stage · arm · commit · prove · undo) · grammar · available · ledger
+  context/           order (one document per order) · attention (what the order needs)
   providers/         base.py (ABC) · max_agent_sdk.py · anthropic_api.py (stub, deliberately)
-  tools/             registry · gate · dispatch · shopify_tools · gmail_tools · mock
+  tools/             registry · gate · dispatch · shopify_tools · shopify_writes · gmail_tools ·
+                     gmail_writes · mock
   clients/           shopify · gmail · whisper · elevenlabs (Scribe) · elevenlabs_tts (Vikram)
   speech/            decode · transcribe · normalise · speakable (text for a mouth)
   session/           manager · models (issued-id ledger)

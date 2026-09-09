@@ -895,36 +895,43 @@
       setState('holding');
       const request = ++armRequest;
       nonce = '';
+      const holdFor = (ms) => {
+        clearHold();
+        holdTimer = timers.set(() => {
+          holdTimer = null;
+          if (committed || state() !== 'holding' || !press) return;
+          if (typeof opts.onArm === 'function' && !nonce) {
+            // The hold is long enough but the Mac has not answered yet: keep holding a little.
+            holdTimer = timers.set(() => {
+              holdTimer = null;
+              if (committed || state() !== 'holding' || !press) return;
+              if (!nonce) { disarmHold("The Mac hasn't armed it"); return; }
+              held();
+            }, 1200);
+            return;
+          }
+          held();
+        }, ms);
+      };
       if (typeof opts.onArm === 'function') {
         Promise.resolve(opts.onArm(proposalId)).then((token) => {
           if (request !== armRequest || committed) return;
           if (!token) { disarmHold("The Mac won't arm this"); return; }
           nonce = String(token);
+          // The Mac measures the hold from when it stamped this token, which is never later
+          // than now: the hold here runs its full length from now as well, so the Mac's
+          // clock is met however long the round trip took.
+          if (state() === 'holding' && press) holdFor(HOLD_MS + HOLD_MARGIN_MS);
         }).catch(() => { if (request === armRequest && !committed) disarmHold("The Mac won't arm this"); });
       }
-      holdTimer = timers.set(() => {
-        holdTimer = null;
-        if (committed || state() !== 'holding' || !press) return;
-        if (typeof opts.onArm === 'function' && !nonce) {
-          // The hold is long enough but the Mac has not answered yet: keep holding a little.
-          holdTimer = timers.set(() => {
-            holdTimer = null;
-            if (committed || state() !== 'holding' || !press) return;
-            if (!nonce) { disarmHold("The Mac hasn't armed it"); return; }
-            held();
-          }, 1200);
-          return;
-        }
-        held();
-      }, HOLD_MS + HOLD_MARGIN_MS);
+      holdFor(HOLD_MS + HOLD_MARGIN_MS);
     };
     const held = () => {
       setState('held');
       say(kind === 'hold_drag_target' ? 'Now drag to the target' : 'Armed · tap to apply');
-      if (kind === 'hold_to_arm') {
-        // A tap must follow within the window, or the arming lapses.
-        heldTimer = timers.set(() => { if (!committed && state() === 'held') disarmHold(''); }, ARMED_FOR_MS);
-      }
+      // A tap or a drag must follow within the window the Mac keeps, or the arming lapses
+      // here as it does there — the surface never says "held" about a hold the Mac forgot.
+      heldTimer = timers.set(() => { if (!committed && state() === 'held') disarmHold('Hold again'); }, ARMED_FOR_MS);
     };
 
     const canBegin = () => armed() && !blocked() && !committed;
@@ -1029,6 +1036,8 @@
     opts = opts || {};
     const node = card('success', [
       h('div', { class: 'card-head' }, [h('div', { class: 'mark ok' }, CHECK()), h('div', {}, [kicker('Done'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
+      // What the Mac's proof could not yet see: said on the card as well as out loud.
+      d.note ? h('p', { class: 'card-meta note-line', text: text(d.note) }) : null,
     ], Object.assign({ className: 'success' }, opts));
     // Keyed by the proposal that is still live. The forward one is settled and nothing looks
     // it up again; the undo is the card the Mac may name in a turn's `revoked` list.

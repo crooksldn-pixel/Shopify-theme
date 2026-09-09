@@ -7,7 +7,7 @@ from __future__ import annotations
 from app.actions.available import available_actions, order_facts
 
 READY = {"state": "ready", "detail": "ready", "scope": "write_orders"}
-ALL = {op: READY for op in ("order_note_append", "order_cancel", "order_shipping_address_set", "refund_create", "fulfillment_create", "gmail_send_reply")}
+ALL = {op: READY for op in ("order_note_append", "order_cancel", "order_shipping_address_set", "refund_create", "fulfillment_create", "gmail_draft_new")}
 
 OPEN = {
     "order_number": "CROOKS-1938", "fulfillment": "UNFULFILLED", "payment": "PAID", "total": "60.00 GBP", "refundable": True,
@@ -20,12 +20,24 @@ def ids(actions, *, enabled=None):
     return [a["id"] for a in actions if enabled is None or a["enabled"] is enabled]
 
 
-def test_an_open_paid_order_offers_the_first_three_changes_and_no_more():
+def test_an_open_paid_order_offers_what_it_needs_first_and_the_note_besides():
+    """A paid order waiting to ship needs shipping: fulfil leads, then the address, then the
+    cancel; the note is always there and never takes one of the three places."""
     actions = available_actions(OPEN, ALL)
-    assert ids(actions, enabled=True) == ["note", "cancel", "address"]
+    assert ids(actions, enabled=True) == ["note", "fulfil", "address", "cancel"]
     assert all(a["mode"] == "ask" for a in actions)
     assert next(a for a in actions if a["id"] == "cancel")["instruction"] == "Cancel order 1938"
     assert next(a for a in actions if a["id"] == "cancel")["risk"] == "red"
+    assert next(a for a in actions if a["id"] == "fulfil")["instruction"] == "Fulfil order 1938"
+    assert "email" not in ids(actions), "three places, taken by what the order needs"
+    off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
+    assert off == {}
+
+
+def test_the_email_chip_primes_a_draft_and_is_amber_for_that_reason():
+    shipped = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}])
+    email = next(a for a in available_actions(shipped, ALL) if a["id"] == "email")
+    assert email["operation"] == "gmail_draft_new" and email["risk"] == "amber" and email["instruction"] == "Email the customer about order 1938"
 
 
 def test_a_shipped_order_cannot_be_cancelled_or_readdressed_and_says_why():
@@ -42,6 +54,8 @@ def test_a_cancelled_or_refunded_order_offers_almost_nothing():
     assert ids(actions, enabled=True) == ["note", "email"]
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {"cancel": "already cancelled", "refund": "fully refunded"}
+    part = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}], payment="PARTIALLY_REFUNDED", refundable=False, money={"refunded": "20.00 GBP", "total": "60.00 GBP"})
+    assert {a["id"]: a["reason"] for a in available_actions(part, ALL) if not a["enabled"]}["refund"] == "nothing to refund", "paid, partly refunded, nothing more refundable: not 'not paid'"
 
 
 def test_an_unpaid_order_is_not_fulfilled_or_refunded():

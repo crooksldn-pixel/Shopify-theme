@@ -69,7 +69,7 @@ async def client(monkeypatch):
 def configure(client, *, writes=True, logins=OWNER, local=False):
     runtime = client.runtime
     runtime.settings = runtime.settings.model_copy(
-        update={"writes_enabled": writes, "allowed_logins": logins, "writes_local_owner": local}
+        update={"writes_enabled": writes, "allowed_logins": logins, "writes_local_owner": local, "tailscale_verify": False}
     )
     app.state.allowed_logins = runtime.allowed_logins
 
@@ -568,7 +568,11 @@ async def test_a_spoken_yes_does_not_wind_the_clock_back_and_ignores_the_undo(cl
     assert body["status"] == "verified" and body["undo"]["proposal_id"]
     after = (await client.post("/turn", json={"text": "okay", "session_id": "s10"}, headers=PROXIED)).json()
     assert after["answer"] == "fake answer" and not [i for i in after["ui"] if i["type"] == "confirmation"]
-    assert client.runtime.sessions.get("s10").proposal(body["undo"]["proposal_id"]).status.value == "REVOKED"
+    # The undo belongs to the change just made, not to "okay": it is still there to tap.
+    undo = client.runtime.sessions.get("s10").proposal(body["undo"]["proposal_id"])
+    assert undo.status.value == "PENDING" and undo.epoch == client.runtime.sessions.get("s10").epoch
+    undone = (await commit(client, undo.proposal_id, session_id="s10")).json()
+    assert undone["status"] == "verified" and len(client.store.mutations) == 2
 
 
 async def test_a_shopify_blip_is_not_spoken_as_a_permission_refusal(client):
@@ -792,3 +796,107 @@ async def test_a_hold_is_armed_on_the_mac_and_the_commit_carries_the_token_in_a_
     assert len(hooks.world.mutations) == 1
     # Arming a settled card is refused.
     assert (await client.post(f"/actions/{proposal.proposal_id}/arm", data={"session_id": "h1"}, headers=PROXIED)).status_code == 409
+
+
+# --------------------------------------------------------------------------- council PASS B: the arm preflight, the identity check, the Gmail scope
+
+
+async def test_a_hold_is_refused_at_the_arm_when_the_change_needs_a_scope_the_store_has_not_granted(client, monkeypatch):
+    """The tablet never says "armed" about a tap the Mac already knows it will refuse: the
+    arm is judged by the proposal's own scope, as the tap would be."""
+    from app.actions.models import Prepared
+    from app.clients.shopify import REVIEWED_MUTATIONS, ReviewedMutation
+    from app.tools import registry
+    from app.tools.gate import Tier
+    from app.tools.registry import ToolSpec, WriteSpec
+
+    configure(client)
+    client.store.scopes = {"read_orders", "write_orders"}
+    client.store._scopes = None
+    monkeypatch.setitem(REVIEWED_MUTATIONS, "probe_fulfil", ReviewedMutation(name="probe_fulfil", document="mutation X { x }", variables={}, scope="write_merchant_managed_fulfillment_orders"))
+
+    async def prepare(order_id: str) -> Prepared:
+        return Prepared(execution={"order_id": order_id}, before={}, expected_after={}, entity_ref=order_id, entity_label="#1930", summary={"read_back": "ship"})
+
+    async def never(*a, **k):
+        raise AssertionError("never runs")
+
+    spec = ToolSpec(name="shopify_fulfil_probe", description="d", input_schema={"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]}, tier=Tier.RED, handler=prepare,
+                    issued_id_args=("order_id",), write=WriteSpec(operation="fulfillment_probe", entity_kind="order", entity_arg="order_id", mutation="probe_fulfil", observe=never, execute=never, present=lambda p: {}, op_class="irreversible"))
+    monkeypatch.setitem(registry._REGISTRY, "shopify_fulfil_probe", spec)
+    session = client.runtime.sessions.get_or_create("a1")
+    session.issue(ORDER)
+    session.epoch = max(session.epoch, 1)
+    text = await dispatch("shopify_fulfil_probe", {"order_id": ORDER}, session=session, timeout_s=5)
+    assert text.startswith("PROPOSED")
+    proposal = session.proposals[-1]
+    assert proposal.interaction == "hold_to_arm"
+    armed = await client.post(f"/actions/{proposal.proposal_id}/arm", data={"session_id": "a1"}, headers=PROXIED)
+    assert armed.status_code == 403 and armed.json()["code"] == "scope_missing", armed.text
+    assert "write_merchant_managed_fulfillment_orders" in armed.json()["detail"]
+    assert not proposal.arm_nonce and proposal.status.value == "PENDING"
+    # A note, needing only write_orders, arms as before.
+    note = await staged(client, session_id="a1")
+    assert note.interaction == "tap_commit"
+    assert (await commit(client, note.proposal_id, session_id="a1")).status_code == 200
+
+
+async def test_a_login_header_tailscale_does_not_vouch_for_applies_nothing(client, monkeypatch):
+    """The header is a claim. Before a change is applied the forwarded address is put to
+    `tailscale whois`; a different holder, or no answer, refuses the tap — and the arm."""
+    from app import identity
+
+    configure(client)
+    client.runtime.settings = client.runtime.settings.model_copy(update={"tailscale_verify": True})
+    monkeypatch.setattr(identity, "cli_path", lambda configured="": "/usr/bin/tailscale")
+    holders = {"100.64.0.9": "intruder@example.com"}
+    identity.bind_runner(lambda cli, address: {"UserProfile": {"LoginName": holders.get(address, "")}})
+    try:
+        proposal = await staged(client)
+        response = await commit(client, proposal.proposal_id)
+        assert response.status_code == 403 and response.json()["code"] == "identity_unverified", response.text
+        assert "belongs to a different login" in response.json()["detail"]
+        assert response.json()["spoken"] == "I couldn't confirm which tablet this is with Tailscale, so I can't apply that."
+        assert client.store.mutations == [] and proposal.status.value == "PENDING"
+        assert (await client.post(f"/actions/{proposal.proposal_id}/arm", data={"session_id": "s1"}, headers=PROXIED)).status_code == 403
+        # A card recovered after a lost connection is shown as one a tap here cannot apply.
+        state = await client.get(f"/actions/{proposal.proposal_id}?session_id=s1", headers=PROXIED)
+        assert state.status_code == 200 and state.json()["status"] == "pending"
+        card = next(i for i in state.json()["ui"] if i["type"] == "confirmation")["data"]
+        assert card["commit"] == {"allowed": False, "code": "identity_unverified", "reason": "The Mac could not confirm this tablet's identity with Tailscale."}
+        # Tailscale names the login on the header: the same tap applies.
+        holders["100.64.0.9"] = OWNER
+        identity.bind_runner(lambda cli, address: {"UserProfile": {"LoginName": holders.get(address, "")}})
+        response = await commit(client, proposal.proposal_id)
+        assert response.status_code == 200 and response.json()["status"] == "verified", response.text
+        assert proposal.caller == OWNER
+    finally:
+        identity.bind_runner(None)
+
+
+async def test_a_gmail_change_the_credential_does_not_allow_is_refused_by_name(client, monkeypatch):
+    """An email change is judged by the Gmail credential's own scopes, read back from Google,
+    never by the Shopify scopes; the refusal names Gmail and the card says which permission."""
+    from app.clients.gmail import SCOPE_READONLY, ScopeReport
+    from app.tools import gmail_writes  # noqa: F401 — registers the Gmail writes
+
+    configure(client)
+    monkeypatch.setattr(client.runtime.gmail, "scopes", lambda fresh=False: ScopeReport(frozenset({SCOPE_READONLY}), "google", 1e12))
+    status = await client.runtime.write_status("gmail_send_reply")
+    assert not status.ready and status.code == "gmail_scope_missing" and "gmail" in status.detail.lower() and "send" in status.detail.lower()
+    assert (await client.runtime.write_status("gmail_draft_reply_undo")).code == "gmail_scope_missing", "an undo is judged as the change it reverses"
+    assert (await client.runtime.write_status("order_note_append")).ready, "Shopify changes are not held by a Gmail scope"
+    health = (await client.get("/health?fresh=1")).json()
+    assert health["capabilities"]["gmail_send_reply"]["state"] == "blocked" and health["capabilities"]["order_note_append"]["state"] == "ready"
+    monkeypatch.setattr(client.runtime.gmail, "scopes", lambda fresh=False: ScopeReport(frozenset({"https://www.googleapis.com/auth/gmail.modify", "https://www.googleapis.com/auth/gmail.compose"}), "google", 1e12))
+    assert (await client.runtime.write_status("gmail_send_reply")).ready
+
+
+async def test_the_spoken_refusal_for_a_missing_scope_does_not_name_a_scope_the_change_does_not_need(client):
+    """The words say the store has not granted what this change needs and point at the
+    card, which carries the Mac's detail; they never claim every change needs write orders."""
+    from app.routes.actions import SPOKEN_REFUSALS
+
+    assert SPOKEN_REFUSALS["scope_missing"] == "The store hasn't granted the permission this change needs; the card says which."
+    assert "gmail" in SPOKEN_REFUSALS["gmail_scope_missing"].lower()
+    assert "Tailscale" in SPOKEN_REFUSALS["identity_unverified"]

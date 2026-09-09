@@ -582,7 +582,7 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
             return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
         live.abandoned = True
         # Named, so the tablet settles exactly the cards this withdrew rather than guessing.
-        revoked = runtime.actions.revoke_pending(live, "turn abandoned")
+        revoked = runtime.actions.revoke_pending(live, "turn abandoned", undos=True)
         runtime.actions.advance_epoch(live, "turn abandoned")
         interrupted = await runtime.provider.interrupt(session_id)
     stopped = runtime.voice.cancel_prefetches()

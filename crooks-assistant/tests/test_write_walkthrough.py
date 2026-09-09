@@ -98,7 +98,7 @@ async def walk(monkeypatch, tmp_path):
         runtime.sessions.on_drop.append(runtime.actions.forget_session)
         runtime.provider = ModelThatAddsANote(runtime)
         runtime.settings = runtime.settings.model_copy(
-            update={"writes_enabled": True, "allowed_logins": OWNER, "writes_local_owner": False}
+            update={"writes_enabled": True, "allowed_logins": OWNER, "writes_local_owner": False, "tailscale_verify": False}
         )
         app.state.allowed_logins = runtime.allowed_logins
 

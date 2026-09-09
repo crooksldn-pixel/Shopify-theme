@@ -1176,12 +1176,12 @@ const ACTION_LABELS = {
   unknown: 'No longer waiting',
 };
 const ACTION_REASONS = {
-  refused: 'The Mac refused that. Check the Mac\'s log for the reason.',
+  refused: 'The service refused that. The card says why.',
   not_authorised: "This tablet's login is not on the Mac's allowed list (CROOKS_ALLOWED_LOGINS).",
   not_authorised_local: 'Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).',
   writes_disabled: 'Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).',
   allow_list_missing: 'No allowed logins are configured on the Mac (CROOKS_ALLOWED_LOGINS).',
-  scope_missing: 'The Shopify app has not been granted permission to write orders.',
+  identity_unverified: "The Mac could not confirm this tablet's identity with Tailscale.",
   unknown: 'The Mac is no longer holding that change — it was restarted, or it waited too long. Ask again.',
   wrong_session: 'That proposal belongs to another conversation.',
 };

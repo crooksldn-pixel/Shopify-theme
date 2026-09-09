@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept whisper-server secrets shopify gmail gmail-verify voice check
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -29,6 +29,7 @@ help:
 	@echo "When something needs looking at:"
 	@echo "  make check           doctor + shopify + gmail-verify in one go"
 	@echo "  make gmail-verify    prove Gmail refreshes without a browser"
+	@echo "  make write-check     rehearse one change through the engine: TOOL=… ARGS='{json}' [COMMIT=1]"
 	@echo "  make voice           hear Vikram on this Mac (one short ElevenLabs request)"
 	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
 	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"
@@ -88,6 +89,9 @@ chat:
 
 acceptance:
 	$(PY) scripts/acceptance.py $(if $(SPOKEN),--spoken,)
+
+write-check:
+	$(PY) scripts/write_check.py $(TOOL) '$(ARGS)' $(if $(COMMIT),--commit,)
 
 accept:
 	$(PY) scripts/accept.py $(if $(SHOTS),--shots $(SHOTS),) $(if $(NO_BROWSER),--no-browser,)

@@ -222,7 +222,7 @@ async def test_preparing_reads_the_order_and_the_email_merges_the_change_and_sen
     assert facts["From"] == "12 Somewhere Street, Flat 3, Windsor, SL4 1AA"
     assert facts["To"] == "4 Example Row, London, EC1A 1AA"
     assert facts["Changes"] == "street, second line cleared, town, postcode"
-    assert facts["Cited"] == "Email from daniel@example.com, 8 Sep 10:12 · verified sender · postcode and street found in the message"
+    assert facts["Cited"] == "Email from daniel@example.com, 8 Sep 10:12 · verified sender · postcode, street and town found in the message"
     assert facts["Note"] == REPRINT_NOTE
     assert [f["tone"] for f in words["facts"] if f["label"] == "To"] == ["warn"]
     assert [f["tone"] for f in words["facts"] if f["label"] == "Cited"] == [""]
@@ -270,7 +270,7 @@ async def test_a_dictated_address_is_staged_and_says_it_was_dictated(store, engi
     assert text.startswith("PROPOSED") and inbox.reads == []
     words = registry.get(TOOL).write.present(proposal)
     cited = [f for f in words["facts"] if f["label"] == "Cited"][0]
-    assert cited["value"] == "none — as dictated" and cited["tone"] == "warn"
+    assert cited["value"] == "none — given by the owner" and cited["tone"] == "warn"
     assert engine.ledger.read()[-1]["facts"]["evidence"] is False
 
 
@@ -451,3 +451,52 @@ async def test_thread_and_search_results_carry_message_ids_for_citing():
     assert out["messages"][0]["message_id"] == "m1"
     summary = gmail_tools._summary("t1", {"from": "a@x.com"}, {"id": "m9", "snippet": "hi"})
     assert summary["message_id"] == "m9"
+
+
+# --------------------------------------------------------------------------- what the evidence must say
+
+
+async def test_a_different_street_in_the_email_is_refused_even_with_the_right_postcode(store, engine, session, inbox):
+    inbox.messages[EVIDENCE]["body"] = "Please send it to 4 Oak Row, London EC1A 1AA"
+    text, proposal = await stage(session, **MOVE)
+    assert text.startswith("ERROR") and "does not contain the new street" in text and proposal is None
+
+
+async def test_a_flat_change_alone_is_checked_against_the_email(store, engine, session, inbox):
+    inbox.messages[EVIDENCE]["body"] = "It's flat 9 now, same building."
+    text, proposal = await stage(session, evidence_message_id=EVIDENCE, address2="Flat 9")
+    assert text.startswith("PROPOSED"), text
+    facts = {f["label"]: f["value"] for f in registry.get(TOOL).write.present(proposal)["facts"]}
+    assert facts["Cited"].endswith("second line found in the message")
+    inbox.messages[EVIDENCE]["body"] = "Please leave it with the neighbour."
+    text, proposal = await stage(session, evidence_message_id=EVIDENCE, address2="Flat 9")
+    assert text.startswith("ERROR") and "does not contain the new second line" in text
+
+
+async def test_a_new_street_needs_its_postcode_in_the_email(store, engine, session, inbox):
+    inbox.messages[EVIDENCE]["body"] = "Send it to 4 Example Row please"
+    text, proposal = await stage(session, evidence_message_id=EVIDENCE, address1="4 Example Row")
+    assert text.startswith("ERROR") and "A new street needs its postcode" in text and proposal is None
+    inbox.messages[EVIDENCE]["body"] = "Send it to 4 Example Row please, still SL4 1AA"
+    text, proposal = await stage(session, evidence_message_id=EVIDENCE, address1="4 Example Row")
+    assert text.startswith("PROPOSED"), text
+
+
+async def test_what_the_email_cannot_be_checked_for_is_said_on_the_card(store, engine, session, inbox):
+    inbox.messages[EVIDENCE]["body"] = "Send it to 1 Example Quay, Dublin D02 X285 — Ireland now!"
+    _, proposal = await stage(session, evidence_message_id=EVIDENCE, address1="1 Example Quay", city="Dublin", postcode="D02 X285", country_code="IE")
+    facts = {f["label"]: f["value"] for f in registry.get(TOOL).write.present(proposal)["facts"]}
+    assert facts["Cited"].endswith("postcode, street and town found in the message · not checked: country")
+
+
+async def test_an_email_about_the_address_that_the_model_did_not_cite_is_not_quietly_dictated(store, engine, session, inbox):
+    async def threads_for(**kwargs):
+        return {"available": True, "threads": [{"thread_id": "t9", "message_id": "9f9f9f9f9f9f", "from": "Daniel Sear", "from_email": "daniel@example.com", "subject": "New address for 1930", "date": "Tue, 8 Sep 2026 09:00:00 +0100", "snippet": "I've moved, please send to 4 Example Row", "likely_bulk": False, "authenticated": True}]}
+
+    shopify_tools.bind(store, threads_for=threads_for)
+    text, proposal = await stage(session, address1="4 Example Row", city="London", postcode="EC1A 1AA")
+    assert text.startswith("ERROR") and "An email about this order's address is in the inbox (from daniel@example.com" in text and proposal is None
+    text, proposal = await stage(session, address1="4 Example Row", city="London", postcode="EC1A 1AA", from_owner=True)
+    assert text.startswith("PROPOSED"), text
+    cited = [f for f in registry.get(TOOL).write.present(proposal)["facts"] if f["label"] == "Cited"][0]
+    assert cited["value"] == "none — given by the owner; an email about the address from daniel@example.com was NOT checked" and cited["tone"] == "bad"

@@ -143,6 +143,10 @@ class Runtime:
             return WriteStatus("disabled", "disabled — CROOKS_WRITES_ENABLED=false")
         if not self.allowed_logins:
             return WriteStatus("blocked", "blocked — CROOKS_ALLOWED_LOGINS not configured")
+        # An undo is the change it reverses, judged by the same scope: "order_note_append_undo"
+        # needs what "order_note_append" needs, nothing else.
+        if operation is not None and operation.endswith("_undo"):
+            operation = operation[: -len("_undo")]
         if operation is not None and operation in self._gmail_operations():
             entry = (await self._gmail_capabilities()).get(operation) or {}
             return WriteStatus(str(entry.get("state") or "blocked"), str(entry.get("detail") or "blocked"))
@@ -173,6 +177,15 @@ class Runtime:
         detail = f"ready — {', '.join(ready_ops)}"
         if held_ops:
             detail += "; " + ", ".join(f"{op} needs {scope}" for op, scope in held_ops)
+        # The email changes, in the same line: what the credential allows and what it does not.
+        gmail = await self._gmail_capabilities()
+        gmail_ready = sorted(op.replace("_", " ") for op, entry in gmail.items() if entry.get("state") == "ready")
+        gmail_held = sorted(op for op, entry in gmail.items() if entry.get("state") not in ("ready", "unknown"))
+        if gmail_ready:
+            detail += f"; {', '.join(gmail_ready)}"
+        if gmail_held:
+            first = str(gmail[gmail_held[0]].get("detail", "")).replace("blocked — ", "", 1)
+            detail += f"; {', '.join(op.replace('_', ' ') for op in gmail_held)} held: {first}"
         return WriteStatus("ready", detail)
 
     def _write_scopes(self) -> dict[str, str]:
@@ -267,13 +280,16 @@ class WriteStatus:
 
     @property
     def code(self) -> str:
-        """The controlled refusal code a commit answers with while writes are not ready."""
+        """The controlled refusal code a commit answers with while writes are not ready. The
+        code names the system that is short of a permission; the detail names the permission."""
         if self.state == "ready":
             return ""
         if "WRITES_ENABLED" in self.detail:
             return "writes_disabled"
         if "ALLOWED_LOGINS" in self.detail:
             return "allow_list_missing"
+        if "gmail" in self.detail.lower():
+            return "gmail_scope_missing"
         return "scope_missing"
 
 

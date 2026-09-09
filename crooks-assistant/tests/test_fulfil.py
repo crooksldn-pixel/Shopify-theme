@@ -177,7 +177,7 @@ def test_carriers_are_spelled_as_shopify_spells_them():
 async def test_preparing_reads_the_fulfilment_orders_names_every_line_and_sends_nothing(store, engine, session):
     text, proposal = await stage(session, tracking_number="ab123456785gb")
     assert text.startswith("PROPOSED") and words_for("hold_to_arm")["verb"] in text
-    assert "mark order 1930 as shipped with Royal Mail, tracking AB123456785GB, without emailing the customer" in text
+    assert "mark order 1930 for Daniel Sear as shipped with Royal Mail, tracking AB123456785GB, without emailing the customer" in text
     assert store.mutations == [] and proposal.risk == "RED" and proposal.interaction == "hold_to_arm"
     ex = dict(proposal.execution)
     assert ex["input"] == {
@@ -189,7 +189,7 @@ async def test_preparing_reads_the_fulfilment_orders_names_every_line_and_sends_
     words = registry.get(TOOL).write.present(proposal)
     assert words["title"] == "Mark as shipped" and words["detail"] == "Marks every item shipped." and words["done_title"] == "Shipped"
     facts = {f["label"]: f["value"] for f in words["facts"]}
-    assert facts == {"Items": "Blue Wash Yard Jeans M ×2, Convict Sweats L", "From": "CROOKS HQ", "Carrier": "Royal Mail", "Tracking": TRACKING, "Customer emailed": "no"}
+    assert facts == {"Customer": "Daniel Sear", "Items": "Blue Wash Yard Jeans M ×2, Convict Sweats L", "From": "CROOKS HQ", "Carrier": "Royal Mail", "Tracking": TRACKING, "Customer emailed": "no"}
     assert all(f.get("tone", "") == "" for f in words["facts"])
     line = engine.ledger.read()[-1]
     assert line["event"] == "PROPOSED" and line["facts"] == {"lines": 2, "units": 3, "carrier": "Royal Mail", "tracked": True, "notify": False, "complete": True}
@@ -247,6 +247,7 @@ async def test_only_the_items_named_ship_and_the_rest_stay_open(store, engine, s
     ({"cancelled_at": "2026-09-01T00:00:00Z"}, {}, "is cancelled"),
     ({"remaining": {FOL: 0, FOL2: 0}}, {}, "nothing left to ship"),
     ({"financial": "PENDING"}, {}, "is pending; it should not ship yet"),
+    ({"financial": "PARTIALLY_PAID"}, {}, "is partly paid; take the balance first"),
     ({"split": True}, {}, "split across locations"),
     ({}, {"carrier": "Pigeon Post"}, "carrier must be one Shopify knows"),
     ({}, {"tracking_number": "AB 12"}, "tracking number must be"),

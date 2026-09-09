@@ -89,10 +89,17 @@ _EXTRA_ALLOWED = frozenset({"reason", "ms", "payload_len", "detail", "deduplicat
 
 
 def _fingerprint_only(value: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Only the hash-and-length shape is a fingerprint; anything else is not written."""
+    """A fingerprint is hashes, counts, flags and short enum-like words — what the proof saw
+    before and after ("refunded 0.00 → 20.00", an address hash). Free text is not written."""
     if not isinstance(value, dict):
         return None
-    return {k: v for k, v in value.items() if k in ("sha", "len") and isinstance(v, (str, int))} or None
+    out = {}
+    for k, v in value.items():
+        if isinstance(v, bool) or isinstance(v, (int, float)):
+            out[str(k)[:24]] = v
+        elif isinstance(v, str) and v and len(v) <= 24 and not any(ch.isspace() for ch in v):
+            out[str(k)[:24]] = v
+    return out or None
 
 
 class NullLedger(ActionLedger):

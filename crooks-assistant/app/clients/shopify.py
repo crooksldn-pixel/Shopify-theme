@@ -43,6 +43,14 @@ class ShopifyThrottled(ShopifyError):
         self.wait_s = wait_s
 
 
+class ShopifyRefused(ShopifyError):
+    """Shopify ran the mutation and answered with user errors: the change was not made, for
+    a reason it stated. Not a lost answer — the re-read confirms nothing moved, and the
+    reason is the one line worth showing."""
+
+    refused = True
+
+
 class ShopifyPreconditionFailed(ShopifyError):
     """Shopify refused a change because the entity was not as the sender assumed — a
     compare-and-swap that found another quantity, an order that cannot be cancelled as it
@@ -234,6 +242,24 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         root="fulfillmentCreate",
         validate=lambda key, value: key == "fulfillment" and fulfillment_input_ok(value),
     ),
+    # Tracking on a shipment already marked shipped (Click & Drop prints the label; the number
+    # arrives afterwards). Setting a value: idempotent. The selection is the shipment's own.
+    "fulfillment_tracking_set": ReviewedMutation(
+        name="fulfillment_tracking_set",
+        document="""
+            mutation CrooksFulfillmentTrackingSet($fulfillmentId: ID!, $trackingInfoInput: FulfillmentTrackingInput!, $notifyCustomer: Boolean) {
+              fulfillmentTrackingInfoUpdate(fulfillmentId: $fulfillmentId, trackingInfoInput: $trackingInfoInput, notifyCustomer: $notifyCustomer) {
+                fulfillment { id status trackingInfo { company number url } }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"fulfillmentId": str, "trackingInfoInput": dict, "notifyCustomer": bool},
+        scope="write_merchant_managed_fulfillment_orders",
+        idempotent=True,
+        root="fulfillmentTrackingInfoUpdate",
+        validate=lambda key, value: key == "trackingInfoInput" and tracking_input_ok(value),
+    ),
     # Phase I: one variant's available stock at one location, set to a number decided on the
     # Mac from a fresh read, guarded by Shopify's own compare-and-swap: the quantity is only
     # written if the store still holds the number the Mac read (COMPARE_QUANTITY_STALE
@@ -369,6 +395,18 @@ def fulfillment_input_ok(value: Any) -> bool:
                 return False
             if not isinstance(line["quantity"], int) or isinstance(line["quantity"], bool) or not 1 <= line["quantity"] <= 500:
                 return False
+    return True
+
+
+def tracking_input_ok(value: Any) -> bool:
+    """The FulfillmentTrackingInput this project sends: a carrier as Shopify names it and one
+    number. Never a URL from anyone: Shopify builds the link from a name it knows."""
+    if not isinstance(value, dict) or not value or set(value) - {"company", "number"} or "number" not in value:
+        return False
+    if not isinstance(value["number"], str) or not _TRACKING_NUMBER.match(value["number"]):
+        return False
+    if "company" in value and (not isinstance(value["company"], str) or not 1 <= len(value["company"]) <= 60 or "<" in value["company"]):
+        return False
     return True
 
 
@@ -677,7 +715,7 @@ class ShopifyClient:
             messages = "; ".join(str(e.get("message", e)) for e in user_errors)
             if codes & PRECONDITION_CODES:
                 raise ShopifyPreconditionFailed(messages)
-            raise ShopifyError(messages)
+            raise ShopifyRefused(messages)
 
         return payload
 

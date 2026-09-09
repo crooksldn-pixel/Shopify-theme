@@ -65,6 +65,12 @@ class GmailError(RuntimeError):
     """A Gmail call failed in a way worth reporting honestly."""
 
 
+class GmailRefused(GmailError):
+    """Gmail answered and said no (a 4xx with a reason): the change was not made."""
+
+    refused = True
+
+
 def short_scopes(scopes) -> str:
     """"modify, compose" — the scopes as a person says them."""
     return ", ".join(sorted(_SHORT.get(s, s.rsplit("/", 1)[-1]) for s in scopes)) or "none"
@@ -314,11 +320,14 @@ class GmailClient:
             if is_auth_failure(exc):
                 self.reset()
                 raise GmailAuthRequired("Gmail authorisation has expired.") from exc
+            status = getattr(getattr(exc, "resp", None), "status", None) or getattr(exc, "status_code", None)
+            if isinstance(status, int) and 400 <= status < 500 and status not in (408, 429):
+                raise GmailRefused(f"{what}: {describe_error(exc)}") from exc
             raise GmailError(f"{what}: {describe_error(exc)}") from exc
 
     # --- reads the writes need
 
-    THREAD_HEADERS = ("From", "To", "Subject", "Date", "Message-ID", "In-Reply-To", "References", "Authentication-Results")
+    THREAD_HEADERS = ("From", "To", "Reply-To", "Subject", "Date", "Message-ID", "In-Reply-To", "References", "Authentication-Results")
 
     def thread_messages(self, thread_id: str) -> list[dict]:
         """Every message in a thread with its labels and the headers a reply needs: the
@@ -329,10 +338,19 @@ class GmailClient:
             ).execute()
             out = []
             for message in thread.get("messages") or []:
-                headers = {h["name"].lower(): h["value"] for h in (message.get("payload") or {}).get("headers") or []}
+                headers: dict[str, str] = {}
+                for h in (message.get("payload") or {}).get("headers") or []:
+                    headers.setdefault(str(h.get("name", "")).lower(), str(h.get("value", "")))
                 out.append({"id": str(message.get("id") or ""), "labels": list(message.get("labelIds") or []), "headers": headers})
             return out
         return self._run("Could not read the thread", fetch)
+
+    def message_labels(self, message_id: str) -> set[str]:
+        """One message's labels: SENT is the proof a send Gmail answered for really went."""
+        def fetch():
+            message = self.service().users().messages().get(userId="me", id=message_id, format="minimal").execute()
+            return set(message.get("labelIds") or [])
+        return self._run("Could not read the message", fetch)
 
     def thread_labels(self, thread_id: str) -> set[str]:
         def fetch():
