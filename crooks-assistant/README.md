@@ -209,41 +209,60 @@ testable directly in Python without spending anything.
 
 ---
 
-## Changes to the store: the first action
+## Changes to the store and the inbox
 
-The assistant can now propose one change: an internal staff note on an order ("add a note to
-order 1930 saying the customer asked for an exchange"). It is off by default, and it is built
-as the pattern every later change will follow rather than as a feature of its own:
+The assistant can propose nine changes. Each is off by default, and each follows the one
+pattern rather than being a feature of its own:
 
-    Claude calls the tool → the gate stages it → the Mac reads the order and decides the exact
-    note → a card appears on the tablet → you tap it → the Mac checks the order has not changed,
-    sends the one reviewed mutation, reads the order again to prove it → the card says NOTE
-    ADDED, Vikram says "Note added to order 1930", and an Undo waits for a minute.
+    Claude calls a narrow tool → the gate stages it → the Mac reads the entity and decides
+    every argument → a card appears on the tablet with the facts the gesture authorises →
+    you make the gesture → the Mac checks the entity has not changed, sends the one reviewed
+    mutation once, reads the entity again to prove it → the card says what happened, Vikram
+    says it, and where there is an undo, an undo waits.
 
-Say the order number and the Mac looks the order up before Claude is asked, so the card is
-ready sooner and the note is proposed for an order the Mac has already seen. Say "yes" or "go
-ahead" while the card is waiting and the Mac answers, without Claude, that nothing happens
-until you tap; the card stays. A fumbled hold or a recording that said nothing withdraws
-nothing. If a tap from where you are would be refused, the card says so before you tap —
-changes switched off, no allowed logins, a login not on the list, or a request made on the
-Mac itself — and the "Changes" dot on the ready screen shows the same.
+| Change | Tier | Gesture | Proven by |
+|---|---|---|---|
+| Order note | AMBER, undo | tap | the note re-read |
+| Tags | AMBER, undo | tap | the tags re-read |
+| Cancel (with refund, restock, email per policy) | RED money | hold, then drag onto "Drop to cancel and refund £X" | `cancelledAt` set after Shopify's job finishes |
+| Refund (an amount, the items, the postage — priced by Shopify) | RED money | hold, then drag onto "Drop to refund £X" | `totalRefunded` moved by exactly the amount |
+| Address (the customer's email read on the Mac; the postcode and street must be in it) | RED | hold, then tap | the address re-read and hashed |
+| Fulfil (from the order's own fulfilment orders; carrier as Shopify spells it) | RED | hold, then tap | the remaining quantities dropped to what was expected |
+| Stock (one variant, one location, ±100, compare-and-swap) | RED, undo | hold, then tap | the level re-read |
+| Email: draft a reply / a new email | AMBER, undo | tap | the draft found in the thread by the Message-ID minted here |
+| Email: send a reply / a new email | RED | hold, then tap | the sent message found the same way |
+| Archive a thread | AMBER, undo | tap | the INBOX label gone |
+
+Say the order number and the Mac looks the order up before Claude is asked — items with
+images, money, address, the customer's history and their email, and what the order needs
+(unshipped for days, oversold, cancelled but not refunded, an email from the customer read
+for what it is about). The card's rail offers only the changes that make sense for that
+order and that the store has granted this Mac. Say "yes" or "go ahead" while a card is
+waiting and the Mac answers, without Claude, that nothing happens until the gesture; the
+card stays. If a gesture from where you are would be refused, the card says so first.
 
 What holds it together, and what the tests hold:
 
 - **The tool call is the proposal.** Calling the tool changes nothing. Claude is told
-  PROPOSED and that a spoken "yes" cannot apply it. Only the tap can.
-- **The Mac's copy is the action.** The tablet sends a proposal id and the session. The note,
-  the order and the mutation come from what the Mac stored when it staged the proposal.
-- **Once.** Two taps, a retry, a double request: one mutation. A lost connection asks the Mac
-  what happened rather than tapping again.
-- **Bound to now.** A proposal waits a minute from the moment its card leaves for the tablet
-  and dies with the next instruction, a cancel or a reset. The order is re-read before the
-  write; if it changed, nothing is sent.
-- **Proven.** Shopify's 200 is not success; the re-read is. Only a verified change shows
-  NOTE ADDED or is spoken as done. If Shopify's answer is lost mid-way, the Mac re-reads the
-  order once and says what it saw: applied, untouched, or "check the order" — never a guess.
+  PROPOSED and which gesture applies it. A spoken "yes" cannot.
+- **The Mac's copy is the action.** The tablet sends a proposal id, the session and — for a
+  hold — the nonce the hold earned. The arguments come from what the Mac stored when it
+  staged the proposal; a refund amount, an address, an email body never travel with a tap.
+- **The recipient is never the model's.** A reply goes to the sender of the message it
+  answers; a new email to the customer on the order; an address change to the order whose
+  customer wrote the email — all read on the Mac.
+- **Once.** Two taps, a retry, a double request: one mutation. A lost answer asks the
+  entity what happened rather than sending again.
+- **Bound to now.** A proposal waits a minute and dies with the next instruction, a cancel
+  or a reset. The entity is re-read before the write; if it changed, nothing is sent. A
+  stock change is held to the old number by Shopify itself.
+- **Proven.** A 200 is not success; the re-read is. What could not be proven is said as
+  "check the order", never as done.
 - **Recorded.** `logs/actions.jsonl` is an append-only ledger of every proposal and outcome:
-  identities, fingerprints and lengths, never the note.
+  identities, hashes, amounts and flags — never a note, a name or a street.
+- **Email is evidence.** What a customer wrote is quoted on the card with who sent it and
+  whether the receiving server vouched for them; it never becomes an instruction, and
+  nothing is ever sent because an email asked.
 
 To switch it on, in `.env`:
 
@@ -252,9 +271,9 @@ CROOKS_WRITES_ENABLED=true
 CROOKS_ALLOWED_LOGINS=you@example.com     # open /whoami on the tablet to see the exact login
 ```
 
-and grant the Shopify app the `write_orders` scope (Dev Dashboard → the app → Configuration →
-Admin API access scopes → release a new version). The settings sheet's "Changes" row says
-which of those is still missing; nothing executes until it says "ready — order note append".
+and grant the Shopify app the scope each change needs (`SHOPIFY_SCOPES.md`); the Gmail
+changes take their scopes from the Gmail credential itself. The settings sheet's "Changes"
+row and `/health` say, per change, what is ready and what is still waiting on a scope.
 
 ## How it is put together
 
@@ -480,7 +499,7 @@ Mac, your tablet, and your console access — is not, and cannot be done from an
 | M6 Shopify auth | Client with token cache and the `shpat_` fallback. **Needs your credentials.** |
 | M7 Shopify tools | Seven tools; queries validated against the schema and search syntax verified on the live store. **Needs your credentials to run.** |
 | M8 Gmail auth | Auth script and refresh handling. **Needs the Google Cloud console work.** |
-| M9 Gmail tools | Two tools, no write path anywhere. |
+| M9 Gmail | Two read tools; five staged changes (draft, send, archive) on the action engine, scoped by the credential itself. |
 | M10 Typed agent | System prompt, KB loader, `scripts/chat.py`, redacted logging. **KB written from the store's own policies and metafields**; one discretion section is yours. |
 | M11 Voice in | `/turn` takes audio or text; the tablet polls `/state` so the screen shows the tool actually running. |
 | M12 Voice out | Chunking, unlock, voice picker — all three Android guardrails. |
@@ -590,5 +609,6 @@ the closest maintained equivalent and is what the normaliser's thresholds were t
 
 ## Out of scope for Day 1
 
-Wake word, Android APK, VPS hosting, scheduled triage, shipping-label integration, and every
-write action. Phase 2 starts from a tagged `v1.0-day1`.
+Wake word, Android APK, VPS hosting, scheduled triage, and shipping-label integration. The
+write actions arrived with the operational expansion (see "Changes to the store and the
+inbox"); shipping labels are still Click & Drop's.
