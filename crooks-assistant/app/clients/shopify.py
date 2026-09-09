@@ -92,6 +92,9 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
 }
 
 SCOPES_TTL_S = 600.0
+# How long a failed scope check is remembered as failed, so a Shopify that is not answering
+# is not asked again on every turn and every tap.
+SCOPES_FAILED_TTL_S = 30.0
 
 
 class ShopifyClient:
@@ -119,6 +122,7 @@ class ShopifyClient:
         self.mutations_sent = 0   # every reviewed mutation this process has sent
         self._scopes: frozenset[str] | None = None
         self._scopes_at = 0.0
+        self._scopes_failed_at = 0.0
 
     def _client(self) -> httpx.AsyncClient:
         if self._http is None or self._http.is_closed:
@@ -240,14 +244,24 @@ class ShopifyClient:
         asks on every health poll and must not cost a query each time."""
         if self._scopes is not None and not refresh and time.time() - self._scopes_at < SCOPES_TTL_S:
             return self._scopes
-        payload = await self.graphql(
-            "query CrooksScopes { currentAppInstallation { accessScopes { handle } } }"
-        )
+        if not refresh and time.time() - self._scopes_failed_at < SCOPES_FAILED_TTL_S:
+            # It did not answer a moment ago. Asking again on every turn and every tap would
+            # spend the preflight's whole bound each time, and the caller treats a scope check
+            # it cannot make as "unknown" — which is applicable, with Shopify deciding the tap.
+            raise ShopifyError("the scope check failed a moment ago")
+        try:
+            payload = await self.graphql(
+                "query CrooksScopes { currentAppInstallation { accessScopes { handle } } }"
+            )
+        except Exception:
+            self._scopes_failed_at = time.time()
+            raise
         installation = (payload.get("data") or {}).get("currentAppInstallation") or {}
         self._scopes = frozenset(
             str(s.get("handle", "")) for s in installation.get("accessScopes") or [] if isinstance(s, dict)
         )
         self._scopes_at = time.time()
+        self._scopes_failed_at = 0.0
         return self._scopes
 
     async def _post(self, query: str, variables: dict[str, Any] | None = None, *, mutation: bool = False) -> dict[str, Any]:
