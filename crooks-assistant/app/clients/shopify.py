@@ -216,6 +216,24 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         root="orderUpdate",
         validate=lambda key, value: key == "address" and mailing_address_ok(value),
     ),
+    # Phase G: a fulfilment, from the order's own fulfilment orders resolved on the Mac at
+    # staging time, with the carrier named as Shopify names it. Creating one is not
+    # idempotent — never sent twice. The selection is the id and status of what was made.
+    "fulfillment_create": ReviewedMutation(
+        name="fulfillment_create",
+        document="""
+            mutation CrooksFulfillmentCreate($fulfillment: FulfillmentInput!) {
+              fulfillmentCreate(fulfillment: $fulfillment) {
+                fulfillment { id status }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"fulfillment": dict},
+        scope="write_merchant_managed_fulfillment_orders",
+        root="fulfillmentCreate",
+        validate=lambda key, value: key == "fulfillment" and fulfillment_input_ok(value),
+    ),
 }
 
 _GID = re.compile(r"^gid://shopify/[A-Za-z]+/\d+$")
@@ -294,6 +312,43 @@ def mailing_address_ok(value: Any) -> bool:
         return False
     if "phone" in value and not _PHONE.match(value["phone"]):
         return False
+    return True
+
+
+_TRACKING_NUMBER = re.compile(r"^[A-Za-z0-9\-]{8,34}$")
+
+
+def fulfillment_input_ok(value: Any) -> bool:
+    """The FulfillmentInput shape this project sends: which fulfilment-order lines, how many
+    of each, one carrier and one number, whether the customer hears. Nothing else."""
+    if not isinstance(value, dict) or set(value) - {"notifyCustomer", "trackingInfo", "lineItemsByFulfillmentOrder"}:
+        return False
+    if "notifyCustomer" in value and not isinstance(value["notifyCustomer"], bool):
+        return False
+    tracking = value.get("trackingInfo")
+    if tracking is not None:
+        if not isinstance(tracking, dict) or not tracking or set(tracking) - {"company", "number"}:
+            return False
+        if "company" in tracking and (not isinstance(tracking["company"], str) or not 1 <= len(tracking["company"]) <= 60 or "<" in tracking["company"]):
+            return False
+        if "number" in tracking and (not isinstance(tracking["number"], str) or not _TRACKING_NUMBER.match(tracking["number"])):
+            return False
+    orders = value.get("lineItemsByFulfillmentOrder")
+    if not isinstance(orders, list) or not orders or len(orders) > 10:
+        return False
+    for entry in orders:
+        if not isinstance(entry, dict) or set(entry) != {"fulfillmentOrderId", "fulfillmentOrderLineItems"}:
+            return False
+        if not _GID.match(str(entry["fulfillmentOrderId"])):
+            return False
+        lines = entry["fulfillmentOrderLineItems"]
+        if not isinstance(lines, list) or not lines or len(lines) > 50:
+            return False
+        for line in lines:
+            if not isinstance(line, dict) or set(line) != {"id", "quantity"} or not _GID.match(str(line["id"])):
+                return False
+            if not isinstance(line["quantity"], int) or isinstance(line["quantity"], bool) or not 1 <= line["quantity"] <= 500:
+                return False
     return True
 
 

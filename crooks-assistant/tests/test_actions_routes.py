@@ -141,7 +141,7 @@ async def test_a_missing_scope_blocks_every_commit_and_shows_in_health(client):
     assert response.status_code == 403 and response.json()["code"] == "scope_missing"
     assert client.store.mutations == []
     health = (await client.get("/health?fresh=1")).json()
-    assert health["writes"] == {"state": "blocked", "detail": "blocked — Shopify write_orders scope missing"}
+    assert health["writes"] == {"state": "blocked", "detail": "blocked — Shopify write_merchant_managed_fulfillment_orders, write_orders scope missing"}
     assert health["checks"]["writes"]["ok"] is False
 
 
@@ -691,7 +691,8 @@ async def test_the_commit_preflight_is_for_the_proposals_own_scope(client, monke
                     issued_id_args=("order_id",), write=WriteSpec(operation="fulfillment_probe", entity_kind="order", entity_arg="order_id", mutation="probe_fulfil", observe=never, execute=never, present=lambda p: {}))
     monkeypatch.setitem(registry._REGISTRY, "shopify_fulfil_probe", spec)
     health = (await client.get("/health?fresh=1")).json()
-    assert health["writes"]["state"] == "blocked" and "write_merchant_managed_fulfillment_orders" in health["writes"]["detail"]
+    assert health["writes"]["state"] == "ready", "a scope one change lacks does not block the others"
+    assert "fulfillment probe needs write_merchant_managed_fulfillment_orders" in health["writes"]["detail"]
     assert health["capabilities"]["order_note_append"]["state"] == "ready"
     assert health["capabilities"]["fulfillment_probe"]["state"] == "blocked"
     proposal = await staged(client)

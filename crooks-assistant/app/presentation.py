@@ -702,7 +702,7 @@ def present_proposal_state(
 def _done_title(proposal) -> str:
     return {
         "order_note_append": "Note added", "order_tags_add": "Tags added", "order_cancel": "Cancelled",
-        "refund_create": "Refunded", "order_shipping_address_set": "Address changed",
+        "refund_create": "Refunded", "order_shipping_address_set": "Address changed", "fulfillment_create": "Shipped",
     }.get(proposal.operation, "Done")
 
 

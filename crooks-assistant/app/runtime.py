@@ -154,11 +154,23 @@ class Runtime:
             # may well have granted. The tap decides, and Shopify decides the tap.
             log.warning("could not read the Shopify app's scopes: %s", exc)
             return WriteStatus("unknown", f"ready, unverified — Shopify did not answer the scope check ({type(exc).__name__})")
-        missing = sorted(needed - set(granted))
-        if missing:
-            return WriteStatus("blocked", f"blocked — Shopify {', '.join(missing)} scope missing")
-        names = ", ".join(sorted(op.replace("_", " ") for op in self._write_scopes() if operation is None or op == operation))
-        return WriteStatus("ready", f"ready — {names or 'no actions registered'}")
+        granted = set(granted)
+        missing = sorted(needed - granted)
+        if operation is not None:
+            if missing:
+                return WriteStatus("blocked", f"blocked — Shopify {', '.join(missing)} scope missing")
+            return WriteStatus("ready", f"ready — {operation.replace('_', ' ')}")
+        # The whole: blocked only when the store has granted none of it. A scope one change
+        # needs and the store has not granted is named, and does not stop the others.
+        scopes = self._write_scopes()
+        ready_ops = sorted(op.replace("_", " ") for op, scope in scopes.items() if scope in granted)
+        held_ops = sorted((op.replace("_", " "), scope) for op, scope in scopes.items() if scope not in granted)
+        if not ready_ops:
+            return WriteStatus("blocked", f"blocked — Shopify {', '.join(missing) or 'write'} scope missing")
+        detail = f"ready — {', '.join(ready_ops)}"
+        if held_ops:
+            detail += "; " + ", ".join(f"{op} needs {scope}" for op, scope in held_ops)
+        return WriteStatus("ready", detail)
 
     def _write_scopes(self) -> dict[str, str]:
         """operation → the Admin API scope its reviewed mutation needs, for every registered write."""

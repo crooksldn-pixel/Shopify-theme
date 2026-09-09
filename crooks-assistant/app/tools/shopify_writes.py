@@ -1072,3 +1072,283 @@ async def shopify_order_shipping_address_set(
             },
         },
     )
+
+
+# ---------------------------------------------------------------------- fulfilment
+#
+# Marking an order shipped: the Mac reads the order's own fulfilment orders and their
+# remaining lines, fulfils exactly those (or the items named, no more than remain), names
+# the carrier as Shopify names it so the number becomes a link, and says on the card whether
+# the customer hears. Not idempotent — never sent twice — and proven by the remaining
+# quantities dropping to exactly what was expected. RED with a hold: a shipping email is
+# irrevocable, and the labels in Click & Drop are a second system nobody here can see.
+
+FULFILLMENT_ORDERS_QUERY = """
+query CrooksFulfillmentOrders($id: ID!) {
+  order(id: $id) {
+    id
+    name
+    cancelledAt
+    displayFulfillmentStatus
+    displayFinancialStatus
+    customer { displayName }
+    fulfillmentOrders(first: 10) {
+      edges { node {
+        id
+        status
+        requestStatus
+        assignedLocation { name location { id } }
+        lineItems(first: 50) {
+          edges { node { id remainingQuantity totalQuantity lineItem { id title variantTitle } } }
+        }
+      } }
+    }
+  }
+}
+"""
+
+# Carriers a London label ships with, spelled exactly as Shopify's supported-tracking-company
+# list spells them (capitalisation matters to Shopify): a name from here gets a tracking link
+# built by Shopify; any other name would be stored as dead text.
+CARRIERS = (
+    "Royal Mail", "Parcelforce", "Evri", "DPD UK", "DPD Local", "DPD", "Yodel", "DHL Parcel", "DHL Express",
+    "UPS", "FedEx", "TNT", "Amazon Logistics UK", "An Post", "Whistl", "Tuffnells", "APC", "DX", "GLS",
+)
+_CARRIER_BY_KEY = {re.sub(r"[^a-z0-9]", "", c.casefold()): c for c in CARRIERS}
+_ROYAL_MAIL_S10 = re.compile(r"^[A-Z]{2}\d{9}GB$")
+_TRACKING_NUMBER = re.compile(r"^[A-Za-z0-9\-]{8,34}$")
+_FULFILLABLE = frozenset({"OPEN", "IN_PROGRESS"})
+_PAID_FOR_SHIPPING = frozenset({"PAID", "PARTIALLY_REFUNDED", "PARTIALLY_PAID"})
+
+
+async def _read_fulfillment_state(client: ShopifyClient, order_id: str) -> dict[str, Any]:
+    payload = await client.graphql(FULFILLMENT_ORDERS_QUERY, {"id": order_id})
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+def _fulfillment_orders(node: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every fulfilment order on the order, each with its lines and what remains of them."""
+    out = []
+    for edge in ((node.get("fulfillmentOrders") or {}).get("edges") or []):
+        fo = edge.get("node") or {}
+        if not fo.get("id"):
+            continue
+        location = fo.get("assignedLocation") or {}
+        lines = []
+        for line_edge in ((fo.get("lineItems") or {}).get("edges") or []):
+            line = line_edge.get("node") or {}
+            item = line.get("lineItem") or {}
+            if line.get("id"):
+                lines.append({
+                    "id": str(line["id"]), "line_item_id": str(item.get("id") or ""), "remaining": int(line.get("remainingQuantity") or 0),
+                    "total": int(line.get("totalQuantity") or 0), "title": str(item.get("title") or ""), "variant": str(item.get("variantTitle") or ""),
+                })
+        out.append({
+            "id": str(fo["id"]), "status": str(fo.get("status") or "").upper(), "request": str(fo.get("requestStatus") or "").upper(),
+            "location_id": str((location.get("location") or {}).get("id") or ""), "location": str(location.get("name") or ""), "lines": lines,
+        })
+    return out
+
+
+def _remaining_hash(remaining: dict[str, int]) -> str:
+    """Sixteen hex characters for "which fulfilment-order lines have how many left": the
+    state a fulfilment changes, and the state that proves it."""
+    return hashlib.sha256(json.dumps(sorted(remaining.items())).encode("utf-8")).hexdigest()[:16]
+
+
+def fulfil_fingerprint(node: dict[str, Any]) -> dict[str, Any]:
+    orders = _fulfillment_orders(node)
+    remaining = {line["id"]: line["remaining"] for fo in orders for line in fo["lines"]}
+    return {
+        "fulfillment": str(node.get("displayFulfillmentStatus") or ""), "cancelled": bool(node.get("cancelledAt")),
+        "remaining": _remaining_hash(remaining), "lines": len(remaining),
+    }
+
+
+async def _observe_fulfil(execution: dict) -> Observed:
+    node = await _read_fulfillment_state(_c(), str(execution["order_id"]))
+    return Observed(fingerprint=fulfil_fingerprint(node), entity=None)
+
+
+async def _execute_fulfil(execution: dict) -> dict:
+    client = _c()
+    order_id = str(execution["order_id"])
+    payload = await client.mutate("fulfillment_create", {"fulfillment": dict(execution["input"])})
+    hydrator().forget(order_id)
+    fulfillment = ((payload.get("data") or {}).get("fulfillmentCreate") or {}).get("fulfillment") or {}
+    if not fulfillment.get("id"):
+        raise ShopifyError("Shopify did not confirm the fulfilment.")
+    return {"fulfillment_id": str(fulfillment["id"]), "status": str(fulfillment.get("status") or "")}
+
+
+def _verify_fulfil(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
+    """What remained to ship dropped by exactly what was sent: proven from the state, not
+    from the answer. A shipment that then reads oddly in Shopify is said out loud."""
+    if observed.get("remaining") != execution.get("expected_remaining"):
+        return False, ""
+    status = str(observed.get("fulfillment") or "").upper()
+    if execution.get("complete") and status != "FULFILLED":
+        return True, "Shopify still shows the order as not fully shipped; check it."
+    return True, ""
+
+
+def _present_fulfil(proposal) -> dict:
+    s = proposal.summary
+    tracking = str(s.get("tracking") or "")
+    facts = [
+        {"label": "Items", "value": str(s.get("items_words") or "")},
+        {"label": "From", "value": str(s.get("location") or "")},
+        {"label": "Carrier", "value": str(s.get("carrier") or "")},
+        {"label": "Tracking", "value": (tracking + (f" · {s['tracking_warning']}" if s.get("tracking_warning") else "")) if tracking else "none", "tone": "warn" if (s.get("tracking_warning") or not tracking) else ""},
+        {"label": "Customer emailed", "value": "yes — with the tracking link" if s.get("notify") and tracking else ("yes" if s.get("notify") else "no")},
+    ]
+    return {
+        "title": "Mark as shipped", "summary": "",
+        "detail": "Marks every item shipped." if s.get("complete") else "Marks these items shipped; the rest stay open.",
+        "facts": facts, "done_title": "Shipped",
+    }
+
+
+@tool(
+    name="shopify_order_fulfil",
+    description=(
+        "Prepare to mark one order shipped: every item still to ship, or only the items named "
+        "(by line_item_id from the order detail). The carrier and tracking number go on the "
+        "fulfilment, and store policy decides whether the customer is emailed. Staged for the "
+        "owner to apply with a hold on the tablet; nothing ships by calling it."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "tracking_number": {"type": "string", "maxLength": 40, "description": "The carrier's tracking number, if there is one."},
+            "carrier": {"type": "string", "maxLength": 40, "description": "The carrier, e.g. Royal Mail, Evri, DPD. Leave out for the store's usual one."},
+            "items": {
+                "type": "array", "maxItems": 12,
+                "items": {"type": "object", "properties": {"line_item_id": {"type": "string"}, "quantity": {"type": "integer"}}, "required": ["line_item_id", "quantity"]},
+                "description": "Only these items, with quantities. Leave out to ship everything still open.",
+            },
+        },
+        "required": ["order_id"],
+    },
+    tier=Tier.RED,
+    issued_id_args=("order_id",),
+    write=WriteSpec(
+        operation="fulfillment_create",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="fulfillment_create",
+        observe=_observe_fulfil,
+        execute=_execute_fulfil,
+        present=_present_fulfil,
+        entity=_entity_after,
+        verify=_verify_fulfil,
+        op_class="irreversible",
+        reversible=False,
+        spoken_success="Order {label} marked as shipped.",
+        spoken_failure="I couldn't confirm the fulfilment. Check the order before asking again.",
+        spoken_stale="The order's items changed since this was prepared. Nothing was sent.",
+    ),
+)
+async def shopify_order_fulfil(order_id: str, tracking_number: str = "", carrier: str = "", items: list | None = None) -> Prepared:
+    """Prepare, never send: the fulfilment orders as they are now, the lines to ship decided
+    here, the carrier named as Shopify names it, and the fingerprint the engine must see
+    again before it sends."""
+    settings = policy()
+    carrier_key = re.sub(r"[^a-z0-9]", "", str(carrier or getattr(settings, "carrier", "Royal Mail") or "").casefold())
+    carrier_name = _CARRIER_BY_KEY.get(carrier_key)
+    if carrier_name is None:
+        raise ToolError("The carrier must be one Shopify knows: " + ", ".join(CARRIERS[:8]) + ", …")
+    tracking = re.sub(r"\s+", "", str(tracking_number or "")).upper()
+    if tracking and not _TRACKING_NUMBER.match(tracking):
+        raise ToolError("The tracking number must be letters, digits and dashes, 8 to 34 characters.")
+    tracking_warning = ""
+    if tracking and carrier_name == "Royal Mail" and not _ROYAL_MAIL_S10.match(tracking):
+        tracking_warning = "not the usual Royal Mail form (two letters, nine digits, GB)"
+    items = items or []
+    if not isinstance(items, list) or len(items) > 12:
+        raise ToolError("Give up to twelve items.")
+
+    node = await _read_fulfillment_state(_c(), str(order_id))
+    label = str(node.get("name") or "")
+    if node.get("cancelledAt"):
+        raise ToolError(f"Order {label} is cancelled; it cannot be shipped.")
+    financial = str(node.get("displayFinancialStatus") or "").upper()
+    if financial not in _PAID_FOR_SHIPPING:
+        raise ToolError(f"Order {label} is {financial.lower().replace('_', ' ') or 'not paid'}; it should not ship yet.")
+    open_orders = [fo for fo in _fulfillment_orders(node) if fo["status"] in _FULFILLABLE and any(line["remaining"] > 0 for line in fo["lines"])]
+    if not open_orders:
+        raise ToolError(f"Order {label} has nothing left to ship.")
+    locations = {fo["location_id"] for fo in open_orders}
+    if len(locations) > 1:
+        raise ToolError(f"Order {label} is split across locations; fulfil it in Admin.")
+
+    # Which lines, how many: everything that remains, or exactly the items named.
+    by_line_item = {line["line_item_id"]: (fo, line) for fo in open_orders for line in fo["lines"] if line["remaining"] > 0}
+    chosen: dict[str, tuple[dict, dict, int]] = {}
+    if items:
+        for item in items:
+            if not isinstance(item, dict):
+                raise ToolError("Each item needs a line_item_id and a quantity.")
+            line_id = str(item.get("line_item_id") or "")
+            try:
+                quantity = int(item.get("quantity"))
+            except (TypeError, ValueError):
+                raise ToolError("Each item needs a whole-number quantity.") from None
+            found = by_line_item.get(line_id)
+            if found is None:
+                raise ToolError(f"{line_id or 'that item'} is not still to ship on order {label}.")
+            fo, line = found
+            if quantity < 1 or quantity > line["remaining"]:
+                raise ToolError(f"Only {line['remaining']} of {line['title']} remain to ship.")
+            chosen[line["id"]] = (fo, line, quantity)
+    else:
+        for fo in open_orders:
+            for line in fo["lines"]:
+                if line["remaining"] > 0:
+                    chosen[line["id"]] = (fo, line, line["remaining"])
+
+    by_order: dict[str, list[dict[str, Any]]] = {}
+    for fo, line, quantity in chosen.values():
+        by_order.setdefault(fo["id"], []).append({"id": line["id"], "quantity": quantity})
+    fulfillment_input: dict[str, Any] = {
+        "notifyCustomer": bool(getattr(settings, "fulfil_notify", False)),
+        "lineItemsByFulfillmentOrder": [{"fulfillmentOrderId": fo_id, "fulfillmentOrderLineItems": lines} for fo_id, lines in by_order.items()],
+    }
+    if tracking:
+        fulfillment_input["trackingInfo"] = {"company": carrier_name, "number": tracking}
+
+    # What remains once this ships, for the proof; complete when nothing remains anywhere.
+    remaining = {line["id"]: line["remaining"] for fo in _fulfillment_orders(node) for line in fo["lines"]}
+    for line_id, (_, _, quantity) in chosen.items():
+        remaining[line_id] = max(0, remaining.get(line_id, 0) - quantity)
+    complete = all(count == 0 for count in remaining.values())
+    units = sum(quantity for _, _, quantity in chosen.values())
+    items_words = ", ".join(
+        f"{line['title']}{' ' + line['variant'] if line['variant'] else ''}{' ×' + str(quantity) if quantity > 1 else ''}" for _, line, quantity in chosen.values()
+    )
+    notify = fulfillment_input["notifyCustomer"]
+    digits = label.rsplit("-", 1)[-1].lstrip("#")
+    read_back = f"mark order {digits} as shipped{'' if complete else ' in part'} with {carrier_name}"
+    read_back += f", tracking {tracking}" if tracking else ", no tracking number"
+    read_back += ", emailing the customer" if notify else ", without emailing the customer"
+    return Prepared(
+        execution={
+            "order_id": str(order_id), "input": fulfillment_input, "expected_remaining": _remaining_hash(remaining), "complete": complete,
+        },
+        before=fulfil_fingerprint(node),
+        expected_after={"remaining": _remaining_hash(remaining)},
+        entity_ref=str(order_id),
+        entity_label=label,
+        summary={
+            "customer": str((node.get("customer") or {}).get("displayName") or ""), "items_words": items_words, "units": units,
+            "location": open_orders[0]["location"], "carrier": carrier_name, "tracking": tracking, "tracking_warning": tracking_warning,
+            "notify": notify, "complete": complete, "read_back": read_back,
+            "ledger": {
+                "lines": len(chosen), "units": units, "carrier": carrier_name[:24], "tracked": bool(tracking), "notify": notify, "complete": complete,
+            },
+        },
+    )

@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     cancel_notify: bool = True
     # Whether a refund emails the customer. Policy, printed on the card.
     refund_notify: bool = True
+    # Marking an order shipped: the carrier Shopify is told (exactly as Shopify names it, so
+    # the tracking number becomes a link) and whether the shipping email goes out. Off by
+    # default: Click & Drop or Admin may already send one; printed on the card either way.
+    carrier: str = "Royal Mail"
+    fulfil_notify: bool = False
     # Sending email. Off (the default): the assistant drafts and the draft stays a card.
     # On is not enough by itself: the inbox must have been re-authorised with the send scope
     # (scripts/gmail_auth.py --send), which is a deliberate step the owner takes once.
