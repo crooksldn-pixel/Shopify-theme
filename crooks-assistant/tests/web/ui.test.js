@@ -23,6 +23,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'assistant', 'order', 'order_list', 'customer', 'customer_list', 'product', 'inventory',
     'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation',
     'success', 'error', 'context_stack',
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend',
   ]));
 });
 
@@ -676,4 +677,71 @@ test('the attention card follows the order it reads and is replaced by a later r
   assert.ok(textOf(parent.childNodes[1]).includes('Oversold') && !textOf(parent.childNodes[1]).includes('Customer emailed'));
   UI.hydrateOrder(order, { order_id: 'gid://shopify/Order/1', pending: [], attention: [] });
   assert.deepEqual(parent.childNodes.map((n) => n.dataset.type), ['order', 'assistant']);
+});
+
+
+// ---- the read layer's cards
+
+test('a ranking draws rank, label, the primary figure, a bar and the totals, all as text', () => {
+  const out = UI.render([{ type: 'ranking', data: {
+    title: 'Best sellers', subtitle: 'last 30 days', mode: '',
+    rows: [
+      { rank: 1, label: 'Convict Joggers', ref: 'gid://shopify/Product/1', kind: 'product', primary: { key: 'units', label: 'units', value: '41' }, secondary: { key: 'revenue', label: 'revenue', value: '£1,845.00' }, pct: 54, lines: [], known: true },
+      { rank: 2, label: HOSTILE, ref: '', kind: '', primary: { key: 'units', label: 'units', value: '22' }, secondary: null, pct: 29, lines: [], known: true },
+    ],
+    totals: [{ key: 'units', label: 'units', value: '76' }], measured: ['units', 'revenue'], derived: ['share'], note: 'From the last 30 days.', complete: true, truncated: false,
+  } }]);
+  assert.equal(out.nodes.length, 1);
+  const node = out.nodes[0];
+  assert.equal(node.dataset.type, 'ranking');
+  const ranks = node.querySelectorAll('.rank');
+  assert.equal(ranks.length, 2);
+  assert.equal(ranks[0].dataset.ref, 'gid://shopify/Product/1');
+  assert.equal(ranks[0].querySelector('.rank-v').textContent, '41');
+  assert.equal(ranks[0].querySelector('.rank-fill').style.getPropertyValue('--w'), '54%');
+  assert.ok(textOf(ranks[1]).includes(HOSTILE), 'a hostile label is drawn as text');
+  assert.equal(node.querySelectorAll('img').length, 0);
+  assert.ok(textOf(node).includes('76') && textOf(node).includes('Derived: share') && textOf(node).includes('From the last 30 days.'));
+});
+
+test('restock priority shows measured and derived lines and marks unknown stock', () => {
+  const out = UI.render([{ type: 'ranking', data: { title: 'Restock priority', subtitle: 'last 7 days', mode: 'restock', rows: [
+    { rank: 1, label: 'Convict Joggers · Black / L', primary: { key: 'days_cover', label: 'days cover', value: '1.6' }, secondary: { key: 'stock', label: 'in stock', value: '3' }, pct: null, lines: [{ key: 'stock', label: 'in stock', value: '3', derived: false }, { key: 'velocity', label: 'a day', value: '1.86', derived: true }], known: true },
+    { rank: 2, label: 'Yard Jeans · Blue / M', primary: { key: 'days_cover', label: 'days cover', value: '—' }, secondary: null, pct: null, lines: [], known: false },
+  ], totals: [], measured: ['units', 'stock'], derived: ['velocity', 'days_cover'], note: 'Not a forecast.', complete: true } }]);
+  const node = out.nodes[0];
+  const ranks = node.querySelectorAll('.rank');
+  assert.ok(ranks[1].classList.contains('is-unknown'));
+  assert.equal(ranks[0].querySelectorAll('.rank-fill').length, 0, 'no bar for a cover');
+  const lines = ranks[0].querySelectorAll('.rank-lines')[0].children;
+  assert.equal(lines[1].className, 'derived');
+  assert.ok(textOf(node).includes('Not a forecast.'));
+});
+
+test('a table, a comparison, a matrix, a trend and a metric group all render from strings', () => {
+  const items = [
+    { type: 'table', data: { title: 'By product', subtitle: 'this month', columns: [{ key: 'product', label: 'Product', numeric: false }, { key: 'units', label: 'units', numeric: true }], rows: [{ ref: 'gid://shopify/Product/1', cells: ['Convict Joggers', '41'] }], note: '', truncated: true, complete: true } },
+    { type: 'comparison', data: { title: 'This week against last', subtitle: 'this week', current: { label: 'this week', metrics: [{ key: 'revenue', label: 'revenue', value: '£4,812.00' }] }, previous: { label: 'last week', metrics: [{ key: 'revenue', label: 'revenue', value: '£4,109.00' }] }, changes: [{ key: 'revenue', label: 'revenue', delta: '+£703.00', pct: '+17.1%', direction: 'up' }], note: '', complete: true } },
+    { type: 'variant_matrix', data: { title: 'Units by colour and size', subtitle: 'this month', row_label: 'Colour', col_label: 'Size', rows: ['Black', 'Pink'], cols: ['S', 'M', 'L'], cells: [{ row: 'Black', col: 'L', value: 13, display: '13' }, { row: 'Pink', col: 'M', value: 5, display: '5' }], metric: 'units', note: '' } },
+    { type: 'trend', data: { title: 'Revenue by day', subtitle: 'last 7 days', metric: 'revenue', points: [{ label: '2026-09-07', value: 120.5, display: '£120.50' }, { label: '2026-09-08', value: 300, display: '£300.00' }], total: '£420.50', note: '' } },
+    { type: 'metric_group', data: { title: 'Unfulfilled', subtitle: 'last 90 days', metrics: [{ key: 'orders', label: 'orders', value: '23', measured: true }, { key: 'aov', label: 'avg order', value: '£64.39', measured: false }], note: '', complete: false } },
+  ];
+  const out = UI.render(items);
+  assert.deepEqual(out.skipped, []);
+  assert.equal(out.nodes.length, 5);
+  assert.ok(out.hasContext);
+  const [table, comparison, matrix, trend, metrics] = out.nodes;
+  assert.equal(table.querySelectorAll('td').length, 2);
+  assert.equal(table.querySelectorAll('td')[1].className, 'num');
+  assert.ok(textOf(table).includes('More rows than shown.'));
+  assert.equal(comparison.querySelectorAll('.change')[0].className, 'change up');
+  assert.ok(textOf(comparison).includes('+£703.00') && textOf(comparison).includes('last week'));
+  assert.equal(matrix.querySelectorAll('th').length, 4);
+  const cells = matrix.querySelectorAll('td');
+  assert.equal(cells.length, 8, 'two rows, a label and three sizes each');
+  assert.ok(cells.some((c) => c.className === 'hot' && c.textContent === '13'));
+  assert.equal(trend.querySelectorAll('.bar').length, 2);
+  assert.equal(trend.querySelectorAll('.bar')[1].dataset.pct, '100');
+  assert.ok(textOf(trend).includes('£420.50'));
+  assert.ok(textOf(metrics).includes('avg order · derived') && textOf(metrics).includes('Partial'));
 });

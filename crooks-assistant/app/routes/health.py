@@ -187,5 +187,7 @@ async def _health(runtime) -> dict:
         },
         "writes": {"state": writes.state, "detail": writes.detail},
         "capabilities": capabilities,
+        # The recent orders the read layer answers from: how many, how far back, how fresh.
+        "orders_cache": runtime.order_cache.status() if getattr(runtime, "order_cache", None) is not None else None,
         "checks": checks,
     }

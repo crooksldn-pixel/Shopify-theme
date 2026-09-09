@@ -49,6 +49,8 @@ class Runtime:
     # The test-session timeline (app/observability): off unless a session is active.
     tests: Any = None
     timeline: Any = None
+    # The recent orders the read layer answers from (app/analytics/cache.py).
+    order_cache: Any = None
     started_at: float = field(default_factory=time.time)
     build: str = ""
     _catalogue_refreshed_at: float = 0.0
@@ -57,6 +59,16 @@ class Runtime:
     @property
     def uptime_s(self) -> float:
         return time.time() - self.started_at
+
+    def warm_orders_soon(self) -> None:
+        """Start reading the recent window of orders in the background, so the first question
+        about sales or stock is answered from memory. Never awaited by a turn."""
+        if self.order_cache is None or int(getattr(self.settings, "analytics_warm_days", 0) or 0) <= 0:
+            return
+        try:
+            self.order_cache.warm(int(self.settings.analytics_warm_days))
+        except Exception as exc:  # noqa: BLE001 — a cold cache is a slower first answer, not a fault
+            log.debug("order cache warm-up not started: %s", exc)
 
     def refresh_catalogue_soon(self) -> None:
         """Kick the hourly catalogue refresh off beside the current turn rather than in front
@@ -344,6 +356,7 @@ def build(settings: Settings | None = None) -> Runtime:
 
     # Register the tool modules. Importing them is what runs the @tool decorators.
     from app.tools import (  # noqa: F401
+        analytics_tools,
         gmail_tools,
         gmail_writes,
         mock,
@@ -352,6 +365,10 @@ def build(settings: Settings | None = None) -> Runtime:
     )
 
     shopify_tools.bind(shopify)
+    from app.analytics.cache import OrderCache
+
+    order_cache = OrderCache(lambda: runtime.shopify)
+    analytics_tools.bind(order_cache)
     gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(shopify))
 
     kb = load(settings.kb_dir)
@@ -403,7 +420,10 @@ def build(settings: Settings | None = None) -> Runtime:
         actions=actions,
         tests=tests,
         timeline=timeline,
+        order_cache=order_cache,
     )
+    # A change applied to an order makes what the cache holds of it stale: dropped, re-read.
+    shopify_tools.hydrator().on_forget.append(order_cache.invalidate)
     # The write policy (refund on cancel, restock, notify) is the runtime's settings, read
     # at prepare time, so a test's configured runtime is what the card prints.
     shopify_writes.bind_policy(lambda: runtime.settings)

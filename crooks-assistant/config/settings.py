@@ -118,6 +118,11 @@ class Settings(BaseSettings):
     gmail_signature: str = "CROOKS"
     gmail_link_hosts: str = "crooksldn.com,royalmail.com,parcelforce.com,evri.com,dpd.co.uk,yodel.co.uk"
 
+    # --- the read layer ---
+    # How many days of orders the Mac reads into memory at boot, so the first question about
+    # sales or stock is answered from memory. 0 leaves the cache cold until asked.
+    analytics_warm_days: int = 90
+
     # --- behaviour ---
     tool_timeout_s: float = 8.0
     session_idle_timeout_s: int = 1800

@@ -135,4 +135,10 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
         assert len(spec.description) <= 600, f"{spec.name}: {len(spec.description)} chars of description"
         assert "spoken yes" not in spec.description, f"{spec.name}: the staging rules belong in the prompt"
     total = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered)
-    assert total <= 16_000, f"the tool block is {total} bytes"
+    # 16,000 held the narrow tools. The read layer (commerce_aggregate, commerce_query,
+    # inventory_query, commerce_capabilities) is four tools for the questions that used to
+    # need one each; its schemas are terse and the language's detail lives in
+    # commerce_capabilities, called on demand. The four cost about 4.5 KB together.
+    assert total <= 21_000, f"the tool block is {total} bytes"
+    analytic = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith(("commerce_", "inventory_query")))
+    assert analytic <= 5_000, f"the read layer's schemas are {analytic} bytes; the detail belongs in commerce_capabilities"

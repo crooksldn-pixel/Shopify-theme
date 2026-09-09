@@ -133,6 +133,28 @@ change anything, anywhere: you cannot send email, edit an order, refund, or upda
 asked to do any of those, say plainly that you can look things up but not change them. An \
 order's `attention` lines are the Mac's own reading of it; mention what matters, briefly."""
 
+ANALYTICS_GUIDANCE = """\
+
+# Working things out
+
+Questions about what sold, to whom, when, how much, and what is running out are answered by \
+composing the read tools, not by looking for a tool named after the question. \
+commerce_aggregate counts and totals orders over a period, grouped by product, size, colour, \
+day, customer and more, with a comparison to the period before; commerce_query lists the \
+orders or customers that match and gives you a working set id for them; inventory_query ranks \
+variants by how soon they run out. Best sellers, sales by size, this week against last, \
+average order value, customers who spent over a figure, orders older than five days still to \
+ship, what needs restocking: all one or two calls. Periods are in London time: today, \
+yesterday, this_week, last_week, this_month, last_month, last_7_days, last_30_days. Before you \
+say a question about sales, products, customers or stock cannot be answered, call \
+commerce_capabilities and look. A follow-up keeps the last question's shape: "just this week" \
+is the same query with a new period, "by size" the same query grouped by size, "only \
+joggers" the same query with a product filter; "these" and "those" are the working set the \
+last listing made — pass its set_id in filters.in_set rather than repeating the filters. Say \
+figures the tool returned and never invent one; when the result says it is not complete, say \
+so in a few words. Derived figures (velocity, days of cover, average order value) are the \
+Mac's estimates from measured ones: say "about" and never promise them."""
+
 WRITE_CAPABILITIES = """\
 You have read access to the CROOKS Shopify store and the CROOKS email inbox, and a few tools \
 that PROPOSE a change (each one's description says what it prepares: shopify_order_note_append \
@@ -166,5 +188,5 @@ def build_system_prompt(kb: KnowledgeBase, *, writes_enabled: bool = False) -> s
         section = f"# Knowledge base\n\n{kb.text}"
     return SYSTEM_PROMPT_TEMPLATE.format(
         kb_section=section,
-        capabilities_section=WRITE_CAPABILITIES if writes_enabled else READ_ONLY_CAPABILITIES,
+        capabilities_section=(WRITE_CAPABILITIES if writes_enabled else READ_ONLY_CAPABILITIES) + ANALYTICS_GUIDANCE,
     )

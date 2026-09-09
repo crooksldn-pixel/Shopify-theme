@@ -525,6 +525,7 @@ class Hydrator:
         # call a moment after the search finds the order already in hand.
         self._cores: dict[str, tuple[asyncio.Future, float]] = {}
         self.core_reads = 0
+        self.on_forget: list[Callable[[str], None]] = []
 
     # -------------------------------------------------------------- order
 
@@ -597,8 +598,14 @@ class Hydrator:
         return {**history, "email_threads": email}
 
     def forget(self, order_id: str) -> None:
-        """The order has just been changed: whatever was held of it is no longer it."""
+        """The order has just been changed: whatever was held of it is no longer it — here,
+        and in whatever else holds a copy (the read layer's cache)."""
         self._cores.pop(order_id, None)
+        for listener in list(self.on_forget):
+            try:
+                listener(order_id)
+            except Exception:  # noqa: BLE001 — a listener never stops the forgetting
+                log.debug("forget listener failed", exc_info=True)
 
     # --------------------------------------------------------- internals
 

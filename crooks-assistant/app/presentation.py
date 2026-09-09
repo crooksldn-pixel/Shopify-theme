@@ -33,7 +33,10 @@ UI_TYPES = frozenset({
     "assistant", "order", "order_list", "customer", "customer_list", "product", "inventory",
     "sales_summary", "email_list", "email_thread", "email_draft", "attention", "confirmation",
     "success", "error", "context_stack",
+    # the read layer's cards (app/analytics/present.py)
+    "metric_group", "ranking", "table", "comparison", "variant_matrix", "trend",
 })
+ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query"})
 
 # Bounds. The tablet is 8 inches wide; more than this is a spreadsheet, not an answer.
 MAX_ORDERS = 10
@@ -146,6 +149,10 @@ def present(
 
 
 def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
+    if name in ANALYTIC_TOOLS:
+        from app.analytics.present import build
+
+        return build(result, tool=name)
     if name == "shopify_order_detail":
         return [_ui("order", _order(result, detail=True))]
     if name == "shopify_find_order":
@@ -176,6 +183,7 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
             "count": _int(result.get("count")) or len(orders),
             "truncated": bool(result.get("truncated")),
             "orders": orders,
+            "value": "",
         })]
     if name == "shopify_customer_history":
         card = _customer(result)

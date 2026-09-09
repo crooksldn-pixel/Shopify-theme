@@ -1066,6 +1066,138 @@
     ], opts);
   }
 
+  // ---- the read layer's cards: figures the Mac formatted, drawn as text and bars.
+
+  function analyticHead(kicker_, d, fallback) {
+    return h('div', { class: 'card-head' }, [h('div', {}, [kicker(kicker_), h('h2', { class: 'card-title', text: text(d.title, fallback) }), h('p', { class: 'card-meta', text: text(d.subtitle) })])]);
+  }
+
+  function analyticFoot(d) {
+    return [
+      d.complete === false ? h('p', { class: 'card-note', text: 'Partial: the Mac is still reading Shopify.' }) : null,
+      d.truncated ? h('p', { class: 'card-note', text: 'More rows than shown.' }) : null,
+      d.note ? h('p', { class: 'card-note', text: text(d.note) }) : null,
+    ];
+  }
+
+  function legend(d) {
+    const measured = Array.isArray(d.measured) ? d.measured : [];
+    const derived = Array.isArray(d.derived) ? d.derived : [];
+    if (!derived.length) return null;
+    return h('p', { class: 'legend' }, [
+      measured.length ? h('span', { text: `Measured: ${measured.join(', ')}` }) : null,
+      h('span', { class: 'derived', text: `Derived: ${derived.join(', ')}` }),
+    ]);
+  }
+
+  function renderRanking(d, opts) {
+    const rows = list(d.rows, 25);
+    const kick = d.mode === 'restock' ? 'Restock priority' : 'Ranking';
+    return card('ranking', [
+      analyticHead(kick, d, d.mode === 'restock' ? 'Restock priority' : 'Best sellers'),
+      h('ol', { class: 'rank-rows' }, rows.map((r) => {
+        const primary = r.primary && typeof r.primary === 'object' ? r.primary : {};
+        const secondary = r.secondary && typeof r.secondary === 'object' ? r.secondary : null;
+        const pct = num(r.pct);
+        const fill = pct === null ? null : h('span', { class: 'rank-fill' });
+        if (fill && fill.style && fill.style.setProperty) fill.style.setProperty('--w', `${Math.max(0, Math.min(100, pct))}%`);
+        const li = h('li', { class: `rank${r.known === false ? ' is-unknown' : ''}`, data: { ref: text(r.ref), kind: text(r.kind) } }, [
+          h('span', { class: 'rank-n', text: num(r.rank) === null ? '' : String(r.rank) }),
+          h('div', { class: 'rank-main' }, [
+            h('div', { class: 'rank-label', text: text(r.label, '—') }),
+            r.sublabel ? h('div', { class: 'rank-sub', text: text(r.sublabel) }) : null,
+            fill ? h('div', { class: 'rank-track' }, fill) : null,
+            list(r.lines, 6).length ? h('div', { class: 'rank-lines' }, list(r.lines, 6).map((l) => h('span', { class: l.derived ? 'derived' : '', text: `${text(l.value, '—')} ${text(l.label)}` }))) : null,
+          ]),
+          h('div', { class: 'rank-side' }, [
+            h('div', { class: 'rank-v', text: text(primary.value, '—') }),
+            h('div', { class: 'rank-k', text: text(primary.label) }),
+            secondary ? h('div', { class: 'card-meta', text: `${text(secondary.value, '—')} ${text(secondary.label)}` }) : null,
+          ]),
+        ]);
+        return li;
+      })),
+      list(d.totals, 4).length ? h('div', { class: `stats${list(d.totals, 4).length === 3 ? ' three' : ''}` }, list(d.totals, 4).map((t) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(t.value, '—') }), h('div', { class: 'stat-k', text: text(t.label) })]))) : null,
+      legend(d),
+    ].concat(analyticFoot(d)), opts);
+  }
+
+  function renderMetricGroup(d, opts) {
+    const metrics = list(d.metrics, 6);
+    return card('metric_group', [
+      analyticHead('Figures', d, 'Sales'),
+      h('div', { class: `stats${metrics.length === 3 ? ' three' : ''}` }, metrics.map((m) => h('div', { class: 'stat' }, [
+        h('div', { class: 'stat-v', text: text(m.value, '—') }),
+        h('div', { class: 'stat-k', text: `${text(m.label)}${m.measured === false ? ' · derived' : ''}` }),
+      ]))),
+    ].concat(analyticFoot(d)), opts);
+  }
+
+  function renderTable(d, opts) {
+    const columns = list(d.columns, 8);
+    const rows = list(d.rows, 25);
+    return card('table', [
+      analyticHead('Table', d, 'Table'),
+      h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl' }, [
+        h('thead', {}, h('tr', {}, columns.map((c) => h('th', { class: c.numeric ? 'num' : '', text: text(c.label) })))),
+        h('tbody', {}, rows.map((r) => h('tr', { data: { ref: text(r.ref) } }, (Array.isArray(r.cells) ? r.cells.slice(0, 8) : []).map((cell, i) => h('td', { class: columns[i] && columns[i].numeric ? 'num' : '', text: text(cell, '—') }))))),
+      ])),
+    ].concat(analyticFoot(d)), opts);
+  }
+
+  function renderComparison(d, opts) {
+    const current = d.current && typeof d.current === 'object' ? d.current : {};
+    const previous = d.previous && typeof d.previous === 'object' ? d.previous : {};
+    const col = (side, cls) => h('div', { class: `compare-col ${cls}` }, [
+      h('div', { class: 'compare-k', text: text(side.label, cls === 'now' ? 'This period' : 'Before') }),
+      list(side.metrics, 4).map((m) => h('div', { class: 'compare-row' }, [h('span', { class: 'card-meta', text: text(m.label) }), h('strong', { text: text(m.value, '—') })])),
+    ]);
+    return card('comparison', [
+      analyticHead('Compared', d, 'Compared'),
+      h('div', { class: 'compare' }, [col(current, 'now'), col(previous, 'then')]),
+      list(d.changes, 4).length ? h('div', { class: 'changes' }, list(d.changes, 4).map((c) => h('span', { class: `change ${text(c.direction, 'flat')}`, text: `${text(c.label)} ${text(c.delta, '')} (${text(c.pct, '—')})`.replace('  ', ' ') }))) : null,
+    ].concat(analyticFoot(d)), opts);
+  }
+
+  function renderVariantMatrix(d, opts) {
+    const rows = Array.isArray(d.rows) ? d.rows.slice(0, 12).map((r) => text(r)) : [];
+    const cols = Array.isArray(d.cols) ? d.cols.slice(0, 10).map((c) => text(c)) : [];
+    const cells = list(d.cells, 64);
+    const at = (r, c) => cells.find((x) => text(x.row) === r && text(x.col) === c);
+    let top = 0;
+    for (const c of cells) top = Math.max(top, num(c.value) || 0);
+    return card('variant_matrix', [
+      analyticHead('By size', d, 'Sizes'),
+      h('div', { class: 'matrix-wrap' }, h('table', { class: 'matrix' }, [
+        h('thead', {}, h('tr', {}, [h('th', { text: text(d.row_label) })].concat(cols.map((c) => h('th', { text: c }))))),
+        h('tbody', {}, rows.map((r) => h('tr', {}, [h('td', { text: r })].concat(cols.map((c) => {
+          const cell = at(r, c);
+          const value = cell ? num(cell.value) : null;
+          return h('td', { class: value === null ? 'zero' : (top && value === top ? 'hot' : ''), text: cell ? text(cell.display, '—') : '·' });
+        }))))),
+      ])),
+      d.metric ? h('p', { class: 'card-meta', text: text(d.metric) }) : null,
+    ].concat(analyticFoot(d)), opts);
+  }
+
+  function renderTrend(d, opts) {
+    const points = list(d.points, 31);
+    const values = points.map((p) => Math.max(0, num(p.value) || 0));
+    const top = Math.max(1, ...values);
+    return card('trend', [
+      analyticHead('Trend', d, 'Trend'),
+      d.total ? h('div', { class: 'trend-total', text: text(d.total) }) : null,
+      points.length ? h('div', { class: 'bars', 'aria-hidden': 'true' }, points.map((p, i) => {
+        const pct = Math.max(4, Math.min(100, Math.round((values[i] / top) * 100)));
+        const bar = h('span', { class: 'bar', data: { pct: String(pct) } });
+        if (bar.style) bar.style.height = `${pct}%`;
+        return h('span', { class: 'bar-col', title: text(p.label) }, [bar, h('span', { class: 'bar-day', text: text(p.label).slice(-2) })]);
+      })) : null,
+      points.length ? h('ul', { class: 'rows compact' }, points.slice(-7).map((p) => h('li', { class: 'row' }, [h('span', { class: 'row-main', text: text(p.label) }), h('span', { class: 'row-side' }, h('strong', { text: text(p.display, '—') }))]))) : null,
+      d.metric ? h('p', { class: 'card-meta', text: text(d.metric) }) : null,
+    ].concat(analyticFoot(d)), opts);
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1082,9 +1214,16 @@
     confirmation: renderConfirmation,
     success: renderSuccess,
     error: renderError,
+    metric_group: renderMetricGroup,
+    ranking: renderRanking,
+    table: renderTable,
+    comparison: renderComparison,
+    variant_matrix: renderVariantMatrix,
+    trend: renderTrend,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
-  const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant'];
+  const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend'];
 
   function isValid(item) {
     return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'

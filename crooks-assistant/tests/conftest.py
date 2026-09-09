@@ -12,6 +12,8 @@ _TEST_STATE = tempfile.mkdtemp(prefix="crooks-tests-")
 os.environ.setdefault("CROOKS_LOG_DIR", os.path.join(_TEST_STATE, "logs"))
 os.environ.setdefault("CROOKS_BENCH_AUDIO_DIR", os.path.join(_TEST_STATE, "bench"))
 os.environ.setdefault("CROOKS_SAVE_CAPTURES", "false")
+# The read layer's cache is not warmed at boot under test: each test binds the store it wants.
+os.environ.setdefault("CROOKS_ANALYTICS_WARM_DAYS", "0")
 
 from app.clients.shopify import ShopifyClient  # noqa: E402 — after the environment above
 from app.secrets import keychain  # noqa: E402

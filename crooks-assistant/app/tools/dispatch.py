@@ -16,6 +16,7 @@ from app.actions.models import Prepared
 from app.observability import timeline
 from app.session.models import Session
 from app.tools import registry
+from app.tools.context import CURRENT_SESSION
 from app.tools.gate import Disposition, Tier, classify
 from app.tools.registry import ToolError
 
@@ -139,9 +140,35 @@ async def dispatch(
         )
 
     if decision.disposition is Disposition.STAGE_FOR_OWNER:
-        return await _stage(name, args, session=session, timeout_s=timeout_s, calls=calls, trace=trace)
+        token = CURRENT_SESSION.set(session)
+        try:
+            return await _stage(name, args, session=session, timeout_s=timeout_s, calls=calls, trace=trace)
+        finally:
+            CURRENT_SESSION.reset(token)
+
+    # The read layer composes: a turn may run several queries, within its bounds, and never
+    # the same one twice — the earlier answer is handed back instead.
+    planned = _planned(name)
+    plan_cost = 0
+    if planned:
+        from app.analytics import plan as turn_plan
+        from app.tools import analytics_tools
+
+        plan_cost = analytics_tools.cost_of(name, args)
+        refusal, cached = turn_plan.check(session, name, args, cost=plan_cost)
+        if cached is not None:
+            trace.finish("ok", ms=0.0, cached=True, cost=0)
+            if calls is not None:
+                calls.append(trace.call(ToolCall(name=name, args=args, ok=True, duration_ms=0.0, result={"reused": True})))
+            return "(the same query already ran this turn; its result again)\n" + cached
+        if refusal is not None:
+            trace.finish("refused", error=refusal, plan_bound=True)
+            if calls is not None:
+                calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=refusal)))
+            return refusal + " Do not call this tool again this turn."
 
     started = time.perf_counter()
+    token = CURRENT_SESSION.set(session)
     try:
         payload = await registry.invoke(name, args, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
@@ -164,10 +191,12 @@ async def dispatch(
             f"ERROR: {name} failed unexpectedly ({type(exc).__name__}). Say the lookup failed. "
             "Do not invent a result."
         )
+    finally:
+        CURRENT_SESSION.reset(token)
 
     _harvest_ids(payload, session)
     ms = payload.get("_ms") if isinstance(payload, dict) else None
-    trace.finish("ok", ms=ms if ms is not None else _elapsed(started), result=_result_shape(payload))
+    trace.finish("ok", ms=ms if ms is not None else _elapsed(started), result=_result_shape(payload), cost=(plan_cost or None), query=(_query_shape(payload) if planned else None))
     if calls is not None:
         calls.append(trace.call(ToolCall(
             name=name, args=args, ok=True, duration_ms=ms,
@@ -176,6 +205,10 @@ async def dispatch(
 
     spec = registry.get(name)
     text = _render(spec.model_view(payload) if spec.model_view is not None and isinstance(payload, dict) else payload)
+    if planned:
+        from app.analytics import plan as turn_plan
+
+        turn_plan.record(session, name, args, cost=plan_cost, rendered=text, ms=float(ms or 0.0), cached=bool(isinstance(payload, dict) and (payload.get("coverage") or {}).get("read_age_s")))
     if decision.tier is Tier.AMBER:
         text = (
             "AMBER — this result contains customer personal data. Read the identifying detail "
@@ -261,6 +294,25 @@ async def _stage(
 
 def _elapsed(started: float) -> float:
     return round((time.perf_counter() - started) * 1000, 1)
+
+
+def _planned(name: str) -> bool:
+    from app.tools import analytics_tools
+
+    return name in analytics_tools.PLANNED
+
+
+def _query_shape(payload: Any) -> dict[str, Any] | None:
+    """What a read-layer query was, for the timeline: the language's own terms, never the rows."""
+    if not isinstance(payload, dict):
+        return None
+    period = payload.get("period") if isinstance(payload.get("period"), dict) else {}
+    coverage = payload.get("coverage") if isinstance(payload.get("coverage"), dict) else {}
+    return {
+        "entity": payload.get("entity"), "period": period.get("label"), "days": period.get("days"), "filters": sorted(str(k) for k in (payload.get("filters") or {})),
+        "group_by": payload.get("group_by"), "metrics": payload.get("metrics"), "compare": bool(payload.get("compare")), "rows": payload.get("row_count"),
+        "complete": coverage.get("complete"), "read_age_s": coverage.get("read_age_s"), "view": payload.get("view"),
+    }
 
 
 # ------------------------------------------------------------- the timeline's view of a call

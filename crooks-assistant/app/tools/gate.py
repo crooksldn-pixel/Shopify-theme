@@ -91,6 +91,8 @@ _KNOWN_TOOLS = frozenset({
     "shopify_find_order", "shopify_order_detail", "shopify_list_orders",
     "shopify_find_customer", "shopify_inventory", "shopify_sales_summary",
     "shopify_product_info", "shopify_customer_history",
+    # the general read layer (app/tools/analytics_tools.py)
+    "commerce_aggregate", "commerce_query", "inventory_query", "commerce_capabilities",
     # Gmail — M9
     "gmail_search", "gmail_read_thread",
 })
