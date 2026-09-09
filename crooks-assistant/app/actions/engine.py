@@ -413,7 +413,9 @@ class ActionEngine:
             if "{amount}" in spoken:
                 spoken = spoken.replace("{amount}", _spoken_amount(proposal.summary))
             if "{to}" in spoken:
-                spoken = spoken.replace("{to}", str(proposal.summary.get("spoken_to") or "them"))
+                # The recipient, or the number a change ends on, as the tool summarised it; for
+                # an undo, which has no summary of its own, the number its reverse ends on.
+                spoken = spoken.replace("{to}", str(proposal.summary.get("spoken_to") or proposal.execution.get("to") or "them"))
             if proposal.note:
                 spoken = f"{spoken} {proposal.note}"
             if proposal.undo_of is None:

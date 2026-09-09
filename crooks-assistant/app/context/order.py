@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.clients.shopify import ShopifyClient, ShopifyError
+from app.context.attention import attention_for
 from app.tools.registry import ToolError
 
 log = logging.getLogger("crooks.context")
@@ -60,6 +61,7 @@ _ORDER_SELECTION = """
     closedAt
     displayFulfillmentStatus
     displayFinancialStatus
+    returnStatus
     fullyPaid
     tags
     note
@@ -291,6 +293,7 @@ def shape_order(node: dict[str, Any]) -> dict[str, Any]:
         "cancelled_at": node.get("cancelledAt"),
         "cancel_reason": node.get("cancelReason"),
         "closed_at": node.get("closedAt"),
+        "return_status": node.get("returnStatus"),
         "fully_paid": node.get("fullyPaid"),
         "note": _short(node.get("note"), 1200),
         "tags": [str(t)[:40] for t in (node.get("tags") or [])[:10]],
@@ -491,11 +494,12 @@ class _Job:
     """One order's enrichment in flight: the parts land one by one, so a caller who cannot
     wait for all of them takes what is there and says what is still to come."""
 
-    __slots__ = ("order_id", "parts", "task", "started", "finished")
+    __slots__ = ("order_id", "parts", "task", "started", "finished", "core")
 
     def __init__(self, order_id: str, started: float) -> None:
         self.order_id = order_id
         self.parts: dict[str, Any] = {}
+        self.core: dict[str, Any] | None = None   # the order the parts belong to, for a later reading
         self.task: asyncio.Task | None = None
         self.started = started
         self.finished: float | None = None
@@ -544,7 +548,11 @@ class Hydrator:
             job = self._enrich(order_id, core)
         if job.task is not None and not job.task.done() and wait_s > 0:
             await asyncio.wait({job.task}, timeout=wait_s)
-        return {"order_id": order_id, "pending": job.pending, **{k: v for k, v in job.parts.items()}}
+        out = {"order_id": order_id, "pending": job.pending, **{k: v for k, v in job.parts.items()}}
+        if job.core is not None:
+            # Read again with what has landed: the card's attention lines follow the parts.
+            out["attention"] = self._merge(job.core, job)["attention"]
+        return out
 
     async def customer(self, customer_id: str) -> dict[str, Any]:
         """A customer's history on its own, with the inbox around them."""
@@ -614,6 +622,7 @@ class Hydrator:
         if job is not None and (job.finished is None or now - job.finished < ENRICH_REUSE_S):
             return job
         job = _Job(order_id, now)
+        job.core = core
         self._jobs[order_id] = job
         job.task = asyncio.ensure_future(self._run(job, core))
         return job
@@ -670,6 +679,8 @@ class Hydrator:
         out["history"] = job.parts.get("history")
         out["email"] = job.parts.get("email")
         out["pending"] = job.pending
+        # What the order needs, from whatever has landed; recomputed as the rest arrives.
+        out["attention"] = attention_for(out, now=self.clock())
         return out
 
     def _prune(self) -> None:

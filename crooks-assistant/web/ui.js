@@ -447,8 +447,24 @@
       if (k && standing && !k.querySelector('.badge')) k.appendChild(badge(standing, 'quiet'));
     }
     if (pending.indexOf('email') === -1 && Object.prototype.hasOwnProperty.call(ext, 'email')) fill('email', relatedEmailBlock(ext.email));
+    if (Array.isArray(ext.attention)) placeAttention(node, ext.order_id, ext.attention);
     node.dataset.pending = pending.join(' ');
     return pending;
+  }
+
+  // The attention card sits right after the order it reads; a later reading replaces it.
+  function placeAttention(orderNode, orderId, items) {
+    const parent = orderNode.parentNode;
+    if (!parent) return null;
+    const ref = text(orderId);
+    const old = parent.querySelectorAll('.card-attention').filter ? parent.querySelectorAll('.card-attention').filter((n) => n.dataset.for === ref) : Array.prototype.filter.call(parent.querySelectorAll('.card-attention'), (n) => n.dataset.for === ref);
+    old.forEach((n) => parent.removeChild(n));
+    if (!items.length) return null;
+    const fresh = renderAttention({ items, for: ref }, {});
+    const siblings = Array.prototype.slice.call(parent.childNodes);
+    const after = siblings[siblings.indexOf(orderNode) + 1] || null;
+    if (after && typeof parent.insertBefore === 'function') parent.insertBefore(fresh, after); else parent.appendChild(fresh);
+    return fresh;
   }
 
   function renderOrderList(d, opts) {
@@ -673,7 +689,7 @@
 
   function renderAttention(d, opts) {
     const items = list(d.items, 8);
-    return card('attention', [
+    const node = card('attention', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Attention'), h('h2', { class: 'card-title', text: `${items.length} require${items.length === 1 ? 's' : ''} attention` })])]),
       h('ul', { class: 'rows' }, items.map((a) => h('li', { class: 'row' }, [
         h('span', { class: 'row-main', text: text(a.title, '—') }),
@@ -681,6 +697,8 @@
         h('span', { class: 'row-side' }, [badge(text(a.kind), a.level === 'red' ? 'bad' : a.level === 'green' ? 'ok' : 'warn')]),
       ]))),
     ], opts);
+    if (d.for) node.dataset.for = text(d.for);
+    return node;
   }
 
   // ------------------------------------------------------------------ actions

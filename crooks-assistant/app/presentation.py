@@ -50,6 +50,7 @@ MAX_SNIPPET_CHARS = 300
 MAX_TEXT_CHARS = 160
 MAX_NOTE_CHARS = 400
 MAX_EMAIL_BODY_CHARS = 2400
+MAX_ATTENTION = 6
 MAX_CONTEXT = 6
 
 # The interaction grammar: how the owner authorises a proposal. The card names one of these
@@ -119,6 +120,11 @@ def present(
                 # the order's own state and what the store has granted this Mac.
                 item["data"]["actions"] = _actions(call.result, capabilities)
             items.append(item)
+            if item["type"] == "order" and item["data"].get("detail"):
+                # What the order needs, read on the Mac, as its own card after the order.
+                attention = _attention_items(call.result)
+                if attention:
+                    items.append(_ui("attention", {"items": attention, "for": item["data"].get("order_id")}))
 
     items = _merge(items)
     if session is not None:
@@ -430,7 +436,26 @@ def present_extension(ext: dict[str, Any]) -> dict[str, Any]:
         "pending": [_text(p, 20) for p in (ext.get("pending") or [])[:4] if isinstance(p, str)],
         "history": _history(ext.get("history")),
         "email": _related_email(ext.get("email")),
+        **({"attention": _attention_items(ext)} if isinstance(ext.get("attention"), list) else {}),
     }
+
+
+def _attention_items(order: dict[str, Any]) -> list[dict[str, Any]]:
+    """The attention lines the Mac read from the order, bounded for the card. A "say" is
+    printed as words the owner could use — the card never offers to do it."""
+    out = []
+    for a in _list(order.get("attention"), MAX_ATTENTION):
+        if not isinstance(a, dict) or not a.get("title"):
+            continue
+        detail = _text(a.get("detail"), MAX_TEXT_CHARS)
+        say = _text(a.get("say"), 80)
+        if say:
+            detail = f"{detail} — say “{say}”" if detail else f"Say “{say}”"
+        out.append({
+            "kind": _text(a.get("kind"), 20), "title": _text(a.get("title"), 80), "detail": _text(detail, 200),
+            "level": a.get("level") if a.get("level") in ("red", "amber", "green") else "amber",
+        })
+    return out
 
 
 def _customer(c: dict[str, Any]) -> dict[str, Any]:

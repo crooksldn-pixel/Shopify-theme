@@ -661,3 +661,19 @@ test('an undo takes the kind the Mac gave it', () => {
   assert.equal(node.querySelector('.action-surface').dataset.kind, 'hold_to_arm');
   assert.ok(textOf(node.querySelector('.action-surface')).toLowerCase().includes('hold'));
 });
+
+test('the attention card follows the order it reads and is replaced by a later reading', () => {
+  const parent = document.createElement('div');
+  const order = UI.renderItem({ type: 'order', data: { order_id: 'gid://shopify/Order/1', order_number: '#1930', detail: true, items: [] } });
+  const other = UI.renderItem({ type: 'assistant', data: { text: 'after' } });
+  parent.appendChild(order); parent.appendChild(other);
+  UI.hydrateOrder(order, { order_id: 'gid://shopify/Order/1', pending: [], attention: [{ kind: 'email', title: 'Customer emailed', detail: 'from x — say “reply”', level: 'amber' }] });
+  assert.deepEqual(parent.childNodes.map((n) => n.dataset.type), ['order', 'attention', 'assistant']);
+  assert.ok(textOf(parent.childNodes[1]).includes('Customer emailed') && textOf(parent.childNodes[1]).includes('say “reply”'));
+  assert.equal(parent.childNodes[1].querySelectorAll('button').length, 0);
+  UI.hydrateOrder(order, { order_id: 'gid://shopify/Order/1', pending: [], attention: [{ kind: 'stock', title: 'Oversold: Jeans', detail: '', level: 'red' }] });
+  assert.deepEqual(parent.childNodes.map((n) => n.dataset.type), ['order', 'attention', 'assistant']);
+  assert.ok(textOf(parent.childNodes[1]).includes('Oversold') && !textOf(parent.childNodes[1]).includes('Customer emailed'));
+  UI.hydrateOrder(order, { order_id: 'gid://shopify/Order/1', pending: [], attention: [] });
+  assert.deepEqual(parent.childNodes.map((n) => n.dataset.type), ['order', 'assistant']);
+});

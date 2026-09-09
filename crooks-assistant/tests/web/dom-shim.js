@@ -58,6 +58,13 @@ class Element extends Node {
     return node;
   }
   removeChild(node) { const i = this.childNodes.indexOf(node); if (i !== -1) this.childNodes.splice(i, 1); node.parentNode = null; return node; }
+  insertBefore(node, before) {
+    if (node.parentNode) node.parentNode.removeChild(node);
+    const i = before ? this.childNodes.indexOf(before) : -1;
+    if (i === -1) this.childNodes.push(node); else this.childNodes.splice(i, 0, node);
+    node.parentNode = this;
+    return node;
+  }
   get firstChild() { return this.childNodes[0] || null; }
   get children() { return this.childNodes.filter((n) => n.nodeType === 1); }
   get textContent() { return this.childNodes.map((n) => n.textContent).join(''); }
