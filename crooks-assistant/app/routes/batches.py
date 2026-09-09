@@ -116,18 +116,24 @@ async def commit(request: Request, batch_id: str, session_id: str = Form(default
     if result.spoken:
         runtime.voice.prefetch(to_speakable(result.spoken, max_chars=runtime.voice.max_chars), pin=False)
     session = _owner_session(runtime, session_id)
-    undo = None
-    if batch.undo_id and session is not None:
-        undo_batch = session.batches.get(batch.undo_id)
-        if undo_batch is not None:
-            undo = undo_batch.public()
+    if session is not None and result.code == "done":
+        # The next question is asked with the outcome in hand: "did that work?" is answered
+        # from what the Mac counted, never guessed (app/routes/turn.py).
+        session.last_outcome = result.spoken
     return {
         **batch.public(),
         "code": result.code,
         "spoken": result.spoken,
         "ui": present_batch(result, session=session, writes=await writes_context(request, batch.child_operation)),
-        "undo": undo,
+        "undo": _undo_of(batch, session),
     }
+
+
+def _undo_of(batch, session) -> dict | None:
+    if not batch.undo_id or session is None:
+        return None
+    undo_batch = session.batches.get(batch.undo_id)
+    return undo_batch.public() if undo_batch is not None and undo_batch.status.value == "PENDING" else None
 
 
 @router.get("/{batch_id}", response_model=None)
@@ -140,4 +146,6 @@ async def state(request: Request, batch_id: str, session_id: str = "") -> JSONRe
     if session is not None and not session_matches(session, request):
         return _refuse(403, "wrong_session", "That conversation belongs to another login.")
     writes = await writes_context(request, batch.child_operation)
-    return {**batch.public(), "ui": present_batch_state(batch, session=session, writes=writes)}
+    # A tablet that lost the connection mid-run gets what the answer would have carried:
+    # the counted line and the undo, not only the status.
+    return {**batch.public(), "ui": present_batch_state(batch, session=session, writes=writes), "undo": _undo_of(batch, session)}

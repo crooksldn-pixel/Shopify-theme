@@ -90,6 +90,16 @@ class Session:
     # Bulk changes proposed this session (app/actions/batch.py), by batch id. Their
     # children are ordinary proposals in `proposals`.
     batches: dict[str, Any] = field(default_factory=dict)
+    # What the Mac said about the last gesture's outcome ("Tagged 20 of the 21 orders…"),
+    # told to the model once at the next question and then cleared: "did that work?" is
+    # answered from the count, never guessed.
+    last_outcome: str = ""
+    # The last read-layer query, as the Mac ran it, so "just this week" and "by size" keep
+    # its shape rather than starting over.
+    last_query: dict[str, Any] | None = None
+    # Whether this turn's question was answered with a capability hint on the prompt, so a
+    # refusal after it is filed apart from an unaided one.
+    hinted: bool = False
 
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and

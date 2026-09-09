@@ -187,7 +187,7 @@ def test_the_gesture_grows_with_the_batch():
     assert batch_gesture("RED", "reversible", 10) == "hold_to_arm"
     assert batch_gesture("AMBER", "reversible", DRAG_MIN) == "hold_drag_target"
     assert batch_gesture("nonsense", "reversible", 1) == "hold_drag_target"
-    assert spoken_for("Tagged", "orders", {"requested": 23, "verified": 20, "failed": 1, "excluded": 2}) == "Tagged 20 of the 23 orders. 1 could not be applied. 2 were excluded."
+    assert spoken_for("Tagged", "orders", {"requested": 23, "eligible": 21, "verified": 20, "failed": 1, "excluded": 2}) == "Tagged 20 of the 21 orders. 1 could not be applied.", "the denominator is what was gestured for; the excluded were named on the card"
 
 
 # ---------------------------------------------------------------------------- staging
@@ -277,7 +277,7 @@ async def test_the_gesture_applies_each_member_once_and_the_count_is_what_was_pr
     card = present_batch_state(batch, session=session, code="done")[0]
     assert card["type"] == "batch_result" and card["data"]["title"] == "Tags added: 3 of 6" and card["data"]["all_verified"] is False
     assert card["data"]["counts"]["verified"] == 3 and {r["label"]: r["outcome"] for r in card["data"]["rows"]}["#1004"] == "changed meanwhile, left alone"
-    assert "Only the members marked applied were proven" in card["data"]["note"]
+    assert "The 3 marked not applied were left as they were" in card["data"]["note"] and card["data"]["summary"] == "3 applied, 3 not"
     # The undo is a batch of exactly the proven members.
     undo = session.batches[batch.undo_id]
     assert undo.undo_of == batch.batch_id and sorted(c.label for c in undo.children) == ["#1001", "#1005", "#1006"] and undo.interaction == "hold_to_arm"
@@ -361,7 +361,7 @@ async def test_bulk_remove_takes_off_only_what_each_order_has(engine, batches, s
     text, batch, _ = await stage(session, "batch_order_tags_remove", set_id=ws.set_id, tags=["hold"])
     assert "2 of the 4 orders" in text and "has none of those tags: 2" in text
     result = await gesture(batches, batch)
-    assert result.spoken == "Took the tags off 2 of the 4 orders. 2 were excluded."
+    assert result.spoken == "Took the tags off 2 of the 2 orders."
     assert store.orders[gid(1001)]["tags"] == ["vip"] and store.orders[gid(1003)]["tags"] == [] and store.orders[gid(1002)]["tags"] == ["vip"]
 
 
@@ -427,7 +427,7 @@ async def test_bulk_archive_leaves_the_inbox_and_the_undo_puts_them_back(engine,
     card = present(calls, session=session)[0]["data"]
     assert card["title"] == "Archive 2 threads" and card["members"] == ["Order 1001", "Order 1002"], "the set's own names for the threads"
     result = await gesture(batches, batch)
-    assert result.spoken == "Archived 2 of the 3 threads. 1 was excluded."
+    assert result.spoken == "Archived 2 of the 2 threads."
     assert "INBOX" not in box.thread_labels("18f0000000000001") and "INBOX" not in box.thread_labels("18f0000000000002")
     undo = session.batches[batch.undo_id]
     back = await gesture(batches, undo)
@@ -444,12 +444,12 @@ async def test_bulk_drafts_fill_the_template_per_customer_and_preview_the_first(
     )
     assert "2 of the 2 orders" in text and batch.interaction == "tap_commit"
     card = present(calls, session=session)[0]["data"]
-    assert card["title"] == "Save 2 drafts" and card["summary"] == "Your order {order_number}" and "{first_name}" in card["body"]
+    assert card["title"] == "Save 2 drafts" and card["summary"] == "" and "{first_name}" in card["body"] and "One draft per order" in card["detail"]
     assert card["preview"]["to"] == "Ben Ade <c1001@example.com>" and card["preview"]["subject"] == "Your order 1001"
     assert card["preview"]["body"].startswith("Hi Ben,\n\nOrder 1001 has been with us 8 days.") and card["preview"]["body"].rstrip().endswith("CROOKS")
     assert box.drafts == {}, "nothing saved before the gesture"
     result = await gesture(batches, batch)
-    assert result.spoken == "Saved drafts for 2 of the 2 customers."
+    assert result.spoken == "Saved drafts for 2 of the 2 orders.", "a set of orders gets a draft per order, and says so"
     bodies = sorted(d["parsed"]["body"] for d in box.drafts.values())
     assert bodies[0].startswith("Hi Ben,\n\nOrder 1001 has been with us 8 days") and bodies[1].startswith("Hi Flo,\n\nOrder 1002 has been with us 8 days")
     assert sorted(d["parsed"]["to"] for d in box.drafts.values()) == ["Ben Ade <c1001@example.com>", "Flo Okoro <c1002@example.com>"]
@@ -536,7 +536,7 @@ async def test_the_routes_take_a_batch_id_and_a_session_and_nothing_else(client)
     done = await client.post(f"/batches/{batch_id}/commit", data={"session_id": "s1", "tags": "vip", "members": "gid://shopify/Order/9"}, headers=PROXIED)
     body = done.json()
     assert done.status_code == 200 and body["status"] == "done" and body["counts"]["verified"] == 2 and body["counts"]["excluded"] == 1
-    assert body["ui"][0]["type"] == "batch_result" and body["undo"]["batch_id"] and body["spoken"] == "Tagged 2 of the 3 orders. 1 was excluded."
+    assert body["ui"][0]["type"] == "batch_result" and body["undo"]["batch_id"] and body["spoken"] == "Tagged 2 of the 2 orders."
     assert sorted(v["tags"] for _, v in client.store.mutations) == [["hold"], ["hold"]]
     again = await client.post(f"/batches/{batch_id}/commit", data={"session_id": "s1"}, headers=PROXIED)
     assert again.status_code == 200 and again.json()["code"] == "already_executed" and len(client.store.mutations) == 2

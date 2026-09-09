@@ -55,7 +55,7 @@ def test_a_set_is_immutable_issued_and_in_focus():
     assert ws.set_id.startswith("set_") and ws.count == 2 and ws.members == ("gid://shopify/Order/1", "gid://shopify/Order/2") and ws.label == "unfulfilled older than 5 days"
     assert ws.session_id == "s1" and ws.turn_id == "turn_1" and ws.step == "query" and ws.parent is None
     assert session.sets[ws.set_id] is ws and session.focus["set"] == ws.set_id
-    assert {ws.set_id, "gid://shopify/Order/1", "gid://shopify/Order/2"} <= session.issued_ids
+    assert ws.set_id in session.issued_ids and "gid://shopify/Order/1" not in session.issued_ids, "the set's id is issued; being in a set is not being looked up"
     with pytest.raises((AttributeError, TypeError)):
         ws.members = ()  # type: ignore[misc]
     public = ws.public()
@@ -212,17 +212,17 @@ async def test_the_inbox_is_cross_referenced_with_the_set_and_makes_derived_sets
     contacted, quiet, replied = result["set_contacted"], result["set_not_contacted"], result["set_replied"]
     assert contacted["count"] == 2 and quiet["count"] == 1 and replied["count"] == 1 and quiet["parent"] == set_id and quiet["step"] == "correlate"
     assert set(session.sets[quiet["set_id"]].members) == {"gid://shopify/Order/1009"} and set(session.sets[replied["set_id"]].members) == {"gid://shopify/Order/1007"}
-    assert session.focus["set"] == replied["set_id"], "the customers stay in focus; the threads are a side set"
+    assert session.focus["set"] == set_id, "the set the owner asked about stays in focus; the derived ones are named by id"
     threads = result["set_threads"]
     assert threads["kind"] == "emails" and threads["count"] == 2 and threads["parent"] == set_id and session.sets[threads["set_id"]].labels
     searched = {c["sender"] for c in inbox.calls}
     assert searched == {"ben@example.com", "flo@example.com", "gus@example.com"} and inbox.calls[0]["terms"] == ["1002"] or True
     # The cards: the counts, who wrote, and the two sets.
     items = present(calls[-1:], session=session)
-    assert [i["type"] for i in items] == ["metric_group", "table", "working_set", "working_set", "working_set"]
+    assert [i["type"] for i in items] == ["metric_group", "table", "working_set"], "the counts, the table, and one set card for the correlation"
     assert items[0]["data"]["metrics"][0] == {"key": "contacted", "label": "emailed us", "value": "2", "measured": True}
     assert items[1]["data"]["rows"][0]["cells"] == ["Ben Bold", "1002", "yes", "no", "Where is order 1002?"]
-    assert items[2]["data"]["parent_label"] == "Delayed orders" and items[3]["data"]["step"] == "correlate"
+    assert items[2]["data"]["label"] == "Delayed orders" and items[2]["data"]["step"] == "correlate" and [x["value"] for x in items[2]["data"]["lines"]] == ["2", "1", "1"]
     # Asking again within the cache window does not search the inbox again.
     before = len(inbox.calls)
     session.turn_id = "turn_mail2"

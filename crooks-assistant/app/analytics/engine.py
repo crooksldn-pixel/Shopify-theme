@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 from app.analytics.periods import Period
 from app.analytics.query import DERIVED, MEASURED, METRICS, Query
+from app.analytics.sets import MAX_MEMBERS
 
 MAX_SAMPLE = 5
 
@@ -204,7 +205,9 @@ def aggregate(
         "entity": query.entity, "period": query.period.as_dict(), "filters": {k: v for k, v in query.filters.items() if not (k == "cancelled" and v == "false")},
         "group_by": list(query.group_by), "metrics": list(query.metrics), "sort": [f"{k} {d}" for k, d in query.sort], "limit": query.limit,
         **body,
-        "measured": [m for m in METRICS if m in query.metrics and m in MEASURED], "derived": [m for m in METRICS if m in query.metrics and m in DERIVED],
+        # A refund is the order's; shared out over its lines it is an estimate, and says so.
+        "measured": [m for m in METRICS if m in query.metrics and m in MEASURED and not (m == "refunded" and body.get("item_level"))],
+        "derived": [m for m in METRICS if m in query.metrics and (m in DERIVED or (m == "refunded" and body.get("item_level")))],
         "view": query.view, "title": query.title,
     }
     if query.compare:
@@ -260,11 +263,27 @@ def _aggregate_period(query: Query, period: Period, rows: list[dict[str, Any]], 
     shaped = [_row(b, query, period, now=now, zone=zone, total_units=total_units) for b in buckets.values()]
     shaped = _sorted(shaped, query.sort)
     truncated = len(shaped) > query.limit
-    return {
+    out = {
         "rows": shaped[: query.limit], "row_count": len(shaped), "truncated": truncated,
         "totals": _totals(total, query, period, now=now, zone=zone, orders=len(orders)),
         "orders_in_period": len(orders), "currency": next((str(o.get("currency")) for o in orders if o.get("currency")), "GBP"),
+        # What "revenue" is here: line values after discounts for anything broken down by
+        # item, the order's total (shipping and tax in) for orders as wholes.
+        "revenue_basis": "line items after discounts, before shipping and tax" if item_level else "order totals, shipping and tax included",
+        "item_level": item_level,
     }
+    if "refunded" in query.metrics:
+        # A refund is counted against the order it was made on, in the period that order was
+        # placed — not in the period the refund was made.
+        out["refunded_basis"] = "refunds against orders placed in the period, not refunds made in it"
+    id_key = {"customers": "customer_id", "products": "product_id", "variants": "variant_id"}.get(query.entity)
+    if id_key:
+        # Every member the ranking matched, for a working set — the rows are the few shown;
+        # "everyone who spent over £250" is all of them unless a limit was asked for.
+        chosen = shaped[: query.limit] if query.limit_explicit else shaped
+        out["member_ids"] = list(dict.fromkeys(str(r["key"][id_key]) for r in chosen if r.get("key", {}).get(id_key)))[:MAX_MEMBERS]
+        out["member_labels"] = {str(r["key"][id_key]): str(r.get("label") or "") for r in chosen if r.get("key", {}).get(id_key)}
+    return out
 
 
 def _fold(b: _Bucket, order: dict[str, Any], item: dict[str, Any] | None, item_level: bool) -> None:
@@ -275,9 +294,21 @@ def _fold(b: _Bucket, order: dict[str, Any], item: dict[str, Any] | None, item_l
     if customer_id:
         b.customers.add(customer_id)
     if item_level and item is not None:
-        b.units += int(item.get("quantity") or 0)
-        b.revenue += float(item.get("total") or 0.0)
-        b.unfulfilled_units += int(item.get("unfulfilled_quantity") or 0)
+        quantity = int(item.get("quantity") or 0)
+        line_total = float(item.get("total") or 0.0)
+        b.units += quantity
+        b.revenue += line_total
+        unfulfilled = int(item.get("unfulfilled_quantity") or 0)
+        b.unfulfilled_units += unfulfilled
+        # Money at the item's own level: what is still to ship is this line's unfulfilled
+        # units at this line's price; a refund is the order's, shared out by the line's share
+        # of the order (marked derived by the caller). Never the whole order's figure on
+        # every one of its products.
+        if quantity and unfulfilled and not order.get("cancelled"):
+            b.unfulfilled_value += line_total * unfulfilled / quantity
+        order_total = float(order.get("total") or 0.0)
+        if order_total > 0 and float(order.get("refunded") or 0.0):
+            b.refunded += float(order["refunded"]) * min(1.0, line_total / order_total)
         if item.get("variant_id"):
             b.variant_ids.add(str(item["variant_id"]))
         if len(b.sample) < MAX_SAMPLE and new_order:
@@ -286,12 +317,12 @@ def _fold(b: _Bucket, order: dict[str, Any], item: dict[str, Any] | None, item_l
         b.units += int(order.get("units") or sum(int(i.get("quantity") or 0) for i in order.get("items") or []))
         b.revenue += float(order.get("total") or 0.0)
         b.unfulfilled_units += int(order.get("unfulfilled_units") or 0)
-        if len(b.sample) < MAX_SAMPLE:
-            b.sample.append({"order_id": order_id, "order_number": order.get("order_number")})
-    if new_order:
         b.refunded += float(order.get("refunded") or 0.0)
         if str(order.get("fulfillment") or "").upper() != "FULFILLED" and not order.get("cancelled"):
             b.unfulfilled_value += float(order.get("total") or 0.0)
+        if len(b.sample) < MAX_SAMPLE:
+            b.sample.append({"order_id": order_id, "order_number": order.get("order_number")})
+    if new_order:
         ts = float(order.get("ts") or 0)
         b.first_ts = ts if not b.first_ts or ts < b.first_ts else b.first_ts
         b.last_ts = max(b.last_ts, ts)
@@ -445,7 +476,11 @@ def _orders_listing(query: Query, orders: list[dict[str, Any]], *, now: float, z
               "refunded": round(sum(float(o.get("refunded") or 0) for o in orders), 2)}
     if "aov" in query.metrics:
         totals["aov"] = round(revenue / len(orders), 2) if orders else None
-    return {"rows": shaped[: query.limit], "row_count": len(shaped), "truncated": len(shaped) > query.limit, "totals": totals, "orders_in_period": len(orders), "member_ids": [o["order_id"] for o in orders],
+    # The set a listing makes holds every match; when the model asked for a number ("the five
+    # oldest"), it holds exactly the rows shown.
+    members = [o["order_id"] for o in orders][:MAX_MEMBERS] if not query.limit_explicit else [r["order_id"] for r in shaped[: query.limit]]
+    return {"rows": shaped[: query.limit], "row_count": len(shaped), "truncated": len(shaped) > query.limit, "totals": totals, "orders_in_period": len(orders), "member_ids": members,
+            "revenue_basis": "order totals, shipping and tax included", "item_level": False,
             "currency": next((str(o.get("currency")) for o in orders if o.get("currency")), "GBP")}
 
 

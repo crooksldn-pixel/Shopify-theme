@@ -103,9 +103,12 @@ def create(
     while len(held) > MAX_SETS:
         oldest = min(held.values(), key=lambda s: s.created_at)
         del held[oldest.set_id]
+    # The set id is issued to the conversation; its members are not. The rows the owner was
+    # shown were issued by the listing that showed them; the hundreds behind them were not
+    # looked up, and a single change may not name one of them by id.
     issue = getattr(session, "issue", None)
     if callable(issue):
-        issue(ws.set_id, *ids)
+        issue(ws.set_id)
     held_focus = getattr(session, "focus", None)
     if focus and isinstance(held_focus, dict):
         held_focus["set"] = ws.set_id

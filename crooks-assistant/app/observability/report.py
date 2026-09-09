@@ -599,13 +599,20 @@ def _false_claim(turn: Turn) -> dict[str, Any] | None:
             return {"capabilities": [str(x) for x in c.get("capabilities") or []], "composable_via": [str(x) for x in c.get("composable_via") or []]}
     if turn.claims:
         return None
-    signal = claims.claim(turn.question, turn.answer, [{"tool": t.tool} for t in turn.tools], _REGISTERED_FOR_CLAIMS)
+    signal = claims.claim(turn.question, turn.answer, [{"tool": t.tool, "ok": t.outcome in ("ok", "staged")} for t in turn.tools], _registered_for_claims())
     return signal if signal and signal.get("false_unsupported") else None
 
 
-# The tools the claim rule judges against when a turn carries no signal of its own: the
-# registry of this process, read once; empty (never a false claim) without a registry.
-_REGISTERED_FOR_CLAIMS: frozenset[str] = frozenset()
+_REGISTERED_CACHE: list[str] | None = None
+
+
+def _registered_for_claims() -> frozenset[str]:
+    """The tools the claim rule judges against when a turn carries no signal of its own (an
+    older timeline): this process's registry, read once."""
+    global _REGISTERED_CACHE
+    if _REGISTERED_CACHE is None:
+        _REGISTERED_CACHE = registered_tools()
+    return frozenset(_REGISTERED_CACHE)
 
 
 def _duplicate_calls(tools: list[ToolRecord]) -> list[str]:
@@ -761,7 +768,8 @@ def intelligence(rec: Reconstruction, registered: list[str]) -> dict[str, Any]:
         signal = _false_claim(t)
         if signal:
             caps = [c for c in claims.CAPABILITIES if c.key in signal["capabilities"]]
-            false_rows.append({"turn_id": t.turn_id, "question": t.question or t.raw_text, "answer": t.answer, "what": "; ".join(c.what for c in caps) or ", ".join(signal["capabilities"]), "tools": signal["composable_via"], "attempted": ", ".join(x.tool for x in t.tools) or "nothing"})
+            hinted = any(c.get("hinted") for c in t.claims)
+            false_rows.append({"turn_id": t.turn_id, "question": t.question or t.raw_text, "answer": t.answer, "what": "; ".join(c.what for c in caps) or ", ".join(signal["capabilities"]), "tools": signal["composable_via"], "attempted": (", ".join(x.tool for x in t.tools) or "nothing") + (" (the prompt named the capability)" if hinted else "")})
         matched = [c for c in claims.match_capabilities(t.question) if all(x in known for x in c.tools)]
         if matched:
             wanted = {x for c in matched for x in c.tools}
@@ -1129,6 +1137,10 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     add("The assistant said it could not, and the tools registered on this Mac compose exactly that.")
     add("")
     lines.extend(_table(["Turn", "Owner said", "Assistant answered", "Composable as", "Via", "Attempted"], [[r["turn_id"], r["question"], r["answer"], r["what"], ", ".join(r["tools"]), r["attempted"]] for r in intel["false_unsupported"]]))
+    hinted = sum(1 for r in intel["false_unsupported"] if "the prompt named" in r["attempted"])
+    if intel["false_unsupported"]:
+        add(f"{len(intel['false_unsupported']) - hinted} declined unaided; {hinted} declined after the Mac named the capability on the prompt (a prompted decline is the model's, not the prompt's).")
+        add("")
     add("### Composable but failed requests")
     add("")
     lines.extend(_table(["Turn", "Owner said", "Composable as", "What failed"], [[r["turn_id"], r["question"], r["what"], r["detail"]] for r in intel["composable_failed"]]))

@@ -187,6 +187,9 @@ class ActionEngine:
             expires_at=now + self.ttl_s,
             undo_of=done.proposal_id,
             turn_id=done.turn_id,
+            # The undo of a batch member is a batch member from birth: never committable on
+            # its own, even before the batch engine gathers the undos into their own batch.
+            batch_id=done.batch_id,
         )
         session.stage(undo)
         self._index[undo.proposal_id] = session
@@ -214,8 +217,13 @@ class ActionEngine:
         a new instruction keeps them, a reset or a cancel takes everything). Returns their
         ids, so the turn that withdrew them can tell the tablet which cards are dead."""
         revoked: list[str] = []
+        running = _running_batches(session)
         for proposal in session.proposals:
             if proposal.status is ActionStatus.PENDING and (undos or proposal.undo_of is None):
+                if proposal.batch_id and proposal.batch_id in running:
+                    # A member of a batch the owner has already gestured for: the batch is
+                    # applying it now, and a word spoken meanwhile withdraws nothing of it.
+                    continue
                 self._finish(proposal, ActionStatus.REVOKED, "revoked", reason=reason)
                 revoked.append(proposal.proposal_id)
         return revoked
@@ -347,7 +355,9 @@ class ActionEngine:
             return self._terminal(proposal, write)
 
         session = self._index.get(proposal_id)
-        if session is None or proposal.epoch != session.epoch:
+        # A batch member's position is the batch's: it was checked when the batch was
+        # claimed, and a turn that arrives while the batch runs does not move it.
+        if session is None or (not via_batch and proposal.epoch != session.epoch):
             self._finish(proposal, ActionStatus.REVOKED, "revoked", reason="the owner moved on")
             return self._terminal(proposal, write)
         if write is None or not write.complete:
@@ -385,7 +395,7 @@ class ActionEngine:
                 await write.settle(execution, proposal.sent or {})
             # Verification: a 200 is not proof; the re-read is.
             proven = await write.observe(execution)
-            return await self._prove(proposal, proven, session, spec, write)
+            return await self._prove(proposal, proven, session, spec, write, courtesy=not via_batch)
         except (PreconditionFailed, ShopifyPreconditionFailed) as exc:
             # Shopify itself said the entity was not as expected (a compare-and-swap that
             # found another number, an order already cancelled). Nothing was applied: stale.
@@ -396,7 +406,7 @@ class ActionEngine:
             # change and proving it. It must not be left claimed for ever: look once, record
             # what was seen, then let the cancellation continue.
             if sent:
-                await self._settle_by_observation(proposal, execution, session, spec, write, exc)
+                await self._settle_by_observation(proposal, execution, session, spec, write, exc, courtesy=not via_batch)
             else:
                 self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason="cancelled before sending")
             raise
@@ -409,9 +419,9 @@ class ActionEngine:
             # The mutation left, or its answer did not come back, or the proving read failed.
             # Shopify may or may not hold the change. Look once; say what was seen.
             log.warning("action %s is ambiguous after sending: %s", proposal.proposal_id, exc)
-            return await self._settle_by_observation(proposal, execution, session, spec, write, exc)
+            return await self._settle_by_observation(proposal, execution, session, spec, write, exc, courtesy=not via_batch)
 
-    async def _prove(self, proposal, proven, session, spec, write) -> CommitResult:
+    async def _prove(self, proposal, proven, session, spec, write, *, courtesy: bool = True) -> CommitResult:
         proposal.after = dict(proven.fingerprint)
         proposal.entity = proven.entity
         if write.verify is not None and proposal.undo_of is None:
@@ -421,7 +431,9 @@ class ActionEngine:
         if ok:
             proposal.verified = True
             proposal.note = str(note or "")
-            if write.entity is not None:
+            # The fuller read is for the card of a single change; a batch's card shows counts,
+            # and fifty courtesy reads would cost Shopify more than the changes did.
+            if write.entity is not None and courtesy:
                 # The card shows the entity as it now is: a fuller read than the proof needed.
                 try:
                     proposal.entity = await write.entity(dict(proposal.execution))
@@ -447,7 +459,7 @@ class ActionEngine:
         self._finish(proposal, ActionStatus.UNVERIFIED, "unverified", reason="re-read does not match")
         return CommitResult(proposal, "unverified", _failure_words(proposal, write))
 
-    async def _settle_by_observation(self, proposal, execution, session, spec, write, exc) -> CommitResult:
+    async def _settle_by_observation(self, proposal, execution, session, spec, write, exc, *, courtesy: bool = True) -> CommitResult:
         """One re-read decides an ambiguous mutation. Landed: verified, as if the answer had
         come back. Untouched: failed, and 'nothing was changed' is now a fact — except for a
         change Shopify finishes later (a cancel's job), where an unchanged re-read proves
@@ -487,7 +499,7 @@ class ActionEngine:
             proposal.executed_at = self.clock()
             proposal.status = ActionStatus.EXECUTED
             self.ledger.record("EXECUTED", proposal, reason="settled by re-read")
-        return await self._prove(proposal, proven, session, spec, write)
+        return await self._prove(proposal, proven, session, spec, write, courtesy=courtesy)
 
     # ---------------------------------------------------------------- helpers
 
@@ -537,6 +549,15 @@ class PreconditionFailed(RuntimeError):
     """Shopify refused the change because the entity was not as the proposal expected — a
     compare-and-swap that found a different quantity, an order that is already cancelled.
     Nothing was applied. Raised by a write's execute; the engine settles it as STALE."""
+
+
+def _running_batches(session: Session) -> set[str]:
+    """The batches of this session that the owner has gestured for and that are applying
+    their members now (app/actions/batch.py)."""
+    batches = getattr(session, "batches", None)
+    if not isinstance(batches, dict):
+        return set()
+    return {bid for bid, b in batches.items() if str(getattr(getattr(b, "status", None), "value", "")) == "EXECUTING"}
 
 
 def _stale_words(proposal: ActionProposal, write) -> str:

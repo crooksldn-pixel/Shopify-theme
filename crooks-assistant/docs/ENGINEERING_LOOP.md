@@ -19,8 +19,9 @@ improvement starts.
   9. approve      the owner reads the summary and merges; the Mac is updated by the owner, deliberately
 ```
 
-Steps 1–3 are automatic and run on the Mac. Steps 4–9 involve a person at every gate that
-matters: choosing what to build, and deciding what runs.
+Steps 1–3 are deterministic scripts a person runs on the Mac (`make` targets); nothing
+starts them by itself. Steps 4–9 involve a person at every gate that matters: choosing what
+to build, and deciding what runs.
 
 ## What a candidate is
 
@@ -45,9 +46,10 @@ counts.
 ## What is never automatic
 
 - **The production branch is never modified while servicing the owner.** The assistant
-  the owner talks to has no tool that edits, commits, deploys or restarts anything, and
-  the gate refuses any such tool by name. Nothing in the timeline, the report or the
-  proposals file can execute.
+  the owner talks to has no tool that edits, commits, deploys or restarts anything: no such
+  tool is registered, the gate denies any tool that is not registered, and any name that
+  reads as a mutation is denied unless it carries a reviewed write definition. Nothing in
+  the timeline, the report or the proposals file can execute.
 - **No candidate is applied by the thing that generated it.** The proposals file is read by
   a person. An engineering agent, when one is used, is given a candidate by the owner and
   works on a development branch under the same rules as any contributor: tests, review,

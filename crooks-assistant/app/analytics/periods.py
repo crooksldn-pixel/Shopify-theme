@@ -42,21 +42,42 @@ class Period:
     @property
     def whole_days(self) -> int:
         """The number of calendar days the period spans, for a velocity: a period that ends now
-        still counts today as a day."""
-        return max(1, int(-(-(self.end - self.start).total_seconds() // 86400)))
+        still counts today as a day. Counted by date, so a clock change is not a day."""
+        days = (self.end.date() - self.start.date()).days
+        if self.end.time() != self.end.min.time() or days == 0:
+            days += 1
+        return max(1, days)
+
+    @property
+    def to_date(self) -> bool:
+        """A period still running (this week, this month, today): the figures are "so far"."""
+        return self.kind in ("this_week", "this_month", "today")
 
     def contains(self, moment: datetime) -> bool:
         return self.start <= moment < self.end
 
     def previous(self) -> Period:
-        """The period of the same length immediately before this one — the comparison."""
+        """The period immediately before this one — the comparison. A period still running
+        (this week on a Wednesday) is compared with the same stretch of the one before
+        (last week to Wednesday at this time), never with the whole of it: "down 60% on
+        last week" every midweek would be the calendar, not the shop."""
         span = self.end - self.start
-        if self.kind in ("this_week", "last_week"):
+        if self.kind == "this_week":
+            start = self.start - timedelta(days=7)
+            return Period(start, start + span, "last week to this point", "last_week_to_date")
+        if self.kind == "last_week":
             return Period(self.start - timedelta(days=7), self.start, "the week before", "last_week")
-        if self.kind in ("this_month", "last_month"):
+        if self.kind == "this_month":
+            first_of_previous = (self.start.replace(day=1) - timedelta(days=1)).replace(day=1)
+            end = min(first_of_previous + span, self.start)
+            return Period(first_of_previous, end, "last month to this point", "last_month_to_date")
+        if self.kind == "last_month":
             first_of_previous = (self.start.replace(day=1) - timedelta(days=1)).replace(day=1)
             return Period(first_of_previous, self.start, "the month before", "last_month")
-        if self.kind in ("days", "today", "yesterday", "since_launch"):
+        if self.kind == "today":
+            start = self.start - timedelta(days=1)
+            return Period(start, start + span, "yesterday to this time", "yesterday_to_date")
+        if self.kind in ("days", "yesterday", "since_launch"):
             # A period that ends now is a number of whole days; the one before is as many, ending at its start.
             return Period(self.start - timedelta(days=self.whole_days), self.start, f"the {self.whole_days} day{'s' if self.whole_days != 1 else ''} before", "days")
         return Period(self.start - span, self.start, "the period before", self.kind)

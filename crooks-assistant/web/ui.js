@@ -1250,20 +1250,29 @@
         ]),
       ]),
       d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
-      // A draft campaign: the template as written, and one member's email as it will be saved.
-      d.body ? h('blockquote', { class: 'action-summary action-body' }, h('p', { class: 'msg-body', text: text(d.body) })) : null,
+      // A draft campaign: one member's email as it will be saved is the card; the template
+      // it was filled from sits behind a fold, named as a template.
       preview && (preview.subject || preview.body) ? h('div', { class: 'batch-preview' }, [
-        h('p', { class: 'card-meta', text: `Preview · ${text(preview.to, 'the first customer')}` }),
+        h('p', { class: 'card-meta', text: `As it will be saved for ${text(preview.to, 'the first customer')}` }),
         preview.subject ? h('p', { class: 'batch-preview-subject', text: text(preview.subject) }) : null,
         preview.body ? h('p', { class: 'msg-body', text: text(preview.body) }) : null,
       ]) : null,
+      d.body ? h('details', { class: 'batch-members' }, [
+        h('summary', { text: preview ? 'The template · filled in for each one' : 'The text' }),
+        h('p', { class: 'msg-body', text: text(d.body) }),
+      ]) : null,
       facts.length ? h('dl', { class: 'facts' }, facts.map((f) => [h('dt', { text: text(f.label) }), h('dd', { class: text(f.tone) || null, text: text(f.value) })]).flat()) : null,
       d.detail ? h('p', { class: 'card-meta', text: text(d.detail) }) : null,
-      // Who is left out, and why: read before the hand moves.
-      excluded.length ? h('div', { class: 'batch-excluded' }, [
-        h('p', { class: 'card-note', text: `${excluded.length} excluded` }),
-        h('ul', { class: 'batch-list' }, excluded.map((x) => h('li', {}, [h('span', { class: 'batch-item', text: text(x.label) }), h('span', { class: 'batch-why', text: text(x.reason) })]))),
-      ]) : null,
+      // Who is left out, and why: read before the hand moves; a long list sits behind a fold.
+      excluded.length ? (excluded.length <= 3
+        ? h('div', { class: 'batch-excluded' }, [
+          h('p', { class: 'card-note', text: `${excluded.length} excluded` }),
+          h('ul', { class: 'batch-list' }, excluded.map((x) => h('li', {}, [h('span', { class: 'batch-item', text: text(x.label) }), h('span', { class: 'batch-why', text: text(x.reason) })]))),
+        ])
+        : h('details', { class: 'batch-members batch-excluded' }, [
+          h('summary', { text: `${excluded.length} excluded · ${excluded.slice(0, 3).map((x) => text(x.label)).join(' · ')} …` }),
+          h('ul', { class: 'batch-list' }, excluded.map((x) => h('li', {}, [h('span', { class: 'batch-item', text: text(x.label) }), h('span', { class: 'batch-why', text: text(x.reason) })]))),
+        ])) : null,
       // Every member the gesture will touch, one tap away, never hidden behind a count.
       members.length ? h('details', { class: 'batch-members' }, [
         h('summary', { text: `All ${members.length} · ${members.slice(0, 4).join(' · ')}${members.length > 4 ? ' …' : ''}` }),
@@ -1289,7 +1298,7 @@
     const node = card('batch_result', [
       h('div', { class: 'card-head' }, [
         h('div', { class: `mark ${all ? 'ok' : 'warn'}` }, all ? CHECK() : h('span', { text: String(n('verified')) })),
-        h('div', {}, [kicker(all ? 'Done · all proven' : 'Done · counted'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })]),
+        h('div', {}, [kicker(text(d.summary, all ? 'Done' : 'Done in part')), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })]),
       ]),
       h('div', { class: 'stats counts' }, [stat('applied', 'verified'), stat('excluded', 'excluded'), stat('not applied', 'failed'), stat('changed meanwhile', 'stale'), stat('not confirmed', 'unverified'), stat('not attempted', 'not_attempted')].filter(Boolean)),
       d.note ? h('p', { class: 'card-note bad', text: text(d.note) }) : null,

@@ -804,19 +804,19 @@ test('a batch card names the count, the scope, the excluded and every member, an
 
 test('a batch result counts what was proven, lists each member with its outcome, and offers the undo batch', () => {
   const node = UI.renderItem({ type: 'batch_result', data: {
-    batch_id: 'batch_abc', operation: 'batch_order_tags_add', title: 'Tags added: 20 of 23', detail: 'delayed · 23 orders', all_verified: false,
+    batch_id: 'batch_abc', operation: 'batch_order_tags_add', title: 'Tags added: 20 of 21', detail: 'delayed · 23 orders · 2 excluded before the gesture', all_verified: false, summary: '20 applied, 1 not',
     counts: { requested: 23, eligible: 21, excluded: 2, verified: 20, unverified: 0, stale: 0, failed: 1, not_attempted: 0 },
     rows: [{ label: '#1938', outcome: 'applied', code: 'verified' }, { label: '#1935', outcome: 'not applied', code: 'failed' }, { label: '#1902', outcome: 'excluded: already has those tags', code: 'excluded' }],
-    note: 'Only the members marked applied were proven.',
+    note: 'The 1 marked not applied was left as it was.',
     undo: { batch_id: 'batch_undo', label: 'Undo all', interaction: 'hold_to_arm', ttl_s: 120 },
   } }, { now: () => 0, timers: { set: () => 0, clear: () => {} } });
   const words = textOf(node);
-  assert.ok(words.includes('Done · counted') && words.includes('Tags added: 20 of 23') && words.includes('not applied') && words.includes('Only the members marked applied were proven.'));
+  assert.ok(words.includes('20 applied, 1 not') && words.includes('Tags added: 20 of 21') && words.includes('not applied') && words.includes('The 1 marked not applied was left as it was.'));
   assert.equal(node.querySelector('.counts').querySelectorAll('.stat').length, 3, 'only the non-zero counts are shown');
   assert.equal(node.querySelector('.batch-list').querySelectorAll('li').length, 3);
   assert.equal(node.querySelectorAll('li').find((li) => li.classList.contains('bad')).querySelector('.batch-why').textContent, 'not applied');
   assert.equal(node.dataset.proposal, 'batch_undo', 'the live id on the card is the undo batch');
   assert.equal(node.querySelector('.action-surface').dataset.kind, 'hold_to_arm');
   const clean = UI.renderItem({ type: 'batch_result', data: { batch_id: 'b', title: 'Archived: 3 of 3', all_verified: true, counts: { requested: 3, eligible: 3, verified: 3 }, rows: [] } });
-  assert.ok(textOf(clean).includes('all proven'));
+  assert.ok(textOf(clean).includes('Done') && !textOf(clean).includes('in part'));
 });

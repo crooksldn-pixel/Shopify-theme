@@ -41,10 +41,6 @@ def _set(set_id: str, *, kinds: tuple[str, ...]) -> Any:
     return ws
 
 
-def _scope(batch) -> list[dict[str, str]]:
-    return [{"label": "Set", "value": f"{batch.set_label} · {batch.requested} {batch.set_kind}"}]
-
-
 # --------------------------------------------------------------------------- tags
 
 
@@ -52,12 +48,11 @@ def _present_tags(batch) -> dict[str, Any]:
     tags = [str(t) for t in batch.summary.get("tags") or []]
     remove = batch.operation.startswith("batch_order_tags_remove")
     if batch.undo_of:
-        return {"title": "Put the tags back on all of them" if remove else "Take the tags off all of them again", "detail": "Reverses exactly what the batch did, order by order.", "confirm_label": "Undo all", "undone_title": "Tags put back" if remove else "Tags removed again"}
+        return {"title": "Put the tags back on" if remove else "Take the tags back off", "detail": "Reverses exactly what the batch did, order by order.", "confirm_label": "Undo all", "undone_title": "Tags put back" if remove else "Tags taken back off"}
     return {
         "title": ("Remove tags from" if remove else "Add tags to") + f" {len(batch.eligible)} orders",
         "summary": ", ".join(tags),
-        "detail": ("Taken off each order's tags; nothing else changes." if remove else "Added to each order's tags; nothing is removed.") + " Each order is checked and proven on its own.",
-        "facts": [{"label": "Tags", "value": ", ".join(tags)}, *_scope(batch)],
+        "detail": ("Taken off each order's tags; nothing else changes." if remove else "Added to each order's tags; nothing is removed.") + " Each order is checked first and read back afterwards.",
         "done_title": "Tags removed" if remove else "Tags added",
         "target": "Apply to all",
     }
@@ -120,7 +115,6 @@ def _present_archive(batch) -> dict[str, Any]:
     return {
         "title": f"Archive {len(batch.eligible)} threads",
         "detail": "Each leaves the inbox and stays in All Mail and in search. Undo puts them all back.",
-        "facts": _scope(batch),
         "done_title": "Archived",
         "target": "Archive all",
     }
@@ -201,14 +195,15 @@ def _preview_draft(prepared) -> dict[str, Any]:
 
 def _present_drafts(batch) -> dict[str, Any]:
     if batch.undo_of:
-        return {"title": "Delete all the drafts again", "detail": "Each draft this saved is deleted from Gmail.", "confirm_label": "Undo all", "undone_title": "Drafts deleted"}
+        return {"title": f"Delete the {len(batch.eligible)} drafts", "detail": "Each draft this saved is deleted from Gmail.", "confirm_label": "Undo all", "undone_title": "Drafts deleted"}
     s = batch.summary
+    per = "order" if batch.set_kind == "orders" else "customer"
     return {
         "title": f"Save {len(batch.eligible)} drafts",
-        "summary": str(s.get("subject") or ""),
+        # The template, filled in for each member by the Mac; the card shows one filled
+        # (the preview) and keeps the template behind a fold.
         "body": str(s.get("body") or ""),
-        "detail": "One draft per customer, saved in Gmail drafts. Nothing is sent; sending is a separate step, one at a time.",
-        "facts": [{"label": "Subject", "value": str(s.get("subject") or "")}, *_scope(batch)],
+        "detail": f"One draft per {per}, saved in Gmail drafts. Nothing is sent; sending is a separate step, one at a time.",
         "done_title": "Drafts saved",
         "target": "Save all",
     }
@@ -216,7 +211,7 @@ def _present_drafts(batch) -> dict[str, Any]:
 
 @tool(
     name="batch_email_drafts",
-    description="One Gmail draft per customer for every order (or customer) in a working set (≤50), from a template the Mac fills: {first_name}, {order_number}, {order_age_days}. Nothing is sent.",
+    description="One Gmail draft per order (or per customer, for a set of customers) in a working set (≤50), from a template the Mac fills: {first_name}, {order_number}, {order_age_days}. Nothing is sent.",
     input_schema={
         "type": "object",
         "properties": {
@@ -229,7 +224,7 @@ def _present_drafts(batch) -> dict[str, Any]:
     tier=Tier.AMBER,
     issued_id_args=("set_id",),
     timeout_s=30.0,
-    batch=BatchSpec(operation="batch_email_drafts", child_tool="gmail_draft_new", set_kinds=("orders", "customers"), present=_present_drafts, verb="Saved drafts for", noun="customers", preview=_preview_draft),
+    batch=BatchSpec(operation="batch_email_drafts", child_tool="gmail_draft_new", set_kinds=("orders", "customers"), present=_present_drafts, verb="Saved drafts for", noun="", preview=_preview_draft),
 )
 async def batch_email_drafts(set_id: str, subject: str, body: str) -> BatchPlan:
     from app.tools.gmail_writes import clean_body, clean_subject

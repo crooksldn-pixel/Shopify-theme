@@ -30,9 +30,14 @@ def test_named_periods_resolve_in_london_time():
     assert week.start == datetime(2026, 9, 7, tzinfo=LONDON) and week.end == NOW, "Monday to now"
     last = periods.resolve("last_week", now=NOW)
     assert last.start == datetime(2026, 8, 31, tzinfo=LONDON) and last.end == datetime(2026, 9, 7, tzinfo=LONDON)
-    assert week.previous().start == datetime(2026, 8, 31, tzinfo=LONDON) and week.previous().end == week.start
+    # A week still running is compared with last week to the same point, never the whole of it.
+    assert week.previous().start == datetime(2026, 8, 31, tzinfo=LONDON) and week.previous().end == datetime(2026, 9, 2, 15, 30, tzinfo=LONDON) and week.previous().label == "last week to this point"
+    assert last.previous().start == datetime(2026, 8, 24, tzinfo=LONDON) and last.previous().end == last.start, "a whole week is compared with the whole week before"
+    month = periods.resolve("this_month", now=NOW)
+    assert month.previous().start == datetime(2026, 8, 1, tzinfo=LONDON) and month.previous().end == datetime(2026, 8, 9, 15, 30, tzinfo=LONDON) and month.to_date
+    assert periods.resolve("today", now=NOW).previous().end == datetime(2026, 9, 8, 15, 30, tzinfo=LONDON)
     month = periods.resolve("this month", now=NOW)
-    assert month.start == datetime(2026, 9, 1, tzinfo=LONDON) and month.previous().start == datetime(2026, 8, 1, tzinfo=LONDON) and month.previous().end == month.start
+    assert month.start == datetime(2026, 9, 1, tzinfo=LONDON) and month.previous().start == datetime(2026, 8, 1, tzinfo=LONDON) and month.previous().end == datetime(2026, 8, 9, 15, 30, tzinfo=LONDON)
     assert periods.resolve("last month", now=NOW).start == datetime(2026, 8, 1, tzinfo=LONDON)
     seven = periods.resolve({"days": 7}, now=NOW)
     assert seven.start == datetime(2026, 9, 3, tzinfo=LONDON) and seven.whole_days == 7 and seven.previous().start == datetime(2026, 8, 27, tzinfo=LONDON) and seven.previous().end == seven.start

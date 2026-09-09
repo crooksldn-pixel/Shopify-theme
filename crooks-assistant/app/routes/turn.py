@@ -212,6 +212,8 @@ async def turn(
     set_line = working_sets.prompt_line(live)
     if set_line:
         prompt_text = f"{prompt_text}\n\n{set_line}"
+    for extra in _context_lines(live, text):
+        prompt_text = f"{prompt_text}\n\n{extra}"
     if timeline.current().active is not None:
         timeline.emit(
             "prefetch", session_id=session_id, turn_id=live.turn_id, order_numbers=spoken_order_numbers(text), hit=bool(lookup),
@@ -283,6 +285,38 @@ LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 AFFIRMATION_ANSWER = words_for("tap_commit")["affirmation"]
 AFFIRMATION_BLOCKED_ANSWER = AFFIRMATION_BLOCKED
 FIXED_LINES = GRAMMAR_FIXED_LINES
+
+def _context_lines(session, text: str) -> list[str]:
+    """What the Mac knows that the model would otherwise guess at, one line each: the last
+    gesture's counted outcome (once), the last query's shape (for a follow-up), and which
+    composable capability the question's words name (so it is reached for, not declined)."""
+    from app.observability import claims
+
+    lines: list[str] = []
+    outcome = str(getattr(session, "last_outcome", "") or "").strip()
+    if outcome:
+        lines.append(f'[The last change, as the Mac proved it: "{outcome[:200]}". If asked whether it worked, say this; do not propose it again.]')
+        session.last_outcome = ""
+    session.hinted = False
+    last = getattr(session, "last_query", None)
+    if isinstance(last, dict) and last:
+        lines.append(f"[Last read-layer query: {_short_query(last)}. A follow-up (\"just this week\", \"by size\", \"only joggers\") is this query with that one thing changed.]")
+    matched = claims.match_capabilities(text)
+    if matched:
+        known = claims.registered()
+        usable = [c for c in matched if all(t in known for t in c.tools)]
+        if usable:
+            lines.append("[This asks for " + "; ".join(f"{c.what} ({', '.join(c.tools)})" for c in usable[:3]) + " — the Mac composes it; call the tool rather than saying it cannot be done.]")
+            session.hinted = True
+    return lines
+
+
+def _short_query(query: dict) -> str:
+    import json
+
+    keep = {k: query[k] for k in ("tool", "entity", "period", "filters", "group_by", "metrics", "sort", "limit", "compare") if k in query and query[k] not in (None, [], {}, False)}
+    return json.dumps(keep, ensure_ascii=False, default=str)[:300]
+
 
 def _blocked_words(writes: dict) -> str:
     """Why a tap would be refused, in a clause the model can put in a sentence."""
@@ -581,7 +615,7 @@ async def _answer(
         # FALSE UNSUPPORTED claim, and the report counts it. Words only; no reasoning text.
         from app.observability import claims
 
-        signal = claims.claim(question or (transcript or {}).get("text") or "", answer, tool_calls, claims.registered())
+        signal = claims.claim(question or (transcript or {}).get("text") or "", answer, tool_calls, claims.registered(), hinted=bool(getattr(session, "hinted", False)))
         if signal is not None:
             timeline.emit("unsupported_claim", session_id=session_id, turn_id=turn_id or None, **signal)
         timeline.emit(

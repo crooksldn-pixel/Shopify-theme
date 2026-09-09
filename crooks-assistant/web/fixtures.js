@@ -161,10 +161,10 @@
       facts: [{ label: 'Subject', value: 'Your order {order_number}' }, { label: 'Set', value: 'delayed orders — who have not emailed us · 26 orders' }],
       preview: { to: 'Sam Fixture <sam@example.com>', subject: 'Your order 1938', body: 'Hi Sam,\n\nYour order 1938 has been with us 8 days and is on its way this week. Sorry for the wait.\n\nCROOKS' },
       interaction: { kind: 'hold_drag_target', label: 'Hold, then drag to the target', footer: 'nothing happens until you hold the card and drag the handle onto the target', target: 'Save all 26', armed_after_ms: 650 }, ttl_s: 120, reversible: true, commit: { allowed: true } } }] },
-    { id: 'batch-result', label: 'Bulk result', items: [{ type: 'batch_result', data: { batch_id: 'batch_fixture0001', operation: 'batch_order_tags_add', title: 'Tags added: 20 of 23', detail: 'unfulfilled orders older than 5 days · 23 orders', all_verified: false,
+    { id: 'batch-result', label: 'Bulk result', items: [{ type: 'batch_result', data: { batch_id: 'batch_fixture0001', operation: 'batch_order_tags_add', title: 'Tags added: 20 of 21', detail: 'unfulfilled orders older than 5 days · 23 orders · 2 excluded before the gesture', all_verified: false, summary: '20 applied, 1 not',
       counts: { requested: 23, eligible: 21, excluded: 2, verified: 20, unverified: 0, stale: 0, failed: 1, not_attempted: 0 },
       rows: [{ label: '#1938', outcome: 'applied', code: 'verified' }, { label: '#1937', outcome: 'applied', code: 'verified' }, { label: '#1935', outcome: 'not applied', code: 'failed' }, { label: '#1902', outcome: 'excluded: already has those tags', code: 'excluded' }],
-      note: 'Only the members marked applied were proven. Check the others before asking again.',
+      note: 'The 1 marked not applied was left as it was. Ask for the change again for those, or check them in Shopify.',
       undo: { batch_id: 'batch_fixture_undo', label: 'Undo all', interaction: 'hold_to_arm', ttl_s: 120, armed_after_ms: 650 } } }] },
     { id: 'unknown', label: 'Unsupported type', items: [{ type: 'hologram', data: { html: '<b>should never render</b>' } }, { type: 'assistant', data: { text: 'The unsupported item before this one was skipped; only this card should show. <img src=x onerror=alert(1)> stays as text.' } }] },
   ];

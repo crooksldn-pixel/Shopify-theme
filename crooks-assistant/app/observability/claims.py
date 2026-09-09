@@ -100,19 +100,26 @@ def match_capabilities(question: str) -> list[Capability]:
     return [c for c in CAPABILITIES if c.matches(words)]
 
 
-def claim(question: str, answer: str, tool_calls: list[dict[str, Any]] | None, registered: set[str] | frozenset[str]) -> dict[str, Any] | None:
+def claim(question: str, answer: str, tool_calls: list[dict[str, Any]] | None, registered: set[str] | frozenset[str], *, hinted: bool = False) -> dict[str, Any] | None:
     """The signal for a turn whose answer declines: which composable capabilities the
-    question named, whether their tools are registered (a FALSE UNSUPPORTED claim), and
-    what was actually tried. None when the answer does not decline."""
+    question named, whether their tools are registered and were NOT reached for (a FALSE
+    UNSUPPORTED claim), and what was actually tried. "I can't see any orders that old" after
+    commerce_query ran and found none is an honest answer, not a claim. None when the
+    answer does not decline. `hinted` records that the Mac named the capability to the model
+    before the turn, so the report can tell an unaided reach from a prompted one."""
     if not declined(answer):
         return None
     matched = [c for c in match_capabilities(question) if all(t in registered for t in c.tools)]
-    attempted = sorted({str(tc.get("tool") or tc.get("name") or "") for tc in (tool_calls or []) if isinstance(tc, dict)} - {""})
+    calls = [tc for tc in (tool_calls or []) if isinstance(tc, dict)]
+    attempted = sorted({str(tc.get("tool") or tc.get("name") or "") for tc in calls} - {""})
+    reached = {str(tc.get("tool") or tc.get("name") or "") for tc in calls if tc.get("ok") is not False}
+    unreached = [c for c in matched if not any(t in reached for t in c.tools)]
     return {
-        "false_unsupported": bool(matched),
-        "capabilities": [c.key for c in matched],
-        "composable_via": sorted({t for c in matched for t in c.tools}),
+        "false_unsupported": bool(unreached),
+        "capabilities": [c.key for c in unreached],
+        "composable_via": sorted({t for c in unreached for t in c.tools}),
         "attempted": attempted,
+        "hinted": bool(hinted),
     }
 
 

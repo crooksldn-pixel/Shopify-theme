@@ -206,9 +206,9 @@ async def test_an_applied_change_drops_the_order_until_it_is_read_again(store, c
     month = resolve("last_30_days", now=NOW)
     await cache.view(month)
     cache.invalidate("gid://shopify/Order/1001")
-    assert cache.status()["orders"] == 5
+    assert cache.status()["orders"] == 6 and cache.status()["stale"] == 1, "kept, marked, read again — never dropped"
     view = await cache.view(month)
-    assert len(view.rows) == 6 and store.pages == 2, "the next view re-read what changed"
+    assert len(view.rows) == 6 and store.pages == 2 and cache.status()["stale"] == 0, "the next view re-read what changed"
 
 
 async def test_stock_is_read_in_one_call_per_chunk_and_held_briefly(store, cache, clock):
@@ -253,7 +253,8 @@ async def test_a_comparison_and_a_customer_ranking_through_the_tool(store, cache
     calls = []
     await dispatch("commerce_aggregate", {"entity": "orders", "period": "this_week", "metrics": ["orders", "revenue", "aov"], "compare": True, "view": "comparison"}, session=session, timeout_s=5, calls=calls)
     result = calls[-1].result
-    assert result["totals"]["orders"] == 2 and result["compare"]["totals"]["orders"] == 3 and result["compare"]["change"]["orders"]["delta"] == -1, "Monday to now against the whole week before"
+    assert result["totals"]["orders"] == 2 and result["compare"]["totals"]["orders"] == 1 and result["compare"]["change"]["orders"]["delta"] == 1, "Monday to now against last week to the same point, never the whole of it"
+    assert result["compare"]["period"]["label"] == "last week to this point"
     await dispatch("commerce_aggregate", {"entity": "customers", "period": "last_90_days", "filters": {"min_spent": 250}, "metrics": ["lifetime_spent", "lifetime_orders"]}, session=session, timeout_s=5, calls=calls)
     result = calls[-1].result
     assert [r["label"] for r in result["rows"]] == ["Cy Cole", "Ann Able"]

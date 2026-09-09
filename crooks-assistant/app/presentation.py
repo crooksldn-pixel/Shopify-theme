@@ -764,7 +764,6 @@ def _batch_card(batch, *, writes: dict[str, Any] | None = None) -> dict[str, Any
         "excluded_count": len(batch.excluded),
         "excluded": [{"label": _text(c.label, 60), "reason": _text(c.excluded, 120)} for c in batch.excluded[:MAX_BATCH_ROWS]],
         "members": [_text(c.label, 60) for c in batch.eligible[:MAX_BATCH_ROWS]],
-        "sample": [_text(c.label, 60) for c in batch.eligible[:5]],
         "facts": [
             {"label": _text(f.get("label"), 40), "value": _text(f.get("value"), 120), "tone": _text(f.get("tone"), 10)}
             for f in _list(words.get("facts"), 8)
@@ -814,13 +813,17 @@ def present_batch_state(batch, *, session: Session | None = None, code: str | No
         rows += [{"label": _text(c.label, 60), "outcome": "excluded: " + _text(c.excluded, 100), "code": "excluded"} for c in batch.excluded[: max(0, MAX_BATCH_ROWS - len(rows))]]
         title = _text(words.get("undone_title") or "Undone") if batch.undo_of else _text(words.get("done_title") or "Done")
         verified, eligible = counts["verified"], counts["eligible"]
+        not_applied = eligible - verified
+        # One denominator, the one the owner gestured for: the eligible members on the card.
+        # The excluded were named there before the gesture and are not counted against it.
         return [_ui("batch_result", {
             "batch_id": _text(batch.batch_id, 40), "operation": _text(batch.operation, 60),
-            "title": f"{title}: {verified} of {counts['requested']}",
-            "detail": f"{_text(batch.set_label, 80)} · {counts['requested']} {_text(batch.set_kind, 20)}",
-            "all_verified": bool(eligible) and verified == eligible and counts["excluded"] == 0,
+            "title": f"{title}: {verified} of {eligible}",
+            "detail": f"{_text(batch.set_label, 80)} · {counts['requested']} {_text(batch.set_kind, 20)}" + (f" · {counts['excluded']} excluded before the gesture" if counts["excluded"] else ""),
+            "all_verified": batch.all_verified,
+            "summary": f"{verified} applied" + (f", {not_applied} not" if not_applied else ""),
             "counts": counts, "rows": rows,
-            "note": "" if verified == eligible else "Only the members marked applied were proven. Check the others before asking again.",
+            "note": "" if verified == eligible else f"The {not_applied} marked not applied were left as they were. Ask for the change again for those, or check them in Shopify.",
         })]
     if status == "pending":
         return [_batch_card(batch, writes=writes)]

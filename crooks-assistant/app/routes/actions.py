@@ -309,6 +309,8 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         session = runtime.sessions.peek(session_id.strip())
     except KeyError:
         session = None
+    if session is not None and result.spoken and result.code in ("verified", "stale", "unverified", "failed", "refused", "service_unavailable"):
+        session.last_outcome = result.spoken
     undo = None
     if proposal.undo_id and session is not None:
         undo_proposal = session.proposal(proposal.undo_id)

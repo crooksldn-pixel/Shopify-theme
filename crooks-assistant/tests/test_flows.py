@@ -270,7 +270,7 @@ async def test_the_flows_run_end_to_end_and_the_report_reads_them_back(client):
     assert delayed["count"] == 2 and delayed["kind"] == "orders"
     data = await ask(client, "which of them have emailed us")
     ids["emailed"] = data["turn_id"]
-    assert types(data)[:2] == ["metric_group", "table"] and sum(1 for t in types(data) if t == "working_set") >= 2
+    assert types(data)[:2] == ["metric_group", "table"] and sum(1 for t in types(data) if t == "working_set") == 1, "one set card for the correlation, not one per derived set"
     assert client.inbox.calls, "the inbox was read per customer"
     data = await ask(client, "draft an email to each of the ones who haven't")
     ids["drafts"] = data["turn_id"]

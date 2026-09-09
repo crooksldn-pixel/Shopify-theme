@@ -34,6 +34,7 @@ from app.actions.engine import ARM_SLACK_MS, WAIT_FOR_OUTCOME_S, ActionEngine
 from app.actions.grammar import ARMED_FOR_S, dwell_ms, gesture_for
 from app.actions.ledger import ActionLedger, NullLedger
 from app.actions.models import ActionStatus, Prepared, args_fingerprint
+from app.clients.shopify import _refill_wait
 from app.tools.registry import BatchPlan, ToolError, ToolSpec
 
 log = logging.getLogger("crooks.actions")
@@ -53,6 +54,11 @@ PREPARE_BUDGET_S = 20.0
 # and withdrawn, and the count says so.
 COMMIT_CONCURRENCY = 3
 COMMIT_BUDGET_S = 90.0
+# Shopify's cost bucket, as the client last saw it: below this many points, the next child
+# waits for the refill Shopify itself described (bounded) rather than being throttled and
+# counted as failed. A precondition read that is refused is a member not applied.
+PACE_FLOOR = 150.0
+PACE_MAX_S = 5.0
 # Size and the gesture. Up to TAP_MAX eligible members the batch takes the change's own
 # gesture; more takes a hold; DRAG_MIN or more takes a hold and a drag onto the target.
 TAP_MAX = 5
@@ -146,6 +152,8 @@ class BatchProposal:
     arm_nonce: str = ""
     undo_of: str | None = None
     undo_id: str | None = None
+    spoken: str = ""                # the counted line, once it has run; the state route repeats it
+    paced_s: float = 0.0            # how long the run waited for Shopify's bucket
     done: asyncio.Event = field(default_factory=asyncio.Event)
 
     # The batch stands where a proposal stands in the turn's bookkeeping (the tool call
@@ -202,6 +210,7 @@ class BatchProposal:
             "ttl_s": self.ttl_s(now),
             "counts": dict(self.counts),
             "all_verified": self.all_verified,
+            "spoken": self.spoken,
             "undo_of": self.undo_of,
             "undo_id": self.undo_id,
         }
@@ -242,10 +251,13 @@ def spoken_for(verb: str, noun: str, counts: dict[str, int]) -> str:
     """The line after a batch has run: numbers the engine counted, in a fixed shape."""
     verified = int(counts.get("verified") or 0)
     requested = int(counts.get("requested") or 0)
-    parts = [f"{verb} {verified} of the {requested} {noun}."]
+    # The denominator is what the owner authorised: the eligible members on the card. The
+    # excluded were named there before the gesture and are not spoken as if it failed them.
+    eligible = int(counts.get("eligible") or requested)
+    parts = [f"{verb} {verified} of the {eligible} {noun}."]
     for key, words in (
         ("stale", "changed meanwhile and were left alone"), ("failed", "could not be applied"),
-        ("unverified", "could not be confirmed"), ("excluded", "were excluded"), ("not_attempted", "were not attempted"),
+        ("unverified", "could not be confirmed"), ("not_attempted", "were not attempted"),
     ):
         n = int(counts.get(key) or 0)
         if n:
@@ -384,8 +396,11 @@ class BatchEngine:
         if not children:
             return None
         now = self.clock()
+        # The undo lives at the conversation's position now, not the one the batch was
+        # staged in: a word spoken while the batch ran moved the session on, and the engine
+        # moved each undo proposal with it.
         undo_batch = BatchProposal(
-            batch_id=new_batch_id(), session_id=batch.session_id, epoch=batch.epoch, tool_name=batch.tool_name, child_tool=batch.child_tool,
+            batch_id=new_batch_id(), session_id=batch.session_id, epoch=int(getattr(session, "epoch", batch.epoch)), tool_name=batch.tool_name, child_tool=batch.child_tool,
             operation=f"{batch.operation}_undo", child_operation=batch.child_operation, risk=batch.risk,
             interaction=batch_gesture(batch.risk, "reversible" if batch.reversible else "irreversible", len(children)), reversible=False,
             set_id=batch.set_id, set_label=batch.set_label, set_kind=batch.set_kind, members=tuple(c.ref for c in children),
@@ -396,6 +411,7 @@ class BatchEngine:
             proposal = session.proposal(child.proposal_id)
             if proposal is not None:
                 proposal.batch_id = undo_batch.batch_id
+                proposal.epoch = undo_batch.epoch
                 proposal.expires_at = undo_batch.expires_at
         _held(session)[undo_batch.batch_id] = undo_batch
         self._index[undo_batch.batch_id] = session
@@ -537,6 +553,12 @@ class BatchEngine:
         batch.status = BatchStatus.EXECUTING
         batch.caller = caller
         batch.executed_at = self.clock()
+        # The gesture authorised every member: none of them waits for a tap any more, so
+        # none of them may expire on the card's clock while the batch works through them.
+        for child in batch.eligible:
+            proposal = session.proposal(child.proposal_id)
+            if proposal is not None and proposal.status is ActionStatus.PENDING:
+                proposal.expires_at = batch.executed_at + COMMIT_BUDGET_S + WAIT_FOR_OUTCOME_S
         self.ledger.record_batch("EXECUTING", batch)
         started = time.perf_counter()
         semaphore = asyncio.Semaphore(COMMIT_CONCURRENCY)
@@ -548,6 +570,7 @@ class BatchEngine:
                 if loop.time() > deadline:
                     child.code = "not_attempted"
                     return
+                batch.paced_s += await pace(batch.child_tool)
                 try:
                     result = await self.engine.commit(child.proposal_id, session_id, caller=caller, spec_lookup=spec_lookup, via_batch=batch.batch_id)
                 except asyncio.CancelledError:
@@ -586,8 +609,9 @@ class BatchEngine:
         if batch.undo_of is None:
             self.stage_undo(session, batch)
         spec = spec_lookup(batch.tool_name)
-        verb, noun = ("Undid", batch.set_kind) if batch.undo_of else _words(spec, batch)
-        return BatchResult(batch, "done", spoken_for(verb, noun, counts))
+        verb, noun = ("Undid", _noun(batch.set_kind)) if batch.undo_of else _words(spec, batch)
+        batch.spoken = spoken_for(verb, noun, counts)
+        return BatchResult(batch, "done", batch.spoken)
 
     # ---------------------------------------------------------------- helpers
 
@@ -630,8 +654,35 @@ class BatchEngine:
 
 def _words(spec, batch: BatchProposal) -> tuple[str, str]:
     if spec is not None and spec.batch is not None:
-        return str(spec.batch.verb or "Applied to"), str(spec.batch.noun or batch.set_kind)
-    return "Applied to", batch.set_kind
+        return str(spec.batch.verb or "Applied to"), str(spec.batch.noun or _noun(batch.set_kind))
+    return "Applied to", _noun(batch.set_kind)
+
+
+def _noun(set_kind: str) -> str:
+    return {"emails": "threads"}.get(str(set_kind), str(set_kind))
+
+
+async def pace(child_tool: str) -> float:
+    """Wait for Shopify's cost bucket when the client last saw it nearly empty, by Shopify's
+    own refill figures and bounded — so a member is not refused for a bucket a moment's
+    patience would have refilled. Returns the seconds waited."""
+    if not str(child_tool).startswith("shopify_"):
+        return 0.0
+    try:
+        from app.tools.shopify_tools import _client as shopify_client
+    except Exception:  # noqa: BLE001
+        return 0.0
+    cost = getattr(shopify_client, "last_cost", None) if shopify_client is not None else None
+    if not isinstance(cost, dict) or cost.get("available") is None or float(cost["available"]) >= PACE_FLOOR:
+        return 0.0
+    wait = min(PACE_MAX_S, max(0.0, _refill_wait({**cost, "requested": max(float(cost.get("requested") or 0.0), PACE_FLOOR)})))
+    if wait > 0:
+        await _sleep(wait)
+    return wait
+
+
+async def _sleep(seconds: float) -> None:
+    await asyncio.sleep(seconds)
 
 
 def _held(session: Any) -> dict[str, BatchProposal]:

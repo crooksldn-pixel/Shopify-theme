@@ -324,12 +324,20 @@ def working_set_items(result: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(result, dict):
         return []
     out = []
-    for key in ("set", "set_contacted", "set_not_contacted", "set_replied"):
-        card = working_set_card(result.get(key))
-        if card is not None:
-            if key != "set":
-                card["data"]["parent_label"] = _text(result.get("set_label") or "", 80)
-            out.append(card)
+    card = working_set_card(result.get("set"))
+    if card is not None:
+        out.append(card)
+    derived = [(key, result.get(key)) for key in ("set_contacted", "set_not_contacted", "set_replied") if isinstance(result.get(key), dict)]
+    if derived:
+        # One card for the correlation: the set the owner asked about, with the three
+        # counts on it. The derived sets are the model's to name; three cards each saying
+        # "these" would be three claims to the same word.
+        counts = result.get("counts") if isinstance(result.get("counts"), dict) else {}
+        out.append(_ui("working_set", {
+            "set_id": _text(result.get("set_id"), 40), "kind": _text(result.get("kind"), 20), "count": int(result.get("customers") or 0), "label": _text(result.get("set_label"), 80),
+            "parent_label": "", "step": "correlate", "sample": [], "truncated": False,
+            "lines": [{"label": "emailed us", "value": str(int(counts.get("contacted") or 0))}, {"label": "no contact", "value": str(int(counts.get("not_contacted") or 0))}, {"label": "we replied", "value": str(int(counts.get("replied") or 0))}],
+        }))
     return out
 
 

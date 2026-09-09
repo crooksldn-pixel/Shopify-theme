@@ -78,6 +78,7 @@ class Query:
     view: str
     title: str
     cost: int
+    limit_explicit: bool = False   # the model asked for this many: a set is then the rows shown
     extra: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
@@ -288,7 +289,7 @@ def parse(spec: dict[str, Any], *, now: datetime | None = None, tz: str | ZoneIn
     cost = estimate_cost(entity, period, groups, metrics, limit, compare)
     if cost > MAX_COST:
         raise QueryError(f"That query is too expensive to run at once (cost {cost} > {MAX_COST}): narrow the period, drop the comparison, or ask for fewer rows.")
-    return Query(entity=entity, period=period, filters=filters, group_by=tuple(groups), metrics=tuple(metrics), sort=tuple(sort), limit=limit, compare=compare, view=view, title=title, cost=cost)
+    return Query(entity=entity, period=period, filters=filters, group_by=tuple(groups), metrics=tuple(metrics), sort=tuple(sort), limit=limit, limit_explicit="limit" in spec, compare=compare, view=view, title=title, cost=cost)
 
 
 def estimate_cost(entity: str, period: Period, groups: list[str], metrics: list[str], limit: int, compare: bool) -> int:

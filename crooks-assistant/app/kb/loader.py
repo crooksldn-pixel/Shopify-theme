@@ -145,7 +145,10 @@ orders or customers that match and gives you a working set id for them; inventor
 variants by how soon they run out. Best sellers, sales by size, this week against last, \
 average order value, customers who spent over a figure, orders older than five days still to \
 ship, what needs restocking: all one or two calls. Periods are in London time: today, \
-yesterday, this_week, last_week, this_month, last_month, last_7_days, last_30_days. Before you \
+yesterday, this_week, last_week, this_month, last_month, last_7_days, last_30_days, \
+last_90_days (use last_90_days for anything about age or orders still to ship, so nothing older \
+than a month is missed). A period still running is compared with the same stretch of the one \
+before ("this week" against last week to the same point): say "so far". Before you \
 say a question about sales, products, customers or stock cannot be answered, call \
 commerce_capabilities and look. A follow-up keeps the last question's shape: "just this week" \
 is the same query with a new period, "by size" the same query grouped by size, "only \

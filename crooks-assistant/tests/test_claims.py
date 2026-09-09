@@ -32,10 +32,10 @@ def test_questions_match_the_capabilities_the_mac_composes(question, keys):
 
 def test_a_refusal_of_a_composable_question_is_a_false_unsupported_claim():
     signal = claims.claim("what sold best by colour last month", "I can't break sales down by colour from here.", [], REGISTERED)
-    assert signal == {"false_unsupported": True, "capabilities": ["best_sellers", "breakdown"], "composable_via": ["commerce_aggregate"], "attempted": []}
+    assert signal == {"false_unsupported": True, "capabilities": ["best_sellers", "breakdown"], "composable_via": ["commerce_aggregate"], "attempted": [], "hinted": False}
     assert claims.claim("what sold best by colour last month", "Black joggers, then the grey hoodie.", [], REGISTERED) is None, "no refusal, no claim"
     honest = claims.claim("give daniel ten pounds of store credit", "I can't add store credit from here.", [{"tool": "shopify_customer_store_credit_add"}], REGISTERED)
-    assert honest == {"false_unsupported": False, "capabilities": [], "composable_via": [], "attempted": ["shopify_customer_store_credit_add"]}
+    assert honest == {"false_unsupported": False, "capabilities": [], "composable_via": [], "attempted": ["shopify_customer_store_credit_add"], "hinted": False}
     without = claims.claim("what sold best by colour last month", "I can't break sales down by colour.", [], frozenset())
     assert without is not None and without["false_unsupported"] is False, "a capability not registered on this Mac is not a false claim"
 

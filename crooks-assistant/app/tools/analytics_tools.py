@@ -106,12 +106,17 @@ def _set_from(result: dict[str, Any], query: Query, *, tool: str) -> dict[str, A
     elif query.entity in ("customers", "products", "variants"):
         id_key = {"customers": "customer_id", "products": "product_id", "variants": "variant_id"}[query.entity]
         kind = query.entity
+        # Every member the ranking matched (the engine's member_ids), not only the rows shown
+        # — unless the model asked for a number, when the set is exactly those rows.
+        members = [str(m) for m in result.get("member_ids") or []]
+        labels = {str(m): str(n) for m, n in (result.get("member_labels") or {}).items() if n}
         for r in result.get("rows") or []:
             key = r.get("key") if isinstance(r, dict) and isinstance(r.get("key"), dict) else {}
             if key.get(id_key):
-                members.append(str(key[id_key]))
-                if r.get("label"):
-                    labels[str(key[id_key])] = str(r.get("label"))
+                if not members or str(key[id_key]) not in labels:
+                    labels[str(key[id_key])] = str(r.get("label") or "")
+                if str(key[id_key]) not in members:
+                    members.append(str(key[id_key]))
                 if len(sample) < 5:
                     sample.append({"ref": key[id_key], "label": r.get("label")})
     if kind is None or not members:
@@ -164,6 +169,12 @@ async def _run(spec: dict[str, Any], *, default_entity: str, tool: str = "commer
         )
         raise ToolError(f"Query not understood: {exc}") from exc
     _sets_in(query)
+    session = current_session()
+    if session is not None:
+        try:
+            session.last_query = {"tool": tool, "entity": query.entity, "period": query.period.label, "filters": dict(query.filters), "group_by": list(query.group_by), "metrics": list(query.metrics), "sort": [list(x) for x in query.sort], "limit": query.limit, "compare": query.compare}
+        except AttributeError:
+            pass
     started = time.perf_counter()
     window = query.period.previous().start if query.compare else query.period.start
     view = await cache().view(Period(window, query.period.end, query.period.label, query.period.kind), timeout_s=READ_TIMEOUT_S)
@@ -237,7 +248,7 @@ async def commerce_aggregate(entity: str = "order_line_items", period: Any = Non
             "period": {"description": _PERIOD_DESC},
             "filters": {"type": "object", "description": _FILTERS_DESC},
             "sort": {"type": "array", "items": {"type": "object"}, "description": "Orders: created_at, total or age_days; customers: a metric. Default newest first."},
-            "limit": {"type": "integer", "description": f"Rows shown (1-{MAX_LIMIT}), default 25; the set holds every match."},
+            "limit": {"type": "integer", "description": f"Rows shown (1-{MAX_LIMIT}). Unset, the set holds every match; set, just these rows."},
             "metrics": {"type": "array", "items": {"type": "string"}, "description": "Customers only: orders, revenue, lifetime_orders, lifetime_spent."},
             "title": {"type": "string", "description": "A short name for the set, in the owner's words."},
         },
@@ -303,7 +314,10 @@ _threads_for = None       # gmail_tools.threads_for, or a test's stand-in
 _replied = None           # async (thread_id) -> bool | None
 _email_cache: dict[tuple[str, int], tuple[float, dict[str, Any]]] = {}
 EMAIL_CACHE_S = 300.0
-EMAIL_MAX_CUSTOMERS = 40
+# As many customers as a batch takes members (app/actions/batch.py MAX_BATCH): the flow
+# "who has emailed → a draft to the rest" must not break at the size a batch allows.
+EMAIL_MAX_CUSTOMERS = 50
+EMAIL_VIEW_DAYS = 90
 EMAIL_CONCURRENCY = 4
 EMAIL_TIMEOUT_S = 7.0
 EMAIL_THREADS_PER_CUSTOMER = 3
@@ -369,19 +383,27 @@ async def email_query(set_id: str, days: int = 30) -> dict:
         raise ToolError(f"email_query takes a set of orders or customers; {set_id} is {ws.kind}.")
     days = max(1, min(int(days or 30), 365))
     now, zone = await _now_and_zone()
-    rows_view = await cache().view(Period(now - __import__("datetime").timedelta(days=MAX_DAYS), now, "held", "days"), timeout_s=READ_TIMEOUT_S)
+    # The window the listings read (never a year's backfill for an inbox question): a member
+    # the Mac does not hold, or one with no customer record (a guest checkout), is counted as
+    # unchecked and said so — never silently left out of "the rest".
+    rows_view = await cache().view(Period(now - __import__("datetime").timedelta(days=EMAIL_VIEW_DAYS), now, "held", "days"), timeout_s=READ_TIMEOUT_S)
     by_customer: dict[str, dict[str, Any]] = {}
+    held: set[str] = set()
+    guests: list[str] = []
     for o in rows_view.rows:
         c = o.get("customer") or {}
-        if not c.get("customer_id"):
-            continue
         if ws.kind == "orders" and o["order_id"] not in ws.members:
             continue
-        if ws.kind == "customers" and c["customer_id"] not in ws.members:
+        if ws.kind == "customers" and c.get("customer_id") not in ws.members:
+            continue
+        held.add(o["order_id"] if ws.kind == "orders" else str(c.get("customer_id")))
+        if not c.get("customer_id"):
+            guests.append(o["order_id"])
             continue
         entry = by_customer.setdefault(c["customer_id"], {"customer_id": c["customer_id"], "name": c.get("name"), "email": c.get("email"), "orders": [], "order_ids": []})
         entry["orders"].append(o.get("order_number"))
         entry["order_ids"].append(o["order_id"])
+    missing = [m for m in ws.members if m not in held]
     if len(by_customer) > EMAIL_MAX_CUSTOMERS:
         raise ToolError(f"That set has {len(by_customer)} customers; the inbox is checked for at most {EMAIL_MAX_CUSTOMERS} at a time. Narrow the set first.")
     clock = cache().clock
@@ -421,15 +443,25 @@ async def email_query(set_id: str, days: int = 30) -> dict:
             "last_thread_id": str(last.get("thread_id") or ""), "checked": bool(mail.get("available")),
         })
     rows.sort(key=lambda r: (not r["emailed"], str(r.get("customer_name") or "")))
+    unchecked = unavailable + len(missing) + len(guests)
+    notes = []
+    if unavailable:
+        notes.append(f"{unavailable} customer(s) could not be checked in Gmail")
+    if missing:
+        notes.append(f"{len(missing)} of the set's {ws.kind} are outside the {EMAIL_VIEW_DAYS} days of orders the Mac holds")
+    if guests:
+        notes.append(f"{len(guests)} order(s) have no customer record to look up")
     result: dict[str, Any] = {
         "set_id": ws.set_id, "set_label": ws.label, "kind": ws.kind, "days": days, "customers": len(by_customer),
-        "counts": {"contacted": sum(1 for r in rows if r["emailed"]), "not_contacted": sum(1 for r in rows if not r["emailed"] and r["checked"]), "replied": sum(1 for r in rows if r["replied"]), "unchecked": unavailable},
+        "counts": {"contacted": sum(1 for r in rows if r["emailed"]), "not_contacted": sum(1 for r in rows if not r["emailed"] and r["checked"]), "replied": sum(1 for r in rows if r["replied"]), "unchecked": unchecked},
         "rows": rows, "source": f"Gmail threads from each customer in the last {days} days, mentioning their order", "_ms": round((time.perf_counter() - started) * 1000, 1),
-        "note": (f"{unavailable} customer(s) could not be checked; they are counted in neither set." if unavailable else ""),
+        "note": ("; ".join(notes) + "; they are counted in neither set." if notes else ""),
     }
     for name, members, words in (("contacted", contacted, "who have emailed us"), ("not_contacted", not_contacted, "who have not emailed us"), ("replied", replied, "we have replied to")):
         if members:
-            made = working_sets.derive(session, ws, members=members, label=f"{ws.label} — {words}"[:80], step="correlate", detail={"tool": "email_query", "which": name, "days": days})
+            # Side sets beside the parent: "these" stays the set the owner asked about; the
+            # model names a derived set by its id when the owner says "the rest".
+            made = working_sets.derive(session, ws, members=members, label=f"{ws.label} — {words}"[:80], step="correlate", detail={"tool": "email_query", "which": name, "days": days}, focus=False)
             result[f"set_{name}"] = made.public()
             timeline.emit("working_set", session_id=session.session_id, turn_id=session.turn_id or None, set_id=made.set_id, set_kind=made.kind, count=made.count, label=made.label, parent=ws.set_id, step="correlate", tool="email_query", which=name)
     # The threads themselves, as a set of emails: what "archive those" would act on.

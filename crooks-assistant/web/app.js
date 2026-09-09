@@ -1102,6 +1102,9 @@ function renderTurn(data) {
 // what it stored when the proposal was staged, proves it, and answers with what to show.
 // Never sent twice: if the connection drops mid-tap the tablet asks what happened instead.
 const ACTION_TIMEOUT_MS = 30000;   // a precondition read, the change, a verifying read
+// A batch is that, member by member, a few at a time: the Mac's own budget for a run is
+// ninety seconds, and the tablet waits for all of it rather than guessing at the count.
+const BATCH_TIMEOUT_MS = 120000;
 
 // A tap counts only when the voice interaction is quiet. Holding to speak wins.
 function actionBlocked() {
@@ -1170,7 +1173,7 @@ async function commitAction(proposalId, node, nonce) {
   let payload = null;
   let status = 0;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ACTION_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), isBatch(proposalId) ? BATCH_TIMEOUT_MS : ACTION_TIMEOUT_MS);
   // The arming token, when the gesture was a hold, travels as a header: the body carries
   // the session and nothing else, and the token is an authorisation, not an argument.
   const headers = nonce ? { 'X-Crooks-Arm': String(nonce) } : {};
@@ -1191,8 +1194,11 @@ async function commitAction(proposalId, node, nonce) {
 }
 
 async function recoverActionState(proposalId) {
-  for (let attempt = 0; attempt < 4; attempt++) {
-    await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+  // A single change settles in seconds; a batch may still be applying its members, and the
+  // Mac says so ("executing") until the count is final: keep asking, never tap again.
+  const attempts = isBatch(proposalId) ? 40 : 4;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    await new Promise((r) => setTimeout(r, isBatch(proposalId) ? 3000 : 1500 * (attempt + 1)));
     try {
       const response = isBatch(proposalId)
         ? await fetch(`/batches/${encodeURIComponent(proposalId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
