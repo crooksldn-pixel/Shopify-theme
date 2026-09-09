@@ -82,7 +82,7 @@ _MUTATION_VERBS = (
 
 # Reads that return customer personal data. They run, but the assistant is told to read the
 # match back rather than act on it, which is the M13 low-confidence rule in tool form.
-_PII_TOOLS = frozenset({"shopify_find_customer", "shopify_order_detail", "gmail_read_thread"})
+_PII_TOOLS = frozenset({"shopify_find_customer", "shopify_order_detail", "shopify_customer_history", "gmail_read_thread"})
 
 _KNOWN_TOOLS = frozenset({
     # mocks — M5 only
@@ -90,7 +90,7 @@ _KNOWN_TOOLS = frozenset({
     # Shopify — M7
     "shopify_find_order", "shopify_order_detail", "shopify_list_orders",
     "shopify_find_customer", "shopify_inventory", "shopify_sales_summary",
-    "shopify_product_info",
+    "shopify_product_info", "shopify_customer_history",
     # Gmail — M9
     "gmail_search", "gmail_read_thread",
 })
@@ -99,6 +99,7 @@ _KNOWN_TOOLS = frozenset({
 # Claude inventing an order id or a thread id and being told about a stranger's order.
 _ISSUED_ID_ARGS: dict[str, tuple[str, ...]] = {
     "shopify_order_detail": ("order_id",),
+    "shopify_customer_history": ("customer_id",),
     "gmail_read_thread": ("thread_id",),
 }
 
@@ -112,6 +113,7 @@ _ID_SHAPE = re.compile(r"^[A-Za-z0-9/_.:=+-]{1,200}$")
 # "issued this session" in any sense that matters, even though a search did return it.
 _ID_KIND = {
     "order_id": re.compile(r"^gid://shopify/Order/\d+$"),
+    "customer_id": re.compile(r"^gid://shopify/Customer/\d+$"),
     "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
 }
 

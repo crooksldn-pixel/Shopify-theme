@@ -37,6 +37,13 @@ _ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "id")
 _PII_KEYS = ("customer_name", "customer_email", "name", "from", "from_email", "email", "displayName")
 
 
+def harvest_ids(payload: Any, session: Session) -> None:
+    """Issue every id a read model exposed to the session, and remember every personal
+    string in it, for a result that did not come through `dispatch` (a lookup the Mac ran
+    ahead of the model, an order's history collected after the turn)."""
+    _harvest_ids(payload, session)
+
+
 def _harvest_ids(payload: Any, session: Session, *, in_customer: bool = False) -> None:
     """Walk a tool result: record every id it exposed (so follow-up lookups are permitted) and
     every personal string (so the turn log can scrub it)."""

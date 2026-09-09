@@ -66,6 +66,10 @@ class Session:
     # something to tap. Empty when a tap would work.
     writes_blocked: str = ""
 
+    # An order's full read started beside the model by /turn (app/routes/turn.py); collected
+    # by the same turn when it lands in time, dropped otherwise. Never awaited by a turn.
+    hydrating: Any = None
+
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and
     # nothing else: no permission decision reads it (that is issued_ids, above).

@@ -105,6 +105,9 @@ class Settings(BaseSettings):
     bench_audio_dir: Path = REPO_ROOT / "bench" / "audio"
     bench_results_dir: Path = REPO_ROOT / "bench" / "results"
     log_dir: Path = REPO_ROOT / "logs"
+    # Product thumbnails fetched for the tablet, kept so the same image is not fetched for
+    # every look at the same order. Bounded; never a customer's data.
+    media_cache_dir: Path = REPO_ROOT / ".cache" / "media"
 
     # --- dev toggles ---
     # Every recording is a recording of the office. Kept on disk only when asked for

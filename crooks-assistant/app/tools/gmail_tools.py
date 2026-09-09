@@ -156,6 +156,121 @@ def _extract_body(payload: dict) -> str:
     return text
 
 
+_METADATA_HEADERS = [
+    "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
+    "Precedence", "Auto-Submitted", "List-Post",
+]
+
+
+async def _list_metadata(client: GmailClient, full_query: str, limit: int) -> list[dict]:
+    """The listing and the metadata of every message in it, in one batched round trip.
+    Raises ToolError with a readable reason; never a raw client exception."""
+
+    # googleapiclient is synchronous. Run it in a thread so the event loop stays free and the
+    # 8-second tool timeout can actually fire — awaiting blocking I/O directly makes the
+    # timeout unenforceable and freezes every other request while Gmail stalls.
+    def fetch_all() -> list[dict]:
+        service = client.service()
+        listing = (
+            service.users()
+            .messages()
+            .list(userId="me", q=full_query, maxResults=limit)
+            .execute()
+        )
+        stubs = listing.get("messages", []) or []
+
+        # metadata format still costs 20 quota units, so the result count is the lever.
+        def get_request(stub):
+            return service.users().messages().get(
+                userId="me", id=stub["id"], format="metadata", metadataHeaders=_METADATA_HEADERS,
+            )
+
+        # One round trip for all of them, not one each: a batch request carries every get in
+        # a single HTTP call, which is most of a second saved on every email question.
+        batched = _fetch_batched(service, stubs, get_request)
+        if batched is not None:
+            return batched
+        messages: list[dict] = []
+        for stub in stubs:
+            try:
+                messages.append(get_request(stub).execute())
+            except Exception as exc:  # noqa: BLE001
+                log.warning("could not fetch message %s: %s", stub["id"], _describe(exc))
+        return messages
+
+    try:
+        return await asyncio.to_thread(fetch_all)
+    except Exception as exc:  # noqa: BLE001
+        if _is_auth_failure(exc):
+            client.reset()
+            raise ToolError(str(GmailAuthRequired("Gmail authorisation has expired."))) from exc
+        raise ToolError(f"Gmail search failed: {_describe(exc)}") from exc
+
+
+def _one_per_thread(messages: list[dict], include_bulk: bool) -> list[tuple[str, dict[str, str], dict]]:
+    candidates: list[tuple[str, dict[str, str], dict]] = []
+    seen_threads: set[str] = set()
+    for message in messages:
+        thread_id = message.get("threadId", "")
+        if thread_id in seen_threads:
+            continue
+        seen_threads.add(thread_id)
+        headers = _headers(message)
+        if _is_bulk(headers) and not include_bulk:
+            continue
+        candidates.append((thread_id, headers, message))
+    return candidates
+
+
+def _summary(thread_id: str, headers: dict[str, str], message: dict) -> dict[str, Any]:
+    sender_name, sender_email = parseaddr(headers.get("from", ""))
+    return {
+        "thread_id": thread_id,
+        "from": sender_name or sender_email,
+        "from_email": sender_email,
+        "subject": headers.get("subject", "(no subject)"),
+        "date": headers.get("date", ""),
+        "snippet": (message.get("snippet") or "")[:300],
+        "likely_bulk": _is_bulk(headers),
+    }
+
+
+# Correlation looks this far back: an order is visible in Shopify for sixty days without the
+# read_all_orders scope, and the conversation about it is rarely older than the order.
+CORRELATION_DAYS = 60
+CORRELATION_LIMIT = 3
+_GMAIL_TERM = re.compile(r"[^\w@.+\-]")
+
+
+async def threads_for(*, sender: str = "", terms: list[str] | tuple[str, ...] = (), days: int = CORRELATION_DAYS, limit: int = CORRELATION_LIMIT) -> dict[str, Any]:
+    """Recent inbox threads from one sender, or mentioning one of a few exact terms (an
+    order number). For the context layer, not the model: it never raises — an inbox that is
+    not configured or not answering is reported as unavailable, and the order card is shown
+    without its email. Metadata only; a body is read only when the owner asks for it."""
+    if _client is None:
+        return {"available": False, "reason": "Gmail is not configured on this backend.", "threads": []}
+    clauses: list[str] = []
+    sender = _GMAIL_TERM.sub("", (sender or "").strip().lower())
+    if sender and "@" in sender:
+        clauses.append(f"from:{sender}")
+    for term in terms:
+        term = _GMAIL_TERM.sub("", str(term or "").strip())
+        if term:
+            clauses.append(f'"{term}"')
+    if not clauses:
+        return {"available": True, "threads": []}
+    days = max(1, min(int(days), 365))
+    limit = max(1, min(int(limit), MAX_RESULTS))
+    query = f"newer_than:{days}d -in:trash -in:spam -in:chats ({' OR '.join(clauses)})"
+    try:
+        messages = await _list_metadata(_c(), query, limit * 2)
+    except ToolError as exc:
+        log.warning("email correlation unavailable: %s", exc)
+        return {"available": False, "reason": str(exc)[:160], "threads": []}
+    threads = [_summary(t, h, m) for t, h, m in _one_per_thread(messages, include_bulk=False)]
+    return {"available": True, "query": query, "threads": threads[:limit]}
+
+
 @tool(
     name="gmail_search",
     description=(
@@ -195,81 +310,16 @@ async def gmail_search(
     if query.strip():
         full_query += f" {query.strip()}"
 
-    # googleapiclient is synchronous. Run it in a thread so the event loop stays free and the
-    # 8-second tool timeout can actually fire — awaiting blocking I/O directly makes the
-    # timeout unenforceable and freezes every other request while Gmail stalls.
-    def fetch_all() -> list[dict]:
-        service = client.service()
-        listing = (
-            service.users()
-            .messages()
-            .list(userId="me", q=full_query, maxResults=limit)
-            .execute()
-        )
-        stubs = listing.get("messages", []) or []
-        # metadata format still costs 20 quota units, so the result count is the lever.
-        headers = [
-            "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
-            "Precedence", "Auto-Submitted", "List-Post",
-        ]
-
-        def get_request(stub):
-            return service.users().messages().get(
-                userId="me", id=stub["id"], format="metadata", metadataHeaders=headers,
-            )
-
-        # One round trip for all of them, not one each: a batch request carries every get in
-        # a single HTTP call, which is most of a second saved on every email question.
-        batched = _fetch_batched(service, stubs, get_request)
-        if batched is not None:
-            return batched
-        messages: list[dict] = []
-        for stub in stubs:
-            try:
-                messages.append(get_request(stub).execute())
-            except Exception as exc:  # noqa: BLE001
-                log.warning("could not fetch message %s: %s", stub["id"], _describe(exc))
-        return messages
-
-    try:
-        messages = await asyncio.to_thread(fetch_all)
-    except Exception as exc:  # noqa: BLE001
-        if _is_auth_failure(exc):
-            client.reset()
-            raise ToolError(str(GmailAuthRequired("Gmail authorisation has expired."))) from exc
-        raise ToolError(f"Gmail search failed: {_describe(exc)}") from exc
-
-    candidates: list[tuple[str, dict[str, str], dict]] = []
-    seen_threads: set[str] = set()
-    for message in messages:
-        thread_id = message.get("threadId", "")
-        if thread_id in seen_threads:
-            continue
-        seen_threads.add(thread_id)
-        headers = _headers(message)
-        if _is_bulk(headers) and not include_bulk:
-            continue
-        candidates.append((thread_id, headers, message))
+    messages = await _list_metadata(client, full_query, limit)
+    candidates = _one_per_thread(messages, include_bulk)
 
     # Cross-reference every sender against Shopify concurrently, not one after another.
     senders = [parseaddr(h.get("from", ""))[1] for _, h, _ in candidates]
     known = await asyncio.gather(*(_known_customer(e) for e in senders))
 
     results: list[dict[str, Any]] = []
-    for (thread_id, headers, message), sender_email, is_known in zip(candidates, senders, known, strict=True):
-        sender_name = parseaddr(headers.get("from", ""))[0]
-        results.append(
-            {
-                "thread_id": thread_id,
-                "from": sender_name or sender_email,
-                "from_email": sender_email,
-                "subject": headers.get("subject", "(no subject)"),
-                "date": headers.get("date", ""),
-                "snippet": (message.get("snippet") or "")[:300],
-                "likely_bulk": _is_bulk(headers),
-                "known_customer": is_known,
-            }
-        )
+    for (thread_id, headers, message), is_known in zip(candidates, known, strict=True):
+        results.append({**_summary(thread_id, headers, message), "known_customer": is_known})
 
     return {
         "query": full_query,

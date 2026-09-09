@@ -164,6 +164,11 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
             "truncated": bool(result.get("truncated")),
             "orders": orders,
         })]
+    if name == "shopify_customer_history":
+        card = _customer(result)
+        card["history"] = _history(result)
+        card["email"] = _related_email(result.get("email_threads"))
+        return [_ui("customer", card)]
     if name == "shopify_find_customer":
         customers = [_customer(c) for c in _list(result.get("customers"), MAX_CUSTOMERS)]
         if len(customers) == 1:
@@ -250,17 +255,9 @@ def _order(o: dict[str, Any], *, detail: bool = False) -> dict[str, Any]:
         "detail": detail,
     }
     if detail:
+        money = o.get("money") if isinstance(o.get("money"), dict) else {}
         out.update({
-            "items": [
-                {
-                    "title": _text(i.get("title")),
-                    "variant": _text(i.get("variant")),
-                    "sku": _text(i.get("sku")),
-                    "quantity": _int(i.get("quantity")),
-                    "total": _money_text(i.get("total")),
-                }
-                for i in _list(o.get("items"), MAX_ITEMS)
-            ],
+            "items": [_item(i) for i in _list(o.get("items"), MAX_ITEMS)],
             "items_truncated": bool(o.get("items_truncated")),
             "fulfillments": [
                 {
@@ -268,14 +265,150 @@ def _order(o: dict[str, Any], *, detail: bool = False) -> dict[str, Any]:
                     "shipped_at": _text(f.get("shipped_at")),
                     "carrier": _text(f.get("carrier")),
                     "number": _text(f.get("number")),
+                    "url": _tracking_url(f.get("url")),
                 }
                 for f in _list(o.get("fulfillments"), 6)
             ],
             "cancelled_at": _text(o.get("cancelled_at")),
+            "cancel_reason": _status(o.get("cancel_reason")),
             "note": _text(o.get("note"), MAX_NOTE_CHARS),
+            "tags": [_text(t, 40) for t in (o.get("tags") or [])[:10] if isinstance(t, str)],
             "ships_to": _text(o.get("ships_to")),
+            "shipping_method": _text(o.get("shipping_method")),
+            "shipping_address": _address(o.get("shipping_address")),
+            "money": {
+                "subtotal": _money_text(money.get("subtotal")),
+                "shipping": _money_text(money.get("shipping")),
+                "tax": _money_text(money.get("tax")),
+                "discounts": _money_text(money.get("discounts")),
+                "refunded": _money_text(money.get("refunded")),
+                "outstanding": _money_text(money.get("outstanding")),
+            } if money else None,
+            "refunds": [
+                {"created_at": _text(r.get("created_at")), "amount": _money_text(r.get("amount")), "note": _text(r.get("note"))}
+                for r in _list(o.get("refunds"), 6)
+            ],
+            "history": _history(o.get("history")),
+            "email": _related_email(o.get("email")),
+            "pending": [_text(p, 20) for p in (o.get("pending") or [])[:4] if isinstance(p, str)],
         })
     return out
+
+
+def _item(i: dict[str, Any]) -> dict[str, Any]:
+    stock = i.get("stock") if isinstance(i.get("stock"), dict) else None
+    return {
+        "title": _text(i.get("title")),
+        "variant": _text(i.get("variant")),
+        "sku": _text(i.get("sku")),
+        "quantity": _int(i.get("quantity")),
+        "total": _money_text(i.get("total")),
+        "image": _media_path(i.get("image_url")),
+        "variant_id": _text(i.get("variant_id")),
+        "product_id": _text(i.get("product_id")),
+        "stock": {
+            "tracked": bool(stock.get("tracked", True)),
+            "available": _int(stock.get("available")),
+        } if stock else None,
+    }
+
+
+def _address(a: Any) -> dict[str, Any] | None:
+    """The address as the card prints it: a name and a few lines. The postcode and country
+    are what a change-of-address diff turns on, so they are kept as fields of their own."""
+    if not isinstance(a, dict):
+        return None
+    lines = [_text(line, 120) for line in (a.get("lines") or [])[:3] if isinstance(line, str) and line.strip()]
+    return {
+        "name": _text(a.get("name")),
+        "company": _text(a.get("company")),
+        "lines": lines,
+        "city": _text(a.get("city")),
+        "province": _text(a.get("province")),
+        "zip": _text(a.get("zip"), 20),
+        "country": _text(a.get("country")),
+        "country_code": _text(a.get("country_code"), 4),
+    }
+
+
+def _history(h: Any) -> dict[str, Any] | None:
+    """The customer's history beside their order: the five questions the owner asks."""
+    if not isinstance(h, dict):
+        return None
+    last = h.get("last_order") if isinstance(h.get("last_order"), dict) else None
+    return {
+        "customer_id": _text(h.get("customer_id")),
+        "name": _text(h.get("name")),
+        "orders": _int(h.get("orders")),
+        "spent": _money_text(h.get("spent")),
+        "since": _text(h.get("since")),
+        "standing": _text(h.get("standing"), 20),
+        "first_order_at": _text(h.get("first_order_at")),
+        "last_order": {"order_id": _text(last.get("order_id")), "order_number": _order_number(last.get("order_number"))} if last else None,
+        "recent": [
+            {
+                "order_id": _text(r.get("order_id")),
+                "order_number": _order_number(r.get("order_number")),
+                "placed_at": _text(r.get("placed_at")),
+                "fulfillment": _status(r.get("fulfillment")),
+                "payment": _status(r.get("payment")),
+                "cancelled": bool(r.get("cancelled_at")),
+                "total": _money_text(r.get("total")),
+                "items_brief": _text(r.get("items_brief")),
+                "current": bool(r.get("current")),
+            }
+            for r in _list(h.get("recent"), 5)
+        ],
+        "other_unfulfilled": [_order_number(n) for n in (h.get("other_unfulfilled") or [])[:5] if isinstance(n, str)],
+        "tags": [_text(t, 40) for t in (h.get("tags") or [])[:6] if isinstance(t, str)],
+        "provenance": _text(h.get("provenance"), 20) or "SHOPIFY",
+    }
+
+
+def _related_email(e: Any) -> dict[str, Any] | None:
+    """Email that is about this order, and how sure that is. Every thread carries its
+    provenance: a verified sender is the customer; anything else is a mention."""
+    if not isinstance(e, dict):
+        return None
+    return {
+        "available": bool(e.get("available")),
+        "reason": _text(e.get("reason")),
+        "threads": [
+            {
+                **_thread_summary(t),
+                "verified_sender": bool(t.get("verified_sender")),
+                "match": _text(t.get("match"), 20),
+                "provenance": _text(t.get("provenance"), 20) or "UNKNOWN",
+            }
+            for t in _list(e.get("threads"), 3)
+        ],
+    }
+
+
+def _tracking_url(value: Any) -> str:
+    """A carrier's tracking link, shown only when it is an https link. Never opened by the
+    tablet on its own; the owner taps it."""
+    text = _text(value, 400)
+    return text if text.lower().startswith("https://") else ""
+
+
+def _media_path(value: Any) -> str:
+    """An image reaches the tablet only as a same-origin path the Mac signed. A Shopify CDN
+    URL the Mac does not recognise becomes no image at all."""
+    from app.media import signed_path
+
+    return signed_path(value) or ""
+
+
+def present_extension(ext: dict[str, Any]) -> dict[str, Any]:
+    """What GET /context/order returns: the parts of the order card that arrived after the
+    turn, bounded the same way as the card itself."""
+    return {
+        "order_id": _text(ext.get("order_id")),
+        "pending": [_text(p, 20) for p in (ext.get("pending") or [])[:4] if isinstance(p, str)],
+        "history": _history(ext.get("history")),
+        "email": _related_email(ext.get("email")),
+    }
 
 
 def _customer(c: dict[str, Any]) -> dict[str, Any]:

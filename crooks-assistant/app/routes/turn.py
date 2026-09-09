@@ -185,7 +185,7 @@ async def turn(
     for step, ms in getattr(result, "steps", None) or []:
         timings[f"step:{step}"] = ms
     if prefetched:
-        result.tool_calls = prefetched + list(result.tool_calls or [])
+        result.tool_calls = _hydrated(live, prefetched + list(result.tool_calls or []))
 
     answer = result.text or "I could not work out an answer to that."
     if len(answer) > runtime.settings.max_answer_chars:
@@ -354,11 +354,56 @@ async def _prefetch_order(runtime, session, text: str, calls: list, timings: dic
     if not calls or not calls[-1].ok:
         calls.clear()
         return ""
+    # One order: its full picture is read now, beside the model rather than in front of it.
+    # If the model asks for the detail it is answered at once; if it does not, the card still
+    # shows the whole order when the read has landed by the time the answer does.
+    found = calls[-1].result.get("orders") if isinstance(calls[-1].result, dict) else None
+    hydrating = ""
+    if isinstance(found, list) and len(found) == 1 and isinstance(found[0], dict) and found[0].get("order_id"):
+        session.hydrating = _hydrate_soon(str(found[0]["order_id"]))
+        hydrating = (
+            " The full order (items, money, address, tracking, the customer's history and their "
+            "recent email) is being read beside you: call shopify_order_detail if the answer needs "
+            "any of it — it answers at once."
+        )
     return (
         f"[The Mac already ran shopify_find_order(query=\"{number}\") for this question. Its result:\n"
         f"{rendered}\nUse it as if you had called the tool; do not call shopify_find_order for "
-        f"{number} again. Call shopify_order_detail if you need the items or the address.]"
+        f"{number} again.{hydrating}]"
     )
+
+
+def _hydrate_soon(order_id: str) -> asyncio.Task | None:
+    """Start the order's full read in the background. Never awaited by the turn itself."""
+    from app.tools.shopify_tools import hydrator
+
+    try:
+        return asyncio.get_running_loop().create_task(hydrator().order(order_id))
+    except Exception as exc:  # noqa: BLE001 — Shopify not bound; the model looks it up itself
+        log.debug("no background hydration: %s", exc)
+        return None
+
+
+def _hydrated(session, calls: list) -> list:
+    """The order the Mac read beside the model, as a tool call the card is built from — when
+    it landed in time and the model did not read it itself. The ids in it are issued as any
+    tool result's are. Nothing is waited for: a read still in flight is collected by the
+    tablet from /context/order once the card is up."""
+    task = getattr(session, "hydrating", None)
+    if task is None:
+        return calls
+    session.hydrating = None
+    if not task.done() or task.cancelled() or task.exception() is not None:
+        if task.done() and task.exception() is not None:
+            log.debug("background hydration failed: %s", task.exception())
+        return calls
+    result = task.result()
+    if not isinstance(result, dict) or any(c.name == "shopify_order_detail" and c.ok for c in calls):
+        return calls
+    from app.tools.dispatch import harvest_ids
+
+    harvest_ids(result, session)
+    return list(calls) + [ToolCall(name="shopify_order_detail", args={"order_id": result.get("order_id", "")}, ok=True, result=result)]
 
 
 def _loggable_args(call) -> dict:
