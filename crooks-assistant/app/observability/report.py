@@ -15,15 +15,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.observability import claims
 from app.observability.timeline import read_events
 
 # The classes a failed or partial turn is filed under, in the order they are tested.
 CLASSES = (
-    "STT_ERROR", "TIMEOUT", "PERMISSION_ERROR", "MISSING_CAPABILITY", "TOOL_ERROR", "VERIFICATION_ERROR",
+    "STT_ERROR", "TIMEOUT", "PERMISSION_ERROR", "MISSING_CAPABILITY", "FALSE_UNSUPPORTED", "TOOL_ERROR", "VERIFICATION_ERROR",
     "TOOL_SELECTION_ERROR", "UI_RENDER_ERROR", "UI_NAVIGATION_PROBLEM", "CONTEXT_INCOMPLETE", "INTENT_ERROR", "UNKNOWN",
 )
 SEVERITY = {
-    "VERIFICATION_ERROR": 5, "TOOL_ERROR": 4, "TIMEOUT": 4, "PERMISSION_ERROR": 4, "UI_RENDER_ERROR": 4,
+    "VERIFICATION_ERROR": 5, "TOOL_ERROR": 4, "TIMEOUT": 4, "PERMISSION_ERROR": 4, "UI_RENDER_ERROR": 4, "FALSE_UNSUPPORTED": 4,
     "STT_ERROR": 3, "MISSING_CAPABILITY": 3, "UNKNOWN": 3,
     "TOOL_SELECTION_ERROR": 2, "CONTEXT_INCOMPLETE": 2, "INTENT_ERROR": 2, "UI_NAVIGATION_PROBLEM": 2,
 }
@@ -31,6 +32,7 @@ COMPONENT = {
     "STT_ERROR": "speech (Scribe / whisper.cpp, app/speech)", "TIMEOUT": "the turn's budget (provider or tool timeouts)",
     "PERMISSION_ERROR": "the write boundary (CROOKS_WRITES_ENABLED, allow-list, scopes, Tailscale identity)",
     "MISSING_CAPABILITY": "the tool registry (app/tools)", "TOOL_ERROR": "the Shopify / Gmail clients (app/clients, app/tools)",
+    "FALSE_UNSUPPORTED": "the model's use of the read layer and the batch tools (system prompt, commerce_capabilities)",
     "VERIFICATION_ERROR": "the action engine's proof (app/actions/engine.py)", "TOOL_SELECTION_ERROR": "the model's tool use (system prompt, tool descriptions)",
     "UI_RENDER_ERROR": "the tablet renderer (web/ui.js, app/presentation.py)", "UI_NAVIGATION_PROBLEM": "the tablet's screens (web/app.js)",
     "CONTEXT_INCOMPLETE": "context hydration (app/context/order.py, /context route)", "INTENT_ERROR": "the model's reading of the request (system prompt, normaliser)",
@@ -42,6 +44,7 @@ PERMISSION_CODES = frozenset({
 # What a turn is about, from its tools first and its words second. Higher entries win.
 CLUSTERS = (
     ("actions", (), ()),
+    ("analytics", ("commerce_", "inventory_query", "email_query"), ("best seller", "sold most", "by size", "by colour", "compare", "average order", "days of cover", "run out", "older than", "who have emailed")),
     ("email", ("gmail_",), ("email", "inbox", "reply", "draft")),
     ("sales", ("shopify_sales_summary",), ("sales", "revenue", "takings", "how much did we")),
     ("inventory", ("shopify_inventory",), ("stock", "inventory", "how many left")),
@@ -54,8 +57,9 @@ RAIL_BY_OPERATION = {
     "order_note_append": "note", "order_cancel": "cancel", "refund_create": "refund", "order_shipping_address_set": "address",
     "fulfillment_create": "fulfil", "gmail_draft_new": "email",
 }
-# Words the assistant uses when it declines: a deterministic signal, not a judgement.
-CANNOT_RE = re.compile(r"\b(i can(?:no|')t|i'm not able to|i am not able to|isn't something i can|is not something i can|i (?:don't|do not) have a way to|not able to do that|i'm unable to|i am unable to|no way to)\b", re.I)
+# Words the assistant uses when it declines: a deterministic signal, not a judgement. Held
+# with the map of what the Mac composes (app/observability/claims.py).
+CANNOT_RE = claims.CANNOT_RE
 CLARIFY_RE = re.compile(r"\b(which (?:one|order|customer|product)|do you mean|could you (?:say|tell me)|can you (?:say|tell me)|which do you)\b", re.I)
 OFFER_GESTURE_RE = re.compile(r"\b(tap|hold|swipe|drag)\b.{0,40}\b(card|to apply|to send)\b|\bthe card\b", re.I)
 # The change a request names, for "the assistant said it cannot, but a tool exists".
@@ -196,6 +200,12 @@ class Turn:
     context_requests: list[dict[str, Any]] = field(default_factory=list)
     tts: list[dict[str, Any]] = field(default_factory=list)
     tablet: list[dict[str, Any]] = field(default_factory=list)
+    # The read layer's own bookkeeping: working sets made, cross-source reads, rejected
+    # queries, and the turn-time claim signal (app/observability/claims.py).
+    sets: list[dict[str, Any]] = field(default_factory=list)
+    rejected: list[dict[str, Any]] = field(default_factory=list)
+    claims: list[dict[str, Any]] = field(default_factory=list)
+    batches: list[dict[str, Any]] = field(default_factory=list)
     submitted: dict[str, Any] | None = None   # the tablet's turn_submitted, paired by order
     classes: list[str] = field(default_factory=list)
     signals: list[str] = field(default_factory=list)
@@ -404,6 +414,30 @@ def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
             turn = turn_for(event)
             if turn is not None and p not in turn.proposals:
                 turn.proposals.append(p)
+        elif kind in ("working_set", "cross_source"):
+            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            if turn is not None:
+                turn.sets.append(event)
+            else:
+                orphans.append(event)
+        elif kind == "query_rejected":
+            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            if turn is not None:
+                turn.rejected.append(event)
+            else:
+                orphans.append(event)
+        elif kind == "unsupported_claim":
+            turn = turn_for(event)
+            if turn is not None:
+                turn.claims.append(event)
+            else:
+                orphans.append(event)
+        elif kind.startswith("batch_") and event.get("batch_id"):
+            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            if turn is not None:
+                turn.batches.append(event)
+            else:
+                orphans.append(event)
         elif kind == "context_hydration":
             turn = _turn_in_flight(turns, order, event)
             if turn is not None:
@@ -494,7 +528,11 @@ def _classify(turn: Turn) -> None:
     if permission_refusals or ((turn.finished or {}).get("writes_code") in PERMISSION_CODES and turn.proposals):
         classes.append("PERMISSION_ERROR")
         signals.append("a tap refused by the write boundary: " + ", ".join(sorted({str(r.get('code')) for r in permission_refusals}) or [str((turn.finished or {}).get("writes_code"))]))
-    if missing or (not ok_tools and CANNOT_RE.search(turn.answer)):
+    false_claim = _false_claim(turn)
+    if false_claim:
+        classes.append("FALSE_UNSUPPORTED")
+        signals.append("declined, though the Mac composes this: " + ", ".join(false_claim["capabilities"]) + " via " + ", ".join(false_claim["composable_via"]))
+    elif missing or (not ok_tools and CANNOT_RE.search(turn.answer)):
         classes.append("MISSING_CAPABILITY")
         signals.append("asked for: " + (", ".join(sorted({t.missing_capability for t in missing})) or "something the assistant said it cannot do"))
     if failed_tools:
@@ -549,8 +587,25 @@ def _classify(turn: Turn) -> None:
         turn.outcome = "partial"
     else:
         turn.outcome = "failed"
-    if classes == ["MISSING_CAPABILITY"] and not ok_tools:
+    if classes in (["MISSING_CAPABILITY"], ["FALSE_UNSUPPORTED"]) and not ok_tools:
         turn.outcome = "failed"
+
+
+def _false_claim(turn: Turn) -> dict[str, Any] | None:
+    """The turn's claim signal, from the timeline when the Mac wrote one, else from the same
+    rule applied now to the words (an older timeline, a session without the signal)."""
+    for c in turn.claims:
+        if c.get("false_unsupported"):
+            return {"capabilities": [str(x) for x in c.get("capabilities") or []], "composable_via": [str(x) for x in c.get("composable_via") or []]}
+    if turn.claims:
+        return None
+    signal = claims.claim(turn.question, turn.answer, [{"tool": t.tool} for t in turn.tools], _REGISTERED_FOR_CLAIMS)
+    return signal if signal and signal.get("false_unsupported") else None
+
+
+# The tools the claim rule judges against when a turn carries no signal of its own: the
+# registry of this process, read once; empty (never a false claim) without a registry.
+_REGISTERED_FOR_CLAIMS: frozenset[str] = frozenset()
 
 
 def _duplicate_calls(tools: list[ToolRecord]) -> list[str]:
@@ -678,12 +733,108 @@ def _closest_capability(name: str, registered: list[str]) -> str:
 
 def registered_tools() -> list[str]:
     try:
-        from app.tools import gmail_tools, gmail_writes, shopify_tools, shopify_writes  # noqa: F401
+        from app.tools import (  # noqa: F401
+            analytics_tools,
+            batch_tools,
+            gmail_tools,
+            gmail_writes,
+            shopify_tools,
+            shopify_writes,
+        )
         from app.tools.registry import all_specs
 
         return sorted(s.name for s in all_specs() if not s.name.startswith("mock_"))
     except Exception:  # noqa: BLE001 — the report still reads without the registry
         return []
+
+
+def intelligence(rec: Reconstruction, registered: list[str]) -> dict[str, Any]:
+    """Section 13's evidence, by rule, each row citing its turn: false unsupported claims,
+    composable requests that failed, the multi-tool workflows and follow-up shapes the
+    session repeated, and the query dimensions, actions, bulk actions and card types asked
+    for that do not exist yet."""
+    turns = rec.turns
+    known = frozenset(registered)
+    false_rows: list[dict[str, Any]] = []
+    failed_rows: list[dict[str, Any]] = []
+    for t in turns:
+        signal = _false_claim(t)
+        if signal:
+            caps = [c for c in claims.CAPABILITIES if c.key in signal["capabilities"]]
+            false_rows.append({"turn_id": t.turn_id, "question": t.question or t.raw_text, "answer": t.answer, "what": "; ".join(c.what for c in caps) or ", ".join(signal["capabilities"]), "tools": signal["composable_via"], "attempted": ", ".join(x.tool for x in t.tools) or "nothing"})
+        matched = [c for c in claims.match_capabilities(t.question) if all(x in known for x in c.tools)]
+        if matched:
+            wanted = {x for c in matched for x in c.tools}
+            tried = [x for x in t.tools if x.tool in wanted]
+            broken = [x for x in tried if x.outcome not in ("ok", "staged")]
+            if tried and broken and not any(x.outcome in ("ok", "staged") for x in tried):
+                failed_rows.append({"turn_id": t.turn_id, "question": t.question, "what": "; ".join(c.what for c in matched), "detail": "; ".join(f"{x.tool}: {x.outcome} {x.error[:80]}".strip() for x in broken[:3])})
+    workflows: Counter = Counter()
+    workflow_turns: dict[tuple[str, ...], list[str]] = defaultdict(list)
+    for t in turns:
+        names = tuple(x.tool for x in t.tools if x.outcome in ("ok", "staged"))
+        if len(names) >= 2:
+            workflows[names] += 1
+            workflow_turns[names].append(t.turn_id)
+    dimensions: Counter = Counter()
+    dimension_turns: dict[str, list[str]] = defaultdict(list)
+    for t in turns:
+        for r in t.rejected:
+            for name in r.get("unknown") or []:
+                dimensions[str(name)] += 1
+                dimension_turns[str(name)].append(t.turn_id)
+    actions: Counter = Counter()
+    action_turns: dict[str, list[str]] = defaultdict(list)
+    for t in turns:
+        for x in t.tools:
+            if x.missing_capability:
+                actions[x.missing_capability] += 1
+                action_turns[x.missing_capability].append(t.turn_id)
+    bulk: dict[str, dict[str, Any]] = {}
+    for t in turns:
+        req = claims.bulk_request(t.question)
+        if req is None:
+            continue
+        served = any(x.tool.startswith("batch_") and x.outcome == "staged" for x in t.tools) or any(b.get("event") == "PROPOSED" for b in t.batches)
+        entry = bulk.setdefault(req["operation"], {"n": 0, "turns": [], "supported": bool(req["supported"]), "served": 0})
+        entry["n"] += 1
+        entry["turns"].append(t.turn_id)
+        entry["served"] += 1 if served else 0
+    follow_ups: Counter = Counter()
+    follow_up_turns: dict[str, list[str]] = defaultdict(list)
+    previous: dict[str, Turn] = {}
+    for t in turns:
+        shape = claims.follow_up_shape(t.question)
+        if shape and previous.get(t.session_id) is not None:
+            follow_ups[shape] += 1
+            follow_up_turns[shape].append(t.turn_id)
+        previous[t.session_id] = t
+    ui_types: Counter = Counter()
+    ui_turns: dict[str, list[str]] = defaultdict(list)
+    for t in turns:
+        for r in t.tablet_events("render"):
+            for kind in r.get("skipped") or []:
+                ui_types[str(kind)] += 1
+                ui_turns[str(kind)].append(t.turn_id)
+        entity_results = [x for x in t.tools if x.outcome == "ok" and x.result and any(k in x.result for k in ("rows", "orders", "customers", "threads", "products"))]
+        if entity_results and not [u for u in t.ui if u not in ("assistant", "error", "context_stack")]:
+            ui_types["(records without a card)"] += 1
+            ui_turns["(records without a card)"].append(t.turn_id)
+    sets_made = [e for t in turns for e in t.sets if e.get("kind") == "working_set"]
+    cross = [e for t in turns for e in t.sets if e.get("kind") == "cross_source"]
+    batches = {str(e.get("batch_id")): e for t in turns for e in t.batches if e.get("event") == "DONE"}
+    return {
+        "false_unsupported": false_rows,
+        "composable_failed": failed_rows,
+        "workflows": [(names, n, workflow_turns[names][:5]) for names, n in workflows.most_common(10)],
+        "dimensions": [(name, n, dimension_turns[name][:5]) for name, n in dimensions.most_common(10)],
+        "new_actions": [(name, n, action_turns[name][:5]) for name, n in actions.most_common(10)],
+        "bulk": [(op, e["n"], e["turns"][:5], e["supported"] and e["served"] > 0) for op, e in sorted(bulk.items(), key=lambda kv: -kv[1]["n"])],
+        "follow_ups": [(shape, n, follow_up_turns[shape][:6]) for shape, n in follow_ups.most_common()],
+        "ui_types": [(kind, n, ui_turns[kind][:5]) for kind, n in ui_types.most_common(10)],
+        "sets": {"made": len(sets_made), "derived": sum(1 for e in sets_made if e.get("parent")), "by_step": dict(Counter(str(e.get("step")) for e in sets_made)), "cross_source": len(cross)},
+        "batches": {"done": len(batches), "counts": {k: sum(int((e.get("counts") or {}).get(k) or 0) for e in batches.values()) for k in ("requested", "eligible", "excluded", "verified", "failed", "stale", "unverified", "not_attempted")}},
+    }
 
 
 def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) -> str:
@@ -966,6 +1117,44 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     for i, o in enumerate(opportunities, 1):
         add(f"{i}. **{o['problem']}** — {o['frequency']}; severity {o['severity']}/5; e.g. {', '.join(o['examples']) or '—'}. Likely component: {o['component']}. Task: {o['task']}")
     add("")
+
+    # 13 -----------------------------------------------------------------------------
+    add("## 13. Intelligence")
+    add("")
+    add("What the session asked of the read layer, the working sets and the batch tools, and what it asked for that does not exist yet. Every row names its turns; the rules are word matches (app/observability/claims.py) and counts, never a judgement.")
+    add("")
+    intel = intelligence(rec, registered)
+    add("### False unsupported claims")
+    add("")
+    add("The assistant said it could not, and the tools registered on this Mac compose exactly that.")
+    add("")
+    lines.extend(_table(["Turn", "Owner said", "Assistant answered", "Composable as", "Via", "Attempted"], [[r["turn_id"], r["question"], r["answer"], r["what"], ", ".join(r["tools"]), r["attempted"]] for r in intel["false_unsupported"]]))
+    add("### Composable but failed requests")
+    add("")
+    lines.extend(_table(["Turn", "Owner said", "Composable as", "What failed"], [[r["turn_id"], r["question"], r["what"], r["detail"]] for r in intel["composable_failed"]]))
+    add("### Common multi-tool workflows")
+    add("")
+    lines.extend(_table(["Workflow", "Times", "Turns"], [[" → ".join(names), n, ", ".join(ids)] for names, n, ids in intel["workflows"]]))
+    add("### Potential new query dimensions")
+    add("")
+    add("Asked of the query language and refused as unknown.")
+    add("")
+    lines.extend(_table(["Dimension", "Times", "Turns"], [[name, n, ", ".join(ids)] for name, n, ids in intel["dimensions"]]))
+    add("### Potential new actions")
+    add("")
+    lines.extend(_table(["Capability asked for", "Times", "Turns"], [[name, n, ", ".join(ids)] for name, n, ids in intel["new_actions"]]))
+    add("### Bulk workflows requested")
+    add("")
+    lines.extend(_table(["Change, in bulk", "Times", "Turns", "A batch exists and was staged"], [[op, n, ", ".join(ids), "yes" if served else "no"] for op, n, ids, served in intel["bulk"]]))
+    add("### Repeated follow-up patterns")
+    add("")
+    lines.extend(_table(["Shape", "Times", "Turns"], [[shape, n, ", ".join(ids)] for shape, n, ids in intel["follow_ups"]]))
+    add("### Potential UI components")
+    add("")
+    lines.extend(_table(["Card type", "Times", "Turns"], [[kind, n, ", ".join(ids)] for kind, n, ids in intel["ui_types"]]))
+    sets_info = intel["sets"]
+    add(f"Working sets: {sets_info['made']} made ({sets_info['derived']} derived), by step {sets_info['by_step'] or '—'}; cross-source reads: {sets_info['cross_source']}. Batches run: {intel['batches']['done']}; members counted {intel['batches']['counts']}.")
+    add("")
     add("---")
     add(f"Timeline: `logs/test-sessions/{session.get('test_session_id')}.jsonl` · {len(rec.events)} events · {len(rec.orphans)} outside any turn.")
     return "\n".join(lines) + "\n"
@@ -985,6 +1174,7 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
         for c in t.classes:
             by_class[c].append(t)
     tasks = {
+        "FALSE_UNSUPPORTED": "the assistant declined a question the read layer or a batch tool composes: add the example to commerce_capabilities or the prompt's guidance so the composition is reached for.",
         "STT_ERROR": "replay the failing recordings through `make bench`; check the keyterms and the VAD padding for the words that were lost.",
         "TIMEOUT": "raise or split the budget that expired, and make the slow step visible on the tablet while it runs.",
         "PERMISSION_ERROR": "grant the scope or login the refusal names (the card and /health say which) before the next session.",
@@ -1030,6 +1220,18 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
     for name, n in Counter(x.missing_capability for t in turns for x in t.tools if x.missing_capability).items():
         out.append({"problem": f"Requested capability not built: {name}", "frequency": f"requested {n} time(s)", "severity": 3, "examples": [t.turn_id for t in turns if any(x.missing_capability == name for x in t.tools)][:3],
                     "component": "the tool registry (app/tools)", "task": f"build `{name}` on the action engine, or teach the assistant the nearest existing capability ({_closest_capability(name, registered)}).", "weight": 3 * n})
+    intel = intelligence(rec, registered)
+    for name, n, ids in intel["dimensions"]:
+        out.append({"problem": f"Query dimension asked for and unknown: {name}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
+                    "component": "the query language (app/analytics/query.py)", "task": f"decide whether `{name}` is a filter, a group or a metric, and add it with a bound; or teach the prompt the nearest existing one.", "weight": 3 * n})
+    for op, n, ids, served in intel["bulk"]:
+        if not served:
+            out.append({"problem": f"Bulk change asked for with no batch: {op}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
+                        "component": "the batch engine (app/actions/batch.py, app/tools/batch_tools.py)", "task": f"register a batch over the single `{op}` write once that change has proved itself; money and irreversible changes take a hold and a drag at any size.", "weight": 3 * n})
+    for shape, n, ids in intel["follow_ups"]:
+        if n >= 3:
+            out.append({"problem": f"Follow-up shape repeated: {shape}", "frequency": f"{n} time(s)", "severity": 1, "examples": ids[:3],
+                        "component": "the prompt's follow-up guidance (app/kb/loader.py)", "task": "check each follow-up re-ran the previous query with one thing changed; spell the case out in the prompt if any started over.", "weight": n})
     out.sort(key=lambda o: (-o["weight"], o["problem"]))
     return out[:12]
 

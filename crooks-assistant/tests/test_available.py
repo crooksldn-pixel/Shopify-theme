@@ -81,3 +81,25 @@ def test_the_facts_are_read_defensively():
     assert facts["cancelled"] is False and facts["shipped"] is False and facts["refundable"] is False and facts["digits"] == ""
     assert order_facts({"order_number": "#1036"})["digits"] == "1036"
     assert order_facts({"fulfillment": "UNFULFILLED"})["unfulfilled"] is True
+
+
+def test_the_context_ranks_the_rail_a_customers_email_first_and_an_old_order_to_ship():
+    """The rules still decide what is enabled; the order's own context decides what leads."""
+    from app.actions.available import context_rank
+
+    wrote = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Order 1938", "snippet": "any news on when it ships?"}]})
+    assert context_rank(wrote) == ["email"]
+    assert ids(available_actions(wrote, ALL), enabled=True) == ["note", "email", "fulfil", "address"], "the reply leads; the cancel drops off the three"
+    cancelling = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Please cancel 1938", "snippet": "I ordered the wrong size"}]})
+    assert context_rank(cancelling) == ["cancel", "email"]
+    assert ids(available_actions(cancelling, ALL), enabled=True) == ["note", "cancel", "email", "fulfil"]
+    moving = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "New address", "snippet": "can you send it to my work address instead"}]})
+    assert context_rank(moving) == ["address", "email"]
+    shipped = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}], email={"threads": [{"sender_match": True, "subject": "Refund", "snippet": "I'd like a refund please"}]})
+    assert context_rank(shipped) == ["refund", "email"]
+    assert ids(available_actions(shipped, ALL), enabled=True)[:3] == ["note", "refund", "email"]
+    someone_else = dict(OPEN, email={"threads": [{"sender_match": False, "subject": "Newsletter", "snippet": "sale now on"}]})
+    assert context_rank(someone_else) == [], "mail from anyone but the customer ranks nothing"
+    old = dict(OPEN, placed_at="2020-01-01T10:00:00Z")
+    assert context_rank(old) == ["fulfil"]
+    assert context_rank(dict(old, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}])) == []

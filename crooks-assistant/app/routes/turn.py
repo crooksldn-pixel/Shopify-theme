@@ -576,6 +576,14 @@ async def _answer(
     ui = present(calls, session=session, error_kind=error_kind, writes=writes)
     turn_id = getattr(session, "turn_id", "") if session is not None else ""
     if timeline.current().active is not None:
+        # An answer that declines, held against what the Mac composes: a refusal of a best
+        # seller, a breakdown, a comparison or a bulk change the tools could have made is a
+        # FALSE UNSUPPORTED claim, and the report counts it. Words only; no reasoning text.
+        from app.observability import claims
+
+        signal = claims.claim(question or (transcript or {}).get("text") or "", answer, tool_calls, claims.registered())
+        if signal is not None:
+            timeline.emit("unsupported_claim", session_id=session_id, turn_id=turn_id or None, **signal)
         timeline.emit(
             "turn_finished", session_id=session_id, turn_id=turn_id or None, ms=round(timings["total"], 1),
             timings={k: round(v, 1) for k, v in timings.items()}, question=question or (transcript or {}).get("text") or None,

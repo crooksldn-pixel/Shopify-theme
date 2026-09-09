@@ -133,6 +133,22 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_proposals(args) -> int:
+    from app.observability.proposals import write_proposals
+    from app.observability.session import TestSessions
+
+    settings = _settings()
+    store = TestSessions(settings.log_dir)
+    path = Path(args.session) if args.session and args.session.endswith(".jsonl") and Path(args.session).exists() else store.find(args.session or "")
+    if path is None:
+        print("no timeline found" + (f" for {args.session!r}" if args.session else ": start and stop a session first"), file=sys.stderr)
+        return 1
+    out_dir = Path(args.out) if args.out else ROOT / "reports"
+    written = write_proposals(path, out_dir)
+    print(written)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -143,8 +159,11 @@ def main(argv: list[str] | None = None) -> int:
     report = sub.add_parser("report", help="write reports/<session>.md")
     report.add_argument("session", nargs="?", default="", help="a session id, its prefix, or a .jsonl path; default: the active or last session")
     report.add_argument("--out", default="", help="directory for the report (default: reports/)")
+    proposals = sub.add_parser("proposals", help="write reports/<session>-proposals.md: improvement candidates, cited by turn, never applied")
+    proposals.add_argument("session", nargs="?", default="", help="a session id, its prefix, or a .jsonl path; default: the active or last session")
+    proposals.add_argument("--out", default="", help="directory for the file (default: reports/)")
     args = parser.parse_args(argv)
-    return {"start": cmd_start, "status": cmd_status, "stop": cmd_stop, "report": cmd_report}[args.command](args)
+    return {"start": cmd_start, "status": cmd_status, "stop": cmd_stop, "report": cmd_report, "proposals": cmd_proposals}[args.command](args)
 
 
 if __name__ == "__main__":

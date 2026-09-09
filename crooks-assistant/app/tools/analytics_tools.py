@@ -155,6 +155,13 @@ async def _run(spec: dict[str, Any], *, default_entity: str, tool: str = "commer
     try:
         query = parse(spec, now=now, tz=zone, default_entity=default_entity)
     except QueryError as exc:
+        # What was asked for and does not exist in the language (a filter, a group, a metric)
+        # is a dimension the report counts as worth adding — never something to bend to.
+        session = current_session()
+        timeline.emit(
+            "query_rejected", session_id=getattr(session, "session_id", None), turn_id=(getattr(session, "turn_id", "") or None) if session is not None else None,
+            tool=tool, entity=str(spec.get("entity") or default_entity)[:40], unknown=[str(u)[:40] for u in exc.unknown][:8] or None, reason=str(exc)[:200],
+        )
         raise ToolError(f"Query not understood: {exc}") from exc
     _sets_in(query)
     started = time.perf_counter()

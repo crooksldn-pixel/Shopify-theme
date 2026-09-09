@@ -218,6 +218,7 @@ make test-session-start NAME="first hour"   # prints the session id (ts-…)
 make test-session-status                    # what is running, events so far
 make test-session-stop
 make test-session-report                    # writes reports/<session>.md; SESSION=ts-… for an older one
+make test-session-proposals                 # writes reports/<session>-proposals.md: improvement candidates, never applied
 ```
 
 The timeline is `logs/test-sessions/<session>.jsonl`, one JSON line per event, each with the
@@ -237,8 +238,13 @@ and P95s by stage with the ten slowest turns; the requests clustered; tool usage
 failed or partial turn with what was said, answered, attempted and shown, filed under a
 named class; the capabilities asked for that do not exist, counted; what the screens showed
 and what was used; every proposal's staging, gesture, commit and proof; the gaps in context;
-deterministic response-quality signals; the attention surfaces; and a ranked list of what to
-fix next, each with its evidence. Both files hold what the owner said about customers: they
+deterministic response-quality signals; the attention surfaces; a ranked list of what to
+fix next, each with its evidence; and an intelligence section — false unsupported claims
+(the assistant said it could not, and the read layer or a batch tool could have), composable
+requests that failed, the multi-tool workflows and follow-up shapes the session repeated,
+query dimensions, actions, bulk actions and card types asked for that do not exist yet —
+every line citing its turn ids. `make test-session-proposals` writes those as IMPROVEMENT
+CANDIDATES for a person to pick up; nothing applies them (see `docs/ENGINEERING_LOOP.md`). Both files hold what the owner said about customers: they
 are created 0600 and are never committed (`logs/` and `reports/` are ignored).
 
 Never in either: a token, a key, an Authorization header, a cookie, a request's headers.

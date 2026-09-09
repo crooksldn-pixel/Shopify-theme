@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -44,6 +44,8 @@ help:
 	@echo "  make test-session-status                      what is running, events so far"
 	@echo "  make test-session-stop                        end it"
 	@echo "  make test-session-report [SESSION=ts-…]       write reports/<session>.md from logs/test-sessions/<session>.jsonl"
+	@echo "  make test-session-proposals [SESSION=ts-…]    write reports/<session>-proposals.md: improvement candidates, cited by turn, never applied"
+	@echo "  make bench-intelligence                       time the read layer, the working sets and batch staging against a fake store"
 
 doctor:
 	@$(PY) scripts/doctor.py 2>/dev/null || python3 scripts/doctor.py
@@ -110,6 +112,12 @@ test-session-stop:
 
 test-session-report:
 	$(PY) scripts/test_session.py report $(SESSION)
+
+test-session-proposals:
+	$(PY) scripts/test_session.py proposals $(SESSION)
+
+bench-intelligence:
+	$(PY) scripts/bench_intelligence.py
 
 accept:
 	$(PY) scripts/accept.py $(if $(SHOTS),--shots $(SHOTS),) $(if $(NO_BROWSER),--no-browser,)

@@ -9,6 +9,7 @@ built, or whose scope the store has not granted, never becomes a chip.
 
 from __future__ import annotations
 
+import time
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -124,10 +125,50 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     add("email", "Email", "gmail_draft_new", "amber", f["has_email"], "no email address", f"Email the customer about order {n}")
 
     order_of_need = _NEED_CANCELLED if f["cancelled"] else _NEED_OPEN if f["unfulfilled"] else _NEED_SHIPPED
+    # What the order's own context says comes first: a customer who has written, an order
+    # that has waited too long. Decided here from the read model, never by the model.
+    first = context_rank(order, f)
     enabled_all = [a for a in candidates if a.enabled]
     note = [a for a in enabled_all if a.id == "note"]
-    rest = sorted((a for a in enabled_all if a.id != "note"), key=lambda a: order_of_need.index(a.id) if a.id in order_of_need else 99)
+    rest = sorted((a for a in enabled_all if a.id != "note"), key=lambda a: (first.index(a.id) if a.id in first else len(first), order_of_need.index(a.id) if a.id in order_of_need else 99))
     enabled = note + rest[:MAX_ENABLED]
     # A disabled chip is shown only where the owner would otherwise ask and be told no.
     disabled = [a for a in candidates if not a.enabled and a.id in ("cancel", "refund", "fulfil") and a.reason][:2]
     return [a.public() for a in enabled + disabled]
+
+
+def context_rank(order: dict[str, Any], facts: dict[str, Any] | None = None) -> list[str]:
+    """The chips the order's context puts first, in order: a customer's email that mentions
+    cancelling puts the cancel first and the reply beside it; one that mentions an address
+    puts the address first; a refund or a return puts the refund first; any email from the
+    customer puts the reply first; an order that has waited too long puts the fulfilment
+    first. Pure words and dates from the read model; the rail's rules still decide what is
+    enabled at all."""
+    from app.context.attention import (
+        _ADDRESS,
+        _CANCEL,
+        _REFUND,
+        _RETURN,
+        AGING_AMBER_DAYS,
+        _days_since,
+    )
+
+    f = facts or order_facts(order)
+    out: list[str] = []
+    email = order.get("email") if isinstance(order.get("email"), dict) else {}
+    threads = [t for t in (email.get("threads") or []) if isinstance(t, dict) and t.get("sender_match")]
+    if threads:
+        t = threads[0]
+        text = f"{t.get('subject') or ''} {t.get('snippet') or ''}"
+        open_order = not f["shipped"] and not f["cancelled"]
+        if _CANCEL.search(text) and open_order:
+            out.append("cancel")
+        elif _ADDRESS.search(text) and open_order:
+            out.append("address")
+        elif _REFUND.search(text) or _RETURN.search(text):
+            out.append("refund")
+        out.append("email")
+    age = _days_since(order.get("placed_at"), time.time())
+    if not f["cancelled"] and f["unfulfilled"] and f["payment"] in PAID and age is not None and age >= AGING_AMBER_DAYS and "fulfil" not in out:
+        out.append("fulfil")
+    return out

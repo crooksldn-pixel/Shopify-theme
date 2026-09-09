@@ -174,13 +174,16 @@ async def _draft_args(ref: str, subject: str, body: str, kind: str) -> dict[str,
     customer) as the Mac reads it now. The recipient is the child's to decide, from Shopify."""
     values: dict[str, str] = {}
     if kind == "orders":
+        from app.context.order import order_digits
         from app.tools.gmail_writes import _first_name, _order_customer
         from app.tools.shopify_tools import hydrator
 
         order = await hydrator().order(ref, budget_s=0.0)
         customer = await _order_customer(order_id=ref)
         values["first_name"] = _first_name(str(customer.get("name") or ""), str(customer.get("email") or ""))
-        values["order_number"] = str(order.get("order_number") or "").lstrip("#")
+        # The number as the owner says it: "1938" from "#1938" or "CROOKS-1938".
+        number = str(order.get("order_number") or "")
+        values["order_number"] = order_digits(number) or number.lstrip("#")
         age = _age_days(str(order.get("placed_at") or ""))
         values["order_age_days"] = str(age) if age is not None else ""
         return {"order_id": ref, "subject": fill(subject, values), "body": fill(body, values)}
