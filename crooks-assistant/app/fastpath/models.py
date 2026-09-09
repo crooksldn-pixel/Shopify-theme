@@ -37,6 +37,12 @@ class FastAnswer:
 
     answer: str
     calls: list[Any] = field(default_factory=list)
+    # Cards this recipe built itself, for the answers that are not derived from a tool result.
+    # `present()` builds the `ui` list by walking ToolCalls, which is right for a read — but it
+    # left a recipe that reads nothing with no way to draw anything at all. "What can you do
+    # now?" consults the capability manifest, calls no tool, and so drew no card and spoke a
+    # paragraph instead. These are appended to the turn's `ui` as they stand.
+    surfaces: list[Any] = field(default_factory=list)
     # Set when part of what was asked could not be read. The answer says so in words; this is
     # for the timeline and the report.
     partial: bool = False

@@ -178,6 +178,7 @@ def _capability_summary(ctx: Ctx, result: ReadResult) -> FastAnswer:   # noqa: A
     # `delta_mod.spoken_delta` is an AttributeError at the worst possible moment.
     from app.capabilities.manifest import build as build_manifest
     from app.capabilities.manifest import spoken_summary
+    from app.capabilities.surface import build_surface
 
     manifest = getattr(ctx.runtime, "manifest", None)
     if not manifest:
@@ -185,26 +186,57 @@ def _capability_summary(ctx: Ctx, result: ReadResult) -> FastAnswer:   # noqa: A
         # "I can change things" while changes are switched off is the worst answer available.
         settings = getattr(ctx.runtime, "settings", None)
         manifest = build_manifest(build_id=getattr(ctx.runtime, "build", ""), writes_enabled=bool(getattr(settings, "writes_enabled", False)))
-    return FastAnswer(answer=spoken_summary(manifest), trace={"source": "manifest", "fingerprint": manifest.get("fingerprint")})
+    spoken = spoken_summary(manifest)
+    # The sentence and the card are built from the same manifest, so the screen cannot list a
+    # capability the spoken answer denies. Thirty capabilities are a list, not a paragraph.
+    surface = build_surface(manifest, spoken=spoken, states=_capability_states(ctx))
+    return FastAnswer(answer=spoken, surfaces=[surface],
+                      trace={"source": "manifest", "fingerprint": manifest.get("fingerprint")})
+
+
+def _capability_states(ctx: Ctx) -> dict[str, dict[str, Any]] | None:
+    """The per-change table /health computed on its last run, when there is one.
+
+    Read from the runtime's cache rather than recomputed: working out whether a change is
+    possible asks Shopify and Google for their scopes, and a question about what the assistant
+    can do must not become two network round trips. Absent, every change reads as "unknown",
+    which is the honest answer when nobody has checked.
+    """
+    cached = getattr(ctx.runtime, "capability_states", None)
+    return cached if isinstance(cached, dict) and cached else None
 
 
 def _capability_delta(ctx: Ctx, result: ReadResult) -> FastAnswer:     # noqa: ARG001
+    from app.capabilities.delta import delta as compute_delta
     from app.capabilities.delta import spoken_delta
+    from app.capabilities.surface import build_surface
 
     record = getattr(ctx.runtime, "capability_record", None)
     if not record:
         return FastAnswer(answer="", defer="no capability record on this backend")
-    return FastAnswer(answer=spoken_delta(record), trace={"source": "capability delta", "fingerprint": (record.get("current") or {}).get("fingerprint")})
+    spoken = spoken_delta(record)
+    current = record.get("current") if isinstance(record.get("current"), dict) else {}
+    moved = compute_delta(record)
+    surface = build_surface(
+        current or {}, spoken=spoken, states=_capability_states(ctx),
+        changed={
+            "since": moved.get("previous_build") or "",
+            "added": [f"{e.get('name')}: {e.get('what')}" for e in (moved.get("added") or [])],
+            "gone": [f"{e.get('name')}: {e.get('what')}" for e in (moved.get("removed") or [])],
+        },
+    )
+    return FastAnswer(answer=spoken, surfaces=[surface],
+                      trace={"source": "capability delta", "fingerprint": (record.get("current") or {}).get("fingerprint")})
 
 
 register(Recipe(
     recipe_id="capability_summary", intent_family="capability_summary",
-    read_primitives=(), ui="assistant", cache_policy=CACHE_NONE, min_confidence=0.7,
+    read_primitives=(), ui="capability", cache_policy=CACHE_NONE, min_confidence=0.7,
     target_ms=50, plan=_capability_plan, render=_capability_summary,
 ))
 register(Recipe(
     recipe_id="capability_delta", intent_family="capability_delta",
-    read_primitives=(), ui="assistant", cache_policy=CACHE_NONE, min_confidence=0.7,
+    read_primitives=(), ui="capability", cache_policy=CACHE_NONE, min_confidence=0.7,
     target_ms=50, plan=_capability_plan, render=_capability_delta,
 ))
 
@@ -431,6 +463,73 @@ register(Recipe(
 # ----------------------------------------------------------------- a customer
 
 
+def _order_list_plan(ctx: Ctx) -> ReadPlan | None:
+    """The orders in a period, as a list. `shopify_list_orders` already returns the shape the
+    order_list card is built from, so this is one read and one card."""
+    days, days_ago = _period_days(ctx.intent.signals.words)
+    return ReadPlan([Read("listing", "shopify_list_orders", {"days": days, "days_ago": days_ago, "limit": 10},
+                          source="shopify", cost=90.0)], label="order_list_period")
+
+
+def _period_days(words: tuple[str, ...]) -> tuple[int, int]:
+    """How wide a window the question asked for, and how far back it starts.
+
+    Deliberately small: the fast lane takes "today", "yesterday" and "this week" and defers
+    anything cleverer to the read layer, which can parse a period properly.
+    """
+    have = set(words)
+    if "yesterday" in have:
+        return 1, 1
+    if "week" in have:
+        return 7, 0
+    if "month" in have:
+        return 30, 0
+    return 1, 0
+
+
+def _order_list_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
+    """A sentence about the shape of the list, and the list itself on screen.
+
+    The sentence deliberately does not read the orders out. Seven orders spoken is a minute of
+    talking nobody listens to; "seven today, three still to go out" is what a person says, and
+    the rows are there to be looked at and tapped.
+    """
+    body = result.values.get("listing")
+    if not isinstance(body, dict):
+        return FastAnswer(answer="", defer="the order list did not come back")
+    orders = [o for o in (body.get("orders") or []) if isinstance(o, dict)]
+    period = "today" if int(body.get("days") or 1) == 1 and not int(body.get("days_ago") or 0) else "in that period"
+    if not orders:
+        return FastAnswer(answer=f"No orders {period}.", calls=list(result.calls), trace={"rows": 0})
+    # The set the cursor walks, so "next" and a tap on the third row mean the same thing.
+    _open_workflow(ctx, body, kind="orders", operation="review", set_id=_set_id_of(body))
+    unfulfilled = sum(1 for o in orders if "unfulfilled" in str(o.get("fulfillment") or "").lower())
+    words = f"{len(orders)} order{'s' if len(orders) != 1 else ''} {period}"
+    if unfulfilled:
+        words += f"; {unfulfilled} still to go out"
+    more = " There are more than I have shown." if body.get("truncated") else ""
+    return FastAnswer(answer=words + "." + more, calls=list(result.calls), partial=result.partial,
+                      trace={"rows": len(orders), "unfulfilled": unfulfilled})
+
+
+register(Recipe(
+    recipe_id="order_list_period", intent_family="order_list_period",
+    read_primitives=("shopify_list_orders",), parallel_nodes=(("listing",),), ui="order_list",
+    cache_policy=CACHE_HOT, min_confidence=0.74, target_ms=900,
+    plan=_order_list_plan, render=_order_list_render,
+))
+# Showing the open order again is the same procedure as looking it up: `_order_plan` already
+# falls back to the branch's current entity when no number was said, which is exactly this
+# case. A second recipe rather than a second condition, because recipe_for maps one family to
+# one recipe and the two families are genuinely different questions.
+register(Recipe(
+    recipe_id="order_reopen", intent_family="order_reopen", required_entities=("order",),
+    read_primitives=("shopify_order_detail",), parallel_nodes=(("detail",),), ui="order",
+    cache_policy=CACHE_ENTITY, min_confidence=0.74, target_ms=700,
+    plan=_order_plan, render=_order_render,
+))
+
+
 def _customer_plan(ctx: Ctx) -> ReadPlan | None:
     """A name this branch has already resolved needs no search: read the history straight."""
     said = ctx.intent.slots.get("name") or ""
@@ -489,6 +588,50 @@ def _customer_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         tail += "."
     return FastAnswer(answer=_customer_line(history, name) + tail, calls=list(result.calls),
                       partial=result.partial, trace={"customer_id": ref})
+
+
+def _customer_history_plan(ctx: Ctx) -> ReadPlan | None:
+    """"What else has this customer ordered?" — the person is whoever the open record belongs
+    to, so nothing has to be resolved from the words.
+
+    Two shapes. With a customer open it is one read. With an ORDER open the customer is not
+    known until the order has been read, so it is two waves — the same find-then-detail
+    pattern the order recipes use, and the scheduler runs them in dependency order.
+    """
+    customer = ctx.entity("customer")
+    if customer:
+        return ReadPlan([Read("history", "shopify_customer_history", {"customer_id": customer},
+                              source="shopify", cost=60.0)], label="customer_history")
+    order = ctx.entity("order")
+    if order:
+        return ReadPlan([
+            Read("detail", "shopify_order_detail", {"order_id": order}, source="shopify", cost=90.0),
+            Read("history", "shopify_customer_history", _history_from_order, source="shopify", after=("detail",), cost=60.0),
+        ], label="customer_history")
+    return None
+
+
+def _history_from_order(values: dict[str, Any]) -> dict[str, Any] | None:
+    detail = values.get("detail")
+    customer = detail.get("customer") if isinstance(detail, dict) else None
+    ref = customer.get("customer_id") if isinstance(customer, dict) else None
+    return {"customer_id": str(ref)} if ref else None
+
+
+def _customer_history_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
+    """The same card and the same sentence as a lookup by name — this is the same question
+    asked a different way, and answering it differently would be a second implementation of
+    one thing. What differs is only how the customer was found."""
+    return _customer_render(ctx, result)
+
+
+register(Recipe(
+    recipe_id="customer_history_lookup", intent_family="customer_history_lookup",
+    required_entities=("customer", "order"),
+    read_primitives=("shopify_order_detail", "shopify_customer_history"),
+    parallel_nodes=(("detail",), ("history",)), ui="customer", cache_policy=CACHE_ENTITY,
+    min_confidence=0.74, target_ms=1500, plan=_customer_history_plan, render=_customer_history_render,
+))
 
 
 register(Recipe(

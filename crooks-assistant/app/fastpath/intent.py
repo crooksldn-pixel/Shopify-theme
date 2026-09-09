@@ -67,6 +67,28 @@ def mutating(words: tuple[str, ...]) -> bool:
 _QUESTION = frozenset({"what", "which", "who", "how", "when", "where", "show", "tell", "list", "find", "check", "look", "read", "give"})
 
 _WORD = re.compile(r"[a-z0-9£$%'#]+")
+# A possessive or a contraction is the same word wearing a suffix. Keeping the apostrophe made
+# "today's" a token of its own, so it matched no period word and "show me today's orders" — the
+# ordinary way to ask — resolved to no family at all while "orders today" resolved to a sales
+# metric. Every closed set in this file is written without apostrophes, so stripping the tail
+# can only help a word find its set.
+_POSSESSIVE = re.compile(r"'s$")
+# Somebody's something. The time words take a possessive too ("today's orders"), and those are
+# not people, so they are excluded by name. What is left is almost always a person: "Millie's
+# emails" is a question about one customer's correspondence, and answering it with the whole
+# inbox — which is what happened — is a confident answer to a different question. The fast
+# lane has no way to resolve a name it has never seen, so it declines and Claude, which can
+# search for the customer, takes the turn.
+_TIME_POSSESSIVE = frozenset({
+    "today", "yesterday", "tomorrow", "week", "weeks", "month", "months", "year", "years",
+    "day", "days", "morning", "afternoon", "evening", "tonight", "weekend", "quarter",
+    "this", "last", "next", "it", "that", "there", "who", "what", "let",
+})
+_OWNER_OF = re.compile(r"\b([a-z]+)'s\b")
+
+
+def _tokens(lowered: str) -> tuple[str, ...]:
+    return tuple(_POSSESSIVE.sub("", w) or w for w in _WORD.findall(lowered))
 
 # Direction: moving through a set that is already open.
 _NEXT = frozenset({"next", "onwards", "forward", "another", "following"})
@@ -86,11 +108,21 @@ _PERIOD = frozenset({
     "today", "yesterday", "week", "weeks", "month", "months", "year", "day", "days",
     "morning", "afternoon", "tonight", "weekend", "quarter", "recently", "lately",
 })
+# A quantity is being asked for. "Orders" is deliberately NOT here: "how many orders today" is
+# a number and "show me today's orders" is a list, and the word they share cannot decide which.
+# What decides is whether a quantity was asked for ("how much", "how many") or a look was
+# ("show", "list") — so the quantity words carry the metric reading and _LISTING carries the
+# other. Before this split, "show me today's orders" was answered with a revenue figure.
 _METRIC = frozenset({
-    "sales", "selling", "sold", "revenue", "takings", "turnover", "units", "orders",
+    "sales", "selling", "sold", "revenue", "takings", "turnover", "units",
     "average", "aov", "spend", "spent", "breakdown", "split", "compare", "comparison",
-    "versus", "vs", "against", "made", "money",
+    "versus", "vs", "against", "made", "money", "much", "many",
 })
+# Asking to be shown something, rather than told a figure about it.
+_LISTING = frozenset({"show", "list", "see", "display", "view", "pull", "bring", "open", "give"})
+# Asking for the same thing again. The order is already the branch's entity; this is a
+# re-render, not a new lookup.
+_AGAIN = frozenset({"again", "re-open", "reopen", "back"})
 # Asking for an order of merit rather than a total: a different question and a different card.
 _RANKING = frozenset({"best", "bestseller", "bestsellers", "top", "worst", "most", "least", "highest", "lowest", "popular", "biggest"})
 _STOCK = frozenset({"stock", "inventory", "left", "remaining", "sizes"})
@@ -98,7 +130,7 @@ _STOCK = frozenset({"stock", "inventory", "left", "remaining", "sizes"})
 # is a ranking by cover across the catalogue; "how much stock of the yard jeans" is one
 # product, and belongs to the model, which can find the product.
 _RUNNING_OUT = frozenset({"cover", "running", "low", "reorder", "restock", "restocking", "short", "soon", "empty"})
-_EMAIL = frozenset({"email", "emails", "inbox", "mail", "message", "messages", "thread", "threads", "unread", "unanswered", "replied", "reply", "replies", "replying", "heard", "correspondence"})
+_EMAIL = frozenset({"email", "emails", "emailed", "inbox", "mail", "mailed", "message", "messages", "thread", "threads", "unread", "unanswered", "replied", "reply", "replies", "replying", "heard", "wrote", "written", "correspondence"})
 # Someone is owed an answer. The question "who needs replying to" is this signal, not a
 # request to reply: it asks about a state of the inbox.
 _WAITING = frozenset({"waiting", "unanswered", "unreplied", "outstanding", "owed", "chase", "chasing", "needs", "need", "back", "ignored", "hanging"})
@@ -138,6 +170,9 @@ class Signals:
     customer: bool = False
     status: bool = False
     address: bool = False
+    listing: bool = False
+    again: bool = False
+    possessive_name: bool = False
     bought: bool = False
     deixis: bool = False            # "that", "this", "it", "them", "these"
     # Branch state, folded in: what the conversation already has open.
@@ -167,7 +202,7 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
     from app.routes.turn import spoken_order_numbers
 
     lowered = (text or "").lower()
-    words = tuple(_WORD.findall(lowered))
+    words = _tokens(lowered)
     have = set(words)
     sig = Signals(
         words=words,
@@ -183,6 +218,9 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         stock=bool(have & _STOCK),
         running_out=bool(have & _RUNNING_OUT) or ({"out", "of"} <= have and not (have & _STOCK)) or ("out" in have and "running" in have),
         email=bool(have & _EMAIL),
+        listing=bool(have & _LISTING),
+        again=bool(have & _AGAIN),
+        possessive_name=any(w not in _TIME_POSSESSIVE for w in _OWNER_OF.findall(lowered)),
         waiting=bool(have & _WAITING),
         delayed=bool(have & _DELAY),
         order=bool(have & _ORDER),
@@ -260,15 +298,31 @@ FAMILIES: tuple[Family, ...] = (
     Family("capability_delta", needs=("meta_self", "meta_more"), blocks=("mutation",), base=0.75, max_words=16),
     Family("capability_summary", needs=("meta_self", "question"), blocks=("mutation", "meta_more"), base=0.7, max_words=12),
     Family("order_lookup", needs=("order_number",), boosts=("order", "question"), blocks=("mutation", "metric", "email", "status", "address"), entities=("order",), base=0.8, max_words=12),
+    # "Show me today's orders" — a list, not a total. It needs an explicit ask to be shown,
+    # so "how many orders today" stays a number and this stays a list.
+    Family("order_list_period", needs=("order", "period"), boosts=("listing", "question"),
+           blocks=("mutation", "metric", "order_number", "ranking", "running_out", "stock", "email", "delayed", "status", "address"),
+           entities=("order",), base=0.74, max_words=12),
+    # "Show it again" / "1938 again" — the order is already the branch's entity, so this is a
+    # re-render of what is open, not a fresh lookup. Requires an entity: with nothing open
+    # there is nothing to show again, and guessing would re-open the wrong record.
+    Family("order_reopen", needs=("again", "has_entity"), boosts=("listing", "order", "question"),
+           blocks=("mutation", "metric", "email", "ranking", "period", "direction_back"),
+           entities=("order",), base=0.76, max_words=8),
+    # "What else has this customer ordered?" — the person is whoever the open record belongs
+    # to, so no name has to be resolved.
+    Family("customer_history_lookup", needs=("bought", "has_entity"), boosts=("customer", "question", "deixis"),
+           blocks=("mutation", "order_number", "metric", "email", "ranking", "period"),
+           entities=("customer", "order"), base=0.74, max_words=12),
     Family("order_status_lookup", needs=("status",), boosts=("order_number", "order", "has_entity", "deixis"), blocks=("mutation", "metric", "address"), entities=("order",), base=0.72, max_words=14),
-    Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric"), entities=("order",), base=0.7, max_words=14),
+    Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email"), entities=("order",), base=0.72, max_words=14),
     Family("customer_purchase_lookup", needs=("known_name", "bought"), boosts=("customer", "question"), blocks=("mutation",), entities=("customer",), base=0.72, max_words=14),
     Family("best_sellers_period", needs=("ranking",), boosts=("period", "question", "metric"), blocks=("mutation", "email", "stock", "running_out", "order_number", "customer"), base=0.65, floor=0.72, max_words=14),
     Family("sales_breakdown_period", needs=("metric", "period"), boosts=("question",), blocks=("mutation", "email", "stock", "running_out", "order_number", "ranking"), base=0.66, floor=0.72, max_words=16),
     Family("delayed_orders", needs=("delayed", "order"), boosts=("question", "period"), blocks=("mutation", "order_number"), base=0.72, max_words=14),
     Family("stock_cover_analysis", needs=("running_out",), boosts=("question", "period", "metric", "stock"), blocks=("mutation", "email", "order_number"), base=0.7, floor=0.72, max_words=12),
     Family("needs_reply", needs=("email", "waiting"), boosts=("customer", "question"), blocks=("mutation", "metric", "order_number", "ranking"), base=0.7, floor=0.74, max_words=14),
-    Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number"), base=0.7, floor=0.74, max_words=12),
+    Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number", "possessive_name"), base=0.7, floor=0.74, max_words=12),
 )
 
 # Signal names as the families spell them, mapped to how they are read off Signals.
@@ -288,6 +342,9 @@ _LOOKUP = {
     "stock": lambda s: s.stock,
     "running_out": lambda s: s.running_out,
     "email": lambda s: s.email,
+    "listing": lambda s: s.listing,
+    "again": lambda s: s.again,
+    "possessive_name": lambda s: s.possessive_name,
     "waiting": lambda s: s.waiting,
     "delayed": lambda s: s.delayed,
     "order": lambda s: s.order,

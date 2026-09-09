@@ -1,0 +1,144 @@
+"""The capability manifest as something to look at rather than something to listen to.
+
+"What can you do now?" is the question a new owner asks first and the one an experienced owner
+asks after an update. It was answered in a paragraph: the manifest was summarised into a
+sentence, spoken, and nothing was drawn. A spoken list of thirty capabilities is not a list —
+by the fourth item the first is gone.
+
+So the same manifest is grouped by the part of the shop it touches, each entry carrying what it
+is and whether it could be done right now, and the whole thing goes on screen while the spoken
+answer stays one sentence. The words and the card come from the same manifest, so they cannot
+disagree.
+
+Nothing here decides what is possible. `manifest.build()` reads the tool registry and is the
+only authority; this arranges what it returns.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from app.surfaces import Freshness, Surface
+
+# The parts of the shop, in the order an owner thinks about them. `_source_of` in manifest.py
+# already tags every tool with one of these areas; this fixes the order and gives each a word.
+AREAS: tuple[tuple[str, str], ...] = (
+    ("orders", "Orders"),
+    ("customers", "Customers"),
+    ("products", "Products and stock"),
+    ("email", "Email"),
+    ("analytics", "Sales and reporting"),
+    ("system", "The assistant itself"),
+)
+_AREA_ORDER = {name: i for i, (name, _) in enumerate(AREAS)}
+_AREA_LABEL = dict(AREAS)
+
+MAX_PER_GROUP = 10
+MAX_EXAMPLES = 6
+
+# Things worth saying, shown as chips. Deliberately a short fixed list of the questions the
+# fast lane actually has a recipe for, so tapping one is answered without the model.
+EXAMPLES: tuple[str, ...] = (
+    "Show me today's orders",
+    "Show me order 1938",
+    "Which customers need replying to?",
+    "How much have we sold today?",
+    "What is running out?",
+    "Which orders are late?",
+)
+
+
+def _kind_of(entry: dict[str, Any], kind: str) -> dict[str, Any]:
+    return {
+        "name": str(entry.get("name") or ""),
+        "what": str(entry.get("what") or "")[:140],
+        "kind": kind,
+        "area": str(entry.get("area") or "system"),
+        "operation": str(entry.get("operation") or ""),
+        "risk": str(entry.get("risk") or ""),
+        "reversible": bool(entry.get("reversible", True)),
+    }
+
+
+def _grouped(manifest: dict[str, Any], states: dict[str, dict[str, Any]] | None) -> list[dict[str, Any]]:
+    states = states or {}
+    entries: list[dict[str, Any]] = []
+    entries += [_kind_of(e, "read") for e in manifest.get("reads") or []]
+    entries += [_kind_of(e, "change") for e in manifest.get("writes") or []]
+    entries += [_kind_of(e, "bulk") for e in manifest.get("batches") or []]
+
+    for entry in entries:
+        state = states.get(entry["operation"]) if entry["operation"] else None
+        if isinstance(state, dict):
+            entry["state"] = str(state.get("state") or "")
+            entry["detail"] = str(state.get("detail") or "")[:140]
+        elif entry["kind"] == "read":
+            # A read needs no permission beyond the credential the health page already checks.
+            entry["state"] = "ready"
+        else:
+            entry["state"] = "unknown"
+
+    groups: list[dict[str, Any]] = []
+    for area, label in AREAS:
+        mine = [e for e in entries if e["area"] == area]
+        if not mine:
+            continue
+        mine.sort(key=lambda e: ({"read": 0, "change": 1, "bulk": 2}[e["kind"]], e["name"]))
+        groups.append({
+            "area": area,
+            "label": label,
+            "count": len(mine),
+            "truncated": len(mine) > MAX_PER_GROUP,
+            "items": mine[:MAX_PER_GROUP],
+        })
+    groups.sort(key=lambda g: _AREA_ORDER.get(g["area"], 99))
+    return groups
+
+
+def build_surface(
+    manifest: dict[str, Any],
+    *,
+    spoken: str = "",
+    states: dict[str, dict[str, Any]] | None = None,
+    changed: dict[str, Any] | None = None,
+) -> Surface:
+    """The capability surface for one build.
+
+    `states` is the per-operation table `/health` already computes (ready / blocked / disabled
+    / unknown). It is optional: without it a change reads as "unknown" rather than as ready,
+    because claiming a change is available when nobody has checked the scope is the one wrong
+    answer here.
+    """
+    groups = _grouped(manifest, states)
+    counts = dict(manifest.get("counts") or {})
+    writes_on = bool(manifest.get("writes_enabled"))
+    data: dict[str, Any] = {
+        "build": str(manifest.get("build") or "")[:40],
+        "fingerprint": str(manifest.get("fingerprint") or "")[:16],
+        "writes_enabled": writes_on,
+        "counts": {
+            "reads": int(counts.get("reads") or 0),
+            "changes": int(counts.get("writes") or 0),
+            "bulk": int(counts.get("batches") or 0),
+        },
+        "groups": groups,
+        "examples": list(EXAMPLES[:MAX_EXAMPLES]),
+        "note": ("" if writes_on else "Changes are switched off on the Mac, so everything here is read-only."),
+    }
+    if changed:
+        # The delta answer: the same surface, with what moved since the last build called out.
+        data["changed"] = {
+            "since": str(changed.get("since") or "")[:40],
+            "added": [str(x)[:120] for x in (changed.get("added") or [])[:12]],
+            "gone": [str(x)[:120] for x in (changed.get("gone") or [])[:12]],
+        }
+    return Surface(
+        surface_type="capability",
+        ui_type="capability",
+        data=data,
+        title="What this can do",
+        subtitle=(f"{data['counts']['reads']} readings · {data['counts']['changes']} changes"
+                  if writes_on else f"{data['counts']['reads']} readings · changes off"),
+        freshness=Freshness(source="mac", complete=True),
+        spoken_summary=spoken,
+    )

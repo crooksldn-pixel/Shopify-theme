@@ -216,6 +216,7 @@ async def turn(
                 transcript=transcript_info, question=text.strip(), speak=speak, calls=fast.calls,
                 epoch=epoch, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
                 lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
+                surfaces=fast.surfaces,
             )
         lane, lane_why = "NORMAL", "the fast path deferred"
 
@@ -736,7 +737,8 @@ def _ui_entities(ui: list) -> list[dict]:
         if not isinstance(data, dict):
             continue
         kind = str(item.get("type") or "")
-        ref = data.get("order_id") or data.get("customer_id") or data.get("thread_id") or data.get("proposal_id") or ""
+        named = item.get("entity") if isinstance(item.get("entity"), dict) else None
+        ref = (named or {}).get("ref") or data.get("order_id") or data.get("customer_id") or data.get("thread_id") or data.get("proposal_id") or ""
         if not ref and kind in ("product", "inventory") and isinstance(data.get("products"), list) and data["products"] and isinstance(data["products"][0], dict):
             ref = data["products"][0].get("product_id") or ""
         if ref:
@@ -807,6 +809,7 @@ async def _answer(
     branch: Any = None,
     partial: bool = False,
     measures: dict | None = None,
+    surfaces: list | None = None,
 ) -> dict:
     tool_calls = tool_calls or []
     turns = 0
@@ -858,6 +861,10 @@ async def _answer(
     # What the screen shows beside the answer: cards chosen from the tool results, never from
     # the prose. See app/presentation.py for the vocabulary and the bounds.
     ui = present(calls, session=session, error_kind=error_kind, writes=writes)
+    # A card a recipe built for itself, for an answer no tool produced. It goes in front of
+    # the context stack and behind nothing: it IS the answer to the question that was asked.
+    if surfaces:
+        ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in surfaces] + ui
     turn_id = getattr(session, "turn_id", "") if session is not None else ""
     if branch is None and session is not None:
         branch = session.branch()

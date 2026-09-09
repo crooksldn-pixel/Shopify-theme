@@ -37,6 +37,9 @@ UI_TYPES = frozenset({
     "metric_group", "ranking", "table", "comparison", "variant_matrix", "trend", "working_set",
     # bulk changes (app/actions/batch.py): the card before the gesture, the count after it
     "batch_action", "batch_result",
+    # what this build can do, grouped (app/capabilities/surface.py). Built by a recipe rather
+    # than from a tool result: the manifest is read from the registry, not from the shop.
+    "capability",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})

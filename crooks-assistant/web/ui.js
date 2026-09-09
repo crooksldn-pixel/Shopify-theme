@@ -1289,6 +1289,73 @@
     return node;
   }
 
+  // ---- what this build can do. The manifest, grouped by the part of the shop it touches.
+  // Thirty capabilities read aloud are not a list; the sentence stays one line and this is
+  // the list. Chips are questions the fast lane has a recipe for, so tapping one is answered
+  // without the model — they post the same text a spoken question would.
+
+  function capabilityRow(item) {
+    const state = text(item.state);
+    const tone = state === 'ready' ? 'good' : state === 'blocked' ? 'bad' : state === 'disabled' ? 'quiet' : 'quiet';
+    const kindLabel = item.kind === 'change' ? 'Change' : item.kind === 'bulk' ? 'Bulk' : 'Read';
+    return h('li', { class: 'cap-row' }, [
+      h('div', { class: 'cap-main' }, [
+        h('span', { class: 'cap-what', text: text(item.what, item.name) }),
+        h('span', { class: 'cap-kind', text: kindLabel }),
+      ]),
+      state && state !== 'ready' ? badge(state, tone) : null,
+    ]);
+  }
+
+  function renderCapability(d, opts) {
+    const groups = list(d.groups, 8);
+    const counts = d.counts && typeof d.counts === 'object' ? d.counts : {};
+    const changed = d.changed && typeof d.changed === 'object' ? d.changed : null;
+    const examples = list(d.examples, 6).map((x) => text(x)).filter(Boolean);
+    const meta = [];
+    if (num(counts.reads) !== null) meta.push(`${counts.reads} readings`);
+    if (num(counts.changes) !== null) meta.push(d.writes_enabled ? `${counts.changes} changes` : 'changes off');
+    if (num(counts.bulk) !== null && counts.bulk) meta.push(`${counts.bulk} bulk`);
+    const panels = groups.map((g) => ({
+      name: text(g.area, 'other'),
+      label: text(g.label, 'Other'),
+      node: [
+        h('ul', { class: 'cap-rows' }, list(g.items, 10).map(capabilityRow)),
+        g.truncated ? h('p', { class: 'card-note', text: 'More than shown.' }) : null,
+      ],
+    }));
+    const node = card('capability', [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker('Capabilities'),
+        h('h2', { class: 'card-title', text: text(d.title, 'What this can do') }),
+        h('p', { class: 'card-meta', text: meta.join(' \u00b7 ') }),
+      ])]),
+      d.note ? h('p', { class: 'card-note', text: text(d.note) }) : null,
+      changed && (list(changed.added, 12).length || list(changed.gone, 12).length)
+        ? section('cap-changed', 'Since the last build', [
+            list(changed.added, 12).length
+              ? h('ul', { class: 'cap-rows' }, list(changed.added, 12).map((x) => h('li', { class: 'cap-row new', text: '+ ' + text(x) })))
+              : null,
+            list(changed.gone, 12).length
+              ? h('ul', { class: 'cap-rows' }, list(changed.gone, 12).map((x) => h('li', { class: 'cap-row gone', text: '\u2212 ' + text(x) })))
+              : null,
+          ])
+        : null,
+      panels.length ? tabs(panels, { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('capability', name, label) : null }) : null,
+      examples.length
+        ? section('cap-examples', 'Try asking', [
+            h('div', { class: 'chips' }, examples.map((q) => {
+              const chip = h('button', { class: 'chip', type: 'button', text: q });
+              chip.dataset.ask = q;
+              return chip;
+            })),
+          ])
+        : null,
+    ], opts);
+    node.dataset.build = text(d.build);
+    return node;
+  }
+
   // ---- bulk changes: one card for many proposals, and the count afterwards. The gesture
   // wiring is the confirmation card's; the id it names is the batch's.
 
@@ -1419,11 +1486,12 @@
     trend: renderTrend,
     working_set: renderWorkingSet,
     batch_action: renderBatchAction,
+    capability: renderCapability,
     batch_result: renderBatchResult,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
-    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result'];
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result', 'capability'];
 
   function isValid(item) {
     return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'
