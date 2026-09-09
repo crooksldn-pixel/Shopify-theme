@@ -13,6 +13,7 @@ import time
 from typing import Any
 
 from app.actions.models import Prepared
+from app.observability import timeline
 from app.session.models import Session
 from app.tools import registry
 from app.tools.gate import Disposition, Tier, classify
@@ -116,26 +117,29 @@ async def dispatch(
         "tool=%s tier=%s disposition=%s args=%s",
         name, decision.tier.value, decision.disposition.value, sorted(args) if args else [],
     )
+    trace = _Trace(name, args, session, decision)
 
     if decision.disposition is Disposition.DENY:
         refusal = session.refuse(name, args, decision.reason)
         log.warning("REFUSED tool=%s refusal=%s reason=%s", name, refusal.refusal_id, decision.reason)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=decision.reason))
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=decision.reason)))
         if decision.recoverable:
+            trace.finish("not_yet", error=decision.reason)
             # Not a rule: a wrong turning the model can correct by itself. It must not tell
             # the owner it could not do this — it has not tried properly yet.
             return (
                 f"NOT YET ({refusal.refusal_id}): {decision.reason} "
                 "Do this now, without mentioning it to the owner; nothing has been refused."
             )
+        trace.finish("refused", error=decision.reason, missing_capability=_missing_capability(name, decision.reason))
         return (
             f"REFUSED ({refusal.refusal_id}): {decision.reason} "
             "Tell the user plainly that you could not do this and why. Do not retry."
         )
 
     if decision.disposition is Disposition.STAGE_FOR_OWNER:
-        return await _stage(name, args, session=session, timeout_s=timeout_s, calls=calls)
+        return await _stage(name, args, session=session, timeout_s=timeout_s, calls=calls, trace=trace)
 
     started = time.perf_counter()
     try:
@@ -145,7 +149,8 @@ async def dispatch(
         # us"). They must reach the model intact, not as "failed unexpectedly".
         log.warning("tool=%s failed: %s", name, exc)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=str(exc), duration_ms=_elapsed(started)))
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=str(exc), duration_ms=_elapsed(started))))
+        trace.finish("error", error=str(exc), ms=_elapsed(started))
         return (
             f"ERROR: {exc} Say that this lookup failed. Do not invent a result and do not "
             "report success."
@@ -153,19 +158,21 @@ async def dispatch(
     except Exception as exc:  # noqa: BLE001 — a tool must never take the process down
         log.exception("tool=%s raised", name)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=repr(exc), duration_ms=_elapsed(started)))
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=repr(exc), duration_ms=_elapsed(started))))
+        trace.finish("exception", error=f"{type(exc).__name__}: {exc}", ms=_elapsed(started))
         return (
             f"ERROR: {name} failed unexpectedly ({type(exc).__name__}). Say the lookup failed. "
             "Do not invent a result."
         )
 
     _harvest_ids(payload, session)
+    ms = payload.get("_ms") if isinstance(payload, dict) else None
+    trace.finish("ok", ms=ms if ms is not None else _elapsed(started), result=_result_shape(payload))
     if calls is not None:
-        ms = payload.get("_ms") if isinstance(payload, dict) else None
-        calls.append(ToolCall(
+        calls.append(trace.call(ToolCall(
             name=name, args=args, ok=True, duration_ms=ms,
             result=payload if isinstance(payload, dict) else None,
-        ))
+        )))
 
     spec = registry.get(name)
     text = _render(spec.model_view(payload) if spec.model_view is not None and isinstance(payload, dict) else payload)
@@ -179,29 +186,34 @@ async def dispatch(
 
 
 async def _stage(
-    name: str, args: dict[str, Any], *, session: Session, timeout_s: float, calls: list[Any] | None,
+    name: str, args: dict[str, Any], *, session: Session, timeout_s: float, calls: list[Any] | None, trace: _Trace | None = None,
 ) -> str:
     """A write: the handler prepares the exact change from a fresh read and nothing is sent.
     The proposal waits on the session for the owner's tap; the model is told it is waiting."""
     from app.actions.engine import current as current_engine
     from app.providers.base import ToolCall
 
+    trace = trace or _Trace(name, args, session, None)
     spec = registry.get(name)
+    started = time.perf_counter()
     try:
         prepared = await registry.invoke(name, args, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
         log.warning("tool=%s could not be prepared: %s", name, exc)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=str(exc)))
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=str(exc))))
+        trace.finish("unprepared", error=str(exc), ms=_elapsed(started))
         return f"ERROR: {exc} Say that this could not be prepared. Nothing was changed."
     except Exception as exc:  # noqa: BLE001
         log.exception("tool=%s raised while preparing", name)
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error=repr(exc)))
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=repr(exc))))
+        trace.finish("exception", error=f"{type(exc).__name__}: {exc}", ms=_elapsed(started))
         return f"ERROR: {name} could not be prepared ({type(exc).__name__}). Nothing was changed."
     if not isinstance(prepared, Prepared):
         if calls is not None:
-            calls.append(ToolCall(name=name, args=args, ok=False, error="handler did not prepare a change"))
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error="handler did not prepare a change")))
+        trace.finish("unprepared", error="handler did not prepare a change", ms=_elapsed(started))
         return f"ERROR: {name} did not prepare a change. Nothing was changed."
 
     # A change decided on the Mac can carry a person's details the model never saw in a
@@ -210,8 +222,9 @@ async def _stage(
     if isinstance(pii, (list, tuple)):
         session.remember_pii(*(p for p in pii if isinstance(p, str)))
     proposal, created = current_engine().stage(session, spec, args, prepared)
+    trace.finish("staged", ms=_elapsed(started), proposal_id=proposal.proposal_id, new=created, risk=proposal.risk, interaction=proposal.interaction)
     if calls is not None:
-        calls.append(ToolCall(name=name, args=args, ok=True, proposal_id=proposal.proposal_id))
+        calls.append(trace.call(ToolCall(name=name, args=args, ok=True, proposal_id=proposal.proposal_id)))
     log.info(
         "PROPOSED tool=%s proposal=%s entity=%s new=%s", name, proposal.proposal_id, proposal.entity_label, created,
     )
@@ -248,6 +261,95 @@ async def _stage(
 
 def _elapsed(started: float) -> float:
     return round((time.perf_counter() - started) * 1000, 1)
+
+
+# ------------------------------------------------------------- the timeline's view of a call
+
+
+class _Trace:
+    """One tool call as the test-session timeline sees it: requested, then finished, under one
+    tool_call_id, against the session and the turn in progress. Off, both are a no-op."""
+
+    __slots__ = ("name", "session", "tool_call_id", "started", "active")
+
+    def __init__(self, name: str, args: dict[str, Any], session: Session, decision) -> None:
+        self.name = name
+        self.session = session
+        self.tool_call_id = timeline.new_id("tc")
+        self.started = time.perf_counter()
+        self.active = timeline.current().active is not None
+        if self.active:
+            timeline.emit(
+                "tool_requested", session_id=session.session_id, turn_id=session.turn_id or None, tool_call_id=self.tool_call_id,
+                tool=name, args=loggable_args(name, args), tier=(decision.tier.value if decision is not None else None),
+                disposition=(decision.disposition.value if decision is not None else None),
+            )
+
+    def finish(self, outcome: str, *, ms: float | None = None, error: str | None = None, **fields: Any) -> None:
+        if not self.active:
+            return
+        timeline.emit(
+            "tool_finished", session_id=self.session.session_id, turn_id=self.session.turn_id or None, tool_call_id=self.tool_call_id,
+            tool=self.name, ok=outcome in ("ok", "staged"), outcome=outcome, error=(str(error)[:400] if error else None),
+            ms=(round(float(ms), 1) if ms is not None else _elapsed(self.started)), **fields,
+        )
+
+    def call(self, call):
+        call.tool_call_id = self.tool_call_id
+        return call
+
+
+def loggable_args(name: str, args: dict[str, Any]) -> dict[str, Any]:
+    """A tool call's arguments as the timeline keeps them: ids and short plain values as they
+    are; the text of a change (a note, an email body) by its length. Redacted by shape."""
+    from app.logging.turnlog import redact
+
+    write = False
+    try:
+        write = registry.get(name).write is not None
+    except KeyError:
+        pass
+    out: dict[str, Any] = {}
+    for key, value in (args or {}).items():
+        key = str(key)[:40]
+        if write and not key.endswith("_id") and not isinstance(value, (bool, int, float)):
+            out[key] = f"<{len(str(value))} chars>"
+        elif isinstance(value, (bool, int, float)):
+            out[key] = value
+        elif isinstance(value, list):
+            out[key] = f"<list of {len(value)}>"
+        else:
+            out[key] = str(value)[:120]
+    return redact(out)
+
+
+def _result_shape(payload: Any) -> dict[str, Any] | None:
+    """What a result was, never what it said: its keys, the lengths of its lists, and the
+    ids it carried (an order's, a customer's, a thread's), for the reconstruction of the turn."""
+    if not isinstance(payload, dict):
+        return None
+    shape: dict[str, Any] = {}
+    for key, value in payload.items():
+        key = str(key)
+        if key.startswith("_"):
+            continue
+        if isinstance(value, list):
+            shape[key] = {"count": len(value)}
+            ids = [str(v.get(k)) for v in value[:20] if isinstance(v, dict) for k in _ID_KEYS if k in v and k != "id"]
+            if ids:
+                shape[key]["ids"] = ids[:20]
+        elif isinstance(value, dict):
+            shape[key] = {"keys": sorted(str(k) for k in value)[:20]}
+        elif key in _ID_KEYS or key in ("order_number", "name", "available", "truncated", "count", "total", "ok", "state") or isinstance(value, (bool, int, float)):
+            shape[key] = value if isinstance(value, (bool, int, float)) else str(value)[:80]
+        elif isinstance(value, str):
+            shape[key] = f"<{len(value)} chars>"
+    return shape
+
+
+def _missing_capability(name: str, reason: str) -> str | None:
+    """A tool the model asked for that this Mac does not have. Other refusals are rules."""
+    return name if "not a registered tool" in reason else None
 
 
 def make_pretooluse_hook(session_getter, on_event=None):

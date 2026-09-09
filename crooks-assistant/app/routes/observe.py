@@ -1,0 +1,152 @@
+"""The test session, controlled from the Mac, and the tablet's own account of what it did.
+
+  POST /test-session/start   {name}   begin a named session (the Mac itself only)
+  GET  /test-session/status           the session in progress, if any (the Mac itself only)
+  POST /test-session/stop             end it (the Mac itself only)
+  POST /telemetry            {session_id, events: [...]}   the tablet's batch; always 204
+
+The control routes answer only requests made on the Mac (no X-Forwarded-For: nothing
+`tailscale serve` proxied), so a tablet cannot start or stop a session. Telemetry is taken
+from any login the Mac admits, bounded, and dropped without a word when it names a
+conversation that belongs to another login. Nothing is ever waited for by the tablet: the
+answer is 204 before the events are written."""
+
+from __future__ import annotations
+
+import logging
+import re
+from typing import Any
+
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse, Response
+
+from app.observability.session import AlreadyActive
+
+log = logging.getLogger("crooks.observe")
+
+router = APIRouter()
+
+MAX_BODY_BYTES = 64_000
+MAX_EVENTS = 200
+MAX_STRING = 2_000
+MAX_DEPTH = 6
+_KIND = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
+# What a tablet event may carry. Anything else is dropped: the page is ours, but the route
+# is reachable by every login the Mac admits, and the file is read by a report.
+ALLOWED_FIELDS = frozenset({
+    "kind", "t", "session_id", "turn_id", "proposal_id", "context_request_id", "screen", "entity", "entities", "items",
+    "cards", "tabs", "actions", "confirmations", "viewport", "document", "overflow", "images", "from", "to", "label",
+    "action", "gesture", "target", "state", "code", "reason", "message", "file", "line", "col", "src", "status",
+    "ms", "via", "nav", "phase", "order_id", "question", "attention", "outcome", "depth", "count", "id", "name",
+    "history", "mode", "skipped", "errors", "scroll", "height", "width", "aborted", "offline", "seq", "answer_chars",
+    "audio_ms", "turns", "error_kind", "detail", "chars", "before", "after", "reachable", "elapsed_ms", "index",
+    "fixture", "kept", "cancelled",
+})
+
+
+def _local(request: Request) -> bool:
+    return not request.headers.get("x-forwarded-for")
+
+
+def _summary(session) -> dict[str, Any]:
+    return {"test_session_id": session.test_session_id, "name": session.name, "started_at": session.started_at, "stopped_at": session.stopped_at}
+
+
+@router.post("/test-session/start", response_model=None)
+async def start(request: Request) -> JSONResponse | dict:
+    if not _local(request):
+        return JSONResponse(status_code=403, content={"code": "not_local", "detail": "A test session is started on the Mac itself."})
+    runtime = request.app.state.runtime
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        body = {}
+    name = str((body or {}).get("name") or "").strip()[:80] if isinstance(body, dict) else ""
+    try:
+        session = runtime.timeline.start(name or "session")
+    except AlreadyActive as exc:
+        return JSONResponse(status_code=409, content={"code": "already_active", "detail": f"A test session is already running: {exc}. Stop it first.", "test_session_id": str(exc)})
+    log.info("test session started: %s", session.test_session_id)
+    return {"started": True, **_summary(session), "path": str(runtime.tests.timeline_path(session))}
+
+
+@router.get("/test-session/status", response_model=None)
+async def status(request: Request) -> JSONResponse | dict:
+    if not _local(request):
+        return JSONResponse(status_code=403, content={"code": "not_local", "detail": "Asked on the Mac itself."})
+    runtime = request.app.state.runtime
+    session = runtime.timeline.active
+    if session is None:
+        last = runtime.tests.last()
+        return {"active": False, "last": _summary(last) if last else None}
+    return {"active": True, **_summary(session), "path": str(runtime.tests.timeline_path(session)), "events": runtime.timeline.counts}
+
+
+@router.post("/test-session/stop", response_model=None)
+async def stop(request: Request) -> JSONResponse | dict:
+    if not _local(request):
+        return JSONResponse(status_code=403, content={"code": "not_local", "detail": "A test session is stopped on the Mac itself."})
+    runtime = request.app.state.runtime
+    session = runtime.timeline.stop()
+    if session is None:
+        return {"stopped": False, "detail": "No test session is running."}
+    log.info("test session stopped: %s", session.test_session_id)
+    return {"stopped": True, **_summary(session), "path": str(runtime.tests.timeline_path(session)), "events": runtime.timeline.counts}
+
+
+@router.post("/telemetry")
+async def telemetry(request: Request) -> Response:
+    """The tablet's batch. 204 whatever happens: the page never learns anything from this
+    route and never waits on it. Events are kept only while a session is active."""
+    runtime = request.app.state.runtime
+    timeline = runtime.timeline
+    if timeline.active is None:
+        return Response(status_code=204)
+    raw = await request.body()
+    if len(raw) > MAX_BODY_BYTES:
+        return Response(status_code=204)
+    try:
+        import json
+
+        body = json.loads(raw.decode("utf-8", "replace") or "{}")
+    except ValueError:
+        return Response(status_code=204)
+    if not isinstance(body, dict):
+        return Response(status_code=204)
+    session_id = str(body.get("session_id") or "")[:64]
+    if session_id:
+        from app.routes.actions import session_matches
+
+        try:
+            owner = runtime.sessions.peek(session_id)
+        except KeyError:
+            owner = None
+        if owner is not None and not session_matches(owner, request):
+            return Response(status_code=204)
+    events = body.get("events")
+    if not isinstance(events, list):
+        return Response(status_code=204)
+    received = 0
+    for item in events[:MAX_EVENTS]:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("kind") or "")
+        if not _KIND.match(kind):
+            continue
+        fields = {k: _bounded(v) for k, v in item.items() if k in ALLOWED_FIELDS and k != "kind"}
+        fields.setdefault("session_id", session_id or None)
+        timeline.emit(f"tablet_{kind}", source="tablet", **fields)
+        received += 1
+    return Response(status_code=204, headers={"X-Crooks-Telemetry": str(received)})
+
+
+def _bounded(value: Any, depth: int = 0) -> Any:
+    if depth > MAX_DEPTH:
+        return None
+    if isinstance(value, dict):
+        return {str(k)[:40]: _bounded(v, depth + 1) for k, v in list(value.items())[:40]}
+    if isinstance(value, list):
+        return [_bounded(v, depth + 1) for v in value[:100]]
+    if isinstance(value, bool) or value is None or isinstance(value, (int, float)):
+        return value
+    return str(value)[:MAX_STRING]

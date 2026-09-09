@@ -207,6 +207,44 @@ questions it fumbled listed.
 same Max allowance, and a long day of voice testing can exhaust the weekly window. Tool logic is
 testable directly in Python without spending anything.
 
+### An hour with the tablet, written down
+
+A test session records everything the Mac and the tablet do into one timeline, and a report
+is read back from it. Nothing restarts: the backend notices a session within a second, and
+the page joins it at its next health poll or its next answer.
+
+```bash
+make test-session-start NAME="first hour"   # prints the session id (ts-…)
+make test-session-status                    # what is running, events so far
+make test-session-stop
+make test-session-report                    # writes reports/<session>.md; SESSION=ts-… for an older one
+```
+
+The timeline is `logs/test-sessions/<session>.jsonl`, one JSON line per event, each with the
+time, a sequence number, the test session, its source (`mac` or `tablet`) and the ids that
+join it to the rest: `session_id`, `turn_id`, `tool_call_id`, `proposal_id`,
+`context_request_id`. The Mac writes what it heard (raw and normalised, which recogniser,
+how long), what Claude answered and how long it took, every tool it asked for and what came
+back (shape and timing, never content), every proposal's life on the action engine, every
+context read, every voice line's first byte. The tablet writes what it actually showed —
+screen, card types, sections, rail chips and whether they were enabled, viewport and scroll
+sizes, clipping — and what the owner did: navigation, tabs, holds, taps on cards, failed
+images, failed context requests, exceptions, going offline and back. Structure, never the
+words on the cards; batched every two seconds, never waited for.
+
+The report (`reports/<session>.md`) stands on its own: a summary; latency averages, medians
+and P95s by stage with the ten slowest turns; the requests clustered; tool usage; every
+failed or partial turn with what was said, answered, attempted and shown, filed under a
+named class; the capabilities asked for that do not exist, counted; what the screens showed
+and what was used; every proposal's staging, gesture, commit and proof; the gaps in context;
+deterministic response-quality signals; the attention surfaces; and a ranked list of what to
+fix next, each with its evidence. Both files hold what the owner said about customers: they
+are created 0600 and are never committed (`logs/` and `reports/` are ignored).
+
+Never in either: a token, a key, an Authorization header, a cookie, a request's headers.
+Keys that name one are withheld and strings shaped like one are scrubbed before a line is
+written, whoever wrote it.
+
 ---
 
 ## Changes to the store and the inbox

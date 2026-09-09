@@ -21,7 +21,7 @@ from app import runtime as runtime_module
 from app.logging.quiet import quieten
 from app.logging.turnlog import RedactingFilter
 from app.providers.max_agent_sdk import BillingGuardError, assert_no_payg_credentials
-from app.routes import actions, admin, context, health, media, speak, turn
+from app.routes import actions, admin, context, health, media, observe, speak, turn
 from config.settings import get_settings
 
 log = logging.getLogger("crooks")
@@ -151,6 +151,7 @@ app.include_router(admin.router)
 app.include_router(actions.router)
 app.include_router(context.router)
 app.include_router(media.router)
+app.include_router(observe.router)
 
 if WEB_DIR.exists():
     mimetypes.add_type("application/manifest+json", ".webmanifest")

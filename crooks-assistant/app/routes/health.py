@@ -33,7 +33,7 @@ async def health(request: Request, fresh: int = Query(default=0)) -> dict:
     state = request.app.state
     cached = getattr(state, "health_cache", None)
     if not fresh and cached and time.time() - cached[0] < CACHE_TTL_S:
-        return {**cached[1], "cached": True, "age_s": round(time.time() - cached[0], 1)}
+        return {**cached[1], "observability": _observability(runtime), "cached": True, "age_s": round(time.time() - cached[0], 1)}
     lock = getattr(state, "health_lock", None)
     if lock is None:
         lock = state.health_lock = asyncio.Lock()
@@ -42,10 +42,18 @@ async def health(request: Request, fresh: int = Query(default=0)) -> dict:
         # doubling the work.
         cached = getattr(state, "health_cache", None)
         if not fresh and cached and time.time() - cached[0] < CACHE_TTL_S:
-            return {**cached[1], "cached": True, "age_s": round(time.time() - cached[0], 1)}
+            return {**cached[1], "observability": _observability(runtime), "cached": True, "age_s": round(time.time() - cached[0], 1)}
         result = await _health(runtime)
         state.health_cache = (time.time(), result)
-        return {**result, "cached": False, "age_s": 0.0}
+        return {**result, "observability": _observability(runtime), "cached": False, "age_s": 0.0}
+
+
+def _observability(runtime) -> dict:
+    """Whether a test session is on, read at answer time rather than from the cached checks:
+    the tablet turns its own telemetry on and off from this, within one poll."""
+    timeline = getattr(runtime, "timeline", None)
+    session = timeline.active if timeline is not None else None
+    return {"test_session": session.test_session_id if session is not None else None, "name": session.name if session is not None else None}
 
 
 async def _health(runtime) -> dict:

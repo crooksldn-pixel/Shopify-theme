@@ -18,6 +18,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse
 
 from app.actions import grammar
+from app.observability import timeline
 from app.presentation import present_action, present_proposal_state
 from app.speech.speakable import to_speakable
 
@@ -41,7 +42,17 @@ SPOKEN_REFUSALS = {
 
 def _refuse(status: int, code: str, detail: str, spoken_key: str | None = None) -> JSONResponse:
     content = {"code": code, "detail": detail, "spoken": SPOKEN_REFUSALS.get(spoken_key or code, "")}
-    return JSONResponse(status_code=status, content=content)
+    response = JSONResponse(status_code=status, content=content)
+    response.crooks_code = code  # type: ignore[attr-defined] — for the timeline, never the wire
+    return response
+
+
+def _code_of(response: JSONResponse) -> str:
+    return str(getattr(response, "crooks_code", "") or "")
+
+
+def _elapsed(started: float) -> float:
+    return round((time.perf_counter() - started) * 1000, 1)
 
 
 def caller_check(request: Request) -> tuple[str, str, str, str]:
@@ -224,11 +235,14 @@ async def arm(request: Request, proposal_id: str, session_id: str = Form(default
     status = await _write_status_soon(runtime, pending.operation if pending is not None else None)
     if not status.ready:
         log.warning("arm refused: %s — %s (caller=%s)", status.code, status.detail, caller)
+        timeline.emit("action_arm_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=status.code, detail=status.detail)
         return _refuse(403, status.code, status.detail, status.code)
     proposal, code = runtime.actions.arm(proposal_id, session_id.strip())
     if proposal is None:
+        timeline.emit("action_arm_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=code, detail="no such proposal")
         return _refuse(404 if code == "unknown" else 403, code, "No such proposal for this session.")
     if code:
+        timeline.emit("action_arm_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=code, detail="no longer waiting")
         return _refuse(409, code, "That change is no longer waiting.")
     log.info("action %s armed by %s", proposal.proposal_id, caller)
     return {"proposal_id": proposal.proposal_id, "nonce": proposal.arm_nonce, "hold_ms": grammar.HOLD_MS, "armed_for_s": grammar.ARMED_FOR_S}
@@ -236,9 +250,11 @@ async def arm(request: Request, proposal_id: str, session_id: str = Form(default
 
 @router.post("/{proposal_id}/commit", response_model=None)
 async def commit(request: Request, proposal_id: str, session_id: str = Form(default="")) -> JSONResponse | dict:
+    started = time.perf_counter()
     runtime = request.app.state.runtime
     caller, refusal = _authorise(request)
     if refusal is not None:
+        timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=_code_of(refusal), ms=_elapsed(started))
         return refusal
     if not session_id.strip():
         return _refuse(400, "wrong_session", "The session is missing.")
@@ -255,6 +271,7 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     status = await _write_status_soon(runtime, pending.operation if pending is not None else None)
     if not status.ready:
         log.warning("commit refused: %s — %s (caller=%s)", status.code, status.detail, caller)
+        timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=status.code, detail=status.detail, ms=_elapsed(started))
         return _refuse(403, status.code, status.detail, status.code)
 
     from app.tools import registry
@@ -270,13 +287,20 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     nonce = request.headers.get("x-crooks-arm", "").strip()[:64]
     result = await runtime.actions.commit(proposal_id, session_id.strip(), caller=caller, spec_lookup=spec_lookup, nonce=nonce)
     if result.proposal is None:
+        timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=result.code, detail="no such proposal", ms=_elapsed(started))
         return _refuse(404 if result.code == "unknown" else 403, result.code, "No such proposal for this session.")
     if result.code == "not_armed":
         log.warning("commit refused: not_armed — a hold gesture without its hold (caller=%s)", caller)
+        timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, turn_id=result.proposal.turn_id or None, code="not_armed", nonce_present=bool(nonce), ms=_elapsed(started))
         return _refuse(409, "not_armed", "Hold the card first.")
 
     proposal = result.proposal
     log.info("action %s %s → %s (%s)", proposal.proposal_id, proposal.operation, proposal.status.value, result.code)
+    timeline.emit(
+        "action_commit", session_id=session_id.strip(), proposal_id=proposal.proposal_id, turn_id=proposal.turn_id or None,
+        operation=proposal.operation, code=result.code, status=proposal.status.value, verified=proposal.verified,
+        spoken=result.spoken, detail=getattr(result, "detail", "") or None, nonce_present=bool(nonce), undo_id=proposal.undo_id, ms=_elapsed(started),
+    )
     if result.spoken:
         # A fixed line, synthesised once and kept: the tablet asks /speak for it next.
         # Pinned only when fixed: a success line names the order and is not worth a slot.

@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -38,6 +38,12 @@ help:
 	@echo "  make whisper-server  speech recognition alone (prints build steps if not built yet)"
 	@echo "  make bench           choose the Whisper model from your tablet recordings"
 	@echo "  make lint            code style"
+	@echo ""
+	@echo "An hour with the tablet, written down (nothing restarts; the page joins within a poll):"
+	@echo "  make test-session-start [NAME='first hour']   begin; prints the session id"
+	@echo "  make test-session-status                      what is running, events so far"
+	@echo "  make test-session-stop                        end it"
+	@echo "  make test-session-report [SESSION=ts-…]       write reports/<session>.md from logs/test-sessions/<session>.jsonl"
 
 doctor:
 	@$(PY) scripts/doctor.py 2>/dev/null || python3 scripts/doctor.py
@@ -92,6 +98,18 @@ acceptance:
 
 write-check:
 	$(PY) scripts/write_check.py $(TOOL) '$(ARGS)' $(if $(COMMIT),--commit,)
+
+test-session-start:
+	$(PY) scripts/test_session.py start --name "$(if $(NAME),$(NAME),session)"
+
+test-session-status:
+	$(PY) scripts/test_session.py status
+
+test-session-stop:
+	$(PY) scripts/test_session.py stop
+
+test-session-report:
+	$(PY) scripts/test_session.py report $(SESSION)
 
 accept:
 	$(PY) scripts/accept.py $(if $(SHOTS),--shots $(SHOTS),) $(if $(NO_BROWSER),--no-browser,)

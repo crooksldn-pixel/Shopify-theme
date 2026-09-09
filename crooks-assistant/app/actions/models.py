@@ -97,6 +97,7 @@ class ActionProposal:
     note: str = ""                             # a caveat proven alongside success, spoken after it
     armed_at: float | None = None              # when the owner's hold armed it on the Mac's clock
     arm_nonce: str = ""                        # the single-use token the arming handed the tablet
+    turn_id: str = ""                          # the turn that proposed it (test-session timeline)
     # Set once the proposal is terminal, so a second commit that arrived while the first was
     # executing can wait for the real outcome instead of guessing.
     done: asyncio.Event = field(default_factory=asyncio.Event)

@@ -75,6 +75,9 @@ class Session:
     # An order's full read started beside the model by /turn (app/routes/turn.py); collected
     # by the same turn when it lands in time, dropped otherwise. Never awaited by a turn.
     hydrating: Any = None
+    # The turn being answered (turn_…), for the test-session timeline: every tool call and
+    # every proposal made while it runs is written against it. Empty between turns.
+    turn_id: str = ""
 
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and

@@ -28,6 +28,8 @@ class ToolCall:
     # Set when the call was a write: it did not run, it was staged. The presentation layer
     # finds the proposal on the session and builds the action card from it.
     proposal_id: str | None = None
+    # The id the test-session timeline wrote this call under, when a session was active.
+    tool_call_id: str = ""
 
 
 @dataclass(slots=True)

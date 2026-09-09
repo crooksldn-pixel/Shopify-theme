@@ -4,7 +4,7 @@ an inbox or a voice credit, in one command, with numbers.
 
     lint            ruff over app, config, scripts and tests
     syntax          node --check over every page script
-    node tests      the renderer and the service worker under Node
+    node tests      the renderer, the service worker and the telemetry under Node
     pytest          the offline suite (the live tests are deselected)
     server          a backend on a free port, its logs in a temporary directory
     latency         medians over repeated requests to the endpoints the tablet hits
@@ -75,6 +75,20 @@ def get(url: str, *, gzip_ok: bool = False, timeout: float = 10.0) -> tuple[int,
         return exc.code, exc.read(), dict(exc.headers)
 
 
+def post(url: str, body: dict | None = None, *, timeout: float = 10.0) -> dict:
+    request = urllib.request.Request(url, data=json.dumps(body or {}).encode("utf-8"), method="POST", headers={"content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 — loopback only
+            return json.loads(response.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read().decode("utf-8") or "{}")
+        except ValueError:
+            return {"code": f"http {exc.code}"}
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return {"code": f"{type(exc).__name__}: {exc}"}
+
+
 def wait_for(url: str, seconds: float) -> bool:
     deadline = time.time() + seconds
     while time.time() < deadline:
@@ -114,7 +128,7 @@ def main() -> int:
     if NODE:
         bad = [p.name for p in (ROOT / "web").glob("*.js") if run([NODE, "--check", str(p)]).returncode != 0]
         report.add("node --check", not bad, ", ".join(bad) or f"{len(list((ROOT / 'web').glob('*.js')))} files parse")
-        for test in ("ui.test.js", "sw.test.js"):
+        for test in ("ui.test.js", "sw.test.js", "telemetry.test.js"):
             result = run([NODE, "--test", str(ROOT / "tests" / "web" / test)], timeout=300)
             passed = next((line for line in result.stdout.splitlines() if line.startswith("# pass")), "")
             report.add(f"node {test}", result.returncode == 0 and "# fail 0" in result.stdout, passed.replace("# ", "") or result.stderr[-300:])
@@ -166,7 +180,7 @@ def main() -> int:
 
         # ---- sizes: what the tablet downloads and what the model reads
         sizes = {}
-        for path in ("/", "/static/app.js", "/static/ui.js", "/static/style.css", "/static/orb.js", "/static/audio-viz.js", "/sw.js"):
+        for path in ("/", "/static/app.js", "/static/ui.js", "/static/telemetry.js", "/static/style.css", "/static/orb.js", "/static/audio-viz.js", "/sw.js"):
             _, raw, _ = get(f"{base}{path}")
             _, packed, packed_headers = get(f"{base}{path}", gzip_ok=True)
             encoding = next((v for k, v in packed_headers.items() if k.lower() == "content-encoding"), "")
@@ -198,6 +212,10 @@ def main() -> int:
             else:
                 shots = Path(args.shots) if args.shots else state_dir / "shots"
                 shots.mkdir(parents=True, exist_ok=True)
+                # A test session for the browser run: the page joins it from /health, and what
+                # it reports lands in the backend's own timeline, proven below.
+                session = post(f"{base}/test-session/start", {"name": "acceptance"})
+                report.add("test session starts on the Mac", bool(session.get("started")), session.get("test_session_id", session.get("detail", "")))
                 browser = run([NODE, str(ROOT / "scripts" / "browser" / "accept.js"), base, str(shots)], timeout=600)
                 try:
                     result = json.loads(browser.stdout.strip().splitlines()[-1])
@@ -208,6 +226,21 @@ def main() -> int:
                 metrics["turn_timing_ms"] = result.get("timing", {})
                 metrics["screenshots"] = str(shots)
                 print(f"  {DIM}screenshots in {shots}{RESET}")
+                stopped = post(f"{base}/test-session/stop")
+                timeline_path = Path(str(stopped.get("path") or ""))
+                time.sleep(0.3)
+                events = [json.loads(line) for line in timeline_path.read_text(encoding="utf-8").splitlines() if line.strip()] if timeline_path.exists() else []
+                tablet = [e for e in events if e.get("source") == "tablet"]
+                report.add("the tablet's report reached the timeline", bool(stopped.get("stopped")) and any(e.get("kind") == "tablet_render" for e in tablet), f"{len(events)} events, {len(tablet)} from the tablet")
+                try:
+                    from app.observability.report import write_report
+
+                    written = write_report(timeline_path, state_dir / "reports")
+                    text = written.read_text(encoding="utf-8")
+                    report.add("a report is written from the timeline", "## 12. Top improvement opportunities" in text and "## 7. UI usage" in text, str(written))
+                    metrics["test_session_report"] = str(written)
+                except Exception as exc:  # noqa: BLE001
+                    report.add("a report is written from the timeline", False, f"{type(exc).__name__}: {exc}")
     finally:
         server.terminate()
         try:

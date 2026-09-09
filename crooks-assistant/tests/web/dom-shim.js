@@ -76,9 +76,10 @@ class Element extends Node {
   setPointerCapture() {}
   releasePointerCapture() {}
   querySelectorAll(selector) {
-    // Only what the tests need: ".class" and "tag" selectors, descendants included.
+    // Only what the tests need: ".class", "tag" and '[attr="value"]' selectors, descendants included.
     const out = [];
-    const match = (el) => (selector.startsWith('.') ? el.classList.contains(selector.slice(1)) : el.tagName === selector.toUpperCase());
+    const attr = /^\[([a-z-]+)="([^"]*)"\]$/.exec(selector);
+    const match = (el) => (attr ? el.getAttribute(attr[1]) === attr[2] : selector.startsWith('.') ? el.classList.contains(selector.slice(1)) : el.tagName === selector.toUpperCase());
     const walk = (el) => { for (const c of el.children) { if (match(c)) out.push(c); walk(c); } };
     walk(this);
     return out;

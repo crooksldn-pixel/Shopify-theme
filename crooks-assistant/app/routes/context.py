@@ -43,19 +43,34 @@ async def order_extension(request: Request, order_id: str, session_id: str = "")
         # and an id of another kind (a customer, a variant) is not an order however it was
         # issued.
         return JSONResponse(status_code=404, content={"code": "unknown", "detail": "No such order for this session."})
+    import time
+
+    from app.observability import timeline
     from app.tools.dispatch import harvest_ids
     from app.tools.shopify_tools import hydrator
 
+    request_id = timeline.new_id("ctx")
+    started = time.perf_counter()
     try:
-        ext = await hydrator().extension(order_id, wait_s=EXTENSION_WAIT_S)
+        ext = await hydrator().extension(order_id, wait_s=EXTENSION_WAIT_S, request_id=request_id)
     except ToolError as exc:
-        return JSONResponse(status_code=404, content={"code": "unknown", "detail": str(exc)[:160]})
+        timeline.emit("context_request", context_request_id=request_id, session_id=session.session_id, turn_id=session.turn_id or None, order_id=order_id, status=404, ms=_ms(started), error=str(exc)[:160])
+        return JSONResponse(status_code=404, content={"code": "unknown", "detail": str(exc)[:160], "context_request_id": request_id})
     except Exception as exc:  # noqa: BLE001 — Shopify or Gmail failing is "not yet", not a crash
         log.warning("context extension for %s failed: %s", order_id, type(exc).__name__)
-        return JSONResponse(status_code=503, content={"code": "service_unavailable", "detail": "The order's history could not be read."})
+        timeline.emit("context_request", context_request_id=request_id, session_id=session.session_id, turn_id=session.turn_id or None, order_id=order_id, status=503, ms=_ms(started), error=type(exc).__name__)
+        return JSONResponse(status_code=503, content={"code": "service_unavailable", "detail": "The order's history could not be read.", "context_request_id": request_id})
     # The ids the card carries (the recent orders, the threads) are issued to the session
     # like any tool result's — those and no others.
     shaped = present_extension(ext)
     harvest_ids(shaped, session)
     log.info("context extension served for %s (pending=%s)", order_id, ",".join(shaped["pending"]) or "-")
+    timeline.emit("context_request", context_request_id=request_id, session_id=session.session_id, turn_id=session.turn_id or None, order_id=order_id, status=200, ms=_ms(started), pending=list(shaped.get("pending") or []), landed=[k for k in ("history", "email") if shaped.get(k) is not None])
+    shaped["context_request_id"] = request_id
     return shaped
+
+
+def _ms(started: float) -> float:
+    import time
+
+    return round((time.perf_counter() - started) * 1000, 1)

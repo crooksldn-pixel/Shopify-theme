@@ -21,3 +21,8 @@ venv/
 logs/
 .cache/
 kb/.catalogue-cache.txt
+
+# Test sessions: what the owner said and what was answered, on this Mac only
+logs/test-sessions/
+reports/*
+!reports/.gitkeep

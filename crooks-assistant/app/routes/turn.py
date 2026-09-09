@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 from app.actions.grammar import AFFIRMATION_BLOCKED, affirmation_for, words_for
 from app.actions.grammar import FIXED_LINES as GRAMMAR_FIXED_LINES
 from app.logging.turnlog import redact
+from app.observability import timeline
 from app.presentation import present
 from app.providers.base import ToolCall
 from app.routes.actions import session_matches, writes_context
@@ -103,6 +104,15 @@ async def turn(
     # This turn's place in the conversation. A hold that abandons the question, or a later
     # question, moves the session past it; the answer then goes unspoken.
     epoch = live.epoch
+    # The turn's id: every tool call, proposal and tablet event it causes is written against
+    # it on the test-session timeline (a no-op while no session is on).
+    live.turn_id = timeline.new_id("turn")
+    if timeline.current().active is not None:
+        timeline.emit(
+            "turn_started", session_id=session_id, turn_id=live.turn_id, input="audio" if audio is not None else "text",
+            turns_before=live.turns, epoch=epoch, lost_thread=lost_thread, focus=(live.context[0] if live.context else None),
+            waiting=[p.proposal_id for p in live.proposals if p.status.value == "PENDING"],
+        )
 
     if audio is not None:
         blob = await audio.read()
@@ -117,6 +127,14 @@ async def turn(
         result = await runtime.transcriber.from_blob(blob, filename_hint=audio.filename or "")
         transcript_info = result.as_dict()
         timings.update(result.timings_ms)
+        if timeline.current().active is not None:
+            stats = transcript_info.get("stats") or {}
+            timeline.emit(
+                "stt", session_id=session_id, turn_id=live.turn_id, ok=result.ok, engine=result.engine or None, fallback=result.fallback,
+                engine_detail=result.engine_detail or None, reason=result.reason or None, raw_text=result.raw_text or None, text=result.text or None,
+                audio_s=stats.get("duration_s"), audio_bytes=len(blob), timings=transcript_info.get("timings_ms"),
+                matches=transcript_info.get("matches"), order_numbers=transcript_info.get("order_numbers"),
+            )
         if not result.ok:
             live.set_state("READY")
             return await _answer(
@@ -188,12 +206,23 @@ async def turn(
     live.writes_blocked = "" if writes is None or writes["allowed"] else _blocked_words(writes)
     if lookup:
         prompt_text = f"{prompt_text}\n\n{lookup}"
+    if timeline.current().active is not None:
+        timeline.emit(
+            "prefetch", session_id=session_id, turn_id=live.turn_id, order_numbers=spoken_order_numbers(text), hit=bool(lookup),
+            ms=(round(timings["prefetch"], 1) if "prefetch" in timings else None), hydrating=live.hydrating is not None, writes_code=(None if writes is None or writes["allowed"] else writes.get("code")),
+        )
 
     t0 = time.perf_counter()
     result = await runtime.provider.turn(session_id, prompt_text)
     timings["agent"] = (time.perf_counter() - t0) * 1000
     for step, ms in getattr(result, "steps", None) or []:
         timings[f"step:{step}"] = ms
+    if timeline.current().active is not None:
+        timeline.emit(
+            "model", session_id=session_id, turn_id=live.turn_id, ms=round(timings["agent"], 1), steps=list(getattr(result, "steps", None) or []),
+            error_kind=result.error_kind, stopped_early=result.stopped_early, answer=result.text or None,
+            tool_calls=[{"tool": c.name, "ok": c.ok, "tool_call_id": getattr(c, "tool_call_id", "") or None, "proposal_id": c.proposal_id} for c in result.tool_calls or []],
+        )
     if prefetched:
         result.tool_calls = _hydrated(live, prefetched + list(result.tool_calls or []))
 
@@ -227,9 +256,10 @@ async def turn(
                 # content stays out of the log altogether; the ledger keeps its length.
                 "args": _loggable_args(c),
                 "proposal_id": c.proposal_id,
+                "tool_call_id": getattr(c, "tool_call_id", "") or None,
             }
             for c in result.tool_calls
-        ],
+        ] + [],
         calls=result.tool_calls,
         speak=speak,
         lost_thread=lost_thread,
@@ -412,6 +442,22 @@ def _hydrated(session, calls: list) -> list:
     return list(calls) + [ToolCall(name="shopify_order_detail", args={"order_id": result.get("order_id", "")}, ok=True, result=result)]
 
 
+def _ui_entities(ui: list) -> list[dict]:
+    """Which records the cards showed, by kind and id — never their contents."""
+    out: list[dict] = []
+    for item in ui or []:
+        data = item.get("data") if isinstance(item, dict) else None
+        if not isinstance(data, dict):
+            continue
+        kind = str(item.get("type") or "")
+        ref = data.get("order_id") or data.get("customer_id") or data.get("thread_id") or data.get("proposal_id") or ""
+        if not ref and kind in ("product", "inventory") and isinstance(data.get("products"), list) and data["products"] and isinstance(data["products"][0], dict):
+            ref = data["products"][0].get("product_id") or ""
+        if ref:
+            out.append({"type": kind, "ref": str(ref)[:80]})
+    return out
+
+
 def _loggable_args(call) -> dict:
     """What the turn log keeps of a tool call's arguments. A write tool's content — the note
     the owner dictated — is logged by length only, whether or not it became a proposal: a
@@ -516,8 +562,21 @@ async def _answer(
     # What the screen shows beside the answer: cards chosen from the tool results, never from
     # the prose. See app/presentation.py for the vocabulary and the bounds.
     ui = present(calls, session=session, error_kind=error_kind, writes=writes)
+    turn_id = getattr(session, "turn_id", "") if session is not None else ""
+    if timeline.current().active is not None:
+        timeline.emit(
+            "turn_finished", session_id=session_id, turn_id=turn_id or None, ms=round(timings["total"], 1),
+            timings={k: round(v, 1) for k, v in timings.items()}, question=question or (transcript or {}).get("text") or None,
+            answer=answer, error_kind=error_kind, lost_thread=lost_thread, abandoned=abandoned,
+            ui=[item["type"] for item in ui], ui_entities=_ui_entities(ui), proposed=proposed or None, revoked=list(revoked or []) or None,
+            writes_code=(None if writes is None or writes.get("allowed") else writes.get("code")),
+            speak_requested=speak, tts_prefetched=bool(speak and answer and not abandoned),
+            tool_calls=[{"tool": c.get("name"), "ok": c.get("ok"), "ms": c.get("ms"), "tool_call_id": c.get("tool_call_id") or None, "proposal_id": c.get("proposal_id")} for c in tool_calls] or None,
+        )
     payload = {
         "session_id": session_id,
+        "turn_id": turn_id,
+        "test_session_id": timeline.current().active_id,
         "turns": turns,
         "answer": answer,
         "question": question or (transcript or {}).get("text", ""),

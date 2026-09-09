@@ -262,7 +262,9 @@ class MaxAgentSDKProvider(ClaudeProvider):
             # A hook-denied call never reaches dispatch, so record it here or the turn log
             # would show a refusal the model reported but no tool call behind it.
             reason = session.refusals[-1].reason if session and session.refusals else "refused"
-            self._calls.append(ToolCall(name=name, args={}, ok=False, error=reason))
+            call = ToolCall(name=name, args={}, ok=False, error=reason)
+            self._calls.append(call)
+            self._trace_refusal(session, call, reason)
         if session is None:
             return
         if denied:
@@ -273,6 +275,23 @@ class MaxAgentSDKProvider(ClaudeProvider):
             session.set_state("CHECKING EMAIL", name)
         else:
             session.set_state("THINKING", name)
+
+    @staticmethod
+    def _trace_refusal(session, call: ToolCall, reason: str) -> None:
+        """The refusal, on the test-session timeline, in the same two events a dispatched
+        call gets — so the report reads both paths alike."""
+        from app.observability import timeline
+
+        if timeline.current().active is None:
+            return
+        call.tool_call_id = timeline.new_id("tc")
+        session_id = getattr(session, "session_id", None)
+        turn_id = getattr(session, "turn_id", "") or None
+        timeline.emit("tool_requested", session_id=session_id, turn_id=turn_id, tool_call_id=call.tool_call_id, tool=call.name, args={}, disposition="DENY", at="hook")
+        timeline.emit(
+            "tool_finished", session_id=session_id, turn_id=turn_id, tool_call_id=call.tool_call_id, tool=call.name, ok=False,
+            outcome="refused", error=str(reason)[:400], ms=0.0, missing_capability=(call.name if "not a registered tool" in reason else None),
+        )
 
     async def _dispatch(self, tool_name: str, args: dict) -> str:
         session = self._current

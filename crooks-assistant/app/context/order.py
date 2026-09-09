@@ -528,26 +528,39 @@ class Hydrator:
 
     # -------------------------------------------------------------- order
 
-    async def order(self, order_id: str, *, budget_s: float = ENRICH_BUDGET_S, fresh: bool = False) -> dict[str, Any]:
+    async def order(self, order_id: str, *, budget_s: float = ENRICH_BUDGET_S, fresh: bool = False, request_id: str = "") -> dict[str, Any]:
         """The order, with as much of its history and inbox as arrives within the budget.
         `pending` names what is still on its way. An order read a moment ago is reused;
         `fresh` reads it again regardless — what a change is checked against, and proved
         by, is never a copy."""
+        started = time.perf_counter()
         if fresh:
             self._cores.pop(order_id, None)
-        core = await self._core(order_id)
+        reused = order_id in self._cores
+        try:
+            core = await self._core(order_id)
+        except Exception as exc:
+            self._trace("order", order_id, request_id, started, error=exc, budget_s=budget_s, reused_core=reused)
+            raise
         job = self._enrich(order_id, core)
         if budget_s > 0 and job.task is not None and not job.task.done():
             await asyncio.wait({job.task}, timeout=budget_s)
+        self._trace("order", order_id, request_id, started, job=job, budget_s=budget_s, reused_core=reused, fresh=fresh)
         return self._merge(core, job)
 
-    async def extension(self, order_id: str, *, wait_s: float) -> dict[str, Any]:
+    async def extension(self, order_id: str, *, wait_s: float, request_id: str = "") -> dict[str, Any]:
         """What the tablet collects after the card is up: the parts of the enrichment that
         missed the turn's budget. Starts the work if nothing is in flight (a restart, a card
         the owner came back to)."""
+        started = time.perf_counter()
         job = self._jobs.get(order_id)
+        reused = job is not None
         if job is None or (job.finished is not None and self.clock() - job.finished > ENRICH_REUSE_S):
-            core = await self._core(order_id)
+            try:
+                core = await self._core(order_id)
+            except Exception as exc:
+                self._trace("extension", order_id, request_id, started, error=exc, budget_s=wait_s, reused_core=False)
+                raise
             job = self._enrich(order_id, core)
         if job.task is not None and not job.task.done() and wait_s > 0:
             await asyncio.wait({job.task}, timeout=wait_s)
@@ -555,11 +568,29 @@ class Hydrator:
         if job.core is not None:
             # Read again with what has landed: the card's attention lines follow the parts.
             out["attention"] = self._merge(job.core, job)["attention"]
+        self._trace("extension", order_id, request_id, started, job=job, budget_s=wait_s, reused_core=reused)
         return out
+
+    def _trace(self, kind: str, order_id: str, request_id: str, started: float, *, job: _Job | None = None, error: BaseException | None = None, **fields: Any) -> None:
+        """One `context_hydration` event per read, for the test-session timeline: what was
+        asked for, how long it took, which parts landed and which are still on their way."""
+        from app.observability import timeline
+
+        if timeline.current().active is None:
+            return
+        landed = [k for k, v in (job.parts.items() if job is not None else ()) if v is not None]
+        missing = [k for k, v in (job.parts.items() if job is not None else ()) if v is None]
+        timeline.emit(
+            "context_hydration", context_request_id=request_id or timeline.new_id("ctx"), hydration=kind, order_id=order_id,
+            ms=round((time.perf_counter() - started) * 1000, 1), landed=landed, unavailable=missing,
+            pending=(job.pending if job is not None else None), error=(f"{type(error).__name__}: {error}"[:200] if error is not None else None), **fields,
+        )
 
     async def customer(self, customer_id: str) -> dict[str, Any]:
         """A customer's history on its own, with the inbox around them."""
+        started = time.perf_counter()
         history = await self._history(customer_id, current_order_id=None)
+        self._trace("customer", customer_id, "", started, landed_history=history is not None)
         if history is None:
             raise ToolError(f"No customer with id {customer_id}.")
         email = await self._email(history.get("email"), digits="")

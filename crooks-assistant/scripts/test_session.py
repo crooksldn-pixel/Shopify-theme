@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""The test session, from the Mac's terminal.
+
+    make test-session-start [NAME="first hour"]   begin; prints the session id
+    make test-session-status                       what is running, and how many events so far
+    make test-session-stop                         end it
+    make test-session-report [SESSION=ts-…]        write reports/<session>.md from the timeline
+
+Start, status and stop talk to the running backend on loopback, so nothing restarts. When the
+backend is not running they work the session file directly (logs/test-sessions/active.json),
+and the backend picks the state up within a second of its next event. The report needs no
+backend at all: it reads the JSONL and writes the Markdown.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+
+def _settings():
+    from config.settings import get_settings
+
+    return get_settings()
+
+
+def _call(port: int, method: str, path: str, body: dict | None = None) -> dict | None:
+    """The backend on loopback, or None when it is not running."""
+    data = json.dumps(body or {}).encode("utf-8") if method == "POST" else None
+    request = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=data, method=method, headers={"content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:  # noqa: S310 — loopback only
+            return json.loads(response.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read().decode("utf-8") or "{}")
+        except ValueError:
+            return {"code": f"http {exc.code}"}
+    except (urllib.error.URLError, OSError, TimeoutError):
+        return None
+
+
+def cmd_start(args) -> int:
+    from app.observability.session import AlreadyActive, TestSessions
+
+    settings = _settings()
+    name = (args.name or "session").strip()
+    answer = _call(settings.port, "POST", "/test-session/start", {"name": name})
+    if answer is not None:
+        if answer.get("started"):
+            print(answer["test_session_id"])
+            print(f"recording to {answer['path']}", file=sys.stderr)
+            return 0
+        print(answer.get("detail") or answer, file=sys.stderr)
+        return 1
+    # No backend: mark the session on disk; the backend reads it when it next writes an event.
+    try:
+        session = TestSessions(settings.log_dir).start(name)
+    except AlreadyActive as exc:
+        print(f"A test session is already running: {exc}. Stop it first.", file=sys.stderr)
+        return 1
+    print(session.test_session_id)
+    print("the backend is not running here; the session is marked on disk and starts recording when it is (make up)", file=sys.stderr)
+    return 0
+
+
+def cmd_status(args) -> int:
+    from app.observability.session import TestSessions
+
+    settings = _settings()
+    answer = _call(settings.port, "GET", "/test-session/status")
+    if answer is None:
+        store = TestSessions(settings.log_dir)
+        active = store.active()
+        if active is None:
+            last = store.last()
+            print("no test session running (backend not running)" + (f"; last: {last.test_session_id}" if last else ""))
+            return 0
+        print(f"{active.test_session_id}  (marked on disk; backend not running)")
+        return 0
+    if not answer.get("active"):
+        last = answer.get("last") or {}
+        print("no test session running" + (f"; last: {last.get('test_session_id')}" if last else ""))
+        return 0
+    counts = answer.get("events") or {}
+    print(f"{answer['test_session_id']}  name={answer.get('name')!r}  events written={counts.get('written', '?')} queued={counts.get('queued', '?')} dropped={counts.get('dropped', '?')}")
+    print(f"timeline: {answer.get('path')}")
+    return 0
+
+
+def cmd_stop(args) -> int:
+    from app.observability.session import TestSessions
+
+    settings = _settings()
+    answer = _call(settings.port, "POST", "/test-session/stop")
+    if answer is None:
+        session = TestSessions(settings.log_dir).stop()
+        if session is None:
+            print("no test session running", file=sys.stderr)
+            return 1
+        print(session.test_session_id)
+        return 0
+    if not answer.get("stopped"):
+        print(answer.get("detail") or "no test session running", file=sys.stderr)
+        return 1
+    print(answer["test_session_id"])
+    counts = answer.get("events") or {}
+    print(f"{counts.get('written', '?')} events in {answer.get('path')}", file=sys.stderr)
+    print(f"next: make test-session-report SESSION={answer['test_session_id']}", file=sys.stderr)
+    return 0
+
+
+def cmd_report(args) -> int:
+    from app.observability.report import write_report
+    from app.observability.session import TestSessions
+
+    settings = _settings()
+    store = TestSessions(settings.log_dir)
+    path = Path(args.session) if args.session and args.session.endswith(".jsonl") and Path(args.session).exists() else store.find(args.session or "")
+    if path is None:
+        print("no timeline found" + (f" for {args.session!r}" if args.session else ": start and stop a session first"), file=sys.stderr)
+        return 1
+    out_dir = Path(args.out) if args.out else ROOT / "reports"
+    written = write_report(path, out_dir)
+    print(written)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest="command", required=True)
+    start = sub.add_parser("start", help="begin a named test session")
+    start.add_argument("--name", default="session")
+    sub.add_parser("status", help="the session in progress")
+    sub.add_parser("stop", help="end the session in progress")
+    report = sub.add_parser("report", help="write reports/<session>.md")
+    report.add_argument("session", nargs="?", default="", help="a session id, its prefix, or a .jsonl path; default: the active or last session")
+    report.add_argument("--out", default="", help="directory for the report (default: reports/)")
+    args = parser.parse_args(argv)
+    return {"start": cmd_start, "status": cmd_status, "stop": cmd_stop, "report": cmd_report}[args.command](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

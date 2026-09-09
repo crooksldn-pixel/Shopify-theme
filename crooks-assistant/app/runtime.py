@@ -7,6 +7,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from app.actions.engine import ActionEngine
 from app.actions.engine import install as install_engine
@@ -45,6 +46,9 @@ class Runtime:
     kb: KnowledgeBase
     turnlog: TurnLog
     actions: ActionEngine
+    # The test-session timeline (app/observability): off unless a session is active.
+    tests: Any = None
+    timeline: Any = None
     started_at: float = field(default_factory=time.time)
     build: str = ""
     _catalogue_refreshed_at: float = 0.0
@@ -372,6 +376,16 @@ def build(settings: Settings | None = None) -> Runtime:
             "CROOKS_ALLOWED_LOGINS is empty: any tailnet login may ask (reads only; changes need "
             "the allow-list). Open /whoami on the tablet and put its login in .env."
         )
+    from app.actions import ledger as ledger_module
+    from app.observability import hooks as observe_hooks
+    from app.observability.session import TestSessions
+    from app.observability.timeline import Timeline
+    from app.observability.timeline import install as install_timeline
+
+    tests = TestSessions(settings.log_dir)
+    timeline = install_timeline(Timeline(tests))
+    ledger_module.observe(observe_hooks.ledger_observer)
+
     runtime = Runtime(
         build=web_build_id(),
         settings=settings,
@@ -387,6 +401,8 @@ def build(settings: Settings | None = None) -> Runtime:
         kb=kb,
         turnlog=TurnLog(settings.log_dir),
         actions=actions,
+        tests=tests,
+        timeline=timeline,
     )
     # The write policy (refund on cancel, restock, notify) is the runtime's settings, read
     # at prepare time, so a test's configured runtime is what the card prints.

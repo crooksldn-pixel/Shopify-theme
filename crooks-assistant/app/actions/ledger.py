@@ -62,6 +62,11 @@ class ActionLedger:
         entry = redact(entry)
         entry["caller"] = caller
         self._append(entry)
+        for observer in list(_observers):
+            try:
+                observer(entry, proposal)
+            except Exception as exc:  # noqa: BLE001 — an observer never stops the record
+                log.debug("ledger observer failed: %s", exc)
         return entry
 
     def _append(self, entry: dict[str, Any]) -> None:
@@ -86,6 +91,20 @@ class ActionLedger:
 
 
 _EXTRA_ALLOWED = frozenset({"reason", "ms", "payload_len", "detail", "deduplicated", "job", "facts"})
+
+# Called with (entry, proposal) after every line is written: the test-session timeline reads
+# the action lifecycle from here, so the two records can never disagree.
+_observers: list = []
+
+
+def observe(fn) -> None:
+    if fn not in _observers:
+        _observers.append(fn)
+
+
+def unobserve(fn) -> None:
+    if fn in _observers:
+        _observers.remove(fn)
 
 
 def _fingerprint_only(value: dict[str, Any] | None) -> dict[str, Any] | None:

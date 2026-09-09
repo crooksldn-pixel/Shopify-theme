@@ -20,7 +20,7 @@ const OUT = process.argv[3] || '';
 const VIEWPORT = { width: 800, height: 1280 };   // the Galaxy Tab A 8.0, portrait
 
 const ORDER_TURN = {
-  session_id: 'accept', turns: 1, answer: 'Order 1930. Paid, not shipped. One pair of Yard Jeans, sixty pounds.',
+  session_id: 'accept', turn_id: 'turn_accept0001', turns: 1, answer: 'Order 1930. Paid, not shipped. One pair of Yard Jeans, sixty pounds.',
   question: 'Show me order 1930', error_kind: null, lost_thread: false, state: 'READY', revoked: [],
   tool_calls: [{ name: 'shopify_order_detail', ok: true, error: null, ms: 412, args: {} }], transcript: null,
   timings_ms: { agent: 2100, total: 2400 },
@@ -45,6 +45,8 @@ async function main() {
   page.on('pageerror', (e) => errors.push(e.message));
   const shot = async (name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`) }); };
   const posts = [];
+  const telemetry = [];   // every batch the page posted to /telemetry; the Mac keeps them too
+  await page.route('**/telemetry', (route) => { telemetry.push(route.request().postData() || ''); route.continue(); });
   await page.route('**/speak', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{"ok":false,"kind":"no_key","reason":"no voice under test"}' }));
   await page.route('**/actions/**', (route) => {
     const req = route.request();
@@ -219,6 +221,16 @@ async function main() {
   let back = false;
   try { await page.waitForFunction(() => document.getElementById('system').dataset.phase === 'online', null, { timeout: 8000 }); back = true; } catch { /* below */ }
   check('the page comes back when the Mac does', back);
+
+  // 9b. A test session is on (accept.py started one): the page reported what it rendered, as
+  // structure — card types, chips, sizes — and never the words on the cards.
+  await page.evaluate(() => { if (window.CrooksTelemetry) window.CrooksTelemetry.flush(false); });
+  await sleep(400);
+  const kinds = [];
+  for (const body of telemetry) { try { for (const e of JSON.parse(body).events || []) kinds.push(e.kind); } catch { /* not ours */ } }
+  const joined = telemetry.join('\n');
+  check('the page reports what it rendered while a test session is on', kinds.includes('render') && kinds.includes('turn_response') && kinds.includes('navigate'), `${telemetry.length} batch(es): ${[...new Set(kinds)].join(', ')}`);
+  check('the report is structure, never the cards\' words', telemetry.length > 0 && !/Sam Fixture|sam@example\.com|Somewhere Street/.test(joined), joined.length ? `${joined.length} bytes without a customer detail` : 'nothing posted');
 
   // 10. Nothing the page did raised a script error, and no secret-looking string is in the DOM.
   const dom = await page.content();

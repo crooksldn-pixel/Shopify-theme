@@ -108,11 +108,24 @@ let pendingStart = false;    // true between pointerdown and the recorder actual
 let lastWasError = false;    // so an error stays on screen after it has been read out
 let lastErrorTitle = '';
 let speakingVia = null;      // 'player' while the ElevenLabs MP3 plays, 'browser' for the fallback
+let speakRequestedAt = 0;    // when /speak was asked for the answer now playing
+let currentTurnId = '';      // the Mac's id for the last answered turn, sent back with /speak and telemetry
+let recordingStartedAt = 0;
+let lastRecordingMs = 0;
+let scrollMax = 0;           // how far down the cards the owner went since the last render
+
+// What the tablet did, for a test session running on the Mac (web/telemetry.js). Off, every
+// call here is a boolean test; nothing on this page ever waits for it.
+const T = window.CrooksTelemetry || { record() {}, configure() {}, setContext() {}, flush() {}, snapshot() { return {}; }, pathOnly() { return ''; } };
 
 // One player, for the life of the page. 2ms of silence, used once inside the first touch to
 // prove to Chrome that this element is allowed to make sound.
 const player = new Audio();
-player.addEventListener('playing', () => { if (speakingVia === 'player') setState('SPEAKING'); });
+player.addEventListener('playing', () => {
+  if (speakingVia !== 'player') return;
+  setState('SPEAKING');
+  T.record('speak', { via: 'player', ms: speakRequestedAt ? Date.now() - speakRequestedAt : undefined });
+});
 player.preload = 'auto';
 const SILENT_WAV = 'data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YRAAAACAgICAgICAgICAgICAgICA';
 
@@ -355,6 +368,7 @@ function chunkForSpeech(text, limit = 200) {
 // The fallback voice: Android's own, used only when ElevenLabs could not speak this answer.
 // `reason` is logged rather than shown — the owner wants the answer, not an apology.
 function browserSpeak(text, { isError = false, reason = '' } = {}) {
+  T.record('speak', { via: 'browser', reason: reason || undefined, ms: speakRequestedAt ? Date.now() - speakRequestedAt : undefined });
   if (!window.speechSynthesis || !el.speakToggle.checked || !text) { settle(isError); return; }
   console.warn(`[crooks] ElevenLabs voice unavailable (${reason || 'unknown'}) — using the Android voice`);
   const generation = speakGeneration;
@@ -390,6 +404,7 @@ async function speakAnswer(text, { isError = false } = {}) {
   if (!el.speakToggle.checked) { settle(isError); return; }
   stopSpeaking();
   const generation = speakGeneration;
+  speakRequestedAt = Date.now();
   // The orb says Speaking when sound plays (the player's own event), not now: a voice that
   // is still being fetched is not speaking, and the screen must not say so over silence.
   el.sub.textContent = 'Getting the voice…';
@@ -403,11 +418,12 @@ async function speakAnswer(text, { isError = false } = {}) {
     response = await fetch('/speak', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text, session_id: sessionId }),
+      body: JSON.stringify({ text, session_id: sessionId, turn_id: currentTurnId }),
       signal: controller.signal,
       cache: 'no-store',
     });
     clearTimeout(headersTimer);
+    T.record('speak_headers', { status: response.status, ms: Date.now() - speakRequestedAt });
     if (generation !== speakGeneration) return;    // interrupted while it was generating
     if (response.status === 204) { settle(isError); return; }   // nothing worth saying
     if (!response.ok) {
@@ -655,6 +671,7 @@ async function pollHealth(fresh = false) {
     if (response.status === 403) { wentRefused(); return; }
     if (!response.ok) throw new Error(`health ${response.status}`);
     const data = await response.json();
+    T.configure(data.observability);
     if (reachable !== true) wentOnline();
     applyUpdateWhenIdle();
     const checks = data.checks || {};
@@ -825,9 +842,11 @@ async function startRecording() {
       el.sub.textContent = TOO_SHORT;
       el.errline.textContent = TOO_SHORT;
       haptic(HAPTIC.error);
+      T.record('recording_too_short', { ms: lastRecordingMs });
     };
     mediaRecorder.start(250);
     recording = true;
+    recordingStartedAt = Date.now();
     el.talk.dataset.recording = 'true';
     el.talkLabel.textContent = 'Release to send';
     setState('LISTENING');
@@ -852,6 +871,8 @@ function stopRecording(discard = false) {
   el.talkLabel.textContent = 'Hold to speak';
   // The thumb lifted: say so now, on this frame. The encoder takes its time to flush and
   // the orb must not keep listening to the room while it does.
+  lastRecordingMs = recordingStartedAt ? Date.now() - recordingStartedAt : 0;
+  T.record('hold', { phase: 'release', ms: lastRecordingMs, outcome: discard ? 'discarded' : 'sent' });
   if (discard) setState('READY');
   else { setState('TRANSCRIBING'); haptic(HAPTIC.release); }
   try { mediaRecorder.stop(); } catch { /* already stopped */ }
@@ -891,6 +912,14 @@ function pushContext(nodes, items, question) {
   renderRecent();
   armDeckExpiry();
   for (const node of nodes) collectPending(node);
+  T.record('navigate', { nav: 'new', index: historyIndex, entities: history[historyIndex].entities });
+  snapshotSoon({ fixture: typeof question === 'string' && question.startsWith('fixture:') ? question.slice(8) : undefined });
+}
+
+// The screen as structure, once it has been laid out: card types, tabs, the rail, sizes.
+function snapshotSoon(extra) {
+  const take = () => T.record('render', T.snapshot(el.cards, extra));
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(take); else take();
 }
 
 /* ------------------------------------------------------- the rest of an order */
@@ -908,11 +937,12 @@ function collectPending(node, attempt = 0) {
     if (!node.dataset.pending || !node.isConnected && !history.some((entry) => entry.nodes.indexOf(node) !== -1)) return;
     try {
       const response = await fetch(`/context/order/${encodeURIComponent(orderId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
-      if (!response.ok) return;   // not this session's order any more, or the Mac cannot say: leave the card honest
+      if (!response.ok) { T.record('context_failed', { order_id: orderId, status: response.status, index: attempt }); return; }   // not this session's order any more, or the Mac cannot say: leave the card honest
       const ext = await response.json();
       const still = window.CrooksUI.hydrateOrder(node, ext);
+      T.record(still.length ? 'context_pending' : 'context_landed', { order_id: orderId, context_request_id: ext && ext.context_request_id, index: attempt, detail: still.length ? still.join(' ') : undefined });
       if (still.length) collectPending(node, attempt + 1);
-    } catch { collectPending(node, attempt + 1); }
+    } catch { T.record('context_failed', { order_id: orderId, status: 0, index: attempt }); collectPending(node, attempt + 1); }
   }, CONTEXT_WAITS_MS[attempt]);
 }
 
@@ -937,6 +967,7 @@ function showHistory(index) {
   clear(el.cards);
   for (const node of history[index].nodes) el.cards.appendChild(node);
   el.cards.scrollTop = 0;
+  scrollMax = 0;
   el.deck.dataset.depth = String(Math.min(2, index));
   el.backBtn.hidden = index === 0;
   renderStackChips();
@@ -944,11 +975,13 @@ function showHistory(index) {
 }
 
 function goBack() {
+  T.record('navigate', { nav: 'back', from: historyIndex, to: historyIndex > 0 ? historyIndex - 1 : -1 });
   if (historyIndex > 0) showHistory(historyIndex - 1);
   else goHome();
 }
 
 function goHome() {
+  T.record('navigate', { nav: 'home', from: historyIndex });
   setMode('orb');
   renderRecent();
 }
@@ -971,8 +1004,9 @@ function renderStackChips() {
     onSelect: (entry) => {
       // Bring the most recent cards for that entity forward, if we still hold them.
       for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].entities.indexOf(entry.ref) !== -1) { showHistory(i); haptic(HAPTIC.start); return; }
+        if (history[i].entities.indexOf(entry.ref) !== -1) { T.record('navigate', { nav: 'stack_chip', entity: entry.ref, to: i }); showHistory(i); haptic(HAPTIC.start); return; }
       }
+      T.record('navigate', { nav: 'dead_chip', entity: entry.ref });
     },
   });
   for (const chip of chips) {
@@ -1007,11 +1041,13 @@ function renderTurn(data) {
   renderAttentionSurface();
 
   const answer = data.answer || '';
+  const renderInfo = { skipped: ui.skipped.length ? ui.skipped : undefined, errors: ui.errors.length ? ui.errors.map((e) => e.title || 'error') : undefined, attention: attentionItems.length || undefined, answer_chars: answer.length };
   if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui)) {
     // The Mac re-presented a card that is already live on this screen (a spoken yes): the
     // deck stays as it is, the order beside it included — but it is brought back into view,
     // because the answer is about a card the owner may have left behind.
     setMode('context');
+    snapshotSoon(Object.assign({ kept: true }, renderInfo));
     return;
   }
   if (ui.hasContext) {
@@ -1023,6 +1059,7 @@ function renderTurn(data) {
     else setMode('orb');
   } else {
     setMode('orb');
+    snapshotSoon(renderInfo);
   }
 }
 
@@ -1052,10 +1089,11 @@ async function armAction(proposalId) {
   const timer = setTimeout(() => controller.abort(), 4000);
   try {
     const response = await fetch(`/actions/${encodeURIComponent(proposalId)}/arm`, { method: 'POST', body: form, signal: controller.signal, cache: 'no-store' });
-    if (!response.ok) return null;
+    if (!response.ok) { T.record('action_arm', { proposal_id: proposalId, status: response.status, outcome: 'refused' }); return null; }
     const data = await response.json();
+    T.record('action_arm', { proposal_id: proposalId, status: response.status, outcome: data && data.nonce ? 'armed' : 'no_token' });
     return data && data.nonce ? String(data.nonce) : null;
-  } catch { return null; } finally { clearTimeout(timer); }
+  } catch { T.record('action_arm', { proposal_id: proposalId, status: 0, outcome: 'unreachable' }); return null; } finally { clearTimeout(timer); }
 }
 
 // A rail chip: the Mac says this change makes sense for the order. The chip does not stage
@@ -1070,9 +1108,11 @@ function primeAction(action) {
     // silently replacing what the owner may be about to apply.
     el.sub.textContent = 'Finish or leave the card that is waiting first.';
     haptic(HAPTIC.error);
+    T.record('action_primed', { action: String(action.id || ''), outcome: 'blocked_by_live_card' });
     return;
   }
   primedInstruction = words;
+  T.record('action_primed', { action: String(action.id || ''), outcome: 'primed' });
   el.talkLabel.textContent = `Hold and say: “${words}”`;
   el.sub.textContent = `Hold and say: “${words}”`;
   haptic(HAPTIC.start);
@@ -1081,8 +1121,9 @@ function primeAction(action) {
 }
 
 async function commitAction(proposalId, node, nonce) {
-  if (actionBlocked()) { settleActionNode(node, 'armed', 'Tap to apply'); return; }
+  if (actionBlocked()) { settleActionNode(node, 'armed', 'Tap to apply'); T.record('action_commit', { proposal_id: proposalId, outcome: 'blocked_busy' }); return; }
   haptic(HAPTIC.start);
+  const commitStartedAt = Date.now();
   const form = new FormData();
   form.append('session_id', sessionId);
   let payload = null;
@@ -1104,6 +1145,7 @@ async function commitAction(proposalId, node, nonce) {
   } finally {
     clearTimeout(timer);
   }
+  T.record('action_commit', { proposal_id: proposalId, status: payload ? String(payload.status || '') : '', code: payload ? String(payload.code || '') : '', outcome: payload ? 'answered' : 'unknown', ms: Date.now() - commitStartedAt, detail: status ? String(status) : undefined });
   settleAction(node, payload, status);
 }
 
@@ -1319,6 +1361,10 @@ async function submit(body, isAudio) {
   el.errline.textContent = '';
   el.heard.textContent = '';
   turnStartedAt = Date.now();
+  T.record('turn_submitted', {
+    screen: el.body.dataset.mode || '', index: historyIndex, entities: history[historyIndex] ? history[historyIndex].entities : [],
+    audio_ms: isAudio ? lastRecordingMs : undefined, turns, before: liveActionSurface() ? 'live_card' : undefined,
+  });
   setState(isAudio ? 'TRANSCRIBING' : 'THINKING');
   startStatePolling();
   const controller = new AbortController();
@@ -1337,6 +1383,7 @@ async function submit(body, isAudio) {
       : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal };
     const response = await fetch('/turn', options);
     if (!response.ok) {
+      T.record('turn_failed', { status: response.status, ms: Date.now() - turnStartedAt });
       lastWasError = true;
       lastErrorTitle = response.status === 403 ? 'Not allowed' : 'The Mac hit a problem';
       el.errline.textContent = response.status === 403
@@ -1352,6 +1399,10 @@ async function submit(body, isAudio) {
 
     sessionId = data.session_id || sessionId;
     store.set('crooks.session', sessionId);
+    currentTurnId = data.turn_id ? String(data.turn_id) : '';
+    if ('test_session_id' in data) T.configure({ test_session: data.test_session_id || null });
+    T.setContext({ session_id: sessionId, turn_id: currentTurnId });
+    T.record('turn_response', { ms: Date.now() - turnStartedAt, error_kind: data.error_kind || undefined, items: (data.ui || []).map((i) => i && i.type), answer_chars: String(data.answer || '').length, turns: data.turns });
     turns = typeof data.turns === 'number' ? data.turns : turns + 1;
     if (data.lost_thread) turns = 0;
     store.set('crooks.turns', String(turns));
@@ -1376,6 +1427,7 @@ async function submit(body, isAudio) {
       setState('READY');
       return;
     }
+    T.record('turn_failed', { status: 0, aborted: controller.signal.aborted, ms: Date.now() - turnStartedAt });
     lastWasError = true;
     lastErrorTitle = controller.signal.aborted ? 'The Mac took too long' : 'The Mac did not answer';
     el.errline.textContent = controller.signal.aborted
@@ -1422,6 +1474,7 @@ function onHoldStart(event) {
   unlockSpeech();          // must be inside the gesture
   stopSpeaking();          // before anything else: the voice must not be recorded answering itself
   acquireWakeLock();
+  T.record('hold', { phase: 'start', state: busy ? 'busy' : 'ready', target: event.currentTarget === el.orbFrame ? 'orb' : 'dock' });
   if (busy) {
     // A turn is in flight. Say so; and if the hold goes on, take it as "forget that one".
     showBusyHint();
@@ -1449,6 +1502,7 @@ function showBusyHint() {
 function cancelTurnAndListen() {
   cancelHoldTimer = null;
   if (!busy || !turnAbort) return;
+  T.record('turn_cancelled', { ms: Date.now() - turnStartedAt });
   turnAbort.cancelled = true;
   turnAbort.abort();
   const form = new FormData();
@@ -1473,6 +1527,51 @@ for (const target of [el.talk, el.orbFrame]) {
   target.addEventListener('pointercancel', onHoldEnd);
   target.addEventListener('contextmenu', (event) => event.preventDefault());
 }
+// What the owner touched on the cards, and what failed to load, for the test session.
+// Delegated, so the renderer stays free of it; captured, so an image's error (which does
+// not bubble) is seen. Nothing here reads the cards' text.
+el.cards.addEventListener('click', (event) => {
+  const target = event.target;
+  const tab = target && target.closest ? target.closest('[role="tab"]') : null;
+  if (tab) {
+    const card = tab.closest('.card');
+    T.record('tab', { label: tab.textContent.trim().slice(0, 40), name: card && card.dataset ? card.dataset.type : '', entity: card && card.dataset ? card.dataset.ref : '' });
+    return;
+  }
+  const chip = target && target.closest ? target.closest('.rail-chip') : null;
+  if (chip) T.record('rail_tap', { action: chip.dataset.action || '', state: chip.getAttribute('aria-disabled') === 'true' ? 'disabled' : 'enabled' });
+});
+el.cards.addEventListener('error', (event) => {
+  const target = event.target;
+  if (target && target.tagName === 'IMG') T.record('image_failed', { src: T.pathOnly(target.getAttribute('src')) });
+}, true);
+for (const type of ['pointerdown', 'pointerup', 'pointercancel']) {
+  el.cards.addEventListener(type, (event) => {
+    const surface = event.target && event.target.closest ? event.target.closest('.action-surface') : null;
+    if (!surface) return;
+    const card = surface.closest('.card');
+    T.record('gesture', { gesture: type.slice(7), name: (surface.className.match(/kind-([a-z_]+)/) || [])[1] || '', state: surface.dataset.state || '', proposal_id: card && card.dataset ? card.dataset.proposal : '' });
+  }, true);
+}
+let scrollReportTimer = null;
+el.cards.addEventListener('scroll', () => {
+  scrollMax = Math.max(scrollMax, el.cards.scrollTop);
+  if (scrollReportTimer) return;
+  scrollReportTimer = setTimeout(() => {
+    scrollReportTimer = null;
+    T.record('scroll', { depth: Math.round(scrollMax), height: el.cards.scrollHeight, width: el.cards.clientHeight });
+  }, 1500);
+}, { passive: true });
+window.addEventListener('error', (event) => {
+  T.record('exception', { message: String(event && event.message || '').slice(0, 200), file: T.pathOnly(event && event.filename), line: event && event.lineno, col: event && event.colno });
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event && event.reason;
+  T.record('exception', { message: String(reason && reason.message || reason || '').slice(0, 200), file: 'promise' });
+});
+window.addEventListener('pagehide', () => T.flush(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) T.flush(true); });
+
 // Keyboard: hold Space or Enter on the talk control.
 el.talk.addEventListener('keydown', (event) => {
   if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) {
@@ -1485,8 +1584,9 @@ el.talk.addEventListener('keyup', (event) => {
 
 el.homeBtn.addEventListener('click', goHome);
 el.backBtn.addEventListener('click', goBack);
-el.recent.addEventListener('click', () => { if (history.length) showHistory(history.length - 1); });
+el.recent.addEventListener('click', () => { T.record('navigate', { nav: 'recent', to: history.length - 1 }); if (history.length) showHistory(history.length - 1); });
 el.attention.addEventListener('click', () => {
+  T.record('navigate', { nav: 'attention_open', count: attentionItems.length });
   if (!window.CrooksUI || !attentionItems.length) return;
   const node = window.CrooksUI.renderItem({ type: 'attention', data: { items: attentionItems } });
   if (node) pushContext([node], [], '');
@@ -1682,6 +1782,7 @@ async function checkReachable() {
 
 function wentOnline() {
   const wasDown = reachable === false;
+  if (wasDown) T.record('connectivity', { state: 'online' });
   reachable = true;
   clearTimeout(reconnectTimer);
   reconnectTimer = null;
@@ -1701,6 +1802,7 @@ function wentOnline() {
 // The Mac answered, and said no: this tablet's login is not on its allowed list. That is a
 // configuration to fix on the Mac, not an outage, and the screen must not call it one.
 function wentRefused() {
+  if (reachable !== false) T.record('connectivity', { state: 'refused' });
   reachable = false;
   if (quiet()) {
     setSystem('refused', 'Not allowed', "This tablet's login is not on the Mac's allowed list.", 'CROOKS_ALLOWED_LOGINS on the Mac · open /whoami · tap to check again');
@@ -1710,6 +1812,7 @@ function wentRefused() {
 }
 
 function wentOffline() {
+  if (reachable !== false) T.record('connectivity', { state: 'offline' });
   reachable = false;
   // Never over a question in flight, a recording, or Vikram mid-sentence: the turn's own
   // error copy covers those, and the layer takes over once the screen is quiet.

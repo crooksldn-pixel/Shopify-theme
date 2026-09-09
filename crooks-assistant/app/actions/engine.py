@@ -140,6 +140,7 @@ class ActionEngine:
             fingerprint=fingerprint,
             created_at=now,
             expires_at=now + self.ttl_s,
+            turn_id=str(getattr(session, "turn_id", "") or ""),
         )
         session.stage(proposal)
         self._index[proposal.proposal_id] = session
@@ -183,6 +184,7 @@ class ActionEngine:
             created_at=now,
             expires_at=now + self.ttl_s,
             undo_of=done.proposal_id,
+            turn_id=done.turn_id,
         )
         session.stage(undo)
         self._index[undo.proposal_id] = session
