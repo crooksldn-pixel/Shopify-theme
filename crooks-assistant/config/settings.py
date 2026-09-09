@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -10,9 +11,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+def _env_file() -> str | None:
+    """Which file the settings read, normally `.env` beside this repository.
+
+    CROOKS_ENV_FILE names a different one, and set to nothing it names none: the offline test
+    suite runs that way, because `.env` is the owner's own configuration — his allow-list, his
+    voice, whether changes are on — and pydantic-settings reads it in every process that
+    imports this module, pytest included. A test whose result depends on which Mac it runs on
+    is not a test. Nothing else sets it, so the assistant itself reads `.env` exactly as before.
+    """
+    return os.environ.get("CROOKS_ENV_FILE", ".env") or None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="CROOKS_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_prefix="CROOKS_", env_file=_env_file(), env_file_encoding="utf-8", extra="ignore"
     )
 
     # --- transport ---
@@ -50,12 +63,13 @@ class Settings(BaseSettings):
     # --- the assistant's voice (ElevenLabs text-to-speech) ---
     # Off falls the tablet back to Android's own speechSynthesis, which is what it used before.
     tts_enabled: bool = True
-    # "Vikram - AI Productivity Assistant", from the ElevenLabs library — used by id, without
-    # being added to the account. This is the assistant's voice; `.env` overrides it and
-    # `make voice` hears a change here. (An earlier default, Derek, is what /health reported
-    # when nothing overrode it; the owner's intended voice is Vikram.)
-    tts_voice_id: str = "9375G6zswFk7v9bKTVQF"
-    tts_voice_name: str = "Vikram"
+    # Derek, from the ElevenLabs library — used by id, without being added to the account.
+    # This is the assistant's approved voice; `.env` overrides it and `make voice` hears a
+    # change here. The id is what ElevenLabs synthesises from and the name is only what this
+    # code calls it, so /health asks ElevenLabs whose voice the id really is and fails the
+    # check when the two disagree: an id changed without its name is caught there, not by ear.
+    tts_voice_id: str = "Q0Et7LOU7VpeoeCRQAVS"
+    tts_voice_name: str = "Derek"
     tts_model: str = "eleven_flash_v2_5"  # the low-latency model; this is a conversation
     # ~16 kB/s. The 32 kbps stream this replaced was audibly compressed on the tablet
     # speaker, and four times the bytes is nothing next to the generation time.
@@ -149,4 +163,6 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    # Re-read the env file name each time rather than trusting the one baked into model_config
+    # at import: the test suite clears this cache after fixing its environment.
+    return Settings(_env_file=_env_file())

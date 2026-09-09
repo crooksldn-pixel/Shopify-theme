@@ -361,45 +361,62 @@ async def test_a_turn_still_answers_when_the_voice_is_broken(client):
     assert (await client.post("/speak", json={"text": turn["answer"]})).status_code == 503
 
 
+# The ElevenLabs voices this project has been given permission to speak with, by id. The id
+# is the only part ElevenLabs acts on; the name is what this code calls it, and the pair has
+# to agree or /health reports one voice while the tablet hears another. Adding a voice is a
+# line here and a line in config/settings.py, deliberately, in that order.
+APPROVED_VOICES = {
+    "Q0Et7LOU7VpeoeCRQAVS": "Derek",     # the production voice
+    "9375G6zswFk7v9bKTVQF": "Vikram",    # "AI Productivity Assistant"; used before Derek
+}
+PRODUCTION_VOICE_ID = "Q0Et7LOU7VpeoeCRQAVS"
+
+
 async def test_health_names_the_voice(client):
+    settings = app.state.runtime.settings
     body = (await client.get("/health")).json()
-    assert body["voice"]["voice"] == app.state.runtime.settings.tts_voice_name
-    assert body["voice"]["model"] == "eleven_flash_v2_5"
+    assert body["voice"]["voice"] == settings.tts_voice_name
+    assert body["voice"]["model"] == settings.tts_model
     assert body["voice"]["provider"] == "elevenlabs"
-    assert "Vikram" in body["checks"]["tts"]["detail"]
+    # Whatever voice is configured is the one health names — not a name written into the page.
+    assert settings.tts_voice_name in body["checks"]["tts"]["detail"]
 
 
 async def test_the_configured_voice_is_the_one_that_was_approved(client):
-    """Vikram — "AI Productivity Assistant" — is the owner's chosen voice, from the default in
-    the code to the URL the request goes to. Health showed Derek because Derek was the old
-    default; a .env line still wins over this, which is why /health asks ElevenLabs whose
-    voice the id really is and fails the check when they disagree."""
+    """Derek is the approved production voice, from the default in the code to the URL the
+    request goes to. A `.env` line still wins over the default, so the check that matters at
+    run time is not this one: /health asks ElevenLabs whose voice the id really is and fails
+    when they disagree. What is proved here is that nothing between the setting and the
+    request substitutes a voice of its own, and that an id and a name never drift apart."""
     from config.settings import Settings
 
     # 1. the default in the code, with nothing configured at all
     bare = Settings(_env_file=None)
-    assert (bare.tts_voice_id, bare.tts_voice_name) == ("9375G6zswFk7v9bKTVQF", "Vikram")
+    assert (bare.tts_voice_id, bare.tts_voice_name) == (PRODUCTION_VOICE_ID, "Derek")
     assert (bare.tts_model, bare.tts_output_format) == ("eleven_flash_v2_5", "mp3_44100_128")
 
-    # 2. the settings this process is running with
+    # 2. the settings this process is running with: an approved id, under its own name
     settings = app.state.runtime.settings
-    assert settings.tts_voice_id == "9375G6zswFk7v9bKTVQF"
-    assert settings.tts_voice_name == "Vikram"
+    assert settings.tts_voice_id in APPROVED_VOICES, "an unapproved ElevenLabs voice id"
+    assert settings.tts_voice_name == APPROVED_VOICES[settings.tts_voice_id]
     assert settings.tts_model == "eleven_flash_v2_5"
     assert settings.tts_output_format == "mp3_44100_128"
 
     # 3. the client the runtime built, and the request it would send
     voice = app.state.runtime.voice
-    assert (voice.voice_id, voice.voice_name) == ("9375G6zswFk7v9bKTVQF", "Vikram")
+    assert (voice.voice_id, voice.voice_name) == (settings.tts_voice_id, settings.tts_voice_name)
     url = voice._url(stream=True)
-    assert url.endswith("/text-to-speech/9375G6zswFk7v9bKTVQF/stream?output_format=mp3_44100_128")
-    assert voice._payload("hello")["model_id"] == "eleven_flash_v2_5"
+    assert url.endswith(
+        f"/text-to-speech/{settings.tts_voice_id}/stream"
+        f"?output_format={settings.tts_output_format}"
+    )
+    assert voice._payload("hello")["model_id"] == settings.tts_model
 
     # 4. what the health page says, and what the tablet is told
     body = (await client.get("/health?fresh=1")).json()
-    assert body["voice"]["voice"] == "Vikram"
-    assert body["voice"]["model"] == "eleven_flash_v2_5"
-    assert body["voice"]["output_format"] == "mp3_44100_128"
+    assert body["voice"]["voice"] == settings.tts_voice_name
+    assert body["voice"]["model"] == settings.tts_model
+    assert body["voice"]["output_format"] == settings.tts_output_format
 
 
 # --------------------------------------------------------------------------- the ui contract

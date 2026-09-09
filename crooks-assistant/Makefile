@@ -30,7 +30,7 @@ help:
 	@echo "  make check           doctor + shopify + gmail-verify in one go"
 	@echo "  make gmail-verify    prove Gmail refreshes without a browser"
 	@echo "  make write-check     rehearse one change through the engine: TOOL=… ARGS='{json}' [COMMIT=1]"
-	@echo "  make voice           hear Vikram on this Mac (one short ElevenLabs request)"
+	@echo "  make voice           hear the voice on this Mac (one short ElevenLabs request)"
 	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
 	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"
 	@echo "  make accept          everything provable without the store: lint, Node, pytest, a server, latency, the page in Chromium"

@@ -520,8 +520,8 @@ class VoiceClient:
     async def verify_voice(self) -> str | None:
         """What ElevenLabs calls the configured voice id — asked once an hour, free (no
         synthesis), and remembered. The configured name is only a label; a .env that still
-        carries an old id would otherwise say "Vikram" on the health page while another
-        voice spoke on the tablet. Returns the name, or None when it cannot be asked."""
+        carries an old id would otherwise name the configured voice on the health page
+        while another spoke on the tablet. Returns the name, or None when it cannot be asked."""
         if not self.enabled:
             return None
         now = time.time()
@@ -552,9 +552,9 @@ class VoiceClient:
         actual = self._voice_actual_name
         if not actual:
             return None
-        # ElevenLabs library voices carry a description after the name — "Vikram - AI
-        # Productivity Assistant" is the voice configured as "Vikram". The name is what must
-        # match; a different voice entirely is what this is for.
+        # ElevenLabs library voices carry a description after the name — a voice returned as
+        # "Vikram - AI Productivity Assistant" is the one configured as "Vikram". The name is
+        # what must match; a different voice entirely is what this is for.
         theirs, ours = actual.strip().lower(), self.voice_name.strip().lower()
         if theirs == ours or theirs.split(" - ")[0].strip() == ours or theirs.startswith(f"{ours} "):
             return None

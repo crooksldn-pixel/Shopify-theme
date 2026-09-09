@@ -1,4 +1,4 @@
-"""POST /speak — the answer, in Vikram's voice.
+"""POST /speak — the answer, in the assistant's voice.
 
 Deliberately a second request rather than part of /turn. The answer text has to be on the
 tablet's screen the moment the agent finishes; making /turn wait for an MP3 would delay the
@@ -55,7 +55,7 @@ REASONS = {
 
 @router.post("/speak")
 async def speak(request: Request) -> Response:
-    """Text in, MP3 out. 204 when there is nothing worth saying, 503 when Vikram cannot."""
+    """Text in, MP3 out. 204 when there is nothing worth saying, 503 when the voice cannot."""
     runtime = request.app.state.runtime
     voice = runtime.voice
     try:
