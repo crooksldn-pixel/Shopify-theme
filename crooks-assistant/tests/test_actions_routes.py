@@ -567,3 +567,40 @@ async def test_a_spoken_yes_does_not_wind_the_clock_back_and_ignores_the_undo(cl
     after = (await client.post("/turn", json={"text": "okay", "session_id": "s10"}, headers=PROXIED)).json()
     assert after["answer"] == "fake answer" and not [i for i in after["ui"] if i["type"] == "confirmation"]
     assert client.runtime.sessions.get("s10").proposal(body["undo"]["proposal_id"]).status.value == "REVOKED"
+
+
+async def test_a_shopify_blip_is_not_spoken_as_a_permission_refusal(client):
+    """The scope check is a read that can fail like any other. When it does, the Mac must not
+    tell the owner the store has refused it: the card stays live and the tap decides."""
+    configure(client)
+
+    async def unreachable(*a, **k):
+        raise RuntimeError("Shopify is not answering")
+
+    client.store.access_scopes = unreachable  # type: ignore[method-assign]
+    client.runtime.provider = StagingProvider(client.runtime)
+    body = (await client.post("/turn", json={"text": "add a note to order 1938", "session_id": "blip"}, headers=PROXIED)).json()
+    assert body["writes"]["allowed"] is True and body["writes"]["state"] == "unknown"
+    assert "permission" not in body["answer"].lower() and "not allowed" not in body["answer"].lower()
+    (card,) = [i for i in body["ui"] if i["type"] == "confirmation"]
+    assert card["data"]["commit"] == {"allowed": True}
+    # And the tap is still answered by Shopify, not by a guess: with the store back, it works.
+    proposal = client.runtime.sessions.get("blip").proposals[-1]
+    del client.store.access_scopes
+    assert (await commit(client, proposal.proposal_id, session_id="blip")).json()["status"] == "verified"
+
+
+async def test_a_login_header_without_the_proxy_is_worth_nothing(client):
+    """Only `tailscale serve` stamps an identity, and it stamps X-Forwarded-For with it. A
+    process on the Mac that adds the header by hand is still a request made on the Mac."""
+    configure(client, local=False)
+    proposal = await staged(client, session_id="s12")
+    spoofed = {"Tailscale-User-Login": OWNER}
+    response = await commit(client, proposal.proposal_id, session_id="s12", headers=spoofed)
+    assert response.status_code == 403 and response.json()["code"] == "not_authorised"
+    assert client.store.mutations == []
+    # With the local owner permitted, the same request is allowed — as a local one, and the
+    # ledger says so rather than naming a login it cannot check.
+    configure(client, local=True)
+    assert (await commit(client, proposal.proposal_id, session_id="s12", headers=spoofed)).json()["status"] == "verified"
+    assert proposal.caller == "local"

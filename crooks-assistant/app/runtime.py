@@ -151,7 +151,11 @@ class Runtime:
         try:
             granted = await self.shopify.access_scopes()
         except Exception as exc:  # noqa: BLE001
-            return WriteStatus("blocked", f"blocked — could not read the Shopify app's scopes ({type(exc).__name__})")
+            # Shopify did not answer. That says nothing about what the app may do: refusing
+            # here would tell the owner, out loud, that the store has not granted a scope it
+            # may well have granted. The tap decides, and Shopify decides the tap.
+            log.warning("could not read the Shopify app's scopes: %s", exc)
+            return WriteStatus("unknown", f"ready, unverified — Shopify did not answer the scope check ({type(exc).__name__})")
         missing = sorted(needed - set(granted))
         if missing:
             return WriteStatus("blocked", f"blocked — Shopify {', '.join(missing)} scope missing")
@@ -161,12 +165,14 @@ class Runtime:
 
 @dataclass(frozen=True)
 class WriteStatus:
-    state: str     # "disabled" | "blocked" | "ready"
+    state: str     # "disabled" | "blocked" | "unknown" | "ready"
     detail: str
 
     @property
     def ready(self) -> bool:
-        return self.state == "ready"
+        # "unknown" is the scope check having failed, not a refusal: a change may be applied
+        # and Shopify has the final word on it.
+        return self.state in ("ready", "unknown")
 
     @property
     def code(self) -> str:

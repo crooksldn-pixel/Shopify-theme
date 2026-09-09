@@ -380,7 +380,21 @@ def _message(m: dict[str, Any]) -> dict[str, Any]:
 
 
 def _recovered(call: ToolCall, later: list[ToolCall]) -> bool:
-    return any(c.ok and c.name == call.name for c in later)
+    """The gate refused this call and the model then did the same thing properly. The same
+    thing: the same tool on the same entity — a note refused for one order is not made good
+    by a note prepared for another, and the owner must see the refusal."""
+    entity = _entity_of(call)
+    return any(c.ok and c.name == call.name and (entity is None or _entity_of(c) == entity) for c in later)
+
+
+def _entity_of(call: ToolCall) -> str | None:
+    """The entity a call was about, as the store numbers it: "1938" whether the model wrote
+    the bare number or the full gid. The refused call and the one that put it right are the
+    same thing only when this matches."""
+    for key, value in (call.args or {}).items():
+        if key.endswith("_id") and isinstance(value, str) and value.strip():
+            return value.rstrip("/").rsplit("/", 1)[-1].lower()
+    return None
 
 
 def _tool_error(call: ToolCall, session: Session | None) -> dict[str, Any]:

@@ -35,6 +35,12 @@ class ShopifyError(RuntimeError):
     """A query failed. Carries the message the assistant should read out."""
 
 
+class ShopifyScopeRefused(ShopifyError):
+    """Shopify refused a mutation for want of a scope, and said so in the response. Proof that
+    nothing was applied — which is what makes one retry with a freshly minted token safe. No
+    other failure means this: a 5xx whose body happens to mention the words does not."""
+
+
 @dataclass(slots=True)
 class _Token:
     value: str
@@ -218,8 +224,8 @@ class ShopifyClient:
         log.info("mutation %s sent", name)
         try:
             return await self._post(reviewed.document, variables, mutation=True)
-        except ShopifyError as exc:
-            if "ACCESS_DENIED" not in str(exc) or self.auth_mode == "static_token" or self._token is None:
+        except ShopifyScopeRefused:
+            if self.auth_mode == "static_token" or self._token is None:
                 raise
             # A client-credentials token lives a day and carries the scopes granted when it was
             # minted. The store granted write_orders after that: one fresh token, one retry.
@@ -287,8 +293,9 @@ class ShopifyClient:
                 raise ShopifyError("That query was too expensive for Shopify; narrow it.")
             if mutation and "ACCESS_DENIED" in codes:
                 # For a read, ACCESS_DENIED is protected customer data coming back redacted and
-                # the rest of the answer stands. For a mutation there is no rest: it was refused.
-                raise ShopifyError(f"Shopify refused the change (ACCESS_DENIED): {messages[:160]}")
+                # the rest of the answer stands. For a mutation there is no rest: it was refused,
+                # and this type says so — no other failure may be taken for a refusal.
+                raise ShopifyScopeRefused(f"Shopify refused the change (ACCESS_DENIED): {messages[:160]}")
             if payload.get("data") is None:
                 raise ShopifyError(f"Shopify rejected the query: {messages}")
             log.warning("Shopify partial errors (likely protected-data redaction): %s", messages)
@@ -355,10 +362,12 @@ _MUTATION_RE = re.compile(r"^\s*(?:#[^\n]*\n\s*)*mutation\b", re.I)
 
 
 def _is_mutation(document: str) -> bool:
-    """True if the GraphQL document's operation is a mutation. Anonymous `{ ... }` and
-    `query` documents are reads; anything starting with `mutation` is a write."""
+    """True if the document holds a mutation operation anywhere in it. Anonymous `{ ... }` and
+    `query` documents are reads; `mutation Name(`, `mutation Name {`, `mutation {` and
+    `mutation{` — first in the document or after another operation — are all writes, and this
+    path never sends one."""
     return bool(_MUTATION_RE.match(document or "")) or bool(
-        re.search(r"\bmutation\s+\w*\s*[({]", document or "", re.I)
+        re.search(r"(?:^|[\s};])mutation\b\s*(?:\w+\s*)?[({]", document or "", re.I)
     )
 
 

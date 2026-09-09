@@ -66,9 +66,8 @@ async def lifespan(app: FastAPI):
     app.state.runtime = runtime_module.build(settings)
     app.state.health_cache = None   # /health answers from a recent result; none yet
     app.state.health_lock = None
-    app.state.allowed_logins = tuple(
-        login.strip().lower() for login in settings.allowed_logins.split(",") if login.strip()
-    )
+    # The same list the write boundary reads, so the two can never disagree.
+    app.state.allowed_logins = app.state.runtime.allowed_logins
     try:
         await app.state.runtime.provider.start()
     except BillingGuardError:

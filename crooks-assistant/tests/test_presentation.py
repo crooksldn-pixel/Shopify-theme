@@ -202,8 +202,9 @@ def test_a_denial_the_model_recovers_from_is_not_a_card():
 
     session = Session(session_id="s")
     session.issue("gid://shopify/Order/1938")
-    # The first call used an id nothing had issued: denied by the gate whatever else is true.
-    stumble = ToolCall(name="shopify_order_note_append", args={"order_id": "gid://shopify/Order/999", "note": "x"}, ok=False, error="not looked up")
+    # The first call named the order the way the owner said it, before anything had looked
+    # it up: denied by the gate. The model then found it and proposed the note properly.
+    stumble = ToolCall(name="shopify_order_note_append", args={"order_id": "1938", "note": "x"}, ok=False, error="not looked up")
     found = ToolCall(name="shopify_find_order", args={"order_number": "1938"}, ok=True, result={"orders": []})
     staged = ToolCall(name="shopify_order_note_append", args={"order_id": "gid://shopify/Order/1938", "note": "x"}, ok=True, result={}, proposal_id="prop_x")
     items = present([stumble, found, staged], session=session)
@@ -211,6 +212,11 @@ def test_a_denial_the_model_recovers_from_is_not_a_card():
     # Unrecovered, the refusal is shown — as the assistant's rule, not the owner's permission.
     (card,) = [i for i in present([stumble], session=session) if i["type"] == "error"]
     assert card["data"]["title"] == "Refused by the assistant's rules"
+    # And a note refused for one order is not made good by a note prepared for another: that
+    # refusal is still shown, beside the card for the order that did work.
+    other = ToolCall(name="shopify_order_note_append", args={"order_id": "gid://shopify/Order/22", "note": "x"}, ok=True, result={}, proposal_id="prop_y")
+    mixed = present([stumble, found, other], session=session)
+    assert [i["type"] for i in mixed if i["type"] == "error"], mixed
 
 
 def test_one_error_per_service_and_turn_errors_are_named():

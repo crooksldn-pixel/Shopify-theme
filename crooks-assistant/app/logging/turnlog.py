@@ -103,8 +103,13 @@ class TurnLog:
         record = {"ts": time.time(), "iso": time.strftime("%Y-%m-%dT%H:%M:%S"), **redact(record, names)}
         try:
             self._rotate_if_needed()
+            # It holds what was said and what was answered: the owner's to read and nobody
+            # else's, like the action ledger beside it. Created 0600; an existing file that
+            # anyone could read is tightened the first time this notices.
             with self.path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+            if self.path.stat().st_mode & 0o077:
+                self.path.chmod(0o600)
         except OSError as exc:
             log.warning("could not write turn log: %s", exc)
 

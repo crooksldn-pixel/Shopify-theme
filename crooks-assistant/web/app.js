@@ -1087,12 +1087,14 @@ const ACTION_LABELS = {
   verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
   executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…', refused: 'Refused',
   blocked: 'Refused',
-  unverified: 'Not confirmed', service_unavailable: 'Not applied', not_authorised: 'Not allowed', writes_disabled: 'Switched off',
+  unverified: 'Not confirmed', service_unavailable: 'Not applied', writes_disabled: 'Switched off',
+  not_authorised: 'Not on the list', not_authorised_local: 'Not from the Mac itself',
   allow_list_missing: 'Not configured', scope_missing: 'Not permitted', unknown: 'Unknown', wrong_session: 'Not this conversation',
 };
 const ACTION_REASONS = {
   refused: 'The Mac refused that. Check the Mac\'s log for the reason.',
-  not_authorised: 'This tablet is not allowed to apply changes. Check CROOKS_ALLOWED_LOGINS on the Mac.',
+  not_authorised: "This tablet's login is not on the Mac's allowed list (CROOKS_ALLOWED_LOGINS).",
+  not_authorised_local: 'Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).',
   writes_disabled: 'Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).',
   allow_list_missing: 'No allowed logins are configured on the Mac (CROOKS_ALLOWED_LOGINS).',
   scope_missing: 'The Shopify app has not been granted permission to write orders.',

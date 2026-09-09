@@ -10,6 +10,7 @@ document, a token, a variable, or a stack trace.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, Form, Request
@@ -53,12 +54,15 @@ def caller_check(request: Request) -> tuple[str, str, str, str]:
     if not allowed:
         return "", "allow_list_missing", "No allowed Tailscale logins are configured (CROOKS_ALLOWED_LOGINS).", "allow_list_missing"
     login = request.headers.get("tailscale-user-login", "").strip()
+    # Only `tailscale serve` stamps an identity, and it stamps X-Forwarded-For on everything
+    # it proxies. A login header without it is a claim made by something on the Mac itself,
+    # and is worth nothing: that request is judged as what it is, a local one.
     proxied = bool(request.headers.get("x-forwarded-for"))
-    if proxied or login:
-        if login.lower() in allowed:
+    if proxied:
+        if login and login.lower() in allowed:
             return login.lower(), "", "", ""
         return "", "not_authorised", "This login may not apply changes.", "not_authorised"
-    # No login and not proxied: a request made on the Mac itself.
+    # Not proxied: a request made on the Mac itself, whatever headers it carries.
     if settings.writes_local_owner:
         return "local", "", "", ""
     return "", "not_authorised", "Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).", "not_authorised_local"
@@ -77,13 +81,29 @@ def _authorise(request: Request) -> tuple[str, JSONResponse | None]:
     return caller, None
 
 
+# The tablet is told whether a tap could work while the owner waits for the answer's voice.
+# A Shopify scope check that is slow must not become the answer's latency: past this, the
+# card is shown as it would be if the scopes were fine, and the tap itself decides.
+WRITE_STATUS_TIMEOUT_S = 1.5
+
+
+async def _write_status_soon(runtime):
+    from app.runtime import WriteStatus
+
+    try:
+        return await asyncio.wait_for(runtime.write_status(), timeout=WRITE_STATUS_TIMEOUT_S)
+    except TimeoutError:
+        log.warning("the write preflight took longer than %.1fs; the card is shown as ready", WRITE_STATUS_TIMEOUT_S)
+        return WriteStatus("unknown", "ready, unverified — the Shopify scope check was slow")
+
+
 async def writes_context(request: Request) -> dict:
     """What the tablet needs to know about applying changes from this request's identity:
     whether writes are ready on the Mac and whether this caller may tap. Sent with every turn
     that proposes something, so the card can say up front when a tap would be refused."""
     runtime = request.app.state.runtime
     caller, code, detail, spoken_key = caller_check(request)
-    status = await runtime.write_status()
+    status = await _write_status_soon(runtime)
     if not code and not status.ready:
         code, detail, spoken_key = status.code, status.detail, status.code
     if code:
