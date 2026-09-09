@@ -427,6 +427,10 @@ async def _answer(
         runtime.voice.prefetch(
             to_speakable(answer, max_chars=runtime.voice.max_chars), pin=bool(error_kind) or answer in FIXED_LINES
         )
+    # The turn is over: whatever it was doing (hearing, checking Shopify, thinking), the
+    # session says so now, so a /state poll that outlives the turn cannot report otherwise.
+    if session is not None and session.state not in ("READY", "ERROR"):
+        session.set_state("ERROR" if error_kind else "READY")
     timings["total"] = (time.perf_counter() - started) * 1000
     # What the screen shows beside the answer: cards chosen from the tool results, never from
     # the prose. See app/presentation.py for the vocabulary and the bounds.
