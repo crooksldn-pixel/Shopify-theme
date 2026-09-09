@@ -403,3 +403,17 @@ def test_letting_go_of_a_question_settles_the_cards_the_mac_withdrew():
     assert "fetch('/cancel'" in body
     assert "settleProposals(data.revoked, 'revoked', 'Withdrawn')" in body
     assert "cancelTurn(form," in function_body(APP_JS, "async function submit(body, isAudio)")
+
+
+def test_the_tablet_never_erases_what_it_has_already_proved():
+    """A tap that did not go through — an undo the Mac has withdrawn, say — settles its own
+    surface. It never replaces the card that records the change that did go through."""
+    body = function_body(APP_JS, "function settleAction(node, payload, status)")
+    assert "card-success" in body and "payload.status !== 'verified'" in body
+    assert "if (rendered.nodes.length && !keepTheCard)" in body
+
+
+def test_a_recording_too_short_to_send_is_seen_and_felt():
+    """The sub-line is hidden beside the cards, which is exactly when this happens most."""
+    assert "el.errline.textContent = TOO_SHORT;" in APP_JS
+    assert "const TOO_SHORT = 'That was too short — hold while you speak.';" in APP_JS

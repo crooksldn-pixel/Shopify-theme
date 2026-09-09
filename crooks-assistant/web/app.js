@@ -204,6 +204,7 @@ function setMode(mode) {
   if (orb && typeof orb.setSize === 'function') orb.setSize(mode === 'orb' ? ORB_SIZE : ORB_SIZE_DOCKED);
 }
 
+const TOO_SHORT = 'That was too short — hold while you speak.';
 const HAPTIC = { start: 12, release: 8, done: [10, 60, 10], error: [40, 50, 40] };
 function haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* unsupported */ }
@@ -817,8 +818,13 @@ async function startRecording() {
       // The stream stays open: the next press starts recording on the first sample.
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
       if (discardRecording) { discardRecording = false; setState('READY'); return; }
-      if (blob.size > 800) sendAudio(blob);
-      else { setState('READY'); el.sub.textContent = 'That was too short — hold while you speak.'; }
+      if (blob.size > 800) { sendAudio(blob); return; }
+      // Too short to be a question. The sub-line is hidden beside the cards, so this goes
+      // where it can always be read, with the buzz that says the tablet noticed.
+      setState('READY');
+      el.sub.textContent = TOO_SHORT;
+      el.errline.textContent = TOO_SHORT;
+      haptic(HAPTIC.error);
     };
     mediaRecorder.start(250);
     recording = true;
@@ -979,7 +985,9 @@ function renderTurn(data) {
   const answer = data.answer || '';
   if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui)) {
     // The Mac re-presented a card that is already live on this screen (a spoken yes): the
-    // deck stays as it is, the order beside it included.
+    // deck stays as it is, the order beside it included — but it is brought back into view,
+    // because the answer is about a card the owner may have left behind.
+    setMode('context');
     return;
   }
   if (ui.hasContext) {
@@ -1011,7 +1019,7 @@ function renderOpts() {
 }
 
 async function commitAction(proposalId, node) {
-  if (actionBlocked()) { settleActionNode(node, 'armed'); return; }
+  if (actionBlocked()) { settleActionNode(node, 'armed', 'Tap to apply'); return; }
   haptic(HAPTIC.start);
   const form = new FormData();
   form.append('session_id', sessionId);
@@ -1066,7 +1074,11 @@ function settleAction(node, payload, status) {
     items[0].data.undo = Object.assign({ label: 'Undo', armed_after_ms: 650 }, payload.undo);
   }
   const rendered = window.CrooksUI ? window.CrooksUI.render(items, renderOpts()) : { nodes: [] };
-  if (rendered.nodes.length) {
+  // A card that already records something that happened — "Note added" and its undo — is
+  // never replaced by the answer to a tap that did not happen: the undo's surface settles
+  // and the proof stays on screen.
+  const keepTheCard = node.classList && node.classList.contains('card-success') && payload.status !== 'verified';
+  if (rendered.nodes.length && !keepTheCard) {
     replaceCard(node, rendered.nodes);
   } else {
     settleActionNode(node, code === 'verified' ? 'verified' : code, ACTION_LABELS[code] || 'Not applied');
@@ -1275,11 +1287,11 @@ async function submit(body, isAudio) {
     el.answer.textContent = data.answer;
     lastWasError = Boolean(data.error_kind);
     if (data.build) pendingBuild = String(data.build);
-    setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
     haptic(lastWasError ? HAPTIC.error : HAPTIC.done);
-    // The text is on screen, then the cards, then the voice — and the voice never waits on
-    // audio. The /speak request is sent from here, ahead of building the cards.
+    // The cards first, so the headline is this answer's and not the last one's; then the
+    // state; then the voice, which never waits on audio.
     renderTurn(data);
+    setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
     speakAnswer(data.answer, { isError: lastWasError });   // deliberately not awaited
     renderTimings(data.timings_ms, data.transcript);
     // Exactly the cards this instruction withdrew, as the Mac decided; no others.
