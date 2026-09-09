@@ -298,7 +298,8 @@ def test_both_playback_paths_guard_against_a_silent_context():
 def test_a_turn_in_flight_can_be_abandoned_by_holding():
     assert "const controller = new AbortController();" in function_body(APP_JS, "async function submit(body, isAudio)")
     cancel = function_body(APP_JS, "function cancelTurnAndListen()")
-    assert "turnAbort.abort()" in cancel and "fetch('/cancel'" in cancel and "startRecording()" in cancel
+    assert "turnAbort.abort()" in cancel and "cancelTurn(form," in cancel and "startRecording()" in cancel
+    assert "fetch('/cancel'" in function_body(APP_JS, "function cancelTurn(form, whyItIsSafeToIgnore)")
     hold = function_body(APP_JS, "function onHoldStart(event)")
     assert "cancelHoldTimer = setTimeout(cancelTurnAndListen, CANCEL_HOLD_MS)" in hold
     assert "clearTimeout(cancelHoldTimer)" in function_body(APP_JS, "function onHoldEnd(event)")
@@ -393,3 +394,12 @@ def test_a_card_already_on_screen_is_not_pushed_again():
     assert "if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui))" in body
     keep = function_body(APP_JS, "function onlyLiveCardsAlreadyShown(items)")
     assert "'confirmation'" in keep and "'arming'" in keep and "'armed'" in keep
+
+
+def test_letting_go_of_a_question_settles_the_cards_the_mac_withdrew():
+    """/cancel withdraws whatever the abandoned question proposed and names those cards; the
+    tablet settles exactly those, so none is left armed for a tap the Mac would refuse."""
+    body = function_body(APP_JS, "function cancelTurn(form, whyItIsSafeToIgnore)")
+    assert "fetch('/cancel'" in body
+    assert "settleProposals(data.revoked, 'revoked', 'Withdrawn')" in body
+    assert "cancelTurn(form," in function_body(APP_JS, "async function submit(body, isAudio)")

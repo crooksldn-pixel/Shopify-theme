@@ -289,7 +289,10 @@ PREFETCH_TIMEOUT_S = 2.5
 # "orders from 2025" or "orders in the last 100 days", which name no order.
 _SPOKEN_ORDER = re.compile(
     r"\b(?:order|invoice)\b\s*(?P<explicit>(?:number|no\.?|#)\s*#?\s*)?(?P<digits>\d{4})\b"
-    r"(?!\s*(?:pounds?|quid|days?|items?|units?|percent|%|per\b))",
+    # Not a figure with a unit after it, and not the head of something the recogniser left
+    # half-converted ("1930-eight"): a number that runs into a word is not an order number.
+    r"(?!\s*(?:pounds?|quid|days?|items?|units?|percent|%|per\b))"
+    r"(?![\u2010-\u2015-]?[A-Za-z])",
     re.I,
 )
 
@@ -489,16 +492,19 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
     Nothing applied is undone; whatever the abandoned turn had proposed is withdrawn, unsent."""
     runtime = request.app.state.runtime
     interrupted = False
+    revoked: list[str] = []
     if session_id:
         # Marked whether or not the turn has reached Claude yet — a hold during transcription
         # counts — and even before the session's first turn has created it. Anything the
         # abandoned turn proposed is withdrawn with it.
         live = runtime.sessions.get_or_create(session_id)
         live.abandoned = True
+        # Named, so the tablet settles exactly the cards this withdrew rather than guessing.
+        revoked = runtime.actions.revoke_pending(live, "turn abandoned")
         runtime.actions.advance_epoch(live, "turn abandoned")
         interrupted = await runtime.provider.interrupt(session_id)
     stopped = runtime.voice.cancel_prefetches()
-    return {"cancelled": True, "interrupted": interrupted, "prefetches_stopped": stopped}
+    return {"cancelled": True, "interrupted": interrupted, "prefetches_stopped": stopped, "revoked": revoked}
 
 
 @router.post("/audio-test")

@@ -239,6 +239,8 @@ class ActionEngine:
                 continue
             if proposal.terminal and proposal.finished_at is not None and now - proposal.finished_at > SETTLED_RETENTION_S:
                 del self._index[pid]
+                # And out of the session, so the words the owner dictated go with it.
+                session.proposals[:] = [p for p in session.proposals if p.proposal_id != pid]
                 dropped += 1
         return dropped
 
@@ -318,6 +320,15 @@ class ActionEngine:
             # Verification: a 200 is not proof; the re-read is.
             proven = await write.observe(execution)
             return self._prove(proposal, proven, session, spec, write)
+        except asyncio.CancelledError as exc:
+            # The task was cancelled (a shutdown, a client that went away) between sending the
+            # change and proving it. It must not be left claimed for ever: look once, record
+            # what was seen, then let the cancellation continue.
+            if sent:
+                await self._settle_by_observation(proposal, execution, session, spec, write, exc)
+            else:
+                self._finish(proposal, ActionStatus.FAILED, "service_unavailable", reason="cancelled before sending")
+            raise
         except Exception as exc:  # noqa: BLE001 — every failure is a recorded outcome
             if not sent:
                 # Nothing left this process: the precondition read failed. Proven unchanged.
@@ -373,7 +384,8 @@ class ActionEngine:
         if status in (ActionStatus.VERIFIED, ActionStatus.EXECUTED):
             return CommitResult(proposal, "already_executed", "")
         if status is ActionStatus.UNVERIFIED:
-            return CommitResult(proposal, "already_executed", "")
+            # Sent, and not proven. Saying "already applied" would claim more than was seen.
+            return CommitResult(proposal, "unverified", write.spoken_failure if write else "")
         if status is ActionStatus.STALE:
             return CommitResult(proposal, "stale", write.spoken_stale if write else "")
         if status is ActionStatus.EXPIRED:

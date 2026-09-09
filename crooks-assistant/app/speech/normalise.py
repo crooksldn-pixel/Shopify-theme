@@ -106,6 +106,16 @@ _TENS = {
     "seventy": 70, "eighty": 80, "ninety": 90,
 }
 _WORD_RE = re.compile(r"[A-Za-z0-9'★™]+|[^\sA-Za-z0-9'★™]")
+
+# "thirty-eight" is one number said with a hyphen — the recogniser writes it either way, and
+# it must not break the run of number words: "order nineteen thirty-eight" is order 1938, and
+# reading it as 1930 would look up somebody else's order.
+_HYPHENATED_NUMBER = re.compile(
+    r"\b(" + "|".join(sorted(set(_UNITS) | set(_TENS) | {"hundred", "thousand"}, key=len, reverse=True)) + r")"
+    r"[\u2010-\u2015-]"
+    r"(?=(?:" + "|".join(sorted(set(_UNITS) | set(_TENS) | {"hundred", "thousand"}, key=len, reverse=True)) + r")\b)",
+    re.I,
+)
 _ORDER_CUE = re.compile(r"\b(order|invoice|number|no\.?|crooks)[\s-]*#?\s*", re.I)
 
 # Words people say one way and Shopify spells another. Applied to both sides before scoring.
@@ -456,6 +466,7 @@ class Normaliser:
         if not text:
             return Normalised(raw=raw, text="")
 
+        text = _HYPHENATED_NUMBER.sub(r"\1 ", text)
         tokens = _WORD_RE.findall(text)
         tokens = words_to_digits(tokens)
         catalogue = self.catalogue

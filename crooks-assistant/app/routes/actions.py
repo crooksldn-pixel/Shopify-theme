@@ -65,7 +65,7 @@ def caller_check(request: Request) -> tuple[str, str, str, str]:
     # Not proxied: a request made on the Mac itself, whatever headers it carries.
     if settings.writes_local_owner:
         return "local", "", "", ""
-    return "", "not_authorised", "Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).", "not_authorised_local"
+    return "", "not_authorised_local", "Requests made on the Mac itself may not apply changes (CROOKS_WRITES_LOCAL_OWNER).", "not_authorised_local"
 
 
 def _authorise(request: Request) -> tuple[str, JSONResponse | None]:

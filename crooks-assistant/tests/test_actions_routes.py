@@ -125,7 +125,7 @@ async def test_the_mac_itself_may_not_commit_unless_told_so(client):
     configure(client, local=False)
     proposal = await staged(client)
     response = await commit(client, proposal.proposal_id, headers={})
-    assert response.status_code == 403 and response.json()["code"] == "not_authorised"
+    assert response.status_code == 403 and response.json()["code"] == "not_authorised_local"
     assert client.store.mutations == []
     configure(client, local=True)
     response = await commit(client, proposal.proposal_id, headers={})
@@ -395,7 +395,7 @@ async def test_a_refused_commit_carries_a_spoken_line(client):
     assert body["code"] == "writes_disabled" and body["spoken"].startswith("Changes are switched off")
     configure(client, local=False)
     body = (await commit(client, proposal.proposal_id, headers={})).json()
-    assert body["code"] == "not_authorised" and body["spoken"].startswith("Requests from the Mac itself")
+    assert body["code"] == "not_authorised_local" and body["spoken"].startswith("Requests from the Mac itself")
 
 
 async def test_a_login_outside_the_allow_list_cannot_even_ask(client):
@@ -597,7 +597,7 @@ async def test_a_login_header_without_the_proxy_is_worth_nothing(client):
     proposal = await staged(client, session_id="s12")
     spoofed = {"Tailscale-User-Login": OWNER}
     response = await commit(client, proposal.proposal_id, session_id="s12", headers=spoofed)
-    assert response.status_code == 403 and response.json()["code"] == "not_authorised"
+    assert response.status_code == 403 and response.json()["code"] == "not_authorised_local"
     assert client.store.mutations == []
     # With the local owner permitted, the same request is allowed — as a local one, and the
     # ledger says so rather than naming a login it cannot check.

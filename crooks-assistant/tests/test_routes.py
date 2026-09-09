@@ -604,7 +604,7 @@ async def test_cancel_stops_prefetches_and_asks_the_provider_to_interrupt(client
 
     provider.interrupt = interrupt
     body = (await client.post("/cancel", data={"session_id": "busy"})).json()
-    assert body == {"cancelled": True, "interrupted": True, "prefetches_stopped": 0}
+    assert body == {"cancelled": True, "interrupted": True, "prefetches_stopped": 0, "revoked": []}
     assert asked == ["busy"]
 
 

@@ -644,16 +644,19 @@
     const node = card('success', [
       h('div', { class: 'card-head' }, [h('div', { class: 'mark ok' }, CHECK()), h('div', {}, [kicker('Done'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
     ], Object.assign({ className: 'success' }, opts));
-    if (d.proposal_id) node.dataset.proposal = text(d.proposal_id);
+    // Keyed by the proposal that is still live. The forward one is settled and nothing looks
+    // it up again; the undo is the card the Mac may name in a turn's `revoked` list.
     // A reversible action offers its undo: a second proposal the Mac staged, authorised the
     // same way (its own dead time, its own tap) and executed by the same path.
     const undo = d.undo && typeof d.undo === 'object' && d.undo.proposal_id ? d.undo : null;
+    if (!undo && d.proposal_id) node.dataset.proposal = text(d.proposal_id);
     if (undo) {
       const armedAfter = num(undo.armed_after_ms) === null ? 650 : undo.armed_after_ms;
       const surface = h('div', {
         class: 'action-surface quiet', role: 'button', tabindex: '0', 'aria-disabled': 'true',
         data: { state: 'arming', kind: 'tap_commit' },
       }, [h('span', { class: 'action-label', text: text(undo.label, 'Undo') }), h('span', { class: 'action-arm', 'aria-hidden': 'true' })]);
+      node.dataset.proposal = text(undo.proposal_id);
       node.appendChild(surface);
       node.appendChild(h('p', { class: 'action-meta', text: num(undo.ttl_s) !== null ? `Undo available for ${Math.round(undo.ttl_s)} s` : '' }));
       // The undo has its own minute on the Mac's clock, and says how much of it is left.

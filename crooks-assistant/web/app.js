@@ -1117,6 +1117,17 @@ function onlyLiveCardsAlreadyShown(items) {
   });
 }
 
+// Letting go of a question in flight. The Mac answers with the cards it withdrew — anything
+// proposed under the question being abandoned — and exactly those are settled here.
+function cancelTurn(form, whyItIsSafeToIgnore) {
+  fetch('/cancel', { method: 'POST', body: form })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (data && Array.isArray(data.revoked) && data.revoked.length) settleProposals(data.revoked, 'revoked', 'Withdrawn');
+    })
+    .catch(() => { /* whyItIsSafeToIgnore */ });
+}
+
 // The cards the Mac named, wherever the deck still holds them.
 function settleProposals(ids, state, label) {
   const wanted = new Set(ids.map(String));
@@ -1234,7 +1245,7 @@ async function submit(body, isAudio) {
     // queued behind a dead one.
     const form = new FormData();
     form.append('session_id', sessionId);
-    fetch('/cancel', { method: 'POST', body: form }).catch(() => { /* it will time out on its own */ });
+    cancelTurn(form, 'it will time out on its own');
   }, TURN_TIMEOUT_MS);
   try {
     const options = isAudio
@@ -1358,7 +1369,7 @@ function cancelTurnAndListen() {
   turnAbort.abort();
   const form = new FormData();
   form.append('session_id', sessionId);
-  fetch('/cancel', { method: 'POST', body: form }).catch(() => { /* the abort already freed the tablet */ });
+  cancelTurn(form, 'the abort already freed the tablet');
   haptic(HAPTIC.start);
   // submit()'s finally clears busy once the abort lands; start listening right after it —
   // if the thumb is still down. A thumb that lifted meanwhile just wanted the question gone.

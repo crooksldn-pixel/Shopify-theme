@@ -394,3 +394,22 @@ def test_shipped_terminology_seed_loads_cleanly():
     assert len(n.catalogue) >= 20
     assert n.catalogue.max_words <= 6, "a prose line has leaked into the term list"
     assert "cross stars tee" in n.catalogue.aliases
+
+
+def test_a_hyphen_never_splits_a_spoken_order_number(n):
+    """"Order nineteen thirty-eight" is order 1938. The recogniser writes the hyphen as often
+    as not, and reading it as 1930 would look up — and could write to — somebody else's order."""
+    from app.routes.turn import spoken_order_numbers
+
+    for said, expected in [
+        ("Find order nineteen thirty-eight and add an internal note", "1938"),
+        ("check order nineteen thirty-eight please", "1938"),
+        ("order nineteen thirty-two", "1932"),
+        ("find order nineteen thirty eight", "1938"),
+    ]:
+        text = n.normalise(said).text
+        assert spoken_order_numbers(text) == [expected], (said, text)
+    # And a number the recogniser left half-converted is not an order number at all: the
+    # model does its own looking up rather than the Mac fetching the wrong record.
+    assert spoken_order_numbers("order 1930-eight") == []
+    assert spoken_order_numbers("order 1938.") == ["1938"]
