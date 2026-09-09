@@ -117,7 +117,11 @@ _ID_KIND = {
     "line_item_id": re.compile(r"^gid://shopify/LineItem/\d+$"),
     "variant_id": re.compile(r"^gid://shopify/ProductVariant/\d+$"),
     "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
+    "evidence_message_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
 }
+# Issued-id arguments a tool may be called without. Present, they must be issued ids of
+# their kind like any other; absent, the tool decides what it can do without them.
+_OPTIONAL_ID_ARGS = frozenset({"evidence_message_id"})
 
 
 def id_kind_ok(arg: str, value: object) -> bool:
@@ -228,6 +232,8 @@ def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any],
     for arg in id_args:
         value = args.get(arg)
         if value is None or not str(value).strip():
+            if arg in _OPTIONAL_ID_ARGS:
+                continue
             return f"{name} requires {arg}, which was not supplied."
         value = str(value)
         if not _ID_SHAPE.match(value):

@@ -35,9 +35,9 @@ def _readable_errors() -> tuple[type[BaseException], ...]:
 _READABLE_ERRORS = _readable_errors()
 
 # Result keys whose values are ids the assistant may later use in a detail-style lookup.
-_ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "line_item_id", "id")
+_ID_KEYS = ("order_id", "customer_id", "thread_id", "message_id", "variant_id", "line_item_id", "id")
 # Result keys whose values are a person's details. Remembered so the turn log can scrub them.
-_PII_KEYS = ("customer_name", "customer_email", "name", "from", "from_email", "email", "displayName", "zip", "company")
+_PII_KEYS = ("customer_name", "customer_email", "name", "from", "from_email", "email", "displayName", "zip", "company", "phone")
 # A list of strings under this key is a street address, line by line.
 _PII_LIST_KEYS = ("lines",)
 
@@ -190,6 +190,11 @@ async def _stage(
             calls.append(ToolCall(name=name, args=args, ok=False, error="handler did not prepare a change"))
         return f"ERROR: {name} did not prepare a change. Nothing was changed."
 
+    # A change decided on the Mac can carry a person's details the model never saw in a
+    # result (the street an address is changed to); the tool lists them so the log scrubs them.
+    pii = prepared.summary.get("pii")
+    if isinstance(pii, (list, tuple)):
+        session.remember_pii(*(p for p in pii if isinstance(p, str)))
     proposal, created = current_engine().stage(session, spec, args, prepared)
     if calls is not None:
         calls.append(ToolCall(name=name, args=args, ok=True, proposal_id=proposal.proposal_id))

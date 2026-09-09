@@ -196,6 +196,26 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         idempotent=True,
         root="tagsRemove",
     ),
+    # Phase E: the shipping address, and the reprint note in the same write. `orderUpdate`
+    # overwrites both, which is why the Mac merges the changed fields into the address as
+    # it is now and builds the note from a fresh read, and checks both again before sending.
+    # Setting values: idempotent. The selection carries ids only — never the address.
+    "order_shipping_address_set": ReviewedMutation(
+        name="order_shipping_address_set",
+        document="""
+            mutation CrooksOrderShippingAddressSet($id: ID!, $address: MailingAddressInput!, $note: String!) {
+              orderUpdate(input: {id: $id, shippingAddress: $address, note: $note}) {
+                order { id name }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "address": dict, "note": str},
+        scope="write_orders",
+        idempotent=True,
+        root="orderUpdate",
+        validate=lambda key, value: key == "address" and mailing_address_ok(value),
+    ),
 }
 
 _GID = re.compile(r"^gid://shopify/[A-Za-z]+/\d+$")
@@ -248,6 +268,32 @@ def refund_input_ok(value: Any) -> bool:
             return False
         if not isinstance(t["gateway"], str) or not 1 <= len(t["gateway"]) <= 60:
             return False
+    return True
+
+
+_ADDRESS_KEYS = frozenset({"firstName", "lastName", "company", "address1", "address2", "city", "provinceCode", "zip", "countryCode", "phone"})
+_COUNTRY_CODE = re.compile(r"^[A-Z]{2}$")
+_PROVINCE_CODE = re.compile(r"^[A-Z0-9]{1,5}$")
+_PHONE = re.compile(r"^\+?[0-9 ()\-]{6,20}$")
+
+
+def mailing_address_ok(value: Any) -> bool:
+    """The MailingAddressInput shape this project sends: Shopify's own ten fields, plain
+    text under a hundred characters each, a two-letter country, a street line present.
+    A parcel goes where this says; the shape is held here as well as where it is built."""
+    if not isinstance(value, dict) or not value or set(value) - _ADDRESS_KEYS:
+        return False
+    for text in value.values():
+        if not isinstance(text, str) or not text or len(text) > 100 or "<" in text or any(ord(ch) < 32 for ch in text):
+            return False
+    if not value.get("address1") or not value.get("countryCode"):
+        return False
+    if not _COUNTRY_CODE.match(value["countryCode"]):
+        return False
+    if "provinceCode" in value and not _PROVINCE_CODE.match(value["provinceCode"]):
+        return False
+    if "phone" in value and not _PHONE.match(value["phone"]):
+        return False
     return True
 
 

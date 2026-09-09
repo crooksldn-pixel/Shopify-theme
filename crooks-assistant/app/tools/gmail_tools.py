@@ -130,7 +130,7 @@ def _decode_part(part: dict) -> str:
         return ""
 
 
-def _extract_body(payload: dict) -> str:
+def _extract_body(payload: dict, *, limit: int = MAX_BODY_CHARS) -> str:
     """Walk a multipart MIME tree for text/plain, falling back to stripped HTML."""
     plain: list[str] = []
     html: list[str] = []
@@ -151,8 +151,8 @@ def _extract_body(payload: dict) -> str:
         text = re.sub(r"\s+", " ", text).strip()
     # Quoted history adds length and no information to a spoken answer.
     text = re.split(r"\nOn .{0,80} wrote:\n|\n-{2,} ?Original Message", text)[0].strip()
-    if len(text) > MAX_BODY_CHARS:
-        text = text[:MAX_BODY_CHARS] + f"… [truncated, {len(text) - MAX_BODY_CHARS} more chars]"
+    if len(text) > limit:
+        text = text[:limit] + f"… [truncated, {len(text) - limit} more chars]"
     return text
 
 
@@ -234,6 +234,7 @@ def _summary(thread_id: str, headers: dict[str, str], message: dict) -> dict[str
     sender_name, sender_email = parseaddr(headers.get("from", ""))
     return {
         "thread_id": thread_id,
+        "message_id": str(message.get("id") or ""),
         "from": sender_name or sender_email,
         "from_email": sender_email,
         "subject": headers.get("subject", "(no subject)"),
@@ -278,6 +279,46 @@ async def threads_for(*, sender: str = "", terms: list[str] | tuple[str, ...] = 
         return {"available": False, "reason": str(exc)[:160], "threads": []}
     threads = [_summary(t, h, m) for t, h, m in _one_per_thread(messages, include_bulk=False)]
     return {"available": True, "query": query, "threads": threads[:limit]}
+
+
+# An email read as evidence for a change is read whole: an address at the foot of a long
+# message is still the address.
+EVIDENCE_BODY_CHARS = 20_000
+
+
+async def message_evidence(message_id: str) -> dict[str, Any]:
+    """One message, read in full, as evidence for a change the owner asked for: who sent it,
+    whether the receiving server vouched for that sender, and its text. For the write tools
+    on the Mac — never handed to the model, which cites a message by id and no more."""
+    client = _c()
+    message_id = str(message_id or "").strip()
+    if not message_id:
+        raise ToolError("No message id was given.")
+
+    def fetch() -> dict:
+        return client.service().users().messages().get(userId="me", id=message_id, format="full").execute()
+
+    try:
+        message = await asyncio.to_thread(fetch)
+    except Exception as exc:  # noqa: BLE001
+        if _is_auth_failure(exc):
+            client.reset()
+            raise ToolError(str(GmailAuthRequired("Gmail authorisation has expired."))) from exc
+        raise ToolError(f"Could not read that email: {_describe(exc)}") from exc
+    if not isinstance(message, dict) or not message.get("payload"):
+        raise ToolError("That email could not be read.")
+    headers = _headers(message)
+    sender_name, sender_email = parseaddr(headers.get("from", ""))
+    return {
+        "message_id": str(message.get("id") or message_id),
+        "thread_id": str(message.get("threadId") or ""),
+        "from": sender_name or sender_email,
+        "from_email": sender_email.strip().lower(),
+        "date": headers.get("date", ""),
+        "subject": headers.get("subject", ""),
+        "authenticated": _authenticated(headers),
+        "body": _extract_body(message.get("payload", {}), limit=EVIDENCE_BODY_CHARS),
+    }
 
 
 @tool(
@@ -386,6 +427,7 @@ async def gmail_read_thread(thread_id: str) -> dict:
         sender_name, sender_email = parseaddr(headers.get("from", ""))
         out.append(
             {
+                "message_id": str(message.get("id") or ""),
                 "from": sender_name or sender_email,
                 "from_email": sender_email,
                 "date": headers.get("date", ""),

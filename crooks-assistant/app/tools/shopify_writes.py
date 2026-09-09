@@ -10,15 +10,19 @@ on the card; it is never an argument the model supplies.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
+import re
 import time
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 from app.actions.models import Observed, Prepared
 from app.clients.shopify import ShopifyClient, ShopifyError
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, WriteSpec, tool
-from app.tools.shopify_tools import _c, hydrator
+from app.tools.shopify_tools import _c, append_note, hydrator
 
 log = logging.getLogger("crooks.shopify_writes")
 
@@ -635,3 +639,436 @@ def _decimal(value: object) -> float | None:
     if amount <= 0 or amount > 9_999_999:
         return None
     return amount
+
+
+# ------------------------------------------------------------------------ address
+#
+# The shipping address, changed to what the customer asked for and nothing else. RED
+# always: a redirected parcel is the oldest fraud there is, and a DKIM pass proves the
+# mailbox sent the mail, not that the account holder did — provenance is printed on the
+# card, never a reason to soften the gesture. The evidence is one message, read here on
+# the Mac: its sender must be the order's customer, and the postcode and street the model
+# gives must appear in its text. The changed fields are merged into the address as it is
+# now, every field is diffed, a reprint note goes on the order in the same write, and the
+# change is proven by re-reading the address. There is no undo card: "change it back" is
+# a fresh instruction with a fresh diff.
+
+ADDRESS_STATE_QUERY = """
+query CrooksAddressState($id: ID!) {
+  order(id: $id) {
+    id
+    name
+    note
+    email
+    cancelledAt
+    displayFulfillmentStatus
+    customer { displayName defaultEmailAddress { emailAddress } }
+    shippingAddress { firstName lastName company address1 address2 city province provinceCode zip country countryCodeV2 phone }
+    fulfillments(first: 5) { id status }
+  }
+}
+"""
+
+# Where the open fulfilment orders will ship. Needs a fulfilment-order scope the store may
+# not have granted; read best-effort and printed after the change, never a reason to stop it.
+DESTINATION_QUERY = """
+query CrooksFulfillmentDestination($id: ID!) {
+  order(id: $id) {
+    id
+    fulfillmentOrders(first: 5) {
+      edges { node { id status destination { address1 address2 city zip countryCode } } }
+    }
+  }
+}
+"""
+
+REPRINT_NOTE = "ADDRESS CHANGED — reprint label"
+MAX_ADDRESS_CHARS = 100
+# Shopify's MailingAddressInput, in its own names. The read side answers with countryCodeV2.
+_ADDRESS_INPUT_KEYS = ("firstName", "lastName", "company", "address1", "address2", "city", "provinceCode", "zip", "countryCode", "phone")
+# The fields that say where a parcel goes, as a fulfilment-order destination has them.
+_PLACE_KEYS = ("address1", "address2", "city", "zip", "countryCode")
+_CHANGE_WORDS = {
+    "address1": "street", "address2": "second line", "city": "town", "zip": "postcode", "countryCode": "country",
+    "provinceCode": "region", "firstName": "name", "lastName": "name", "company": "company", "phone": "phone",
+}
+_OPEN_FULFILLMENT_ORDERS = frozenset({"OPEN", "IN_PROGRESS", "SCHEDULED", "ON_HOLD"})
+_COUNTRY_CODE = re.compile(r"^[A-Za-z]{2}$")
+_PROVINCE_CODE = re.compile(r"^[A-Za-z0-9]{1,5}$")
+_PHONE = re.compile(r"^\+?[0-9 ()\-]{6,20}$")
+_WORD = re.compile(r"[a-z0-9]+")
+
+_evidence_reader = None        # async (message_id) -> the message; the Gmail read, injectable
+_destination_reads = True      # False once the store has said the fulfilment-order scope is missing
+
+
+def bind_evidence(reader) -> None:
+    """The read that turns a message id into the message. Tests hand in a fake inbox."""
+    global _evidence_reader
+    _evidence_reader = reader
+
+
+async def _evidence(message_id: str) -> dict[str, Any]:
+    reader = _evidence_reader
+    if reader is None:
+        from app.tools.gmail_tools import message_evidence
+
+        reader = message_evidence
+    return await reader(message_id)
+
+
+def _clean_field(value: object, limit: int = MAX_ADDRESS_CHARS) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) > limit or "<" in text or any(ord(ch) < 32 for ch in text):
+        raise ToolError("Address fields must be plain text, each under a hundred characters.")
+    return text
+
+
+def address_input(address: dict[str, Any] | None) -> dict[str, str]:
+    """A MailingAddressInput from an address as Shopify answers with it: the same ten fields,
+    whitespace collapsed, empty ones left out."""
+    address = address if isinstance(address, dict) else {}
+    out: dict[str, str] = {}
+    for key in _ADDRESS_INPUT_KEYS:
+        value = address.get("countryCodeV2") if key == "countryCode" and address.get("countryCodeV2") else address.get(key)
+        text = " ".join(str(value or "").split())
+        if text:
+            out[key] = text
+    return out
+
+
+def _canon(value: object, key: str) -> str:
+    text = " ".join(str(value or "").split()).casefold()
+    if key == "zip":
+        return text.replace(" ", "")
+    if key == "phone":
+        return re.sub(r"\D", "", text)
+    return text
+
+
+def address_hash(address: dict[str, Any]) -> str:
+    """Sixteen hex characters standing for an address, case and spacing aside: what the
+    fingerprint and the ledger carry instead of the street."""
+    canon = {k: _canon(address.get(k), k) for k in _ADDRESS_INPUT_KEYS}
+    return hashlib.sha256(json.dumps(canon, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def place_hash(address: dict[str, Any]) -> str:
+    """The same, for the five fields a fulfilment-order destination has."""
+    canon = {k: _canon(address.get(k), k) for k in _PLACE_KEYS}
+    return hashlib.sha256(json.dumps(canon, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def _note_hash(note: object) -> str:
+    text = (note if isinstance(note, str) else "").replace("\r\n", "\n").strip()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def address_line(address: dict[str, Any]) -> str:
+    """One line for the card: the street lines, the town, the postcode, the country when
+    it is not the store's own."""
+    parts = [address.get("address1"), address.get("address2"), address.get("city"), address.get("zip")]
+    line = ", ".join(p for p in (str(x or "").strip() for x in parts) if p)
+    country = str(address.get("countryCode") or "").upper()
+    return f"{line}, {country}" if country and country != "GB" else line
+
+
+async def _read_address_state(client: ShopifyClient, order_id: str) -> dict[str, Any]:
+    payload = await client.graphql(ADDRESS_STATE_QUERY, {"id": order_id})
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+async def _read_destination(client: ShopifyClient, order_id: str) -> str:
+    """The place hashes of the open fulfilment orders, joined; "none" when there are none;
+    "unknown" when the store would not say."""
+    global _destination_reads
+    if not _destination_reads:
+        return "unknown"
+    try:
+        payload = await client.graphql(DESTINATION_QUERY, {"id": order_id})
+    except Exception as exc:  # noqa: BLE001 — a courtesy read; the address itself is the proof
+        text = str(exc)
+        if "ACCESS_DENIED" in text.upper() or "access denied" in text.lower():
+            _destination_reads = False
+        log.info("fulfilment destination not readable for %s: %s", order_id, text[:120])
+        return "unknown"
+    edges = (((payload.get("data") or {}).get("order") or {}).get("fulfillmentOrders") or {}).get("edges") or []
+    places = []
+    for edge in edges:
+        node = edge.get("node") or {}
+        destination = node.get("destination")
+        if str(node.get("status") or "").upper() in _OPEN_FULFILLMENT_ORDERS and isinstance(destination, dict):
+            places.append(place_hash(destination))
+    return "|".join(sorted(set(places))) or "none"
+
+
+def address_fingerprint(node: dict[str, Any], destination: str) -> dict[str, Any]:
+    return {
+        "address": address_hash(address_input(node.get("shippingAddress"))),
+        "note": _note_hash(node.get("note")),
+        "fulfillment": str(node.get("displayFulfillmentStatus") or ""),
+        "cancelled": bool(node.get("cancelledAt")),
+        "destination": destination,
+    }
+
+
+async def _observe_address(execution: dict) -> Observed:
+    client = _c()
+    order_id = str(execution["order_id"])
+    node, destination = await asyncio.gather(_read_address_state(client, order_id), _read_destination(client, order_id))
+    return Observed(fingerprint=address_fingerprint(node, destination), entity=None)
+
+
+async def _execute_address(execution: dict) -> dict:
+    client = _c()
+    order_id = str(execution["order_id"])
+    payload = await client.mutate(
+        "order_shipping_address_set", {"id": order_id, "address": dict(execution["address"]), "note": str(execution["note"])},
+    )
+    hydrator().forget(order_id)
+    order = ((payload.get("data") or {}).get("orderUpdate") or {}).get("order") or {}
+    if order.get("id") != order_id:
+        raise ShopifyError("Shopify did not confirm which order it updated.")
+    return {"order_id": order_id}
+
+
+def _verify_address(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
+    """The address on the order is the staged one: proven. The note and the fulfilment
+    destination are courtesies, said out loud when they did not follow."""
+    if observed.get("address") != execution.get("address_hash"):
+        return False, ""
+    notes = []
+    if observed.get("note") != execution.get("note_hash"):
+        notes.append("The reprint note didn't stick; add it by hand.")
+    destination = str(observed.get("destination") or "")
+    if destination not in ("", "none", "unknown") and any(part != execution.get("place_hash") for part in destination.split("|")):
+        notes.append("The fulfilment destination still shows the old address; check it before printing the label.")
+    return True, " ".join(notes)
+
+
+def _present_address(proposal) -> dict:
+    s = proposal.summary
+    facts = [
+        {"label": "Customer", "value": str(s.get("customer") or "")},
+        {"label": "From", "value": str(s.get("from_line") or "")},
+        {"label": "To", "value": str(s.get("to_line") or ""), "tone": "warn"},
+        {"label": "Changes", "value": ", ".join(str(c) for c in s.get("changes") or [])},
+        {"label": "Cited", "value": str(s.get("cited") or ""), "tone": "" if s.get("evidence") else "warn"},
+        {"label": "Note", "value": REPRINT_NOTE},
+    ]
+    return {
+        "title": "Change the address", "summary": "",
+        "detail": "Not shipped yet. If a label is already printed, reprint it.",
+        "facts": facts, "done_title": "Address changed",
+    }
+
+
+def _when(date_header: str) -> str:
+    try:
+        return parsedate_to_datetime(date_header).strftime("%-d %b %H:%M")
+    except (TypeError, ValueError, IndexError):
+        return str(date_header or "")[:16]
+
+
+def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[str], list[str]]:
+    """Which of the changed parts the message's own text contains, and which it does not.
+    The postcode with its spaces removed; the street by its number and its longest word,
+    so "12 Baker St" in the mail matches "12 Baker Street" on the card."""
+    text = " ".join(str(body or "").split()).casefold()
+    squashed = text.replace(" ", "")
+    found, missing = [], []
+    if "zip" in changed:
+        (found if _canon(new.get("zip"), "zip") and _canon(new.get("zip"), "zip") in squashed else missing).append("postcode")
+    if "address1" in changed:
+        tokens = _WORD.findall(str(new.get("address1") or "").casefold())
+        number = tokens[0] if tokens else ""
+        word = max((t for t in tokens if t.isalpha() and len(t) >= 3), key=len, default="")
+        ok = bool(tokens) and re.search(rf"(?<![a-z0-9]){re.escape(number)}(?![a-z0-9])", text) is not None and (not word or word in text)
+        (found if ok else missing).append("street")
+    if "city" in changed and not ({"zip", "address1"} & changed):
+        city = _canon(new.get("city"), "city")
+        (found if city and city in text else missing).append("town")
+    return found, missing
+
+
+@tool(
+    name="shopify_order_shipping_address_set",
+    description=(
+        "Prepare a change to one order's shipping address, before it ships. Give only the parts "
+        "that change; the Mac merges them into the address as it is now and prints the difference. "
+        "When the new address came from an email, pass that message's message_id: the Mac reads "
+        "the message itself and refuses unless the postcode and street appear in it. Staged for "
+        "the owner to apply with a hold on the tablet; nothing changes by calling it."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "evidence_message_id": {"type": "string", "maxLength": 40, "description": "The message_id of the customer's email giving the new address, when there is one."},
+            "address1": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "The new first line: number and street."},
+            "address2": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "The new second line (flat, building), if any."},
+            "city": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "The new town or city."},
+            "postcode": {"type": "string", "maxLength": 12, "description": "The new postcode."},
+            "country_code": {"type": "string", "maxLength": 2, "description": "Two-letter country code, only when the country changes."},
+            "province_code": {"type": "string", "maxLength": 5, "description": "Region or state code, only when the country needs one."},
+            "name": {"type": "string", "maxLength": 80, "description": "The recipient's name, only when it changes."},
+            "company": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Company or building name, only when it changes."},
+            "phone": {"type": "string", "maxLength": 20, "description": "Delivery phone number, only when it changes."},
+        },
+        "required": ["order_id"],
+    },
+    tier=Tier.RED,
+    issued_id_args=("order_id", "evidence_message_id"),
+    write=WriteSpec(
+        operation="order_shipping_address_set",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="order_shipping_address_set",
+        observe=_observe_address,
+        execute=_execute_address,
+        present=_present_address,
+        entity=_entity_after,
+        verify=_verify_address,
+        op_class="irreversible",
+        reversible=False,
+        spoken_success="Changed the address on order {label}. Reprint the label if one is printed.",
+        spoken_failure="I couldn't confirm the address change. Check the order before asking again.",
+        spoken_stale="The order changed since this was prepared. Nothing was sent.",
+    ),
+)
+async def shopify_order_shipping_address_set(
+    order_id: str, evidence_message_id: str = "", address1: str = "", address2: str = "", city: str = "", postcode: str = "",
+    country_code: str = "", province_code: str = "", name: str = "", company: str = "", phone: str = "",
+) -> Prepared:
+    """Prepare, never send: the address as it is now, the parts that change merged in, the
+    evidence read and checked, the diff printed, and the fingerprint the engine must see
+    again before it sends."""
+    client = _c()
+    given = {k: _clean_field(v) for k, v in {
+        "address1": address1, "address2": address2, "city": city, "zip": postcode, "countryCode": country_code,
+        "provinceCode": province_code, "name": name, "company": company, "phone": phone,
+    }.items()}
+    given["zip"] = given["zip"].upper()
+    if len(given["zip"]) > 12:
+        raise ToolError("That postcode is too long.")
+    if given["countryCode"] and not _COUNTRY_CODE.match(given["countryCode"]):
+        raise ToolError("country_code must be two letters, like GB.")
+    if given["provinceCode"] and not _PROVINCE_CODE.match(given["provinceCode"]):
+        raise ToolError("province_code must be a short code, like ENG or CA.")
+    if given["phone"] and not _PHONE.match(given["phone"]):
+        raise ToolError("The phone number must be digits, with an optional leading +.")
+
+    node = await _read_address_state(client, str(order_id))
+    label = str(node.get("name") or "")
+    if node.get("cancelledAt"):
+        raise ToolError(f"Order {label} is cancelled; its address does not matter now.")
+    status = str(node.get("displayFulfillmentStatus") or "").upper()
+    shipped = status in ("FULFILLED", "PARTIALLY_FULFILLED") or any(
+        str(f.get("status") or "").upper() == "SUCCESS" for f in node.get("fulfillments") or [] if isinstance(f, dict)
+    )
+    if shipped:
+        raise ToolError(f"Order {label} has shipped; the address cannot be changed from here. Contact the carrier.")
+    current = address_input(node.get("shippingAddress"))
+    if not current.get("address1"):
+        raise ToolError(f"Order {label} has no shipping address to change.")
+
+    # The merge: a new street brings its own second line (an old flat number on a new street
+    # is a wrong address); a new country drops a region code that belonged to the old one.
+    new = dict(current)
+    if given["address1"]:
+        new["address1"] = given["address1"]
+        new.pop("address2", None)
+        if given["address2"]:
+            new["address2"] = given["address2"]
+    elif given["address2"]:
+        new["address2"] = given["address2"]
+    if given["city"]:
+        new["city"] = given["city"]
+    if given["zip"]:
+        new["zip"] = given["zip"]
+    if given["countryCode"] and given["countryCode"].upper() != current.get("countryCode"):
+        new["countryCode"] = given["countryCode"].upper()
+        new.pop("provinceCode", None)
+    if given["provinceCode"]:
+        new["provinceCode"] = given["provinceCode"].upper()
+    if given["name"]:
+        first, _, last = given["name"].partition(" ")
+        new["firstName"] = first
+        new.pop("lastName", None)
+        if last:
+            new["lastName"] = last
+    if given["company"]:
+        new["company"] = given["company"]
+    if given["phone"]:
+        new["phone"] = given["phone"]
+    if not new.get("countryCode"):
+        raise ToolError(f"Order {label}'s address has no country; set it in Admin first.")
+
+    changed = {k for k in _ADDRESS_INPUT_KEYS if _canon(new.get(k), k) != _canon(current.get(k), k)}
+    if not changed:
+        raise ToolError(f"That is the address already on order {label}; nothing to change.")
+    changes = []
+    for key in _ADDRESS_INPUT_KEYS:
+        if key in changed:
+            word = _CHANGE_WORDS[key] + (" cleared" if not new.get(key) else "")
+            if word not in changes:
+                changes.append(word)
+
+    # The evidence: read here, never trusted from the model's summary of it.
+    customer_email = str(node.get("email") or ((node.get("customer") or {}).get("defaultEmailAddress") or {}).get("emailAddress") or "").strip().lower()
+    evidence = None
+    message_id = str(evidence_message_id or "").strip()
+    if message_id:
+        evidence = await _evidence(message_id)
+        sender = str(evidence.get("from_email") or "").strip().lower()
+        if not customer_email or sender != customer_email:
+            raise ToolError(
+                f"That email is from {sender or 'an unknown sender'}, not the customer on order {label}. "
+                "The address was not changed; do it in Admin if you are sure."
+            )
+        found, missing = _mentions(str(evidence.get("body") or ""), new, changed)
+        if missing:
+            raise ToolError(
+                f"The email does not contain the new {' or '.join(missing)}. Read it again, or change the address in Admin."
+            )
+        cited = (
+            f"Email from {sender}, {_when(str(evidence.get('date') or ''))} · "
+            f"{'verified sender' if evidence.get('authenticated') else 'sender not verified'}"
+            + (f" · {' and '.join(found)} found in the message" if found else "")
+        )
+    else:
+        cited = "none — as dictated"
+
+    note = append_note(str(node.get("note") or ""), REPRINT_NOTE) if REPRINT_NOTE not in str(node.get("note") or "") else str(node.get("note") or "")
+    destination = await _read_destination(client, str(order_id))
+    from_line = address_line(current)
+    to_line = address_line(new)
+    digits = label.rsplit("-", 1)[-1].lstrip("#")
+    read_back = f"change the address on order {digits} to {to_line}"
+    execution = {
+        "order_id": str(order_id), "address": new, "note": note,
+        "address_hash": address_hash(new), "place_hash": place_hash(new), "note_hash": _note_hash(note),
+    }
+    pii = [v for v in (current.get("address1"), current.get("address2"), current.get("zip"), new.get("address1"), new.get("address2"), new.get("zip"),
+                       new.get("phone"), given["name"]) if v]
+    return Prepared(
+        execution=execution,
+        before=address_fingerprint(node, destination),
+        expected_after={"address": execution["address_hash"]},
+        entity_ref=str(order_id),
+        entity_label=label,
+        summary={
+            "customer": str((node.get("customer") or {}).get("displayName") or ""),
+            "from_line": from_line, "to_line": to_line, "changes": changes, "cited": cited,
+            "evidence": bool(evidence), "verified_sender": bool(evidence and evidence.get("authenticated")),
+            "read_back": read_back, "pii": pii,
+            "ledger": {
+                "line1": "address1" in changed, "post": "zip" in changed, "town": "city" in changed, "country": new.get("countryCode", ""),
+                "evidence": bool(evidence), "verified_sender": bool(evidence and evidence.get("authenticated")),
+                "destination_known": destination != "unknown",
+            },
+        },
+    )
