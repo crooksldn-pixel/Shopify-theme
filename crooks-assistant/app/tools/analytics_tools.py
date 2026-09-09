@@ -323,10 +323,14 @@ EMAIL_TIMEOUT_S = 7.0
 EMAIL_THREADS_PER_CUSTOMER = 3
 
 
-def bind_email(threads_for=None, replied=None) -> None:
-    global _threads_for, _replied
+_reply_state = None       # async (thread_id) -> the thread's own direction and stamps, or None
+
+
+def bind_email(threads_for=None, replied=None, reply_state=None) -> None:
+    global _threads_for, _replied, _reply_state
     _threads_for = threads_for
     _replied = replied
+    _reply_state = reply_state
     _email_cache.clear()
 
 
@@ -338,18 +342,73 @@ async def _customer_threads(email: str, terms: list[str], days: int, *, clock) -
         return held[1]
     found = await _threads_for(sender=email, terms=terms, days=days)
     threads = [t for t in (found.get("threads") or []) if isinstance(t, dict)]
+    looked_at = threads[:EMAIL_THREADS_PER_CUSTOMER]
     replied = None
-    if found.get("available") and threads and _replied is not None:
-        flags = []
-        for t in threads[:EMAIL_THREADS_PER_CUSTOMER]:
-            try:
-                flags.append(await _replied(str(t.get("thread_id") or "")))
-            except Exception:  # noqa: BLE001 — unknown is an honest answer
-                flags.append(None)
-        replied = any(f is True for f in flags) if any(f is not None for f in flags) else None
-    out = {"available": bool(found.get("available")), "reason": found.get("reason"), "threads": threads[:EMAIL_THREADS_PER_CUSTOMER], "count": len(threads), "replied": replied}
+    states: list[dict[str, Any]] = []
+    if found.get("available") and looked_at:
+        for t in looked_at:
+            thread_id = str(t.get("thread_id") or "")
+            if not thread_id:
+                continue
+            state = None
+            if _reply_state is not None:
+                try:
+                    state = await _reply_state(thread_id)
+                except Exception:  # noqa: BLE001 — unknown is an honest answer
+                    state = None
+            if state is not None:
+                states.append(state)
+            elif _replied is not None:
+                # No per-message view of this thread: fall back to "did anything go out",
+                # which is weaker, and is recorded as weaker (no stamps to fold).
+                try:
+                    flag = await _replied(thread_id)
+                except Exception:  # noqa: BLE001
+                    flag = None
+                if flag is not None:
+                    replied = bool(replied) or bool(flag)
+    folded = _fold_reply_states(states)
+    if folded["checked_threads"]:
+        replied = folded["has_reply_after_latest_inbound"]
+    out = {
+        "available": bool(found.get("available")), "reason": found.get("reason"), "threads": looked_at,
+        "count": len(threads), "replied": replied, **folded,
+    }
     _email_cache[key] = (now, out)
     return out
+
+
+def _fold_reply_states(states: list[dict[str, Any]]) -> dict[str, Any]:
+    """Several threads, one customer, one answer — WITHOUT merging the threads.
+
+    A reply we sent in one thread does not answer a newer message that arrived in another.
+    So the fold takes the latest inbound across all of them and the latest outbound across
+    all of them, and asks whether we have spoken since they last did. That is the question
+    "who is waiting on a reply" actually asks, and the September session showed the
+    per-thread answer getting it wrong.
+    """
+    inbound = [s["latest_inbound_at"] for s in states if s.get("latest_inbound_at")]
+    outbound = [s["latest_outbound_at"] for s in states if s.get("latest_outbound_at")]
+    latest_in = max(inbound) if inbound else None
+    latest_out = max(outbound) if outbound else None
+    answered = bool(latest_in is not None and latest_out is not None and latest_out >= latest_in)
+    if latest_in is None and latest_out is None:
+        direction = "none"
+    elif latest_out is None:
+        direction = "inbound"
+    elif latest_in is None:
+        direction = "outbound"
+    else:
+        direction = "inbound" if latest_in > latest_out else "outbound"
+    return {
+        "checked_threads": len(states),
+        "thread_count": len(states),
+        "latest_inbound_at": latest_in,
+        "latest_outbound_at": latest_out,
+        "latest_direction": direction,
+        "has_reply_after_latest_inbound": answered,
+        "needs_reply": bool(latest_in is not None and not answered),
+    }
 
 
 @tool(
@@ -441,8 +500,17 @@ async def email_query(set_id: str, days: int = 30) -> dict:
             "customer_id": entry["customer_id"], "customer_name": entry.get("name"), "customer_email": entry.get("email"), "orders": entry["orders"][:5],
             "emailed": has_mail, "threads": int(mail.get("count") or 0), "replied": mail.get("replied"), "last_subject": str(last.get("subject") or "")[:80], "last_date": str(last.get("date") or "")[:32],
             "last_thread_id": str(last.get("thread_id") or ""), "checked": bool(mail.get("available")),
+            # Across every thread this customer has with us, never merged: who spoke last,
+            # when, and whether we have answered since they did.
+            "thread_count": int(mail.get("thread_count") or 0),
+            "latest_inbound_at": mail.get("latest_inbound_at"),
+            "latest_outbound_at": mail.get("latest_outbound_at"),
+            "latest_direction": mail.get("latest_direction") or ("none" if not has_mail else "unknown"),
+            "has_reply_after_latest_inbound": mail.get("has_reply_after_latest_inbound"),
+            "needs_reply": bool(mail.get("needs_reply")),
         })
-    rows.sort(key=lambda r: (not r["emailed"], str(r.get("customer_name") or "")))
+    # Waiting on us first: that is what the question is usually for.
+    rows.sort(key=lambda r: (not r.get("needs_reply"), not r["emailed"], str(r.get("customer_name") or "")))
     unchecked = unavailable + len(missing) + len(guests)
     notes = []
     if unavailable:
@@ -453,16 +521,19 @@ async def email_query(set_id: str, days: int = 30) -> dict:
         notes.append(f"{len(guests)} order(s) have no customer record to look up")
     result: dict[str, Any] = {
         "set_id": ws.set_id, "set_label": ws.label, "kind": ws.kind, "days": days, "customers": len(by_customer),
-        "counts": {"contacted": sum(1 for r in rows if r["emailed"]), "not_contacted": sum(1 for r in rows if not r["emailed"] and r["checked"]), "replied": sum(1 for r in rows if r["replied"]), "unchecked": unchecked},
+        "counts": {"contacted": sum(1 for r in rows if r["emailed"]), "not_contacted": sum(1 for r in rows if not r["emailed"] and r["checked"]), "replied": sum(1 for r in rows if r["replied"]), "needs_reply": sum(1 for r in rows if r.get("needs_reply")), "unchecked": unchecked},
         "rows": rows, "source": f"Gmail threads from each customer in the last {days} days, mentioning their order", "_ms": round((time.perf_counter() - started) * 1000, 1),
         "note": ("; ".join(notes) + "; they are counted in neither set." if notes else ""),
     }
-    for name, members, words in (("contacted", contacted, "who have emailed us"), ("not_contacted", not_contacted, "who have not emailed us"), ("replied", replied, "we have replied to")):
+    waiting = [m for r in rows if r.get("needs_reply") for m in ([r["customer_id"]] if ws.kind == "customers" else by_customer[r["customer_id"]]["order_ids"])]
+    for name, members, words in (("contacted", contacted, "who have emailed us"), ("not_contacted", not_contacted, "who have not emailed us"), ("replied", replied, "we have replied to"), ("needs_reply", waiting, "waiting on a reply from us")):
         if members:
             # Side sets beside the parent: "these" stays the set the owner asked about; the
             # model names a derived set by its id when the owner says "the rest".
             made = working_sets.derive(session, ws, members=members, label=f"{ws.label} — {words}"[:80], step="correlate", detail={"tool": "email_query", "which": name, "days": days}, focus=False)
             result[f"set_{name}"] = made.public()
+            if name == "needs_reply":
+                result["needs_reply_set_id"] = made.set_id
             timeline.emit("working_set", session_id=session.session_id, turn_id=session.turn_id or None, set_id=made.set_id, set_kind=made.kind, count=made.count, label=made.label, parent=ws.set_id, step="correlate", tool="email_query", which=name)
     # The threads themselves, as a set of emails: what "archive those" would act on.
     thread_ids: list[str] = []

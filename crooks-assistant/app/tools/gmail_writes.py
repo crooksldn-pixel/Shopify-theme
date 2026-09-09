@@ -195,9 +195,15 @@ async def thread_context(thread_id: str) -> dict[str, Any]:
     tokens_sent = {m["headers"].get("message-id", "").strip() for m in messages if "SENT" in m["labels"] and m["headers"].get("message-id", "").strip()}
     drafts = []
     for m in messages:
-        if "DRAFT" in m["labels"] and sender(m) == me and _MESSAGE_ID.match(m["headers"].get("message-id", "").strip()):
+        # A draft of ours in this thread. Its Message-ID is kept when it is well formed —
+        # that is how a draft is matched to the proposal that made it — but a draft whose
+        # header Gmail rewrote is still a draft, and is listed with an empty token so the
+        # proof can match it by the id Gmail handed back instead. A send never guesses
+        # between drafts: `_the_one_draft` still refuses when there is more than one.
+        if "DRAFT" in m["labels"] and sender(m) == me:
+            header = m["headers"].get("message-id", "").strip()
             to_name, to_email = parseaddr(m["headers"].get("to", ""))
-            drafts.append({"message_id": m["id"], "token": m["headers"]["message-id"].strip(), "to": to_email.strip().lower(), "to_name": to_name.strip(), "subject": m["headers"].get("subject", "")})
+            drafts.append({"message_id": m["id"], "token": header if _MESSAGE_ID.match(header) else "", "to": to_email.strip().lower(), "to_name": to_name.strip(), "subject": m["headers"].get("subject", "")})
     last_in = inbound[-1] if inbound else None
     head = (last_in or (real[-1] if real else messages[-1]))["headers"]
     from_name, from_email = parseaddr(head.get("from", ""))
@@ -215,9 +221,19 @@ async def thread_context(thread_id: str) -> dict[str, Any]:
     }
 
 
-def _thread_fingerprint(ctx: dict[str, Any], token: str, sent_message_id: str = "") -> dict[str, Any]:
+def _thread_fingerprint(ctx: dict[str, Any], token: str, sent_message_id: str = "", drafted_message_id: str = "") -> dict[str, Any]:
+    """The thread reduced to what a proof needs: what its last real message is, whether OUR
+    draft is in it, and whether OUR message has gone.
+
+    A draft is ours by the Message-ID we generated, or — once Gmail has answered the create
+    with an id of its own — by that id. Gmail may rewrite a Message-ID header on the way in;
+    a draft it told us it made, sitting in the thread it told us it is in, is stronger proof
+    than the header, not weaker. Before the change there is no such id, so the precondition
+    counts nothing: this can only ever prove a draft that this commit actually created.
+    """
     sent = token in ctx["tokens_sent"] or (bool(sent_message_id) and sent_message_id in ctx["sent_ids"])
-    return {"last": ctx["last"], "drafts": sum(1 for d in ctx["drafts"] if d["token"] == token), "sent": 1 if sent else 0}
+    ours = [d for d in ctx["drafts"] if (d["token"] and d["token"] == token) or (drafted_message_id and d.get("message_id") == drafted_message_id)]
+    return {"last": ctx["last"], "drafts": len(ours), "sent": 1 if sent else 0}
 
 
 async def _draft_text(draft_id: str) -> tuple[str, dict[str, str]]:
@@ -232,7 +248,7 @@ async def _draft_text(draft_id: str) -> tuple[str, dict[str, str]]:
 
 async def _observe_thread(execution: dict) -> Observed:
     ctx = await thread_context(str(execution["thread_id"]))
-    fingerprint = _thread_fingerprint(ctx, str(execution["token"]), str(execution.get("sent_message_id") or ""))
+    fingerprint = _thread_fingerprint(ctx, str(execution["token"]), str(execution.get("sent_message_id") or ""), str(execution.get("drafted_message_id") or ""))
     if execution.get("draft_id"):
         # The card printed the draft's text; the draft must still be that text when it goes.
         try:
@@ -243,26 +259,37 @@ async def _observe_thread(execution: dict) -> Observed:
     return Observed(fingerprint=fingerprint, entity=None)
 
 
-async def _token_state(token: str, sent_message_id: str = "") -> dict[str, int]:
+async def _token_state(token: str, sent_message_id: str = "", drafted_draft_id: str = "") -> dict[str, int]:
     """For a message outside any thread: how many drafts and how many sent messages carry
     this token, by Gmail's own search on the Message-ID — and, once Gmail has answered a
-    send with an id, that message's own labels."""
+    send (or a draft) with an id, that record's own existence.
+
+    The id fallback exists because Gmail may rewrite the Message-ID header it was given. A
+    draft Gmail says it created, which Gmail still holds when asked for it by that id, is
+    proof; the fallback is only ever consulted for an id THIS commit was handed back."""
     client = _g()
     drafts, sent = await asyncio.gather(
         asyncio.to_thread(client.list_drafts, f"rfc822msgid:{token.strip('<>')}"),
         asyncio.to_thread(client.find_messages, f"rfc822msgid:{token.strip('<>')} in:sent"),
     )
+    held = len(drafts)
+    if not held and drafted_draft_id:
+        try:
+            found = await asyncio.to_thread(client.get_draft, drafted_draft_id)
+            held = 1 if (found or {}).get("id") else 0
+        except GmailError:
+            held = 0
     gone = 1 if sent else 0
     if not gone and sent_message_id:
         try:
             gone = 1 if "SENT" in await asyncio.to_thread(client.message_labels, sent_message_id) else 0
         except GmailError:
             gone = 0
-    return {"drafts": len(drafts), "sent": gone}
+    return {"drafts": held, "sent": gone}
 
 
 async def _observe_token(execution: dict) -> Observed:
-    fingerprint = await _token_state(str(execution["token"]), str(execution.get("sent_message_id") or ""))
+    fingerprint = await _token_state(str(execution["token"]), str(execution.get("sent_message_id") or ""), str(execution.get("drafted_draft_id") or ""))
     if execution.get("draft_id"):
         try:
             body, _ = await _draft_text(str(execution["draft_id"]))
@@ -351,6 +378,33 @@ async def _settle_send(execution: dict, sent: dict) -> None:
                 return
         except (ToolError, GmailError) as exc:
             log.info("settle: %s", exc)
+        await asyncio.sleep(SETTLE_POLL_S)
+
+
+async def _settle_draft(execution: dict, created: dict) -> None:
+    """Gmail lists a new draft a moment after answering the create. Wait for it, bounded, so
+    the proving read looks at a thread that has it — rather than calling a draft that exists
+    "not created". The ids Gmail handed back are kept for the proof.
+
+    Nothing here can make an absent draft look present: if the poll never sees it, the proof
+    runs on the same read it would have run on, and the change settles UNVERIFIED."""
+    if created.get("message_id"):
+        execution["drafted_message_id"] = str(created["message_id"])
+    if created.get("draft_id"):
+        execution["drafted_draft_id"] = str(created["draft_id"])
+    if execution.get("delete"):
+        return
+    deadline = time.monotonic() + SETTLE_S
+    while time.monotonic() < deadline:
+        try:
+            if execution.get("thread_id"):
+                ctx = await thread_context(str(execution["thread_id"]))
+                if _thread_fingerprint(ctx, str(execution["token"]), "", str(execution.get("drafted_message_id") or ""))["drafts"] == 1:
+                    return
+            elif (await _token_state(str(execution["token"]), "", str(execution.get("drafted_draft_id") or "")))["drafts"] == 1:
+                return
+        except (ToolError, GmailError) as exc:
+            log.info("settle draft: %s", exc)
         await asyncio.sleep(SETTLE_POLL_S)
 
 
@@ -461,7 +515,7 @@ _REPLY_SCHEMA = {
     issued_id_args=("thread_id", "order_id"),
     write=WriteSpec(
         operation="gmail_draft_reply", entity_kind="email", entity_arg="thread_id", mutation="gmail:draft",
-        observe=_observe_thread, execute=_execute_draft, present=_present_email, entity=_entity_email, verify=_verify_drafted,
+        observe=_observe_thread, execute=_execute_draft, present=_present_email, entity=_entity_email, verify=_verify_drafted, settle=_settle_draft,
         reversible=True, undo=_undo_draft, op_class="reversible", risk=_draft_risk,
         spoken_success="Draft saved to {to}. It's in Gmail, not sent.", spoken_undo_success="Draft deleted.",
         spoken_failure="I couldn't confirm the draft was saved. Check Gmail's drafts.",
@@ -564,7 +618,7 @@ async def _recipient(order_id: str, customer_id: str) -> dict[str, str]:
     issued_id_args=("order_id", "customer_id"),
     write=WriteSpec(
         operation="gmail_draft_new", entity_kind="email", entity_arg="order_id", mutation="gmail:draft",
-        observe=_observe_token, execute=_execute_draft, present=_present_email, entity=_entity_email, verify=_verify_drafted,
+        observe=_observe_token, execute=_execute_draft, present=_present_email, entity=_entity_email, verify=_verify_drafted, settle=_settle_draft,
         reversible=True, undo=_undo_draft, op_class="reversible",
         spoken_success="Draft saved to {to}. It's in Gmail, not sent.", spoken_undo_success="Draft deleted.",
         spoken_failure="I couldn't confirm the draft was saved. Check Gmail's drafts.",

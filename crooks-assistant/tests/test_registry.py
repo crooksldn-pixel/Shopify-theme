@@ -149,8 +149,18 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # four batch tools (tags on and off a set of orders, a set of threads archived, a draft
     # to each customer) are the bulk versions of changes already offered singly; together
     # they cost about 1.7 KB and are withheld, like every write, while changes are off.
-    assert total <= 22_700, f"the tool block is {total} bytes"
+    #
+    # 24,300 covers what the September session showed missing and nothing else:
+    # shopify_order_address (the street address the owner asked for and was told did not
+    # exist), gmail_find_in_email (a term checked across every thread, with coverage
+    # reported) and batch_email_send (the bulk send, which shares batch_email_drafts's
+    # schema object). About 1.7 KB together, half of it paid back by tightening the address
+    # tool's per-field descriptions. The block is what every turn ON THE MODEL PATH pays —
+    # a fast-lane turn pays none of it — and a tool added here has to earn its bytes.
+    assert total <= 24_300, f"the tool block is {total} bytes"
     batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
-    assert batch <= 1_800, f"the batch tools' schemas are {batch} bytes; the rules belong in the prompt"
+    # 2,300 covers the fifth batch tool — the same campaign as batch_email_drafts, sent
+    # rather than saved — which shares its schema object and adds two lines of description.
+    assert batch <= 2_300, f"the batch tools' schemas are {batch} bytes; the rules belong in the prompt"
     analytic = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith(("commerce_", "inventory_query")))
     assert analytic <= 5_000, f"the read layer's schemas are {analytic} bytes; the detail belongs in commerce_capabilities"

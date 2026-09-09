@@ -241,6 +241,46 @@ async def shopify_order_detail(order_id: str) -> dict:
 
 
 @tool(
+    name="shopify_order_address",
+    description=(
+        "The full delivery address on an order — street lines, town, county, whole postcode, "
+        "country. Other order tools give only the town and outward postcode; use this when the "
+        "owner asks for the address itself."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {"order_id": {"type": "string", "description": "The order_id from a search."}},
+        "required": ["order_id"],
+    },
+    tier=Tier.AMBER,
+    issued_id_args=("order_id",),
+)
+async def shopify_order_address(order_id: str) -> dict:
+    """The address as the card already has it, said out loud because it was asked for.
+
+    Nothing new is read: the order is the same read every other order question makes. What is
+    different is that this result is NOT put through the redaction every other order result
+    is, which is the whole reason it is a tool of its own — an owner who asks for a street
+    address gets the street address, and the fact that he asked is on the timeline.
+    Observability still writes the SHAPE of a result and never its contents
+    (app/tools/dispatch.py), so no address reaches a log through this.
+    """
+    order = await hydrator().order(str(order_id), budget_s=MODEL_BUDGET_S)
+    address = order.get("shipping_address") if isinstance(order.get("shipping_address"), dict) else None
+    if not address:
+        return {"order_id": str(order_id), "order_number": order.get("order_number"), "shipping_address": None,
+                "written": "", "note": "There is no delivery address on that order."}
+    parts = [*(address.get("lines") or []), address.get("city"), address.get("province"), address.get("zip"), address.get("country")]
+    return {
+        "order_id": str(order_id), "order_number": order.get("order_number"),
+        "shipping_address": address,
+        # One line, as it would be written on a label — what a spoken answer needs.
+        "written": ", ".join(str(p).strip() for p in parts if str(p or "").strip()),
+        "phone": address.get("phone"),
+    }
+
+
+@tool(
     name="shopify_customer_history",
     description=(
         "A customer's history: order count, lifetime spend, first order, their last five orders "

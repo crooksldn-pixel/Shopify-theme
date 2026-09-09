@@ -21,10 +21,16 @@ from app.observability.timeline import read_events
 # The classes a failed or partial turn is filed under, in the order they are tested.
 CLASSES = (
     "STT_ERROR", "TIMEOUT", "PERMISSION_ERROR", "MISSING_CAPABILITY", "FALSE_UNSUPPORTED", "TOOL_ERROR", "VERIFICATION_ERROR",
+    # What the request was FOR, held against what the turn did (app/observability/contract.py).
+    "FALSE_SUCCESS", "UNFULFILLED_ACTION", "ACTION_MISMATCH", "UI_INTENT_UNFULFILLED",
+    "DATA_FIELD_UNAVAILABLE", "INTENT_DIVERGENCE", "PARTIAL_COVERAGE",
     "TOOL_SELECTION_ERROR", "UI_RENDER_ERROR", "UI_NAVIGATION_PROBLEM", "CONTEXT_INCOMPLETE", "INTENT_ERROR", "UNKNOWN",
 )
 SEVERITY = {
-    "VERIFICATION_ERROR": 5, "TOOL_ERROR": 4, "TIMEOUT": 4, "PERMISSION_ERROR": 4, "UI_RENDER_ERROR": 4, "FALSE_UNSUPPORTED": 4,
+    "FALSE_SUCCESS": 6, "ACTION_MISMATCH": 6,
+    "VERIFICATION_ERROR": 5, "UNFULFILLED_ACTION": 5,
+    "TOOL_ERROR": 4, "TIMEOUT": 4, "PERMISSION_ERROR": 4, "UI_RENDER_ERROR": 4, "FALSE_UNSUPPORTED": 4,
+    "UI_INTENT_UNFULFILLED": 3, "DATA_FIELD_UNAVAILABLE": 3, "INTENT_DIVERGENCE": 3, "PARTIAL_COVERAGE": 2,
     "STT_ERROR": 3, "MISSING_CAPABILITY": 3, "UNKNOWN": 3,
     "TOOL_SELECTION_ERROR": 2, "CONTEXT_INCOMPLETE": 2, "INTENT_ERROR": 2, "UI_NAVIGATION_PROBLEM": 2,
 }
@@ -33,6 +39,13 @@ COMPONENT = {
     "PERMISSION_ERROR": "the write boundary (CROOKS_WRITES_ENABLED, allow-list, scopes, Tailscale identity)",
     "MISSING_CAPABILITY": "the tool registry (app/tools)", "TOOL_ERROR": "the Shopify / Gmail clients (app/clients, app/tools)",
     "FALSE_UNSUPPORTED": "the model's use of the read layer and the batch tools (system prompt, commerce_capabilities)",
+    "FALSE_SUCCESS": "the action engine and the prompt: a change reported as made that was never staged (app/actions, system prompt)",
+    "UNFULFILLED_ACTION": "the write tools: a change asked for that nothing staged and nothing refused (app/tools)",
+    "ACTION_MISMATCH": "the model's tool choice: a different change staged from the one asked for (system prompt, tool descriptions)",
+    "UI_INTENT_UNFULFILLED": "the controlled UI (app/presentation.py, web/ui.js): the screen could carry what was asked for",
+    "DATA_FIELD_UNAVAILABLE": "the read models (app/context, app/tools): a field said to be missing that a tool returns",
+    "INTENT_DIVERGENCE": "the prompt: the answer addressed something the request did not ask about",
+    "PARTIAL_COVERAGE": "the read that reported a subset without the answer saying so",
     "VERIFICATION_ERROR": "the action engine's proof (app/actions/engine.py)", "TOOL_SELECTION_ERROR": "the model's tool use (system prompt, tool descriptions)",
     "UI_RENDER_ERROR": "the tablet renderer (web/ui.js, app/presentation.py)", "UI_NAVIGATION_PROBLEM": "the tablet's screens (web/app.js)",
     "CONTEXT_INCOMPLETE": "context hydration (app/context/order.py, /context route)", "INTENT_ERROR": "the model's reading of the request (system prompt, normaliser)",
@@ -213,6 +226,8 @@ class Turn:
     claims: list[dict[str, Any]] = field(default_factory=list)
     batches: list[dict[str, Any]] = field(default_factory=list)
     submitted: dict[str, Any] | None = None   # the tablet's turn_submitted, paired by order
+    # What the request was for (app/observability/contract.py), set by the classifier.
+    contract: str = "READ_INTENT"
     classes: list[str] = field(default_factory=list)
     signals: list[str] = field(default_factory=list)
     outcome: str = "successful"
@@ -527,6 +542,105 @@ def _turn_in_flight(turns: dict[str, Turn], order: list[str], event: dict[str, A
 # -------------------------------------------------------------------- classification
 
 
+def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
+    """The request contract, held against what the turn actually did.
+
+    This is the section of the report that would have caught the September turn which asked
+    for two items to be added to an order, called nothing, staged nothing, and answered as
+    though it had. Words and counts only.
+    """
+    from app.observability import contract as contract_mod
+
+    classes: list[str] = []
+    signals: list[str] = []
+    question, answer = turn.question, turn.answer
+    ui_asked = "UI_INTENT" in ()  # placeholder kept out of the way; the regex does the work
+    kind = contract_mod.contract_of(question, ui_asked=ui_asked)
+    turn.contract = kind
+    staged = [p for p in turn.proposals if p.proposal_id]
+    settled = [p for p in staged if p.status in ("VERIFIED", "EXECUTED")]
+
+    if kind == contract_mod.WRITE_INTENT:
+        if contract_mod.reports_success(answer) and not settled:
+            classes.append("FALSE_SUCCESS")
+            signals.append("the answer says the change was made; " + (f"{len(staged)} card(s) were staged and none is verified" if staged else "nothing was staged and no tool ran"))
+        elif not staged and not contract_mod.declines(answer) and not contract_mod.waiting_for_a_gesture(answer):
+            classes.append("UNFULFILLED_ACTION")
+            signals.append("a change was asked for; nothing was staged and nothing was refused in words")
+        limitation = contract_mod.limitation_for(question)
+        if limitation is not None and contract_mod.reports_success(answer):
+            signals.append(f"the request runs into a known limitation ({limitation['name']}) and was answered as done")
+    if kind == contract_mod.UI_INTENT and contract_mod.declines(answer) and not turn.ui:
+        classes.append("UI_INTENT_UNFULFILLED")
+        signals.append("asked for something on the screen; the answer declined and no card carried it")
+    field = _missing_field(turn)
+    if field:
+        classes.append("DATA_FIELD_UNAVAILABLE")
+        signals.append(field)
+    partial = _partial_coverage(turn)
+    if partial:
+        classes.append("PARTIAL_COVERAGE")
+        signals.append(partial)
+    divergence = _divergence(turn)
+    if divergence:
+        classes.append("INTENT_DIVERGENCE")
+        signals.append(divergence)
+    return classes, signals
+
+
+# Fields an answer may say it has no access to, and the tool that returns them. Each pair is
+# a claim the report can check rather than take on trust.
+_FIELDS: tuple[tuple[Any, str, str], ...] = (
+    (re.compile(r"\b(?:street|full|actual|whole)? ?address(?:es)? line|only the town|only the (?:city|postcode)|don'?t (?:return|have) the (?:actual |full )?(?:street )?address", re.I), "the street address", "shopify_order_address"),
+    (re.compile(r"\bcan'?t (?:read|search) (?:the )?(?:body|bodies|full text) of", re.I), "the text of an email", "gmail_find_in_email"),
+)
+
+
+def _missing_field(turn: Turn) -> str:
+    """An answer that says a field is unavailable, when a registered tool returns it."""
+    from app.observability.claims import registered
+
+    if not turn.answer or not CANNOT_RE.search(turn.answer):
+        return ""
+    known = registered()
+    for pattern, what, tool in _FIELDS:
+        if pattern.search(turn.answer) and tool in known:
+            return f"said it has no {what}; {tool} returns it"
+    return ""
+
+
+def _partial_coverage(turn: Turn) -> str:
+    """A read that covered part of what was asked, where the answer does not say so."""
+    for record in turn.tools:
+        shape = record.result if isinstance(record.result, dict) else {}
+        checked, found = shape.get("threads_checked"), shape.get("threads_found")
+        if isinstance(checked, int) and isinstance(found, int) and 0 <= checked < found:
+            if not re.search(r"\b(?:checked|read|of the|could not (?:open|check))\b", turn.answer or "", re.I):
+                return f"{record.tool} read {checked} of {found}; the answer does not say so"
+    return ""
+
+
+_DECLINED_MECHANISM = re.compile(r"\b(?:no way to|can'?t|cannot) ([a-z ]{4,40}?)(?:\.|,|$)", re.I)
+
+
+def _divergence(turn: Turn) -> str:
+    """The answer declined a mechanism the request never named. "There is no way to merge
+    Gmail threads", to a request that asked for a reply on a separate thread."""
+    if not turn.answer or not turn.question:
+        return ""
+    match = _DECLINED_MECHANISM.search(turn.answer)
+    if not match:
+        return ""
+    phrase = match.group(1).strip().lower()
+    words = [w for w in re.findall(r"[a-z]{4,}", phrase) if w not in ("that", "this", "them", "from", "here", "with", "your", "into")]
+    if not words:
+        return ""
+    asked = (turn.question or "").lower()
+    if any(w in asked for w in words):
+        return ""
+    return f"declined {phrase!r}, which the request did not ask for"
+
+
 def _classify(turn: Turn) -> None:
     classes: list[str] = []
     signals: list[str] = []
@@ -597,6 +711,11 @@ def _classify(turn: Turn) -> None:
     if CLARIFY_RE.search(turn.answer) and not ok_tools and (stt.get("order_numbers") or turn.focus):
         classes.append("INTENT_ERROR")
         signals.append("asked which, though the request named one (" + (", ".join(str(n) for n in stt.get("order_numbers") or []) or "the entity in focus") + ")")
+    contract_classes, contract_signals = _contract_classes(turn)
+    for name, signal in zip(contract_classes, contract_signals, strict=False):
+        if name not in classes:
+            classes.append(name)
+            signals.append(signal)
     if (error_kind or tablet_failed) and not classes:
         classes.append("UNKNOWN")
         signals.append(f"error_kind={error_kind or 'tablet turn_failed'}")
@@ -1221,6 +1340,13 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
         "CONTEXT_INCOMPLETE": "extend the hydration budget for the part that never arrived, or make the tablet's collection retry longer.",
         "INTENT_ERROR": "hand the model the entity in focus more plainly (the prefetch line, the context stack) for follow-up questions.",
         "UNKNOWN": "read the turn's events; the error kind has no rule here yet.",
+        "FALSE_SUCCESS": "the worst class there is: a change reported as made that nothing staged. Read the turn, then either build the named mutation or add the limitation to app/observability/contract.py so the assistant says what it cannot do.",
+        "UNFULFILLED_ACTION": "a change was asked for and nothing happened, in either direction. Decide whether the write tool is missing or the request was misread, and make the answer say which.",
+        "ACTION_MISMATCH": "a different change was staged from the one asked for; tighten the tool description or the entity resolution for that phrasing.",
+        "UI_INTENT_UNFULFILLED": "the owner asked for something on the screen. Add it to the card vocabulary (app/presentation.py, web/ui.js) or say plainly which surface carries it.",
+        "DATA_FIELD_UNAVAILABLE": "the answer said a field is not available and a registered tool returns it: name the tool in the prompt, or in the tool's own description.",
+        "INTENT_DIVERGENCE": "the answer addressed a mechanism the request never named. Read the pair; the misunderstanding is usually one word.",
+        "PARTIAL_COVERAGE": "a read covered part of what was asked and the answer did not say so. Make the coverage line part of the answer, not the result.",
     }
     for cls, group in by_class.items():
         out.append({

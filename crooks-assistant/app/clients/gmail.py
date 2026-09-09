@@ -361,6 +361,33 @@ class GmailClient:
             return labels
         return self._run("Could not read the thread", fetch)
 
+    def thread_full(self, thread_id: str) -> list[dict]:
+        """Every message in a thread with its whole payload, for a search the Mac runs over
+        the text itself. One request per thread; the caller bounds how many threads."""
+        def fetch():
+            thread = self.service().users().threads().get(userId="me", id=thread_id, format="full").execute()
+            return list(thread.get("messages") or [])
+        return self._run("Could not read the thread", fetch)
+
+    def thread_state(self, thread_id: str) -> list[dict]:
+        """Every message in a thread as (id, labels, when). `internalDate` is Gmail's own
+        millisecond stamp for when the message arrived or was sent, which is what makes
+        "who spoke last" answerable without parsing a Date header nobody controls."""
+        def fetch():
+            thread = self.service().users().threads().get(
+                userId="me", id=thread_id, format="metadata", metadataHeaders=["From"],
+            ).execute()
+            out = []
+            for message in thread.get("messages") or []:
+                headers = {str(h.get("name", "")).lower(): str(h.get("value", "")) for h in (message.get("payload") or {}).get("headers") or []}
+                try:
+                    when = int(message.get("internalDate") or 0)
+                except (TypeError, ValueError):
+                    when = 0
+                out.append({"id": str(message.get("id") or ""), "labels": list(message.get("labelIds") or []), "at_ms": when, "from": headers.get("from", "")})
+            return out
+        return self._run("Could not read the thread", fetch)
+
     def list_drafts(self, query: str) -> list[dict]:
         """Drafts matching a Gmail query: id and the message id and thread of each."""
         def fetch():

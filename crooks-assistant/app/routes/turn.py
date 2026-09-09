@@ -253,6 +253,10 @@ async def turn(
             ms=(round(timings["prefetch"], 1) if "prefetch" in timings else None), hydrating=live.hydrating is not None, writes_code=(None if writes is None or writes["allowed"] else writes.get("code")),
         )
 
+    # What the model is about to be given, in numbers (brief section 11). Counts only: no
+    # part of the prompt is written anywhere, here or on the timeline. Kept apart from
+    # `timings`, which is milliseconds and is published as such.
+    measures = {"model_input_chars": len(prompt_text), "tool_schema_bytes": _tool_schema_bytes(runtime)}
     t0 = time.perf_counter()
     result = await runtime.provider.turn(session_id, prompt_text)
     timings["agent"] = (time.perf_counter() - t0) * 1000
@@ -307,13 +311,15 @@ async def turn(
         epoch=epoch,
         revoked=revoked,
         writes=writes,
+        branch=branch,
+        measures=measures,
     )
 
 
 LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
 
 
-def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session) -> dict:
+def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict) -> dict:
     """The turn's own measurements. No content, no arguments, no personal data: counts,
     milliseconds and names of tools."""
     from app.memory import current as memory
@@ -341,8 +347,8 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "model_ms": round(float(model_ms), 1) if model_ms is not None else None,
         "model_calls": 0 if lane == "FAST" else 1,
         "model_phases": model_phases or None,
-        "model_input_chars": timings.get("prompt_chars"),
-        "tool_schema_bytes": timings.get("tool_schema_bytes"),
+        "model_input_chars": measures.get("model_input_chars"),
+        "tool_schema_bytes": measures.get("tool_schema_bytes"),
         "prefetch_ms": round(float(timings["prefetch"]), 1) if "prefetch" in timings else None,
         "turn_total_ms": round(float(timings.get("total") or 0.0), 1),
         "cache": memory().counts(),
@@ -369,6 +375,28 @@ def _call_ref(call) -> str:
         if body.get(key):
             return str(body[key])
     return ""
+
+
+_SCHEMA_BYTES: dict[bool, int] = {}
+
+
+def _tool_schema_bytes(runtime) -> int:
+    """The size of the tool block the model is offered, in bytes. Measured once per writes
+    setting: the registry does not change while the process runs."""
+    import json
+
+    writes = bool(getattr(runtime.settings, "writes_enabled", False))
+    if writes not in _SCHEMA_BYTES:
+        from app.providers.max_agent_sdk import withheld_tools
+        from app.tools import registry
+
+        specs = registry.all_specs()
+        withheld = withheld_tools(specs, writes_enabled=writes)
+        _SCHEMA_BYTES[writes] = sum(
+            len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema}))
+            for s in specs if s.name not in withheld
+        )
+    return _SCHEMA_BYTES[writes]
 
 
 def _route(text: str, branch):
@@ -446,6 +474,20 @@ def _context_lines(session, text: str) -> list[str]:
     last = getattr(session, "last_query", None)
     if isinstance(last, dict) and last:
         lines.append(f"[Last read-layer query: {_short_query(last)}. A follow-up (\"just this week\", \"by size\", \"only joggers\") is this query with that one thing changed.]")
+    # A change the Mac knowingly cannot make: said plainly, with what it can do instead.
+    # Without this the September session's "add two items to David Randall's order" was
+    # answered as though it had been done (app/observability/contract.py).
+    from app.observability import contract as contract_mod
+
+    limitation = contract_mod.limitation_line(text)
+    if limitation:
+        lines.append(limitation)
+    # Drafting and sending are different requests, and the words tell them apart. Said here
+    # rather than left to be inferred, because the wrong one is either an email nobody meant
+    # to send or a draft nobody asked for.
+    wants = _draft_or_send(text)
+    if wants:
+        lines.append(wants)
     matched = claims.match_capabilities(text)
     if matched:
         known = claims.registered()
@@ -454,6 +496,27 @@ def _context_lines(session, text: str) -> list[str]:
             lines.append("[This asks for " + "; ".join(f"{c.what} ({', '.join(c.tools)})" for c in usable[:3]) + " — the Mac composes it; call the tool rather than saying it cannot be done.]")
             session.hinted = True
     return lines
+
+
+# "Draft", "prepare", "write me" ask for something to read first. "Send", "email them",
+# "let them know" ask for something to go. Both still need the owner's gesture; what differs
+# is which change is staged, and staging the wrong one is not a small mistake.
+_WANTS_DRAFT = re.compile(r"\b(?:draft|drafts?|prepare|prepared|write me|write out|put together|compose|mock up|rough out|have a go at)\b", re.I)
+# "Reply to" is deliberately absent: it names what the email is, not whether it goes. A bare
+# "reply to Millie" is left unhinted and the model decides, which is honest — the owner's
+# gesture is what sends either way.
+_WANTS_SEND = re.compile(r"\b(?:send|sends|email them|email him|email her|email the|let (?:them|him|her) know|tell (?:them|him|her)|get back to|chase|fire (?:it|them) off)\b", re.I)
+
+
+def _draft_or_send(text: str) -> str:
+    draft, send = bool(_WANTS_DRAFT.search(text)), bool(_WANTS_SEND.search(text))
+    if draft and not send:
+        return "[This asks for a DRAFT: stage gmail_draft_reply or gmail_draft_new, not a send. Nothing leaves the Mac.]"
+    if send and not draft:
+        return "[This asks for the email to GO: stage gmail_send_reply or gmail_send_new. It still waits for the owner's gesture; a spoken yes never sends it.]"
+    if send and draft:
+        return "[This says both draft and send. Stage the DRAFT and say that sending it is a second gesture.]"
+    return ""
 
 
 def _short_query(query: dict) -> str:
@@ -706,6 +769,7 @@ async def _answer(
     recipe_id: str = "",
     branch: Any = None,
     partial: bool = False,
+    measures: dict | None = None,
 ) -> dict:
     tool_calls = tool_calls or []
     turns = 0
@@ -765,7 +829,7 @@ async def _answer(
             branch.remember_result(call.name, summary=_call_summary(call), ref=_call_ref(call), ms=float(getattr(call, "duration_ms", 0.0) or 0.0))
     # How this turn actually went, in numbers. Every field is measured; none of it is content.
     # This is what the report's speed section and the bench read (brief section 32).
-    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session)
+    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session, measures=measures or {})
     if timeline.current().active is not None:
         # An answer that declines, held against what the Mac composes: a refusal of a best
         # seller, a breakdown, a comparison or a bulk change the tools could have made is a

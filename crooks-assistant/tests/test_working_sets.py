@@ -204,7 +204,7 @@ async def test_the_inbox_is_cross_referenced_with_the_set_and_makes_derived_sets
     session.turn_id = "turn_mail"
     text = await dispatch("email_query", {"set_id": set_id, "days": 30}, session=session, timeout_s=5, calls=calls)
     result = calls[-1].result
-    assert result["counts"] == {"contacted": 2, "not_contacted": 1, "replied": 1, "unchecked": 0} and result["customers"] == 3 and text.startswith("AMBER")
+    assert result["counts"] == {"contacted": 2, "not_contacted": 1, "replied": 1, "needs_reply": 0, "unchecked": 0} and result["customers"] == 3 and text.startswith("AMBER")
     rows = {r["customer_name"]: r for r in result["rows"]}
     assert rows["Ben Bold"]["emailed"] and rows["Ben Bold"]["replied"] is False and rows["Ben Bold"]["last_subject"] == "Where is order 1002?"
     assert rows["Flo Fry"]["emailed"] and rows["Flo Fry"]["replied"] is True and rows["Gus Gee"]["emailed"] is False

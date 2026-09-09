@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 
 from app.actions import grammar
 from app.observability import timeline
-from app.presentation import present_action, present_proposal_state
+from app.presentation import present, present_action, present_proposal_state
 from app.speech.speakable import to_speakable
 
 log = logging.getLogger("crooks.actions")
@@ -210,6 +210,58 @@ async def writes_context(request: Request, operation: str | None = None) -> dict
         # the caller may not tap at all, so no chip is offered to a login that cannot use it.
         "capabilities": capabilities if not code or code == status.code else {},
     }
+
+
+@router.post("/row", response_model=None)
+async def row(request: Request, session_id: str = Form(default=""), action: str = Form(default=""), ref: str = Form(default="")) -> JSONResponse | dict:
+    """A button beside a row on a card was tapped.
+
+    The tablet posts WHICH action and WHICH row, and nothing else. The Mac looks the action
+    up in its own table (app/actions/rows.py), builds the arguments from a fresh read through
+    the write tool's own prepare step, and stages a proposal — the same path a change the
+    model proposed takes, through the same gate. Nothing is applied here: the card that comes
+    back still waits for the owner's gesture.
+    """
+    runtime = request.app.state.runtime
+    caller, refusal = _authorise(request)
+    if refusal is not None:
+        return refusal
+    session_id = session_id.strip()
+    if not session_id:
+        return _refuse(400, "wrong_session", "The session is missing.")
+    try:
+        owner_session = runtime.sessions.get(session_id)
+    except KeyError:
+        return _refuse(409, "no_session", "That conversation has gone; ask again.")
+    if not session_matches(owner_session, request):
+        return _refuse(403, "wrong_session", "That conversation belongs to another login.")
+
+    from app.actions import rows as row_actions
+
+    try:
+        spec, args = row_actions.resolve(action, ref)
+    except row_actions.UnknownRowAction:
+        # Fail closed: an action this build does not offer is not attempted, whatever the
+        # tablet believes it saw.
+        log.warning("row action refused: %r is not offered", action)
+        return _refuse(400, "unknown_action", "That button is not one this build offers.")
+    status = await _write_status_soon(runtime, spec.tool)
+    if not status.ready:
+        return _refuse(403, status.code, status.detail, status.code)
+
+    from app.tools.dispatch import dispatch
+
+    calls: list = []
+    await dispatch(spec.tool, args, session=owner_session, timeout_s=runtime.settings.tool_timeout_s, calls=calls)
+    proposal_id = next((c.proposal_id for c in calls if getattr(c, "proposal_id", None)), "")
+    if not proposal_id:
+        detail = next((str(c.error) for c in calls if not c.ok and c.error), "That change could not be prepared.")
+        timeline.emit("row_action", session_id=session_id, action=str(action)[:40], ok=False, detail=detail[:200])
+        return _refuse(409, "not_prepared", detail[:200])
+    runtime.actions.deliver(proposal_id)
+    timeline.emit("row_action", session_id=session_id, turn_id=getattr(owner_session, "turn_id", "") or None, action=str(action)[:40], ok=True, proposal_id=proposal_id)
+    ui = present(calls, session=owner_session, writes=await writes_context(request))
+    return {"staged": True, "proposal_id": proposal_id, "ui": ui}
 
 
 @router.post("/{proposal_id}/arm", response_model=None)

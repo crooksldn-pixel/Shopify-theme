@@ -285,7 +285,7 @@ async def test_the_inbox_read_names_the_members_it_could_not_check(session, monk
         calls: list = []
         await dispatch("email_query", {"set_id": ws.set_id, "days": 30}, session=session, timeout_s=5, calls=calls)
         result = calls[-1].result
-        assert result["counts"] == {"contacted": 0, "not_contacted": 2, "replied": 0, "unchecked": 1}
+        assert result["counts"] == {"contacted": 0, "not_contacted": 2, "replied": 0, "needs_reply": 0, "unchecked": 1}
         assert "1 of the set's orders are outside the 90 days" in result["note"]
         assert session.focus["set"] == ws.set_id, "the set the owner asked about stays in focus"
         assert result["set_not_contacted"]["count"] == 2 and "set_contacted" not in result

@@ -102,6 +102,10 @@ def present(
     calls = list(calls or [])
     capabilities = writes.get("capabilities") if isinstance(writes, dict) and isinstance(writes.get("capabilities"), dict) else {}
 
+    # What a row on a card may offer, decided here rather than by the tablet
+    # (app/actions/rows.py). Empty while changes are off.
+    row_actions = _row_actions(writes)
+
     for index, call in enumerate(calls):
         if not call.ok:
             if _recovered(call, calls[index + 1:]):
@@ -127,6 +131,10 @@ def present(
         if not isinstance(call.result, dict):
             continue
         for item in _from_result(call.name, call.result):
+            if item["type"] == "email_list" and row_actions.get("email_thread"):
+                for thread in item["data"].get("threads") or []:
+                    if thread.get("thread_id"):
+                        thread["actions"] = row_actions["email_thread"]
             if item["type"] == "order" and item["data"].get("detail"):
                 # The rail: which changes make sense for this order, decided on the Mac from
                 # the order's own state and what the store has granted this Mac.
@@ -323,6 +331,16 @@ def _order(o: dict[str, Any], *, detail: bool = False) -> dict[str, Any]:
             "pending": [_text(p, 20) for p in (o.get("pending") or [])[:4] if isinstance(p, str)],
         })
     return out
+
+
+def _row_actions(writes: dict[str, Any] | None) -> dict[str, list[dict[str, Any]]]:
+    """The buttons each kind of row carries on this build, by kind. Read once per turn."""
+    from app.actions.rows import BY_KIND, actions_for
+
+    enabled = bool(isinstance(writes, dict) and writes.get("allowed"))
+    if not enabled:
+        return {}
+    return {kind: actions_for(kind, writes_enabled=True) for kind in BY_KIND}
 
 
 def _actions(order: dict[str, Any], capabilities: dict[str, Any]) -> list[dict[str, Any]]:

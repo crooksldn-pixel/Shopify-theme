@@ -1,0 +1,153 @@
+"""What a request was FOR, and whether the turn did it.
+
+The September session scored a turn "successful" that asked to add two items to David
+Randall's order, called no tool, staged nothing, and answered as though it had. Nothing in
+the report caught it, because the report asked "did anything fail" rather than "was the
+request contract met".
+
+This module supplies the contract:
+
+    READ_INTENT             look something up
+    WRITE_INTENT            change something
+    UI_INTENT               change what is on the screen
+    NAVIGATION_INTENT       move around what is already there
+    WORKFLOW_CONTINUATION   carry on with the thing in hand
+    META_CAPABILITY_INTENT  a question about the assistant itself
+
+and the failure classes that only make sense once a request has one. Words only: the question
+as transcribed and the answer as spoken, never any model reasoning.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+READ_INTENT = "READ_INTENT"
+WRITE_INTENT = "WRITE_INTENT"
+UI_INTENT = "UI_INTENT"
+NAVIGATION_INTENT = "NAVIGATION_INTENT"
+WORKFLOW_CONTINUATION = "WORKFLOW_CONTINUATION"
+META_CAPABILITY_INTENT = "META_CAPABILITY_INTENT"
+
+CONTRACTS = (READ_INTENT, WRITE_INTENT, UI_INTENT, NAVIGATION_INTENT, WORKFLOW_CONTINUATION, META_CAPABILITY_INTENT)
+
+# Asking for something on the screen to change: a button, a column, a card, a list.
+_UI = re.compile(
+    r"\b(?:button|buttons|tab|tabs|column|columns|card|cards|screen|list view|checkbox|"
+    r"tick box|next to (?:them|it|each)|on the card|show me a|put a|give me a way to)\b", re.I,
+)
+_NAV = re.compile(r"^\s*(?:go |take me )?(?:back|home|up|forward)\b|^\s*(?:next|previous|the one before)\b", re.I)
+_WORKFLOW = re.compile(r"^\s*(?:next|carry on|keep going|go on|and the next|the one after)\b", re.I)
+_META = re.compile(r"\b(?:what (?:can|else can) you|your capabilities|what more can you|can you now|are you able to)\b", re.I)
+
+# An answer that reports the change as made. Deliberately narrow: "I've added", "done",
+# "that's updated". A card WAITING to be tapped is not one of these.
+_SUCCESS = re.compile(
+    r"\b(?:i(?:'ve| have) (?:added|updated|changed|set|sent|cancelled|refunded|removed|archived|tagged|saved)"
+    r"|(?:that|it|the order|the note|the address|the email)(?:'s| is| has been) (?:done|added|updated|changed|set|sent|saved|cancelled|refunded|archived)"
+    r"|^done\b|\ball set\b|\bsorted\b|\bthat's done\b)", re.I,
+)
+# An answer that says a card is waiting. This is the honest shape of a staged change.
+_WAITING = re.compile(r"\b(?:tap|swipe|hold|drag|press)\b.{0,40}\b(?:card|to apply|to confirm|it)\b|\bwaiting for you\b|\bon the card\b", re.I)
+# An answer that says plainly it did not do it.
+_DECLINED = re.compile(r"\b(?:can'?t|cannot|couldn'?t|could not|unable to|not able to|there(?:'s| is) no way|i don'?t have)\b", re.I)
+
+# Whether a request asks for a change is decided in ONE place: app/fastpath/intent.py, which
+# is also what decides whether the fast lane may take the turn. "Any email from him about
+# 1938" is a noun; "email him about 1938" is an instruction; both must read the same way to
+# the router and to the report, or the report will grade a turn against a contract the
+# router never gave it.
+_ASKING_ABOUT = re.compile(r"^\s*(?:can|could|will|would|is it possible|are you able|do you|how (?:do|would) (?:i|you|we))\b", re.I)
+_WORD = re.compile(r"[a-z0-9'#]+")
+
+
+def _is_change(text: str) -> bool:
+    from app.fastpath.intent import mutating
+
+    return mutating(tuple(_WORD.findall((text or "").lower())))
+
+
+def contract_of(question: str, *, ui_asked: bool = False) -> str:
+    """What this request was for. One contract per turn: the most specific that fits."""
+    text = (question or "").strip()
+    if not text:
+        return READ_INTENT
+    if _META.search(text):
+        return META_CAPABILITY_INTENT
+    if _WORKFLOW.match(text):
+        return WORKFLOW_CONTINUATION
+    if _NAV.match(text):
+        return NAVIGATION_INTENT
+    if ui_asked or _UI.search(text):
+        return UI_INTENT
+    if _is_change(text) and not _ASKING_ABOUT.match(text):
+        return WRITE_INTENT
+    return READ_INTENT
+
+
+def reports_success(answer: str) -> bool:
+    """Whether the answer claims the change was made. A card offered for a gesture does not."""
+    text = answer or ""
+    return bool(_SUCCESS.search(text)) and not _WAITING.search(text)
+
+
+def declines(answer: str) -> bool:
+    return bool(_DECLINED.search(answer or ""))
+
+
+def waiting_for_a_gesture(answer: str) -> bool:
+    return bool(_WAITING.search(answer or ""))
+
+
+# What CROOKS OS knowingly cannot do, so that a request for one is a limitation stated
+# rather than a silence or an invention. Each entry names the thing, the words that ask for
+# it, and the nearest thing that IS possible. Generated answers are checked against this in
+# app/observability/report.py; the model is told the honest sentence at turn time
+# (app/routes/turn.py).
+LIMITATIONS: tuple[dict[str, Any], ...] = (
+    {
+        "name": "order_edit",
+        "what": "change what is ON an order — add, remove or swap a line item",
+        "asks": re.compile(r"\b(?:add|put|swap|change|replace|remove|take off)\b.{0,60}\b(?:to|from|on|off)\b.{0,30}\b(?:order|his order|her order|their order|the order)\b|\border edit\b", re.I),
+        "instead": (
+            "Shopify's order editing changes what the customer owes, so it is not one of the "
+            "reviewed changes the Mac can make. What I can do: put a note on the order saying "
+            "exactly what to add, tag it, or cancel and refund it."
+        ),
+    },
+    {
+        "name": "gmail_thread_merge",
+        "what": "merge two Gmail threads into one",
+        "asks": re.compile(r"\bmerge\b.{0,30}\b(?:threads?|emails?|conversations?)\b", re.I),
+        "instead": "I can reply in either thread, and quote the other, but Gmail has no way to join two threads.",
+    },
+    {
+        "name": "price_change",
+        "what": "change a price on a product or an order",
+        "asks": re.compile(r"\b(?:change|set|update|drop|raise|discount)\b.{0,30}\bprice\b", re.I),
+        "instead": "I can tell you what a thing costs and what it sold for; changing a price is done in Shopify.",
+    },
+)
+
+
+def limitation_for(question: str) -> dict[str, Any] | None:
+    """The known limitation this request runs into, if it runs into one."""
+    text = (question or "").strip()
+    if not text:
+        return None
+    for entry in LIMITATIONS:
+        if entry["asks"].search(text):
+            return entry
+    return None
+
+
+def limitation_line(question: str) -> str:
+    """The one line the model is given so a limitation is stated rather than papered over."""
+    found = limitation_for(question)
+    if found is None:
+        return ""
+    return (
+        f"[The Mac cannot {found['what']}. Say so plainly and say what it can do instead: "
+        f"{found['instead']} Never answer as though the change has been made.]"
+    )

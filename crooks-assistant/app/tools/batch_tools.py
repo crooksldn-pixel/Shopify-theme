@@ -209,18 +209,86 @@ def _present_drafts(batch) -> dict[str, Any]:
     }
 
 
+# One schema for both email batches: the same set, the same template, the same bounds. The
+# difference between them is whether the messages go, and that is the tool's name and tier.
+_CAMPAIGN_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "set_id": {"type": "string", "description": "A set of orders or customers."},
+        "subject": {"type": "string", "maxLength": 120, "description": "One plain line; placeholders allowed."},
+        "body": {"type": "string", "maxLength": 2000, "description": "Plain text with placeholders; the sign-off is added."},
+    },
+    "required": ["set_id", "subject", "body"],
+}
+
+
+def _present_sends(batch) -> dict[str, Any]:
+    if batch.undo_of:
+        # There is no undo for a sent email, and there must never look like one.
+        return {"title": "Nothing to undo", "detail": "An email that has gone cannot be recalled.", "confirm_label": "", "undone_title": ""}
+    s = batch.summary
+    per = "order" if batch.set_kind == "orders" else "customer"
+    return {
+        "title": f"SEND {len(batch.eligible)} emails",
+        "body": str(s.get("body") or ""),
+        "detail": (
+            f"One email per {per}, going out from team@crooksldn.com. Each is the exact message "
+            "prepared below and shown on this card — it is not written again when it goes. "
+            "There is no undo: an email that has gone has gone."
+        ),
+        "done_title": "Emails sent",
+        "target": "Send all",
+    }
+
+
+@tool(
+    name="batch_email_send",
+    description=(
+        "As batch_email_drafts, but the emails GO. Prepared and shown first; each goes exactly "
+        "as shown; no undo. Only when the owner asked for them to be sent."
+    ),
+    input_schema=_CAMPAIGN_SCHEMA,
+    # RED because it is irreversible and it leaves the building. The batch engine takes the
+    # tool's tier as a floor (app/actions/batch.py batch_risk), so this is always the
+    # hold-and-drag gesture however few members the set has.
+    tier=Tier.RED,
+    issued_id_args=("set_id",),
+    timeout_s=30.0,
+    batch=BatchSpec(operation="batch_email_send", child_tool="gmail_send_new", set_kinds=("orders", "customers"), present=_present_sends, verb="Sent to", noun="", preview=_preview_draft),
+)
+async def batch_email_send(set_id: str, subject: str, body: str) -> BatchPlan:
+    """Prepare one email per member. Nothing is sent here, and nothing is written twice.
+
+    Each member's message is built ONCE, at preparation, by the same child write tool a
+    single email goes through — which reads the customer from Shopify, builds the MIME, and
+    freezes it in the proposal's execution arguments. The card prints one of those exact
+    messages. When the owner's gesture commits the batch, the engine sends the frozen
+    arguments: the template is not filled again, the customer is not read again, and what
+    goes is what was on the card. See app/actions/batch.py.
+    """
+    from app.tools.gmail_writes import clean_body, clean_subject
+
+    ws = _set(set_id, kinds=("orders", "customers"))
+    allowed = PLACEHOLDERS if ws.kind == "orders" else ("first_name",)
+    _check_template(subject, allowed=allowed)
+    _check_template(body, allowed=allowed)
+    clean_subject(subject)
+    clean_body(body)
+
+    def child_args(ref: str):
+        return _draft_args(ref, subject, body, ws.kind)
+
+    return BatchPlan(
+        set_id=ws.set_id, child_tool="gmail_send_new", child_args=child_args, label="send campaign",
+        summary={"subject": " ".join(str(subject).split())[:120], "body": str(body)[:2000],
+                 "read_back": f"send an email to each of the {ws.count} {ws.kind}"},
+    )
+
+
 @tool(
     name="batch_email_drafts",
     description="One Gmail draft per order (or per customer, for a set of customers) in a working set (≤50), from a template the Mac fills: {first_name}, {order_number}, {order_age_days}. Nothing is sent.",
-    input_schema={
-        "type": "object",
-        "properties": {
-            "set_id": {"type": "string", "description": "A set of orders or customers."},
-            "subject": {"type": "string", "maxLength": 120, "description": "One plain line; placeholders allowed."},
-            "body": {"type": "string", "maxLength": 2000, "description": "Plain text with placeholders; the sign-off is added."},
-        },
-        "required": ["set_id", "subject", "body"],
-    },
+    input_schema=_CAMPAIGN_SCHEMA,
     tier=Tier.AMBER,
     issued_id_args=("set_id",),
     timeout_s=30.0,

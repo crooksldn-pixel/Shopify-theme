@@ -82,7 +82,7 @@ _MUTATION_VERBS = (
 
 # Reads that return customer personal data. They run, but the assistant is told to read the
 # match back rather than act on it, which is the M13 low-confidence rule in tool form.
-_PII_TOOLS = frozenset({"shopify_find_customer", "shopify_order_detail", "shopify_customer_history", "gmail_read_thread"})
+_PII_TOOLS = frozenset({"shopify_find_customer", "shopify_order_detail", "shopify_customer_history", "shopify_order_address", "gmail_read_thread", "gmail_find_in_email"})
 
 _KNOWN_TOOLS = frozenset({
     # mocks — M5 only
@@ -90,11 +90,11 @@ _KNOWN_TOOLS = frozenset({
     # Shopify — M7
     "shopify_find_order", "shopify_order_detail", "shopify_list_orders",
     "shopify_find_customer", "shopify_inventory", "shopify_sales_summary",
-    "shopify_product_info", "shopify_customer_history",
+    "shopify_product_info", "shopify_customer_history", "shopify_order_address",
     # the general read layer (app/tools/analytics_tools.py)
     "commerce_aggregate", "commerce_query", "inventory_query", "commerce_capabilities", "email_query",
     # Gmail — M9
-    "gmail_search", "gmail_read_thread",
+    "gmail_search", "gmail_read_thread", "gmail_find_in_email",
 })
 
 # Tools that may only be called with an id this session already handed to the assistant. Stops

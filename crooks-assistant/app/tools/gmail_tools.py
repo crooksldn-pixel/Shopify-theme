@@ -314,6 +314,47 @@ async def replied(thread_id: str) -> bool | None:
     return "SENT" in labels
 
 
+async def reply_state(thread_id: str) -> dict[str, Any] | None:
+    """Who spoke last in this thread, and whether we have answered since.
+
+    Returned per thread; the customer-level view is folded from several of these in
+    app/tools/analytics_tools.py, WITHOUT merging the threads. A reply in one thread does
+    not answer a newer message in another, and the September session showed exactly that
+    case being missed. None when the thread cannot be read — unknown is an honest answer.
+    """
+    if _client is None or not thread_id:
+        return None
+    try:
+        messages = await asyncio.to_thread(_c().thread_state, str(thread_id))
+    except Exception as exc:  # noqa: BLE001 — unknown, said as such
+        log.debug("thread state unavailable for %s: %s", thread_id, type(exc).__name__)
+        return None
+    if not messages:
+        return None
+    inbound = [m["at_ms"] for m in messages if "SENT" not in m["labels"] and "DRAFT" not in m["labels"] and m["at_ms"]]
+    outbound = [m["at_ms"] for m in messages if "SENT" in m["labels"] and m["at_ms"]]
+    latest_in = max(inbound) if inbound else None
+    latest_out = max(outbound) if outbound else None
+    return {
+        "thread_id": str(thread_id),
+        "latest_inbound_at": latest_in,
+        "latest_outbound_at": latest_out,
+        "latest_direction": _direction(latest_in, latest_out),
+        "has_reply_after_latest_inbound": bool(latest_in is not None and latest_out is not None and latest_out >= latest_in),
+        "messages": len(messages),
+    }
+
+
+def _direction(latest_in: int | None, latest_out: int | None) -> str:
+    if latest_in is None and latest_out is None:
+        return "none"
+    if latest_out is None:
+        return "inbound"
+    if latest_in is None:
+        return "outbound"
+    return "inbound" if latest_in > latest_out else "outbound"
+
+
 # An email read as evidence for a change is read whole: an address at the foot of a long
 # message is still the address.
 EVIDENCE_BODY_CHARS = 20_000
@@ -352,6 +393,101 @@ async def message_evidence(message_id: str) -> dict[str, Any]:
         "authenticated": authenticated(headers, sender_email),
         "body": _extract_body(message.get("payload", {}), limit=EVIDENCE_BODY_CHARS),
     }
+
+
+# Looking for one string across a customer's whole correspondence. Bounded: the search is
+# a Gmail query the Mac builds, and the bodies it reads are the threads that query returned.
+FIND_MAX_THREADS = 12
+FIND_BODY_CHARS = 20_000
+FIND_EXCERPT = 160
+FIND_CONCURRENCY = 3
+
+
+@tool(
+    name="gmail_find_in_email",
+    description=(
+        "Look for an exact string (a house number, a postcode, a tracking number) in the FULL "
+        "TEXT of a customer's recent emails, not the snippets. Reads every thread it finds and "
+        "says how many of how many it read. Use instead of reading threads one at a time."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "contains": {"type": "string", "description": "The string to look for; case ignored."},
+            "sender": {"type": "string", "description": "The customer's email address, from a search."},
+            "mentions": {"type": "string", "description": "An order number the threads mention."},
+            "days": {"type": "integer", "description": "How far back, default 60."},
+        },
+        "required": ["contains"],
+    },
+    tier=Tier.AMBER,
+    timeout_s=20.0,
+)
+async def gmail_find_in_email(contains: str, sender: str = "", mentions: str = "", days: int = CORRELATION_DAYS) -> dict[str, Any]:
+    needle = str(contains or "").strip()
+    if len(needle) < 2:
+        raise ToolError("Give me at least two characters to look for.")
+    if not (sender.strip() or mentions.strip()):
+        raise ToolError("Say whose email to look through: a sender's address, an order number, or both.")
+    found = await threads_for(sender=sender, terms=[mentions] if mentions.strip() else [], days=days, limit=FIND_MAX_THREADS)
+    if not found.get("available"):
+        raise ToolError(str(found.get("reason") or "The inbox could not be read."))
+    threads = [t for t in (found.get("threads") or []) if isinstance(t, dict) and t.get("thread_id")]
+    total = len(threads)
+    looked = threads[:FIND_MAX_THREADS]
+    semaphore = asyncio.Semaphore(FIND_CONCURRENCY)
+    matches: list[dict[str, Any]] = []
+    checked = 0
+    unreadable: list[str] = []
+
+    async def scan(thread: dict) -> None:
+        nonlocal checked
+        thread_id = str(thread["thread_id"])
+        async with semaphore:
+            try:
+                messages = await asyncio.to_thread(_c().thread_full, thread_id)
+            except Exception as exc:  # noqa: BLE001 — a thread that will not open is said so
+                unreadable.append(thread_id)
+                log.debug("could not read thread %s: %s", thread_id, type(exc).__name__)
+                return
+        checked += 1
+        for message in messages:
+            body = _extract_body(message.get("payload") or {}, limit=FIND_BODY_CHARS)
+            headers = _headers(message)
+            where = _where(needle, headers.get("subject", ""), body)
+            if where is None:
+                continue
+            matches.append({
+                "thread_id": thread_id, "message_id": str(message.get("id") or ""),
+                "subject": headers.get("subject", "")[:120], "date": headers.get("date", "")[:40],
+                "from": parseaddr(headers.get("from", ""))[1].strip().lower(),
+                "outbound": "SENT" in (message.get("labelIds") or []),
+                "where": where[0], "excerpt": where[1],
+            })
+
+    await asyncio.gather(*(scan(t) for t in looked))
+    return {
+        "contains": needle, "threads_found": total, "threads_checked": checked,
+        "threads_unreadable": len(unreadable), "complete": checked == total and not unreadable,
+        "matches": matches, "match_count": len(matches),
+        "coverage": f"checked {checked} of {total} thread(s)" + (f"; {len(unreadable)} could not be opened" if unreadable else ""),
+        "source": f"Gmail, last {max(1, min(int(days or CORRELATION_DAYS), 365))} days",
+    }
+
+
+def _where(needle: str, subject: str, body: str) -> tuple[str, str] | None:
+    """Where the string appears, and the line it is on. Subject first: it is the shortest
+    honest answer. Nothing is returned when it does not appear at all."""
+    lowered = needle.lower()
+    if lowered in subject.lower():
+        return "subject", subject.strip()[:FIND_EXCERPT]
+    at = body.lower().find(lowered)
+    if at < 0:
+        return None
+    start = body.rfind("\n", 0, at) + 1
+    end = body.find("\n", at)
+    line = body[start : end if end != -1 else len(body)].strip()
+    return "body", (line or body[max(0, at - 40) : at + 80].strip())[:FIND_EXCERPT]
 
 
 @tool(

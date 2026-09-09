@@ -42,7 +42,7 @@ def test_the_gmail_reads_are_two_and_every_other_gmail_tool_is_a_staged_write():
 
     reads = sorted(s.name for s in all_specs() if s.name.startswith("gmail_") and s.write is None)
     writes = sorted(s.name for s in all_specs() if s.name.startswith("gmail_") and s.write is not None)
-    assert reads == ["gmail_read_thread", "gmail_search"]
+    assert reads == ["gmail_find_in_email", "gmail_read_thread", "gmail_search"]
     assert writes == ["gmail_draft_new", "gmail_draft_reply", "gmail_send_new", "gmail_send_reply", "gmail_thread_archive"]
     assert all(s.write.complete and s.write.mutation.startswith("gmail:") for s in all_specs() if s.name in writes)
 
