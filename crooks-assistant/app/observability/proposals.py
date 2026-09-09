@@ -91,6 +91,8 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None) -> l
             f"Either add `{kind}` to the vocabulary on both sides with a bounded data shape, or stop the presentation layer emitting it.",
             "the vocabulary test in tests/web/ui.test.js and the presentation test.",
             "no model-generated markup; a new type is a new renderer with its own bounds.", 2 * n)
+    for row in _recipe_candidates(turns):
+        add(*row)
     for o in _opportunities(rec, turns, registered):
         # The report's own ranked list, carried over as summaries beside the specific rows above.
         add("REPORT", o["problem"], list(o["examples"]), o["component"], o["task"],
@@ -104,6 +106,108 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None) -> l
         seen.add(c["title"])
         unique.append(c)
     return unique[:24]
+
+
+# What a turn cost when the model answered it, above which it is worth asking whether the
+# Mac could have. The September session's median model time was 12 seconds.
+SLOW_MODEL_MS = 8_000
+# How many times a question must repeat before "write the procedure down" is worth proposing.
+REPEATED = 3
+
+
+def _recipe_candidates(turns: list[Turn]) -> list[tuple]:
+    """Proposals about the fast lane itself (brief section 29).
+
+    Three things the timeline can now say that it could not before: which questions the model
+    answered slowly and repeatedly (a recipe waiting to be written), which recipes deferred
+    and why (a recipe that is not earning its place), and which recipes ran over their own
+    target. All proposals; nothing here writes a recipe.
+    """
+    out: list[tuple] = []
+    slow: Counter = Counter()
+    slow_ids: dict[str, list[str]] = {}
+    defers: Counter = Counter()
+    defer_ids: dict[str, list[str]] = {}
+    over: dict[str, list[str]] = {}
+
+    for turn in turns:
+        lane = (turn.lane or {}).get("lane") if turn.lane else None
+        fast = turn.fast or {}
+        if fast.get("defer"):
+            key = f"{fast.get('recipe_id')}: {fast['defer']}"
+            defers[key] += 1
+            defer_ids.setdefault(key, []).append(turn.turn_id)
+        target, took = fast.get("target_ms"), fast.get("ms")
+        if fast.get("hit") and isinstance(target, (int, float)) and isinstance(took, (int, float)) and took > target:
+            over.setdefault(str(fast.get("recipe_id")), []).append(turn.turn_id)
+        if lane == "NORMAL" and turn.model and isinstance(turn.model.get("ms"), (int, float)) and turn.model["ms"] >= SLOW_MODEL_MS:
+            shape = _shape_of(turn)
+            if shape:
+                slow[shape] += 1
+                slow_ids.setdefault(shape, []).append(turn.turn_id)
+
+    for shape, n in slow.most_common(6):
+        if n < REPEATED:
+            continue
+        out.append((
+            "FAST_PATH_RECIPE", f"A question asked {n} times that the model answered slowly: {shape}",
+            slow_ids[shape][:3], "the fast lane (app/fastpath/intent.py, library.py)",
+            f"Write the procedure down: an intent family for “{shape}”, the reads it needs, and the sentence that answers it. "
+            "It must decline rather than guess when an entity does not resolve.",
+            "a routing test (this phrasing and two near neighbours), a plan test, and a deferral test for the case it cannot serve.",
+            "read-only and navigation-only; a recipe can never stage, arm or commit a change.", 4 * n,
+        ))
+    for key, n in defers.most_common(4):
+        if n < 2:
+            continue
+        out.append((
+            "RECIPE_DEFERRED", f"A recipe took the lane and then could not answer, {n} times: {key}",
+            defer_ids[key][:3], "the fast lane (app/fastpath)",
+            "Either resolve what it could not (an entity, a period, a dimension) or stop routing that shape to it: a recipe that defers is a model call plus its own cost.",
+            "a test that this request either answers or never reaches the recipe.",
+            "deferring is safe and answering wrongly is not; tighten the route rather than loosening the recipe.", 3 * n,
+        ))
+    for recipe_id, ids in sorted(over.items(), key=lambda kv: -len(kv[1]))[:4]:
+        out.append((
+            "RECIPE_SLOW", f"A recipe answered but missed its own target, {len(ids)} time(s): {recipe_id}",
+            ids[:3], "the recipe and its reads (app/fastpath/library.py, app/reads/scheduler.py)",
+            "Look at the read plan on those turns: a wave that could be one, a read that could be cached, or a target that was never realistic.",
+            "make bench-lanes, which fails when a recipe is over target.",
+            "no bound may be widened to make a target: narrow the work instead.", 2 * len(ids),
+        ))
+    return out
+
+
+def _shape_of(turn: Turn) -> str:
+    """A question reduced to its SHAPE, so two askings of the same thing count as two.
+
+    Built from a CLOSED vocabulary — the words the router itself knows (app/fastpath/intent.py)
+    — rather than by dropping a list of stop words. A name, a street, an order number or
+    anything else the owner said about a customer is not in that vocabulary and therefore
+    cannot reach a proposals file, whatever it was. This file is written to disk and read by
+    a person; a deny-list would only be as good as its last omission.
+    """
+    import re
+
+    words = re.findall(r"[a-z]{3,}", (turn.question or "").lower())
+    kept = [w for w in words if w in _VOCABULARY]
+    return " ".join(dict.fromkeys(kept))[:80]
+
+
+def _vocabulary() -> frozenset[str]:
+    from app.fastpath import intent as router
+
+    words: set[str] = set()
+    for name in dir(router):
+        value = getattr(router, name)
+        if isinstance(value, frozenset) and value and all(isinstance(v, str) for v in value):
+            words |= {str(v) for v in value}
+    # The shapes of a question, which the router reads off structure rather than words.
+    words |= {"how", "many", "much", "long", "should", "would", "could", "left", "each", "all", "every", "any", "some", "still"}
+    return frozenset(w for w in words if len(w) >= 3)
+
+
+_VOCABULARY = _vocabulary()
 
 
 def render(rec: Reconstruction, cands: list[dict[str, Any]]) -> str:

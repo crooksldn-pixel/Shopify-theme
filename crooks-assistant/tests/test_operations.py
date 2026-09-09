@@ -232,3 +232,29 @@ def test_the_commands_point_at_the_checkout_rather_than_copying_it(tmp_path, mon
 
 def test_the_commands_are_the_three_the_brief_asked_for():
     assert sorted(install_commands.COMMANDS) == ["crooks-status", "crooks-update", "crooks-watch"]
+
+
+# ------------------------------------------------------------------- the bench
+
+async def test_the_lane_bench_runs_offline_and_every_row_is_measured(capsys):
+    """The bench is a test as well as a bench: it fails if a recipe stops answering, and it
+    never reaches a network — the sources are the suite's own doubles."""
+    from scripts import bench_lanes
+
+    assert await bench_lanes.main(["--orders", "60", "--latency-ms", "1"]) == 0
+    out = capsys.readouterr().out
+    assert "answered with no model call" in out
+    answered = int(out.split("\n")[out.split("\n").index(next(x for x in out.split("\n") if "answered with no model call" in x))].split()[0])
+    total = int(next(x for x in out.split("\n") if "answered with no model call" in x).split()[2])
+    assert answered == total, f"{total - answered} row(s) fell out of the fast lane"
+    assert "OVER" not in out, "a recipe missed its own latency target"
+
+
+def test_the_bench_quotes_the_session_it_says_it_quotes():
+    """Every baseline figure in the bench is one the September report actually carries."""
+    from scripts.bench_lanes import BASELINE
+
+    assert BASELINE["capability_delta"][1:] == (76_585, 75_530, 0)
+    assert BASELINE["working_set_next"][1:] == (30_430, 29_440, 0)
+    assert BASELINE["needs_reply"][1:] == (29_010, 28_099, 0)
+    assert BASELINE["order_address_lookup"][1:] == (36_812, 35_236, 1)

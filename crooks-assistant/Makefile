@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence commands commands-remove update watch
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence bench-lanes commands commands-remove update watch
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -46,6 +46,7 @@ help:
 	@echo "  make test-session-report [SESSION=ts-…]       write reports/<session>.md from logs/test-sessions/<session>.jsonl"
 	@echo "  make test-session-proposals [SESSION=ts-…]    write reports/<session>-proposals.md: improvement candidates, cited by turn, never applied"
 	@echo "  make bench-intelligence                       time the read layer, the working sets and batch staging against a fake store"
+	@echo "  make bench-lanes                              time the fast lane against the 9 September session's own figures"
 	@echo "  make watch [SESSION=ts-…]                     follow what it is doing, live, one line per thing"
 	@echo ""
 	@echo "Three words on the PATH, so none of this needs a folder or a make:"
@@ -135,6 +136,9 @@ update:
 
 watch:
 	@$(PY) scripts/watch.py $(SESSION)
+
+bench-lanes:
+	@$(PY) scripts/bench_lanes.py $(if $(ORDERS),--orders $(ORDERS),) $(if $(LATENCY),--latency-ms $(LATENCY),)
 
 bench-intelligence:
 	$(PY) scripts/bench_intelligence.py

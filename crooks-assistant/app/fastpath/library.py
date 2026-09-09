@@ -133,19 +133,23 @@ def _capability_plan(ctx: Ctx) -> ReadPlan | None:      # noqa: ARG001 — no so
 
 
 def _capability_summary(ctx: Ctx, result: ReadResult) -> FastAnswer:   # noqa: ARG001
-    from app.capabilities import manifest as manifest_mod
+    # Imported by name, not as a module: app/capabilities/__init__.py re-exports `delta` and
+    # `build` as functions, so `from app.capabilities import delta` gets the function and
+    # `delta_mod.spoken_delta` is an AttributeError at the worst possible moment.
+    from app.capabilities.manifest import build as build_manifest
+    from app.capabilities.manifest import spoken_summary
 
-    manifest = getattr(ctx.runtime, "manifest", None) or manifest_mod.build(build_id=getattr(ctx.runtime, "build", ""))
-    return FastAnswer(answer=manifest_mod.spoken_summary(manifest), trace={"source": "manifest", "fingerprint": manifest.get("fingerprint")})
+    manifest = getattr(ctx.runtime, "manifest", None) or build_manifest(build_id=getattr(ctx.runtime, "build", ""))
+    return FastAnswer(answer=spoken_summary(manifest), trace={"source": "manifest", "fingerprint": manifest.get("fingerprint")})
 
 
 def _capability_delta(ctx: Ctx, result: ReadResult) -> FastAnswer:     # noqa: ARG001
-    from app.capabilities import delta as delta_mod
+    from app.capabilities.delta import spoken_delta
 
     record = getattr(ctx.runtime, "capability_record", None)
     if not record:
         return FastAnswer(answer="", defer="no capability record on this backend")
-    return FastAnswer(answer=delta_mod.spoken_delta(record), trace={"source": "capability delta", "fingerprint": (record.get("current") or {}).get("fingerprint")})
+    return FastAnswer(answer=spoken_delta(record), trace={"source": "capability delta", "fingerprint": (record.get("current") or {}).get("fingerprint")})
 
 
 register(Recipe(
@@ -625,9 +629,20 @@ def _needs_reply_plan(ctx: Ctx) -> ReadPlan | None:
 
 
 def _needs_reply_args(values: dict[str, Any]) -> dict[str, Any] | None:
-    body = values.get("customers")
-    set_id = body.get("set_id") if isinstance(body, dict) else None
-    return {"set_id": str(set_id), "days": 30} if set_id else None
+    set_id = _set_id_of(values.get("customers"))
+    return {"set_id": set_id, "days": 30} if set_id else None
+
+
+def _set_id_of(body: Any, key: str = "set") -> str:
+    """The working set a listing made. The read layer publishes it under `set` (the whole
+    public shape) — `set_id` at the top level is what the batch tools' own results use — so
+    both are looked for rather than one being assumed."""
+    if not isinstance(body, dict):
+        return ""
+    held = body.get(key)
+    if isinstance(held, dict) and held.get("set_id"):
+        return str(held["set_id"])
+    return str(body.get("set_id") or "")
 
 
 def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
@@ -638,7 +653,7 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     waiting = [r for r in rows if r.get("needs_reply")]
     counts = body.get("counts") or {}
     unchecked = int(counts.get("unchecked") or 0)
-    _open_workflow(ctx, body, kind="customers", operation="reply", set_id=str(body.get("needs_reply_set_id") or ""))
+    _open_workflow(ctx, body, kind="customers", operation="reply", set_id=_set_id_of(body, "set_needs_reply"))
     if not waiting:
         tail = f" {unchecked} could not be checked." if unchecked else ""
         return FastAnswer(answer=f"Nobody is waiting on a reply — {len(rows)} customers checked.{tail}", calls=list(result.calls),
@@ -658,7 +673,7 @@ def _open_workflow(ctx: Ctx, body: dict[str, Any], *, kind: str, operation: str,
     from app.analytics import sets as working_sets
     from app.session.branch import Workflow
 
-    set_id = set_id or str(body.get("set_id") or "")
+    set_id = set_id or _set_id_of(body)
     if not set_id:
         return
     ws = working_sets.get(ctx.session, set_id)
