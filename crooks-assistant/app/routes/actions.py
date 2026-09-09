@@ -169,7 +169,7 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         **proposal.public(),
         "code": result.code,
         "spoken": result.spoken,
-        "ui": present_action(result, session=session),
+        "ui": present_action(result, session=session, writes=await writes_context(request)),
         "undo": undo,
     }
 
@@ -186,4 +186,7 @@ async def state(request: Request, proposal_id: str, session_id: str = "") -> JSO
         session = runtime.sessions.peek(session_id.strip())
     except KeyError:
         session = None
-    return {**proposal.public(), "ui": present_proposal_state(proposal, session=session)}
+    # The same preflight the commit route runs: a card recovered after a lost connection is
+    # only shown as tappable when a tap from this request could actually work.
+    writes = await writes_context(request)
+    return {**proposal.public(), "ui": present_proposal_state(proposal, session=session, writes=writes)}

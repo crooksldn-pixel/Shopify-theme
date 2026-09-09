@@ -604,3 +604,16 @@ async def test_a_login_header_without_the_proxy_is_worth_nothing(client):
     configure(client, local=True)
     assert (await commit(client, proposal.proposal_id, session_id="s12", headers=spoofed)).json()["status"] == "verified"
     assert proposal.caller == "local"
+
+
+async def test_a_card_recovered_after_a_lost_connection_is_honest_about_the_tap(client):
+    """The tablet asks what happened when a commit's answer never arrived. If a tap from
+    where it is would now be refused, the card it gets back must say so rather than arming."""
+    configure(client)
+    proposal = await staged(client, session_id="s13")
+    live = (await client.get(f"/actions/{proposal.proposal_id}?session_id=s13", headers=PROXIED)).json()
+    assert live["ui"][0]["data"]["commit"] == {"allowed": True}
+    configure(client, writes=False)
+    blocked = (await client.get(f"/actions/{proposal.proposal_id}?session_id=s13", headers=PROXIED)).json()
+    assert blocked["ui"][0]["data"]["commit"]["allowed"] is False
+    assert blocked["ui"][0]["data"]["commit"]["code"] == "writes_disabled"

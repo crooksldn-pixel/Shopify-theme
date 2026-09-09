@@ -490,17 +490,20 @@ def _entity_line(proposal) -> str:
     return _text(f"{kind} {proposal.entity_label}".strip())
 
 
-def present_action(result, *, session: Session | None = None) -> list[dict[str, Any]]:
+def present_action(result, *, session: Session | None = None, writes: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """What the tablet shows once a tap has been answered: a success card and the entity as
     it now is (from the verifying re-read), or a calm failure. Built from the engine's result,
     never from the tablet's expectation."""
     proposal = result.proposal
     if proposal is None:
         return []
-    return present_proposal_state(proposal, session=session, code=result.code)
+    return present_proposal_state(proposal, session=session, code=result.code, writes=writes)
 
 
-def present_proposal_state(proposal, *, session: Session | None = None, code: str | None = None) -> list[dict[str, Any]]:
+def present_proposal_state(
+    proposal, *, session: Session | None = None, code: str | None = None,
+    writes: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     code = code or proposal.code or proposal.status.value.lower()
     words = _present_words(proposal)
     entity_line = _entity_line(proposal)
@@ -515,7 +518,9 @@ def present_proposal_state(proposal, *, session: Session | None = None, code: st
         if isinstance(proposal.entity, dict) and proposal.entity_kind == "order":
             items.append(_ui("order", _order(proposal.entity, detail=True)))
     elif status == "pending":
-        items.append(_confirmation(proposal))
+        # Whether a tap from this request could work, on this card too: a card recovered
+        # after a lost connection must not offer a tap the Mac would refuse.
+        items.append(_confirmation(proposal, writes=writes))
     elif status in ("executing", "executed"):
         # Claimed, sent, or being proven: the outcome is not known yet, and the card must not
         # say "not applied" about a change that may be on the order this second.
