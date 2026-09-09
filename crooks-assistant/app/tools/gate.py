@@ -119,9 +119,6 @@ _ID_KIND = {
     "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
     "evidence_message_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
 }
-# Issued-id arguments a tool may be called without. Present, they must be issued ids of
-# their kind like any other; absent, the tool decides what it can do without them.
-_OPTIONAL_ID_ARGS = frozenset({"evidence_message_id"})
 
 
 def id_kind_ok(arg: str, value: object) -> bool:
@@ -169,7 +166,7 @@ def classify(
     if spec_tier is Tier.RED:
         return deny(f"{name} is registered as RED.")
 
-    problem = _check_issued_ids(name, id_args, args, issued)
+    problem = _check_issued_ids(name, id_args, args, issued, optional=_optional_args(spec, id_args))
     if problem:
         return deny(problem.lstrip(_RECOVERABLE), recoverable=problem.startswith(_RECOVERABLE))
 
@@ -210,7 +207,7 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
     id_args = tuple(dict.fromkeys(spec.issued_id_args))
     if write.entity_arg not in id_args:
         return deny(f"{name} must act on an issued {write.entity_arg}.")
-    problem = _check_issued_ids(name, id_args, args, issued)
+    problem = _check_issued_ids(name, id_args, args, issued, optional=_optional_args(spec, id_args) - {write.entity_arg})
     if problem:
         return deny(problem.lstrip(_RECOVERABLE), recoverable=problem.startswith(_RECOVERABLE))
     problem = _check_schema_bounds(name, spec.input_schema, args)
@@ -228,11 +225,20 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
 _RECOVERABLE = "\x00"
 
 
-def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any], issued: frozenset[str]) -> str:
+def _optional_args(spec, id_args: tuple[str, ...]) -> frozenset[str]:
+    """The issued-id arguments the tool's own schema does not require (an order a reply is
+    about, the email an address came from). Present, they must be issued ids of their kind
+    like any other; absent, the tool decides what it can do without them."""
+    schema = spec.input_schema if spec is not None and isinstance(spec.input_schema, dict) else {}
+    required = set(schema.get("required") or [])
+    return frozenset(arg for arg in id_args if arg not in required)
+
+
+def _check_issued_ids(name: str, id_args: tuple[str, ...], args: dict[str, Any], issued: frozenset[str], *, optional: frozenset[str] = frozenset()) -> str:
     for arg in id_args:
         value = args.get(arg)
         if value is None or not str(value).strip():
-            if arg in _OPTIONAL_ID_ARGS:
+            if arg in optional:
                 continue
             return f"{name} requires {arg}, which was not supplied."
         value = str(value)

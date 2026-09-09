@@ -461,24 +461,23 @@ def _present_refund(proposal) -> dict:
 @tool(
     name="shopify_refund_create",
     description=(
-        "Prepare a refund on one order, priced by Shopify: the returned items (with restock), "
-        "the postage, or a plain amount. Stages it for the owner to apply on the tablet with a "
-        "hold and a drag; nothing is refunded by calling it. Requires an order_id from a previous "
-        "search; item ids come from shopify_order_detail."
+        "Prepare a refund on one order, priced by Shopify: a plain amount, the returned items (with "
+        "restock), or the postage. Applied by a hold and drag on the tablet; nothing is refunded by "
+        "calling it. Needs an order_id from a search; item ids come from shopify_order_detail."
     ),
     input_schema={
         "type": "object",
         "properties": {
             "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
-            "amount": {"type": "string", "maxLength": 12, "description": "A plain amount, e.g. \"20.00\". Leave out when refunding items."},
+            "amount": {"type": "string", "maxLength": 12, "description": "A plain amount, e.g. \"20.00\"; leave out when refunding items."},
             "items": {
                 "type": "array", "maxItems": 12,
                 "items": {"type": "object", "properties": {"line_item_id": {"type": "string"}, "quantity": {"type": "integer"}}, "required": ["line_item_id", "quantity"]},
-                "description": "The items being refunded, by line_item_id from the order detail, with quantities.",
+                "description": "Items refunded, by line_item_id, with quantities.",
             },
-            "restock": {"type": "string", "maxLength": 8, "description": "For items: return (they came back), cancel (never shipped), or none. Default none."},
-            "shipping": {"type": "string", "maxLength": 12, "description": "Refund the postage too: \"full\", or an amount such as \"3.95\". Default none."},
-            "reason": {"type": "string", "maxLength": MAX_REFUND_NOTE_CHARS, "description": "Optional short reason, kept on the refund."},
+            "restock": {"type": "string", "maxLength": 8, "description": "For items: return, cancel (never shipped) or none. Default none."},
+            "shipping": {"type": "string", "maxLength": 12, "description": "Refund the postage too: \"full\" or an amount like \"3.95\"."},
+            "reason": {"type": "string", "maxLength": MAX_REFUND_NOTE_CHARS, "description": "Short reason, kept on the refund."},
         },
         "required": ["order_id"],
     },
@@ -897,26 +896,26 @@ def _mentions(body: str, new: dict[str, str], changed: set[str]) -> tuple[list[s
 @tool(
     name="shopify_order_shipping_address_set",
     description=(
-        "Prepare a change to one order's shipping address, before it ships. Give only the parts "
-        "that change; the Mac merges them into the address as it is now and prints the difference. "
-        "When the new address came from an email, pass that message's message_id: the Mac reads "
-        "the message itself and refuses unless the postcode and street appear in it. Staged for "
-        "the owner to apply with a hold on the tablet; nothing changes by calling it."
+        "Prepare a change to an order's shipping address before it ships: give only the parts that "
+        "change; the Mac merges them into the current address and prints the difference. If the "
+        "address came from an email, pass its message_id: the Mac reads that message and refuses "
+        "unless the postcode and street are in it. Applied by a hold on the tablet; nothing changes "
+        "by calling it."
     ),
     input_schema={
         "type": "object",
         "properties": {
             "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
-            "evidence_message_id": {"type": "string", "maxLength": 40, "description": "The message_id of the customer's email giving the new address, when there is one."},
-            "address1": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "The new first line: number and street."},
-            "address2": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "The new second line (flat, building), if any."},
-            "city": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "The new town or city."},
-            "postcode": {"type": "string", "maxLength": 12, "description": "The new postcode."},
-            "country_code": {"type": "string", "maxLength": 2, "description": "Two-letter country code, only when the country changes."},
-            "province_code": {"type": "string", "maxLength": 5, "description": "Region or state code, only when the country needs one."},
-            "name": {"type": "string", "maxLength": 80, "description": "The recipient's name, only when it changes."},
-            "company": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Company or building name, only when it changes."},
-            "phone": {"type": "string", "maxLength": 20, "description": "Delivery phone number, only when it changes."},
+            "evidence_message_id": {"type": "string", "maxLength": 40, "description": "message_id of the customer's email giving the new address, if any."},
+            "address1": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "New first line: number and street."},
+            "address2": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "New second line, if any."},
+            "city": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "New town."},
+            "postcode": {"type": "string", "maxLength": 12, "description": "New postcode."},
+            "country_code": {"type": "string", "maxLength": 2, "description": "Two letters, only if the country changes."},
+            "province_code": {"type": "string", "maxLength": 5, "description": "Region code, only if the country needs one."},
+            "name": {"type": "string", "maxLength": 80, "description": "Recipient's name, only if it changes."},
+            "company": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "Company or building, only if it changes."},
+            "phone": {"type": "string", "maxLength": 20, "description": "Delivery phone, only if it changes."},
         },
         "required": ["order_id"],
     },
@@ -1215,21 +1214,20 @@ def _present_fulfil(proposal) -> dict:
 @tool(
     name="shopify_order_fulfil",
     description=(
-        "Prepare to mark one order shipped: every item still to ship, or only the items named "
-        "(by line_item_id from the order detail). The carrier and tracking number go on the "
-        "fulfilment, and store policy decides whether the customer is emailed. Staged for the "
-        "owner to apply with a hold on the tablet; nothing ships by calling it."
+        "Prepare to mark an order shipped: everything still to ship, or only the items named (by "
+        "line_item_id), with the carrier and tracking number. Store policy decides whether the "
+        "customer is emailed. Applied by a hold on the tablet; nothing ships by calling it."
     ),
     input_schema={
         "type": "object",
         "properties": {
             "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
-            "tracking_number": {"type": "string", "maxLength": 40, "description": "The carrier's tracking number, if there is one."},
-            "carrier": {"type": "string", "maxLength": 40, "description": "The carrier, e.g. Royal Mail, Evri, DPD. Leave out for the store's usual one."},
+            "tracking_number": {"type": "string", "maxLength": 40, "description": "The tracking number, if any."},
+            "carrier": {"type": "string", "maxLength": 40, "description": "Royal Mail, Evri, DPD…; leave out for the store's usual one."},
             "items": {
                 "type": "array", "maxItems": 12,
                 "items": {"type": "object", "properties": {"line_item_id": {"type": "string"}, "quantity": {"type": "integer"}}, "required": ["line_item_id", "quantity"]},
-                "description": "Only these items, with quantities. Leave out to ship everything still open.",
+                "description": "Only these items; leave out to ship everything still open.",
             },
         },
         "required": ["order_id"],

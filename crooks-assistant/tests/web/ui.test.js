@@ -178,12 +178,21 @@ test('email thread: last message open, earlier ones collapsed and openable', () 
   assert.equal(msgs[0].classList.contains('is-collapsed'), false);
 });
 
-test('a draft never has a send control and says nothing was sent', () => {
+test('a draft never has a send control and says nothing was sent; a sent one says sent', () => {
   const node = UI.renderItem({ type: 'email_draft', data: { to: 'x@example.com', subject: 's', body: 'b' } });
   // No buttons at all: the dead "Rewrite / Shorter" controls went with the space they cost.
   assert.equal(node.querySelectorAll('button').length, 0);
-  assert.ok(!/send\b/i.test(textOf(node).replace(/not sent|nothing has been sent/gi, '')), 'a send control exists');
-  assert.ok(/not sent/i.test(textOf(node)));
+  assert.ok(/nothing has been sent/i.test(textOf(node)) && /Draft · saved in Gmail/.test(textOf(node)));
+  const sent = UI.renderItem({ type: 'email_draft', data: { state: 'sent', to: 'x@example.com', subject: 's', body: 'b' } });
+  assert.equal(sent.querySelectorAll('button').length, 0);
+  assert.ok(/^Sent/.test(textOf(sent).trim()) && !/nothing has been sent/i.test(textOf(sent)));
+});
+
+test('an email card prints the whole body the gesture would send, as text', () => {
+  const { node } = tapHarness({ body: 'Hi Sam,\n\nIt ships tomorrow.\n\n' + HOSTILE, operation: 'gmail_send_reply', risk: 'red' });
+  const body = node.querySelector('.action-body');
+  assert.ok(body && body.textContent.includes('It ships tomorrow.') && body.textContent.includes(HOSTILE));
+  assert.equal(node.querySelector('img'), null);
 });
 
 test('a confirmation without a proposal is inert and names its risk', () => {

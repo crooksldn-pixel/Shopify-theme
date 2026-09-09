@@ -143,6 +143,9 @@ class Runtime:
             return WriteStatus("disabled", "disabled — CROOKS_WRITES_ENABLED=false")
         if not self.allowed_logins:
             return WriteStatus("blocked", "blocked — CROOKS_ALLOWED_LOGINS not configured")
+        if operation is not None and operation in self._gmail_operations():
+            entry = (await self._gmail_capabilities()).get(operation) or {}
+            return WriteStatus(str(entry.get("state") or "blocked"), str(entry.get("detail") or "blocked"))
         needed = {scope for op, scope in self._write_scopes().items() if operation is None or op == operation}
         if operation is not None and operation not in self._write_scopes():
             return WriteStatus("blocked", f"blocked — {operation.replace('_', ' ')} is not a change this Mac can make")
@@ -183,23 +186,47 @@ class Runtime:
             if s.write is not None and s.write.mutation in REVIEWED_MUTATIONS and not s.name.startswith("mock_")
         }
 
-    def gmail_send_capability(self) -> dict[str, str]:
-        """Whether an email could be sent from here. The inbox is authorised read-only until
-        the owner runs the send authorisation deliberately (scripts/gmail_auth.py --send),
-        and until then this says so rather than offering a send that would fail."""
-        from app.clients.gmail import send_scope_granted
+    def _gmail_operations(self) -> dict[str, str]:
+        """operation → the kind of Gmail call it makes (draft, send, labels), for every
+        registered Gmail write. The kind is what the credential's scopes are checked against."""
+        from app.tools.registry import all_specs
 
-        if not self.settings.writes_enabled:
-            return {"state": "disabled", "detail": "disabled — CROOKS_WRITES_ENABLED=false", "scope": "gmail.send"}
-        if not self.settings.gmail_send_enabled:
-            return {"state": "disabled", "detail": "disabled — CROOKS_GMAIL_SEND=false", "scope": "gmail.send"}
+        return {
+            s.write.operation: s.write.mutation.split(":", 1)[1]
+            for s in all_specs()
+            if s.write is not None and s.write.mutation.startswith("gmail:") and not s.name.startswith("mock_")
+        }
+
+    async def _gmail_capabilities(self) -> dict[str, dict[str, str]]:
+        """Every email change, and whether the credential allows it: read back from Google
+        (cached), never from a comment about what was once authorised. Re-authorisation is
+        named only when Google itself refused the credential."""
+        from app.clients.gmail import OPERATIONS, GmailAuthRequired, short_scopes
+
+        operations = self._gmail_operations()
+        if not operations:
+            return {}
+        settings = self.settings
+        if not settings.writes_enabled:
+            return {op: {"state": "disabled", "detail": "disabled — CROOKS_WRITES_ENABLED=false", "scope": f"gmail:{kind}"} for op, kind in operations.items()}
+        if not self.allowed_logins:
+            return {op: {"state": "blocked", "detail": "blocked — CROOKS_ALLOWED_LOGINS not configured", "scope": f"gmail:{kind}"} for op, kind in operations.items()}
         try:
-            granted = send_scope_granted()
-        except Exception as exc:  # noqa: BLE001
-            return {"state": "unknown", "detail": f"unverified — the Gmail credential could not be read ({type(exc).__name__})", "scope": "gmail.send"}
-        if not granted:
-            return {"state": "blocked", "detail": "Gmail send unavailable — scope missing (run: python scripts/gmail_auth.py --send)", "scope": "gmail.send"}
-        return {"state": "ready", "detail": "ready — gmail send reply", "scope": "gmail.send"}
+            report = await asyncio.to_thread(self.gmail.scopes)
+        except GmailAuthRequired as exc:
+            return {op: {"state": "blocked", "detail": f"blocked — {exc}", "scope": f"gmail:{kind}"} for op, kind in operations.items()}
+        except Exception as exc:  # noqa: BLE001 — Google not answering says nothing about the grant
+            log.warning("could not read the Gmail credential's scopes: %s", exc)
+            return {op: {"state": "unknown", "detail": f"ready, unverified — the Gmail scope check did not answer ({type(exc).__name__})", "scope": f"gmail:{kind}"} for op, kind in operations.items()}
+        out: dict[str, dict[str, str]] = {}
+        for op, kind in sorted(operations.items()):
+            needs = short_scopes(OPERATIONS[kind][:2])
+            if report.allows(kind):
+                detail = f"ready — {op.replace('_', ' ')}" + ("" if report.verified else " (scopes as stored, unverified)")
+                out[op] = {"state": "ready", "detail": detail, "scope": f"gmail:{kind}"}
+            else:
+                out[op] = {"state": "blocked", "detail": f"blocked — Gmail {kind} needs {needs}; the credential has {short_scopes(report.scopes)}", "scope": f"gmail:{kind}"}
+        return out
 
     async def capabilities(self) -> dict[str, dict[str, str]]:
         """Every change the Mac knows how to make, and whether it could make it now: the
@@ -223,6 +250,7 @@ class Runtime:
                 out[operation] = {"state": "blocked", "detail": f"blocked — Shopify {scope} scope missing", "scope": scope}
             else:
                 out[operation] = {"state": state, "detail": detail or f"ready — {operation.replace('_', ' ')}", "scope": scope}
+        out.update(await self._gmail_capabilities())
         return out
 
 
@@ -295,7 +323,13 @@ def build(settings: Settings | None = None) -> Runtime:
     gmail = GmailClient()
 
     # Register the tool modules. Importing them is what runs the @tool decorators.
-    from app.tools import gmail_tools, mock, shopify_tools, shopify_writes  # noqa: F401
+    from app.tools import (  # noqa: F401
+        gmail_tools,
+        gmail_writes,
+        mock,
+        shopify_tools,
+        shopify_writes,
+    )
 
     shopify_tools.bind(shopify)
     gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(shopify))
@@ -341,6 +375,7 @@ def build(settings: Settings | None = None) -> Runtime:
     # The write policy (refund on cancel, restock, notify) is the runtime's settings, read
     # at prepare time, so a test's configured runtime is what the card prints.
     shopify_writes.bind_policy(lambda: runtime.settings)
+    gmail_writes.bind(gmail, policy=lambda: runtime.settings)
     return runtime
 
 

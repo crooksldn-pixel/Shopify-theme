@@ -49,6 +49,7 @@ MAX_BODY_CHARS = 2_000
 MAX_SNIPPET_CHARS = 300
 MAX_TEXT_CHARS = 160
 MAX_NOTE_CHARS = 400
+MAX_EMAIL_BODY_CHARS = 2400
 MAX_CONTEXT = 6
 
 # The interaction grammar: how the owner authorises a proposal. The card names one of these
@@ -601,6 +602,8 @@ def _confirmation(proposal, *, writes: dict[str, Any] | None = None) -> dict[str
         "entity_kind": _text(proposal.entity_kind, 20),
         "entity_ref": _text(proposal.entity_ref, 200),
         "summary": _text(words.get("summary"), MAX_NOTE_CHARS),
+        # An email's whole text, when the change is an email: the card is the draft.
+        "body": _text(words.get("body"), MAX_EMAIL_BODY_CHARS),
         "detail": _text(words.get("detail")),
         # The facts the gesture authorises, printed above it: what the change will do and to
         # whom, built by the tool from what it read. Never a place for the model's words.
@@ -684,6 +687,12 @@ def present_proposal_state(
         }))
         if isinstance(proposal.entity, dict) and proposal.entity_kind == "order":
             items.append(_ui("order", _order(proposal.entity, detail=True)))
+        elif isinstance(proposal.entity, dict) and proposal.entity.get("kind") == "email" and proposal.entity.get("body"):
+            e = proposal.entity
+            items.append(_ui("email_draft", {
+                "to": _text(e.get("to")), "subject": _text(e.get("subject"), 200), "body": _text(e.get("body"), MAX_EMAIL_BODY_CHARS),
+                "state": "sent" if e.get("state") == "sent" else "draft",
+            }))
     elif status == "pending":
         # Whether a tap from this request could work, on this card too: a card recovered
         # after a lost connection must not offer a tap the Mac would refuse.
@@ -703,11 +712,16 @@ def _done_title(proposal) -> str:
     return {
         "order_note_append": "Note added", "order_tags_add": "Tags added", "order_cancel": "Cancelled",
         "refund_create": "Refunded", "order_shipping_address_set": "Address changed", "fulfillment_create": "Shipped",
+        "gmail_draft_reply": "Draft saved", "gmail_draft_new": "Draft saved", "gmail_send_reply": "Reply sent", "gmail_send_new": "Email sent",
+        "gmail_thread_archive": "Archived",
     }.get(proposal.operation, "Done")
 
 
 def _undone_title(proposal) -> str:
-    return {"order_note_append_undo": "Note restored", "order_tags_add_undo": "Tags removed"}.get(proposal.operation, "Undone")
+    return {
+        "order_note_append_undo": "Note restored", "order_tags_add_undo": "Tags removed",
+        "gmail_draft_reply_undo": "Draft deleted", "gmail_draft_new_undo": "Draft deleted", "gmail_thread_archive_undo": "Back in the inbox",
+    }.get(proposal.operation, "Undone")
 
 
 # What a settled-but-not-successful proposal says on the card. Calm, and nothing from Shopify.

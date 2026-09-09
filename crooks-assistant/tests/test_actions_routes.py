@@ -662,7 +662,10 @@ async def test_health_names_every_change_and_whether_it_could_be_made(client):
     health = (await client.get("/health?fresh=1")).json()
     caps = health["capabilities"]
     assert caps["order_note_append"] == {"state": "ready", "detail": "ready — order note append", "scope": "write_orders"}
-    assert caps["gmail_send"]["state"] == "disabled" and "CROOKS_GMAIL_SEND" in caps["gmail_send"]["detail"]
+    # No Gmail credential is stored here: the email changes are blocked, and say why — never
+    # "disabled" by a switch, never "ready" on the strength of a comment.
+    assert caps["gmail_send_reply"]["state"] == "blocked" and "Re-authorise" in caps["gmail_send_reply"]["detail"]
+    assert caps["gmail_draft_reply"]["scope"] == "gmail:draft" and caps["gmail_send_reply"]["scope"] == "gmail:send"
     client.store.scopes = {"read_orders"}
     client.store._scopes = None
     health = (await client.get("/health?fresh=1")).json()

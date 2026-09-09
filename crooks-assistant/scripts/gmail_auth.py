@@ -15,10 +15,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.clients.gmail import (  # noqa: E402
     CREDENTIALS_PATH,
-    SCOPES,
+    OPERATIONS,
+    REQUESTED_SCOPES,
     GmailAuthRequired,
     GmailClient,
+    ScopeReport,
+    effective_scopes,
     load_credentials,
+    short_scopes,
     store_token_json,
 )
 
@@ -34,7 +38,7 @@ def authorise() -> int:
         )
         return 1
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), REQUESTED_SCOPES)
     print("\nA browser will open. Expect an 'unverified app' warning — that is correct for a\n"
           "private app. Click Advanced, then 'Go to … (unsafe)', then Allow. Once, ever.\n")
     # 127.0.0.1 rather than localhost: Google warns localhost can trip client firewalls.
@@ -59,11 +63,15 @@ def verify() -> int:
         print(f"FAIL: {exc}")
         return 1
 
-    granted = list(creds.scopes or [])
+    scopes, source = effective_scopes(creds)
+    report = ScopeReport(scopes=scopes, source=source, checked_at=0.0)
     print(f"refresh token  : {'present' if creds.refresh_token else 'MISSING — re-run without --verify'}")
-    print(f"scopes granted : {granted}")
-    if granted != SCOPES:
-        print(f"WARNING: expected exactly {SCOPES}. A wider scope than gmail.readonly is a bug.")
+    print(f"scopes         : {short_scopes(scopes)} — {'verified by Google' if report.verified else 'as stored (Google did not answer tokeninfo)'}")
+    for kind in OPERATIONS:
+        print(f"  {kind:<7}: {'yes' if report.allows(kind) else 'no'}")
+    missing = [s for s in REQUESTED_SCOPES if s not in scopes]
+    if missing:
+        print(f"NOTE: the token lacks {short_scopes(missing)}; re-run without --verify to authorise it. Nothing else needs doing.")
 
     client = GmailClient()
     profile = client.profile()

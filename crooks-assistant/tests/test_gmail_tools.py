@@ -30,17 +30,21 @@ def test_module_contains_no_write_capability():
         assert forbidden not in source, f"{forbidden} appears in gmail_tools — Day 1 is read-only"
 
 
-def test_only_readonly_scope_is_requested():
-    from app.clients.gmail import SCOPES
+def test_the_scopes_asked_for_are_modify_and_compose_and_never_the_whole_mailbox():
+    from app.clients.gmail import REQUESTED_SCOPES, SCOPE_COMPOSE, SCOPE_FULL, SCOPE_MODIFY
 
-    assert SCOPES == ["https://www.googleapis.com/auth/gmail.readonly"]
+    assert set(REQUESTED_SCOPES) == {SCOPE_MODIFY, SCOPE_COMPOSE} and SCOPE_FULL not in REQUESTED_SCOPES
 
 
-def test_registered_gmail_tools_are_read_only():
+def test_the_gmail_reads_are_two_and_every_other_gmail_tool_is_a_staged_write():
+    from app.tools import gmail_writes  # noqa: F401 — registers the writes
     from app.tools.registry import all_specs
 
-    names = [s.name for s in all_specs() if s.name.startswith("gmail_")]
-    assert sorted(names) == ["gmail_read_thread", "gmail_search"]
+    reads = sorted(s.name for s in all_specs() if s.name.startswith("gmail_") and s.write is None)
+    writes = sorted(s.name for s in all_specs() if s.name.startswith("gmail_") and s.write is not None)
+    assert reads == ["gmail_read_thread", "gmail_search"]
+    assert writes == ["gmail_draft_new", "gmail_draft_reply", "gmail_send_new", "gmail_send_reply", "gmail_thread_archive"]
+    assert all(s.write.complete and s.write.mutation.startswith("gmail:") for s in all_specs() if s.name in writes)
 
 
 # --- bulk detection ----------------------------------------------------------

@@ -412,6 +412,8 @@ class ActionEngine:
             spoken = spoken.replace("{label}", str(proposal.entity_label).lstrip("#"))
             if "{amount}" in spoken:
                 spoken = spoken.replace("{amount}", _spoken_amount(proposal.summary))
+            if "{to}" in spoken:
+                spoken = spoken.replace("{to}", str(proposal.summary.get("spoken_to") or "them"))
             if proposal.note:
                 spoken = f"{spoken} {proposal.note}"
             if proposal.undo_of is None:

@@ -661,11 +661,13 @@
   }
 
   function renderEmailDraft(d, opts) {
-    // Architecture only: Gmail is read-only. There is no send here and there must not be one.
+    // An email after a proven change: saved as a draft in Gmail, or sent. There is no send
+    // here — sending is a gesture on the confirmation card, answered by the Mac.
+    const sent = text(d.state) === 'sent';
     return card('email_draft', [
-      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Draft · not sent'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-sub', text: d.to ? `To ${text(d.to)}` : '' })]), h('div', { class: 'badges' }, [badge('Draft', 'warn')])]),
+      h('div', { class: 'card-head' }, [h('div', {}, [kicker(sent ? 'Sent' : 'Draft · saved in Gmail'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-sub', text: d.to ? `To ${text(d.to)}` : '' })]), h('div', { class: 'badges' }, [badge(sent ? 'Sent' : 'Draft', sent ? 'ok' : 'warn')])]),
       h('p', { class: 'msg-body', text: text(d.body) }),
-      h('p', { class: 'future', text: 'Editing and sending are not connected. Nothing has been sent.' }),
+      sent ? null : h('p', { class: 'future', text: 'Nothing has been sent. Say "send it" to send this draft, or send it from Gmail.' }),
     ], opts);
   }
 
@@ -735,6 +737,8 @@
         ]),
       ]),
       d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
+      // An email's whole text, when the change is an email: what the gesture sends, read here.
+      d.body ? h('blockquote', { class: 'action-summary action-body' }, h('p', { class: 'msg-body', text: text(d.body) })) : null,
       // What the gesture authorises, fact by fact, from the Mac. The owner reads this, not
       // the model's sentence, before moving a hand.
       facts.length ? h('dl', { class: 'facts' }, facts.map((f) => [h('dt', { text: text(f.label) }), h('dd', { class: text(f.tone) || null, text: text(f.value) })]).flat()) : null,

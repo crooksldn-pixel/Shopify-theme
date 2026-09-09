@@ -105,10 +105,13 @@ class Settings(BaseSettings):
     # default: Click & Drop or Admin may already send one; printed on the card either way.
     carrier: str = "Royal Mail"
     fulfil_notify: bool = False
-    # Sending email. Off (the default): the assistant drafts and the draft stays a card.
-    # On is not enough by itself: the inbox must have been re-authorised with the send scope
-    # (scripts/gmail_auth.py --send), which is a deliberate step the owner takes once.
-    gmail_send_enabled: bool = False
+    # Email the assistant prepares. What it may do is read from the Gmail credential itself
+    # (modify: read and label; compose: draft and send) and shown per change on /health; these
+    # are how the emails read. The sign-off goes on every draft and every send; links are
+    # allowed only to these hosts, so a made-up URL never reaches a customer.
+    gmail_from_name: str = "CROOKS"
+    gmail_signature: str = "CROOKS"
+    gmail_link_hosts: str = "crooksldn.com,royalmail.com,parcelforce.com,evri.com,dpd.co.uk,yodel.co.uk"
 
     # --- behaviour ---
     tool_timeout_s: float = 8.0

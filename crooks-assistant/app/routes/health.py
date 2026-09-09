@@ -130,7 +130,6 @@ async def _health(runtime) -> dict:
     # Every change the Mac knows how to make, and whether it could make it now. Off is the
     # intended state and not a fault; a scope the store has not granted is named here.
     capabilities = await runtime.capabilities()
-    capabilities["gmail_send"] = runtime.gmail_send_capability()
 
     return {
         # Degraded, not down: Shopify being unreachable should not make the page say the

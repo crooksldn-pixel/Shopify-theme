@@ -89,8 +89,11 @@ Then, in order:
    in `SHOPIFY_SCOPES.md`, which also lists the scopes.
 
 6. **Gmail** — Google Cloud project → enable the Gmail API → Branding → Audience: External
-   → Data Access: `gmail.readonly` only → **Publish app** → Clients → Desktop app → save the
-   JSON as `credentials.json` in this folder. Then `make gmail`.
+   → Data Access: `gmail.modify` (read mail, change labels) and `gmail.compose` (drafts, and
+   sending) → **Publish app** → Clients → Desktop app → save the JSON as `credentials.json`
+   in this folder. Then `make gmail`. `make gmail-verify` prints what Google says the stored
+   token may do — read, draft, send, labels — and `/health` says the same, per change. The
+   assistant never asks you to re-authorise unless Google itself has refused the token.
    **Skip "Publish app" and your token dies every seven days.**
 
 7. **Content** — `kb/terminology.md` already holds the live catalogue with spoken aliases for
@@ -271,7 +274,8 @@ tablet (Chrome)  ──HTTPS via tailscale serve──▶  FastAPI on 127.0.0.1:
                                           ┌───────┴───────┐
                                           ▼               ▼
                                     Shopify Admin      Gmail API
-                                     (read-only)      (readonly)
+                                  (reads; reviewed    (modify, compose;
+                                   writes, staged)     writes staged)
 ```
 
 `app/tools/gate.py` is the security architecture. Every tool call passes through it, including
@@ -390,10 +394,11 @@ never decided from the prose. `/turn` carries a `ui` list — `[{type, data}, �
 `email_thread`, an `error` per failed service, and a `context_stack` once the conversation has
 touched more than one thing. Every item is whitelisted key by key and bounded (ten orders, six
 messages, two thousand characters of email body); a field reaches the screen only when a line
-in that module carries it. `email_draft` and `attention` exist in the vocabulary and the
-renderer, with fixtures, but the backend does not produce them: Gmail is read-only and there
-is no attention scan. `confirmation` and `success` are produced by the action engine (see
-"Changes to the store" above): a staged proposal, and a change that was verified.
+in that module carries it. `email_draft` is produced after a proven email change — a draft
+saved in Gmail, a reply sent — and says which. `attention` exists in the vocabulary and the
+renderer, with fixtures, and is produced by the attention scan. `confirmation` and `success`
+are produced by the action engine (see "Changes to the store" above): a staged proposal, and
+a change that was verified.
 
 `web/ui.js` renders exactly those types and nothing else, through `textContent` and safe DOM
 construction — a customer's name arriving as `<img onerror>` is shown as that text. Claude
