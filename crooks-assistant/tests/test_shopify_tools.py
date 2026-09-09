@@ -591,3 +591,32 @@ def test_a_mutation_refused_for_scope_re_mints_the_token_once():
 
     asyncio.run(run())
     del original
+
+
+def test_a_scope_check_that_failed_is_not_asked_again_at_once():
+    """A Shopify that is not answering must not be asked on every turn and every tap: each
+    ask costs the preflight's whole bound. The failure is remembered for half a minute."""
+    import asyncio
+
+    from app.clients.shopify import ShopifyClient, ShopifyError
+
+    client = ShopifyClient("x.myshopify.com", "2025-07", auth_mode="static_token")
+    asks = []
+
+    async def failing(query, variables=None):
+        asks.append(query)
+        raise ShopifyError("Shopify is not answering")
+
+    client.graphql = failing  # type: ignore[method-assign]
+
+    async def run():
+        for _ in range(3):
+            with pytest.raises(ShopifyError):
+                await client.access_scopes()
+        assert len(asks) == 1, "asked once, then remembered"
+        # A caller that insists is still served.
+        with pytest.raises(ShopifyError):
+            await client.access_scopes(refresh=True)
+        assert len(asks) == 2
+
+    asyncio.run(run())

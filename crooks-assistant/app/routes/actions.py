@@ -88,12 +88,15 @@ WRITE_STATUS_TIMEOUT_S = 1.5
 
 
 async def _write_status_soon(runtime):
+    """The preflight, bounded. It runs before the answer's voice and before a tap; neither may
+    wait on a slow Shopify. Past the bound the change is treated as applicable — Shopify has
+    the last word on the mutation itself, and refuses it there if the scope is really missing."""
     from app.runtime import WriteStatus
 
     try:
         return await asyncio.wait_for(runtime.write_status(), timeout=WRITE_STATUS_TIMEOUT_S)
     except TimeoutError:
-        log.warning("the write preflight took longer than %.1fs; the card is shown as ready", WRITE_STATUS_TIMEOUT_S)
+        log.warning("the write preflight took longer than %.1fs; treated as ready", WRITE_STATUS_TIMEOUT_S)
         return WriteStatus("unknown", "ready, unverified — the Shopify scope check was slow")
 
 
@@ -131,7 +134,7 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     caller, refusal = _authorise(request)
     if refusal is not None:
         return refusal
-    status = await runtime.write_status()
+    status = await _write_status_soon(runtime)
     if not status.ready:
         log.warning("commit refused: %s — %s (caller=%s)", status.code, status.detail, caller)
         return _refuse(403, status.code, status.detail, status.code)

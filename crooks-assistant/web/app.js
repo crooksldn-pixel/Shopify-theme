@@ -1101,7 +1101,8 @@ const ACTION_LABELS = {
   blocked: 'Refused',
   unverified: 'Not confirmed', service_unavailable: 'Not applied', writes_disabled: 'Switched off',
   not_authorised: 'Not on the list', not_authorised_local: 'Not from the Mac itself',
-  allow_list_missing: 'Not configured', scope_missing: 'Not permitted', unknown: 'Unknown', wrong_session: 'Not this conversation',
+  allow_list_missing: 'Not configured', scope_missing: 'Not permitted', wrong_session: 'Not this conversation',
+  unknown: 'No longer waiting',
 };
 const ACTION_REASONS = {
   refused: 'The Mac refused that. Check the Mac\'s log for the reason.',
@@ -1110,7 +1111,7 @@ const ACTION_REASONS = {
   writes_disabled: 'Changes are switched off on the Mac (CROOKS_WRITES_ENABLED).',
   allow_list_missing: 'No allowed logins are configured on the Mac (CROOKS_ALLOWED_LOGINS).',
   scope_missing: 'The Shopify app has not been granted permission to write orders.',
-  unknown: 'The Mac no longer has that proposal. Ask again.',
+  unknown: 'The Mac is no longer holding that change — it was restarted, or it waited too long. Ask again.',
   wrong_session: 'That proposal belongs to another conversation.',
 };
 
