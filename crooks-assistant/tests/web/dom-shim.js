@@ -65,7 +65,9 @@ class Element extends Node {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   getAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null; }
   addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); }
-  dispatch(type) { for (const fn of this.listeners[type] || []) fn({ type, target: this, currentTarget: this, preventDefault() {} }); }
+  dispatch(type, detail) { for (const fn of this.listeners[type] || []) fn(Object.assign({ type, target: this, currentTarget: this, preventDefault() {} }, detail || {})); }
+  setPointerCapture() {}
+  releasePointerCapture() {}
   querySelectorAll(selector) {
     // Only what the tests need: ".class" and "tag" selectors, descendants included.
     const out = [];

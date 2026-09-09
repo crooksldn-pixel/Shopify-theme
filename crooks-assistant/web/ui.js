@@ -692,7 +692,22 @@
   // press that began before the surface armed does not commit when it ends, and nothing
   // commits while the app says it is busy (recording, submitting, waiting).
 
-  const INTERACTIONS = ['tap_commit'];   // implemented here; the grammar lists more
+  // The grammar, as the tablet performs it. Each kind is one gesture with its own dead time:
+  //   tap_commit        a tap, once the surface has armed
+  //   swipe_commit      a swipe of the handle most of the way along the track, then release
+  //   hold_to_arm       a hold of 900 ms (the Mac is told when it began), then a tap
+  //   hold_drag_target  a hold of 900 ms, then, without lifting, the handle dragged onto the
+  //                     target and released there
+  // A hold is reported to the Mac the moment it begins (opts.onArm) and the Mac hands back a
+  // token; the commit carries it. Nothing here decides what the change is or whether it may
+  // be applied — the Mac decided both when it staged the card.
+  const INTERACTIONS = ['tap_commit', 'swipe_commit', 'hold_to_arm', 'hold_drag_target'];
+  const HOLD_MS = 900;
+  const HOLD_MARGIN_MS = 150;       // the Mac measures the hold from its own clock, a round trip later
+  const ARMED_FOR_MS = 5000;
+  const SWIPE_FRACTION = 0.72;
+  const SLOP_PX = 12;               // a wobble this big during a hold is a scroll, not a hold
+  const DEFAULT_TRACK_PX = 300;
 
   function renderConfirmation(d, opts) {
     opts = opts || {};
@@ -702,17 +717,14 @@
     const supported = INTERACTIONS.indexOf(kind) !== -1;
     const armedAfter = num(interaction.armed_after_ms) === null ? 650 : Math.max(0, interaction.armed_after_ms);
     const status = text(d.status, 'pending');
-    // The Mac already knows whether a tap from this tablet could apply it. When it cannot,
-    // the surface says so and never arms: an honest card beats a button that fails.
+    // The Mac already knows whether a gesture from this tablet could apply it. When it
+    // cannot, the surface says so and never arms: an honest card beats a button that fails.
     const blocked = d.commit && typeof d.commit === 'object' && d.commit.allowed === false ? d.commit : null;
     const live = supported && status === 'pending' && Boolean(d.proposal_id) && !blocked;
-    const surface = h('div', {
-      class: 'action-surface', role: 'button', tabindex: live ? '0' : '-1', 'aria-disabled': 'true',
-      data: { state: live ? 'arming' : (blocked ? 'unavailable' : (supported ? status : 'unsupported')), kind },
-    }, [
-      h('span', { class: 'action-label', text: live ? text(interaction.label, 'Tap to apply') : (blocked ? blockedLabel(blocked.code) : (supported ? settledLabel(status) : 'Needs a newer tablet build')) }),
-      h('span', { class: 'action-arm', 'aria-hidden': 'true' }),
-    ]);
+    const label = live ? text(interaction.label, gestureLabel(kind)) : (blocked ? blockedLabel(blocked.code) : (supported ? settledLabel(status) : 'Needs a newer tablet build'));
+    const surface = buildSurface(kind, label, text(interaction.target), live ? 'arming' : (blocked ? 'unavailable' : (supported ? status : 'unsupported')), live);
+    const facts = list(d.facts, 8).filter((f) => text(f.value));
+    const footer = text(interaction.footer, 'nothing happens until you tap');
     const node = card('confirmation', [
       h('div', { class: 'card-head' }, [
         h('div', { class: `mark ${risk === 'red' ? 'bad' : 'warn'}` }, h('span', { text: '!' })),
@@ -723,26 +735,52 @@
         ]),
       ]),
       d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
+      // What the gesture authorises, fact by fact, from the Mac. The owner reads this, not
+      // the model's sentence, before moving a hand.
+      facts.length ? h('dl', { class: 'facts' }, facts.map((f) => [h('dt', { text: text(f.label) }), h('dd', { class: text(f.tone) || null, text: text(f.value) })]).flat()) : null,
       d.detail && d.entity ? h('p', { class: 'card-meta', text: text(d.detail) }) : null,
       surface,
-      // The reason a tap would be refused is the one line the owner must read: body size,
-      // not the 11 px caption.
+      // The reason a gesture would be refused is the one line the owner must read: body
+      // size, not the 11 px caption.
       blocked ? h('p', { class: 'card-sub action-why', text: text(blocked.reason) }) : null,
-      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · nothing happens until you tap` : 'Nothing happens until you tap') : '' }),
-    ], Object.assign({ className: `tier-${risk}` }, opts));
+      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · ${footer}` : capitalise(footer)) : '' }),
+    ], Object.assign({ className: `tier-${risk} kind-${kind}` }, opts));
     node.dataset.proposal = text(d.proposal_id);
     node.dataset.ref = text(d.entity_ref);
-    if (live) wireTapCommit(node, surface, text(d.proposal_id), armedAfter, opts, num(d.ttl_s), (left) => `Waits ${left} s · nothing happens until you tap`);
+    if (live) wireGesture(node, surface, kind, text(d.proposal_id), armedAfter, opts, num(d.ttl_s), (left) => `Waits ${left} s · ${footer}`);
     return node;
   }
 
-  // Who is stopping the tap, in five words: the Mac's switch, its allow-list, this tablet's
-  // login, or Shopify's grant. "This tablet" is blamed only when it is the reason.
+  function capitalise(s) { const t = text(s); return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+
+  function gestureLabel(kind) {
+    return { tap_commit: 'Tap to apply', swipe_commit: 'Swipe to apply', hold_to_arm: 'Hold to arm, then tap', hold_drag_target: 'Hold, then drag to the target' }[kind] || 'Not available';
+  }
+
+  // The surface for a kind. A tap is a plain surface; a swipe and a drag carry a track with a
+  // handle, and a drag carries a target at the far end that names the consequence.
+  function buildSurface(kind, label, target, state, live) {
+    const withTrack = kind === 'swipe_commit' || kind === 'hold_drag_target';
+    const children = [h('span', { class: 'action-label', text: label }), h('span', { class: 'action-arm', 'aria-hidden': 'true' })];
+    if (withTrack) {
+      children.push(h('span', { class: 'action-track', 'aria-hidden': 'true' }, [
+        h('span', { class: 'action-handle' }, [h('span', { class: 'action-grip', text: '›' })]),
+        kind === 'hold_drag_target' ? h('span', { class: 'action-target', text: target || 'Drop to apply' }) : null,
+      ]));
+    }
+    return h('div', {
+      class: `action-surface kind-${kind}`, role: 'button', tabindex: live ? '0' : '-1', 'aria-disabled': 'true',
+      data: { state, kind },
+    }, children);
+  }
+
+  // Who is stopping the gesture, in five words: the Mac's switch, its allow-list, this
+  // tablet's login, or Shopify's grant. "This tablet" is blamed only when it is the reason.
   function blockedLabel(code) {
     return {
       writes_disabled: 'Changes are switched off on the Mac', allow_list_missing: 'No allowed logins set on the Mac',
       not_authorised: "This tablet's login is not on the Mac's list", not_authorised_local: 'The Mac itself may not apply changes',
-      scope_missing: 'Shopify has not granted write_orders',
+      scope_missing: 'Shopify has not granted the scope this needs',
     }[text(code)] || "Can't apply from here";
   }
 
@@ -750,29 +788,45 @@
     return { verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', failed: 'Not applied', unverified: 'Not confirmed', executing: 'Applying…', executed: 'Applying…' }[status] || 'Not available';
   }
 
-  function wireTapCommit(node, surface, proposalId, armedAfter, opts, ttlS, word) {
+  // One wiring for every kind. The states a surface passes through:
+  //   arming → armed → (holding → held →) committing → a settled state
+  // A press that began before arming never counts, whatever it ends as; nothing counts while
+  // the app says it is busy; and a settled surface answers to nothing.
+  function wireGesture(node, surface, kind, proposalId, armedAfter, opts, ttlS, word) {
     const now = opts.now || (() => Date.now());
     const shown = now();
-    let downAt = null;
+    const timers = opts.timers || { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) };
+    const trackWidth = () => {
+      const track = surface.querySelector ? surface.querySelector('.action-track') : null;
+      const w = track && typeof track.clientWidth === 'number' && track.clientWidth > 0 ? track.clientWidth : (num(opts.trackWidth) || DEFAULT_TRACK_PX);
+      const handle = surface.querySelector ? surface.querySelector('.action-handle') : null;
+      const hw = handle && typeof handle.clientWidth === 'number' && handle.clientWidth > 0 ? handle.clientWidth : 56;
+      return Math.max(1, w - hw);
+    };
     let committed = false;
+    let press = null;        // { at, x, y, dx } for the press in progress
+    let holdTimer = null;
+    let heldTimer = null;
+    let nonce = '';          // the Mac's token for the hold in progress
+    let armRequest = 0;
     const armed = () => now() - shown >= armedAfter;
     const blocked = () => (typeof opts.blocked === 'function' ? Boolean(opts.blocked()) : false);
-    // Bound wrappers: a host timer called through a plain object is an illegal invocation in Chromium.
-    const timers = opts.timers || { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) };
-    // The visible fill lasts exactly as long as the arming does: one number, ours, not a string from the data.
+    const state = () => surface.dataset.state;
+    const setState = (s) => { surface.dataset.state = s; surface.setAttribute('aria-disabled', s === 'armed' || s === 'held' ? 'false' : 'true'); };
+    const labelEl = surface.childNodes[0];
+    const baseLabel = labelEl.textContent;
+    const say = (words) => { labelEl.textContent = String(words); };
+    const handle = surface.querySelector ? surface.querySelector('.action-handle') : null;
+    const moveHandle = (px) => { if (handle && handle.style && handle.style.setProperty) handle.style.setProperty('--dx', `${Math.round(px)}px`); surface.dataset.dx = String(Math.round(px)); };
+    const needsHold = kind === 'hold_to_arm' || kind === 'hold_drag_target';
+    const needsTrack = kind === 'swipe_commit' || kind === 'hold_drag_target';
+    // The visible fill lasts exactly as long as the arming does: one number, ours.
     if (surface.style && surface.style.setProperty) surface.style.setProperty('--arm-ms', `${Math.round(armedAfter)}ms`);
-    const armTimer = timers.set(() => {
-      if (!committed && surface.dataset.state === 'arming') {
-        surface.dataset.state = 'armed';
-        surface.setAttribute('aria-disabled', 'false');
-      }
-    }, armedAfter);
-    // The Mac's clock decides expiry; this only stops the surface from inviting a tap that
-    // would be answered "Expired". A little early rather than a little late.
+    if (surface.style && surface.style.setProperty) surface.style.setProperty('--hold-ms', `${HOLD_MS + HOLD_MARGIN_MS}ms`);
+    const armTimer = timers.set(() => { if (!committed && state() === 'arming') setState('armed'); }, armedAfter);
     const expiryTimer = ttlS !== null && ttlS !== undefined ? timers.set(() => {
-      if (!committed && (surface.dataset.state === 'arming' || surface.dataset.state === 'armed')) node.settle('expired', 'Expired');
+      if (!committed && ['arming', 'armed', 'holding', 'held'].indexOf(state()) !== -1) node.settle('expired', 'Expired');
     }, Math.max(0, ttlS * 1000 - 1000)) : null;
-    // The waiting line counts down, so it is true for as long as it is shown.
     const metas = node.querySelectorAll ? node.querySelectorAll('.action-meta') : [];
     const meta = metas.length ? metas[metas.length - 1] : null;
     let countdown = null;
@@ -785,46 +839,156 @@
       };
       countdown = timers.set(tick, 1000);
     }
-    node.settle = (state, label) => {
-      // Called by the app when the Mac has answered, or the proposal has gone stale.
+    const clearHold = () => { if (holdTimer !== null) { timers.clear(holdTimer); holdTimer = null; } };
+    const clearHeld = () => { if (heldTimer !== null) { timers.clear(heldTimer); heldTimer = null; } };
+    const disarmHold = (why) => {
+      // Back to armed: the hold did not complete, or it lapsed. The token is worthless now.
+      clearHold(); clearHeld(); nonce = ''; press = null; moveHandle(0);
+      if (!committed && ['holding', 'held'].indexOf(state()) !== -1) setState('armed');
+      say(why || baseLabel);
+      if (why) timers.set(() => { if (!committed && state() === 'armed') say(baseLabel); }, 1400);
+    };
+    const commit = () => {
+      committed = true;
+      clearHold(); clearHeld();
+      setState('committing');
+      say('Applying…');
+      if (typeof opts.onCommit === 'function') opts.onCommit(proposalId, node, nonce);
+    };
+    node.settle = (s, label) => {
       timers.clear(armTimer);
       if (expiryTimer !== null) timers.clear(expiryTimer);
       if (countdown !== null) { timers.clear(countdown); countdown = null; }
-      if (meta && state !== 'armed') meta.textContent = '';
-      committed = state !== 'armed';
-      surface.dataset.state = state;
-      surface.setAttribute('aria-disabled', state === 'armed' ? 'false' : 'true');
-      if (label !== undefined) surface.childNodes[0].textContent = String(label);
+      clearHold(); clearHeld();
+      if (meta && s !== 'armed') meta.textContent = '';
+      committed = s !== 'armed';
+      press = null; nonce = '';
+      moveHandle(0);
+      setState(s);
+      if (label !== undefined) say(label);
     };
-    surface.addEventListener('pointerdown', () => {
-      // Only a press that STARTS after arming can commit; a press carried over from the orb
-      // (or from before the card existed) has downAt null and ends in nothing.
-      downAt = armed() && !blocked() && !committed && surface.dataset.state === 'armed' ? now() : null;
-      if (downAt !== null) surface.dataset.pressed = 'true';
+
+    // ---- the hold: told to the Mac as it begins; completes only if the hand stays still.
+    const beginHold = () => {
+      setState('holding');
+      const request = ++armRequest;
+      nonce = '';
+      if (typeof opts.onArm === 'function') {
+        Promise.resolve(opts.onArm(proposalId)).then((token) => {
+          if (request !== armRequest || committed) return;
+          if (!token) { disarmHold("The Mac won't arm this"); return; }
+          nonce = String(token);
+        }).catch(() => { if (request === armRequest && !committed) disarmHold("The Mac won't arm this"); });
+      }
+      holdTimer = timers.set(() => {
+        holdTimer = null;
+        if (committed || state() !== 'holding' || !press) return;
+        if (typeof opts.onArm === 'function' && !nonce) {
+          // The hold is long enough but the Mac has not answered yet: keep holding a little.
+          holdTimer = timers.set(() => {
+            holdTimer = null;
+            if (committed || state() !== 'holding' || !press) return;
+            if (!nonce) { disarmHold("The Mac hasn't armed it"); return; }
+            held();
+          }, 1200);
+          return;
+        }
+        held();
+      }, HOLD_MS + HOLD_MARGIN_MS);
+    };
+    const held = () => {
+      setState('held');
+      say(kind === 'hold_drag_target' ? 'Now drag to the target' : 'Armed · tap to apply');
+      if (kind === 'hold_to_arm') {
+        // A tap must follow within the window, or the arming lapses.
+        heldTimer = timers.set(() => { if (!committed && state() === 'held') disarmHold(''); }, ARMED_FOR_MS);
+      }
+    };
+
+    const canBegin = () => armed() && !blocked() && !committed;
+
+    surface.addEventListener('contextmenu', (e) => { if (e && e.preventDefault) e.preventDefault(); });
+    surface.addEventListener('selectstart', (e) => { if (e && e.preventDefault) e.preventDefault(); });
+
+    surface.addEventListener('pointerdown', (e) => {
+      const x = e && typeof e.clientX === 'number' ? e.clientX : 0;
+      const y = e && typeof e.clientY === 'number' ? e.clientY : 0;
+      if (e && e.currentTarget && typeof e.currentTarget.setPointerCapture === 'function' && e.pointerId !== undefined) {
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch (error) { /* unsupported */ }
+      }
+      const s = state();
+      if (!canBegin()) { press = null; return; }
+      if (s === 'armed') {
+        press = { at: now(), x, y, dx: 0 };
+        surface.dataset.pressed = 'true';
+        if (needsHold) beginHold();
+        return;
+      }
+      if (s === 'held' && kind === 'hold_to_arm') {
+        // The tap that follows the hold.
+        press = { at: now(), x, y, dx: 0, tap: true };
+        surface.dataset.pressed = 'true';
+        return;
+      }
+      press = null;
     });
-    surface.addEventListener('pointercancel', () => { downAt = null; surface.dataset.pressed = 'false'; });
-    surface.addEventListener('pointerleave', () => { downAt = null; surface.dataset.pressed = 'false'; });
-    surface.addEventListener('pointerup', () => {
-      const ok = downAt !== null && armed() && !blocked() && !committed && surface.dataset.state === 'armed';
-      downAt = null;
-      surface.dataset.pressed = 'false';
-      if (!ok) return;
-      committed = true;
-      surface.dataset.state = 'committing';
-      surface.setAttribute('aria-disabled', 'true');
-      surface.childNodes[0].textContent = 'Applying…';
-      if (typeof opts.onCommit === 'function') opts.onCommit(proposalId, node);
-    });
-    surface.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && armed() && !blocked() && !committed && surface.dataset.state === 'armed') {
-        if (e.preventDefault) e.preventDefault();
-        committed = true;
-        surface.dataset.state = 'committing';
-        surface.setAttribute('aria-disabled', 'true');
-        surface.childNodes[0].textContent = 'Applying…';
-        if (typeof opts.onCommit === 'function') opts.onCommit(proposalId, node);
+
+    surface.addEventListener('pointermove', (e) => {
+      if (!press || committed) return;
+      const x = e && typeof e.clientX === 'number' ? e.clientX : press.x;
+      const y = e && typeof e.clientY === 'number' ? e.clientY : press.y;
+      const dx = x - press.x;
+      const dy = y - press.y;
+      const s = state();
+      if (s === 'holding') {
+        if (Math.abs(dx) > SLOP_PX || Math.abs(dy) > SLOP_PX) { disarmHold('Hold still'); }
+        return;
+      }
+      if (needsTrack && (s === 'armed' && kind === 'swipe_commit' || s === 'held' && kind === 'hold_drag_target')) {
+        if (Math.abs(dy) > 2 * SLOP_PX && dx < SLOP_PX) { press = null; moveHandle(0); if (s === 'held') disarmHold(''); return; }   // the scroller wins
+        press.dx = Math.max(0, Math.min(trackWidth(), dx));
+        moveHandle(press.dx);
       }
     });
+
+    const end = (cancelled) => {
+      if (!press) { surface.dataset.pressed = 'false'; return; }
+      const p = press;
+      press = null;
+      surface.dataset.pressed = 'false';
+      const s = state();
+      if (cancelled || committed || blocked() || !armed()) { if (s === 'holding' || s === 'held') disarmHold(''); moveHandle(0); return; }
+      if (kind === 'tap_commit') { if (s === 'armed') commit(); return; }
+      if (kind === 'swipe_commit') {
+        if (s === 'armed' && p.dx >= SWIPE_FRACTION * trackWidth()) commit(); else moveHandle(0);
+        return;
+      }
+      if (kind === 'hold_to_arm') {
+        if (s === 'holding') { disarmHold(''); return; }          // lifted before the hold completed
+        if (s === 'held' && p.tap && nonce) { commit(); return; }  // the tap after the hold
+        return;                                                    // the lift that ends the hold itself
+      }
+      if (kind === 'hold_drag_target') {
+        if (s === 'holding') { disarmHold(''); return; }
+        if (s === 'held') { if (p.dx >= SWIPE_FRACTION * trackWidth() && nonce) commit(); else disarmHold(''); }
+      }
+    };
+    surface.addEventListener('pointerup', () => end(false));
+    surface.addEventListener('pointercancel', () => end(true));
+    surface.addEventListener('pointerleave', () => { if (kind === 'tap_commit') end(true); });
+    surface.addEventListener('keydown', (e) => {
+      // A keyboard has no hold: Enter applies a tap kind only.
+      if (kind !== 'tap_commit') return;
+      if ((e.key === 'Enter' || e.key === ' ') && canBegin() && state() === 'armed') {
+        if (e.preventDefault) e.preventDefault();
+        commit();
+      }
+    });
+  }
+
+  // Kept for the success card's undo and for anyone who only ever needs a tap.
+  function wireTapCommit(node, surface, proposalId, armedAfter, opts, ttlS, word) {
+    return wireGesture(node, surface, 'tap_commit', proposalId, armedAfter, opts, ttlS, word);
   }
 
   const CHECK = () => {
@@ -852,15 +1016,15 @@
     if (!undo && d.proposal_id) node.dataset.proposal = text(d.proposal_id);
     if (undo) {
       const armedAfter = num(undo.armed_after_ms) === null ? 650 : undo.armed_after_ms;
-      const surface = h('div', {
-        class: 'action-surface quiet', role: 'button', tabindex: '0', 'aria-disabled': 'true',
-        data: { state: 'arming', kind: 'tap_commit' },
-      }, [h('span', { class: 'action-label', text: text(undo.label, 'Undo') }), h('span', { class: 'action-arm', 'aria-hidden': 'true' })]);
+      // The undo is as grave as the change it reverses: its kind comes from the Mac.
+      const kind = INTERACTIONS.indexOf(text(undo.interaction)) !== -1 ? text(undo.interaction) : 'tap_commit';
+      const surface = buildSurface(kind, kind === 'tap_commit' ? text(undo.label, 'Undo') : `${text(undo.label, 'Undo')} · ${gestureLabel(kind).toLowerCase()}`, '', 'arming', true);
+      surface.classList.add('quiet');
       node.dataset.proposal = text(undo.proposal_id);
       node.appendChild(surface);
       node.appendChild(h('p', { class: 'action-meta', text: num(undo.ttl_s) !== null ? `Undo available for ${Math.round(undo.ttl_s)} s` : '' }));
       // The undo has its own minute on the Mac's clock, and says how much of it is left.
-      wireTapCommit(node, surface, text(undo.proposal_id), armedAfter, opts, num(undo.ttl_s), (left) => (left > 0 ? `Undo available for ${left} s` : 'The undo has expired.'));
+      wireGesture(node, surface, kind, text(undo.proposal_id), armedAfter, opts, num(undo.ttl_s), (left) => (left > 0 ? `Undo available for ${left} s` : 'The undo has expired.'));
     }
     return node;
   }

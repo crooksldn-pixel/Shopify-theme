@@ -638,3 +638,31 @@ html[data-lite] .orb-zone{transition:none}
 .rail-chip.is-off{opacity:.55;cursor:default;border-style:dashed}
 .rail-chip.is-off:active{transform:none;background:var(--glass)}
 .rail-why{font-size:11px;font-weight:400;color:var(--ink-3);letter-spacing:.04em}
+
+/* the gestures: a track for a swipe or a drag, a handle that moves with the thumb, a target
+   that names the consequence, and a fill that shows a hold completing */
+.action-surface.kind-swipe_commit,.action-surface.kind-hold_drag_target{min-height:64px;padding:0;touch-action:pan-y}
+.action-surface.kind-hold_to_arm{min-height:56px;touch-action:none}
+.action-surface.kind-hold_drag_target[data-state="held"],.action-surface.kind-hold_drag_target[data-state="holding"]{touch-action:none}
+.action-surface.kind-swipe_commit .action-label,.action-surface.kind-hold_drag_target .action-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:0 72px 0 84px;text-align:center}
+.action-track{position:absolute;inset:6px;border-radius:12px;background:var(--glass);border:1px solid var(--line);overflow:hidden;pointer-events:none}
+.action-handle{
+  position:absolute;left:0;top:0;bottom:0;width:56px;border-radius:10px;background:var(--glass-3);border:1px solid var(--line-2);
+  display:grid;place-items:center;transform:translateX(var(--dx,0px));transition:transform var(--t-1) var(--ease-out),background var(--t-1);
+}
+.action-grip{font-size:22px;color:var(--ink-2);line-height:1}
+.action-surface[data-state="held"] .action-handle,.action-surface[data-pressed="true"] .action-handle{background:rgba(220,178,102,.25);border-color:rgba(220,178,102,.6);transition:none}
+.action-target{position:absolute;right:0;top:0;bottom:0;width:38%;border-left:1px dashed rgba(220,127,108,.45);display:flex;align-items:center;justify-content:center;padding:0 10px;font-size:10px;letter-spacing:.12em;color:var(--bad);text-align:center;line-height:1.3;text-transform:uppercase}
+.action-surface[data-state="held"] .action-target{background:var(--bad-dim)}
+.action-surface[data-state="holding"]{color:var(--ink)}
+.action-surface[data-state="holding"] .action-arm{animation:arm-fill var(--hold-ms,1.05s) linear forwards;background:var(--bad)}
+.action-surface[data-state="held"]{color:var(--ink);border-color:rgba(220,127,108,.6)}
+.action-surface[data-state="held"] .action-arm{width:100%;opacity:.5;background:var(--bad)}
+.tier-red .action-surface{border-color:rgba(220,127,108,.3)}
+.tier-red .action-surface[data-state="armed"]{border-color:rgba(220,127,108,.55)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 0;font-size:15px}
+.facts dt{color:var(--ink-3);font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding-top:3px}
+.facts dd{margin:0;color:var(--ink);word-break:break-word}
+.facts dd.bad{color:var(--bad)}
+.facts dd.warn{color:var(--warn)}
+.facts dd.ok{color:var(--ok)}

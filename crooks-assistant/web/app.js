@@ -1039,7 +1039,23 @@ function actionBlocked() {
 }
 
 function renderOpts() {
-  return { onCommit: commitAction, blocked: actionBlocked, onAction: primeAction };
+  return { onCommit: commitAction, onArm: armAction, blocked: actionBlocked, onAction: primeAction };
+}
+
+// The owner's hold began on a card whose gesture is a hold. Tell the Mac now; it hands back
+// a single-use token the commit will carry. No token, no commit — the surface says so.
+async function armAction(proposalId) {
+  if (actionBlocked()) return null;
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(`/actions/${encodeURIComponent(proposalId)}/arm`, { method: 'POST', body: form, signal: controller.signal, cache: 'no-store' });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data && data.nonce ? String(data.nonce) : null;
+  } catch { return null; } finally { clearTimeout(timer); }
 }
 
 // A rail chip: the Mac says this change makes sense for the order. The chip does not stage
@@ -1048,7 +1064,14 @@ function renderOpts() {
 let primedInstruction = '';
 function primeAction(action) {
   const words = String(action && action.instruction || '').trim();
-  if (!words || busy || recording) return;
+  if (!words || actionBlocked()) return;
+  if (liveActionSurface()) {
+    // A card is waiting for a gesture: a new ask would withdraw it. Say so instead of
+    // silently replacing what the owner may be about to apply.
+    el.sub.textContent = 'Finish or leave the card that is waiting first.';
+    haptic(HAPTIC.error);
+    return;
+  }
   primedInstruction = words;
   el.talkLabel.textContent = `Hold and say: “${words}”`;
   el.sub.textContent = `Hold and say: “${words}”`;
@@ -1057,7 +1080,7 @@ function primeAction(action) {
   busyHintTimer = setTimeout(() => { if (!recording && primedInstruction === words) { primedInstruction = ''; el.talkLabel.textContent = 'Hold to speak'; } }, 8000);
 }
 
-async function commitAction(proposalId, node) {
+async function commitAction(proposalId, node, nonce) {
   if (actionBlocked()) { settleActionNode(node, 'armed', 'Tap to apply'); return; }
   haptic(HAPTIC.start);
   const form = new FormData();
@@ -1066,9 +1089,12 @@ async function commitAction(proposalId, node) {
   let status = 0;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ACTION_TIMEOUT_MS);
+  // The arming token, when the gesture was a hold, travels as a header: the body carries
+  // the session and nothing else, and the token is an authorisation, not an argument.
+  const headers = nonce ? { 'X-Crooks-Arm': String(nonce) } : {};
   try {
     const response = await fetch(`/actions/${encodeURIComponent(proposalId)}/commit`, {
-      method: 'POST', body: form, signal: controller.signal, cache: 'no-store',
+      method: 'POST', body: form, headers, signal: controller.signal, cache: 'no-store',
     });
     status = response.status;
     payload = await response.json();
@@ -1103,6 +1129,12 @@ function settleAction(node, payload, status) {
     return;
   }
   const code = String(payload.code || payload.status || (status >= 400 ? 'refused' : 'failed'));
+  if (code === 'not_armed') {
+    // The Mac did not see the hold: the card stays live for the hold that was meant.
+    settleActionNode(node, 'armed', 'Hold first');
+    haptic(HAPTIC.error);
+    return;
+  }
   if (code === 'in_progress' && !payload._recovered) {
     // The Mac is still proving the change: ask again until it knows, never tap again.
     recoverActionState(node.dataset.proposal || '').then((later) => settleAction(node, later ? Object.assign({ _recovered: true }, later) : null, 200));
@@ -1136,7 +1168,7 @@ function settleAction(node, payload, status) {
 
 const ACTION_LABELS = {
   verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
-  executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…', refused: 'Refused',
+  executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…', refused: 'Refused', not_armed: 'Hold first',
   blocked: 'Refused',
   unverified: 'Not confirmed', service_unavailable: 'Not applied', writes_disabled: 'Switched off',
   not_authorised: 'Not on the list', not_authorised_local: 'Not from the Mac itself',

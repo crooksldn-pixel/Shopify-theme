@@ -114,7 +114,7 @@ def test_the_only_write_path_is_a_proposal_id():
     # The context read carries the session and an order id and nothing else, and is a GET.
     body = function_body(APP_JS, "function collectPending(node, attempt = 0)")
     assert "method:" not in body and "session_id=" in body and "body:" not in body
-    body = function_body(APP_JS, "async function commitAction(proposalId, node)")
+    body = function_body(APP_JS, "async function commitAction(proposalId, node, nonce)")
     assert body.count("form.append(") == 1 and "form.append('session_id', sessionId)" in body
     assert "/commit`" in body and "method: 'POST'" in body
     for forbidden in ("note", "order_id", "amount", "desired"):
@@ -125,7 +125,7 @@ def test_a_lost_connection_asks_what_happened_rather_than_tapping_again():
     body = function_body(APP_JS, "async function recoverActionState(proposalId)")
     assert "method: 'POST'" not in body and "/commit" not in body
     assert "fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=" in body
-    commit = function_body(APP_JS, "async function commitAction(proposalId, node)")
+    commit = function_body(APP_JS, "async function commitAction(proposalId, node, nonce)")
     assert "payload = await recoverActionState(proposalId);" in commit
 
 

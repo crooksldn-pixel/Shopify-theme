@@ -331,13 +331,13 @@ test('a settled card cannot be tapped', () => {
 });
 
 test('a proposal that is not pending, or an interaction the tablet does not know, is inert', () => {
-  for (const data of [{ status: 'expired' }, { interaction: { kind: 'hold_drag_target' } }, { proposal_id: '' }]) {
+  for (const data of [{ status: 'expired' }, { interaction: { kind: 'select_then_commit' } }, { proposal_id: '' }]) {
     const h = tapHarness(data);
     h.at(5000);
     h.surface.dispatch('pointerdown'); h.surface.dispatch('pointerup');
     assert.deepEqual(h.commits, []);
   }
-  assert.ok(textOf(tapHarness({ interaction: { kind: 'hold_drag_target' } }).node).includes('newer tablet build'));
+  assert.ok(textOf(tapHarness({ interaction: { kind: 'select_then_commit' } }).node).includes('newer tablet build'));
 });
 
 test('a success card offers its undo the same way, and success needs a verified answer to exist at all', () => {
@@ -445,7 +445,7 @@ test('a blocked card names who is stopping the tap, by code, and never blames th
   assert.ok(/No allowed logins/.test(words.allow_list_missing));
   assert.ok(/tablet's login/.test(words.not_authorised));
   assert.ok(/Mac itself/.test(words.not_authorised_local) && !/tablet/.test(words.not_authorised_local));
-  assert.ok(/write_orders/.test(words.scope_missing));
+  assert.ok(/Shopify has not granted/.test(words.scope_missing));
   for (const text of Object.values(words)) assert.ok(!/not allowed/i.test(text), text);
 });
 
@@ -502,4 +502,153 @@ test('the rail shows only the Mac\'s chips, primes the words on tap, and a disab
   assert.deepEqual(primed, ['note', 'cancel', 'evil']);
   assert.ok(textOf(chips[3]).includes(HOSTILE) && !node.querySelectorAll('img').length);
   assert.equal(UI.renderItem({ type: 'order', data: { detail: true, items: [], actions: [] } }).querySelectorAll('.rail').length, 0, 'no rail without chips');
+});
+
+
+// ---- the gestures. A timer table stands in for setTimeout so a hold can be "completed" by
+// firing the timer the surface armed, and a press can carry coordinates.
+
+function gestureHarness(kind, extra) {
+  let t = 0;
+  const commits = [];
+  const arms = [];
+  const timers = [];
+  const opts = Object.assign({
+    now: () => t, blocked: () => false, trackWidth: 356,
+    onCommit: (id, node, nonce) => commits.push([id, nonce || '']),
+    onArm: (id) => { arms.push(id); return Promise.resolve('tok-1'); },
+    timers: { set: (fn, ms) => { timers.push({ fn, ms, id: timers.length + 1 }); return timers.length; }, clear: (id) => { const x = timers[id - 1]; if (x) x.cleared = true; } },
+  }, extra || {});
+  const node = proposalCard({ interaction: { kind, label: 'x', armed_after_ms: 650, target: 'Drop to cancel and refund £60.00' }, risk: 'red' }, opts);
+  const surface = node.querySelector('.action-surface');
+  const fire = (ms) => { for (const x of timers) if (!x.fired && !x.cleared && x.ms === ms) { x.fired = true; x.fn(); } };
+  const down = (x, y) => surface.dispatch('pointerdown', { clientX: x || 0, clientY: y || 0, pointerId: 1 });
+  const move = (x, y) => surface.dispatch('pointermove', { clientX: x || 0, clientY: y || 0, pointerId: 1 });
+  const up = () => surface.dispatch('pointerup', { pointerId: 1 });
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+  return { node, surface, commits, arms, timers, fire, down, move, up, settle, at: (ms) => { t = ms; }, arm: () => { surface.dataset.state = 'armed'; } };
+}
+const TRACK = 300;   // 356 minus a 56 px handle
+
+test('a swipe commits only past most of the track, and a vertical wobble is a scroll', () => {
+  const h = gestureHarness('swipe_commit');
+  assert.equal(h.surface.dataset.kind, 'swipe_commit');
+  assert.ok(h.node.querySelector('.action-track') && h.node.querySelector('.action-handle'));
+  h.at(700); h.arm();
+  h.down(10, 100); h.move(120, 102); h.up();                 // not far enough
+  assert.deepEqual(h.commits, []);
+  assert.equal(h.surface.dataset.dx, '0', 'the handle springs back');
+  h.down(10, 100); h.move(60, 140); h.up();                  // the thumb went down the page
+  assert.deepEqual(h.commits, []);
+  h.down(10, 100); h.move(100, 101); h.move(240, 103); h.up();
+  assert.deepEqual(h.commits, [['prop_1', '']]);
+  assert.equal(h.surface.dataset.state, 'committing');
+  h.down(10, 100); h.move(300, 100); h.up();
+  assert.equal(h.commits.length, 1, 'once');
+});
+
+test('a swipe during the dead time, or while busy, moves nothing', () => {
+  let busy = false;
+  const h = gestureHarness('swipe_commit', { blocked: () => busy });
+  h.at(100); h.down(10, 100); h.move(300, 100); h.up();
+  assert.deepEqual(h.commits, []);
+  h.at(700); h.arm(); busy = true;
+  h.down(10, 100); h.move(300, 100); h.up();
+  assert.deepEqual(h.commits, []);
+});
+
+test('hold to arm: the Mac is told as the hold begins, a wobble aborts it, the tap after the hold commits with the token', async () => {
+  const h = gestureHarness('hold_to_arm');
+  h.at(700); h.arm();
+  h.down(50, 50);
+  assert.equal(h.surface.dataset.state, 'holding');
+  assert.deepEqual(h.arms, ['prop_1']);
+  await h.settle();
+  h.move(50 + 20, 50);                                       // a wobble
+  assert.equal(h.surface.dataset.state, 'armed');
+  assert.ok(textOf(h.surface).includes('Hold still'));
+  h.up();
+  assert.deepEqual(h.commits, []);
+  // A still hold: the timer completes it, the surface says so, and a tap applies it.
+  h.down(50, 50); await h.settle();
+  h.fire(HOLD_TOTAL);
+  assert.equal(h.surface.dataset.state, 'held');
+  assert.ok(textOf(h.surface).includes('Armed'));
+  h.up();                                                    // the lift that ends the hold: nothing yet
+  assert.deepEqual(h.commits, []);
+  h.at(1500); h.down(50, 50); h.up();                        // the tap
+  assert.deepEqual(h.commits, [['prop_1', 'tok-1']]);
+});
+const HOLD_TOTAL = 1050;
+
+test('a hold the Mac will not arm never commits, and a lift before the hold completes disarms', async () => {
+  const h = gestureHarness('hold_to_arm', { onArm: () => Promise.resolve(null) });
+  h.at(700); h.arm();
+  h.down(50, 50); await h.settle();
+  assert.equal(h.surface.dataset.state, 'armed');
+  assert.ok(textOf(h.surface).includes("won't arm"));
+  const g = gestureHarness('hold_to_arm');
+  g.at(700); g.arm();
+  g.down(50, 50); await g.settle(); g.up();
+  assert.equal(g.surface.dataset.state, 'armed');
+  g.fire(HOLD_TOTAL);
+  assert.equal(g.surface.dataset.state, 'armed', 'a timer that outlived its hold changes nothing');
+  assert.deepEqual(g.commits, []);
+});
+
+test('an armed hold lapses when no tap follows', async () => {
+  const h = gestureHarness('hold_to_arm');
+  h.at(700); h.arm();
+  h.down(50, 50); await h.settle(); h.fire(HOLD_TOTAL); h.up();
+  assert.equal(h.surface.dataset.state, 'held');
+  h.fire(5000);
+  assert.equal(h.surface.dataset.state, 'armed');
+  h.at(1500); h.down(50, 50); h.up();
+  assert.deepEqual(h.commits, [], 'the tap after the lapse begins a new hold, not a commit');
+  assert.equal(h.surface.dataset.state, 'armed');
+});
+
+test('hold and drag: the handle unlocks only after the hold, and commits only when released on the target', async () => {
+  const h = gestureHarness('hold_drag_target');
+  assert.ok(textOf(h.node.querySelector('.action-target')).includes('refund £60.00'));
+  h.at(700); h.arm();
+  h.down(10, 100); await h.settle();
+  h.move(200, 100);                                          // dragging before the hold completed is a wobble
+  assert.equal(h.surface.dataset.state, 'armed');
+  h.up();
+  h.down(10, 100); await h.settle(); h.fire(HOLD_TOTAL);
+  assert.equal(h.surface.dataset.state, 'held');
+  h.move(120, 101); h.up();                                  // released short of the target
+  assert.deepEqual(h.commits, []);
+  assert.equal(h.surface.dataset.state, 'armed');
+  h.down(10, 100); await h.settle(); h.fire(HOLD_TOTAL);
+  h.move(150, 100); h.move(260, 102); h.up();                // onto the target
+  assert.deepEqual(h.commits, [['prop_1', 'tok-1']]);
+  assert.equal(h.surface.dataset.state, 'committing');
+});
+
+test('a settled surface answers to no gesture', async () => {
+  for (const kind of ['swipe_commit', 'hold_to_arm', 'hold_drag_target']) {
+    const h = gestureHarness(kind);
+    h.at(700); h.arm();
+    h.node.settle('revoked', 'Withdrawn');
+    h.down(10, 100); await h.settle(); h.fire(HOLD_TOTAL); h.move(300, 100); h.up();
+    assert.deepEqual(h.commits, [], kind);
+    assert.equal(h.surface.dataset.state, 'revoked');
+  }
+});
+
+test('the card prints the facts the gesture authorises and the footer names the gesture', () => {
+  const node = proposalCard({ interaction: { kind: 'hold_drag_target', label: 'Hold, then drag', footer: 'nothing happens until you hold the card and drag', armed_after_ms: 650 },
+    facts: [{ label: 'Refund', value: '£60.00 to the original card', tone: 'bad' }, { label: 'Customer emailed', value: 'yes' }, { label: 'Empty', value: '' }], ttl_s: 60 }, { timers: { set: () => 0, clear: () => {} }, now: () => 0 });
+  const facts = node.querySelectorAll('dd').map((d) => d.textContent);
+  assert.deepEqual(facts, ['£60.00 to the original card', 'yes']);
+  assert.ok(textOf(node.querySelector('.action-meta')).includes('nothing happens until you hold the card and drag'));
+  assert.ok(node.classList.contains('kind-hold_drag_target'));
+});
+
+test('an undo takes the kind the Mac gave it', () => {
+  const node = UI.renderItem({ type: 'success', data: { title: 'Done', proposal_id: 'p', undo: { proposal_id: 'u', label: 'Undo', ttl_s: 60, interaction: 'hold_to_arm' } } }, { now: () => 0, timers: { set: () => 0, clear: () => {} } });
+  assert.equal(node.querySelector('.action-surface').dataset.kind, 'hold_to_arm');
+  assert.ok(textOf(node.querySelector('.action-surface')).toLowerCase().includes('hold'));
 });
