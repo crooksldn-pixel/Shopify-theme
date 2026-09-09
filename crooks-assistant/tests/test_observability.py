@@ -345,8 +345,9 @@ async def mocked_hour(client, monkeypatch) -> tuple[Path, dict]:
         await client.post("/telemetry", json={"session_id": session_id, "events": [{"kind": "turn_response", "turn_id": data["turn_id"], "ms": 900, "items": [i["type"] for i in data["ui"]], "answer_chars": len(data["answer"])}]}, headers=PROXIED)
         return data
 
-    # 1. a successful order lookup: the Mac reads the order ahead of the model, the card shows it
+    # 1. a successful order lookup: the Mac's own procedure, no model on the critical path
     data = await turn("show me order 1938")
+    assert data["lane"] == "FAST" and data["recipe_id"] == "order_lookup", data["lane"]
     ids["order"] = data["turn_id"]
     assert "order" in [i["type"] for i in data["ui"]], data["ui"]
     await tablet(client, session_id, ids["order"],
@@ -438,16 +439,20 @@ async def test_the_mocked_hour_is_reconstructed_interaction_by_interaction_and_r
     assert [t.turn_id for t in rec.turns] == list(ids.values()), "every turn, in order, and no other"
     by = {name: rec.turn(turn_id) for name, turn_id in ids.items()}
 
-    # 1. the order lookup: the Mac's own read ahead of the model, the card, the voice, the scroll
+    # 1. the order lookup: the fast lane's own procedure — the reads, the card, the voice,
+    # the scroll, and NO model call at all. The timeline says which lane and which recipe.
     order = by["order"]
     assert order.input == "text" and order.question == "show me order 1938" and order.outcome == "successful" and order.classes == []
-    assert order.prefetch["hit"] is True and order.prefetch["order_numbers"] == ["1938"]
-    assert [x.tool for x in order.tools] == ["shopify_find_order"] and order.tools[0].outcome == "ok" and order.tools[0].result["orders"] == {"count": 1, "ids": [ORDER, CUSTOMER_NODE["id"]]}
+    assert order.lane["lane"] == "FAST" and order.lane["family"] == "order_lookup"
+    assert order.fast["recipe_id"] == "order_lookup" and order.fast["hit"] is True and order.fast["ms"] > 0
+    assert order.model is None and order.latency("claude") is None, "the fast lane does not call the model"
+    assert order.performance["fast_path_hit"] is True and order.performance["model_calls"] == 0
+    assert order.read_plans and order.read_plans[0]["label"] == "order_lookup"
+    assert [x.tool for x in order.tools] == ["shopify_find_order", "shopify_order_detail"]
+    assert order.tools[0].outcome == "ok" and order.tools[0].result["orders"] == {"count": 1, "ids": [ORDER, CUSTOMER_NODE["id"]]}
     assert order.tools[0].tool_call_id.startswith("tc_") and order.tools[0].ms is not None
-    assert order.model["ms"] > 0 and order.model["steps"][0] == ["model", 80.0] and order.answer.startswith("Order 1938")
     assert "order" in order.ui and {"type": "order", "ref": ORDER} in order.ui_entities
-    assert order.hydrations and order.hydrations[0]["hydration"] == "order" and order.hydrations[0]["order_id"] == ORDER and "history" in order.hydrations[0]["landed"] and "email" in order.hydrations[0]["landed"]
-    assert order.latency("total") > 0 and order.latency("claude") > 0 and order.latency("shopify") is not None and order.latency("round_trip") == 900
+    assert order.latency("total") > 0 and order.latency("shopify") is not None and order.latency("round_trip") == 900
     assert order.latency("tts_first_byte") == 700, "the tablet's own measure, when ElevenLabs is not there"
     assert order.tts and order.tts[0]["ok"] is False and order.tts[0]["failure"] == "no_key" and order.tts[0]["chars"] == len(order.answer)
     render_ = order.render

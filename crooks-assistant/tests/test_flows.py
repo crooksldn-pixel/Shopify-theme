@@ -141,8 +141,8 @@ class ScriptedClaude(FakeProvider):
         elif "average order" in words:
             await call("commerce_aggregate", {"period": "last_30_days", "metrics": ["orders", "revenue", "aov"], "view": "metrics"})
             answer = "The average order over the last thirty days is about ninety pounds."
-        elif "by colour" in words and "last month" in words:
-            answer = "I can't break sales down by colour from here."      # the false claim
+        elif "spent over" in words:
+            answer = "I can't pick customers out by what they have spent from here."   # the false claim
         elif "by material" in words:
             await call("commerce_aggregate", {"period": "this_month", "group_by": ["material"], "metrics": ["units"]})
             answer = "The Mac can't group sales by material; it can do product, size and colour."
@@ -256,7 +256,7 @@ async def test_the_flows_run_end_to_end_and_the_report_reads_them_back(client):
     ids["aov"] = data["turn_id"]
 
     # ---- the false claim, the unknown dimension, the bulk ask with no batch
-    data = await ask(client, "what sold best by colour last month")
+    data = await ask(client, "which customers have spent over two hundred pounds")
     ids["false"] = data["turn_id"]
     data = await ask(client, "split this month by material")
     ids["material"] = data["turn_id"]

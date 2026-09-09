@@ -415,8 +415,26 @@ async def client(monkeypatch):
             yield c
 
 
+async def test_a_spoken_order_number_is_answered_without_the_model(client):
+    """"Show me order 1938" is a procedure the Mac knows: find it, read it, say the sentence.
+    The same two reads, the same card, the same issued ids — and no model call at all."""
+    body = (await client.post("/turn", json={"text": "Show me order 1938", "session_id": "f1"})).json()
+    assert body["lane"] == "FAST" and body["recipe_id"] == "order_lookup"
+    assert client.runtime.provider.prompts == [], "the fast lane never reaches Claude"
+    assert [c["name"] for c in body["tool_calls"]] == ["shopify_find_order", "shopify_order_detail"]
+    assert body["performance"]["model_calls"] == 0 and body["performance"]["fast_path_hit"] is True
+    card = next(i for i in body["ui"] if i["type"] == "order")
+    assert card["data"]["detail"] is True
+    session = client.runtime.sessions.peek("f1")
+    assert "gid://shopify/ProductVariant/11" in session.issued_ids and CUSTOMER in session.issued_ids
+    assert body["branch"]["entity"]["kind"] == "order", "the branch knows where it now is"
+
+
 async def test_a_spoken_order_number_hydrates_the_whole_order_beside_the_model(client):
-    body = (await client.post("/turn", json={"text": "Show me order 1938", "session_id": "h1"})).json()
+    # A change is never the fast lane's, so this turn goes to Claude — and the Mac still runs
+    # the lookup ahead of him and hydrates the order beside him.
+    body = (await client.post("/turn", json={"text": "Show me order 1938 and add a note that he called", "session_id": "h1"})).json()
+    assert body["lane"] == "NORMAL"
     prompt = client.runtime.provider.prompts[-1]
     assert "being read beside you" in prompt and "shopify_order_detail" in prompt
     assert [c["name"] for c in body["tool_calls"]] == ["shopify_find_order", "shopify_order_detail"]

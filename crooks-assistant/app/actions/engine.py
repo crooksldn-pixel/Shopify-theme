@@ -543,6 +543,22 @@ class ActionEngine:
         proposal.finished_at = self.clock()
         self.ledger.record(status.value, proposal, reason=reason or None)
         proposal.done.set()
+        if status in (ActionStatus.VERIFIED, ActionStatus.EXECUTED, ActionStatus.UNVERIFIED):
+            _forget_what_changed(proposal)
+
+
+def _forget_what_changed(proposal: ActionProposal) -> None:
+    """A change landed (or may have): nothing the read caches hold about the thing it touched
+    may be handed out as current again. Marking, not deleting — a card can still say what it
+    was before — and never in the other direction: no write has ever read from that cache.
+    See app/memory/store.py. Never raises; a cache that cannot be told is a slow next read,
+    not a failed change."""
+    try:
+        from app.memory import invalidate_for_write
+
+        invalidate_for_write(str(proposal.entity_kind or ""), str(proposal.entity_ref or ""))
+    except Exception as exc:  # noqa: BLE001 — observability of a cache is not the change
+        log.debug("could not invalidate the read caches: %s", exc)
 
 
 class PreconditionFailed(RuntimeError):

@@ -1,0 +1,138 @@
+"""The capability manifest, and the delta between two builds.
+
+"I updated your capabilities earlier. What more can you do now?" took seventy-five seconds
+and zero tool calls in the September session, and answered wrongly. It is a comparison of two
+generated manifests; these are the tests that keep it one.
+"""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+
+import app.tools.analytics_tools  # noqa: F401
+import app.tools.batch_tools  # noqa: F401
+import app.tools.gmail_tools  # noqa: F401
+import app.tools.gmail_writes  # noqa: F401
+import app.tools.mock  # noqa: F401
+import app.tools.shopify_tools  # noqa: F401
+import app.tools.shopify_writes  # noqa: F401
+from app.capabilities.delta import FILE_NAME, delta, record_build, spoken_delta
+from app.capabilities.manifest import build, fingerprint, spoken_summary
+
+
+@pytest.fixture()
+def manifest():
+    return build(build_id="b1")
+
+
+def test_the_manifest_is_generated_from_the_registry_not_written_down(manifest):
+    from app.tools import registry
+
+    names = {e["name"] for e in manifest["reads"] + manifest["writes"] + manifest["batches"]}
+    registered = {s.name for s in registry.all_specs() if not s.name.startswith("mock_")}
+    from app.tools.gate import Tier
+
+    red_reads = {s.name for s in registry.all_specs() if s.write is None and s.batch is None and s.tier is Tier.RED}
+    assert names == registered - red_reads, "every tool, and only the tools"
+    assert "mock_echo" not in names, "the diagnostics are not a capability"
+
+
+def test_the_manifest_carries_the_semantic_tags_the_tablet_and_the_model_need(manifest):
+    assert set(manifest) >= {"reads", "writes", "batches", "query_dimensions", "entity_types",
+                             "ui_components", "data_sources", "risk_types", "gestures", "fingerprint"}
+    dims = manifest["query_dimensions"]
+    assert "size" in dims["group_by"] and "colour" in dims["group_by"] and "units" in dims["metrics"]
+    assert "this_week" in dims["periods"] and "{days: N}" in dims["periods"]
+    assert {"order", "customer", "email_thread", "working_set"} <= set(manifest["entity_types"])
+    assert all(w["risk"] in manifest["risk_types"] for w in manifest["writes"])
+    assert all(w["gesture"] in manifest["gestures"] for w in manifest["writes"])
+
+
+def test_writes_off_means_the_manifest_says_so():
+    off = build(build_id="b1", writes_enabled=False)
+    assert off["writes"] == [] and off["batches"] == []
+    assert "read only" in spoken_summary(off)
+
+
+def test_the_fingerprint_moves_for_a_capability_and_not_for_a_rewording(manifest):
+    reworded = json.loads(json.dumps(manifest))
+    reworded["reads"][0]["what"] = "an entirely different sentence about the same tool"
+    assert fingerprint(reworded) == manifest["fingerprint"], "prose is not a capability"
+    fewer = json.loads(json.dumps(manifest))
+    fewer["reads"] = fewer["reads"][1:]
+    assert fingerprint(fewer) != manifest["fingerprint"]
+
+
+def test_the_spoken_summary_names_what_it_does_not_what_it_is_made_of(manifest):
+    words = spoken_summary(manifest)
+    assert words.startswith("I can ") and words.endswith(".")
+    assert "commerce_aggregate" not in words and "shopify_" not in words
+    assert "sales" in words and "inbox" in words
+
+
+def test_the_first_build_says_it_has_nothing_to_compare_against(tmp_path, manifest):
+    record = record_build(manifest, tmp_path)
+    assert delta(record)["first_build"] is True
+    assert "first build" in spoken_delta(record)
+    assert (tmp_path / FILE_NAME).exists()
+
+
+def test_the_same_capabilities_on_a_new_build_id_are_not_a_change(tmp_path, manifest):
+    record_build(manifest, tmp_path)
+    again = record_build({**manifest, "build": "b2"}, tmp_path)
+    assert delta(again)["first_build"] is True, "the previous build is still the one before this one"
+    assert spoken_delta(again).startswith("This is the first build")
+
+
+def test_a_gained_tool_is_a_real_delta_answered_from_two_manifests(tmp_path, manifest):
+    smaller = json.loads(json.dumps(manifest))
+    smaller["reads"] = [e for e in smaller["reads"] if e["name"] != "inventory_query"]
+    smaller["batches"] = []
+    smaller["fingerprint"] = fingerprint(smaller)
+    record_build(smaller, tmp_path)
+    record = record_build({**manifest, "build": "b2"}, tmp_path)
+    moved = delta(record)
+    assert moved["first_build"] is False
+    assert moved["previous_build"] == "b1" and moved["current_build"] == "b2"
+    added = {a["name"] for a in moved["added"]}
+    assert "inventory_query" in added
+    assert any(a["section"] == "batches" for a in moved["added"])
+    spoken = spoken_delta(record)
+    assert spoken.startswith("Since the last build") and "bulk" in spoken
+
+
+def test_a_lost_tool_is_reported_as_gone(tmp_path, manifest):
+    record_build(manifest, tmp_path)
+    fewer = json.loads(json.dumps(manifest))
+    fewer["reads"] = [e for e in fewer["reads"] if e["name"] != "gmail_search"]
+    fewer["build"] = "b2"
+    fewer["fingerprint"] = fingerprint(fewer)
+    record = record_build(fewer, tmp_path)
+    assert {r["name"] for r in delta(record)["removed"]} == {"gmail_search"}
+    assert "gone:" in spoken_delta(record)
+
+
+def test_a_new_query_dimension_is_a_delta_of_its_own(tmp_path, manifest):
+    before = json.loads(json.dumps(manifest))
+    before["query_dimensions"]["group_by"] = [g for g in before["query_dimensions"]["group_by"] if g != "colour"]
+    before["fingerprint"] = fingerprint(before)
+    record_build(before, tmp_path)
+    record = record_build({**manifest, "build": "b2"}, tmp_path)
+    added = delta(record)["added"]
+    assert any(a["section"] == "query_dimensions" and "colour" in a["what"] for a in added)
+
+
+def test_nothing_changed_is_said_plainly(tmp_path, manifest):
+    changed = json.loads(json.dumps(manifest))
+    changed["reads"] = changed["reads"][1:]
+    changed["fingerprint"] = fingerprint(changed)
+    record_build(changed, tmp_path)
+    record = record_build({**manifest, "build": "b2"}, tmp_path)
+    # Now record the same capabilities once more: previous stays put, so the delta stands.
+    record = record_build({**manifest, "build": "b3"}, tmp_path)
+    assert delta(record)["current_build"] == "b3"
+    same = json.loads(json.dumps(record["current"]))
+    record["previous"] = same
+    assert spoken_delta(record) == "Nothing has changed since the last build — same tools, same questions, same cards."

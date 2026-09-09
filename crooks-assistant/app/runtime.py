@@ -53,6 +53,13 @@ class Runtime:
     timeline: Any = None
     # The recent orders the read layer answers from (app/analytics/cache.py).
     order_cache: Any = None
+    # What this build can do, generated from the registries (app/capabilities), and the
+    # record that holds the previous build's beside it — so "what more can you do now?" is a
+    # comparison the Mac makes locally rather than a question for the model.
+    manifest: Any = None
+    capability_record: Any = None
+    # The tiered read cache (app/memory). Never consulted by a write.
+    memory: Any = None
     started_at: float = field(default_factory=time.time)
     build: str = ""
     _catalogue_refreshed_at: float = 0.0
@@ -413,6 +420,21 @@ def build(settings: Settings | None = None) -> Runtime:
     timeline = install_timeline(Timeline(tests))
     ledger_module.observe(observe_hooks.ledger_observer)
 
+    # The manifest, and the fast lane's recipes, before the first question. Importing the
+    # library is what registers the recipes; asserting they are read-only is what keeps them
+    # honest, and it happens here so a mistake stops the process rather than a turn.
+    from app.capabilities.delta import record_build
+    from app.capabilities.manifest import build as build_manifest
+    from app.fastpath import library as _recipes  # noqa: F401 — imported for its registrations
+    from app.fastpath import recipes as recipe_registry
+    from app.memory import Memory
+    from app.memory import install as install_memory
+
+    recipe_registry.assert_read_only()
+    memory = install_memory(Memory())
+    manifest = build_manifest(build_id=web_build_id(), writes_enabled=settings.writes_enabled)
+    capability_record = record_build(manifest, settings.log_dir)
+
     runtime = Runtime(
         build=web_build_id(),
         settings=settings,
@@ -432,6 +454,9 @@ def build(settings: Settings | None = None) -> Runtime:
         tests=tests,
         timeline=timeline,
         order_cache=order_cache,
+        manifest=manifest,
+        capability_record=capability_record,
+        memory=memory,
     )
     # A change applied to an order makes what the cache holds of it stale: dropped, re-read.
     shopify_tools.hydrator().on_forget.append(order_cache.invalidate)

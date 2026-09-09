@@ -174,11 +174,14 @@ async def test_a_spoken_order_number_is_looked_up_before_the_model_is_asked(clie
     assert body["ui"] and body["ui"][0]["type"] == "order", body["ui"]
     assert "prefetch" in body["timings_ms"]
     assert "gid://shopify/Order/1930" in app.state.runtime.sessions.get("pre").issued_ids
-    # No order number, or two: the model does its own looking up.
+    # No order number, or two: nothing is looked up ahead of the model. A read the fast lane
+    # makes for itself is not a prefetch, so the check is on the prefetch, by tool.
     seen.clear()
-    await client.post("/turn", json={"text": "how many orders today", "session_id": "pre"})
-    await client.post("/turn", json={"text": "compare order 1930 with order 1931", "session_id": "pre"})
-    assert seen == []
+    body = (await client.post("/turn", json={"text": "how many orders today", "session_id": "pre"})).json()
+    assert "prefetch" not in body["timings_ms"]
+    body = (await client.post("/turn", json={"text": "compare order 1930 with order 1931", "session_id": "pre"})).json()
+    assert "prefetch" not in body["timings_ms"]
+    assert [name for name, _ in seen if name == "shopify_find_order"] == []
     assert turn_module.is_affirmation("yes") and not turn_module.is_affirmation("yes and cancel it")
     # Words that may answer a question the model asked are not affirmations.
     for word in ("fine", "correct", "that's right", "alright", "please"):

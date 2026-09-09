@@ -106,6 +106,13 @@ class Session:
     # nothing else: no permission decision reads it (that is issued_ids, above).
     context: list[dict[str, str]] = field(default_factory=list)
 
+    # The branches of this conversation (app/session/branch.py), by id, and which of them the
+    # owner is talking to. One to begin with; two at most, when the orb is pulled apart.
+    # Branch state is position and presentation — never permission: the gate reads
+    # `issued_ids`, above, which every branch shares because they are one conversation.
+    branches: dict[str, Any] = field(default_factory=dict)
+    focused_branch: str = ""
+
     def set_state(self, state: str, detail: str = "") -> None:
         self.state = state
         self.state_detail = detail
@@ -166,3 +173,29 @@ class Session:
     def set_focus(self, kind: str, value: str) -> None:
         if value:
             self.focus[kind] = str(value)
+
+    # ------------------------------------------------------------------ branches
+
+    def branch(self, branch_id: str = "") -> Any:
+        """A branch of this conversation. With no id, the focused one, made if this is the
+        first question. An id that is not this conversation's gets the focused branch: a
+        branch id is a position, and a stale one must not create a second empty history."""
+        from app.session.branch import Branch, new_branch_id
+
+        if branch_id and branch_id in self.branches:
+            return self.branches[branch_id]
+        if self.focused_branch and self.focused_branch in self.branches:
+            return self.branches[self.focused_branch]
+        created = Branch(branch_id=new_branch_id(), session_id=self.session_id, label="main")
+        self.branches[created.branch_id] = created
+        self.focused_branch = created.branch_id
+        return created
+
+    def branch_ids(self) -> list[str]:
+        return [b.branch_id for b in self.branches.values() if b.status in ("ACTIVE", "BACKGROUND")]
+
+    def focus_branch(self, branch_id: str) -> Any:
+        """Move the owner's attention. The branch left behind keeps everything it had."""
+        if branch_id in self.branches:
+            self.focused_branch = branch_id
+        return self.branch()

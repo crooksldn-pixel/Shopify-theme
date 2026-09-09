@@ -12,6 +12,7 @@ import logging
 import re
 import time
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
@@ -58,6 +59,8 @@ async def turn(
     expected_turns: int | None = None
     # "I will ask /speak for this answer." Lets the backend start the voice a round trip early.
     speak = False
+    # Which half of a divided orb asked. Empty is the focused one, which is the usual case.
+    branch_id = ""
 
     # JSON bodies are what curl and scripts/chat.py send; multipart is what the tablet sends.
     if text is None and audio is None:
@@ -73,11 +76,13 @@ async def turn(
         except (TypeError, ValueError):
             expected_turns = None
         speak = _truthy(body.get("speak"))
+        branch_id = str(body.get("branch_id") or "")[:32]
     else:
         form = await request.form()
         form_turns = form.get("turns")
         expected_turns = int(form_turns) if form_turns not in (None, "") else None
         speak = _truthy(form.get("speak"))
+        branch_id = str(form.get("branch_id") or "")[:32]
 
     # The tablet says how many turns it thinks this conversation has had. If the backend has
     # no such session but the tablet believes one exists, the backend restarted (or the
@@ -184,6 +189,31 @@ async def turn(
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
     # in front of it. This question is answered with the catalogue as it stands.
     runtime.refresh_catalogue_soon()
+
+    # ---------------------------------------------------------------- the fast lane
+    # Most of what is said to a tablet on a workbench is not a new problem. If the Mac knows
+    # the procedure for this one — an order, a customer, a period, "next", "what can you do"
+    # — it runs it and answers, with no model on the critical path. A recipe that is not sure
+    # defers, and the turn carries on to Claude exactly as it did before.
+    branch = live.branch(branch_id)
+    live.heard = text.strip()
+    lane, lane_why, intent, recipe = _route(text, branch)
+    if timeline.current().active is not None:
+        timeline.emit(
+            "lane", session_id=session_id, turn_id=live.turn_id, lane=lane, why=lane_why,
+            branch_id=branch.branch_id, recipe_id=(recipe.recipe_id if recipe else None), **intent.public(),
+        )
+    if lane == "FAST" and recipe is not None:
+        fast = await _fast(runtime, live, branch, intent, recipe, text)
+        if fast is not None:
+            return await _answer(
+                runtime, session_id, fast.answer, request=request, timings=timings, started=started,
+                transcript=transcript_info, question=text.strip(), speak=speak, calls=fast.calls,
+                epoch=epoch, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
+                lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
+            )
+        lane, lane_why = "NORMAL", "the fast path deferred"
+
     await _ensure_provider_started(runtime)
 
     # What was heard, on the session now, so the tablet can show it while Claude thinks
@@ -214,6 +244,9 @@ async def turn(
         prompt_text = f"{prompt_text}\n\n{set_line}"
     for extra in _context_lines(live, text):
         prompt_text = f"{prompt_text}\n\n{extra}"
+    where = _branch_line(branch)
+    if where:
+        prompt_text = f"{prompt_text}\n\n{where}"
     if timeline.current().active is not None:
         timeline.emit(
             "prefetch", session_id=session_id, turn_id=live.turn_id, order_numbers=spoken_order_numbers(text), hit=bool(lookup),
@@ -278,6 +311,118 @@ async def turn(
 
 
 LOST_THREAD_PREFIX = "I lost our earlier thread, so from the start: "
+
+
+def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session) -> dict:
+    """The turn's own measurements. No content, no arguments, no personal data: counts,
+    milliseconds and names of tools."""
+    from app.memory import current as memory
+    from app.memory.coalesce import current as coalescer
+    from app.memory.prefetch import current as prefetcher
+
+    sources: dict[str, float] = {}
+    for call in calls or []:
+        source = "shopify" if call.name.startswith(("shopify_", "commerce_", "inventory_")) else ("gmail" if call.name.startswith(("gmail_", "email_")) else "mac")
+        sources[source] = round(sources.get(source, 0.0) + float(getattr(call, "duration_ms", 0.0) or 0.0), 1)
+    model_ms = timings.get("agent")
+    model_phases = sum(1 for key in timings if key.startswith("step:model"))
+    return {
+        "lane": lane,
+        "recipe_id": recipe_id or None,
+        "fast_path_hit": lane == "FAST",
+        "branch_id": getattr(branch, "branch_id", None),
+        "parent_branch_id": (getattr(branch, "parent_id", "") or None),
+        "backgrounded": getattr(branch, "status", "") == "BACKGROUND",
+        "cancelled": bool(getattr(session, "abandoned", False)),
+        "partial": bool(partial),
+        "tool_calls": len(calls or []),
+        "source_ms": sources,
+        "stt_ms": round(float(timings.get("transcribe") or timings.get("stt") or 0.0), 1) or None,
+        "model_ms": round(float(model_ms), 1) if model_ms is not None else None,
+        "model_calls": 0 if lane == "FAST" else 1,
+        "model_phases": model_phases or None,
+        "model_input_chars": timings.get("prompt_chars"),
+        "tool_schema_bytes": timings.get("tool_schema_bytes"),
+        "prefetch_ms": round(float(timings["prefetch"]), 1) if "prefetch" in timings else None,
+        "turn_total_ms": round(float(timings.get("total") or 0.0), 1),
+        "cache": memory().counts(),
+        "coalesced": coalescer().counts(),
+        "prefetch": prefetcher().counts(),
+    }
+
+
+def _call_summary(call) -> str:
+    """A read, in a clause the next turn can be told without re-reading it."""
+    body = call.result if isinstance(getattr(call, "result", None), dict) else {}
+    for key in ("order_number", "name", "subject", "label", "set_label"):
+        if body.get(key):
+            return f"{call.name}: {body[key]}"
+    for key in ("rows", "orders", "customers", "threads"):
+        if isinstance(body.get(key), list):
+            return f"{call.name}: {len(body[key])} rows"
+    return call.name
+
+
+def _call_ref(call) -> str:
+    body = call.result if isinstance(getattr(call, "result", None), dict) else {}
+    for key in ("order_id", "customer_id", "thread_id", "set_id"):
+        if body.get(key):
+            return str(body[key])
+    return ""
+
+
+def _route(text: str, branch):
+    """(lane, why, intent, recipe) for this request. Structure only: no source is touched."""
+    from app.fastpath import choose_lane, recipe_for, resolve
+
+    intent = resolve(text, branch=branch)
+    recipe = recipe_for(intent.family) if intent.family else None
+    lane, why = choose_lane(intent, recipe=recipe, text=text)
+    return lane, why, intent, recipe
+
+
+async def _fast(runtime, session, branch, intent, recipe, text: str):
+    """Run a recipe. Returns its answer, or None when it deferred and Claude should answer."""
+    from app.fastpath import run as run_recipe
+    from app.fastpath.models import Ctx
+    from app.memory import current as memory
+
+    session.turns += 1
+    session.set_state("THINKING", recipe.recipe_id)
+    answer = await run_recipe(recipe, Ctx(runtime=runtime, session=session, branch=branch, intent=intent, text=text, memory=memory()))
+    session.set_state("READY")
+    if answer.deferred:
+        # The turn is about to be answered properly; it was never a second turn.
+        session.turns -= 1
+        return None
+    return answer
+
+
+def _fast_tool_calls(calls) -> list[dict]:
+    """The fast lane's reads, in the shape the turn log and the tablet already read."""
+    return [
+        {"name": c.name, "ok": c.ok, "error": c.error, "ms": c.duration_ms, "args": _loggable_args(c),
+         "proposal_id": c.proposal_id, "tool_call_id": getattr(c, "tool_call_id", "") or None}
+        for c in calls or []
+    ]
+
+
+def _branch_line(branch) -> str:
+    """Where the conversation is, in one line, so the model does not spend a tool call
+    rediscovering it. Position only — never a permission, and never a whole read."""
+    if branch is None:
+        return ""
+    bits: list[str] = []
+    entity = getattr(branch, "entity", None)
+    if entity:
+        bits.append(f"looking at the {entity['kind']} {entity['label']}")
+    workflow = getattr(branch, "workflow", None)
+    if workflow is not None and workflow.total:
+        bits.append(f"working through {workflow.total} {workflow.kind}, at {workflow.position}")
+    recent = getattr(branch, "recent_results", None) or []
+    if recent:
+        bits.append("just read: " + "; ".join(str(r.get("summary") or "")[:60] for r in recent[:2]))
+    return f"[Where we are: {'; '.join(bits)}.]" if bits else ""
 
 # What a spoken yes gets while a card is waiting: the waiting card's own gesture, in a fixed
 # sentence — synthesised once and kept, and never a promise: the gesture is the only thing
@@ -557,6 +702,10 @@ async def _answer(
     epoch: int | None = None,
     revoked: list[str] | None = None,
     writes: dict | None = None,
+    lane: str = "NORMAL",
+    recipe_id: str = "",
+    branch: Any = None,
+    partial: bool = False,
 ) -> dict:
     tool_calls = tool_calls or []
     turns = 0
@@ -609,6 +758,14 @@ async def _answer(
     # the prose. See app/presentation.py for the vocabulary and the bounds.
     ui = present(calls, session=session, error_kind=error_kind, writes=writes)
     turn_id = getattr(session, "turn_id", "") if session is not None else ""
+    if branch is None and session is not None:
+        branch = session.branch()
+    for call in calls or []:
+        if branch is not None and getattr(call, "ok", False):
+            branch.remember_result(call.name, summary=_call_summary(call), ref=_call_ref(call), ms=float(getattr(call, "duration_ms", 0.0) or 0.0))
+    # How this turn actually went, in numbers. Every field is measured; none of it is content.
+    # This is what the report's speed section and the bench read (brief section 32).
+    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session)
     if timeline.current().active is not None:
         # An answer that declines, held against what the Mac composes: a refusal of a best
         # seller, a breakdown, a comparison or a bulk change the tools could have made is a
@@ -618,6 +775,9 @@ async def _answer(
         signal = claims.claim(question or (transcript or {}).get("text") or "", answer, tool_calls, claims.registered(), hinted=bool(getattr(session, "hinted", False)))
         if signal is not None:
             timeline.emit("unsupported_claim", session_id=session_id, turn_id=turn_id or None, **signal)
+        timeline.emit(
+            "turn_performance", session_id=session_id, turn_id=turn_id or None, **performance,
+        )
         timeline.emit(
             "turn_finished", session_id=session_id, turn_id=turn_id or None, ms=round(timings["total"], 1),
             timings={k: round(v, 1) for k, v in timings.items()}, question=question or (transcript or {}).get("text") or None,
@@ -648,6 +808,13 @@ async def _answer(
         "transcript": transcript,
         "timings_ms": {k: round(v, 1) for k, v in timings.items()},
         "ui": ui,
+        # Which lane answered, and where the conversation now is. The tablet renders its
+        # navigation from this rather than from what it can see on screen.
+        "lane": lane,
+        "recipe_id": recipe_id or None,
+        "branch": branch.public() if branch is not None else None,
+        "partial": bool(partial),
+        "performance": performance,
     }
     # The cards repeat what the tools returned, which the log already has in redacted form;
     # the log keeps only which kinds were shown.

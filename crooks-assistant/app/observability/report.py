@@ -193,6 +193,12 @@ class Turn:
     stt: dict[str, Any] | None = None
     prefetch: dict[str, Any] | None = None
     model: dict[str, Any] | None = None
+    # Which lane answered (app/fastpath): FAST is the Mac's own procedure with no model on
+    # the critical path, NORMAL is Claude, DEEP is work that outlives one answer.
+    lane: dict[str, Any] | None = None
+    fast: dict[str, Any] | None = None
+    read_plans: list[dict[str, Any]] = field(default_factory=list)
+    performance: dict[str, Any] | None = None
     finished: dict[str, Any] | None = None
     tools: list[ToolRecord] = field(default_factory=list)
     proposals: list[ProposalRecord] = field(default_factory=list)
@@ -363,6 +369,22 @@ def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
             turn = turn_for(event)
             if turn is not None:
                 turn.stt = event
+        elif kind == "lane":
+            turn = turn_for(event)
+            if turn is not None:
+                turn.lane = event
+        elif kind == "fast_path":
+            turn = turn_for(event)
+            if turn is not None:
+                turn.fast = event
+        elif kind == "read_plan":
+            turn = turn_for(event)
+            if turn is not None:
+                turn.read_plans.append(event)
+        elif kind == "turn_performance":
+            turn = turn_for(event)
+            if turn is not None:
+                turn.performance = event
         elif kind == "prefetch":
             turn = turn_for(event)
             if turn is not None:
