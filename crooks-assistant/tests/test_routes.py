@@ -843,3 +843,15 @@ async def test_the_state_says_transcribing_while_the_recogniser_runs(client):
     assert seen["state"] == "TRANSCRIBING"
     assert body["error_kind"] == "speech"
     assert (await client.get("/state/hear")).json()["state"] == "READY"
+
+
+async def test_the_microphone_diagnostic_keeps_nothing_unless_captures_are_on(client):
+    """/audio-test decodes and plays back what the Mac heard. It is a diagnostic, not an
+    archive: the office's voice reaches the disk only when captures are asked for."""
+    pytest.importorskip("av")
+    from tests.test_decode import tone_pcm, webm_opus
+
+    files = {"audio": ("t.webm", webm_opus(tone_pcm(0.5)), "audio/webm")}
+    body = (await client.post("/audio-test", files=files)).json()
+    assert body["ok"] is True and body["saved_to"] is None
+    assert body["wav_base64"], "it still plays back what it heard"

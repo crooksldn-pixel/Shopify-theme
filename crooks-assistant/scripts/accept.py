@@ -159,6 +159,10 @@ def main() -> int:
         health = json.loads(body) if status == 200 else {}
         checks = health.get("checks", {})
         report.add("/health answers", status == 200 and "checks" in health, ", ".join(f"{k}:{'ok' if v.get('ok') else 'x'}" for k, v in checks.items()))
+        # "writes: ok" is true of a switched-off write path, which is not what it looks like.
+        writes = health.get("writes") or {}
+        report.add("writes state named, not just scored", bool(writes.get("state")),
+                   f"{writes.get('state', '?')} — {writes.get('detail', '')[:80]}")
 
         # ---- sizes: what the tablet downloads and what the model reads
         sizes = {}
@@ -218,8 +222,10 @@ def finish(report: Report, args, metrics: dict, started: float, state_dir: Path)
     seconds = time.time() - started
     failed = [name for name, ok, _ in report.rows if ok is False]
     print()
+    skipped = [name for name, ok, _ in report.rows if ok is None]
     if report.ok:
-        print(f"{GREEN}{BOLD}ACCEPTED{RESET}  {len(report.rows)} checks in {seconds:.0f} s")
+        note = f", {len(skipped)} skipped ({', '.join(skipped)})" if skipped else ""
+        print(f"{GREEN}{BOLD}ACCEPTED{RESET}  {len(report.rows) - len(skipped)} checks in {seconds:.0f} s{note}")
     else:
         print(f"{RED}{BOLD}NOT ACCEPTED{RESET}  {len(failed)} failing: {', '.join(failed)}  {DIM}({seconds:.0f} s){RESET}")
     print(f"{DIM}server log: {state_dir / 'uvicorn.log'}{RESET}")

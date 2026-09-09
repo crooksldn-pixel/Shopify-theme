@@ -537,7 +537,11 @@ async def audio_test(request: Request, audio: UploadFile = File(...)) -> dict:
     blob = await audio.read()
     stamp = time.strftime("%Y%m%d-%H%M%S")
     suffix = (audio.filename or "").rsplit(".", 1)
-    save_to = runtime.settings.bench_audio_dir / f"{stamp}.{suffix[-1] if len(suffix) > 1 else 'webm'}"
+    # Kept on disk only when captures are asked for, like every other recording.
+    save_to = (
+        runtime.settings.bench_audio_dir / f"{stamp}.{suffix[-1] if len(suffix) > 1 else 'webm'}"
+        if runtime.settings.save_captures else None
+    )
     try:
         decoded = await asyncio.to_thread(decode, blob, save_to=save_to)
     except DecodeError as exc:
@@ -546,7 +550,7 @@ async def audio_test(request: Request, audio: UploadFile = File(...)) -> dict:
     return {
         "ok": True,
         "mime_type": audio.content_type,
-        "saved_to": str(decoded.saved_to),
+        "saved_to": str(decoded.saved_to) if decoded.saved_to else None,
         # The decoded WAV, so the page can play back exactly what the backend heard (M2).
         "wav_base64": base64.b64encode(decoded.as_wav()).decode("ascii"),
         **decoded.stats.as_dict(),
