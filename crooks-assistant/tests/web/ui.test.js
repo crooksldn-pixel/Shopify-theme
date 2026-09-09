@@ -23,7 +23,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'assistant', 'order', 'order_list', 'customer', 'customer_list', 'product', 'inventory',
     'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation',
     'success', 'error', 'context_stack',
-    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend',
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set',
   ]));
 });
 
@@ -744,4 +744,20 @@ test('a table, a comparison, a matrix, a trend and a metric group all render fro
   assert.equal(trend.querySelectorAll('.bar')[1].dataset.pct, '100');
   assert.ok(textOf(trend).includes('£420.50'));
   assert.ok(textOf(metrics).includes('avg order · derived') && textOf(metrics).includes('Partial'));
+});
+
+test('a working set names what "these" means, shows a sample as text, and keeps its id on the node', () => {
+  const out = UI.render([
+    { type: 'working_set', data: { set_id: 'set_abc123456789', kind: 'orders', count: 23, label: 'Delayed orders ' + HOSTILE, parent_label: 'Unfulfilled ' + HOSTILE, step: 'filter', sample: [{ ref: 'gid://shopify/Order/1', label: '#1938' }, { ref: 'gid://shopify/Order/2', label: HOSTILE }], truncated: true, lines: [{ label: 'value', value: '£1,481.00' }] } },
+    { type: 'working_set', data: { set_id: 'set_def', kind: 'customers', count: 2, label: 'emailed us', step: 'correlate', sample: [], lines: [] } },
+  ]);
+  assert.deepEqual(out.skipped, []);
+  const [narrowed, correlated] = out.nodes;
+  assert.equal(narrowed.dataset.set, 'set_abc123456789');
+  assert.equal(narrowed.querySelectorAll('script, img').length, 0, 'hostile labels stay text');
+  const t = textOf(narrowed);
+  assert.ok(t.includes('Narrowed') && t.includes('23 orders selected · first 500') && t.includes('From: Unfulfilled') && t.includes('#1938 · ') && t.includes('£1,481.00'));
+  assert.ok(t.includes(HOSTILE), 'the hostile label is printed verbatim as text');
+  assert.ok(textOf(correlated).includes('Cross-referenced') && textOf(correlated).includes('2 customers selected'));
+  assert.ok(!textOf(correlated).includes('From:'));
 });

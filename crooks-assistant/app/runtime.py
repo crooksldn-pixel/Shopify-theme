@@ -369,6 +369,7 @@ def build(settings: Settings | None = None) -> Runtime:
 
     order_cache = OrderCache(lambda: runtime.shopify)
     analytics_tools.bind(order_cache)
+    analytics_tools.bind_email(gmail_tools.threads_for, gmail_tools.replied)
     gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(shopify))
 
     kb = load(settings.kb_dir)

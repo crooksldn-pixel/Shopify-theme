@@ -206,6 +206,11 @@ async def turn(
     live.writes_blocked = "" if writes is None or writes["allowed"] else _blocked_words(writes)
     if lookup:
         prompt_text = f"{prompt_text}\n\n{lookup}"
+    from app.analytics import sets as working_sets
+
+    set_line = working_sets.prompt_line(live)
+    if set_line:
+        prompt_text = f"{prompt_text}\n\n{set_line}"
     if timeline.current().active is not None:
         timeline.emit(
             "prefetch", session_id=session_id, turn_id=live.turn_id, order_numbers=spoken_order_numbers(text), hit=bool(lookup),

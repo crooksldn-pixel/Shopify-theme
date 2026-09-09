@@ -81,6 +81,8 @@ class Session:
     # The turn's reading plan (app/analytics/plan.py): how many queries it has run, at what
     # cost, and their answers, so the same query is not run twice.
     plan: Any = None
+    # The working sets this conversation holds (app/analytics/sets.py): what "these" means.
+    sets: dict[str, Any] = field(default_factory=dict)
 
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and

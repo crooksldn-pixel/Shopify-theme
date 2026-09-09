@@ -1198,6 +1198,25 @@
     ].concat(analyticFoot(d)), opts);
   }
 
+  // The working set: what "these" means now — a count, a name, where it came from.
+  function renderWorkingSet(d, opts) {
+    const sample = list(d.sample, 5);
+    const lines = list(d.lines, 3);
+    const node = card('working_set', [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker(d.step === 'filter' ? 'Narrowed' : d.step === 'correlate' ? 'Cross-referenced' : 'Working set'),
+        h('h2', { class: 'card-title', text: text(d.label, 'Selection') }),
+        h('p', { class: 'card-meta', text: `${num(d.count) === null ? '?' : d.count} ${text(d.kind, 'items')} selected${d.truncated ? ' · first 500' : ''}` }),
+      ])]),
+      d.parent_label ? h('p', { class: 'card-note', text: `From: ${text(d.parent_label)}` }) : null,
+      lines.length ? h('div', { class: `stats${lines.length === 3 ? ' three' : ''}` }, lines.map((l) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(l.value, '—') }), h('div', { class: 'stat-k', text: text(l.label) })]))) : null,
+      sample.length ? h('p', { class: 'card-meta set-sample', text: sample.map((s) => text(s.label)).filter(Boolean).join(' · ') + (num(d.count) > sample.length ? ' …' : '') }) : null,
+      h('p', { class: 'card-note', text: 'Say "these" or "those" to ask about them, narrow them, or act on all of them.' }),
+    ], opts);
+    node.dataset.set = text(d.set_id);
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1220,10 +1239,11 @@
     comparison: renderComparison,
     variant_matrix: renderVariantMatrix,
     trend: renderTrend,
+    working_set: renderWorkingSet,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
-    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend'];
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set'];
 
   function isValid(item) {
     return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'

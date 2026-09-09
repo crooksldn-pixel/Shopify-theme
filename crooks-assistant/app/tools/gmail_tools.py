@@ -301,6 +301,19 @@ async def threads_for(*, sender: str = "", terms: list[str] | tuple[str, ...] = 
     return {"available": True, "query": query, "threads": threads[:limit]}
 
 
+async def replied(thread_id: str) -> bool | None:
+    """Whether a message in this thread went out from here (Gmail's SENT label on any of its
+    messages). None when the thread cannot be read."""
+    if _client is None or not thread_id:
+        return None
+    try:
+        labels = await asyncio.to_thread(_c().thread_labels, str(thread_id))
+    except Exception as exc:  # noqa: BLE001 — unknown, said as such
+        log.debug("thread labels unavailable for %s: %s", thread_id, type(exc).__name__)
+        return None
+    return "SENT" in labels
+
+
 # An email read as evidence for a change is read whole: an address at the foot of a long
 # message is still the address.
 EVIDENCE_BODY_CHARS = 20_000

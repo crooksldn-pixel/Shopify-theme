@@ -712,3 +712,7 @@ html[data-lite] .orb-zone{transition:none}
 .matrix td.hot{color:var(--ink);font-weight:600}
 .matrix td.zero{color:var(--ink-4)}
 .trend-total{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:8px}
+
+.chip-set{border-color:var(--line-2);background:var(--glass-2)}
+.chip-set .chip-kind{color:var(--ink)}
+.set-sample{margin-top:8px}

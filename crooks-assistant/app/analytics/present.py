@@ -104,6 +104,8 @@ def build(result: dict[str, Any], *, tool: str) -> list[dict[str, Any]]:
     """The ui items for a read-layer result: usually one card."""
     if not isinstance(result, dict) or result.get("reused"):
         return []
+    if tool == "email_query":
+        return correlation(result)
     currency = str(result.get("currency") or "GBP")
     view = choose_view(result)
     if view == "list":
@@ -293,3 +295,60 @@ def _order_list(result: dict[str, Any], currency: str) -> list[dict[str, Any]]:
         "title": _title(result, "Orders"), "query": _subtitle(result), "orders": rows, "count": int(totals.get("orders") or len(rows)), "truncated": bool(result.get("truncated")),
         "value": _money(totals.get("revenue"), currency) if totals.get("revenue") is not None else "",
     }}]
+
+
+# --------------------------------------------------------------------------- working sets
+
+
+def working_set_card(public: dict[str, Any]) -> dict[str, Any] | None:
+    """The set as the tablet shows it: what it is, how many, where it came from."""
+    if not isinstance(public, dict) or not public.get("set_id"):
+        return None
+    totals = public.get("totals") if isinstance(public.get("totals"), dict) else {}
+    lines = []
+    if isinstance(totals.get("revenue"), (int, float)):
+        lines.append({"label": "value", "value": _money(totals["revenue"], "GBP")})
+    if isinstance(totals.get("unfulfilled_value"), (int, float)) and totals.get("unfulfilled_value") != totals.get("revenue"):
+        lines.append({"label": "unfulfilled", "value": _money(totals["unfulfilled_value"], "GBP")})
+    return _ui("working_set", {
+        "set_id": _text(public.get("set_id"), 40), "kind": _text(public.get("kind"), 20), "count": int(public.get("count") or 0), "label": _text(public.get("label"), 80),
+        "parent_label": _text(public.get("parent_label") or "", 80), "step": _text(public.get("step") or "query", 20),
+        "sample": [{"ref": _text(s.get("ref"), 120), "label": _text(s.get("label"), 60)} for s in (public.get("sample") or [])[:5] if isinstance(s, dict)],
+        "truncated": bool(public.get("truncated")), "lines": lines[:3],
+    })
+
+
+def working_set_items(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every set a result made, as cards after it: a listing's set; a correlation's contacted
+    and not-contacted sets."""
+    if not isinstance(result, dict):
+        return []
+    out = []
+    for key in ("set", "set_contacted", "set_not_contacted", "set_replied"):
+        card = working_set_card(result.get(key))
+        if card is not None:
+            if key != "set":
+                card["data"]["parent_label"] = _text(result.get("set_label") or "", 80)
+            out.append(card)
+    return out
+
+
+def correlation(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """The email query's answer: the counts, then each customer with whether they wrote and
+    whether we replied."""
+    counts = result.get("counts") if isinstance(result.get("counts"), dict) else {}
+    rows = []
+    for r in (result.get("rows") or [])[:MAX_ROWS]:
+        if not isinstance(r, dict):
+            continue
+        rows.append({"ref": _text(r.get("customer_id"), 120), "cells": [
+            _text(r.get("customer_name") or r.get("customer_email") or "—", 40), ", ".join(str(o).rsplit("-", 1)[-1] for o in (r.get("orders") or [])[:3]),
+            ("yes" if r.get("emailed") else ("no" if r.get("checked") else "?")), ("yes" if r.get("replied") else ("no" if r.get("replied") is False else "—")), _text(r.get("last_subject") or "", 60),
+        ]})
+    return [
+        _ui("metric_group", {"title": _text(result.get("set_label") or "Email", MAX_TITLE), "subtitle": f"the last {int(result.get('days') or 30)} days of email",
+                             "metrics": [{"key": "contacted", "label": "emailed us", "value": str(int(counts.get("contacted") or 0)), "measured": True}, {"key": "not_contacted", "label": "no contact", "value": str(int(counts.get("not_contacted") or 0)), "measured": True}, {"key": "replied", "label": "we replied", "value": str(int(counts.get("replied") or 0)), "measured": True}],
+                             "note": _note(result), "complete": not counts.get("unchecked")}),
+        _ui("table", {"title": "Who has written", "subtitle": _text(result.get("set_label") or "", 80), "columns": [{"key": "customer", "label": "Customer", "numeric": False}, {"key": "orders", "label": "Orders", "numeric": False}, {"key": "emailed", "label": "Emailed", "numeric": False}, {"key": "replied", "label": "Replied", "numeric": False}, {"key": "subject", "label": "Last subject", "numeric": False}],
+                      "rows": rows, "note": "", "truncated": len(result.get("rows") or []) > MAX_ROWS, "complete": True}),
+    ]

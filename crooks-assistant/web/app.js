@@ -954,7 +954,7 @@ function armDeckExpiry() {
   clearTimeout(deckExpiryTimer);
   deckExpiryTimer = setTimeout(() => {
     if (busy || recording || speakingVia || liveActionSurface()) { armDeckExpiry(); return; }
-    history.length = 0; historyIndex = -1; currentStack = [];
+    history.length = 0; historyIndex = -1; currentStack = []; currentSet = null;
     clear(el.cards); renderStackChips(); renderRecent();
     el.heard.textContent = ''; el.answer.textContent = '';
     setMode('orb');
@@ -995,8 +995,40 @@ function renderRecent() {
     ? entry.question : 'Last context';
 }
 
+// The working set the conversation holds: a chip that stays in the nav while the owner
+// opens an order and comes back, so "these" keeps its meaning on screen.
+let currentSet = null;
+function noteWorkingSets(items) {
+  for (const item of items || []) {
+    if (item && item.type === 'working_set' && item.data && item.data.set_id) {
+      currentSet = { set_id: String(item.data.set_id), label: String(item.data.label || ''), count: Number(item.data.count) || 0, kind: String(item.data.kind || '') };
+      T.record('working_set', { id: currentSet.set_id, count: currentSet.count, label: currentSet.label, name: currentSet.kind });
+    }
+  }
+}
+function setChip() {
+  if (!currentSet) return null;
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'chip chip-set';
+  chip.dataset.set = currentSet.set_id;
+  chip.setAttribute('aria-pressed', 'false');
+  const kind = document.createElement('span'); kind.className = 'chip-kind'; kind.textContent = `${currentSet.count} ${currentSet.kind}`;
+  const label = document.createElement('span'); label.className = 'chip-label'; label.textContent = currentSet.label;
+  chip.appendChild(kind); chip.appendChild(label);
+  chip.addEventListener('click', () => {
+    T.record('navigate', { nav: 'set_chip', id: currentSet ? currentSet.set_id : '' });
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].nodes.some((n) => n.dataset && n.dataset.set === (currentSet ? currentSet.set_id : ''))) { showHistory(i); haptic(HAPTIC.start); return; }
+    }
+  });
+  return chip;
+}
+
 function renderStackChips() {
   clear(el.stack);
+  const set = setChip();
+  if (set) el.stack.appendChild(set);
   if (!window.CrooksUI || !currentStack.length) return;
   const active = history[historyIndex] ? history[historyIndex].entities : [];
   const chips = window.CrooksUI.renderStack(currentStack, {
@@ -1034,6 +1066,7 @@ function renderTurn(data) {
     el.errline.textContent = ui.errors[0].recovery || '';
   }
   if (ui.stack) currentStack = ui.stack;
+  noteWorkingSets(data.ui);
   // The attention surface shows only what this turn returned; a count from this morning
   // must not sit on the screen at four o'clock as if it were still true.
   const attention = (data.ui || []).filter((i) => i && i.type === 'attention' && i.data && Array.isArray(i.data.items));
@@ -1618,6 +1651,7 @@ el.resetSession.addEventListener('click', async () => {
   history.length = 0;
   historyIndex = -1;
   currentStack = [];
+  currentSet = null;
   clear(el.cards);
   renderStackChips();
   renderRecent();

@@ -92,7 +92,7 @@ _KNOWN_TOOLS = frozenset({
     "shopify_find_customer", "shopify_inventory", "shopify_sales_summary",
     "shopify_product_info", "shopify_customer_history",
     # the general read layer (app/tools/analytics_tools.py)
-    "commerce_aggregate", "commerce_query", "inventory_query", "commerce_capabilities",
+    "commerce_aggregate", "commerce_query", "inventory_query", "commerce_capabilities", "email_query",
     # Gmail — M9
     "gmail_search", "gmail_read_thread",
 })
@@ -120,6 +120,7 @@ _ID_KIND = {
     "variant_id": re.compile(r"^gid://shopify/ProductVariant/\d+$"),
     "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
     "evidence_message_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
+    "set_id": re.compile(r"^set_[0-9a-f]{6,}$"),
 }
 
 

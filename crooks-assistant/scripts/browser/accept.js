@@ -31,7 +31,7 @@ const VERIFIED = {
   ui: [{ type: 'success', data: { title: 'Note added', detail: 'Order #1930', proposal_id: 'prop_fixture0000' } }],
   undo: { proposal_id: 'prop_undo0000', status: 'pending', ttl_s: 60, undo_of: 'prop_fixture0000' },
 };
-const FIXTURES = ['Order', 'Order · still reading', 'Orders today', 'Customer', 'Which customer', 'Product', 'Inventory', 'Sales', 'Email list', 'Email thread', 'Email · hold to arm', 'Email draft', 'Attention', 'Cancel · hold and drag', 'Refund · hold and drag', 'Address · hold to arm', 'Fulfil · hold to arm', 'Stock · hold to arm', 'Swipe · irreversible amber', 'Confirmation', 'Success', 'Error', 'Context stack', 'Best sellers', 'Restock priority', 'This week against last', 'Sizes matrix', 'Sales trend', 'Figures', 'Table'];
+const FIXTURES = ['Order', 'Order · still reading', 'Orders today', 'Customer', 'Which customer', 'Product', 'Inventory', 'Sales', 'Email list', 'Email thread', 'Email · hold to arm', 'Email draft', 'Attention', 'Cancel · hold and drag', 'Refund · hold and drag', 'Address · hold to arm', 'Fulfil · hold to arm', 'Stock · hold to arm', 'Swipe · irreversible amber', 'Confirmation', 'Success', 'Error', 'Context stack', 'Best sellers', 'Restock priority', 'This week against last', 'Sizes matrix', 'Sales trend', 'Figures', 'Table', 'Working set'];
 
 const checks = [];
 const check = (name, ok, detail) => { checks.push({ name, ok: Boolean(ok), detail: detail === undefined ? '' : String(detail) }); };
