@@ -98,6 +98,8 @@ class Settings(BaseSettings):
     cancel_refund: bool = True
     cancel_restock: bool = True
     cancel_notify: bool = True
+    # Whether a refund emails the customer. Policy, printed on the card.
+    refund_notify: bool = True
     # Sending email. Off (the default): the assistant drafts and the draft stays a card.
     # On is not enough by itself: the inbox must have been re-authorised with the send scope
     # (scripts/gmail_auth.py --send), which is a deliberate step the owner takes once.

@@ -308,3 +308,330 @@ async def shopify_order_cancel(order_id: str, reason: str = "customer", staff_no
             "ledger": {"refund": refund, "amount": f"{amount:.2f}" if refund and amount else "0.00", "currency": currency, "restock": restock_count if restock else 0, "notify": notify, "reason": code},
         },
     )
+
+
+# ------------------------------------------------------------------------- refund
+#
+# Three shapes a clothing label actually issues, all priced by Shopify itself
+# (suggestedRefund) and never by the model: the returned items (with restock), the postage,
+# or a goodwill amount. The amount is capped at what the store can still refund; the
+# transactions are Shopify's suggested ones, each capped at its own maximum; a gift-card
+# tender is refused. Verified by the refunded total moving by exactly the amount.
+
+MAX_REFUND_NOTE_CHARS = 120
+RESTOCK_KINDS = {"return": "RETURN", "cancel": "CANCEL", "none": "NO_RESTOCK"}
+
+REFUND_STATE_QUERY = """
+query CrooksRefundState($id: ID!) {
+  order(id: $id) {
+    id
+    name
+    cancelledAt
+    displayFinancialStatus
+    refundable
+    currentTotalPriceSet { shopMoney { amount currencyCode } }
+    totalRefundedSet { shopMoney { amount currencyCode } }
+  }
+}
+"""
+
+SUGGESTED_REFUND_QUERY = """
+query CrooksSuggestedRefund($id: ID!, $shippingAmount: Money, $shippingFull: Boolean, $refundLineItems: [RefundLineItemInput!], $full: Boolean) {
+  order(id: $id) {
+    id
+    name
+    suggestedRefund(shippingAmount: $shippingAmount, refundShipping: $shippingFull, refundLineItems: $refundLineItems, suggestFullRefund: $full) {
+      amountSet { shopMoney { amount currencyCode } }
+      subtotalSet { shopMoney { amount currencyCode } }
+      totalTaxSet { shopMoney { amount currencyCode } }
+      maximumRefundableSet { shopMoney { amount currencyCode } }
+      shipping { amountSet { shopMoney { amount currencyCode } } maximumRefundableSet { shopMoney { amount currencyCode } } }
+      suggestedTransactions { amountSet { shopMoney { amount currencyCode } } maximumRefundableSet { shopMoney { amount currencyCode } } gateway kind parentTransaction { id } }
+      refundLineItems { quantity lineItem { id title } priceSet { shopMoney { amount currencyCode } } }
+    }
+  }
+}
+"""
+
+LOCATIONS_QUERY = """
+query CrooksLocations { locations(first: 10, includeInactive: false) { edges { node { id name isActive fulfillsOnlineOrders } } } }
+"""
+
+
+async def _read_refund_state(client: ShopifyClient, order_id: str) -> dict[str, Any]:
+    payload = await client.graphql(REFUND_STATE_QUERY, {"id": order_id})
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+def refund_fingerprint(node: dict[str, Any]) -> dict[str, Any]:
+    refunded = _amount(node.get("totalRefundedSet"))
+    return {"refunded": f"{refunded:.2f}" if refunded is not None else "", "financial": str(node.get("displayFinancialStatus") or "")}
+
+
+async def _observe_refund(execution: dict) -> Observed:
+    node = await _read_refund_state(_c(), str(execution["order_id"]))
+    return Observed(fingerprint=refund_fingerprint(node), entity=None)
+
+
+async def _restock_location(client: ShopifyClient) -> tuple[str, str] | None:
+    """The one location stock goes back to. None when there is not exactly one candidate:
+    a guess between warehouses is not a restock."""
+    payload = await client.graphql(LOCATIONS_QUERY)
+    nodes = [e.get("node") or {} for e in ((payload.get("data") or {}).get("locations") or {}).get("edges") or []]
+    candidates = [n for n in nodes if n.get("isActive") and n.get("fulfillsOnlineOrders")] or [n for n in nodes if n.get("isActive")]
+    if len(candidates) != 1 or not candidates[0].get("id"):
+        return None
+    return str(candidates[0]["id"]), str(candidates[0].get("name") or "")
+
+
+def _allocate(amount: float, suggested: list[dict[str, Any]], order_id: str) -> list[dict[str, Any]]:
+    """The amount across Shopify's suggested transactions, in order, each capped at what it
+    can refund. Not a gift card: money goes back the way it came, and only that way."""
+    remaining = round(amount, 2)
+    out: list[dict[str, Any]] = []
+    for t in suggested:
+        if remaining <= 0.004:
+            break
+        gateway = str(t.get("gateway") or "")
+        if not gateway or "gift" in gateway.lower():
+            continue
+        parent = (t.get("parentTransaction") or {}).get("id")
+        cap = _amount(t.get("maximumRefundableSet")) or _amount(t.get("amountSet")) or 0.0
+        if not parent or cap <= 0:
+            continue
+        take = round(min(cap, remaining), 2)
+        out.append({"orderId": order_id, "gateway": gateway, "kind": "REFUND", "amount": f"{take:.2f}", "parentId": str(parent)})
+        remaining = round(remaining - take, 2)
+    if remaining > 0.004:
+        raise ToolError("That amount cannot go back the way it was paid; the store can refund less than that to the original payment.")
+    return out
+
+
+async def _entity_after_refund(execution: dict) -> dict:
+    return await hydrator().order(str(execution["order_id"]), budget_s=0.0, fresh=True)
+
+
+async def _execute_refund(execution: dict) -> dict:
+    client = _c()
+    order_id = str(execution["order_id"])
+    payload = await client.mutate("refund_create", {"input": dict(execution["input"])})
+    hydrator().forget(order_id)
+    refund = ((payload.get("data") or {}).get("refundCreate") or {}).get("refund") or {}
+    if not refund.get("id"):
+        raise ShopifyError("Shopify did not confirm the refund.")
+    return {"refund_id": str(refund["id"])}
+
+
+def _verify_refund(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
+    try:
+        moved = round(float(observed.get("refunded") or 0) - float(before.get("refunded") or 0), 2)
+        expected = round(float(execution.get("amount") or 0), 2)
+    except ValueError:
+        return False, ""
+    return abs(moved - expected) < 0.005, ""
+
+
+def _present_refund(proposal) -> dict:
+    s = proposal.summary
+    currency = str(s.get("currency") or "GBP")
+    amount = float(s.get("amount") or 0)
+    facts = [
+        {"label": "Amount", "value": f"{_display(amount, currency)} to the original payment", "tone": "bad"},
+        {"label": "Of", "value": f"{_display(float(s.get('paid') or 0), currency)} paid · {_display(float(s.get('remaining_after') or 0), currency)} remains refundable after"},
+        {"label": "Items", "value": str(s.get("items_words") or "none · goodwill")},
+        {"label": "Shipping", "value": str(s.get("shipping_words") or "no")},
+        {"label": "Restock", "value": str(s.get("restock_words") or "no")},
+        {"label": "Customer emailed", "value": "yes" if s.get("notify") else "no"},
+    ]
+    if s.get("reason"):
+        facts.append({"label": "Reason", "value": str(s.get("reason"))})
+    return {
+        "title": "Refund", "summary": "", "detail": "A refund cannot be undone.", "facts": facts,
+        "target": f"Drop to refund {_display(amount, currency)}", "done_title": "Refunded",
+    }
+
+
+@tool(
+    name="shopify_refund_create",
+    description=(
+        "Prepare a refund on one order, priced by Shopify: the returned items (with restock), "
+        "the postage, or a plain amount. Stages it for the owner to apply on the tablet with a "
+        "hold and a drag; nothing is refunded by calling it. Requires an order_id from a previous "
+        "search; item ids come from shopify_order_detail."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "The order_id returned by a previous search."},
+            "amount": {"type": "string", "maxLength": 12, "description": "A plain amount, e.g. \"20.00\". Leave out when refunding items."},
+            "items": {
+                "type": "array", "maxItems": 12,
+                "items": {"type": "object", "properties": {"line_item_id": {"type": "string"}, "quantity": {"type": "integer"}}, "required": ["line_item_id", "quantity"]},
+                "description": "The items being refunded, by line_item_id from the order detail, with quantities.",
+            },
+            "restock": {"type": "string", "maxLength": 8, "description": "For items: return (they came back), cancel (never shipped), or none. Default none."},
+            "shipping": {"type": "string", "maxLength": 12, "description": "Refund the postage too: \"full\", or an amount such as \"3.95\". Default none."},
+            "reason": {"type": "string", "maxLength": MAX_REFUND_NOTE_CHARS, "description": "Optional short reason, kept on the refund."},
+        },
+        "required": ["order_id"],
+    },
+    tier=Tier.RED,
+    issued_id_args=("order_id",),
+    write=WriteSpec(
+        operation="refund_create",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="refund_create",
+        observe=_observe_refund,
+        execute=_execute_refund,
+        present=_present_refund,
+        entity=_entity_after_refund,
+        verify=_verify_refund,
+        op_class="money",
+        reversible=False,
+        spoken_success="Refunded {amount} on order {label}.",
+        spoken_failure="I couldn't confirm the refund. Check the order before asking again.",
+        spoken_stale="The order's payments changed since this was prepared. Nothing was sent.",
+    ),
+)
+async def shopify_refund_create(
+    order_id: str, amount: str = "", items: list | None = None, restock: str = "none", shipping: str = "", reason: str = "",
+) -> Prepared:
+    """Prepare, never send. Shopify prices the refund; the Mac decides every argument."""
+    client = _c()
+    reason = " ".join(str(reason or "").split())[:MAX_REFUND_NOTE_CHARS]
+    if "<" in reason:
+        raise ToolError("The reason must be plain text.")
+    restock_kind = RESTOCK_KINDS.get(str(restock or "none").strip().lower())
+    if restock_kind is None:
+        raise ToolError("restock must be return, cancel or none.")
+    items = items or []
+    if not isinstance(items, list) or len(items) > 12:
+        raise ToolError("Give up to twelve items.")
+    shipping_word = str(shipping or "").strip().lower()
+    plain = _decimal(amount) if str(amount or "").strip() else None
+    if str(amount or "").strip() and plain is None:
+        raise ToolError("The amount must be a number of pounds, like 20.00.")
+    if plain is not None and (items or shipping_word):
+        raise ToolError("Give either a plain amount, or items and/or shipping — not both.")
+    if plain is None and not items and not shipping_word:
+        raise ToolError("Say what to refund: an amount, the items, or the shipping.")
+
+    state = await _read_refund_state(client, str(order_id))
+    if str(state.get("displayFinancialStatus") or "").upper() in ("VOIDED", "REFUNDED") or state.get("refundable") is False:
+        raise ToolError(f"Order {state.get('name')} has nothing left to refund.")
+    currency = _currency(state.get("currentTotalPriceSet"))
+    paid = _amount(state.get("currentTotalPriceSet")) or 0.0
+    refunded_so_far = _amount(state.get("totalRefundedSet")) or 0.0
+
+    # The items, checked against the order as it is now — not against what the model said.
+    order = await hydrator().order(str(order_id), budget_s=0.0, fresh=True)
+    by_id = {str(i.get("line_item_id")): i for i in order.get("items") or [] if i.get("line_item_id")}
+    refund_lines: list[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ToolError("Each item needs a line_item_id and a quantity.")
+        line_id = str(item.get("line_item_id") or "")
+        try:
+            quantity = int(item.get("quantity"))
+        except (TypeError, ValueError):
+            raise ToolError("Each item needs a whole-number quantity.") from None
+        known = by_id.get(line_id)
+        if known is None:
+            raise ToolError(f"{line_id or 'that item'} is not on order {state.get('name')}.")
+        limit = known.get("refundable_quantity")
+        if quantity < 1 or (isinstance(limit, int) and quantity > limit):
+            raise ToolError(f"Only {limit} of {known.get('title')} can be refunded.")
+        refund_lines.append({"lineItemId": line_id, "quantity": quantity, "restockType": restock_kind, "title": str(known.get("title") or ""), "variant": str(known.get("variant") or "")})
+
+    location: tuple[str, str] | None = None
+    if refund_lines and restock_kind != "NO_RESTOCK":
+        location = await _restock_location(client)
+        if location is None:
+            raise ToolError("Stock cannot be put back: the store has no single location to restock at. Say restock none, or restock in Admin.")
+
+    # Shopify prices it. A plain amount is priced against the full refund and then capped.
+    shipping_amount = None
+    shipping_full = None
+    if shipping_word == "full":
+        shipping_full = True
+    elif shipping_word:
+        shipping_amount = _decimal(shipping_word)
+        if shipping_amount is None:
+            raise ToolError("The shipping amount must be a number of pounds, like 3.95.")
+    variables: dict[str, Any] = {"id": str(order_id), "shippingAmount": None, "shippingFull": None, "refundLineItems": None, "full": None}
+    if plain is not None:
+        variables["full"] = True
+    else:
+        variables["refundLineItems"] = [{"lineItemId": line["lineItemId"], "quantity": line["quantity"], "restockType": line["restockType"]} for line in refund_lines] or None
+        variables["shippingAmount"] = f"{shipping_amount:.2f}" if shipping_amount is not None else None
+        variables["shippingFull"] = shipping_full
+    payload = await client.graphql(SUGGESTED_REFUND_QUERY, variables)
+    node = (payload.get("data") or {}).get("order") or {}
+    suggested = node.get("suggestedRefund") or {}
+    maximum = _amount(suggested.get("maximumRefundableSet"))
+    priced = _amount(suggested.get("amountSet"))
+    if plain is not None:
+        total = plain
+    else:
+        total = priced
+    if total is None or total <= 0:
+        raise ToolError("There is nothing to refund for that.")
+    if maximum is not None and total > maximum + 0.004:
+        raise ToolError(f"Only {_display(maximum, currency)} can still be refunded on order {state.get('name')}.")
+    transactions = _allocate(total, list(suggested.get("suggestedTransactions") or []), str(order_id))
+    shipping_priced = _amount((suggested.get("shipping") or {}).get("amountSet")) if plain is None else None
+
+    settings = policy()
+    notify = bool(getattr(settings, "refund_notify", True))
+    refund_input: dict[str, Any] = {"orderId": str(order_id), "notify": notify, "currency": currency, "transactions": transactions}
+    if reason:
+        refund_input["note"] = reason
+    if refund_lines:
+        refund_input["refundLineItems"] = [
+            {"lineItemId": line["lineItemId"], "quantity": line["quantity"], "restockType": line["restockType"], **({"locationId": location[0]} if location else {})}
+            for line in refund_lines
+        ]
+    if shipping_full:
+        refund_input["shipping"] = {"fullRefund": True}
+    elif shipping_amount is not None:
+        refund_input["shipping"] = {"amount": f"{shipping_amount:.2f}"}
+
+    items_words = ", ".join(f"{line['title']}{' ' + line['variant'] if line['variant'] else ''}{' ×' + str(line['quantity']) if line['quantity'] > 1 else ''}" for line in refund_lines) or ("none · goodwill" if plain is not None else "none")
+    shipping_words = "in full" if shipping_full else (_display(shipping_amount, currency) if shipping_amount is not None else "no")
+    restock_words = f"{'returned to' if restock_kind == 'RETURN' else 'back into'} stock at {location[1]}" if location else "no"
+    label = str(node.get("name") or state.get("name") or "")
+    digits = label.rsplit("-", 1)[-1].lstrip("#")
+    read_back = f"refund {_spoken_money(total, currency)} on order {digits}"
+    if refund_lines:
+        read_back += f" for {items_words}"
+    if shipping_full or shipping_amount is not None:
+        read_back += f", shipping {shipping_words}"
+    read_back += (", restocking" if location else "") + (", emailing the customer" if notify else ", without emailing the customer")
+    return Prepared(
+        execution={"order_id": str(order_id), "input": refund_input, "amount": f"{total:.2f}", "currency": currency},
+        before=refund_fingerprint(state),
+        expected_after={"refunded": f"{refunded_so_far + total:.2f}"},
+        entity_ref=str(order_id),
+        entity_label=label,
+        summary={
+            "amount": f"{total:.2f}", "currency": currency, "paid": f"{paid:.2f}", "remaining_after": f"{max(0.0, (maximum if maximum is not None else paid - refunded_so_far) - total):.2f}",
+            "items_words": items_words, "shipping_words": shipping_words, "restock_words": restock_words, "notify": notify, "reason": reason,
+            "shipping_priced": f"{shipping_priced:.2f}" if shipping_priced is not None else "", "read_back": read_back,
+            "ledger": {"amount": f"{total:.2f}", "currency": currency, "lines": len(refund_lines), "restock": restock_kind if refund_lines else "NO_RESTOCK", "shipping": bool(shipping_full or shipping_amount), "notify": notify, "tenders": len(transactions)},
+        },
+    )
+
+
+def _decimal(value: object) -> float | None:
+    text = str(value or "").strip().replace("£", "").replace(",", "")
+    try:
+        amount = round(float(text), 2)
+    except ValueError:
+        return None
+    if amount <= 0 or amount > 9_999_999:
+        return None
+    return amount

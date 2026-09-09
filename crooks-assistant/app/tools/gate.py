@@ -114,6 +114,8 @@ _ID_SHAPE = re.compile(r"^[A-Za-z0-9/_.:=+-]{1,200}$")
 _ID_KIND = {
     "order_id": re.compile(r"^gid://shopify/Order/\d+$"),
     "customer_id": re.compile(r"^gid://shopify/Customer/\d+$"),
+    "line_item_id": re.compile(r"^gid://shopify/LineItem/\d+$"),
+    "variant_id": re.compile(r"^gid://shopify/ProductVariant/\d+$"),
     "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
 }
 

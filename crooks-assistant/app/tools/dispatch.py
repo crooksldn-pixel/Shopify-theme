@@ -35,7 +35,7 @@ def _readable_errors() -> tuple[type[BaseException], ...]:
 _READABLE_ERRORS = _readable_errors()
 
 # Result keys whose values are ids the assistant may later use in a detail-style lookup.
-_ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "id")
+_ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "line_item_id", "id")
 # Result keys whose values are a person's details. Remembered so the turn log can scrub them.
 _PII_KEYS = ("customer_name", "customer_email", "name", "from", "from_email", "email", "displayName", "zip", "company")
 # A list of strings under this key is a street address, line by line.

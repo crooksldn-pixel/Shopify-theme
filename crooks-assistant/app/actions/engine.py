@@ -407,8 +407,11 @@ class ActionEngine:
                     log.warning("could not re-read %s for the card: %s", proposal.proposal_id, _short(exc))
             self._finish(proposal, ActionStatus.VERIFIED, "verified")
             spoken = (write.spoken_undo_success if proposal.undo_of else write.spoken_success)
-            # The line names what it touched: "{label}" is the entity as a person says it.
+            # The line names what it touched: "{label}" is the entity as a person says it, and
+            # "{amount}" the money a change moved, as the tool summarised it.
             spoken = spoken.replace("{label}", str(proposal.entity_label).lstrip("#"))
+            if "{amount}" in spoken:
+                spoken = spoken.replace("{amount}", _spoken_amount(proposal.summary))
             if proposal.note:
                 spoken = f"{spoken} {proposal.note}"
             if proposal.undo_of is None:
@@ -512,6 +515,16 @@ def _public_answer(answer: Any) -> dict[str, Any] | None:
         if isinstance(value, (str, int, float, bool)) and (key.endswith("_id") or key in ("done", "status")):
             out[key] = value
     return out or None
+
+
+def _spoken_amount(summary: dict[str, Any]) -> str:
+    """"£20.00" from the tool's summary, for the speakable layer to turn into words."""
+    try:
+        amount = float(summary.get("amount"))
+    except (TypeError, ValueError):
+        return "the amount"
+    symbol = {"GBP": "£", "USD": "$", "EUR": "€"}.get(str(summary.get("currency") or "GBP").upper(), "")
+    return f"{symbol}{amount:,.2f}" if symbol else f"{amount:,.2f} {summary.get('currency')}"
 
 
 def _ledger_facts(prepared: Prepared) -> dict[str, Any] | None:

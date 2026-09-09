@@ -161,6 +161,25 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         root="orderCancel",
         validate=lambda key, value: key == "refundMethod" and set(value) == {"originalPaymentMethodsRefund"} and isinstance(value["originalPaymentMethodsRefund"], bool),
     ),
+    # A refund. Never idempotent, never sent twice. The input is a nested object; every key,
+    # enum and amount in it is checked against the reviewed shape below before it leaves.
+    "refund_create": ReviewedMutation(
+        name="refund_create",
+        document="""
+            mutation CrooksRefundCreate($input: RefundInput!) {
+              refundCreate(input: $input) {
+                refund { id createdAt totalRefundedSet { shopMoney { amount currencyCode } } }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"input": dict},
+        scope="write_orders",
+        max_chars=200,
+        idempotent=False,
+        root="refundCreate",
+        validate=lambda key, value: key == "input" and refund_input_ok(value),
+    ),
     "order_tags_remove": ReviewedMutation(
         name="order_tags_remove",
         document="""
@@ -178,6 +197,59 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         root="tagsRemove",
     ),
 }
+
+_GID = re.compile(r"^gid://shopify/[A-Za-z]+/\d+$")
+_DECIMAL = re.compile(r"^\d{1,7}(?:\.\d{1,2})?$")
+_RESTOCK = frozenset({"RETURN", "CANCEL", "NO_RESTOCK"})
+
+
+def refund_input_ok(value: Any) -> bool:
+    """The RefundInput shape this project sends, and nothing else: known keys, enum values,
+    bounded amounts, ids that are ids. A refund is money leaving; the shape is held here as
+    well as where it is built."""
+    if not isinstance(value, dict) or not value:
+        return False
+    allowed = {"orderId", "note", "notify", "currency", "refundLineItems", "shipping", "transactions"}
+    if set(value) - allowed or not _GID.match(str(value.get("orderId", ""))):
+        return False
+    if "note" in value and (not isinstance(value["note"], str) or len(value["note"]) > 200):
+        return False
+    if "notify" in value and not isinstance(value["notify"], bool):
+        return False
+    if "currency" in value and (not isinstance(value["currency"], str) or not re.match(r"^[A-Z]{3}$", value["currency"])):
+        return False
+    lines = value.get("refundLineItems", [])
+    if not isinstance(lines, list) or len(lines) > 50:
+        return False
+    for line in lines:
+        if not isinstance(line, dict) or set(line) - {"lineItemId", "quantity", "restockType", "locationId"}:
+            return False
+        if not _GID.match(str(line.get("lineItemId", ""))) or not isinstance(line.get("quantity"), int) or isinstance(line.get("quantity"), bool) or not 1 <= line["quantity"] <= 50:
+            return False
+        if str(line.get("restockType", "NO_RESTOCK")) not in _RESTOCK:
+            return False
+        if "locationId" in line and not _GID.match(str(line["locationId"])):
+            return False
+    shipping = value.get("shipping")
+    if shipping is not None:
+        if not isinstance(shipping, dict) or set(shipping) - {"amount", "fullRefund"} or not shipping:
+            return False
+        if "amount" in shipping and not _DECIMAL.match(str(shipping["amount"])):
+            return False
+        if "fullRefund" in shipping and not isinstance(shipping["fullRefund"], bool):
+            return False
+    transactions = value.get("transactions", [])
+    if not isinstance(transactions, list) or not transactions or len(transactions) > 10:
+        return False
+    for t in transactions:
+        if not isinstance(t, dict) or set(t) != {"orderId", "gateway", "kind", "amount", "parentId"}:
+            return False
+        if t["kind"] != "REFUND" or not _DECIMAL.match(str(t["amount"])) or not _GID.match(str(t["parentId"])) or not _GID.match(str(t["orderId"])):
+            return False
+        if not isinstance(t["gateway"], str) or not 1 <= len(t["gateway"]) <= 60:
+            return False
+    return True
+
 
 KEEPALIVE_CONNECTIONS = 4
 KEEPALIVE_EXPIRY_S = 120.0
