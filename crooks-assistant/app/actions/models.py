@@ -93,6 +93,10 @@ class ActionProposal:
     entity: dict[str, Any] | None = None       # the bounded re-read after the change
     undo_of: str | None = None                 # set on an undo proposal
     undo_id: str | None = None                 # set on a verified proposal that can be undone
+    # Which branch of the conversation staged this (app/session/branch.py). A change belongs
+    # to the half of the orb it was asked for in: merging two branches never moves it, and a
+    # branch working in the background can never commit it.
+    branch_id: str = ""
     sent: dict[str, Any] | None = None         # what the mutation answered (a job id), never content
     note: str = ""                             # a caveat proven alongside success, spoken after it
     armed_at: float | None = None              # when the owner's hold armed it on the Mac's clock
@@ -132,6 +136,7 @@ class ActionProposal:
             "undo_of": self.undo_of,
             "undo_id": self.undo_id,
             "note": self.note,
+            "branch_id": self.branch_id or None,
         }
 
 

@@ -300,6 +300,27 @@ async def arm(request: Request, proposal_id: str, session_id: str = Form(default
     return {"proposal_id": proposal.proposal_id, "nonce": proposal.arm_nonce, "hold_ms": grammar.HOLD_MS, "armed_for_s": grammar.ARMED_FOR_S}
 
 
+def _branch_may_commit(session, proposal) -> str:
+    """Why this branch may not apply this change, if it may not.
+
+    A change belongs to the half of the orb it was asked for in. A half the owner has put to
+    one side is not where his hands are: it goes on reading, and it can never commit. This is
+    the route's part of "background execution must never silently commit a write"; the other
+    part is that nothing in the background calls this route at all.
+    """
+    branch_id = str(getattr(proposal, "branch_id", "") or "")
+    if not branch_id or session is None:
+        return ""
+    branch = getattr(session, "branches", {}).get(branch_id)
+    if branch is None:
+        return ""
+    if branch.status == "BACKGROUND":
+        return "That change belongs to the half you put aside. Tap it to come back to it first."
+    if branch.status in ("CANCELLED", "MERGED"):
+        return "That change belongs to a half of the conversation that is closed."
+    return ""
+
+
 @router.post("/{proposal_id}/commit", response_model=None)
 async def commit(request: Request, proposal_id: str, session_id: str = Form(default="")) -> JSONResponse | dict:
     started = time.perf_counter()
@@ -320,6 +341,12 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     # The preflight is for THIS change's scope: a fulfilment scope the store has not granted
     # does not stop a note. The proposal is looked at, not claimed; the engine claims it.
     pending = runtime.actions.state(proposal_id, session_id.strip())
+    if pending is not None:
+        elsewhere = _branch_may_commit(owner_session, pending)
+        if elsewhere:
+            log.warning("commit refused: branch %s is not where the owner is (caller=%s)", getattr(pending, "branch_id", ""), caller)
+            timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, code="branch_not_focused", detail=elsewhere, ms=_elapsed(started))
+            return _refuse(409, "branch_not_focused", elsewhere)
     status = await _write_status_soon(runtime, pending.operation if pending is not None else None)
     if not status.ready:
         log.warning("commit refused: %s — %s (caller=%s)", status.code, status.detail, caller)
@@ -375,6 +402,51 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
         "ui": present_action(result, session=session, writes=await writes_context(request, proposal.operation)),
         "undo": undo,
     }
+
+
+# How many live surfaces one reconciliation may ask about. A screen shows a handful; a
+# request naming fifty is not the tablet this was built for.
+MAX_RECONCILE = 60
+
+
+@router.get("/states", response_model=None)
+async def states(request: Request, session_id: str = "", ids: str = "") -> JSONResponse | dict:
+    """Where every card on the screen actually stands, in one request.
+
+    The September session ended with two batches the tablet reported committed that the Mac
+    never claimed. A gesture is a request, not an outcome: the tablet renders lifecycle from
+    THIS — PROPOSED, ARMED, COMMITTING, VERIFIED, UNVERIFIED, FAILED, STALE, EXPIRED,
+    REVOKED — and never from the fact that a finger moved. It reconciles after every gesture
+    and on every wake, so a card cannot go on saying something the Mac disagrees with.
+    """
+    runtime = request.app.state.runtime
+    session_id = session_id.strip()
+    if not session_id:
+        return _refuse(400, "wrong_session", "The session is missing.")
+    try:
+        session = runtime.sessions.peek(session_id)
+    except KeyError:
+        session = None
+    if session is not None and not session_matches(session, request):
+        return _refuse(403, "wrong_session", "That conversation belongs to another login.")
+    wanted = [i.strip() for i in (ids or "").split(",") if i.strip()][:MAX_RECONCILE]
+    found: dict[str, dict] = {}
+    unknown: list[str] = []
+    for proposal_id in wanted:
+        if proposal_id.startswith("batch_"):
+            batch = runtime.batches.state(proposal_id, session_id)
+            if batch is not None:
+                found[proposal_id] = {**batch.public(), "kind": "batch"}
+                continue
+        else:
+            proposal = runtime.actions.state(proposal_id, session_id)
+            if proposal is not None:
+                found[proposal_id] = {**proposal.public(), "kind": "action"}
+                continue
+        # The Mac has never heard of it, or it belonged to a conversation that has gone.
+        # Either way the tablet must stop showing it as live.
+        unknown.append(proposal_id)
+    return {"session_id": session_id, "states": found, "unknown": unknown, "epoch": getattr(session, "epoch", 0)}
 
 
 @router.get("/{proposal_id}", response_model=None)

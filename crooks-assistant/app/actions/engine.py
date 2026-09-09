@@ -125,6 +125,7 @@ class ActionEngine:
             proposal_id=new_proposal_id(),
             session_id=session.session_id,
             epoch=session.epoch,
+            branch_id=str(getattr(session, "focused_branch", "") or ""),
             tool_name=spec.name,
             operation=spec.write.operation,
             risk=risk,

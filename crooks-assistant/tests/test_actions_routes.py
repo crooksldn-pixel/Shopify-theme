@@ -173,8 +173,10 @@ async def test_an_authorised_tap_executes_once_and_returns_verified_state(client
     assert body["ui"][0]["data"]["title"] == "Note added" and body["ui"][0]["data"]["detail"] == "Order #1930"
     assert body["ui"][1]["data"]["note"].endswith("Customer asked for an exchange")
     assert body["undo"]["status"] == "pending" and body["undo"]["undo_of"] == proposal.proposal_id
+    # The public shape, exhaustively: an id, a lifecycle, words for the card, and which
+    # branch of the conversation it belongs to. No arguments, no fingerprint, no personal data.
     assert set(body) <= {"proposal_id", "status", "code", "operation", "risk", "entity_kind", "entity_label", "interaction",
-                         "reversible", "expires_at", "ttl_s", "undo_of", "undo_id", "note", "spoken", "ui", "undo"}
+                         "reversible", "expires_at", "ttl_s", "undo_of", "undo_id", "note", "branch_id", "spoken", "ui", "undo"}
     assert client.store.mutations == [("order_note_set", {"id": ORDER, "note": "Gift wrap please\nCustomer asked for an exchange"})]
 
 
