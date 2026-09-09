@@ -70,7 +70,8 @@ def withheld_tools(specs, *, writes_enabled: bool) -> set[str]:
     turn. Pure, so the rule can be checked without an SDK."""
     return {
         s.name for s in specs
-        if (s.write is None and s.tier is Tier.RED) or (s.write is not None and not writes_enabled)
+        if (s.write is None and s.batch is None and s.tier is Tier.RED)
+        or ((s.write is not None or s.batch is not None) and not writes_enabled)
         or s.name.startswith("mock_")
     }
 

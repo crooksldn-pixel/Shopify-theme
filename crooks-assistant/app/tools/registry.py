@@ -85,6 +85,41 @@ class WriteSpec:
 
 
 @dataclass(slots=True, frozen=True)
+class BatchSpec:
+    """What makes a batch tool a batch tool: the write tool each member's proposal is prepared
+    by, which kinds of working set it acts on, and its words. A batch tool has no write of
+    its own — every mutation is one of the child tool's, staged and proven one by one by the
+    action engine (app/actions/batch.py)."""
+
+    operation: str                      # the batch's name on the card and in the ledger
+    child_tool: str                     # the registered write tool used for each member
+    set_kinds: tuple[str, ...]          # working-set kinds it accepts: ("orders",)
+    present: Callable[..., dict[str, Any]]
+    verb: str = "Applied to"            # the spoken result: "{verb} 20 of the 23 {noun}."
+    noun: str = "items"
+    max_members: int = 50
+    # The card's preview of what one member gets (an email's text), from the first prepared
+    # child. Optional; bounded by the presentation layer.
+    preview: Callable[..., dict[str, Any]] | None = None
+
+    @property
+    def complete(self) -> bool:
+        return bool(self.operation and self.child_tool and self.set_kinds and callable(self.present))
+
+
+@dataclass(slots=True, frozen=True)
+class BatchPlan:
+    """What a batch tool's handler returns: for each member of the set, the arguments the
+    child write tool is prepared with. Nothing read yet, nothing sent."""
+
+    set_id: str
+    child_tool: str
+    child_args: Callable[[str], Any]    # member ref → the child's arguments (or an awaitable of them)
+    label: str
+    summary: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True, frozen=True)
 class ToolSpec:
     name: str
     description: str
@@ -99,6 +134,9 @@ class ToolSpec:
     timeout_s: float | None = field(default=None)
     # Present only on a write tool. Its handler then prepares a proposal and never mutates.
     write: WriteSpec | None = field(default=None)
+    # Present only on a batch tool: its handler returns a BatchPlan and the batch engine
+    # prepares one proposal per member through the child write tool. Never both.
+    batch: BatchSpec | None = field(default=None)
     # What the model reads of the result, when that is less than what the card is built
     # from: a street address and an image URL are for the screen, not for the voice.
     model_view: Callable[[Any], Any] | None = field(default=None)
@@ -120,6 +158,7 @@ def tool(
     issued_id_args: tuple[str, ...] = (),
     timeout_s: float | None = None,
     write: WriteSpec | None = None,
+    batch: BatchSpec | None = None,
     model_view: Callable[[Any], Any] | None = None,
 ) -> Callable[[Handler], Handler]:
     """Register a handler as a tool. The decorated function is returned unchanged so it stays
@@ -137,6 +176,7 @@ def tool(
             issued_id_args=issued_id_args,
             timeout_s=timeout_s,
             write=write,
+            batch=batch,
             model_view=model_view,
         )
         return fn

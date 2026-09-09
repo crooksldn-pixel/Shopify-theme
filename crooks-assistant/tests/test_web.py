@@ -110,13 +110,16 @@ def test_the_only_write_path_is_a_proposal_id():
             assert verb not in source, f"{name} mentions {verb}"
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
         base = endpoint.split("?")[0].rstrip("/")
-        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/context/order/"), endpoint
+        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/"), endpoint
     # The context read carries the session and an order id and nothing else, and is a GET.
     body = function_body(APP_JS, "function collectPending(node, attempt = 0)")
     assert "method:" not in body and "session_id=" in body and "body:" not in body
     body = function_body(APP_JS, "async function commitAction(proposalId, node, nonce)")
     assert body.count("form.append(") == 1 and "form.append('session_id', sessionId)" in body
     assert "/commit`" in body and "method: 'POST'" in body
+    # A batch is the same tap at another route: the id the Mac issued and the session, nothing else.
+    assert "fetch(`/batches/${encodeURIComponent(proposalId)}/commit`" in body and "fetch(`/actions/${encodeURIComponent(proposalId)}/commit`" in body
+    assert "members" not in body and "set_id" not in body
     for forbidden in ("note", "order_id", "amount", "desired"):
         assert f"'{forbidden}'" not in body, f"the tablet must not send {forbidden}"
 
@@ -125,6 +128,7 @@ def test_a_lost_connection_asks_what_happened_rather_than_tapping_again():
     body = function_body(APP_JS, "async function recoverActionState(proposalId)")
     assert "method: 'POST'" not in body and "/commit" not in body
     assert "fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=" in body
+    assert "fetch(`/batches/${encodeURIComponent(proposalId)}?session_id=" in body
     commit = function_body(APP_JS, "async function commitAction(proposalId, node, nonce)")
     assert "payload = await recoverActionState(proposalId);" in commit
 

@@ -111,7 +111,7 @@ async def turn(
         timeline.emit(
             "turn_started", session_id=session_id, turn_id=live.turn_id, input="audio" if audio is not None else "text",
             turns_before=live.turns, epoch=epoch, lost_thread=lost_thread, focus=(live.context[0] if live.context else None),
-            waiting=[p.proposal_id for p in live.proposals if p.status.value == "PENDING"],
+            waiting=[p.proposal_id for p in live.proposals if p.status.value == "PENDING" and not p.batch_id] + [b.batch_id for b in live.batches.values() if b.status.value == "PENDING"],
         )
 
     if audio is not None:
@@ -177,8 +177,9 @@ async def turn(
             transcript=transcript_info, question=text, speak=speak, calls=calls, epoch=epoch, revoked=[],
         )
 
-    revoked = runtime.actions.revoke_pending(live, "new instruction")
+    revoked = runtime.actions.revoke_pending(live, "new instruction") + runtime.batches.revoke_pending(live, "new instruction")
     epoch = runtime.actions.advance_epoch(live, "new instruction")
+    runtime.batches.advance_epoch(live)
 
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
     # in front of it. This question is answered with the catalogue as it stands.
@@ -319,10 +320,11 @@ def _waiting_proposal(runtime, session):
     for proposal in reversed(session.proposals):
         if (
             proposal.status.value == "PENDING" and proposal.epoch == session.epoch
-            and not proposal.expired(now) and proposal.undo_of is None
+            and not proposal.expired(now) and proposal.undo_of is None and not proposal.batch_id
         ):
             return proposal
-    return None
+    # A batch's members are not cards of their own; the batch is the card.
+    return runtime.batches.waiting(session)
 
 
 def _now_line(runtime) -> str:
@@ -477,7 +479,8 @@ def _is_write_tool(name: str) -> bool:
     from app.tools import registry
 
     try:
-        return registry.get(name).write is not None
+        spec = registry.get(name)
+        return spec.write is not None or spec.batch is not None
     except KeyError:
         return False
 
@@ -539,6 +542,7 @@ async def _answer(
         # Claude was still running when the owner moved on, and staged a change into the
         # conversation's new position. Nobody asked for it there: withdrawn, unsent.
         runtime.actions.revoke_ids(proposed, "the owner moved on")
+        runtime.batches.revoke_ids(proposed, "the owner moved on")
         proposed = []
     # A change was proposed this turn. Say, now and in the same breath, whether a tap on THIS
     # tablet could apply it — a card that cannot be applied must never look as if it can.
@@ -550,7 +554,10 @@ async def _answer(
         writes = None
     # The card leaves for the tablet now; its wait for the tap starts now.
     for proposal_id in proposed:
-        runtime.actions.deliver(proposal_id)
+        if proposal_id.startswith("batch_"):
+            runtime.batches.deliver(proposal_id)
+        else:
+            runtime.actions.deliver(proposal_id)
     if speak and answer and not abandoned:
         # Start the voice now: by the time the tablet has this JSON and asks /speak, the MP3
         # is already generating. The same request it would make anyway, just earlier. An
@@ -646,7 +653,7 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
             return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
         live.abandoned = True
         # Named, so the tablet settles exactly the cards this withdrew rather than guessing.
-        revoked = runtime.actions.revoke_pending(live, "turn abandoned", undos=True)
+        revoked = runtime.actions.revoke_pending(live, "turn abandoned", undos=True) + runtime.batches.revoke_pending(live, "turn abandoned", undos=True)
         runtime.actions.advance_epoch(live, "turn abandoned")
         interrupted = await runtime.provider.interrupt(session_id)
     stopped = runtime.voice.cancel_prefetches()

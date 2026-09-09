@@ -24,6 +24,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation',
     'success', 'error', 'context_stack',
     'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set',
+    'batch_action', 'batch_result',
   ]));
 });
 
@@ -760,4 +761,62 @@ test('a working set names what "these" means, shows a sample as text, and keeps 
   assert.ok(t.includes(HOSTILE), 'the hostile label is printed verbatim as text');
   assert.ok(textOf(correlated).includes('Cross-referenced') && textOf(correlated).includes('2 customers selected'));
   assert.ok(!textOf(correlated).includes('From:'));
+});
+
+test('a batch card names the count, the scope, the excluded and every member, and its gesture carries the batch id', async () => {
+  const commits = [];
+  const arms = [];
+  const timers = [];
+  let t = 0;
+  const opts = {
+    now: () => t, blocked: () => false, trackWidth: 356,
+    onCommit: (id, node, nonce) => commits.push([id, nonce || '']),
+    onArm: (id) => { arms.push(id); return Promise.resolve('tok-9'); },
+    timers: { set: (fn, ms) => { timers.push({ fn, ms }); return timers.length; }, clear: () => {} },
+  };
+  const node = UI.renderItem({ type: 'batch_action', data: {
+    batch_id: 'batch_abc', status: 'pending', risk: 'red', operation: 'batch_order_tags_add', title: 'Add tags to 21 orders ' + HOSTILE, summary: 'delayed-sept',
+    set: { set_id: 'set_1', label: 'delayed ' + HOSTILE, kind: 'orders', count: 23 }, requested: 23, eligible: 21, excluded_count: 2,
+    excluded: [{ label: '#1902', reason: 'already has those tags' }, { label: HOSTILE, reason: HOSTILE }],
+    members: ['#1938', '#1937', '#1935', '#1934', '#1931', '#1930'], facts: [{ label: 'Tags', value: 'delayed-sept' }],
+    interaction: { kind: 'hold_to_arm', label: 'Hold to arm, then tap', footer: 'nothing happens until you hold', armed_after_ms: 650 }, ttl_s: 120, reversible: true, commit: { allowed: true },
+  } }, opts);
+  assert.equal(node.dataset.proposal, 'batch_abc');
+  assert.equal(node.dataset.set, 'set_1');
+  assert.equal(node.querySelectorAll('script, img').length, 0);
+  const words = textOf(node);
+  assert.ok(words.includes('Proposed for 21 of 23') && words.includes('delayed') && words.includes('2 excluded') && words.includes('already has those tags'));
+  assert.equal(node.querySelector('.batch-members').querySelectorAll('li').length, 6, 'every member is listed to inspect');
+  assert.ok(words.includes(HOSTILE), 'hostile text is printed, never parsed');
+  const surface = node.querySelector('.action-surface');
+  assert.equal(surface.dataset.kind, 'hold_to_arm');
+  t = 700; surface.dataset.state = 'armed';
+  surface.dispatch('pointerdown', { clientX: 10, clientY: 10, pointerId: 1 });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(arms, ['batch_abc'], 'the hold is told to the Mac under the batch id');
+  for (const x of timers) if (x.ms === 1050 && !x.fired) { x.fired = true; x.fn(); }
+  surface.dispatch('pointerup', { pointerId: 1 });
+  t = 1500;
+  surface.dispatch('pointerdown', { clientX: 10, clientY: 10, pointerId: 1 });
+  surface.dispatch('pointerup', { pointerId: 1 });
+  assert.deepEqual(commits, [['batch_abc', 'tok-9']]);
+});
+
+test('a batch result counts what was proven, lists each member with its outcome, and offers the undo batch', () => {
+  const node = UI.renderItem({ type: 'batch_result', data: {
+    batch_id: 'batch_abc', operation: 'batch_order_tags_add', title: 'Tags added: 20 of 23', detail: 'delayed · 23 orders', all_verified: false,
+    counts: { requested: 23, eligible: 21, excluded: 2, verified: 20, unverified: 0, stale: 0, failed: 1, not_attempted: 0 },
+    rows: [{ label: '#1938', outcome: 'applied', code: 'verified' }, { label: '#1935', outcome: 'not applied', code: 'failed' }, { label: '#1902', outcome: 'excluded: already has those tags', code: 'excluded' }],
+    note: 'Only the members marked applied were proven.',
+    undo: { batch_id: 'batch_undo', label: 'Undo all', interaction: 'hold_to_arm', ttl_s: 120 },
+  } }, { now: () => 0, timers: { set: () => 0, clear: () => {} } });
+  const words = textOf(node);
+  assert.ok(words.includes('Done · counted') && words.includes('Tags added: 20 of 23') && words.includes('not applied') && words.includes('Only the members marked applied were proven.'));
+  assert.equal(node.querySelector('.counts').querySelectorAll('.stat').length, 3, 'only the non-zero counts are shown');
+  assert.equal(node.querySelector('.batch-list').querySelectorAll('li').length, 3);
+  assert.equal(node.querySelectorAll('li').find((li) => li.classList.contains('bad')).querySelector('.batch-why').textContent, 'not applied');
+  assert.equal(node.dataset.proposal, 'batch_undo', 'the live id on the card is the undo batch');
+  assert.equal(node.querySelector('.action-surface').dataset.kind, 'hold_to_arm');
+  const clean = UI.renderItem({ type: 'batch_result', data: { batch_id: 'b', title: 'Archived: 3 of 3', all_verified: true, counts: { requested: 3, eligible: 3, verified: 3 }, rows: [] } });
+  assert.ok(textOf(clean).includes('all proven'));
 });

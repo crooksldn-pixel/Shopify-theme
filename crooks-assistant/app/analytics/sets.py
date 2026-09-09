@@ -18,6 +18,7 @@ KINDS = ("orders", "customers", "products", "variants", "emails")
 MAX_SETS = 12
 MAX_MEMBERS = 500
 MAX_SAMPLE = 5
+MAX_LABEL = 60
 TTL_S = 1800.0
 
 
@@ -39,6 +40,9 @@ class WorkingSet:
     sample: tuple[dict[str, Any], ...] = ()
     totals: dict[str, Any] = field(default_factory=dict)
     truncated: bool = False
+    # How a person names each member (#1938; a customer's name; a thread's subject), for the
+    # batch card that lists them. Held with the set on the Mac; never sent whole to the model.
+    labels: dict[str, str] = field(default_factory=dict)
 
     @property
     def count(self) -> int:
@@ -76,8 +80,10 @@ def _held(session: Any) -> dict[str, WorkingSet]:
 def create(
     session: Any, *, kind: str, members: list[str], label: str, provenance: dict[str, Any] | None = None,
     sample: list[dict[str, Any]] | None = None, totals: dict[str, Any] | None = None, clock=time.time,
+    labels: dict[str, str] | None = None, focus: bool = True,
 ) -> WorkingSet:
-    """A new set on the session, its ids issued to the conversation, the newest first."""
+    """A new set on the session, its ids issued to the conversation, the newest first. It
+    becomes what "these" means unless told otherwise (a side set beside the main one)."""
     if kind not in KINDS:
         raise ValueError(f"unknown set kind {kind!r}")
     now = clock()
@@ -90,6 +96,7 @@ def create(
         created_at=now, expires_at=now + TTL_S, session_id=str(getattr(session, "session_id", "") or ""), turn_id=str(getattr(session, "turn_id", "") or ""),
         provenance=dict(provenance or {}), sample=tuple({"ref": str(s.get("ref") or ""), "label": str(s.get("label") or "")[:60]} for s in (sample or [])[:MAX_SAMPLE]),
         totals={k: v for k, v in (totals or {}).items() if isinstance(v, (int, float, str)) and not isinstance(v, bool)}, truncated=truncated,
+        labels={ref: str(name)[:MAX_LABEL] for ref, name in (labels or {}).items() if ref in set(ids) and name},
     )
     held = _held(session)
     held[ws.set_id] = ws
@@ -99,14 +106,17 @@ def create(
     issue = getattr(session, "issue", None)
     if callable(issue):
         issue(ws.set_id, *ids)
-    focus = getattr(session, "focus", None)
-    if isinstance(focus, dict):
-        focus["set"] = ws.set_id
+    held_focus = getattr(session, "focus", None)
+    if focus and isinstance(held_focus, dict):
+        held_focus["set"] = ws.set_id
     return ws
 
 
 def derive(session: Any, parent: WorkingSet, *, members: list[str], label: str, step: str, detail: dict[str, Any] | None = None, kind: str | None = None, clock=time.time, **extra: Any) -> WorkingSet:
-    """A narrowing (or a correlation) of a set: a new set that remembers where it came from."""
+    """A narrowing (or a correlation) of a set: a new set that remembers where it came from,
+    and keeps the parent's names for the members it kept."""
+    if "labels" not in extra and (kind is None or kind == parent.kind):
+        extra["labels"] = {ref: parent.labels[ref] for ref in members if ref in parent.labels}
     return create(
         session, kind=kind or parent.kind, members=members, label=label, clock=clock,
         provenance={"tool": (detail or {}).get("tool") or "", "parent": parent.set_id, "parent_label": parent.label, "step": step, "detail": dict(detail or {})}, **extra,

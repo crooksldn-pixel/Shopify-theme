@@ -1112,6 +1112,12 @@ function renderOpts() {
   return { onCommit: commitAction, onArm: armAction, blocked: actionBlocked, onAction: primeAction };
 }
 
+// A proposal and a batch are authorised by the same gestures at different routes. The id
+// says which: the Mac issues both, and the tablet forwards either with nothing else.
+function isBatch(id) {
+  return String(id || '').startsWith('batch_');
+}
+
 // The owner's hold began on a card whose gesture is a hold. Tell the Mac now; it hands back
 // a single-use token the commit will carry. No token, no commit — the surface says so.
 async function armAction(proposalId) {
@@ -1121,7 +1127,9 @@ async function armAction(proposalId) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
   try {
-    const response = await fetch(`/actions/${encodeURIComponent(proposalId)}/arm`, { method: 'POST', body: form, signal: controller.signal, cache: 'no-store' });
+    const response = isBatch(proposalId)
+      ? await fetch(`/batches/${encodeURIComponent(proposalId)}/arm`, { method: 'POST', body: form, signal: controller.signal, cache: 'no-store' })
+      : await fetch(`/actions/${encodeURIComponent(proposalId)}/arm`, { method: 'POST', body: form, signal: controller.signal, cache: 'no-store' });
     if (!response.ok) { T.record('action_arm', { proposal_id: proposalId, status: response.status, outcome: 'refused' }); return null; }
     const data = await response.json();
     T.record('action_arm', { proposal_id: proposalId, status: response.status, outcome: data && data.nonce ? 'armed' : 'no_token' });
@@ -1167,9 +1175,9 @@ async function commitAction(proposalId, node, nonce) {
   // the session and nothing else, and the token is an authorisation, not an argument.
   const headers = nonce ? { 'X-Crooks-Arm': String(nonce) } : {};
   try {
-    const response = await fetch(`/actions/${encodeURIComponent(proposalId)}/commit`, {
-      method: 'POST', body: form, headers, signal: controller.signal, cache: 'no-store',
-    });
+    const response = isBatch(proposalId)
+      ? await fetch(`/batches/${encodeURIComponent(proposalId)}/commit`, { method: 'POST', body: form, headers, signal: controller.signal, cache: 'no-store' })
+      : await fetch(`/actions/${encodeURIComponent(proposalId)}/commit`, { method: 'POST', body: form, headers, signal: controller.signal, cache: 'no-store' });
     status = response.status;
     payload = await response.json();
   } catch {
@@ -1186,7 +1194,9 @@ async function recoverActionState(proposalId) {
   for (let attempt = 0; attempt < 4; attempt++) {
     await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
     try {
-      const response = await fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+      const response = isBatch(proposalId)
+        ? await fetch(`/batches/${encodeURIComponent(proposalId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
+        : await fetch(`/actions/${encodeURIComponent(proposalId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
       const data = await response.json();
       if (data && data.status && data.status !== 'executing' && data.status !== 'executed') return data;
     } catch { /* still unreachable; try again */ }
@@ -1219,11 +1229,17 @@ function settleAction(node, payload, status) {
   if (payload.status === 'verified' && payload.undo && items.length && items[0].type === 'success') {
     items[0].data.undo = Object.assign({ label: 'Undo', armed_after_ms: 650 }, payload.undo);
   }
+  // A batch that ran: its card is the count, and the undo the Mac staged is a batch too.
+  const batchDone = payload.status === 'done' && items.length && items[0].type === 'batch_result';
+  if (batchDone && payload.undo && payload.undo.batch_id) {
+    items[0].data.undo = Object.assign({ label: 'Undo all', armed_after_ms: 650 }, payload.undo);
+  }
+  const proven = payload.status === 'verified' || (batchDone && payload.all_verified === true);
   const rendered = window.CrooksUI ? window.CrooksUI.render(items, renderOpts()) : { nodes: [] };
   // A card that already records something that happened — "Note added" and its undo — is
   // never replaced by the answer to a tap that did not happen: the undo's surface settles
   // and the proof stays on screen.
-  const keepTheCard = node.classList && node.classList.contains('card-success') && payload.status !== 'verified';
+  const keepTheCard = node.classList && node.classList.contains('card-success') && payload.status !== 'verified' && payload.status !== 'done';
   if (rendered.nodes.length && !keepTheCard) {
     replaceCard(node, rendered.nodes);
   } else {
@@ -1232,19 +1248,19 @@ function settleAction(node, payload, status) {
   if (status >= 400 && !items.length) {
     el.errline.textContent = ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.');
   }
-  haptic(payload.status === 'verified' ? HAPTIC.done : HAPTIC.error);
-  if (payload.status === 'verified' && !busy && !recording) {
-    // The one moment the green orb is for: the Mac proved the change.
+  haptic(proven ? HAPTIC.done : HAPTIC.error);
+  if (proven && !busy && !recording) {
+    // The one moment the green orb is for: the Mac proved the change — every member of it.
     setState('SUCCESS');
     setTimeout(() => { if (!busy && !recording && el.stage.dataset.state === 'SUCCESS') setState('READY'); }, 1400);
   }
-  if (payload.spoken) speakAnswer(String(payload.spoken), { isError: payload.status !== 'verified' });
+  if (payload.spoken) speakAnswer(String(payload.spoken), { isError: !proven });
 }
 
 const ACTION_LABELS = {
   verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
   executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…', refused: 'Refused', not_armed: 'Hold first',
-  blocked: 'Refused',
+  blocked: 'Refused', done: 'Applied', batch_member: 'Part of a batch',
   unverified: 'Not confirmed', service_unavailable: 'Not applied', writes_disabled: 'Switched off',
   not_authorised: 'Not on the list', not_authorised_local: 'Not from the Mac itself',
   allow_list_missing: 'Not configured', scope_missing: 'Not permitted', wrong_session: 'Not this conversation',
@@ -1269,9 +1285,10 @@ function settleActionNode(node, state, label) {
 // armed on the current screen: nothing new to show.
 function onlyLiveCardsAlreadyShown(items) {
   const cards = (items || []).filter((i) => i && i.type !== 'context_stack');
-  if (!cards.length || cards.some((i) => i.type !== 'confirmation')) return false;
+  if (!cards.length || cards.some((i) => i.type !== 'confirmation' && i.type !== 'batch_action')) return false;
   return cards.every((i) => {
-    const node = el.cards ? el.cards.querySelector(`[data-proposal="${String(i.data && i.data.proposal_id || '').replace(/["\\]/g, '')}"] .action-surface`) : null;
+    const id = String(i.data && (i.data.proposal_id || i.data.batch_id) || '').replace(/["\\]/g, '');
+    const node = el.cards ? el.cards.querySelector(`[data-proposal="${id}"] .action-surface`) : null;
     return Boolean(node) && (node.dataset.state === 'arming' || node.dataset.state === 'armed');
   });
 }

@@ -14,6 +14,17 @@ def ledger_observer(entry: dict[str, Any], proposal: Any) -> None:
     if timeline.current().active is None:
         return
     event = str(entry.get("event") or "").lower()
+    if entry.get("batch_id") and not entry.get("proposal_id"):
+        counts = entry.get("counts") if isinstance(entry.get("counts"), dict) else None
+        timeline.emit(
+            f"batch_{event}", session_id=entry.get("session_id"), turn_id=getattr(proposal, "turn_id", "") or None,
+            batch_id=entry.get("batch_id"), event=str(entry.get("event") or ""), operation=entry.get("operation"), tool=entry.get("tool"),
+            child_tool=entry.get("child_tool"), risk=entry.get("risk"), interaction=entry.get("interaction"), set_id=entry.get("set_id"),
+            set_kind=entry.get("set_kind"), requested=entry.get("requested"), eligible=entry.get("eligible"), excluded=entry.get("excluded"),
+            children=len(entry.get("children") or []), status=entry.get("status"), code=entry.get("code"), counts=counts,
+            reason=entry.get("reason"), ms=entry.get("ms"), undo_of=entry.get("undo_of"), caller_present=bool(entry.get("caller")), epoch=entry.get("epoch"),
+        )
+        return
     timeline.emit(
         f"action_{event}",
         session_id=entry.get("session_id"),
@@ -34,6 +45,7 @@ def ledger_observer(entry: dict[str, Any], proposal: Any) -> None:
         detail=entry.get("detail"),
         ms=entry.get("ms"),
         undo_of=entry.get("undo_of"),
+        batch_id=entry.get("batch_id"),
         caller_present=bool(entry.get("caller")),
         epoch=entry.get("epoch"),
     )

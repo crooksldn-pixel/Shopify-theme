@@ -54,6 +54,7 @@ ARM_SLACK_MS = 2500
 CODES = frozenset({
     "proposed", "verified", "unverified", "failed", "stale", "expired", "revoked",
     "already_executed", "in_progress", "unknown", "wrong_session", "service_unavailable", "not_armed",
+    "batch_member",
 })
 
 # A settled proposal is kept in the index this long after it finished, so the tablet can
@@ -92,7 +93,7 @@ class ActionEngine:
     # ------------------------------------------------------------- staging
 
     def stage(
-        self, session: Session, spec: ToolSpec, model_args: dict[str, Any], prepared: Prepared,
+        self, session: Session, spec: ToolSpec, model_args: dict[str, Any], prepared: Prepared, *, batch_id: str = "",
     ) -> tuple[ActionProposal, bool]:
         """Record a prepared change against the session's current epoch. Returns the proposal
         and whether it is new: the same request twice in one epoch is one proposal."""
@@ -141,6 +142,7 @@ class ActionEngine:
             created_at=now,
             expires_at=now + self.ttl_s,
             turn_id=str(getattr(session, "turn_id", "") or ""),
+            batch_id=str(batch_id or ""),
         )
         session.stage(proposal)
         self._index[proposal.proposal_id] = session
@@ -299,6 +301,9 @@ class ActionEngine:
             return None, "unknown"
         if proposal.session_id != session_id:
             return None, "wrong_session"
+        if proposal.batch_id:
+            # A member of a batch is armed by the batch's own gesture, never on its own.
+            return proposal, "batch_member"
         if proposal.status is not ActionStatus.PENDING:
             return proposal, proposal.code or proposal.status.value.lower()
         proposal.armed_at = self.clock()
@@ -308,17 +313,23 @@ class ActionEngine:
 
     # ----------------------------------------------------------------- commit
 
-    async def commit(self, proposal_id: str, session_id: str, *, caller: str, spec_lookup, nonce: str = "") -> CommitResult:
+    async def commit(self, proposal_id: str, session_id: str, *, caller: str, spec_lookup, nonce: str = "", via_batch: str = "") -> CommitResult:
         """The owner tapped. Validate, claim atomically, check the entity has not moved, send
-        the one reviewed mutation with the stored arguments, prove it, record it."""
+        the one reviewed mutation with the stored arguments, prove it, record it.
+
+        A member of a batch is committed only by its batch (`via_batch` names it): the
+        batch's gesture authorised it, so no arming of its own is looked for; and a commit
+        that names the member directly is refused, whatever it carries."""
         proposal = self.find(proposal_id)
         if proposal is None:
             return CommitResult(None, "unknown", "")
         if proposal.session_id != session_id:
             return CommitResult(None, "wrong_session", "")
+        if proposal.batch_id and via_batch != proposal.batch_id:
+            return CommitResult(proposal, "batch_member", "")
         spec = spec_lookup(proposal.tool_name)
         write = spec.write if spec is not None else None
-        if proposal.status is ActionStatus.PENDING and not self._armed(proposal, nonce):
+        if proposal.status is ActionStatus.PENDING and not via_batch and not self._armed(proposal, nonce):
             # A hold kind, without the hold: nothing is claimed, nothing settles. The card
             # stays live for the hold that was meant.
             return CommitResult(proposal, "not_armed", "")

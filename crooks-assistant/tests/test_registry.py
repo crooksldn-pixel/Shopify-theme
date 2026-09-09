@@ -126,7 +126,14 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     import json
 
     from app.providers.max_agent_sdk import withheld_tools
-    from app.tools import gmail_tools, shopify_tools  # noqa: F401
+    from app.tools import (  # noqa: F401
+        analytics_tools,
+        batch_tools,
+        gmail_tools,
+        gmail_writes,
+        shopify_tools,
+        shopify_writes,
+    )
 
     specs = registry.all_specs()
     offered = [s for s in specs if s.name not in withheld_tools(specs, writes_enabled=True)]
@@ -138,7 +145,12 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # 16,000 held the narrow tools. The read layer (commerce_aggregate, commerce_query,
     # inventory_query, commerce_capabilities) is four tools for the questions that used to
     # need one each; its schemas are terse and the language's detail lives in
-    # commerce_capabilities, called on demand. The four cost about 4.5 KB together.
-    assert total <= 21_000, f"the tool block is {total} bytes"
+    # commerce_capabilities, called on demand. The four cost about 4.5 KB together. The
+    # four batch tools (tags on and off a set of orders, a set of threads archived, a draft
+    # to each customer) are the bulk versions of changes already offered singly; together
+    # they cost about 1.7 KB and are withheld, like every write, while changes are off.
+    assert total <= 22_700, f"the tool block is {total} bytes"
+    batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
+    assert batch <= 1_800, f"the batch tools' schemas are {batch} bytes; the rules belong in the prompt"
     analytic = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith(("commerce_", "inventory_query")))
     assert analytic <= 5_000, f"the read layer's schemas are {analytic} bytes; the detail belongs in commerce_capabilities"

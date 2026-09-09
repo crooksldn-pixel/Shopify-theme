@@ -152,7 +152,7 @@ def classify(
         return deny("Empty tool name.")
 
     spec = _spec(name)
-    if _looks_like_mutation(name) or (spec is not None and spec.write is not None):
+    if _looks_like_mutation(name) or (spec is not None and (spec.write is not None or spec.batch is not None)):
         return _classify_write(name, spec, args, issued)
 
     if name not in _KNOWN_TOOLS:
@@ -202,6 +202,8 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
     with a complete write definition and its arguments pass every bound; otherwise denied."""
     if spec is None:
         return deny(f"{name} reads as a write operation and is not a registered tool.")
+    if spec.batch is not None:
+        return _classify_batch(name, spec, args, issued)
     write = spec.write
     if write is None or not write.complete:
         return deny(f"{name} reads as a write operation and has no reviewed write definition.")
@@ -227,6 +229,37 @@ def _classify_write(name: str, spec, args: dict[str, Any], issued: frozenset[str
     return Decision(
         spec.tier,
         f"{name} is a change to the store: prepared for the owner to authorise on the tablet.",
+        Disposition.STAGE_FOR_OWNER,
+    )
+
+
+def _classify_batch(name: str, spec, args: dict[str, Any], issued: frozenset[str]) -> Decision:
+    """A tool that changes every member of a working set. Staged for the owner only when it
+    is declared completely on a reviewed child write tool, acts on an issued set id, and its
+    arguments pass every bound; otherwise denied. It never executes here either."""
+    batch = spec.batch
+    if spec.write is not None:
+        return deny(f"{name} declares both a write and a batch; it must be one or the other.")
+    if batch is None or not batch.complete:
+        return deny(f"{name} is a bulk change with no reviewed batch definition.")
+    if spec.tier is Tier.GREEN:
+        return deny(f"{name} is a bulk change and cannot be GREEN.")
+    child = _spec(batch.child_tool)
+    if child is None or child.write is None or not child.write.complete:
+        return deny(f"{name} is built on {batch.child_tool}, which is not a reviewed write tool.")
+    id_args = tuple(dict.fromkeys(spec.issued_id_args))
+    if "set_id" not in id_args:
+        return deny(f"{name} must act on an issued set_id.")
+    optional = _optional_args(spec, id_args) - {"set_id"}
+    problem = _check_issued_ids(name, id_args, args, issued, optional=optional)
+    if problem:
+        return deny(problem.lstrip(_RECOVERABLE), recoverable=problem.startswith(_RECOVERABLE))
+    problem = _check_schema_bounds(name, spec.input_schema, args)
+    if problem:
+        return deny(problem)
+    return Decision(
+        spec.tier,
+        f"{name} is a change to every item in a working set: prepared for the owner to authorise on the tablet.",
         Disposition.STAGE_FOR_OWNER,
     )
 

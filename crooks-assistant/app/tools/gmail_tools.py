@@ -403,15 +403,36 @@ async def gmail_search(
     for (thread_id, headers, message), is_known in zip(candidates, known, strict=True):
         results.append({**_summary(thread_id, headers, message), "known_customer": is_known})
 
+    # The threads as a working set on the Mac, so "archive those" means exactly these.
+    made = _threads_set(results, query.strip() or f"inbox, last {days} days")
     return {
         "query": full_query,
         "count": len(results),
         "threads": results,
+        **({"set": made} if made else {}),
         "note": (
             "Gmail's Primary category is a heuristic and can misfile a genuine customer reply. "
             "Nothing here is guaranteed complete."
         ),
     }
+
+
+def _threads_set(results: list[dict[str, Any]], words: str) -> dict[str, Any] | None:
+    """The threads a search found, held on the Mac as a working set (app/analytics/sets.py):
+    a read model's bookkeeping, nothing here touches the mailbox."""
+    from app.analytics.sets import create as hold_working_set
+    from app.tools.context import current_session
+
+    session = current_session()
+    ids = [str(r.get("thread_id")) for r in results if r.get("thread_id")]
+    if session is None or not ids:
+        return None
+    labels = {str(r.get("thread_id")): str(r.get("subject") or "")[:60] or "(no subject)" for r in results if r.get("thread_id")}
+    ws = hold_working_set(
+        session, kind="emails", members=ids, label=f"email: {words}"[:80], provenance={"tool": "gmail_search", "step": "query", "query": {"words": words[:80]}},
+        sample=[{"ref": tid, "label": labels[tid]} for tid in ids[:5]], labels=labels,
+    )
+    return ws.public()
 
 
 @tool(

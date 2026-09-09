@@ -1217,6 +1217,103 @@
     return node;
   }
 
+  // ---- bulk changes: one card for many proposals, and the count afterwards. The gesture
+  // wiring is the confirmation card's; the id it names is the batch's.
+
+  function renderBatchAction(d, opts) {
+    opts = opts || {};
+    const risk = text(d.risk, 'amber') === 'red' ? 'red' : 'amber';
+    const interaction = d.interaction && typeof d.interaction === 'object' ? d.interaction : {};
+    const kind = text(interaction.kind, 'hold_to_arm');
+    const supported = INTERACTIONS.indexOf(kind) !== -1;
+    const armedAfter = num(interaction.armed_after_ms) === null ? 650 : Math.max(0, interaction.armed_after_ms);
+    const status = text(d.status, 'pending');
+    const blocked = d.commit && typeof d.commit === 'object' && d.commit.allowed === false ? d.commit : null;
+    const live = supported && status === 'pending' && Boolean(d.batch_id) && !blocked;
+    const label = live ? text(interaction.label, gestureLabel(kind)) : (blocked ? blockedLabel(blocked.code) : (supported ? settledLabel(status) : 'Needs a newer tablet build'));
+    const surface = buildSurface(kind, label, text(interaction.target, 'Apply to all'), live ? 'arming' : (blocked ? 'unavailable' : (supported ? status : 'unsupported')), live);
+    const scope = d.set && typeof d.set === 'object' ? d.set : {};
+    const eligible = num(d.eligible) === null ? 0 : d.eligible;
+    const requested = num(d.requested) === null ? eligible : d.requested;
+    const excluded = list(d.excluded, 50);
+    const members = Array.isArray(d.members) ? d.members.map((m) => text(m)).filter(Boolean).slice(0, 50) : [];
+    const facts = list(d.facts, 8).filter((f) => text(f.value));
+    const footer = text(interaction.footer, 'nothing happens until you hold the card');
+    const preview = d.preview && typeof d.preview === 'object' ? d.preview : null;
+    const node = card('batch_action', [
+      h('div', { class: 'card-head' }, [
+        h('div', { class: `mark ${risk === 'red' ? 'bad' : 'warn'}` }, h('span', { text: String(eligible) })),
+        h('div', {}, [
+          kicker(blocked ? 'Prepared · cannot apply from here' : `Proposed for ${eligible} of ${requested}`),
+          h('h2', { class: 'card-title', text: text(d.title, 'Apply to all') }),
+          h('p', { class: 'card-sub', text: `${text(scope.label, 'the set')} · ${num(scope.count) === null ? requested : scope.count} ${text(scope.kind, 'items')}` }),
+        ]),
+      ]),
+      d.summary ? h('blockquote', { class: 'action-summary', text: text(d.summary) }) : null,
+      // A draft campaign: the template as written, and one member's email as it will be saved.
+      d.body ? h('blockquote', { class: 'action-summary action-body' }, h('p', { class: 'msg-body', text: text(d.body) })) : null,
+      preview && (preview.subject || preview.body) ? h('div', { class: 'batch-preview' }, [
+        h('p', { class: 'card-meta', text: `Preview · ${text(preview.to, 'the first customer')}` }),
+        preview.subject ? h('p', { class: 'batch-preview-subject', text: text(preview.subject) }) : null,
+        preview.body ? h('p', { class: 'msg-body', text: text(preview.body) }) : null,
+      ]) : null,
+      facts.length ? h('dl', { class: 'facts' }, facts.map((f) => [h('dt', { text: text(f.label) }), h('dd', { class: text(f.tone) || null, text: text(f.value) })]).flat()) : null,
+      d.detail ? h('p', { class: 'card-meta', text: text(d.detail) }) : null,
+      // Who is left out, and why: read before the hand moves.
+      excluded.length ? h('div', { class: 'batch-excluded' }, [
+        h('p', { class: 'card-note', text: `${excluded.length} excluded` }),
+        h('ul', { class: 'batch-list' }, excluded.map((x) => h('li', {}, [h('span', { class: 'batch-item', text: text(x.label) }), h('span', { class: 'batch-why', text: text(x.reason) })]))),
+      ]) : null,
+      // Every member the gesture will touch, one tap away, never hidden behind a count.
+      members.length ? h('details', { class: 'batch-members' }, [
+        h('summary', { text: `All ${members.length} · ${members.slice(0, 4).join(' · ')}${members.length > 4 ? ' …' : ''}` }),
+        h('ul', { class: 'batch-list' }, members.map((m) => h('li', {}, h('span', { class: 'batch-item', text: m })))),
+      ]) : null,
+      surface,
+      blocked ? h('p', { class: 'card-sub action-why', text: text(blocked.reason) }) : null,
+      h('p', { class: 'action-meta', text: live ? (num(d.ttl_s) !== null ? `Waits ${Math.round(d.ttl_s)} s · ${footer}` : capitalise(footer)) : '' }),
+    ], Object.assign({ className: `tier-${risk} kind-${kind} batch` }, opts));
+    node.dataset.proposal = text(d.batch_id);
+    node.dataset.set = text(scope.set_id);
+    if (live) wireGesture(node, surface, kind, text(d.batch_id), armedAfter, opts, num(d.ttl_s), (left) => `Waits ${left} s · ${footer}`);
+    return node;
+  }
+
+  function renderBatchResult(d, opts) {
+    opts = opts || {};
+    const counts = d.counts && typeof d.counts === 'object' ? d.counts : {};
+    const n = (k) => (num(counts[k]) === null ? 0 : counts[k]);
+    const rows = list(d.rows, 50);
+    const all = d.all_verified === true;
+    const stat = (label, key) => (n(key) ? h('div', { class: `stat ${key === 'verified' ? 'ok' : 'warn'}` }, [h('div', { class: 'stat-v', text: String(n(key)) }), h('div', { class: 'stat-k', text: label })]) : null);
+    const node = card('batch_result', [
+      h('div', { class: 'card-head' }, [
+        h('div', { class: `mark ${all ? 'ok' : 'warn'}` }, all ? CHECK() : h('span', { text: String(n('verified')) })),
+        h('div', {}, [kicker(all ? 'Done · all proven' : 'Done · counted'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })]),
+      ]),
+      h('div', { class: 'stats counts' }, [stat('applied', 'verified'), stat('excluded', 'excluded'), stat('not applied', 'failed'), stat('changed meanwhile', 'stale'), stat('not confirmed', 'unverified'), stat('not attempted', 'not_attempted')].filter(Boolean)),
+      d.note ? h('p', { class: 'card-note bad', text: text(d.note) }) : null,
+      rows.length ? h('details', { class: 'batch-members', open: all ? null : '' }, [
+        h('summary', { text: `Each of the ${rows.length}` }),
+        h('ul', { class: 'batch-list' }, rows.map((r) => h('li', { class: text(r.code) === 'verified' ? 'ok' : (text(r.code) === 'excluded' ? '' : 'bad') }, [h('span', { class: 'batch-item', text: text(r.label) }), h('span', { class: 'batch-why', text: text(r.outcome) })]))),
+      ]) : null,
+    ], Object.assign({ className: all ? 'success' : 'partial' }, opts));
+    // The undo the Mac staged for what was proven: a batch of its own, the same gesture.
+    const undo = d.undo && typeof d.undo === 'object' && d.undo.batch_id ? d.undo : null;
+    if (!undo && d.batch_id) node.dataset.proposal = text(d.batch_id);
+    if (undo) {
+      const armedAfter = num(undo.armed_after_ms) === null ? 650 : undo.armed_after_ms;
+      const kind = INTERACTIONS.indexOf(text(undo.interaction)) !== -1 ? text(undo.interaction) : 'hold_to_arm';
+      const surface = buildSurface(kind, kind === 'tap_commit' ? text(undo.label, 'Undo all') : `${text(undo.label, 'Undo all')} · ${gestureLabel(kind).toLowerCase()}`, 'Undo all', 'arming', true);
+      surface.classList.add('quiet');
+      node.dataset.proposal = text(undo.batch_id);
+      node.appendChild(surface);
+      node.appendChild(h('p', { class: 'action-meta', text: num(undo.ttl_s) !== null ? `Undo available for ${Math.round(undo.ttl_s)} s` : '' }));
+      wireGesture(node, surface, kind, text(undo.batch_id), armedAfter, opts, num(undo.ttl_s), (left) => (left > 0 ? `Undo available for ${left} s` : 'The undo has expired.'));
+    }
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1240,10 +1337,12 @@
     variant_matrix: renderVariantMatrix,
     trend: renderTrend,
     working_set: renderWorkingSet,
+    batch_action: renderBatchAction,
+    batch_result: renderBatchResult,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
-    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set'];
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result'];
 
   function isValid(item) {
     return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'

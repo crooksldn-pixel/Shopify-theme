@@ -35,7 +35,10 @@ UI_TYPES = frozenset({
     "success", "error", "context_stack",
     # the read layer's cards (app/analytics/present.py)
     "metric_group", "ranking", "table", "comparison", "variant_matrix", "trend", "working_set",
+    # bulk changes (app/actions/batch.py): the card before the gesture, the count after it
+    "batch_action", "batch_result",
 })
+MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
 
 # Bounds. The tablet is 8 inches wide; more than this is a spreadsheet, not an answer.
@@ -108,7 +111,13 @@ def present(
             error = _tool_error(call, session)
             errors.setdefault(error["data"]["service"], error)
             continue
-        if call.proposal_id:
+        if call.proposal_id and str(call.proposal_id).startswith("batch_"):
+            batch = session.batches.get(call.proposal_id) if session is not None else None
+            if batch is not None and not any(
+                i["type"] == "batch_action" and i["data"].get("batch_id") == batch.batch_id for i in items
+            ):
+                items.append(_batch_card(batch, writes=writes))
+        elif call.proposal_id:
             proposal = session.proposal(call.proposal_id) if session is not None else None
             if proposal is not None and not any(
                 i["type"] == "confirmation" and i["data"].get("proposal_id") == proposal.proposal_id for i in items
@@ -706,6 +715,121 @@ def _service_of(proposal) -> str:
 
 def _service_name(proposal) -> str:
     return "Gmail" if _service_of(proposal) == "gmail" else "Shopify"
+
+
+# --------------------------------------------------------------------------- batches
+
+
+def _batch_words(batch) -> dict[str, Any]:
+    from app.tools import registry
+
+    try:
+        spec = registry.get(batch.tool_name)
+    except KeyError:
+        return {}
+    if spec.batch is None:
+        return {}
+    try:
+        words = spec.batch.present(batch)
+    except Exception:  # noqa: BLE001 — a card with no words is still a card
+        return {}
+    return words if isinstance(words, dict) else {}
+
+
+def _batch_scope(batch) -> dict[str, Any]:
+    return {"set_id": _text(batch.set_id, 40), "label": _text(batch.set_label, 80), "kind": _text(batch.set_kind, 20), "count": int(batch.requested)}
+
+
+def _batch_card(batch, *, writes: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The bulk-change card: how many, of what, with what consequence, who is excluded and
+    why, every member by name to inspect, and the one gesture. Built from the batch the Mac
+    staged and the tool's own words; the model chose none of it."""
+    words = _batch_words(batch)
+    interaction = batch.interaction if batch.interaction in INTERACTIONS else "unsupported"
+    gesture = grammar.words_for(interaction)
+    commit = _commit_words(batch, writes)
+    preview = batch.summary.get("preview") if isinstance(batch.summary.get("preview"), dict) else {}
+    return _ui("batch_action", {
+        "batch_id": _text(batch.batch_id, 40),
+        "status": _text(batch.status.value.lower(), 20),
+        "risk": "red" if batch.risk == "RED" else "amber",
+        "operation": _text(batch.operation, 60),
+        "title": _text(words.get("title")),
+        "summary": _text(words.get("summary"), MAX_NOTE_CHARS),
+        "body": _text(words.get("body"), MAX_EMAIL_BODY_CHARS),
+        "detail": _text(words.get("detail"), MAX_NOTE_CHARS),
+        "set": _batch_scope(batch),
+        "requested": int(batch.requested),
+        "eligible": len(batch.eligible),
+        "excluded_count": len(batch.excluded),
+        "excluded": [{"label": _text(c.label, 60), "reason": _text(c.excluded, 120)} for c in batch.excluded[:MAX_BATCH_ROWS]],
+        "members": [_text(c.label, 60) for c in batch.eligible[:MAX_BATCH_ROWS]],
+        "sample": [_text(c.label, 60) for c in batch.eligible[:5]],
+        "facts": [
+            {"label": _text(f.get("label"), 40), "value": _text(f.get("value"), 120), "tone": _text(f.get("tone"), 10)}
+            for f in _list(words.get("facts"), 8)
+        ],
+        # One member's email as it will be saved: the campaign, previewed on the first.
+        "preview": {"to": _text(preview.get("to")), "subject": _text(preview.get("subject"), 200), "body": _text(preview.get("body"), MAX_EMAIL_BODY_CHARS)} if preview else None,
+        "interaction": {
+            "kind": interaction,
+            "label": _text(words.get("confirm_label") or gesture["label"], 60),
+            "footer": _text(gesture["footer"], 120),
+            "target": _text(words.get("target"), 60),
+            "armed_after_ms": ARMED_AFTER_MS,
+            "hold_ms": grammar.HOLD_MS,
+            "armed_for_s": grammar.ARMED_FOR_S,
+            "swipe_fraction": grammar.SWIPE_FRACTION,
+        },
+        "expires_at": batch.public()["expires_at"],
+        "ttl_s": batch.ttl_s(),
+        "reversible": bool(batch.reversible),
+        "commit": commit if commit else {"allowed": True},
+    })
+
+
+_OUTCOME_LABELS = {
+    "verified": "applied", "unverified": "not confirmed", "stale": "changed meanwhile, left alone", "failed": "not applied",
+    "service_unavailable": "not applied", "refused": "refused", "not_attempted": "not attempted", "already_executed": "applied",
+    "expired": "not attempted", "revoked": "not attempted", "in_progress": "not confirmed",
+}
+
+
+def present_batch(result, *, session: Session | None = None, writes: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    batch = result.batch
+    if batch is None:
+        return []
+    return present_batch_state(batch, session=session, code=result.code, writes=writes)
+
+
+def present_batch_state(batch, *, session: Session | None = None, code: str | None = None, writes: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """What the tablet shows for a batch: the card while it waits, the count once it has run
+    — every member with its outcome, and never a total the engine did not prove."""
+    code = code or batch.code or batch.status.value.lower()
+    status = batch.status.value.lower()
+    words = _batch_words(batch)
+    if status == "done":
+        counts = {k: int(batch.counts.get(k) or 0) for k in ("requested", "eligible", "excluded", "verified", "unverified", "stale", "failed", "not_attempted")}
+        rows = [{"label": _text(c.label, 60), "outcome": _text(_OUTCOME_LABELS.get(c.code, c.code or "not attempted"), 40), "code": _text(c.code, 30)} for c in batch.eligible[:MAX_BATCH_ROWS]]
+        rows += [{"label": _text(c.label, 60), "outcome": "excluded: " + _text(c.excluded, 100), "code": "excluded"} for c in batch.excluded[: max(0, MAX_BATCH_ROWS - len(rows))]]
+        title = _text(words.get("undone_title") or "Undone") if batch.undo_of else _text(words.get("done_title") or "Done")
+        verified, eligible = counts["verified"], counts["eligible"]
+        return [_ui("batch_result", {
+            "batch_id": _text(batch.batch_id, 40), "operation": _text(batch.operation, 60),
+            "title": f"{title}: {verified} of {counts['requested']}",
+            "detail": f"{_text(batch.set_label, 80)} · {counts['requested']} {_text(batch.set_kind, 20)}",
+            "all_verified": bool(eligible) and verified == eligible and counts["excluded"] == 0,
+            "counts": counts, "rows": rows,
+            "note": "" if verified == eligible else "Only the members marked applied were proven. Check the others before asking again.",
+        })]
+    if status == "pending":
+        return [_batch_card(batch, writes=writes)]
+    if status == "executing":
+        return [_error("shopify" if not str(batch.child_tool).startswith("gmail_") else "gmail", "in_progress", *_OUTCOME_WORDS["in_progress"])]
+    title, line = _OUTCOME_WORDS.get(code, _OUTCOME_WORDS["failed"])
+    if code == "revoked" and batch.undo_of:
+        line = "The undo was withdrawn when you moved on."
+    return [_error("shopify" if not str(batch.child_tool).startswith("gmail_") else "gmail", _text(code, 40), title, _text(line, 200))]
 
 
 def present_proposal_state(

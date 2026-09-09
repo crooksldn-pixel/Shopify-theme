@@ -52,6 +52,7 @@ class ActionLedger:
             "before": _fingerprint_only(proposal.before),
             "after": _fingerprint_only(proposal.after),
             "undo_of": proposal.undo_of,
+            "batch_id": getattr(proposal, "batch_id", "") or None,
         }
         for key, value in extra.items():
             if key in _EXTRA_ALLOWED:
@@ -66,6 +67,49 @@ class ActionLedger:
             try:
                 observer(entry, proposal)
             except Exception as exc:  # noqa: BLE001 — an observer never stops the record
+                log.debug("ledger observer failed: %s", exc)
+        return entry
+
+    def record_batch(self, event: str, batch: Any, **extra: Any) -> dict[str, Any]:
+        """One line per batch lifecycle event: the set it acts on, how many it holds, which
+        proposals are its children, and the counts once it has run. Identities and numbers;
+        never a member's name, never an argument."""
+        entry = {
+            "ts": round(time.time(), 3),
+            "iso": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "event": event,
+            "batch_id": batch.batch_id,
+            "operation": batch.operation,
+            "tool": batch.tool_name,
+            "child_tool": batch.child_tool,
+            "risk": batch.risk,
+            "interaction": batch.interaction,
+            "set_id": batch.set_id,
+            "set_kind": batch.set_kind,
+            "requested": batch.requested,
+            "eligible": len(batch.eligible),
+            "excluded": len(batch.excluded),
+            "children": [c.proposal_id for c in batch.eligible],
+            "session_id": batch.session_id,
+            "epoch": batch.epoch,
+            "caller": batch.caller or None,
+            "status": batch.status.value,
+            "code": batch.code or None,
+            "counts": dict(batch.counts) or None,
+            "args_fingerprint": batch.fingerprint,
+            "undo_of": batch.undo_of,
+        }
+        for key, value in extra.items():
+            if key in _EXTRA_ALLOWED and value is not None:
+                entry[key] = value
+        caller = entry["caller"]
+        entry = redact(entry)
+        entry["caller"] = caller
+        self._append(entry)
+        for observer in list(_observers):
+            try:
+                observer(entry, batch)
+            except Exception as exc:  # noqa: BLE001
                 log.debug("ledger observer failed: %s", exc)
         return entry
 

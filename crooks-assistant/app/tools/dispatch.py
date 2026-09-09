@@ -18,7 +18,7 @@ from app.session.models import Session
 from app.tools import registry
 from app.tools.context import CURRENT_SESSION
 from app.tools.gate import Disposition, Tier, classify
-from app.tools.registry import ToolError
+from app.tools.registry import BatchPlan, ToolError
 
 log = logging.getLogger("crooks.tools")
 
@@ -243,6 +243,8 @@ async def _stage(
             calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=repr(exc))))
         trace.finish("exception", error=f"{type(exc).__name__}: {exc}", ms=_elapsed(started))
         return f"ERROR: {name} could not be prepared ({type(exc).__name__}). Nothing was changed."
+    if isinstance(prepared, BatchPlan):
+        return await _stage_batch(name, args, spec, prepared, session=session, calls=calls, trace=trace, started=started)
     if not isinstance(prepared, Prepared):
         if calls is not None:
             calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error="handler did not prepare a change")))
@@ -289,6 +291,65 @@ async def _stage(
         f"PROPOSED ({proposal.proposal_id}): this same change is already waiting on the tablet. "
         f"It has NOT happened. Tell the owner the card is already showing and that {verb}. Do not "
         "call this tool again."
+    )
+
+
+async def _stage_batch(name: str, args: dict[str, Any], spec, plan: BatchPlan, *, session: Session, calls: list[Any] | None, trace: _Trace, started: float) -> str:
+    """A bulk change: one proposal per member of the set, each prepared from a fresh read
+    by the child write tool, held under one batch id. Nothing is sent. The model is told
+    how many are ready, how many were excluded and why, and that the card waits."""
+    from app.actions.batch import current as current_batches
+    from app.actions.grammar import words_for
+    from app.analytics import sets as working_sets
+    from app.providers.base import ToolCall
+
+    working_set = working_sets.get(session, plan.set_id)
+    if working_set is None:
+        if calls is not None:
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error="the set has gone")))
+        trace.finish("unprepared", error="the set has gone", ms=_elapsed(started))
+        return "ERROR: that working set has expired. List the items again and use the new set id. Nothing was changed."
+    try:
+        batch, created = await current_batches().stage(session, spec, args, plan, working_set)
+    except ToolError as exc:
+        if calls is not None:
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=str(exc))))
+        trace.finish("unprepared", error=str(exc), ms=_elapsed(started))
+        return f"ERROR: {exc} Say that nothing needed doing, or what was wrong. Nothing was changed."
+    except Exception as exc:  # noqa: BLE001
+        log.exception("tool=%s raised while preparing the batch", name)
+        if calls is not None:
+            calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=repr(exc))))
+        trace.finish("exception", error=f"{type(exc).__name__}: {exc}", ms=_elapsed(started))
+        return f"ERROR: {name} could not be prepared ({type(exc).__name__}). Nothing was changed."
+    eligible, excluded = len(batch.eligible), len(batch.excluded)
+    trace.finish("staged", ms=_elapsed(started), proposal_id=batch.batch_id, new=created, risk=batch.risk, interaction=batch.interaction, requested=batch.requested, eligible=eligible, excluded=excluded)
+    if calls is not None:
+        calls.append(trace.call(ToolCall(name=name, args=args, ok=True, proposal_id=batch.batch_id)))
+    log.info("PROPOSED BATCH tool=%s batch=%s set=%s eligible=%s excluded=%s new=%s", name, batch.batch_id, batch.set_id, eligible, excluded, created)
+    verb = words_for(batch.interaction)["verb"]
+    reasons = ""
+    if excluded:
+        from app.actions.batch import _reasons
+
+        reasons = f" {excluded} excluded ({_reasons(batch.children)})."
+    what = str(batch.summary.get("read_back") or plan.label or "")[:200]
+    if not created:
+        return (
+            f"PROPOSED BATCH ({batch.batch_id}): this same change is already waiting on the tablet. It has NOT happened. "
+            f"Tell the owner the card is already showing and that {verb}. Do not call this tool again."
+        )
+    if session.writes_blocked:
+        return (
+            f"PROPOSED BATCH ({batch.batch_id}): {what} — {eligible} of the {batch.requested} {batch.set_kind} are ready.{reasons} "
+            f"It cannot be applied from where the owner is: {session.writes_blocked} It has NOT happened. Tell the owner, in one "
+            "sentence, what is ready and that it cannot be applied from there. Do NOT tell them to use the card, do not say it was "
+            "done, and do not call this tool again for this change."
+        )
+    return (
+        f"PROPOSED BATCH ({batch.batch_id}): {what} — {eligible} of the {batch.requested} {batch.set_kind} are ready on one card; {verb}.{reasons} "
+        "It has NOT happened. Tell the owner, in one or two sentences, how many are ready, how many were excluded and why, and "
+        f"that {verb} to all of them. Do not say it was done, do not ask for a spoken yes, and do not call this tool again while the card is waiting."
     )
 
 
@@ -358,7 +419,8 @@ def loggable_args(name: str, args: dict[str, Any]) -> dict[str, Any]:
 
     write = False
     try:
-        write = registry.get(name).write is not None
+        spec = registry.get(name)
+        write = spec.write is not None or spec.batch is not None
     except KeyError:
         pass
     out: dict[str, Any] = {}

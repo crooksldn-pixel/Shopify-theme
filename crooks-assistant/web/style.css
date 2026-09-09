@@ -716,3 +716,24 @@ html[data-lite] .orb-zone{transition:none}
 .chip-set{border-color:var(--line-2);background:var(--glass-2)}
 .chip-set .chip-kind{color:var(--ink)}
 .set-sample{margin-top:8px}
+
+/* bulk changes: the card before the gesture, the count after it */
+.card-batch_action .mark span,.card-batch_result .mark span{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.batch-list{list-style:none;margin:6px 0 0;padding:0;font-size:14px}
+.batch-list li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line)}
+.batch-list li.ok .batch-why{color:var(--ok)}
+.batch-list li.bad .batch-why{color:var(--bad)}
+.batch-item{color:var(--ink);font-variant-numeric:tabular-nums}
+.batch-why{color:var(--ink-3);text-align:right}
+.batch-excluded{margin-top:12px}
+.batch-members{margin-top:12px;font-size:14px}
+.batch-members summary{cursor:pointer;color:var(--ink-2);list-style:none;padding:8px 0}
+.batch-members summary::-webkit-details-marker{display:none}
+.batch-members summary::before{content:"›";display:inline-block;margin-right:8px;color:var(--ink-4);transition:transform .15s}
+.batch-members[open] summary::before{transform:rotate(90deg)}
+.batch-preview{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--glass-2)}
+.batch-preview-subject{margin:6px 0;font-weight:600}
+.stats.counts{grid-template-columns:repeat(auto-fit,minmax(88px,1fr))}
+.stat.ok .stat-v{color:var(--ok)}
+.stat.warn .stat-v{color:var(--warn)}
+.card-batch_result.partial .mark{background:var(--warn-dim,rgba(220,178,102,.18))}

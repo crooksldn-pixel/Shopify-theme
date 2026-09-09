@@ -95,10 +95,14 @@ def _set_from(result: dict[str, Any], query: Query, *, tool: str) -> dict[str, A
     kind = None
     members: list[str] = []
     sample: list[dict[str, Any]] = []
+    labels: dict[str, str] = {}
     if query.entity == "orders":
         kind = "orders"
         members = [str(m) for m in result.get("member_ids") or []]
-        sample = [{"ref": r.get("order_id"), "label": r.get("order_number")} for r in result.get("rows") or [] if isinstance(r, dict)][:5]
+        rows = [r for r in result.get("rows") or [] if isinstance(r, dict)]
+        sample = [{"ref": r.get("order_id"), "label": r.get("order_number")} for r in rows][:5]
+        labels = {str(r.get("order_id")): str(r.get("order_number") or "") for r in rows if r.get("order_id") and r.get("order_number")}
+        labels.update({str(m): str(n) for m, n in (result.get("member_labels") or {}).items() if n})
     elif query.entity in ("customers", "products", "variants"):
         id_key = {"customers": "customer_id", "products": "product_id", "variants": "variant_id"}[query.entity]
         kind = query.entity
@@ -106,6 +110,8 @@ def _set_from(result: dict[str, Any], query: Query, *, tool: str) -> dict[str, A
             key = r.get("key") if isinstance(r, dict) and isinstance(r.get("key"), dict) else {}
             if key.get(id_key):
                 members.append(str(key[id_key]))
+                if r.get("label"):
+                    labels[str(key[id_key])] = str(r.get("label"))
                 if len(sample) < 5:
                     sample.append({"ref": key[id_key], "label": r.get("label")})
     if kind is None or not members:
@@ -115,9 +121,9 @@ def _set_from(result: dict[str, Any], query: Query, *, tool: str) -> dict[str, A
     parent_id = query.filters.get("in_set")
     parent = working_sets.get(session, parent_id) if parent_id else None
     if parent is not None:
-        ws = working_sets.derive(session, parent, members=members, label=label, step="filter", kind=kind if kind == parent.kind else kind, detail={"tool": tool, "filters": {k: v for k, v in query.filters.items() if k != "in_set"}, "entity": query.entity}, sample=sample, totals=totals)
+        ws = working_sets.derive(session, parent, members=members, label=label, step="filter", kind=kind if kind == parent.kind else kind, detail={"tool": tool, "filters": {k: v for k, v in query.filters.items() if k != "in_set"}, "entity": query.entity}, sample=sample, totals=totals, labels={**{m: parent.labels[m] for m in members if m in parent.labels}, **labels})
     else:
-        ws = working_sets.create(session, kind=kind, members=members, label=label, provenance={"tool": tool, "step": "query", "query": {"entity": query.entity, "period": query.period.label, "filters": dict(query.filters), "group_by": list(query.group_by)}}, sample=sample, totals=totals)
+        ws = working_sets.create(session, kind=kind, members=members, label=label, provenance={"tool": tool, "step": "query", "query": {"entity": query.entity, "period": query.period.label, "filters": dict(query.filters), "group_by": list(query.group_by)}}, sample=sample, totals=totals, labels=labels)
     timeline.emit("working_set", session_id=getattr(session, "session_id", None), turn_id=getattr(session, "turn_id", None) or None, set_id=ws.set_id, set_kind=ws.kind, count=ws.count, label=ws.label, parent=ws.parent, step=ws.step, tool=tool)
     return ws.public()
 
@@ -419,6 +425,19 @@ async def email_query(set_id: str, days: int = 30) -> dict:
             made = working_sets.derive(session, ws, members=members, label=f"{ws.label} — {words}"[:80], step="correlate", detail={"tool": "email_query", "which": name, "days": days})
             result[f"set_{name}"] = made.public()
             timeline.emit("working_set", session_id=session.session_id, turn_id=session.turn_id or None, set_id=made.set_id, set_kind=made.kind, count=made.count, label=made.label, parent=ws.set_id, step="correlate", tool="email_query", which=name)
+    # The threads themselves, as a set of emails: what "archive those" would act on.
+    thread_ids: list[str] = []
+    thread_labels: dict[str, str] = {}
+    for entry in by_customer.values():
+        for t in (entry["mail"].get("threads") or []):
+            tid = str(t.get("thread_id") or "")
+            if tid and tid not in thread_labels:
+                thread_ids.append(tid)
+                thread_labels[tid] = str(t.get("subject") or "")[:60] or "(no subject)"
+    if thread_ids:
+        made = working_sets.derive(session, ws, members=thread_ids, label=f"{ws.label} — their emails"[:80], step="correlate", kind="emails", detail={"tool": "email_query", "which": "threads", "days": days}, labels=thread_labels, focus=False)
+        result["set_threads"] = made.public()
+        timeline.emit("working_set", session_id=session.session_id, turn_id=session.turn_id or None, set_id=made.set_id, set_kind=made.kind, count=made.count, label=made.label, parent=ws.set_id, step="correlate", tool="email_query", which="threads")
     timeline.emit("cross_source", session_id=session.session_id, turn_id=session.turn_id or None, set_id=ws.set_id, customers=len(by_customer), counts=result["counts"], ms=result["_ms"])
     return result
 

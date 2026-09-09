@@ -212,7 +212,9 @@ async def test_the_inbox_is_cross_referenced_with_the_set_and_makes_derived_sets
     contacted, quiet, replied = result["set_contacted"], result["set_not_contacted"], result["set_replied"]
     assert contacted["count"] == 2 and quiet["count"] == 1 and replied["count"] == 1 and quiet["parent"] == set_id and quiet["step"] == "correlate"
     assert set(session.sets[quiet["set_id"]].members) == {"gid://shopify/Order/1009"} and set(session.sets[replied["set_id"]].members) == {"gid://shopify/Order/1007"}
-    assert session.focus["set"] == replied["set_id"]
+    assert session.focus["set"] == replied["set_id"], "the customers stay in focus; the threads are a side set"
+    threads = result["set_threads"]
+    assert threads["kind"] == "emails" and threads["count"] == 2 and threads["parent"] == set_id and session.sets[threads["set_id"]].labels
     searched = {c["sender"] for c in inbox.calls}
     assert searched == {"ben@example.com", "flo@example.com", "gus@example.com"} and inbox.calls[0]["terms"] == ["1002"] or True
     # The cards: the counts, who wrote, and the two sets.

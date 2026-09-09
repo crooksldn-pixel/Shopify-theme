@@ -46,6 +46,8 @@ class Runtime:
     kb: KnowledgeBase
     turnlog: TurnLog
     actions: ActionEngine
+    # Bulk changes over the same engine (app/actions/batch.py).
+    batches: Any = None
     # The test-session timeline (app/observability): off unless a session is active.
     tests: Any = None
     timeline: Any = None
@@ -357,6 +359,7 @@ def build(settings: Settings | None = None) -> Runtime:
     # Register the tool modules. Importing them is what runs the @tool decorators.
     from app.tools import (  # noqa: F401
         analytics_tools,
+        batch_tools,
         gmail_tools,
         gmail_writes,
         mock,
@@ -388,6 +391,12 @@ def build(settings: Settings | None = None) -> Runtime:
     # nothing of it stays in memory, once the conversation is over.
     if actions.forget_session not in sessions.on_drop:
         sessions.on_drop.append(actions.forget_session)
+    from app.actions.batch import BatchEngine
+    from app.actions.batch import install as install_batches
+
+    batches = install_batches(BatchEngine(actions, ledger=actions.ledger))
+    if batches.forget_session not in sessions.on_drop:
+        sessions.on_drop.append(batches.forget_session)
 
     if not settings.allowed_logins:
         log.warning(
@@ -419,6 +428,7 @@ def build(settings: Settings | None = None) -> Runtime:
         kb=kb,
         turnlog=TurnLog(settings.log_dir),
         actions=actions,
+        batches=batches,
         tests=tests,
         timeline=timeline,
         order_cache=order_cache,

@@ -195,7 +195,7 @@ def main() -> int:
         from config.settings import get_settings
 
         prompt = build_system_prompt(load(get_settings().kb_dir))
-        specs = [s for s in registry.all_specs() if not s.name.startswith("mock_") and s.write is None and s.tier.value != "RED"]
+        specs = [s for s in registry.all_specs() if not s.name.startswith("mock_") and s.write is None and s.batch is None and s.tier.value != "RED"]
         schema_chars = sum(len(json.dumps(s.input_schema)) + len(s.description) for s in specs)
         report.add("prompt and tools measured", True, f"prompt {len(prompt):,} chars · {len(specs)} read tools, {schema_chars:,} schema chars")
         metrics["prompt_chars"] = len(prompt)

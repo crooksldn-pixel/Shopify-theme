@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from app.actions.models import ActionProposal
 
+# Proposals kept per session: two full batches (app/actions/batch.py MAX_BATCH) with their
+# undos, and the single cards around them.
+MAX_PROPOSALS = 240
+
 
 @dataclass(slots=True)
 class Refusal:
@@ -83,6 +87,9 @@ class Session:
     plan: Any = None
     # The working sets this conversation holds (app/analytics/sets.py): what "these" means.
     sets: dict[str, Any] = field(default_factory=dict)
+    # Bulk changes proposed this session (app/actions/batch.py), by batch id. Their
+    # children are ordinary proposals in `proposals`.
+    batches: dict[str, Any] = field(default_factory=dict)
 
     # The entities this conversation has touched — an order, a customer, an email thread, a
     # product — most recent first. Presentation state for the tablet's context stack and
@@ -126,7 +133,8 @@ class Session:
         """Hold a staged proposal. Only the action engine builds one (app/actions/engine.py);
         the session is where it lives so that it goes when the session goes."""
         self.proposals.append(proposal)
-        del self.proposals[:-50]
+        # Room for a batch's children and their undos beside the cards that came before.
+        del self.proposals[:-MAX_PROPOSALS]
         return proposal
 
     def proposal(self, proposal_id: str) -> ActionProposal | None:
