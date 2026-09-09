@@ -75,29 +75,77 @@ test('every string from outside becomes text, never markup', () => {
   })(out.nodes[1]);
 });
 
-test('an order renders its hierarchy: number, status, customer, then items behind a tab', () => {
+test('an order is composed by entity: number and status, then items, money, shipping, customer, email', () => {
   const node = UI.renderItem({ type: 'order', data: {
     order_number: '#1930', fulfillment: 'unfulfilled', payment: 'paid', total: '£60.00', customer_name: 'Sam Fixture',
     placed_at: '2026-09-08T09:42:00Z', detail: true,
-    items: [{ title: 'Yard Jeans', variant: 'M', quantity: 1, total: '£60.00' }], fulfillments: [],
+    items: [{ title: 'Yard Jeans', variant: 'M', quantity: 1, total: '£60.00', stock: { tracked: true, available: 3 } }], fulfillments: [],
+    money: { subtotal: '£55.00', shipping: '£5.00', tax: '£9.17', discounts: '£0.00', refunded: '£0.00', outstanding: '£0.00' },
+    shipping_address: { name: 'Sam Fixture', lines: ['12 Somewhere Street', 'Flat 3'], city: 'Windsor', zip: 'SL4 1AA', country: 'United Kingdom' },
+    shipping_method: 'Royal Mail Tracked 24',
+    history: { orders: 3, spent: '£410.00', since: '2025-01-02T00:00:00Z', standing: 'returning', first_order_at: '2025-01-02T10:00:00Z', other_unfulfilled: ['#1901'],
+      recent: [{ order_number: '#1930', placed_at: '2026-09-08T09:42:00Z', total: '£60.00', fulfillment: 'unfulfilled', current: true }, { order_number: '#1901', placed_at: '2026-08-20T10:00:00Z', total: '£200.00', fulfillment: 'unfulfilled', items_brief: 'Convict Hoodie ×2' }] },
+    email: { available: true, threads: [{ thread_id: 't1', from: 'Sam Fixture', subject: 'Address for 1930', date: 'Tue, 8 Sep 2026 10:12:00 +0100', snippet: 'Send it to work', verified_sender: true, match: 'both', provenance: 'CUSTOMER_EMAIL' },
+      { thread_id: 't2', from: 'Someone', subject: 'Re: #1930', snippet: 'is this mine', verified_sender: false, match: 'order_number', provenance: 'UNKNOWN' }] },
+    pending: [],
   } });
   assert.equal(node.dataset.type, 'order');
   assert.equal(node.querySelector('.card-title').textContent, '#1930');
-  const badges = node.querySelectorAll('.badge').map((b) => [b.textContent, b.className]);
+  const badges = node.querySelectorAll('.badges')[0].querySelectorAll('.badge').map((b) => [b.textContent, b.className]);
   assert.deepEqual(badges, [['unfulfilled', 'badge warn'], ['paid', 'badge ok']]);
-  const tabs = node.querySelectorAll('.tab').map((t) => t.textContent);
-  assert.deepEqual(tabs, ['Overview', 'Items · 1', 'Shipping', 'Customer']);
-  const panels = node.querySelectorAll('.panel');
-  assert.deepEqual(panels.map((p) => p.hidden), [false, true, true, true]);
-  node.querySelectorAll('.tab')[1].dispatch('click');
-  assert.deepEqual(panels.map((p) => p.hidden), [true, false, true, true]);
-  assert.ok(textOf(panels[1]).includes('Yard Jeans'));
+  assert.equal(node.querySelectorAll('.tab').length, 0, 'nothing is behind a tab');
+  const sections = node.querySelectorAll('.sec').map((s) => s.querySelector('.sec-kicker').textContent);
+  assert.deepEqual(sections, ['Items · 1', 'Money', 'Shipping', 'Customerreturning', 'Email']);
+  const items = node.querySelector('.items');
+  assert.ok(textOf(items).includes('Yard Jeans') && textOf(items).includes('3 left'));
+  assert.equal(node.querySelectorAll('.thumb-img').length, 0, 'no image without a signed path');
+  const money = textOf(node.querySelector('.money'));
+  assert.ok(money.includes('Subtotal') && money.includes('£5.00') && money.includes('Total') && !money.includes('Refunded'), 'zero refunds are not a line');
+  const addr = node.querySelectorAll('.addr-line').map((l) => l.textContent);
+  assert.deepEqual(addr, ['Sam Fixture', '12 Somewhere Street', 'Flat 3', 'Windsor SL4 1AA', 'United Kingdom']);
+  const hist = textOf(node.querySelector('.sec-history'));
+  assert.ok(hist.includes('Lifetime') && hist.includes('£410.00') && hist.includes('Also waiting to ship: #1901') && hist.includes('First order') && hist.includes('this order'));
+  const mail = node.querySelector('.sec-email');
+  assert.deepEqual(mail.querySelectorAll('.badge').map((b) => b.textContent), ['From the customer · verified', 'Mentions the order']);
+  const matched = UI.renderItem({ type: 'order', data: { detail: true, items: [], pending: [], email: { available: true, threads: [{ thread_id: 't', subject: 'x', sender_match: true, verified_sender: false }] } } });
+  assert.equal(matched.querySelector('.sec-email').querySelector('.badge').textContent, 'Sender matches');
+  assert.equal(node.dataset.pending, '');
 });
 
-test('a summary order has no tabs and says how to get more', () => {
+test('a summary order has no sections and says how to get more', () => {
   const node = UI.renderItem({ type: 'order', data: { order_number: '#1930', detail: false } });
-  assert.equal(node.querySelectorAll('.tab').length, 0);
+  assert.equal(node.querySelectorAll('.sec').length, 0);
   assert.ok(textOf(node).includes('items and shipping'));
+});
+
+test('an image is drawn only from a path the Mac signed, and never from data in fixture-less rendering', () => {
+  const signed = '/media/shopify/0123456789abcdef0123456789abcdef/160?u=https%3A%2F%2Fcdn.shopify.com%2Fa.jpg';
+  const good = UI.renderItem({ type: 'order', data: { detail: true, items: [{ title: 'Jeans', image: signed }] } });
+  assert.equal(good.querySelector('.thumb-img').getAttribute('src'), signed);
+  for (const bad of ['https://cdn.shopify.com/a.jpg', '/media/shopify/x/160?u=<img onerror=1>', 'data:image/svg+xml;base64,AAAA', 'javascript:alert(1)']) {
+    const node = UI.renderItem({ type: 'order', data: { detail: true, items: [{ title: 'Jeans', image: bad }] } });
+    assert.equal(node.querySelectorAll('.thumb-img').length, 0, bad);
+    assert.ok(node.querySelector('.thumb-mono'), 'a monogram stands in');
+  }
+  const fixture = UI.renderItem({ type: 'order', data: { detail: true, items: [{ title: 'Jeans', image: 'data:image/svg+xml;base64,AAAA' }] } }, { fixture: true });
+  assert.equal(fixture.querySelectorAll('.thumb-img').length, 1, 'a fixture may carry an inline SVG');
+});
+
+test('what missed the budget says so, and is filled in when it arrives', () => {
+  const node = UI.renderItem({ type: 'order', data: { detail: true, order_number: '#1930', items: [], pending: ['history', 'email'] } });
+  assert.equal(node.dataset.pending, 'history email');
+  assert.ok(textOf(node.querySelector('.sec-history')).includes('Reading their history'));
+  assert.ok(textOf(node.querySelector('.sec-email')).includes('Checking the inbox'));
+  const still = UI.hydrateOrder(node, { pending: ['email'], history: { orders: 2, spent: '£99.00', standing: 'returning', recent: [] } });
+  assert.deepEqual(still, ['email']);
+  assert.ok(textOf(node.querySelector('.sec-history')).includes('£99.00') && !textOf(node.querySelector('.sec-history')).includes('Reading'));
+  assert.ok(textOf(node.querySelector('.sec-email')).includes('Checking the inbox'));
+  assert.deepEqual(UI.hydrateOrder(node, { pending: [], email: { available: true, threads: [] } }), []);
+  assert.ok(textOf(node.querySelector('.sec-email')).includes('No recent email'));
+  assert.equal(node.dataset.pending, '');
+  assert.deepEqual(UI.hydrateOrder(null, {}), []);
+  const off = UI.renderItem({ type: 'order', data: { detail: true, items: [], pending: [], email: { available: false, reason: 'Gmail is not configured' } } });
+  assert.ok(textOf(off.querySelector('.sec-email')).includes('Email not checked'));
 });
 
 test('inventory leads with the exceptions', () => {
@@ -310,19 +358,30 @@ test('a success card offers its undo the same way, and success needs a verified 
 
 // ------------------------------------------------------------------ composition
 
-test('an order carries its progress strip and previews what was bought', () => {
+test('an order carries its progress strip and every item, with the quantity where it is more than one', () => {
   const node = UI.renderItem({ type: 'order', data: { order_number: '#1930', payment: 'paid', fulfillment: 'unfulfilled', placed_at: '2026-09-08T09:42:00Z', detail: true,
-    items: [{ title: 'Yard Jeans', variant: 'M', total: '£60.00', quantity: 2 }, { title: 'Convict Sweats', variant: 'L', total: '£55.00', quantity: 1 }, { title: 'Cap', total: '£20.00' }, { title: 'Socks', total: '£8.00' }], fulfillments: [] } });
+    items: [{ title: 'Yard Jeans', variant: 'M', total: '£60.00', quantity: 2 }, { title: 'Convict Sweats', variant: 'L', total: '£55.00', quantity: 1 }, { title: 'Cap', total: '£20.00' }, { title: 'Socks', total: '£8.00' }], fulfillments: [], items_truncated: true } });
   const steps = node.querySelectorAll('.tl-step');
   assert.equal(steps.length, 3);
   assert.deepEqual(steps.map((s) => s.classList.contains('is-done')), [true, true, false]);
   assert.ok(textOf(steps[2]).includes('To ship'));
-  const preview = node.querySelector('.items-preview');
-  assert.equal(preview.querySelectorAll('li').length, 4, 'three items and an "and more" line');
-  assert.ok(textOf(preview).includes('Yard Jeans · M') && textOf(preview).includes('× 2') && textOf(preview).includes('and 1 more'));
+  const items = node.querySelector('.items');
+  assert.equal(items.querySelectorAll('.item').length, 5, 'four items and a "more" line');
+  assert.ok(textOf(items).includes('Yard Jeans') && textOf(items).includes('× 2') && textOf(items).includes('More items than shown'));
   const cancelled = UI.renderItem({ type: 'order', data: { order_number: '#1', payment: 'refunded', fulfillment: 'unfulfilled', cancelled_at: '2026-09-08T10:00:00Z' } });
   assert.equal(cancelled.querySelectorAll('.is-bad').length, 1);   // the shim reads one class at a time
   assert.ok(textOf(cancelled).includes('Cancelled'));
+});
+
+test('a customer card carries the history when the tool returned it', () => {
+  const node = UI.renderItem({ type: 'customer', data: { customer_id: 'c1', name: 'Daniel Sear', email: 'd@example.com', orders: 3, spent: '£410.00',
+    history: { orders: 3, spent: '£410.00', since: '2025-01-02T00:00:00Z', standing: 'returning', other_unfulfilled: ['#1901', '#1938'], recent: [{ order_number: '#1938', total: '£60.00', fulfillment: 'unfulfilled' }] },
+    related_email: { available: true, threads: [{ thread_id: 't1', subject: 'Hello', verified_sender: true }] } } });
+  assert.ok(textOf(node).includes('Also waiting to ship: #1901, #1938') && textOf(node).includes('From the customer'));
+  const many = UI.renderItem({ type: 'customer', data: { name: 'R', history: { orders: 12, recent_truncated: true, recent: [{ order_number: '#9' }, { order_number: '#8' }] } } });
+  assert.ok(textOf(many).includes('Last 2 of 12 orders shown'));
+  assert.ok(textOf(node).includes('d@example.com'), 'the address is still the address');
+  assert.ok(!textOf(node).includes('Ask for their orders'));
 });
 
 test('a customer is a profile: initials, standing, lifetime', () => {

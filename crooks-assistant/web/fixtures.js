@@ -8,28 +8,48 @@
 (function (root) {
   'use strict';
 
+  const IMAGE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiB2aWV3Qm94PSIwIDAgMTYwIDE2MCI+PHJlY3Qgd2lkdGg9IjE2MCIgaGVpZ2h0PSIxNjAiIGZpbGw9IiMxYTFjMjIiLz48cGF0aCBkPSJNNTIgMjhoNTZsMTAgMTA0SDQyeiIgZmlsbD0iIzJjMzI0MiIvPjxwYXRoIGQ9Ik02MiAyOGgzNmwtNCAxMDRINjZ6IiBmaWxsPSIjM2E0MjU4Ii8+PC9zdmc+';
+  const HISTORY = {
+    orders: 4, spent: '£410.00', since: '2025-01-02T00:00:00Z', standing: 'regular', first_order_at: '2025-01-02T10:00:00Z',
+    other_unfulfilled: ['#1901'],
+    recent: [
+      { order_id: 'gid://shopify/Order/0', order_number: '#1930', placed_at: '2026-09-08T09:42:00Z', fulfillment: 'unfulfilled', payment: 'paid', total: '£145.00', items_brief: 'Blue Wash Yard Jeans, Convict Sweats', current: true },
+      { order_id: 'gid://shopify/Order/1', order_number: '#1901', placed_at: '2026-08-20T10:00:00Z', fulfillment: 'unfulfilled', payment: 'paid', total: '£200.00', items_brief: 'Convict Hoodie ×2' },
+      { order_id: 'gid://shopify/Order/2', order_number: '#1844', placed_at: '2026-05-02T10:00:00Z', fulfillment: 'fulfilled', payment: 'paid', total: '£65.00', items_brief: 'Cap' },
+    ],
+  };
+  const EMAIL = { available: true, threads: [
+    { thread_id: 't1', from: 'Sam Fixture', from_email: 'sam@example.com', subject: 'Address for order 1930', date: 'Tue, 8 Sep 2026 10:12:00 +0100', snippet: 'Could you send it to my work instead? 4 Example Row, London EC1A 1AA.', sender_match: true, verified_sender: true, match: 'both', provenance: 'CUSTOMER_EMAIL' },
+    { thread_id: 't2', from: 'Kit Placeholder', from_email: 'kit@example.com', subject: 'Re: #1930', date: 'Mon, 7 Sep 2026 15:00:00 +0100', snippet: 'Is 1930 the one I ordered for my brother?', verified_sender: false, match: 'order_number', provenance: 'UNKNOWN' },
+  ] };
   const ORDER = {
     order_id: 'gid://shopify/Order/0', order_number: '#1930', placed_at: '2026-09-08T09:42:00Z',
     fulfillment: 'unfulfilled', payment: 'paid', total: '£145.00', customer_name: 'Sam Fixture',
-    customer_id: 'gid://shopify/Customer/0', customer_email: 'sam@example.com', detail: true,
+    customer_id: 'gid://shopify/Customer/0', customer_email: 'sam@example.com', detail: true, tags: ['vip'],
     items: [
-      { title: 'Blue Wash Yard Jeans', variant: 'M', sku: 'YJ-BLU-M', quantity: 1, total: '£95.00' },
-      { title: 'Convict Sweats', variant: 'L / Black', sku: 'CS-BLK-L', quantity: 1, total: '£50.00' },
+      { title: 'Blue Wash Yard Jeans', variant: 'M', sku: 'YJ-BLU-M', quantity: 1, total: '£95.00', image: IMAGE, stock: { tracked: true, available: 3 } },
+      { title: 'Convict Sweats', variant: 'L / Black', sku: 'CS-BLK-L', quantity: 1, total: '£50.00', image: IMAGE, stock: { tracked: true, available: 0 } },
     ],
     items_truncated: false,
     fulfillments: [],
-    cancelled_at: '', note: 'Leave with the neighbour if out.', ships_to: 'London United Kingdom',
+    money: { subtotal: '£140.00', shipping: '£5.00', tax: '£23.33', discounts: '£0.00', refunded: '£0.00', outstanding: '£0.00' },
+    shipping_method: 'Royal Mail Tracked 24',
+    shipping_address: { name: 'Sam Fixture', lines: ['12 Somewhere Street', 'Flat 3'], city: 'London', zip: 'E1 6AN', country: 'United Kingdom', country_code: 'GB' },
+    history: HISTORY, email: EMAIL, pending: [],
+    cancelled_at: '', note: 'Leave with the neighbour if out.', ships_to: 'London, United Kingdom',
   };
+  const ORDER_READING = Object.assign({}, ORDER, { history: null, email: null, pending: ['history', 'email'] });
 
   const list = [
     { id: 'order', label: 'Order', items: [{ type: 'order', data: ORDER }] },
+    { id: 'order_reading', label: 'Order · still reading', items: [{ type: 'order', data: ORDER_READING }] },
     { id: 'order_list', label: 'Orders today', items: [{ type: 'order_list', data: {
       title: 'Today', count: 3, truncated: false, orders: [
         { order_number: '#1931', placed_at: '2026-09-08T11:10:00Z', fulfillment: 'fulfilled', payment: 'paid', total: '£60.00', customer_name: 'Ada Sample' },
         { order_number: '#1930', placed_at: '2026-09-08T09:42:00Z', fulfillment: 'unfulfilled', payment: 'paid', total: '£145.00', customer_name: 'Sam Fixture' },
         { order_number: '#1929', placed_at: '2026-09-08T08:05:00Z', fulfillment: 'unfulfilled', payment: 'pending', total: '£95.00', customer_name: 'Kit Placeholder' },
       ] } }] },
-    { id: 'customer', label: 'Customer', items: [{ type: 'customer', data: { customer_id: 'c0', name: 'Sam Fixture', email: 'sam@example.com', orders: 4, spent: '£410.00' } }] },
+    { id: 'customer', label: 'Customer', items: [{ type: 'customer', data: { customer_id: 'c0', name: 'Sam Fixture', email: 'sam@example.com', orders: 4, spent: '£410.00', history: HISTORY, related_email: EMAIL } }] },
     { id: 'customer_list', label: 'Which customer', items: [{ type: 'customer_list', data: { title: 'Which customer?', ambiguous: true, customers: [
       { customer_id: 'c1', name: 'Dan Sample', email: 'dan.s@example.com', orders: 2, spent: '£120.00' },
       { customer_id: 'c2', name: 'Dan Fixture', email: 'dan.f@example.com', orders: 7, spent: '£880.00' },

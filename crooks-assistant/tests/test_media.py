@@ -3,6 +3,8 @@ CDN, only images, only so many bytes; nothing else is ever fetched."""
 
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pytest
 
@@ -28,6 +30,7 @@ def test_shopify_cdn_urls_are_signed_into_same_origin_paths(url):
     "http://cdn.shopify.com/a.jpg", "https://cdn.shopify.com.evil.example/a.jpg", "https://evil.example/cdn.shopify.com/a.jpg",
     "https://127.0.0.1/a.jpg", "https://user:pw@cdn.shopify.com/a.jpg", "https://cdn.shopify.com:8443/a.jpg",
     "file:///etc/passwd", "", None, 42, "https://cdn.shopify.com/" + "a" * 700,
+    "https://[::1]/a.jpg", "https://cdn.shopify.com./a.jpg", "https://CDN.SHOPIFY.COM.evil.example/a.jpg",
 ])
 def test_anything_else_is_not_signed_and_never_verifies(url):
     assert media.signed_path(url) is None
@@ -39,9 +42,10 @@ def test_only_the_listed_widths_are_signed():
     assert "/640?u=" in media.signed_path(CDN, 640)
 
 
-def test_the_cdn_is_asked_for_the_small_size():
+def test_the_cdn_is_asked_for_the_small_size_once():
     assert media.sized(CDN, 160).endswith("?v=1&width=160")
     assert media.sized("https://cdn.shopify.com/a.jpg", 320).endswith("a.jpg?width=320")
+    assert media.sized("https://cdn.shopify.com/a.jpg?width=2048&v=3", 160).endswith("a.jpg?v=3&width=160")
 
 
 class Upstream(httpx.AsyncBaseTransport):
@@ -94,6 +98,7 @@ async def test_a_signed_path_serves_the_image_and_caches_it(client, monkeypatch)
     first = await client.get(path)
     assert first.status_code == 200 and first.headers["content-type"] == "image/png" and first.content == PNG
     assert first.headers["cache-control"] == "private, max-age=86400" and first.headers["x-crooks-cache"] == "miss"
+    assert first.headers["x-content-type-options"] == "nosniff" and "sandbox" in first.headers["content-security-policy"]
     assert str(up.requests[0].url).endswith("&width=160")
     second = await client.get(path)
     assert second.status_code == 200 and second.headers["x-crooks-cache"] == "hit" and len(up.requests) == 1
@@ -115,6 +120,29 @@ async def test_a_response_that_is_not_an_image_is_refused(client, monkeypatch):
     upstream(monkeypatch, content_type="image/png", body=b"<html>not really</html>")
     assert (await client.get(media.signed_path(CDN))).status_code == 502
     upstream(monkeypatch, status=302, headers={"location": "https://evil.example/x.png"})
+    assert (await client.get(media.signed_path(CDN))).status_code == 502
+    upstream(monkeypatch, content_type="image/svg+xml", body=b"<svg onload=alert(1)></svg>")
+    assert (await client.get(media.signed_path(CDN))).status_code == 502, "an SVG is a document, not an image"
+
+
+async def test_a_cdn_that_drips_is_cut_off_at_the_deadline(client, monkeypatch):
+    class Drip(httpx.AsyncBaseTransport):
+        async def handle_async_request(self, request):
+            async def slow():
+                yield JPEG
+                await asyncio.sleep(3600)
+            return httpx.Response(200, headers={"content-type": "image/jpeg"}, stream=_Stream(slow()))
+
+    class _Stream(httpx.AsyncByteStream):
+        def __init__(self, gen):
+            self.gen = gen
+
+        async def __aiter__(self):
+            async for chunk in self.gen:
+                yield chunk
+
+    monkeypatch.setattr(media_route, "_http", httpx.AsyncClient(transport=Drip()))
+    monkeypatch.setattr(media_route, "TIMEOUT_S", 0.2)
     assert (await client.get(media.signed_path(CDN))).status_code == 502
 
 

@@ -18,7 +18,7 @@ from typing import Any
 
 from app.actions.models import Observed, Prepared, text_fingerprint
 from app.clients.shopify import ShopifyClient, ShopifyError
-from app.context.order import Hydrator
+from app.context.order import Hydrator, model_view
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, WriteSpec, tool
 
@@ -221,6 +221,7 @@ def _order_summary(node: dict) -> dict:
     },
     tier=Tier.AMBER,
     issued_id_args=("order_id",),
+    model_view=model_view,
 )
 async def shopify_order_detail(order_id: str) -> dict:
     return await hydrator().order(str(order_id))

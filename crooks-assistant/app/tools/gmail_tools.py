@@ -158,8 +158,16 @@ def _extract_body(payload: dict) -> str:
 
 _METADATA_HEADERS = [
     "From", "Subject", "Date", "List-Unsubscribe", "List-Id",
-    "Precedence", "Auto-Submitted", "List-Post",
+    "Precedence", "Auto-Submitted", "List-Post", "Authentication-Results",
 ]
+
+_AUTH_PASS = re.compile(r"\b(?:dkim|spf)=pass\b", re.I)
+
+
+def _authenticated(headers: dict[str, str]) -> bool:
+    """Whether the receiving server's own Authentication-Results say the message passed
+    DKIM or SPF. A From header is written by the sender; this line is written by Gmail."""
+    return bool(_AUTH_PASS.search(headers.get("authentication-results", "")))
 
 
 async def _list_metadata(client: GmailClient, full_query: str, limit: int) -> list[dict]:
@@ -232,6 +240,7 @@ def _summary(thread_id: str, headers: dict[str, str], message: dict) -> dict[str
         "date": headers.get("date", ""),
         "snippet": (message.get("snippet") or "")[:300],
         "likely_bulk": _is_bulk(headers),
+        "authenticated": _authenticated(headers),
     }
 
 

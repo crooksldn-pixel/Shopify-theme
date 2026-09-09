@@ -32,8 +32,12 @@ async def order_extension(request: Request, order_id: str, session_id: str = "")
         session = runtime.sessions.peek(session_id.strip())
     except KeyError:
         return JSONResponse(status_code=404, content={"code": "unknown", "detail": "No such session."})
-    if order_id not in session.issued_ids:
-        # Not an order this conversation was shown: the same rule the detail tool keeps.
+    from app.tools.gate import id_kind_ok
+
+    if order_id not in session.issued_ids or not id_kind_ok("order_id", order_id):
+        # Not an order this conversation was shown: the same rule the detail tool keeps,
+        # and an id of another kind (a customer, a variant) is not an order however it was
+        # issued.
         return JSONResponse(status_code=404, content={"code": "unknown", "detail": "No such order for this session."})
     from app.tools.dispatch import harvest_ids
     from app.tools.shopify_tools import hydrator
@@ -45,6 +49,9 @@ async def order_extension(request: Request, order_id: str, session_id: str = "")
     except Exception as exc:  # noqa: BLE001 — Shopify or Gmail failing is "not yet", not a crash
         log.warning("context extension for %s failed: %s", order_id, type(exc).__name__)
         return JSONResponse(status_code=503, content={"code": "service_unavailable", "detail": "The order's history could not be read."})
-    # The ids in it (recent orders, threads) are issued to the session like any tool result's.
-    harvest_ids(ext, session)
-    return present_extension(ext)
+    # The ids the card carries (the recent orders, the threads) are issued to the session
+    # like any tool result's — those and no others.
+    shaped = present_extension(ext)
+    harvest_ids(shaped, session)
+    log.info("context extension served for %s (pending=%s)", order_id, ",".join(shaped["pending"]) or "-")
+    return shaped

@@ -129,6 +129,12 @@ query CrooksCustomerOrders($id: ID!, $n: Int!) {
     amountSpent { amount currencyCode }
     defaultEmailAddress { emailAddress }
     lastOrder { id name }
+    firstOrder: orders(first: 1, sortKey: CREATED_AT) {
+      edges { node { id name processedAt createdAt } }
+    }
+    openOrders: orders(first: 5, query: "fulfillment_status:unfulfilled", sortKey: CREATED_AT, reverse: true) {
+      edges { node { id name cancelledAt displayFulfillmentStatus } }
+    }
     orders(first: $n, sortKey: CREATED_AT, reverse: true) {
       edges { node {
         id
@@ -338,6 +344,20 @@ def shape_customer_history(node: dict[str, Any], *, current_order_id: str | None
     count = _int(node.get("numberOfOrders"))
     email = (node.get("defaultEmailAddress") or {}).get("emailAddress")
     last = node.get("lastOrder") or {}
+    # The first order and the open orders come from their own small connections, so a regular
+    # with twelve orders is answered from all twelve, not from the five shown.
+    first_edges = ((node.get("firstOrder") or {}).get("edges") or [])
+    first = (first_edges[0].get("node") or {}) if first_edges else {}
+    first_at = first.get("processedAt") or first.get("createdAt")
+    if not first_at and recent and count is not None and count <= len(recent):
+        first_at = recent[-1]["placed_at"]
+    open_edges = (node.get("openOrders") or {}).get("edges")
+    if open_edges is not None:
+        other_unfulfilled = [
+            (e.get("node") or {}).get("name") for e in open_edges
+            if isinstance(e.get("node"), dict) and (e["node"].get("id") != current_order_id) and not e["node"].get("cancelledAt")
+            and e["node"].get("name")
+        ]
     return {
         "customer_id": node.get("id"),
         "name": node.get("displayName"),
@@ -347,10 +367,10 @@ def shape_customer_history(node: dict[str, Any], *, current_order_id: str | None
         "since": node.get("createdAt"),
         "tags": [str(t)[:40] for t in (node.get("tags") or [])[:10]],
         "standing": standing(count),
-        # The first order is known only when every order was fetched.
-        "first_order_at": recent[-1]["placed_at"] if recent and count is not None and count <= len(recent) else None,
+        "first_order_at": first_at,
         "last_order": {"order_id": last.get("id"), "order_number": last.get("name")} if last else None,
         "recent": recent,
+        "recent_truncated": bool(count is not None and count > len(recent)),
         "other_unfulfilled": other_unfulfilled,
         "provenance": "SHOPIFY",
     }
@@ -370,25 +390,72 @@ def standing(count: int | None) -> str:
 
 
 def correlate_threads(threads: list[dict[str, Any]], *, customer_email: str | None, digits: str) -> list[dict[str, Any]]:
-    """Which threads are about this order, and how sure that is. The sender matching the
-    order's customer is the strong signal; the order number alone is a mention, and a name
-    match is nothing at all — anyone can be called Sam."""
+    """Which threads are about this order, and how sure that is. A From header that equals
+    the order's customer is a match; it is VERIFIED only when the receiving server's own
+    Authentication-Results say the mail passed DKIM or SPF for that sender — a From header
+    is a claim anyone can write. The order number alone is a mention. A name match is
+    nothing at all: anyone can be called Sam."""
     email = (customer_email or "").strip().lower()
     out = []
     for t in threads:
         sender = str(t.get("from_email") or "").strip().lower()
         text = f"{t.get('subject', '')} {t.get('snippet', '')}"
         mentions = bool(digits) and re.search(rf"(?<!\d){re.escape(digits)}(?!\d)", text) is not None
-        verified = bool(email) and sender == email
-        if not verified and not mentions:
+        matches = bool(email) and sender == email
+        if not matches and not mentions:
             continue
+        verified = matches and bool(t.get("authenticated"))
         out.append({
             **t,
+            "sender_match": matches,
             "verified_sender": verified,
-            "match": "both" if verified and mentions else ("sender" if verified else "order_number"),
-            "provenance": "CUSTOMER_EMAIL" if verified else "UNKNOWN",
+            "match": "both" if matches and mentions else ("sender" if matches else "order_number"),
+            "provenance": "CUSTOMER_EMAIL" if matches else "UNKNOWN",
         })
     return out[:EMAIL_THREADS]
+
+
+# ------------------------------------------------------------- what the model reads
+
+# What the model is told while a part of the order is still on its way: never "none".
+_PENDING_WORDS = {
+    "history": "still being read — do not say the customer has no history",
+    "email": "still being read — do not say there is no email",
+}
+
+
+def model_view(order: dict[str, Any]) -> dict[str, Any]:
+    """The order as the model reads it. The card gets the street address, the image paths
+    and the ids of things that are never spoken; the voice gets the town, the postcode's
+    outward part, and every fact it may need to answer with or act on."""
+    out = dict(order)
+    address = order.get("shipping_address") if isinstance(order.get("shipping_address"), dict) else None
+    out.pop("shipping_address", None)
+    if address:
+        zip_code = str(address.get("zip") or "").strip().upper()
+        out["ships_to"] = ", ".join(p for p in (address.get("city"), zip_code.split(" ")[0] if zip_code else None, address.get("country")) if p) or out.get("ships_to")
+    out["items"] = [
+        {k: v for k, v in item.items() if k not in ("image_url",)} for item in order.get("items") or [] if isinstance(item, dict)
+    ]
+    for item in out["items"]:
+        stock = item.get("stock")
+        if isinstance(stock, dict):
+            item["stock"] = {k: v for k, v in stock.items() if k != "inventory_item_id"}
+    out["fulfillments"] = [
+        {k: v for k, v in f.items() if k not in ("fulfillment_id", "url")} for f in order.get("fulfillments") or [] if isinstance(f, dict)
+    ]
+    out["refunds"] = [{k: v for k, v in r.items() if k != "refund_id"} for r in order.get("refunds") or [] if isinstance(r, dict)]
+    for part, words in _PENDING_WORDS.items():
+        if part in (order.get("pending") or []):
+            out[part] = words
+    email = out.get("email")
+    if isinstance(email, dict):
+        out["email"] = {
+            **email,
+            "threads": [{k: v for k, v in t.items() if k not in ("likely_bulk", "authenticated")} for t in email.get("threads") or [] if isinstance(t, dict)],
+        }
+    out.pop("events", None) if not order.get("events") else None
+    return out
 
 
 # ------------------------------------------------------------------------ the hydrator

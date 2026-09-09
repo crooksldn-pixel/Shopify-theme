@@ -176,7 +176,7 @@ function setState(state, label, sub) {
 const DETAIL_WORDS = {
   shopify_find_order: 'Finding the order', shopify_order_detail: 'Reading the order', shopify_list_orders: 'Listing orders',
   shopify_find_customer: 'Finding the customer', shopify_customer_orders: 'Reading their orders', shopify_sales_summary: 'Adding up sales',
-  shopify_inventory: 'Checking stock', shopify_order_note_append: 'Preparing the note',
+  shopify_inventory: 'Checking stock', shopify_order_note_append: 'Preparing the note', shopify_customer_history: 'Reading their history',
   gmail_search: 'Searching the inbox', gmail_read_thread: 'Reading the thread', gmail_recent: 'Reading recent mail',
 };
 const LONG_THINK_MS = 6000;
@@ -890,6 +890,30 @@ function pushContext(nodes, items, question) {
   showHistory(history.length - 1);
   renderRecent();
   armDeckExpiry();
+  for (const node of nodes) collectPending(node);
+}
+
+/* ------------------------------------------------------- the rest of an order */
+
+// An order card that is still waiting for the customer's history or the inbox asks the Mac
+// for them once the card is up — GET /context/order, session-bound, no model in the loop —
+// and fills the sections in place. A few tries, then the card stays as it is; the sections
+// say "reading…" and nothing pretends to be known.
+const CONTEXT_WAITS_MS = [300, 2500, 6000];
+function collectPending(node, attempt = 0) {
+  if (!node || !node.dataset || node.dataset.type !== 'order' || !node.dataset.pending || !node.dataset.ref) return;
+  if (attempt >= CONTEXT_WAITS_MS.length || !window.CrooksUI || typeof window.CrooksUI.hydrateOrder !== 'function') return;
+  const orderId = node.dataset.ref;
+  setTimeout(async () => {
+    if (!node.dataset.pending || !node.isConnected && !history.some((entry) => entry.nodes.indexOf(node) !== -1)) return;
+    try {
+      const response = await fetch(`/context/order/${encodeURIComponent(orderId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+      if (!response.ok) return;   // not this session's order any more, or the Mac cannot say: leave the card honest
+      const ext = await response.json();
+      const still = window.CrooksUI.hydrateOrder(node, ext);
+      if (still.length) collectPending(node, attempt + 1);
+    } catch { collectPending(node, attempt + 1); }
+  }, CONTEXT_WAITS_MS[attempt]);
 }
 
 // The Mac forgets a conversation after half an hour of silence; the screen forgets with it.

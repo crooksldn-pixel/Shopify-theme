@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 # Shopify serves product images from here and nowhere else. The check is on the host as
 # parsed, never on a substring: "cdn.shopify.com.evil.example" is not on the list.
@@ -39,9 +39,11 @@ def allowed_url(url: object) -> str | None:
         return None
     if parts.scheme != "https" or not parts.hostname:
         return None
-    host = parts.hostname.lower()
+    host = parts.hostname.lower().rstrip(".")
     if host not in ALLOWED_HOSTS and not any(host.endswith(suffix) for suffix in ALLOWED_SUFFIXES):
         return None
+    if parts.hostname.endswith(".") or host.startswith("."):
+        return None   # "cdn.shopify.com." resolves the same but is not the name on the list
     if parts.username or parts.password or parts.port not in (None, 443):
         return None
     return url
@@ -70,6 +72,9 @@ def verify(sig: str, width: int, url: str) -> bool:
 
 def sized(url: str, width: int) -> str:
     """Shopify's CDN resizes on request: `width=` on the query string. The original is never
-    fetched at full size for a 64-pixel thumbnail."""
-    joiner = "&" if "?" in url else "?"
-    return f"{url}{joiner}width={int(width)}"
+    fetched at full size for a 64-pixel thumbnail. A width already on the URL is replaced,
+    not doubled."""
+    parts = urlsplit(url)
+    query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k.lower() not in ("width", "height")]
+    query.append(("width", str(int(width))))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))

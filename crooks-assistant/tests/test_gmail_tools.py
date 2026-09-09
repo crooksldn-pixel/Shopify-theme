@@ -371,3 +371,16 @@ def test_an_injected_service_is_used_from_every_thread():
     t.start()
     t.join()
     assert got == [fake] and client.service() is fake
+
+
+# --- authentication ----------------------------------------------------------
+
+@pytest.mark.parametrize("value,expected", [
+    ("mx.google.com; dkim=pass header.i=@example.com; spf=pass", True),
+    ("mx.google.com; spf=pass (google.com: domain of x designates y as permitted sender)", True),
+    ("mx.google.com; dkim=fail; spf=softfail", False),
+    ("", False),
+])
+def test_a_sender_is_verified_only_by_the_receiving_servers_authentication_results(value, expected):
+    assert gmail_tools._authenticated({"authentication-results": value}) is expected
+    assert gmail_tools._authenticated({}) is False

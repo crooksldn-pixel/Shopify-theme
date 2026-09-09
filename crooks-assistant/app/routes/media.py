@@ -28,6 +28,11 @@ CONCURRENCY = 4
 CACHE_MAX_BYTES = 50_000_000
 CACHE_CONTROL = "private, max-age=86400"
 _IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif", "image/avif")
+# An image is bytes to draw and nothing else: never sniffed into a document, never a page.
+_HEADERS = {"Cache-Control": CACHE_CONTROL, "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox"}
+# The sweep reads every cached file's size; it runs off the loop, and not on every write.
+SWEEP_EVERY = 20
+_writes = 0
 
 _semaphore: asyncio.Semaphore | None = None
 _http: httpx.AsyncClient | None = None
@@ -64,18 +69,19 @@ async def shopify_image(request: Request, sig: str, width: int, u: str = Query(d
     cached = _read_cache(cache_dir, key)
     if cached is not None:
         body, media_type = cached
-        return Response(content=body, media_type=media_type, headers={"Cache-Control": CACHE_CONTROL, "X-Crooks-Cache": "hit"})
+        return Response(content=body, media_type=media_type, headers={**_HEADERS, "X-Crooks-Cache": "hit"})
     async with _gate():
         try:
-            body, media_type = await _fetch(media.sized(u, width))
+            # One deadline for the whole fetch: a CDN that drips bytes cannot hold a slot.
+            body, media_type = await asyncio.wait_for(_fetch(media.sized(u, width)), timeout=TIMEOUT_S)
         except _Refused as exc:
             log.info("image refused: %s", exc)
             return Response(status_code=502)
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, TimeoutError) as exc:
             log.info("image fetch failed: %s", type(exc).__name__)
             return Response(status_code=502)
-    _write_cache(cache_dir, key, body, media_type)
-    return Response(content=body, media_type=media_type, headers={"Cache-Control": CACHE_CONTROL, "X-Crooks-Cache": "miss"})
+    await _write_cache(cache_dir, key, body, media_type)
+    return Response(content=body, media_type=media_type, headers={**_HEADERS, "X-Crooks-Cache": "miss"})
 
 
 class _Refused(RuntimeError):
@@ -144,13 +150,20 @@ def _read_cache(cache_dir: Path, key: str) -> tuple[bytes, str] | None:
         return None
 
 
-def _write_cache(cache_dir: Path, key: str, body: bytes, media_type: str) -> None:
+async def _write_cache(cache_dir: Path, key: str, body: bytes, media_type: str) -> None:
+    global _writes
     try:
         (cache_dir / f"{key}.img").write_bytes(body)
         (cache_dir / f"{key}.type").write_text(media_type, encoding="ascii")
-        _sweep(cache_dir)
     except OSError as exc:
         log.debug("image cache write failed: %s", exc)
+        return
+    _writes += 1
+    if _writes % SWEEP_EVERY == 0:
+        try:
+            await asyncio.to_thread(_sweep, cache_dir)
+        except OSError as exc:
+            log.debug("image cache sweep failed: %s", exc)
 
 
 def _sweep(cache_dir: Path) -> None:

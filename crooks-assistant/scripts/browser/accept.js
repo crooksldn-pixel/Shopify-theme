@@ -24,14 +24,14 @@ const ORDER_TURN = {
   question: 'Show me order 1930', error_kind: null, lost_thread: false, state: 'READY', revoked: [],
   tool_calls: [{ name: 'shopify_order_detail', ok: true, error: null, ms: 412, args: {} }], transcript: null,
   timings_ms: { agent: 2100, total: 2400 },
-  ui: [{ type: 'order', data: { order_id: 'o1', order_number: '#1930', placed_at: '2026-09-08T09:42:00Z', fulfillment: 'unfulfilled', payment: 'paid', total: '£60.00', customer_name: 'Sam Fixture', customer_id: 'c1', customer_email: 'sam@example.com', detail: true, items: [{ title: 'Yard Jeans', variant: 'M', sku: 'YJ-M', quantity: 1, total: '£60.00' }], items_truncated: false, fulfillments: [], cancelled_at: '', note: '', ships_to: 'London, United Kingdom' } }],
+  ui: [{ type: 'order', data: { order_id: 'o1', order_number: '#1930', placed_at: '2026-09-08T09:42:00Z', fulfillment: 'unfulfilled', payment: 'paid', total: '£60.00', customer_name: 'Sam Fixture', customer_id: 'c1', customer_email: 'sam@example.com', detail: true, items: [{ title: 'Yard Jeans', variant: 'M', sku: 'YJ-M', quantity: 1, total: '£60.00', stock: { tracked: true, available: 3 } }], items_truncated: false, fulfillments: [], cancelled_at: '', note: '', ships_to: 'London, United Kingdom', money: { subtotal: '£55.00', shipping: '£5.00', tax: '£9.17' }, shipping_address: { name: 'Sam Fixture', lines: ['12 Somewhere Street'], city: 'London', zip: 'E1 6AN', country: 'United Kingdom' }, history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] }, email: { available: true, threads: [] }, pending: [] } }],
 };
 const VERIFIED = {
   proposal_id: 'prop_fixture0000', status: 'verified', code: 'verified', spoken: 'Order note added.',
   ui: [{ type: 'success', data: { title: 'Note added', detail: 'Order #1930', proposal_id: 'prop_fixture0000' } }],
   undo: { proposal_id: 'prop_undo0000', status: 'pending', ttl_s: 60, undo_of: 'prop_fixture0000' },
 };
-const FIXTURES = ['Orders today', 'Customer', 'Which customer', 'Product', 'Inventory', 'Sales', 'Email list', 'Email thread', 'Email draft', 'Attention', 'Confirmation', 'Success', 'Error', 'Context stack'];
+const FIXTURES = ['Order', 'Order · still reading', 'Orders today', 'Customer', 'Which customer', 'Product', 'Inventory', 'Sales', 'Email list', 'Email thread', 'Email draft', 'Attention', 'Confirmation', 'Success', 'Error', 'Context stack'];
 
 const checks = [];
 const check = (name, ok, detail) => { checks.push({ name, ok: Boolean(ok), detail: detail === undefined ? '' : String(detail) }); };

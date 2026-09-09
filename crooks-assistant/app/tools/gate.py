@@ -118,6 +118,14 @@ _ID_KIND = {
 }
 
 
+def id_kind_ok(arg: str, value: object) -> bool:
+    """Whether a value has the shape of the kind of id this argument takes. For routes that
+    take an id from the tablet and must not forward another kind to Shopify."""
+    kind = _ID_KIND.get(arg)
+    text = str(value or "")
+    return bool(_ID_SHAPE.match(text)) and (kind is None or bool(kind.match(text)))
+
+
 def _looks_like_mutation(name: str) -> bool:
     return any(verb in name for verb in _MUTATION_VERBS)
 

@@ -57,6 +57,11 @@ CUSTOMER_NODE = {
     "id": CUSTOMER, "displayName": "Daniel Sear", "numberOfOrders": 3, "createdAt": "2025-01-02T00:00:00Z", "tags": [],
     "amountSpent": {"amount": "410.00", "currencyCode": "GBP"}, "defaultEmailAddress": {"emailAddress": "daniel@example.com"},
     "lastOrder": {"id": ORDER, "name": "CROOKS-1938"},
+    "firstOrder": {"edges": [{"node": {"id": "gid://shopify/Order/1800", "name": "#1800", "processedAt": "2025-01-02T10:00:00Z", "createdAt": "2025-01-02T10:00:00Z"}}]},
+    "openOrders": {"edges": [
+        {"node": {"id": ORDER, "name": "CROOKS-1938", "cancelledAt": None, "displayFulfillmentStatus": "UNFULFILLED"}},
+        {"node": {"id": "gid://shopify/Order/1901", "name": "CROOKS-1901", "cancelledAt": None, "displayFulfillmentStatus": "UNFULFILLED"}},
+    ]},
     "orders": {"edges": [
         {"node": {"id": ORDER, "name": "CROOKS-1938", "createdAt": "2026-09-07T10:00:00Z", "processedAt": "2026-09-07T10:00:00Z", "cancelledAt": None,
                   "displayFulfillmentStatus": "UNFULFILLED", "displayFinancialStatus": "PAID",
@@ -71,7 +76,7 @@ CUSTOMER_NODE = {
 }
 
 THREADS = [
-    {"thread_id": "18f2a9c0b1d2e3f4", "from": "Daniel Sear", "from_email": "daniel@example.com", "subject": "Address for 1938", "date": "Mon, 8 Sep 2026 10:12:00 +0100", "snippet": "Please send it to my work instead", "likely_bulk": False},
+    {"thread_id": "18f2a9c0b1d2e3f4", "from": "Daniel Sear", "from_email": "daniel@example.com", "subject": "Address for 1938", "date": "Mon, 8 Sep 2026 10:12:00 +0100", "snippet": "Please send it to my work instead", "likely_bulk": False, "authenticated": True},
     {"thread_id": "18f2a9c0b1d2e3f5", "from": "Someone Else", "from_email": "other@example.com", "subject": "Re: CROOKS-1938", "date": "Mon", "snippet": "is 1938 mine?", "likely_bulk": False},
     {"thread_id": "18f2a9c0b1d2e3f6", "from": "Nobody", "from_email": "nobody@example.com", "subject": "Hello", "date": "Mon", "snippet": "unrelated", "likely_bulk": False},
 ]
@@ -151,17 +156,52 @@ def test_the_customer_history_answers_the_five_questions():
     assert [r["order_number"] for r in h["recent"]] == ["CROOKS-1938", "CROOKS-1901", "#1800"]
     assert h["recent"][0]["current"] is True and h["recent"][1]["items_brief"] == "Convict Hoodie ×2"
     assert h["other_unfulfilled"] == ["CROOKS-1901"]
-    many = dict(CUSTOMER_NODE, numberOfOrders=12)
-    assert shape_customer_history(many)["first_order_at"] is None and shape_customer_history(many)["standing"] == "regular"
+    many = shape_customer_history(dict(CUSTOMER_NODE, numberOfOrders=12))
+    # A regular's first order and open orders come from their own connections, not from the five shown.
+    assert many["first_order_at"] == "2025-01-02T10:00:00Z" and many["standing"] == "regular" and many["recent_truncated"] is True
+    older = dict(CUSTOMER_NODE, numberOfOrders=12, firstOrder={"edges": []}, openOrders=None)
+    assert shape_customer_history(older)["first_order_at"] is None
 
 
 def test_email_is_correlated_by_sender_first_and_order_number_second_never_by_name():
     threads = correlate_threads(THREADS, customer_email="Daniel@Example.com", digits="1938")
     assert [t["thread_id"] for t in threads] == ["18f2a9c0b1d2e3f4", "18f2a9c0b1d2e3f5"]
-    assert threads[0]["verified_sender"] is True and threads[0]["match"] == "both" and threads[0]["provenance"] == "CUSTOMER_EMAIL"
-    assert threads[1]["verified_sender"] is False and threads[1]["match"] == "order_number" and threads[1]["provenance"] == "UNKNOWN"
+    assert threads[0]["sender_match"] is True and threads[0]["verified_sender"] is True and threads[0]["match"] == "both" and threads[0]["provenance"] == "CUSTOMER_EMAIL"
+    assert threads[1]["sender_match"] is False and threads[1]["verified_sender"] is False and threads[1]["match"] == "order_number" and threads[1]["provenance"] == "UNKNOWN"
+    # A From line that matches is a match; only the mail server's own authentication makes it verified.
+    unauthenticated = correlate_threads([dict(THREADS[0], authenticated=False)], customer_email="daniel@example.com", digits="1938")
+    assert unauthenticated[0]["sender_match"] is True and unauthenticated[0]["verified_sender"] is False
     # "1938" inside a longer number is not this order.
     assert correlate_threads([{"from_email": "x@y.z", "subject": "ref 119384", "snippet": ""}], customer_email=None, digits="1938") == []
+
+
+def test_the_model_reads_the_town_and_the_facts_never_the_street_or_the_image():
+    from app.context.order import model_view
+
+    o = shape_order(ORDER_NODE)
+    o["pending"] = ["email"]
+    o["history"] = None
+    o["email"] = None
+    m = model_view(o)
+    assert "shipping_address" not in m and m["ships_to"] == "Windsor, SL4, United Kingdom"
+    assert "image_url" not in m["items"][0] and m["items"][0]["variant_id"] == "gid://shopify/ProductVariant/11"
+    assert "inventory_item_id" not in m["items"][0]["stock"] and m["items"][0]["stock"]["available"] == 3
+    assert m["email"].startswith("still being read") and m["history"] is None
+    assert m["money"]["shipping"] == "5.00 GBP" and m["refundable"] is True
+    # The card is built from the full result; the model's text is built from the view.
+    assert o["shipping_address"]["lines"] == ["12 Somewhere Street", "Flat 3"]
+
+
+async def test_the_model_never_sees_the_street_through_dispatch():
+    store = Store()
+    shopify_tools.bind(store, threads_for=inbox())
+    session = Session(session_id="m")
+    session.issue(ORDER)
+    calls: list[ToolCall] = []
+    text = await dispatch("shopify_order_detail", {"order_id": ORDER}, session=session, timeout_s=5, calls=calls)
+    assert "Somewhere Street" not in text and "SL4 1AA" not in text and "cdn.shopify.com" not in text
+    assert "Windsor" in text and "410.00" in text and "CROOKS-1901" in text
+    assert calls[0].result["shipping_address"]["zip"] == "SL4 1AA"
 
 
 # --------------------------------------------------------------------------- hydration
@@ -243,6 +283,7 @@ async def test_the_customer_history_tool_is_amber_needs_an_issued_customer_id_an
     assert "gid://shopify/Order/1901" in session.issued_ids
     items = present(calls, session=session)
     assert items[0]["type"] == "customer" and items[0]["data"]["history"]["other_unfulfilled"] == ["#1938", "#1901"]
+    assert items[0]["data"]["email"] == "daniel@example.com" and items[0]["data"]["related_email"]["threads"][0]["verified_sender"] is True
 
 
 # --------------------------------------------------------------------------- the card
@@ -349,6 +390,8 @@ async def test_a_spoken_order_number_hydrates_the_whole_order_beside_the_model(c
     assert card["data"]["items"][0]["image"].startswith("/media/shopify/")
     session = client.runtime.sessions.peek("h1")
     assert "gid://shopify/ProductVariant/11" in session.issued_ids and CUSTOMER in session.issued_ids
+    # The street and the postcode are remembered as personal, so the log scrubs them by value.
+    assert "12 Somewhere Street" in session.pii_seen and "SL4 1AA" in session.pii_seen
     # The turn log records which cards were shown, never the address on them.
     from pathlib import Path
 
@@ -370,6 +413,10 @@ async def test_the_context_route_is_bound_to_the_session_and_to_issued_orders(cl
     assert ext["email"]["threads"][0]["thread_id"] == "18f2a9c0b1d2e3f4"
     assert "18f2a9c0b1d2e3f4" in session.issued_ids
     assert (await client.get("/context/order/gid://shopify/Order/999", params={"session_id": "c1"})).status_code == 404
+    # An issued id of another kind is not an order, however it was issued.
+    session.issue(CUSTOMER)
+    assert (await client.get(f"/context/order/{CUSTOMER}", params={"session_id": "c1"})).status_code == 404
+    assert len(client.store.queries) == 2, "nothing was asked of Shopify for a customer id"
 
 
 async def test_the_cross_site_guard_does_not_apply_to_the_context_read_but_the_login_gate_does(client):

@@ -34,7 +34,9 @@ _READABLE_ERRORS = _readable_errors()
 # Result keys whose values are ids the assistant may later use in a detail-style lookup.
 _ID_KEYS = ("order_id", "customer_id", "thread_id", "variant_id", "id")
 # Result keys whose values are a person's details. Remembered so the turn log can scrub them.
-_PII_KEYS = ("customer_name", "customer_email", "name", "from", "from_email", "email", "displayName")
+_PII_KEYS = ("customer_name", "customer_email", "name", "from", "from_email", "email", "displayName", "zip", "company")
+# A list of strings under this key is a street address, line by line.
+_PII_LIST_KEYS = ("lines",)
 
 
 def harvest_ids(payload: Any, session: Session) -> None:
@@ -60,6 +62,8 @@ def _harvest_ids(payload: Any, session: Session, *, in_customer: bool = False) -
                 # customer record, never inside an order record.
                 if key != "name" or (customerish and not is_order):
                     session.remember_pii(value)
+            elif key in _PII_LIST_KEYS and isinstance(value, list):
+                session.remember_pii(*(v for v in value if isinstance(v, str)))
             else:
                 _harvest_ids(value, session, in_customer=customerish and not is_order)
     elif isinstance(payload, list):
@@ -146,7 +150,8 @@ async def dispatch(
             result=payload if isinstance(payload, dict) else None,
         ))
 
-    text = _render(payload)
+    spec = registry.get(name)
+    text = _render(spec.model_view(payload) if spec.model_view is not None and isinstance(payload, dict) else payload)
     if decision.tier is Tier.AMBER:
         text = (
             "AMBER — this result contains customer personal data. Read the identifying detail "

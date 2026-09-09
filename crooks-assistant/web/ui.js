@@ -65,6 +65,7 @@
 
   const DATE_FMT = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
   const DAY_FMT = { day: 'numeric', month: 'short' };
+  const DATE_DAY_YEAR = { day: 'numeric', month: 'short', year: 'numeric' };
 
   function formatDate(value, opts) {
     const raw = text(value);
@@ -195,15 +196,180 @@
     ]);
   }
 
+  // ---- images. A card carries an image only as a path the Mac signed for it; the renderer
+  // draws nothing for any other source. In fixture mode a small inline SVG stands in, so the
+  // developer grid can show what a thumbnail looks like without a store behind it.
+  const MEDIA_PATH = /^\/media\/shopify\/[0-9a-f]{32}\/\d{3}\?u=[A-Za-z0-9%._~-]+$/;
+  const FIXTURE_IMAGE = /^data:image\/svg\+xml;base64,[A-Za-z0-9+/=]+$/;
+
+  function imageSource(value, opts) {
+    const src = text(value);
+    if (MEDIA_PATH.test(src)) return src;
+    if (opts && opts.fixture && FIXTURE_IMAGE.test(src)) return src;
+    return '';
+  }
+
+  function thumb(item, opts) {
+    const box = h('span', { class: 'thumb', 'aria-hidden': 'true' }, [
+      h('span', { class: 'thumb-mono', text: (text(item.title).trim().charAt(0) || '·').toUpperCase() }),
+    ]);
+    const src = imageSource(item.image, opts);
+    if (src) {
+      const img = h('img', { class: 'thumb-img', alt: '', loading: 'lazy', decoding: 'async', width: '64', height: '64', referrerpolicy: 'no-referrer' });
+      img.addEventListener('load', () => box.classList.add('is-loaded'));
+      img.addEventListener('error', () => box.classList.add('is-missing'));
+      img.setAttribute('src', src);
+      box.appendChild(img);
+    }
+    return box;
+  }
+
+  function stockWords(stock) {
+    if (!stock || typeof stock !== 'object') return '';
+    if (stock.tracked === false) return 'untracked';
+    const n = num(stock.available);
+    if (n === null) return '';
+    if (n < 0) return `oversold by ${-n}`;
+    if (n === 0) return 'none left';
+    return `${n} left`;
+  }
+  function stockTone(stock) {
+    if (!stock || typeof stock !== 'object' || stock.tracked === false) return '';
+    const n = num(stock.available);
+    if (n === null) return '';
+    return n <= 0 ? 'bad' : n <= 5 ? 'warn' : '';
+  }
+
+  function section(kind, label, children, extra) {
+    return h('section', { class: `sec sec-${kind}`, 'aria-label': label }, [
+      h('p', { class: 'sec-kicker' }, [h('span', { text: label }), extra || null]),
+    ].concat(children || []));
+  }
+
+  function itemsList(items, opts, truncated) {
+    const rows = items.map((it) => h('li', { class: 'item' }, [
+      thumb(it, opts),
+      h('span', { class: 'item-main' }, [
+        h('span', { class: 'item-title', text: text(it.title, '—') }),
+        h('span', { class: 'item-sub', text: [text(it.variant), it.sku ? `SKU ${text(it.sku)}` : ''].filter(Boolean).join(' · ') }),
+      ]),
+      h('span', { class: 'item-side' }, [
+        h('span', { class: 'amount', text: [num(it.quantity) !== null && it.quantity > 1 ? `× ${it.quantity}` : '', text(it.total)].filter(Boolean).join('  ') }),
+        stockWords(it.stock) ? h('span', { class: `item-stock ${stockTone(it.stock)}`.trim(), text: stockWords(it.stock) }) : null,
+      ]),
+    ]));
+    if (truncated) rows.push(h('li', { class: 'item item-more', text: 'More items than shown.' }));
+    return h('ul', { class: 'items' }, rows);
+  }
+
+  function moneyBlock(d) {
+    const m = d.money && typeof d.money === 'object' ? d.money : {};
+    const zero = (v) => /^[^0-9]*0(?:\.00?)?$/.test(text(v));
+    const pairs = [['Subtotal', m.subtotal], ['Shipping', m.shipping], ['Tax', m.tax]];
+    if (m.discounts && !zero(m.discounts)) pairs.push(['Discounts', m.discounts]);
+    if (m.refunded && !zero(m.refunded)) pairs.push(['Refunded', m.refunded, 'bad']);
+    if (m.outstanding && !zero(m.outstanding)) pairs.push(['Outstanding', m.outstanding, 'warn']);
+    pairs.push(['Total', d.total, 'total']);
+    const dl = h('dl', { class: 'money' });
+    for (const [k, v, cls] of pairs) {
+      const value = text(v);
+      if (!value) continue;
+      dl.appendChild(h('dt', { text: k }));
+      dl.appendChild(h('dd', { class: cls || null, text: value }));
+    }
+    return dl.childNodes.length ? dl : null;
+  }
+
+  function addressLines(a) {
+    if (!a || typeof a !== 'object') return [];
+    const streets = Array.isArray(a.lines) ? a.lines.slice(0, 3).map((l) => text(l)).filter(Boolean) : [];
+    const town = [text(a.city), text(a.zip)].filter(Boolean).join(' ');
+    return [text(a.name), text(a.company)].concat(streets, [town, text(a.province), text(a.country)]).filter(Boolean);
+  }
+
+  function addressBlock(a) {
+    const rows = addressLines(a);
+    if (!rows.length) return h('p', { class: 'card-note', text: 'No shipping address on the order.' });
+    return h('address', { class: 'addr' }, rows.map((line) => h('span', { class: 'addr-line', text: line })));
+  }
+
+  function shippingBlock(d) {
+    const fulfils = list(d.fulfillments, 6);
+    const tracking = fulfils.length
+      ? h('ul', { class: 'rows' }, fulfils.map((f) => h('li', { class: 'row' }, [
+        h('span', { class: 'row-main', text: [text(f.carrier), text(f.number)].filter(Boolean).join(' · ') || 'Shipment' }),
+        h('span', { class: 'row-sub', text: formatDate(f.shipped_at) }),
+        h('span', { class: 'row-side' }, [badge(f.status)]),
+      ])))
+      : h('p', { class: 'card-note', text: d.cancelled_at ? 'Not shipped.' : 'Not shipped yet.' });
+    return [
+      d.shipping_method ? h('p', { class: 'ship-method', text: text(d.shipping_method) }) : null,
+      addressBlock(d.shipping_address),
+      tracking,
+    ];
+  }
+
+  // ---- the customer's history, beside their order or on their own card.
+  function historyBlock(hist) {
+    if (!hist || typeof hist !== 'object') return [h('p', { class: 'card-note', text: 'No customer on this order.' })];
+    const orders = num(hist.orders);
+    const stats = h('div', { class: 'stats three' }, [
+      h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: orders === 1 ? 'Order' : 'Orders' })]),
+      h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(hist.spent, '—') }), h('div', { class: 'stat-k', text: 'Lifetime' })]),
+      h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: formatDate(hist.since, { month: 'short', year: 'numeric' }) || '—' }), h('div', { class: 'stat-k', text: 'Since' })]),
+    ]);
+    const lines = [];
+    if (hist.first_order_at) lines.push(h('li', { class: 'hist-line', text: `First order ${formatDate(hist.first_order_at, DATE_DAY_YEAR)}` }));
+    const waiting = list(Array.isArray(hist.other_unfulfilled) ? hist.other_unfulfilled.map((n) => ({ n })) : [], 5).map((x) => text(x.n)).filter(Boolean);
+    if (waiting.length) lines.push(h('li', { class: 'hist-line warn', text: `Also waiting to ship: ${waiting.join(', ')}` }));
+    const recent = list(hist.recent, 5);
+    if (hist.recent_truncated && recent.length && orders !== null) lines.push(h('li', { class: 'hist-line', text: `Last ${recent.length} of ${orders} orders shown` }));
+    const rows = recent.length ? h('ul', { class: 'rows compact hist-rows' }, recent.map((r) => h('li', { class: `row${r.current ? ' is-current' : ''}` }, [
+      h('span', { class: 'row-main' }, [h('strong', { text: text(r.order_number, '—') }), ' ', h('span', { class: 'card-meta', text: formatDate(r.placed_at, DAY_FMT) }), r.current ? badge('this order', 'quiet') : null]),
+      h('span', { class: 'row-sub', text: text(r.items_brief) }),
+      h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: text(r.total) }), badge(r.cancelled ? 'cancelled' : r.fulfillment)]),
+    ]))) : null;
+    return [stats, lines.length ? h('ul', { class: 'hist-lines' }, lines) : null, rows];
+  }
+
+  // ---- email that is about this order, with how sure that is on every line.
+  function relatedEmailBlock(email) {
+    if (!email || typeof email !== 'object') return [h('p', { class: 'card-note', text: 'Email not checked.' })];
+    if (email.available === false) return [h('p', { class: 'card-note', text: `Email not checked${email.reason ? ' · ' + text(email.reason) : ''}` })];
+    const threads = list(email.threads, 3);
+    if (!threads.length) return [h('p', { class: 'card-note', text: 'No recent email from them about this.' })];
+    return [h('ul', { class: 'rows mail' }, threads.map((t) => {
+      // Three words for three certainties: the mail server vouched for the sender; the
+      // From line matches the order and nothing else does; or the order is merely mentioned.
+      const verified = t.verified_sender === true;
+      const matches = verified || t.sender_match === true;
+      const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { thread: text(t.thread_id) } }, [
+        h('span', { class: 'row-main' }, [
+          badge(verified ? 'From the customer · verified' : matches ? 'Sender matches' : 'Mentions the order', verified ? 'quiet ok' : matches ? 'quiet warn' : 'quiet'),
+          ' ', h('strong', { text: text(t.subject, '(no subject)') }),
+        ]),
+        h('span', { class: 'row-sub', text: [text(t.from), text(t.snippet)].filter(Boolean).join(' — ') }),
+        h('span', { class: 'row-side' }, [h('span', { class: 'card-meta', text: formatDate(t.date) })]),
+      ]);
+      row.addEventListener('click', () => row.classList.toggle('is-open'));
+      return row;
+    }))];
+  }
+
+  function pendingLine(what) {
+    return h('p', { class: 'card-note pending-line', text: what });
+  }
+
   function renderOrder(d, opts) {
     const items = list(d.items, 12);
-    const fulfils = list(d.fulfillments, 6);
+    const tags = Array.isArray(d.tags) ? d.tags.slice(0, 3).map((t) => text(t)).filter(Boolean) : [];
     const head = h('div', { class: 'card-head' }, [
       h('div', {}, [
         kicker('Order'),
         h('h2', { class: 'card-title mono', text: text(d.order_number, '—') }),
         h('p', { class: 'card-sub', text: text(d.customer_name) }),
         d.customer_email ? h('p', { class: 'card-meta', text: text(d.customer_email) }) : null,
+        tags.length ? h('p', { class: 'tags' }, tags.map((t) => badge(t, 'quiet'))) : null,
       ]),
       h('div', { class: 'badges' }, [badge(d.fulfillment), badge(d.payment)]),
     ]);
@@ -211,47 +377,56 @@
       ['Placed', formatDate(d.placed_at)],
       ['Total', d.total],
       ['Ships to', d.ships_to],
-      ['Cancelled', d.cancelled_at ? formatDate(d.cancelled_at) : ''],
+      ['Cancelled', d.cancelled_at ? [formatDate(d.cancelled_at), text(d.cancel_reason)].filter(Boolean).join(' · ') : ''],
     ], true);
-    if (d.note) overview.appendChild(h('dt', { text: 'Note' }));
-    if (d.note) overview.appendChild(h('dd', { class: 'note-quote', text: text(d.note) }));
     if (!d.detail) {
       const brief = card('order', [head, orderTimeline(d), overview, h('p', { class: 'card-note', text: 'Ask for the order to see its items and shipping.' })], opts);
       brief.dataset.ref = text(d.order_id);
       return brief;
     }
-    // The first few items in the overview itself: an order should read as an order at a
-    // glance, without a second tap for what was bought.
-    const preview = items.length ? h('ul', { class: 'items-preview' }, items.slice(0, 3).map((it) => h('li', {}, [
-      h('span', { class: 'ip-title', text: [text(it.title), text(it.variant)].filter(Boolean).join(' · ') }),
-      h('span', { class: 'ip-side', text: [num(it.quantity) !== null && it.quantity > 1 ? `× ${it.quantity}` : '', text(it.total)].filter(Boolean).join('  ') }),
-    ])).concat(items.length > 3 ? [h('li', { class: 'ip-more', text: `and ${items.length - 3} more` })] : [])) : null;
-    const overviewPanel = h('div', {}, [preview, overview]);
-    const itemList = h('ul', { class: 'rows' }, items.map((it) => h('li', { class: 'row' }, [
-      h('span', { class: 'row-main', text: text(it.title) }),
-      h('span', { class: 'row-sub', text: [text(it.variant), it.sku ? `SKU ${text(it.sku)}` : ''].filter(Boolean).join(' · ') }),
-      h('span', { class: 'row-side' }, [
-        h('span', { class: 'amount', text: text(it.total) }),
-        num(it.quantity) !== null ? h('span', { class: 'card-meta', text: `× ${it.quantity}` }) : null,
-      ]),
-    ])));
-    if (d.items_truncated) itemList.appendChild(h('li', { class: 'row card-note', text: 'More items than shown.' }));
-    const shipping = fulfils.length
-      ? h('ul', { class: 'rows' }, fulfils.map((f) => h('li', { class: 'row' }, [
-        h('span', { class: 'row-main', text: [text(f.carrier), text(f.number)].filter(Boolean).join(' · ') || 'Shipment' }),
-        h('span', { class: 'row-sub', text: formatDate(f.shipped_at) }),
-        h('span', { class: 'row-side' }, [badge(f.status)]),
-      ])))
-      : h('p', { class: 'card-note', text: 'Not shipped yet.' });
-    const customer = kv([['Name', d.customer_name], ['Email', d.customer_email], ['Ships to', d.ships_to]], true);
-    const full = card('order', [head, orderTimeline(d), tabs([
-      { label: 'Overview', node: overviewPanel },
-      { label: `Items${items.length ? ' · ' + items.length : ''}`, node: itemList },
-      { label: 'Shipping', node: shipping },
-      { label: 'Customer', node: customer },
-    ])], opts);
+    const pending = Array.isArray(d.pending) ? d.pending.map((x) => text(x)) : [];
+    const historyBody = pending.indexOf('history') !== -1 ? [pendingLine('Reading their history…')] : historyBlock(d.history);
+    const emailBody = pending.indexOf('email') !== -1 ? [pendingLine('Checking the inbox…')] : relatedEmailBlock(d.email);
+    const standing = d.history && typeof d.history === 'object' ? text(d.history.standing) : '';
+    const full = card('order', [
+      head,
+      orderTimeline(d),
+      d.cancelled_at ? h('p', { class: 'card-note bad', text: `Cancelled ${formatDate(d.cancelled_at)}${d.cancel_reason ? ' · ' + text(d.cancel_reason) : ''}` }) : null,
+      section('items', `Items${items.length ? ' · ' + items.length : ''}`, [items.length ? itemsList(items, opts, Boolean(d.items_truncated)) : h('p', { class: 'card-note', text: 'No items on the order.' })]),
+      section('money', 'Money', [moneyBlock(d)]),
+      section('shipping', 'Shipping', shippingBlock(d)),
+      section('history', 'Customer', historyBody, standing ? badge(standing, 'quiet') : null),
+      section('email', 'Email', emailBody),
+      d.note ? section('note', 'Note', [h('blockquote', { class: 'note-quote', text: text(d.note) })]) : null,
+    ], opts);
     full.dataset.ref = text(d.order_id);
+    full.dataset.pending = pending.join(' ');
     return full;
+  }
+
+  // The rest of an order card, collected by the app from /context/order once the card is
+  // up: the history and the inbox that missed the turn's budget. Returns what is still to
+  // come, so the app knows whether to ask again.
+  function hydrateOrder(node, ext) {
+    if (!node || !ext || typeof ext !== 'object') return [];
+    const pending = Array.isArray(ext.pending) ? ext.pending.map((x) => text(x)) : [];
+    const fill = (kind, body) => {
+      const sec = node.querySelector(`.sec-${kind}`);
+      if (!sec) return;
+      const keep = sec.querySelector('.sec-kicker');
+      while (sec.firstChild) sec.removeChild(sec.firstChild);
+      if (keep) sec.appendChild(keep);
+      append(sec, body);
+    };
+    if (pending.indexOf('history') === -1 && Object.prototype.hasOwnProperty.call(ext, 'history')) {
+      fill('history', historyBlock(ext.history));
+      const k = node.querySelector('.sec-history') && node.querySelector('.sec-history').querySelector('.sec-kicker');
+      const standing = ext.history && typeof ext.history === 'object' ? text(ext.history.standing) : '';
+      if (k && standing && !k.querySelector('.badge')) k.appendChild(badge(standing, 'quiet'));
+    }
+    if (pending.indexOf('email') === -1 && Object.prototype.hasOwnProperty.call(ext, 'email')) fill('email', relatedEmailBlock(ext.email));
+    node.dataset.pending = pending.join(' ');
+    return pending;
   }
 
   function renderOrderList(d, opts) {
@@ -274,11 +449,14 @@
         h('div', {}, [kicker('Customer'), h('h2', { class: 'card-title', text: text(d.name, 'Customer') }), h('p', { class: 'card-sub', text: text(d.email) })]),
         standing ? h('div', { class: 'badges' }, [badge(standing, 'quiet')]) : null,
       ]),
-      h('div', { class: 'stats' }, [
-        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
-        h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Lifetime' })]),
-      ]),
-      h('p', { class: 'card-note', text: 'Ask for their orders or their emails to see more.' }),
+      d.history && typeof d.history === 'object'
+        ? section('history', 'History', historyBlock(d.history))
+        : h('div', { class: 'stats' }, [
+          h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: 'Orders' })]),
+          h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(d.spent, '—') }), h('div', { class: 'stat-k', text: 'Lifetime' })]),
+        ]),
+      d.related_email && typeof d.related_email === 'object' ? section('email', 'Email', relatedEmailBlock(d.related_email)) : null,
+      d.history ? null : h('p', { class: 'card-note', text: 'Ask for their orders or their emails to see more.' }),
     ], opts);
     node.dataset.ref = text(d.customer_id);
     return node;
@@ -730,5 +908,5 @@
     }, [h('span', { class: 'chip-kind', text: text(e.kind) }), h('span', { class: 'chip-label', text: text(e.label) })]));
   }
 
-  return { render, renderItem, renderStack, isValid, formatDate, TYPES, CONTEXT_TYPES, h };
+  return { render, renderItem, renderStack, hydrateOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h };
 });

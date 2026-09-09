@@ -167,7 +167,7 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
     if name == "shopify_customer_history":
         card = _customer(result)
         card["history"] = _history(result)
-        card["email"] = _related_email(result.get("email_threads"))
+        card["related_email"] = _related_email(result.get("email_threads"))
         return [_ui("customer", card)]
     if name == "shopify_find_customer":
         customers = [_customer(c) for c in _list(result.get("customers"), MAX_CUSTOMERS)]
@@ -359,6 +359,7 @@ def _history(h: Any) -> dict[str, Any] | None:
             }
             for r in _list(h.get("recent"), 5)
         ],
+        "recent_truncated": bool(h.get("recent_truncated")),
         "other_unfulfilled": [_order_number(n) for n in (h.get("other_unfulfilled") or [])[:5] if isinstance(n, str)],
         "tags": [_text(t, 40) for t in (h.get("tags") or [])[:6] if isinstance(t, str)],
         "provenance": _text(h.get("provenance"), 20) or "SHOPIFY",
@@ -376,6 +377,7 @@ def _related_email(e: Any) -> dict[str, Any] | None:
         "threads": [
             {
                 **_thread_summary(t),
+                "sender_match": bool(t.get("sender_match")),
                 "verified_sender": bool(t.get("verified_sender")),
                 "match": _text(t.get("match"), 20),
                 "provenance": _text(t.get("provenance"), 20) or "UNKNOWN",

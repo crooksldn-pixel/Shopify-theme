@@ -71,6 +71,9 @@ class ToolSpec:
     timeout_s: float | None = field(default=None)
     # Present only on a write tool. Its handler then prepares a proposal and never mutates.
     write: WriteSpec | None = field(default=None)
+    # What the model reads of the result, when that is less than what the card is built
+    # from: a street address and an image URL are for the screen, not for the voice.
+    model_view: Callable[[Any], Any] | None = field(default=None)
 
 
 class ToolError(RuntimeError):
@@ -89,6 +92,7 @@ def tool(
     issued_id_args: tuple[str, ...] = (),
     timeout_s: float | None = None,
     write: WriteSpec | None = None,
+    model_view: Callable[[Any], Any] | None = None,
 ) -> Callable[[Handler], Handler]:
     """Register a handler as a tool. The decorated function is returned unchanged so it stays
     directly callable from Python — which is how M5–M9 test tools without spending allowance."""
@@ -105,6 +109,7 @@ def tool(
             issued_id_args=issued_id_args,
             timeout_s=timeout_s,
             write=write,
+            model_view=model_view,
         )
         return fn
 

@@ -196,6 +196,7 @@ body[data-mode="context"] .errline{display:none}
   padding:18px 18px 16px;color:var(--ink);
   animation:card-in var(--t-3) var(--ease-spring) both;
   overflow:hidden;
+  flex:none;   /* the deck scrolls; a tall card is never shrunk to fit and clipped */
 }
 .card::before{ /* soft edge light, top-left */
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
@@ -573,3 +574,53 @@ html[data-lite] .orb-zone{transition:none}
 .bar{display:block;width:100%;max-width:26px;border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,var(--ink-2),var(--ink-4));opacity:.85;min-height:2px}
 .bar-col:last-child .bar{background:linear-gradient(180deg,var(--ink),var(--ink-3));opacity:1}
 .bar-day{font-size:10px;letter-spacing:.1em;color:var(--ink-4);text-transform:uppercase}
+
+/* ------------------------------------------------------------------ the composed order */
+/* One entity, read top to bottom: what was bought, what it cost, where it goes, who they
+   are, what they have said. Sections, not tabs: nothing about an order is hidden behind a
+   tap on a screen this size. */
+.sec{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.sec-kicker{display:flex;align-items:center;gap:10px;margin:0 0 8px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.sec-kicker .badge{letter-spacing:.02em;text-transform:none;font-weight:500}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.card-note.bad{color:var(--bad)}
+.pending-line{color:var(--ink-4);font-style:italic}
+
+.items{list-style:none;margin:0;padding:0}
+.item{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0;padding-top:2px}
+.item.item-more{grid-template-columns:1fr;font-size:12px;color:var(--ink-3);letter-spacing:.06em}
+.item-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.item-title{font-size:15px;color:var(--ink);word-break:break-word}
+.item-sub{font-size:12px;color:var(--ink-3);word-break:break-word}
+.item-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-variant-numeric:tabular-nums}
+.item-side .amount{font-weight:600;font-size:15px;white-space:nowrap}
+.item-stock{font-size:11px;letter-spacing:.06em;color:var(--ink-3);white-space:nowrap}
+.item-stock.warn{color:var(--warn)}
+.item-stock.bad{color:var(--bad)}
+/* A thumbnail: 56 px on screen from a 160 px fetch, a monogram until the bytes land. */
+.thumb{position:relative;width:56px;height:56px;border-radius:12px;background:var(--glass-2);border:1px solid var(--line);overflow:hidden;display:grid;place-items:center;flex:none}
+.thumb-mono{font-size:18px;font-weight:600;color:var(--ink-4);letter-spacing:0}
+.thumb-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity var(--t-2) var(--ease-out)}
+.thumb.is-loaded .thumb-img{opacity:1}
+.thumb.is-missing .thumb-img{display:none}
+
+.money{display:grid;grid-template-columns:1fr auto;gap:5px 16px;margin:0;font-size:14px;font-variant-numeric:tabular-nums}
+.money dt{color:var(--ink-3)}
+.money dd{margin:0;text-align:right;color:var(--ink)}
+.money dd.bad{color:var(--bad)}
+.money dd.warn{color:var(--warn)}
+.money dt:last-of-type,.money dd.total{padding-top:6px;border-top:1px solid var(--line);font-weight:600;font-size:16px;color:var(--ink)}
+
+.ship-method{margin:0 0 8px;font-size:14px;color:var(--ink-2)}
+.addr{font-style:normal;display:flex;flex-direction:column;gap:1px;margin:0 0 10px;font-size:15px;line-height:1.4;color:var(--ink)}
+.addr-line:first-child{font-weight:600}
+
+.stats.three{grid-template-columns:repeat(3,1fr)}
+.hist-lines{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink-2)}
+.hist-line.warn{color:var(--warn)}
+.hist-rows .row.is-current .row-main strong{color:var(--ink)}
+.hist-rows .row-main .badge{margin-left:8px;vertical-align:middle}
+.rows.mail .row-main .badge{margin-right:6px;vertical-align:middle}
+.rows.mail .row-sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.note-quote{margin:0;padding:10px 14px;border-left:2px solid var(--line-2);color:var(--ink-2);font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
