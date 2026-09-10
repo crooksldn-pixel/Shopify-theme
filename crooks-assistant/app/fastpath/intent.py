@@ -15,6 +15,7 @@ all.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -427,6 +428,29 @@ class Intent:
 MARGIN = 0.08
 
 
+def signal(name: str, predicate: Callable[[Signals], bool]) -> str:
+    """A family brings its own word to the router.
+
+    The signal table is fixed vocabulary — order, period, metric, address — and a Phase 3
+    family that needs a word of its own ("show me the SHIPPING", "the LATEST order", "the
+    other HALF") had no way to ask for one without editing the `Signals` dataclass, which is
+    the file every family would then be editing at once. So a name and a predicate over the
+    words already extracted; `score` looks the name up here like any other.
+
+    A core signal is never redefined: shadowing `order` or `mutation` from a family module
+    would change how every other family routes, which is exactly the drift this seam exists to
+    avoid. Registering the same name twice with the same predicate is a no-op, so a module
+    that is imported twice is harmless.
+    """
+    if name in _CORE_SIGNALS:
+        raise ValueError(f"{name!r} is a core signal and cannot be redefined by a family")
+    existing = _LOOKUP.get(name)
+    if existing is not None and existing is not predicate:
+        raise ValueError(f"the signal {name!r} is already registered by another family")
+    _LOOKUP[name] = predicate
+    return name
+
+
 def score(family: Family, sig: Signals) -> float:
     """Zero when the family is ruled out; otherwise base plus what the boosts add."""
     if len(sig.words) > family.max_words:
@@ -447,6 +471,11 @@ def score(family: Family, sig: Signals) -> float:
     if len(sig.words) <= 4:
         value += 0.06
     return max(0.0, min(0.99, value))
+
+
+# Everything in the table as this module defines it. A family may add to the table; it may
+# never replace one of these.
+_CORE_SIGNALS = frozenset(_LOOKUP)
 
 
 def resolve(text: str, *, branch: Any = None) -> Intent:
