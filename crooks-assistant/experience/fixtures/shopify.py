@@ -9,17 +9,24 @@ Dispatch is on the operation name. An operation this file does not know raises r
 returning an empty connection, because a scenario that silently reads nothing is a scenario
 that silently proves nothing.
 
-Writes are refused outright. `mutate()` raises, so a fixture world can never be the thing that
-makes a mutation look as though it succeeded.
+Writes are refused. `mutate()` raises for every mutation that changes anything, so a fixture
+world can never be the thing that makes a change look as though it succeeded. The two
+exceptions are an order edit's `orderEditBegin` and `orderEditAddVariant`, which change
+nothing: they build and price a CalculatedOrder — a scratch copy — and the real order does not
+move until `orderEditCommit`, which is not answered here and raises like the rest. They are
+answered because every number on the card the owner authorises comes from them, and a scenario
+that cannot see that card cannot check what he is being asked to agree to.
 """
 
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.clients.shopify import ShopifyClient
+from app import readonly
+from app.clients.shopify import REVIEWED_MUTATIONS, ShopifyClient
 from experience.fixtures import data
 from experience.fixtures.data import BY_ID, ORDERS, PEOPLE, PRODUCTS, VARIANTS, OrderSpec
 
@@ -31,6 +38,10 @@ SCOPES = (
     "read_orders", "write_orders", "read_customers", "read_products", "read_inventory",
     "write_inventory", "read_fulfillments", "write_fulfillments", "read_merchant_managed_fulfillment_orders",
     "write_merchant_managed_fulfillment_orders", "read_returns", "write_returns",
+    # Phase 3: order item editing (app/families/order_edit.py). Granted here for the same
+    # reason as the rest — a scenario about what the card says must not pass or fail on a
+    # scope. A store without it is the MISSING_SCOPE case, and that is a unit test.
+    "write_order_edits",
 )
 
 
@@ -49,6 +60,11 @@ class FixtureShopify(ShopifyClient):
         super().__init__(domain, "2025-07")
         self.queries: list[tuple[str, dict[str, Any]]] = []
         self.scopes: tuple[str, ...] = SCOPES
+        # The CALCULATION mutations of an order edit, and the scratch orders they built. Kept
+        # apart from `mutations_sent` on purpose: nothing here has changed the shop, and
+        # "nothing was changed" is a check other scenarios make against that counter.
+        self.calculations: list[tuple[str, dict[str, Any]]] = []
+        self.calculated: dict[str, dict[str, Any]] = {}
         self._shop = {
             "name": "CROOKS LDN (fixture)", "myshopifyDomain": domain,
             "ianaTimezone": data.SHOP_TIMEZONE, "currencyCode": data.CURRENCY,
@@ -71,6 +87,26 @@ class FixtureShopify(ShopifyClient):
         return handler(self, variables)
 
     async def mutate(self, name: str, variables: dict[str, Any]) -> dict[str, Any]:
+        # Two mutations are answered here, and they are the two that change nothing: an order
+        # edit's `orderEditBegin` and `orderEditAddVariant` build and price a CalculatedOrder
+        # — a scratch copy — and the real order is untouched until `orderEditCommit`. A
+        # scenario has to be able to see the card the owner would see, and every number on
+        # that card comes from these two. `order_edit_commit` is deliberately absent and
+        # falls through to the refusal below, with every other mutation in the application.
+        calculation = _CALCULATIONS.get(name)
+        if calculation is not None:
+            # The same order the production client keeps: refused before anything is looked
+            # up when the process is latched read-only, so a live read-only run cannot even
+            # open an edit — and held to the reviewed variable set, which the real `mutate`
+            # checks and this seam would otherwise skip.
+            readonly.assert_writable(f"the Shopify mutation {name!r}")
+            reviewed = REVIEWED_MUTATIONS[name]
+            if set(variables) != set(reviewed.variables):
+                raise FixtureWriteAttempted(
+                    f"{name} was sent {sorted(variables)}; the reviewed document takes {sorted(reviewed.variables)}."
+                )
+            self.calculations.append((name, copy.deepcopy(variables)))
+            return calculation(self, dict(variables))
         raise FixtureWriteAttempted(
             f"a fixture run tried to execute the mutation {name!r}. Fixture scenarios propose "
             "changes and inspect the proposal; they never execute one."
@@ -286,4 +322,101 @@ _HANDLERS: dict[str, Any] = {
     "ProductInfo": _products,
     "Catalogue": _products,
     "CrooksLocations": _locations,
+}
+
+
+# --------------------------------------------------------------- order editing (Phase 3)
+#
+# The reads a proposal to add a line needs, and the two CALCULATION mutations that price it.
+# The prices are the catalogue's own (data.py), the postage is data.SHIPPING, and what the
+# customer will owe is worked out from what the order has already been paid — so a scenario
+# asserting "£60.00 more, £149.00 total, £60.00 outstanding" is asserting arithmetic this
+# file did rather than a number somebody typed into a fixture.
+
+
+def _variant_for_edit(_store: FixtureShopify, v: dict) -> dict:
+    """One variant by id, as `shopify_order_add_item` reads it before it opens an edit."""
+    variant = VARIANTS.get(str(v.get("id") or ""))
+    if variant is None:
+        return {"data": {"productVariant": None}}
+    product = variant["product"]
+    return {"data": {"productVariant": {
+        "id": variant["id"], "title": variant["title"], "sku": variant["sku"], "price": variant["price"],
+        "availableForSale": variant["inventoryQuantity"] > 0,
+        "inventoryQuantity": variant["inventoryQuantity"],
+        "selectedOptions": [{"name": n, "value": val} for n, val in variant["options"]],
+        "product": {"id": product["id"], "title": product["title"], "status": product["status"]},
+    }}}
+
+
+def _calculated_order(spec: OrderSpec, added: list[tuple[str, int]], calculated_id: str) -> dict[str, Any]:
+    """The scratch order as Shopify would price it: the order's own lines plus what has been
+    added, folded by variant because `allowDuplicates` is false, and the money recomputed."""
+    node = data.order_node(spec)
+    current = float(node["currentTotalPriceSet"]["shopMoney"]["amount"])
+    outstanding = float(node["totalOutstandingSet"]["shopMoney"]["amount"])
+    paid = current - outstanding
+    lines: dict[str, int] = {}
+    for variant_id, quantity in list(spec.items) + list(added):
+        lines[variant_id] = lines.get(variant_id, 0) + int(quantity)
+    subtotal = sum(float(VARIANTS[v]["price"]) * q for v, q in lines.items())
+    total = subtotal + data.SHIPPING
+    return {
+        "id": calculated_id,
+        "subtotalPriceSet": data._money(f"{subtotal:.2f}"),
+        "totalPriceSet": data._money(f"{total:.2f}"),
+        "totalOutstandingSet": data._money(f"{max(0.0, total - paid):.2f}"),
+        "lineItems": {"edges": [
+            {"node": {"id": f"gid://shopify/CalculatedLineItem/{index}", "quantity": quantity, "variant": {"id": variant_id}}}
+            for index, (variant_id, quantity) in enumerate(lines.items())
+        ]},
+    }
+
+
+def _order_edit_begin(store: FixtureShopify, v: dict) -> dict:
+    spec = BY_ID.get(str(v.get("id") or ""))
+    if spec is None:
+        return {"data": {"orderEditBegin": {"calculatedOrder": None,
+                                            "userErrors": [{"field": ["id"], "message": "Order not found."}]}}}
+    calculated_id = f"gid://shopify/CalculatedOrder/{spec.number}"
+    store.calculated[calculated_id] = {"order_id": spec.order_id, "added": []}
+    return {"data": {"orderEditBegin": {
+        "calculatedOrder": {"id": calculated_id, "committed": False}, "userErrors": [],
+    }}}
+
+
+def _order_edit_add_variant(store: FixtureShopify, v: dict) -> dict:
+    calculated_id = str(v.get("id") or "")
+    state = store.calculated.get(calculated_id)
+    if state is None:
+        return {"data": {"orderEditAddVariant": {"calculatedLineItem": None, "calculatedOrder": None,
+                                                 "userErrors": [{"field": ["id"], "message": "No order edit is in progress."}]}}}
+    variant = VARIANTS.get(str(v.get("variantId") or ""))
+    if variant is None:
+        return {"data": {"orderEditAddVariant": {"calculatedLineItem": None, "calculatedOrder": None,
+                                                 "userErrors": [{"field": ["variantId"], "message": "Variant not found."}]}}}
+    quantity = int(v.get("quantity") or 0)
+    state["added"].append((variant["id"], quantity))
+    spec = BY_ID[state["order_id"]]
+    unit = data._money(variant["price"])
+    return {"data": {"orderEditAddVariant": {
+        "calculatedLineItem": {
+            "id": f"gid://shopify/CalculatedLineItem/new-{variant['id'].rsplit('/', 1)[-1]}",
+            "title": variant["product"]["title"], "variantTitle": variant["title"],
+            "quantity": quantity, "originalUnitPriceSet": unit,
+        },
+        "calculatedOrder": _calculated_order(spec, state["added"], calculated_id),
+        "userErrors": [],
+    }}}
+
+
+_HANDLERS["CrooksOrderEditState"] = _order_by_id
+_HANDLERS["CrooksVariantForOrderEdit"] = _variant_for_edit
+_HANDLERS["CrooksVariantSearch"] = _products
+
+# The only two mutations this fixture answers. Adding a third is adding a way for a fixture
+# run to look as though it changed the shop, which is the one thing it must never do.
+_CALCULATIONS: dict[str, Any] = {
+    "order_edit_begin": _order_edit_begin,
+    "order_edit_add_variant": _order_edit_add_variant,
 }
