@@ -160,6 +160,13 @@ class ReviewedCapability:
 _NOT_GRANTED = "the app has not been granted the scope"
 _NOT_WRITTEN = "the reviewed mutation is not written"
 _NOT_VERIFIED = "no store to verify the change against in this build"
+# The read a return needs and the order read does not make yet. Named because it is the one
+# item on these lists that is neither a scope nor a store: it is work in this repository, and
+# a precondition ("the lines named actually shipped") cannot be checked without it.
+MISSING_FULFILMENT_LINES = (
+    "the order read does not include fulfilment line items yet "
+    "(fulfillments { fulfillmentLineItems { id quantity } } in app/context/order.py)"
+)
 
 RETURN = ReviewedCapability(
     key="return_create", label="Taking an item back", what="start a return on an order",
@@ -171,7 +178,7 @@ RETURN = ReviewedCapability(
         "no open return already covers those lines",
     ),
     verification="read the order's returns back and find one with the lines and quantities asked for",
-    missing=(_NOT_GRANTED, _NOT_WRITTEN, _NOT_VERIFIED),
+    missing=(_NOT_GRANTED, _NOT_WRITTEN, _NOT_VERIFIED, MISSING_FULFILMENT_LINES),
 )
 EXCHANGE = ReviewedCapability(
     key="return_exchange", label="Swapping an item", what="take an item back and send another instead",
@@ -183,7 +190,7 @@ EXCHANGE = ReviewedCapability(
         "the price difference is calculated and shown before the gesture",
     ),
     verification="read the order back: a return for the lines, and the exchange line on the order",
-    missing=(_NOT_GRANTED, _NOT_WRITTEN, _NOT_VERIFIED),
+    missing=(_NOT_GRANTED, _NOT_WRITTEN, _NOT_VERIFIED, MISSING_FULFILMENT_LINES),
     risk="RED",
 )
 REPLACEMENT = ReviewedCapability(
@@ -274,16 +281,27 @@ def words() -> list[str]:
     return [f"- {c.label}: not available — {c.refusal()}" for c in CAPABILITIES.values()]
 
 
-def _shipped_lines(order: dict[str, Any]) -> dict[str, int]:
-    """What actually shipped, by fulfilment line id, from an order as the Mac reads it."""
+def _shipped_lines(order: dict[str, Any]) -> dict[str, int] | None:
+    """What actually shipped, by fulfilment line id — or None when this build cannot know.
+
+    The order read (`app/context/order.py`) asks for a fulfilment's id, status, date and
+    tracking; it does NOT ask for its LINE ITEMS, which is what a return is against. So for an
+    order as the Mac reads it today the answer is unknown, and unknown must not be reported as
+    "nothing shipped": that would refuse every honest return for the wrong reason. It comes
+    back None, the quantity check is skipped, and the missing read is named in
+    `MISSING_FULFILMENT_LINES` — one of the things `stage` refuses on.
+    """
     out: dict[str, int] = {}
+    seen_lines = False
     for fulfillment in order.get("fulfillments") or []:
         if not isinstance(fulfillment, dict):
             continue
-        for line in fulfillment.get("line_items") or fulfillment.get("lines") or []:
+        lines = fulfillment.get("line_items") or fulfillment.get("lines") or []
+        for line in lines:
             if not isinstance(line, dict):
                 continue
+            seen_lines = True
             ref = str(line.get("fulfillment_line_item_id") or line.get("id") or "")
             if ref:
                 out[ref] = out.get(ref, 0) + int(line.get("quantity") or 0)
-    return out
+    return out if seen_lines else None

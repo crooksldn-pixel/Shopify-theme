@@ -56,6 +56,24 @@ def test_a_return_cannot_ask_for_more_than_shipped():
         _request(lines=(ReturnLine("gid://shopify/FulfillmentLineItem/9", 1),)).validate(order=FULFILLED_ORDER)
 
 
+def test_what_shipped_is_unknown_on_this_build_and_unknown_is_not_nothing():
+    """The order read asks a fulfilment for its id, status and tracking — not for its LINE
+    ITEMS, which is what a return is against. So for an order as the Mac reads it today the
+    quantity check cannot be made, and treating that as "nothing shipped" would refuse every
+    honest return for the wrong reason. It is named as missing instead."""
+    as_read_today = {
+        "order_id": "gid://shopify/Order/1", "fulfillment": "FULFILLED",
+        "fulfillments": [{"fulfillment_id": "gid://shopify/Fulfillment/1", "status": "SUCCESS",
+                          "carrier": "Royal Mail", "number": "AB1"}],
+    }
+    assert contract._shipped_lines(as_read_today) is None
+    _request().validate(order=as_read_today)        # not refused for the wrong reason
+    assert any("fulfillmentLineItems" in item for item in contract.RETURN.missing)
+    assert any("fulfillmentLineItems" in item for item in contract.EXCHANGE.missing)
+    # And with the line items present, the check is made.
+    assert contract._shipped_lines(FULFILLED_ORDER) == {"gid://shopify/FulfillmentLineItem/1": 2}
+
+
 def test_a_reason_must_be_one_of_shopifys_own():
     with pytest.raises(InvalidRequest, match="not one of Shopify's return reasons"):
         _request(lines=(ReturnLine("gid://shopify/FulfillmentLineItem/1", 1, reason="HE_DIDNT_LIKE_IT"),)).validate()
