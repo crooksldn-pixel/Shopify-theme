@@ -204,3 +204,22 @@ def test_the_families_that_already_worked_never_withhold_a_tool_from_the_model()
         if family.state in OFFERABLE:
             continue
         assert not family.tools, f"{key} is not READY and names tools that would be withheld: {family.tools}"
+
+
+async def test_no_family_shows_the_owner_a_url_where_a_scope_should_be():
+    """The scope in a family's row is read by the owner in the settings sheet and by the model
+    in one line of prompt. A Gmail scope is a URL to the API and a sentence to nobody; one
+    family registered the full one, and the settings sheet would have printed it beside
+    "gmail.compose" from the family next to it. Shortened once, where the row is built, so the
+    next family to register a URL is also fine."""
+    from app.capabilities import families as families_mod
+    from app.families import load_all
+
+    load_all()
+    table = await families_mod.states(None)
+    assert table, "the family table did not load — the check would pass vacuously"
+    urls = {key: row.get("scope") for key, row in table.items() if "://" in str(row.get("scope") or "")}
+    assert not urls, f"these rows show a URL as the scope: {urls}"
+    # And the shortening keeps the grant identifiable rather than blanking it.
+    assert families_mod._said("https://www.googleapis.com/auth/gmail.compose") == "gmail.compose"
+    assert families_mod._said("write_order_edits") == "write_order_edits"

@@ -83,7 +83,7 @@ async def states(runtime: Any, *, operations: dict[str, dict[str, Any]] | None =
     probe, when there is one, has the last word."""
     out: dict[str, dict[str, Any]] = {}
     for family in all_families():
-        state, detail, scope = family.state, family.detail, (family.scopes[0] if family.scopes else "")
+        state, detail, scope = family.state, family.detail, _said(family.scopes[0] if family.scopes else "")
         table = operations or {}
         rows = [table.get(op) for op in family.operations if isinstance(table.get(op), dict)]
         if rows:
@@ -115,6 +115,18 @@ async def states(runtime: Any, *, operations: dict[str, dict[str, Any]] | None =
             "offerable": state in OFFERABLE, "hide": bool(family.hide_when_unavailable and state not in OFFERABLE),
         }
     return out
+
+
+def _said(scope: str) -> str:
+    """A scope as a person says it.
+
+    A Gmail scope is a URL — the API wants the whole thing, and one family registered it that
+    way — but this string is read by the OWNER, in the settings sheet, and by the model in one
+    line of prompt. "gmail.compose" and
+    "https://www.googleapis.com/auth/gmail.compose" are the same grant, and only one of them
+    is a sentence. Shopify's scopes have no slash and come through unchanged.
+    """
+    return scope.rsplit("/", 1)[-1] if "://" in scope else scope
 
 
 def words(states_table: dict[str, dict[str, Any]], *, only_unavailable: bool = True) -> list[str]:
