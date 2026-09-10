@@ -440,7 +440,10 @@ def _written(text: str, names: set[str]) -> str:
 
 # The opening of the standing capability line. Named, not quoted twice: a test that needs to
 # separate "what the Mac cannot do" from "what this conversation knows" filters on this.
-FAMILY_LINE_PREFIX = "[What this Mac cannot do right now:\n"
+# The instruction is here, ONCE, rather than repeated on every line of the block. It was on
+# each line, and with seven unavailable families that was 287 characters a turn of the same
+# sentence.
+FAMILY_LINE_PREFIX = "[What this Mac cannot do right now. Do not attempt these; say why if asked:\n"
 
 
 def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict, ui: list | None = None) -> dict:

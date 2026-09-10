@@ -378,7 +378,10 @@ def test_the_mac_says_out_loud_that_delivery_is_not_connected():
     family = capability_families.get("delivery_tracking")
     assert family is not None and family.state == "DISCONNECTED"
     lines = capability_families.words({family.key: {"label": family.label, "state": family.state, "detail": family.detail}})
-    assert any("Delivery status: DISCONNECTED" in line and "Do not attempt it" in line for line in lines)
+    # State first, then who — and the "do not attempt" is once at the head of the block
+    # (app/routes/turn.py FAMILY_LINE_PREFIX), not on each line.
+    assert any("DISCONNECTED" in line and "Delivery status" in line for line in lines), lines
+    assert any("no carrier is connected" in line for line in lines), lines
 
 
 # ------------------------------------------------------------------------ the fast lane

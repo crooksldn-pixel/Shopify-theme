@@ -67,7 +67,11 @@ def test_the_model_is_told_what_not_to_attempt(family):
         "other": {"label": "Other", "state": "READY", "detail": "ready"},
     }
     lines = families.words(table)
-    assert any("Test family: MISSING_SCOPE" in line and "Do not attempt it" in line for line in lines)
+    # State and reason first, then who: the model reads this to answer "can you do X", and
+    # the state is the answer. The instruction is at the head of the block, once, rather than
+    # on every line (app/routes/turn.py FAMILY_LINE_PREFIX).
+    assert any("MISSING_SCOPE" in line and "Test family" in line for line in lines), lines
+    assert not any("Do not attempt" in line for line in lines), lines
     # The ready ones are NOT on the prompt: they are the tools the model is offered, and
     # `runtime.withheld_by_family` has taken the rest away, so a line saying "READY" is model
     # context spent to say nothing — fifteen of them, every turn (brief section 25).
@@ -75,6 +79,9 @@ def test_the_model_is_told_what_not_to_attempt(family):
     # The surfaces the OWNER reads want the whole list, and ask for it.
     everything = families.words(table, only_unavailable=False)
     assert any(line == "- Other: READY." for line in everything)
+    # And the owner's list DOES carry the instruction on each line: it is read on a card by
+    # somebody who asked, not paid for on every turn.
+    assert any("Test family" in line and "Do not attempt it" in line for line in everything), everything
 
 
 def test_the_scope_to_grant_is_named_even_when_the_reason_does_not_say_it(family):
@@ -223,3 +230,57 @@ async def test_no_family_shows_the_owner_a_url_where_a_scope_should_be():
     # And the shortening keeps the grant identifiable rather than blanking it.
     assert families_mod._said("https://www.googleapis.com/auth/gmail.compose") == "gmail.compose"
     assert families_mod._said("write_order_edits") == "write_order_edits"
+
+
+async def test_the_standing_capability_line_is_paid_for_once_per_turn_and_stays_small():
+    """This block goes on EVERY model-path prompt, so its length is a per-turn cost.
+
+    It grew to 1,293 characters as Phase 3 registered families: 287 of that was the sentence
+    "Do not attempt it; say so if asked." repeated on all seven lines, and 248 was four
+    NOT_IMPLEMENTED families each restating the same reason word for word. Neither bought
+    anything — `_family_lines` says the instruction once at the head, and families that are
+    unavailable for the same reason now share a line, state and reason first because the state
+    is what the model reads to answer "can you do X".
+
+    The bound is deliberately loose enough to absorb another family or two and tight enough
+    that a regression to a line-per-family with the instruction on each would fail.
+    """
+    import asyncio  # noqa: F401 — the test is async; the import documents that states() is
+
+    from app.capabilities import families as families_mod
+    from app.families import load_all
+    from app.routes.turn import FAMILY_LINE_PREFIX
+
+    load_all()
+    table = await families_mod.states(None)
+    unavailable = [k for k, r in table.items() if r["state"] != "READY"]
+    assert len(unavailable) >= 5, f"only {len(unavailable)} unavailable — the check would be weak"
+
+    block = FAMILY_LINE_PREFIX + "\n".join(families_mod.words(table)) + "]"
+    assert len(block) <= 900, f"{len(block)} chars on every model turn:\n{block}"
+
+    # The instruction appears once, at the head, and never on a line.
+    assert block.count("Do not attempt") == 1, block
+    # Every unavailable family is still named — shorter must not mean quieter.
+    for key in unavailable:
+        assert table[key]["label"] in block, f"{key} vanished from the block"
+    # And every state is still said, because that is what the model answers with.
+    for key in unavailable:
+        assert table[key]["state"] in block, f"{key}'s state vanished"
+
+
+async def test_the_owner_gets_the_whole_list_in_full_where_it_costs_nothing():
+    """The short form is for the prompt. The settings sheet is read on a card, once, by a
+    person who asked — so it keeps every family, its own line, and the reason unclipped."""
+    from app.capabilities import families as families_mod
+    from app.families import load_all
+
+    load_all()
+    table = await families_mod.states(None)
+    full = families_mod.words(table, only_unavailable=False)
+
+    assert len(full) == len(table), "the owner's list drops a family"
+    assert sum(1 for line in full if "READY." in line) >= 15, full[:3]
+    # A reason the model saw clipped is whole here.
+    joined = "\n".join(full)
+    assert "…" not in joined, "the owner's list should not be clipped"

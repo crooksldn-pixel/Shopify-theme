@@ -141,17 +141,55 @@ def words(states_table: dict[str, dict[str, Any]], *, only_unavailable: bool = T
 
     `only_unavailable=False` gives every family, for the capability surfaces the owner reads.
     """
-    lines = []
+    if not only_unavailable:
+        # The owner's list: every family, in full, with the instruction on each line. Nothing
+        # is grouped or clipped, because this is read on a card and not paid for per turn.
+        lines = []
+        for key in sorted(states_table):
+            row = states_table[key]
+            if row["state"] == "READY":
+                lines.append(f"- {row['label']}: READY.")
+                continue
+            lines.append(f"- {row['label']}: {row['state']} — {_with_scope(row)}. Do not attempt it; say so if asked.")
+        return lines
+
+    # The model's list. Families that are unavailable FOR THE SAME REASON share a line: four
+    # NOT_IMPLEMENTED families each repeating "the scope is not granted and the reviewed
+    # mutation is not written" was 248 characters of identical text on every model-path turn.
+    # State and reason first, then who — because the model reads this to answer "can you do
+    # X", and the answer is the state. The scope stays beside each name, since "what
+    # permission do you need?" is the follow-up question.
+    grouped: dict[tuple[str, str], list[str]] = {}
     for key in sorted(states_table):
         row = states_table[key]
-        state = row["state"]
-        if state == "READY":
-            if not only_unavailable:
-                lines.append(f"- {row['label']}: READY.")
+        if row["state"] == "READY":
             continue
-        why = row.get("detail") or state.replace("_", " ").lower()
+        why = _clipped(row.get("detail") or row["state"].replace("_", " ").lower())
         scope = str(row.get("scope") or "")
-        if scope and scope not in why:
-            why = f"{why} ({scope})"
-        lines.append(f"- {row['label']}: {state} — {why}. Do not attempt it; say so if asked.")
-    return lines
+        name = f"{row['label']} ({scope})" if scope and scope not in why else str(row["label"])
+        grouped.setdefault((row["state"], why), []).append(name)
+    return [f"- {state} — {why}: {', '.join(names)}" for (state, why), names in grouped.items()]
+
+
+def _with_scope(row: dict[str, Any]) -> str:
+    why = str(row.get("detail") or row["state"].replace("_", " ").lower())
+    scope = str(row.get("scope") or "")
+    return f"{why} ({scope})" if scope and scope not in why else why
+
+
+# One clause is enough for the model to answer "can you do X" honestly. The owner's card is
+# where a paragraph belongs.
+REASON_CHARS = 90
+
+
+def _clipped(why: str) -> str:
+    why = " ".join(str(why).split())
+    if len(why) <= REASON_CHARS:
+        return why
+    cut = why[:REASON_CHARS]
+    # Prefer a clause boundary, so the sentence does not stop mid-word.
+    for mark in ("; ", ", ", " — "):
+        at = cut.rfind(mark)
+        if at > REASON_CHARS // 2:
+            return cut[:at]
+    return cut.rsplit(" ", 1)[0] + "…"
