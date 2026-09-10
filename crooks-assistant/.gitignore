@@ -31,3 +31,5 @@ reports/*
 reports/experience/
 node_modules/
 package-lock.json
+# Scratch probes. Review agents sometimes write these into tests/; they are not tests.
+tests/test_zz_*.py
