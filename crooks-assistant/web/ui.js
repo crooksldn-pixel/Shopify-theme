@@ -416,7 +416,11 @@
       const enabled = a.enabled === true && Boolean(text(a.instruction));
       const chip = h('button', {
         class: `rail-chip risk-${text(a.risk) === 'red' ? 'red' : 'amber'}${enabled ? '' : ' is-off'}`, type: 'button',
-        'aria-disabled': enabled ? 'false' : 'true', data: { action: text(a.id), mode: text(a.mode, 'ask') },
+        'aria-disabled': enabled ? 'false' : 'true',
+        // `family` is the spoken control this chip arms, when it arms one — the Mac's own
+        // mapping (commands.SPOKEN_CONTROLS), carried here so the page never invents one and
+        // so the armed chip can be found again when the Mac says it is listening.
+        data: { action: text(a.id), mode: text(a.mode, 'ask'), family: text(a.family) },
       }, [
         h('span', { class: 'rail-label', text: text(a.label, '—') }),
         !enabled && a.reason ? h('span', { class: 'rail-why', text: text(a.reason) }) : null,

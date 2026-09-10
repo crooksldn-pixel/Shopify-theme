@@ -37,6 +37,12 @@ class AvailableAction:
     reason: str        # why not, when not; empty when enabled
     instruction: str   # what the owner says (or the chip primes) to ask for it
     mode: str = "ask"  # "ask": the chip primes the hold with the words; nothing is staged by a tap
+    # The spoken control this chip arms, when there is one: a key of commands.SPOKEN_CONTROLS.
+    # Tapping such a chip binds what the NEXT SENTENCE is about, so the words that follow are
+    # applied to this record and to nothing else. The mapping lives on the Mac and travels to
+    # the tablet so the tablet never has to invent one; a chip with no family primes the words
+    # and binds nothing, which is what every chip did before.
+    family: str = ""
 
     def public(self) -> dict[str, Any]:
         return asdict(self)
@@ -80,13 +86,15 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     n = f["digits"] or str(order.get("order_number") or "").lstrip("#")
     candidates: list[AvailableAction] = []
 
-    def add(id_: str, label: str, operation: str, risk: str, ok: bool, reason: str, instruction: str) -> None:
+    def add(id_: str, label: str, operation: str, risk: str, ok: bool, reason: str, instruction: str,
+            family: str = "") -> None:
         cap = caps.get(operation)
         if not isinstance(cap, dict) or cap.get("state") not in ("ready", "unknown"):
             return   # not built, switched off, or blocked: not a chip
-        candidates.append(AvailableAction(id_, label, operation, risk, ok, "" if ok else reason, instruction))
+        candidates.append(AvailableAction(id_, label, operation, risk, ok, "" if ok else reason, instruction,
+                                          family=family))
 
-    add("note", "Note", "order_note_append", "amber", True, "", f"Add a note to order {n}")
+    add("note", "Note", "order_note_append", "amber", True, "", f"Add a note to order {n}", family="order.add_note")
     if f["cancelled"]:
         cancel_reason = "already cancelled"
     elif f["shipped"]:
@@ -104,7 +112,8 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         address_reason = "no shipping address"
     else:
         address_reason = ""
-    add("address", "Address", "order_shipping_address_set", "red", not address_reason, address_reason, f"Change the address on order {n}")
+    add("address", "Address", "order_shipping_address_set", "red", not address_reason, address_reason,
+        f"Change the address on order {n}", family="order.change_address")
     if f["refunded_all"]:
         refund_reason = "fully refunded"
     elif f["payment"] not in PAID or not f["refundable"]:

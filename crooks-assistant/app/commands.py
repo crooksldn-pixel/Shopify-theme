@@ -492,7 +492,7 @@ def _bind_voice(ctx: Ctx) -> Outcome:
     if wants_kind != "set" and (kind != wants_kind or not ref):
         return Outcome.refused("no_target", f"There is no {wants_kind.replace('_', ' ')} open to do that to.")
     bound = ctx.branch.bind_voice(family, kind=kind, ref=ref,
-                                  label=ctx.arg("label") or str(entity.get("label") or ""))
+                                  label=ctx.arg("label") or str(entity.get("label") or ""), prompt=label)
     return Outcome(answer="", changed={"listening_for": {"family": family, "label": bound.get("label", ""),
                                                          "prompt": label}, "expires_at": bound.get("expires_at")})
 

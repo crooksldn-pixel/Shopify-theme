@@ -48,6 +48,7 @@ const el = {
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
   heard: $('heard'), answer: $('answer'), errline: $('errline'), toast: $('toast'), timings: $('timings'),
   context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
+  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'),
   nextBtn: $('next-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
@@ -1493,7 +1494,39 @@ function noteBranch(branch) {
   drawBranchBar();
   el.backBtn.hidden = false;
   el.backBtn.disabled = !canGoBack();
+  drawArmed(branch.listening_for);
   T.record('branch', { id: branch.branch_id, name: branch.status, depth: branch.depth, label: branch.label || undefined });
+}
+
+// What the next sentence will be applied to, while the Mac is listening for it.
+//
+// `branch.listening_for` arrives on EVERY /command and /turn reply and was discarded, so
+// even a binding made by another route left the screen saying "Hold to speak" and nothing
+// else. Pixel-diffing the tap that arms it: 9,961 pixels changed on an 800x1280 screen, 0 of
+// them on the card and 0 on the chip — all 9,925 meaningful ones in a dock pill 788px below
+// the finger, in 11px uppercase, wiped as soon as the thumb went down to speak.
+//
+// It is drawn from the branch and never from the tap, so it is right after a reload, after a
+// binding made by voice, and after the Mac lets one expire.
+function drawArmed(listening) {
+  const on = Boolean(listening && listening.family);
+  if (el.armed) {
+    el.armed.hidden = !on;
+    if (on && el.armedWhat) {
+      const what = String(listening.prompt || 'Listening');
+      const where = String(listening.label || '').trim();
+      el.armedWhat.textContent = where ? `${what} · ${where}` : what;
+    }
+  }
+  document.body.dataset.listeningFor = on ? String(listening.family) : '';
+  // And the chip itself, which never changed by a single pixel: same class, same background,
+  // same border, no aria-pressed. The one the finger touched is the one that should look
+  // touched.
+  for (const chip of document.querySelectorAll('#cards .rail-chip[data-family]')) {
+    const armed = on && chip.dataset.family === String(listening.family);
+    chip.dataset.primed = armed ? '1' : '';
+    chip.setAttribute('aria-pressed', armed ? 'true' : 'false');
+  }
 }
 
 // A tab was chosen. The Mac keeps it against the branch's current stop, so going back and
@@ -1567,24 +1600,65 @@ async function armAction(proposalId) {
 // anything — it puts the words in the owner's mouth. The dock says what to say; the hold
 // asks; the Mac prepares; the gesture applies. Nothing shortcuts that.
 let primedInstruction = '';
-function primeAction(action) {
+async function primeAction(action) {
   const words = String(action && action.instruction || '').trim();
   if (!words || actionBlocked()) return;
   if (liveActionSurface()) {
     // A card is waiting for a gesture: a new ask would withdraw it. Say so instead of
     // silently replacing what the owner may be about to apply.
-    el.sub.textContent = 'Finish or leave the card that is waiting first.';
+    //
+    // Through the toast, not through #state-sub: that element is `display:none` in context
+    // mode (web/style.css), and a card waiting for a gesture is ALWAYS context mode — so this
+    // sentence, and the one below it, were written to an invisible element in every state
+    // where they could occur. Measured shown:false in every context-mode sample.
+    toast('Finish or leave the card that is waiting first.', 'bad');
     haptic(HAPTIC.error);
     T.record('action_primed', { action: String(action.id || ''), outcome: 'blocked_by_live_card' });
     return;
   }
   primedInstruction = words;
-  T.record('action_primed', { action: String(action.id || ''), outcome: 'primed' });
-  el.talkLabel.textContent = `Hold and say: “${words}”`;
-  el.sub.textContent = `Hold and say: “${words}”`;
   haptic(HAPTIC.start);
-  clearTimeout(busyHintTimer);
-  busyHintTimer = setTimeout(() => { if (!recording && primedInstruction === words) { primedInstruction = ''; el.talkLabel.textContent = 'Hold to speak'; } }, 8000);
+
+  // Tell the Mac what the next sentence is about.
+  //
+  // This is the whole of the touch→voice continuation, and until now the tablet did not do
+  // it. `voice.bind` has been on the Mac since Phase 1 — it binds the family and the record,
+  // annotates the sentence that follows as `[This continues order.add_note on the order the
+  // owner is looking at (#1938)…]`, expires after 120s, and is abandoned by "go back" rather
+  // than captured by it. The string "voice.bind" appeared ZERO times in web/, so the sentence
+  // the tablet actually sent was bare and unannotated: the chip put the words in the owner's
+  // mouth and then applied them to whatever the model happened to infer. Every test of the
+  // mechanism posted the bind through the harness, so nothing caught it.
+  //
+  // A chip with no family is unchanged: it primes the words and binds nothing.
+  const family = String(action && action.family || '').trim();
+  const entity = branchState && branchState.entity ? branchState.entity : null;
+  if (!family) {
+    // No spoken control behind this chip: it primes the words and binds nothing, which is
+    // what every chip did. The dock carries it, and gives up after eight seconds.
+    el.talkLabel.textContent = `Hold and say: “${words}”`;
+    clearTimeout(busyHintTimer);
+    busyHintTimer = setTimeout(() => { if (!recording && primedInstruction === words) { primedInstruction = ''; el.talkLabel.textContent = 'Hold to speak'; } }, 8000);
+    T.record('action_primed', { action: String(action.id || ''), outcome: 'primed' });
+    return;
+  }
+  const bound = await semanticCommand('voice.bind', {
+    family, kind: entity ? entity.kind : undefined, ref: entity ? entity.ref : undefined,
+  });
+  const listening = bound && bound.ok && bound.changed ? bound.changed.listening_for : null;
+  if (!listening) {
+    // The Mac refused — there is no record of that kind open. Say the reason it gave rather
+    // than leaving the owner holding a primed sentence that will not land where he thinks.
+    primedInstruction = '';
+    toast((bound && (bound.answer || bound.detail)) || 'There is nothing open to do that to.', 'bad');
+    T.record('action_primed', { action: String(action.id || ''), outcome: 'refused' });
+    return;
+  }
+  // Nothing is written to the dock. `noteBranch` has already drawn the band from the branch
+  // this reply carried, and the band is where the armed state belongs: #talk-label is
+  // overwritten by 'Release to send' the instant the thumb goes down to speak, so the one
+  // piece of feedback there was got wiped by the act of using it and never came back.
+  T.record('action_primed', { action: String(action.id || ''), outcome: 'primed', name: family });
 }
 
 async function commitAction(proposalId, node, nonce) {
@@ -2153,6 +2227,19 @@ el.talk.addEventListener('keyup', (event) => {
 });
 
 el.homeBtn.addEventListener('click', goHome);
+// `voice.cancel` was registered on the Mac in Phase 1 and had no affordance on the glass at
+// all: an armed microphone could only be waited out.
+if (el.armedCancel) {
+  el.armedCancel.addEventListener('click', async () => {
+    haptic(HAPTIC.error);
+    primedInstruction = '';
+    el.talkLabel.textContent = 'Hold to speak';
+    const released = await semanticCommand('voice.cancel');
+    // The reply carries the branch, so `noteBranch` has already taken the band down. If the
+    // Mac could not be reached, take it down here rather than leaving a band that lies.
+    if (!released) drawArmed(null);
+  });
+}
 el.backBtn.addEventListener('click', goBack);
 if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);
 el.recent.addEventListener('click', () => { T.record('navigate', { nav: 'recent', to: history.length - 1 }); if (history.length) showHistory(history.length - 1); });

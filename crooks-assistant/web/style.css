@@ -180,6 +180,30 @@ body[data-mode="context"] .errline{display:none}
 .chip-home{color:var(--ink)}
 .chip-home svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
+/* What the next sentence will be applied to. Above the deck, at the deck's own type scale,
+   and 16px from the chip that armed it rather than 106mm. It stays up for the whole 120s the
+   Mac holds the binding, including while the thumb is down — which is exactly when the dock
+   label it replaced was being overwritten with "Release to send". */
+.armed{
+  display:flex;align-items:center;gap:10px;margin:0 14px 6px;padding:5px 6px 5px 12px;min-height:44px;
+  border-radius:var(--r-2);border:1px solid var(--warn);background:var(--warn-dim);
+  color:var(--ink);font-size:13px;letter-spacing:.01em;
+}
+.armed[hidden]{display:none}
+.armed-dot{
+  flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn);
+  animation:armed-pulse 1.6s var(--ease-inout) infinite;
+}
+@keyframes armed-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.armed-what{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.armed-cancel{
+  flex:none;min-height:44px;padding:0 16px;border-radius:var(--r-pill);
+  border:1px solid var(--line-2);background:var(--glass);color:var(--ink-2);
+  font-size:12px;letter-spacing:.06em;cursor:pointer;
+}
+.armed-cancel:active{transform:scale(.97);background:var(--glass-3)}
+@media (prefers-reduced-motion:reduce){.armed-dot{animation:none}}
+
 .deck{position:relative;flex:1;min-height:0}
 .deck-ghost{
   position:absolute;left:26px;right:26px;top:-8px;height:40px;border-radius:var(--r-3) var(--r-3) 0 0;
@@ -656,6 +680,15 @@ html[data-lite] .orb-zone{transition:none}
 .rail-chip.is-off{opacity:.55;cursor:default;border-style:dashed}
 .rail-chip.is-off:active{transform:none;background:var(--glass)}
 .rail-why{font-size:11px;font-weight:400;color:var(--ink-3);letter-spacing:.04em}
+/* Armed: the Mac is listening, and this is the chip it is listening for. Before this a tap
+   on Note changed the chip by exactly zero pixels — same class, same background, same
+   border, no aria-pressed — so the only way to tell an armed microphone from an idle one was
+   an 11px pill at the far bottom of the screen. */
+.rail-chip[data-primed="1"]{
+  background:var(--warn-dim);border-color:var(--warn);color:var(--ink);
+  box-shadow:0 0 0 1px var(--warn) inset;
+}
+.rail-chip.risk-red[data-primed="1"]{background:var(--bad-dim);border-color:var(--bad);box-shadow:0 0 0 1px var(--bad) inset}
 
 /* the gestures: a track for a swipe or a drag, a handle that moves with the thumb, a target
    that names the consequence, and a fill that shows a hold completing */

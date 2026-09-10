@@ -354,6 +354,7 @@ def _actions(order: dict[str, Any], capabilities: dict[str, Any]) -> list[dict[s
             "id": _text(a.get("id"), 20), "label": _text(a.get("label"), 20), "operation": _text(a.get("operation"), 40),
             "risk": "red" if a.get("risk") == "red" else "amber", "enabled": bool(a.get("enabled")),
             "reason": _text(a.get("reason"), 60), "instruction": _text(a.get("instruction"), 120), "mode": _text(a.get("mode"), 12) or "ask",
+            "family": _text(a.get("family"), 40),
         }
         for a in available_actions(order, capabilities)[:6]
     ]

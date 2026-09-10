@@ -334,6 +334,93 @@ async function main() {
     `ref=${stepped.ref} next=${JSON.stringify(stepped.next)} answer="${stepped.answer}"`);
   await shot('05-list-walk');
 
+  // ---- 9. touch, then voice, with a finger rather than with fetch
+  //
+  // Section 6 above proves the MAC binds. It could not prove the tablet ever asked it to, and
+  // it did not: "voice.bind" appeared zero times in web/, so tapping Note set two text labels
+  // and returned. The Mac was never told, `listening_for` stayed null, the sentence that
+  // followed reached the model bare, and the only thing on screen that changed was a pill
+  // 788px below the finger — which is overwritten by "Release to send" the moment the thumb
+  // goes down to speak.
+  await say('show me order 1938');
+  const chipBefore = await page.evaluate(() => {
+    const c = document.querySelector('#cards .rail-chip[data-family="order.add_note"]');
+    if (!c) return null;
+    const s2 = getComputedStyle(c);
+    const b = c.getBoundingClientRect();
+    return { bg: s2.backgroundColor, border: s2.borderTopColor, x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) };
+  });
+  check('a control that expects words says which one it is', Boolean(chipBefore),
+    chipBefore ? 'data-family=order.add_note' : 'no chip carries a family');
+  if (chipBefore) {
+    await page.touchscreen.tap(chipBefore.x, chipBefore.y);
+    await sleep(1300);
+    const armed = await page.evaluate(() => {
+      const band = document.querySelector('#armed');
+      const c = document.querySelector('#cards .rail-chip[data-family="order.add_note"]');
+      const s2 = c ? getComputedStyle(c) : null;
+      return {
+        shown: Boolean(band && !band.hidden),
+        text: band && !band.hidden ? (band.textContent || '').replace(/\s+/g, ' ').trim() : '',
+        top: band && !band.hidden ? Math.round(band.getBoundingClientRect().top) : -1,
+        chipTop: c ? Math.round(c.getBoundingClientRect().top) : -1,
+        bg: s2 ? s2.backgroundColor : '', border: s2 ? s2.borderTopColor : '',
+        listening: document.body.dataset.listeningFor || '',
+      };
+    });
+    // Asked of the Mac, not of the page: `listening_for` can only be set by a real binding.
+    // The page keeps its session id in localStorage, which is how the tablet itself survives
+    // a reload, so this reads the same session the taps above are driving.
+    const branch = await page.evaluate(async () => {
+      const id = localStorage.getItem('crooks.session') || '';
+      const r = await fetch(`/branches?session_id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      const d = await r.json();
+      const one = (d.branches || []).find((b) => b.listening_for);
+      return one ? one.listening_for : null;
+    });
+    check('tapping it tells the Mac what the next sentence is about',
+      Boolean(branch && branch.family === 'order.add_note'), JSON.stringify(branch));
+    check('and the screen says so, beside the card rather than under the dock',
+      armed.shown && /Add a note/.test(armed.text) && /1938/.test(armed.text)
+      && Math.abs(armed.top - armed.chipTop) < 500,
+      `shown=${armed.shown} "${armed.text}" band@${armed.top} chip@${armed.chipTop}`);
+    check('and the chip the finger touched looks touched',
+      armed.bg !== chipBefore.bg && armed.border !== chipBefore.border && armed.listening === 'order.add_note',
+      `bg ${chipBefore.bg} -> ${armed.bg} | border ${chipBefore.border} -> ${armed.border}`);
+
+    // The band must survive the act of using it. The dock label it replaced did not.
+    await page.evaluate(() => {
+      const t = document.querySelector('#talk');
+      if (t) t.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    });
+    await sleep(400);
+    const held = await page.evaluate(() => {
+      const band = document.querySelector('#armed');
+      return { shown: Boolean(band && !band.hidden), text: band && !band.hidden ? (band.textContent || '').replace(/\s+/g, ' ').trim() : '' };
+    });
+    await page.evaluate(() => {
+      const t = document.querySelector('#talk');
+      if (t) t.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+    });
+    await sleep(500);
+    check('it is still there while the thumb is down to speak', held.shown && /Add a note/.test(held.text),
+      `shown=${held.shown} "${held.text}"`);
+    await shot('06-armed');
+
+    // And it can be let go of. `voice.cancel` had no affordance on the glass at all.
+    await page.evaluate(() => { const b = document.querySelector('#armed-cancel'); if (b) b.click(); });
+    await sleep(1000);
+    const after = await page.evaluate(async () => {
+      const band = document.querySelector('#armed');
+      const id = localStorage.getItem('crooks.session') || '';
+      const r = await fetch(`/branches?session_id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      const d = await r.json();
+      return { shown: Boolean(band && !band.hidden), any: (d.branches || []).filter((b) => b.listening_for).length };
+    });
+    check('and let go of, which nothing on the glass could do',
+      after.shown === false && after.any === 0, JSON.stringify(after));
+  }
+
   check('no script error during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
   await browser.close();

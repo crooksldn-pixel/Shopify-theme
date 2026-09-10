@@ -76,6 +76,16 @@
         <button id="next-btn" class="chip" type="button" hidden>Next</button>
         <div id="stack" class="stack" aria-label="Active context"></div>
       </nav>
+      <!-- What the next sentence will be applied to, while the Mac is listening for it. It
+           lives here, beside the chip the finger just left, because the only feedback used to
+           be a dock pill 788px (106mm) below it in 11px capitals — and that pill is wiped the
+           instant the thumb goes down to speak. Cancel is here too: `voice.cancel` has been
+           registered on the Mac since Phase 1 with nothing on the glass to reach it. -->
+      <div id="armed" class="armed" role="status" aria-live="polite" hidden>
+        <span class="armed-dot" aria-hidden="true"></span>
+        <span id="armed-what" class="armed-what"></span>
+        <button id="armed-cancel" class="armed-cancel" type="button">Cancel</button>
+      </div>
       <div id="deck" class="deck" data-depth="0">
         <div class="deck-ghost g2" aria-hidden="true"></div>
         <div class="deck-ghost g1" aria-hidden="true"></div>
