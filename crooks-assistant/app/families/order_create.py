@@ -307,8 +307,11 @@ def _blocked(workspace: dict[str, Any]) -> str:
         if not ws.value(workspace, "customer"):
             return "It needs a customer."
         if len(candidates) > 1:
+            # The refusal FIRST, then the names: this sentence is bounded when it reaches the
+            # card (app/families/_workspace.py), and five candidates would otherwise push
+            # "I will not guess" off the end of the one line that has to survive.
             names = ", ".join(f"{c['name']} ({c['email'] or 'no address'})" for c in candidates[:MAX_CANDIDATES])
-            return f"{len(candidates)} customers match that name — {names}. Choose one; I will not guess."
+            return f"{len(candidates)} customers match that name and I will not guess which — {names}."
         if not candidates:
             return f"Nobody in the shop is called {ws.value(workspace, 'customer')!r}. Check the spelling, or make the customer in Admin first."
         return "The customer has not been chosen yet."
@@ -658,24 +661,27 @@ def _verify(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
 
 
 def _present(proposal) -> dict:
+    """The card, in EIGHT facts at most, because `app/presentation.py` carries eight and a
+    ninth is silently dropped. The eight are chosen in the order they matter to somebody
+    about to authorise a sale: who, where, what, what it costs, what they owe, and the draft
+    it was priced as. The confirmation address rides on the customer's line rather than
+    taking one of its own, and the postage rides on the goods."""
     s = proposal.summary
     currency = str(s.get("currency") or "GBP")
+    postage = float(s.get("postage") or 0)
+    goods = display(float(s.get("subtotal") or 0), currency)
     facts = [
-        {"label": "Customer", "value": str(s.get("customer") or "")},
-        {"label": "Confirmation to", "value": str(s.get("email") or "no address")},
+        {"label": "Customer", "value": f"{s.get('customer') or ''} · {s.get('email') or 'no address'}"},
+        {"label": "Going to", "value": str(s.get("address") or "no address on file"),
+         "tone": "" if s.get("address") else "warn"},
         {"label": "Items", "value": str(s.get("lines") or "")},
-        {"label": "Goods", "value": display(float(s.get("subtotal") or 0), currency)},
-        {"label": "Postage", "value": display(float(s.get("postage") or 0), currency)},
+        {"label": "Goods", "value": goods + (f" + {display(postage, currency)} postage" if postage else "")},
         {"label": "Total", "value": display(float(s.get("amount") or 0), currency), "tone": "warn"},
         {"label": "Payment", "value": str(s.get("payment_words") or ""), "tone": "bad" if s.get("owing") else ""},
         {"label": "Priced as", "value": f"draft {s.get('draft_name')}, which is in Admin now"},
     ]
-    if s.get("address"):
-        facts.insert(2, {"label": "Going to", "value": str(s.get("address"))})
-    else:
-        facts.insert(2, {"label": "Going to", "value": "no address on file", "tone": "warn"})
     if s.get("discount_words"):
-        facts.insert(5, {"label": "Discount", "value": str(s.get("discount_words")), "tone": "warn"})
+        facts.insert(4, {"label": "Discount", "value": str(s.get("discount_words")), "tone": "warn"})
     return {
         "title": "Create the order",
         "summary": "",

@@ -480,8 +480,11 @@ async def test_the_draft_is_made_and_priced_and_no_order_exists(store, engine, s
     assert proposal.before == {"status": "OPEN", "order": "", "total": "101.00"}
     assert proposal.expected_after["status"] == "COMPLETED"
     facts = {f["label"]: f["value"] for f in registry.get(WRITE).write.present(proposal)["facts"]}
-    assert facts["Customer"] == "Poppy De-Witt" and facts["Total"] == "£101.00"
-    assert facts["Goods"] == "£96.00" and facts["Postage"] == "£5.00"
+    assert facts["Customer"] == "Poppy De-Witt · poppy@example.com" and facts["Total"] == "£101.00"
+    assert facts["Goods"] == "£96.00 + £5.00 postage"
+    # Eight facts is what app/presentation.py carries, and a ninth is silently dropped — so
+    # the card must fit in eight rather than trust the renderer to choose which to keep.
+    assert len(registry.get(WRITE).write.present(proposal)["facts"]) <= 8
     assert facts["Items"] == "1 x Convict Hoodie (Black / M), 2 x Crooks Cap (Black / One size)"
     assert facts["Payment"] == "not paid — it will owe the whole total"
     assert facts["Priced as"].startswith("draft #D") and "in Admin now" in facts["Priced as"]
