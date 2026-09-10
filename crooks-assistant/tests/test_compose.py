@@ -583,3 +583,218 @@ def test_the_typed_value_reaches_the_mac_through_a_command_and_not_a_write_route
     for forbidden in ("/actions/", "startRecording", "sendAudio", "fetch("):
         assert forbidden not in block, forbidden
     assert "window.__crooksCommandDelegate" in block, "the shared delegate must be guarded"
+
+
+# --------------------------------------------------------------------------- the model's way in
+
+
+@pytest.mark.asyncio
+async def test_the_model_opens_a_composer_and_the_card_is_drawn_from_it(branch, session):
+    """The path when the fast lane defers and Claude takes the turn: two GREEN reads that
+    change nothing but the Mac's own copy, and a card built by the family that owns it."""
+    from app.presentation import present
+    from app.providers.base import ToolCall
+    from app.tools.dispatch import dispatch
+
+    session.branches[branch.branch_id] = branch
+    session.focused_branch = branch.branch_id
+    calls: list[ToolCall] = []
+    text = await dispatch("gmail_compose_open",
+                          {"to": "1232 candlestick horse at gmail dot com", "subject": "Free on Sunday?",
+                           "body": "Are you free next Sunday?", "about": "a shoot next Sunday"},
+                          session=session, timeout_s=5, calls=calls)
+    assert "staged" in text and "false" in text.lower()
+    assert branch.compose is not None and branch.compose["to"] == ADDRESS
+    compose_id = branch.compose["compose_id"]
+    assert compose_id in session.issued_ids
+
+    ui = present(calls, session=session)
+    card = [item for item in ui if item["type"] == "email_compose"]
+    assert len(card) == 1, [i["type"] for i in ui]
+    assert card[0]["data"]["to"] == {"value": ADDRESS, "status": "uncertain",
+                                     "hint": "heard, not typed — check it before this goes anywhere"}
+
+    # And the words, into the same copy. The recipient is not an argument of this tool.
+    calls.clear()
+    await dispatch("gmail_compose_fill",
+                   {"compose_id": compose_id, "subject": "Shoot on Sunday?", "body": "Are you free?"},
+                   session=session, timeout_s=5, calls=calls)
+    assert branch.compose["subject"] == "Shoot on Sunday?" and branch.compose["subject_status"] == "ok"
+    assert branch.compose["to"] == ADDRESS, "filling the words must not touch the recipient"
+    assert present(calls, session=session)[0]["data"]["subject"]["value"] == "Shoot on Sunday?"
+
+
+@pytest.mark.asyncio
+async def test_the_model_cannot_open_a_composer_to_something_that_is_not_an_address(branch, session):
+    from app.tools.dispatch import dispatch
+
+    session.branches[branch.branch_id] = branch
+    session.focused_branch = branch.branch_id
+    text = await dispatch("gmail_compose_open", {"to": "a model", "subject": "s", "body": "b"},
+                          session=session, timeout_s=5)
+    assert text.startswith("ERROR") and "not an address" in text
+    assert branch.compose is None, "a refused composer must not be left half-open"
+
+
+@pytest.mark.asyncio
+async def test_filling_a_composer_that_is_not_open_is_refused(branch, session):
+    from app.tools.dispatch import dispatch
+
+    session.branches[branch.branch_id] = branch
+    session.focused_branch = branch.branch_id
+    session.issue("cmp_abcdef0123")
+    text = await dispatch("gmail_compose_fill", {"compose_id": "cmp_abcdef0123", "subject": "s", "body": "b"},
+                          session=session, timeout_s=5)
+    assert text.startswith("ERROR") and "closed" in text
+
+
+# --------------------------------------------------------------------------- rewriting
+
+
+def test_a_rewrite_hands_the_model_the_words_it_has_and_the_instruction(branch, session):
+    family.open_compose(branch, to=ADDRESS, subject="Free for a shoot on Sunday?",
+                        body="Hi, I wondered whether you might conceivably be free.")
+    intent = resolve("make it shorter", branch=branch)
+    ctx = RecipeCtx(runtime=None, session=session, branch=branch, intent=intent, text="make it shorter")
+    answer = family._rewrite_render(ctx, None)
+    assert not answer.deferred and answer.partial and not answer.calls
+    data = answer.surfaces[0].as_ui()["data"]
+    prompt = data["continue_prompt"]
+    assert "make it shorter" in prompt
+    assert "conceivably" in prompt, "the model needs the words it is being asked to change"
+    assert f'gmail_compose_fill(compose_id="{branch.compose["compose_id"]}"' in prompt
+    assert "Do not stage anything" in prompt
+    # And it is still the same composer: a rewrite does not start a second one.
+    assert data["compose_id"] == branch.compose["compose_id"]
+    assert not session.proposals
+
+
+def test_a_rewrite_with_no_composer_defers_rather_than_guessing(branch, session):
+    intent = resolve("make it shorter", branch=branch)
+    ctx = RecipeCtx(runtime=None, session=session, branch=branch, intent=intent, text="make it shorter")
+    assert family._rewrite_render(ctx, None).defer
+
+
+def test_a_composer_sentence_the_mac_cannot_read_an_address_out_of_defers(branch, session):
+    """The family matches on the shape; the recipe is what refuses to guess. Both halves have
+    to hold, or "email them all" would open a composer addressed to nobody."""
+    intent = resolve("email them all", branch=branch)
+    ctx = RecipeCtx(runtime=None, session=session, branch=branch, intent=intent, text="email them all")
+    answer = family._open_render(ctx, None)
+    assert answer.defer == "no address in the words", answer
+    assert branch.compose is None
+
+
+# --------------------------------------------------------------------------- the route
+
+
+# The route-level fixtures, reused rather than rebuilt: the same app, the same lifespan and
+# the same write boundary the commit route is held to. Bound by attribute, as
+# tests/test_council_fixes.py binds the batch suite's, so pytest finds them under these names.
+from tests import test_actions_routes as routes  # noqa: E402
+
+PROXIED = routes.PROXIED
+configure = routes.configure
+client = routes.client
+
+
+async def _open_and_fill(client, session_id="cmp") -> str:
+    """A composer on the Mac, addressed and written, with nothing prepared."""
+    session = client.runtime.sessions.get_or_create(session_id)
+    branch = session.branch()
+    session.acting_branch = branch.branch_id
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="Free on Sunday?", body="Are you free?")
+    session.issue(compose_id)
+    return compose_id
+
+
+async def test_a_gesture_on_the_composer_is_held_to_the_write_boundary(client):
+    """The refusal that /command did not make before this family existed. Staging is not a
+    read: a Mac that would refuse the commit must refuse this too, or the tablet fills with
+    cards it will never be allowed to apply."""
+    configure(client, writes=False)
+    compose_id = await _open_and_fill(client)
+    reply = await client.post("/command", data={"session_id": "cmp", "command": "compose.stage",
+                                                "compose_id": compose_id, "mode": "draft"},
+                              headers=PROXIED)
+    body = reply.json()
+    assert body["ok"] is False and body["code"] == "writes_disabled", body
+    assert "CROOKS_WRITES_ENABLED" in body["detail"], "the refusal has to say which of the three it was"
+    assert not client.runtime.sessions.get_or_create("cmp").proposals
+
+    # A login off the allow-list never reaches the route at all: the app refuses it in front.
+    # Asserted here so that the two boundaries are known to be in the right order.
+    configure(client, writes=True, logins="somebody.else@example.com")
+    refused = await client.post("/command", data={"session_id": "cmp", "command": "compose.stage",
+                                                  "compose_id": compose_id, "mode": "draft"},
+                                headers=PROXIED)
+    assert refused.status_code == 403, refused.json()
+    assert not client.runtime.sessions.get_or_create("cmp").proposals
+
+
+async def test_typing_into_the_composer_is_a_read_and_needs_no_write_permission(client):
+    """The other side of the same rule: a keystroke changes nothing outside the Mac, so it
+    works with changes switched off — the owner can correct an address on a read-only Mac and
+    be told at the gesture, not at the keyboard."""
+    configure(client, writes=False)
+    compose_id = await _open_and_fill(client)
+    body = (await client.post("/command", data={"session_id": "cmp", "command": "compose.field",
+                                                "compose_id": compose_id, "field": "subject",
+                                                "value": "Shoot on Sunday?"},
+                              headers=PROXIED)).json()
+    assert body["ok"] is True, body
+    assert body["ui"][0]["type"] == "email_compose"
+    assert body["ui"][0]["data"]["subject"]["value"] == "Shoot on Sunday?"
+    assert body["model_calls"] == 0 and body["lane"] == "TOUCH"
+
+
+async def test_the_gesture_stages_through_the_engine_and_applies_nothing(client):
+    from app.clients.gmail import SCOPE_COMPOSE, SCOPE_MODIFY, ScopeReport
+    from app.tools import gmail_writes
+
+    configure(client, writes=True)
+    compose_id = await _open_and_fill(client)
+    sent: list = []
+
+    class Box:
+        """An inbox that grants the scope and refuses the work: the preflight has to pass and
+        the mutation must never be reached, because a tap on Send only PREPARES."""
+
+        def scopes(self, *, fresh: bool = False):
+            return ScopeReport(frozenset({SCOPE_MODIFY, SCOPE_COMPOSE}), "google", 1e12)
+
+        def address(self) -> str:
+            return "orders@crooksldn.example"
+
+        def create_draft(self, raw, thread_id):
+            sent.append(("create_draft", thread_id))
+            raise AssertionError("a tap that only PREPARES must never reach Gmail")
+
+        def send_message(self, raw, thread_id):
+            sent.append(("send", thread_id))
+            raise AssertionError("a tap that only PREPARES must never reach Gmail")
+
+        def list_drafts(self, query):
+            return []
+
+        def find_messages(self, query):
+            return []
+
+    box = Box()
+    # The preflight reads the scopes off `runtime.gmail`; the write tool uses its own client.
+    client.runtime.gmail = box
+    gmail_writes.bind(box, policy=lambda: client.runtime.settings)
+    try:
+        body = (await client.post("/command", data={"session_id": "cmp", "command": "compose.stage",
+                                                    "compose_id": compose_id, "mode": "send"},
+                                  headers=PROXIED)).json()
+    finally:
+        gmail_writes.bind(None)
+    assert body["ok"] is True, body
+    assert body["changed"]["staged"] is True and body["changed"]["proposal_id"]
+    card = [i for i in body["ui"] if i["type"] == "confirmation"]
+    assert card and card[0]["data"]["operation"] == "gmail_send_new", body["ui"]
+    proposals = client.runtime.sessions.get_or_create("cmp").proposals
+    assert len(proposals) == 1 and proposals[0].status.value == "PENDING"
+    assert proposals[0].execution["to"] == ADDRESS
+    assert not sent, "nothing was sent and nothing was drafted"

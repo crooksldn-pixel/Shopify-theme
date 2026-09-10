@@ -236,9 +236,10 @@ async def _stage_change(request: Request, runtime, session, branch, wanted: dict
     because a tap that prepares a change on this route is the same event as a tap that
     prepares one on that route:
 
-      * `_authorise` — this login may apply changes at all. /command does not run it for a
-        read, and staging is not a read: without this, a tablet that the Mac refuses at the
-        commit could still fill the screen with cards it will never be allowed to apply.
+      * `caller_check` — this login may apply changes at all. /command does not run it for a
+        read, and staging is not a read: without this, a tablet the Mac refuses at the commit
+        could still fill the screen with cards it will never be allowed to apply. Its own
+        words are used, so the refusal says which of the three reasons it was.
       * `_write_status_soon` — the store has granted what this change needs.
       * `dispatch` — the gate, then the write tool's own prepare step, which re-reads and
         builds the execution arguments itself. Nothing the tablet posted reaches Gmail.
@@ -249,18 +250,17 @@ async def _stage_change(request: Request, runtime, session, branch, wanted: dict
     with nothing to tap if the send could not be prepared.
     """
     from app import commands as command_mod
-    from app.routes.actions import _authorise, _write_status_soon
+    from app.routes.actions import _write_status_soon, caller_check
     from app.tools.dispatch import dispatch
 
     tool_name = str(wanted.get("tool") or "")
     args = wanted.get("args")
     if not tool_name or not isinstance(args, dict):
         return command_mod.Outcome.refused("not_prepared", "That change could not be prepared.")
-    _caller, refusal = _authorise(request)
-    if refusal is not None:
-        return command_mod.Outcome.refused(
-            _code_of(refusal) or "not_authorised", "This tablet is not allowed to apply changes.",
-        )
+    _caller, code, detail, _spoken = caller_check(request)
+    if code:
+        log.warning("a command that prepares a change was refused: %s — %s (path=%s)", code, detail, request.url.path)
+        return command_mod.Outcome.refused(code, detail)
     status = await _write_status_soon(runtime, tool_name)
     if not status.ready:
         return command_mod.Outcome.refused(status.code, status.detail)
@@ -281,10 +281,6 @@ async def _stage_change(request: Request, runtime, session, branch, wanted: dict
         changed={**outcome.changed, "stage": None, "staged": True, "proposal_id": proposal_id,
                  "revoked": withdrawn, "what": str(wanted.get("what") or "")[:80]},
     )
-
-
-def _code_of(response) -> str:
-    return str(getattr(response, "crooks_code", "") or "")
 
 
 async def _read_member(runtime, session, needs: dict) -> list:

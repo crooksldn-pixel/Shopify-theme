@@ -129,13 +129,22 @@ async def test_audio_test_reports_decode_failure(client):
     assert body["ok"] is False and "error" in body
 
 
+# What the Mac says about ITSELF after the question: the standing capability block, which is
+# there on every turn once any capability family is registered (app/families/*, and
+# `turn._family_lines`). It is not part of the question and must never be counted as though
+# it were — the cap below is on the QUESTION.
+STANDING = "\n\n[Capability families on this Mac:"
+
+
 async def test_text_is_capped(client):
     body = (await client.post("/turn", json={"text": "x" * 10_000, "session_id": "cap"})).json()
     assert body["error_kind"] is None
     # 2000 chars of question, plus the clock line the Mac puts above every question.
     session_id, sent = app.state.runtime.provider.turns[-1]
-    assert session_id == "cap" and sent.startswith("[Now: ") and sent.endswith("x" * 2000)
-    assert len(sent.split("\n", 1)[1]) == 2000
+    question = sent.split(STANDING, 1)[0] if STANDING in sent else sent
+    assert session_id == "cap" and question.startswith("[Now: ") and question.endswith("x" * 2000)
+    assert len(question.split("\n", 1)[1]) == 2000, "the question itself is capped at 2000"
+    assert "x" not in sent.split(question, 1)[1], "nothing of the question survives past the cap"
     assert body["turns"] == 0  # the fake provider does not bump the session's turn count
 
 
@@ -144,9 +153,12 @@ async def test_turn_goes_through_the_provider_once(client):
     assert body["answer"].startswith("fake answer")
     (session_id, sent), = app.state.runtime.provider.turns
     assert session_id == "once"
-    # The question reaches the model once, under the shop's clock — never as bare text.
-    clock, question = sent.split("\n", 1)
+    # The question reaches the model ONCE, under the shop's clock — never as bare text, and
+    # never twice. What follows it is the Mac's standing block about itself, not the question.
+    clock, rest = sent.split("\n", 1)
+    question = rest.split(STANDING, 1)[0] if STANDING in rest else rest
     assert question == "hello" and clock.startswith("[Now: ") and clock.endswith("Europe/London]")
+    assert sent.count("hello") == 1
 
 
 async def test_a_spoken_order_number_is_looked_up_before_the_model_is_asked(client, monkeypatch):

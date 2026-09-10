@@ -320,7 +320,14 @@ def test_the_context_lines_tell_the_model_what_the_mac_knows():
     assert lines[1].startswith("[Last read-layer query:") and "commerce_aggregate" in lines[1]
     assert lines[2].startswith("[This asks for") and "commerce_aggregate" in lines[2] and s.hinted
     s.last_query = None
-    assert _context_lines(s, "hello") == [] and not s.hinted
+    # Nothing known about the conversation: nothing is said about it. The standing block is
+    # about the MAC, not the session — `_family_lines` names what this build can and cannot
+    # do — and it appears on every turn once any capability family is registered
+    # (app/families/*). It was absent from this assertion only because none was.
+    rest = _context_lines(s, "hello")
+    assert not s.hinted
+    assert all(line.startswith("[Capability families on this Mac:") for line in rest), rest
+    assert not [line for line in rest if "last change" in line or "read-layer query" in line], rest
 
 
 async def test_batch_state_after_a_lost_connection(client):
