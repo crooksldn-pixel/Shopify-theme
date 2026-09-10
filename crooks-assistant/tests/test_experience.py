@@ -427,3 +427,23 @@ async def test_a_card_redrawn_by_a_tap_offers_what_the_spoken_card_offered(stage
         for a in ((item.get("data") or {}).get("actions") or [])
     ]
     assert offered == [], f"a caller who cannot apply changes was offered {sorted(set(offered))}"
+
+
+async def test_a_record_reached_by_tapping_is_still_held_a_moment_later(stage):
+    """A tap's read went nowhere, so Back and Next were only free for voice.
+
+    Only the fast lane's `_keep` wrote to the memory tiers; `_read_member`, which is what a
+    tapped Next uses when the cursor lands on a record the Mac does not hold, read it and threw
+    it away. So the record was gone a second later: Back onto it missed `replay()` and read
+    Shopify again, and `open.entity` refused a record the owner had been looking at moments
+    before — "I no longer have that one to hand" — for the one thing he had just tapped.
+    """
+    await stage.say("show me today's orders", session_id="held")
+    moved = await stage.touch("workflow.next", session_id="held")
+    ref = (moved.entity or {}).get("ref") or ""
+    assert ref, moved.raw
+
+    reopened = await stage.touch("open.entity", session_id="held", kind="order", ref=ref)
+    assert reopened.raw.get("ok") is True, reopened.raw
+    assert reopened.surfaces, "the record the owner just tapped onto drew nothing"
+    assert not reopened.reads, f"it was read again instead of replayed: {reopened.reads}"

@@ -168,7 +168,33 @@ async def _read_member(runtime, session, needs: dict) -> list:
     except Exception as exc:  # noqa: BLE001 — a tap that cannot read says so; it never fails the app
         log.info("a command could not read %s: %s", tool, exc)
         return []
+    _remember(needs, ref, result)
     return list(result.calls)
+
+
+def _remember(needs: dict, ref: str, result) -> None:
+    """Put what the tap just read where a replay will look for it.
+
+    `run_plan` reads; only the fast lane's `_keep` was writing to the tiers. So a record
+    reached by tapping Next was gone a second later: Back onto it missed `replay()` and read
+    Shopify again, and `open.entity` refused a record the owner had been looking at moments
+    before with "I no longer have that one to hand". `commands.replay`'s premise — the read
+    happened when the record was opened, so going back to it is not a new question — held only
+    for records opened by voice.
+    """
+    from app.commands import MEMBER_READ
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    _, _, kind = MEMBER_READ.get(str(needs.get("set_kind") or ""), ("", "", ""))
+    body = result.values.get("member") if hasattr(result, "values") else None
+    if not kind or not isinstance(body, dict):
+        return
+    try:
+        memory().put(ENTITY, f"{kind}:{ref}", body, source="gmail" if kind == "email_thread" else "shopify",
+                     query="command:member", provenance={"command": "member", "ref": ref})
+    except Exception as exc:  # noqa: BLE001 — a cold cache is a slower Back, not a fault
+        log.debug("could not keep what a tap read: %s", exc)
 
 
 async def _writes(request: Request) -> dict:
