@@ -103,6 +103,42 @@ async def test_opening_an_order_starts_the_background_reads_and_one_guess(antici
     await asyncio.sleep(0.1)
 
 
+async def test_the_thread_a_reply_would_need_is_read_on_a_hunch(anticipator, session, dispatched):
+    """The "likely action prerequisite" of §18: writing a reply needs the thread read, and so
+    does the tablet's own drilldown into it. Speculative, because most orders with an email on
+    them never get a reply written."""
+    signal = order_signal(ids={
+        "order_id": "gid://shopify/Order/1", "customer_id": "gid://shopify/Customer/9",
+        "email": "jo@example.com", "thread_id": "t_991",
+    })
+    decision = await anticipator.on_signal(signal, session=session)
+    started = {p.why: p for p in decision.started}
+    assert "order.email_thread" in started
+    assert started["order.email_thread"].tier == P2 and started["order.email_thread"].tool == "gmail_read_thread"
+    # Two of Gmail is the per-source bound, and this is the second.
+    assert anticipator.prefetcher.in_flight_for(signal.scope, source="gmail") <= anticipator.max_per_source
+    await asyncio.sleep(0.15)
+
+
+async def test_the_bound_counts_what_spends_a_sources_rate_and_not_the_macs_own_reads(anticipator, session, dispatched):
+    """The internal shipping read asks a provider that is not connected and returns a
+    dictionary: it spends no Shopify or Gmail rate, so counting it against the four would cost
+    a real read for nothing. It is still bounded by the prefetcher's own wall."""
+    signal = order_signal(ids={
+        "order_id": "gid://shopify/Order/1", "customer_id": "gid://shopify/Customer/9",
+        "email": "jo@example.com", "thread_id": "t_991",
+    })
+    decision = await anticipator.on_signal(signal, session=session)
+    spending = [p for p in decision.started if p.source != "mac"]
+    internal = [p for p in decision.started if p.source == "mac"]
+    assert len(spending) <= anticipator.max_anticipated
+    assert internal, "the shipping context was not read at all"
+    assert len(decision.started) > anticipator.max_anticipated - 1
+    for source in ("shopify", "gmail"):
+        assert len([p for p in spending if p.source == source]) <= anticipator.max_per_source
+    await asyncio.sleep(0.15)
+
+
 async def test_a_prediction_whose_answer_is_already_held_does_not_run(anticipator, session, dispatched):
     anticipator.memory.put(ENTITY, "customer:gid://shopify/Customer/9", {"held": True}, source="shopify")
     decision = await anticipator.on_signal(order_signal(), session=session)
@@ -172,6 +208,34 @@ async def test_moving_to_another_record_cancels_what_was_read_about_the_last_one
     moved = await anticipator.on_signal(order_signal(ref="gid://shopify/Order/77", ids={"order_id": "gid://shopify/Order/77"}), session=session)
     assert moved.cancelled > 0
     await asyncio.sleep(0.1)
+
+
+async def test_the_same_record_wanted_by_two_conversations_is_one_request(anticipator, dispatched, monkeypatch):
+    """Dedupe identical in-flight reads, coalesce callers (§18). The prefetch TASKS are per
+    conversation — one may be cancelled without the other losing its answer — but the flight
+    underneath is keyed by the read, and so is the cache it lands in."""
+    from app.memory import coalesce
+
+    coalesce.install(coalesce.Coalescer())
+    one = Session(session_id="s1", login="owner@example.com")
+    two = Session(session_id="s2", login="owner@example.com")
+    monkeypatch.setattr(rules_mod, "deterministic", lambda s: [
+        Prediction(key="history:shared", tier=P1, tool="shopify_customer_history",
+                   args={"customer_id": "c1"}, why="order.customer_history",
+                   memory=(ENTITY, "customer:c1")),
+    ])
+    first = await anticipator.on_signal(order_signal(session_id="s1"), session=one)
+    second = await anticipator.on_signal(order_signal(session_id="s2"), session=two)
+    assert first.started, "the first conversation predicted nothing"
+    await asyncio.sleep(0.15)
+    # Either the second was refused because the read was already in flight, or it joined that
+    # flight. Both are one request, which is the property; which one happens depends on
+    # whether the first task had reached the coalescer yet.
+    assert dispatched.count("shopify_customer_history") == 1, dispatched
+    assert coalesce.current().joined + len(second.skipped) >= 1
+    # And the answer is in the ONE shared cache, for whichever conversation asks for it next.
+    held = anticipator.memory.get(ENTITY, "customer:c1")
+    assert held is not None and held.provenance["origin"] == PREDICTED
 
 
 async def test_two_conversations_never_cancel_or_count_against_each_other(anticipator, dispatched):
@@ -449,10 +513,13 @@ def test_the_shape_of_an_order_is_read_without_reading_the_order():
     features = signals.order_features({
         "fulfillment": "UNFULFILLED", "shipping_address": {"country_code": "IE"},
         "placed_at": "2020-01-01T00:00:00Z", "total": "£410.00",
-        "email": {"waiting_since": "5h"},
+        "email": {"available": True, "threads": [{"sender_match": True, "waiting_since": "5h"}]},
     })
     assert set(features) == {"unfulfilled", "international", "old", "high_value", "has_email",
                              "inbound_unanswered", "untracked"}
+    # The inbox part is a dictionary whether or not anything correlated to the order, so what
+    # counts is a thread. Read as the part's presence, every order in the shop has email on it.
+    assert "no_email" in signals.order_features({"email": {"available": True, "threads": []}})
     home = signals.order_features({"fulfillment": "FULFILLED", "shipping_address": {"country_code": "GB"},
                                    "fulfillments": [{"tracking": "AB1"}]})
     assert "domestic" in home and "fulfilled" in home and "tracked" in home

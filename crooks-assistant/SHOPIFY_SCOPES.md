@@ -56,6 +56,27 @@ that login on the tablet making the gesture, and the scope above — checked on 
 Email changes are Gmail's, not Shopify's: their scopes come from the Gmail credential itself
 (`gmail.modify`, `gmail.compose`) and show on `/health` the same way.
 
+## Not granted, and not written: returns, exchanges, replacements, resends
+
+Four changes the shop will want (§21) have their contract, their request shapes and their
+refusal in `app/returns/contract.py`, and no mutation. Each names the scope to grant FIRST;
+none of them will do anything until the scope is granted, the reviewed mutation is written and
+it has been verified against a store.
+
+| Change | Reviewed mutation it would use | Scope to grant |
+| --- | --- | --- |
+| Take an item back | `returnCreate` | `write_returns` (+ `read_returns` to read them back) |
+| Swap an item | `returnCreate` with `exchangeLineItems` | `write_returns` + `write_order_edits` |
+| Send a replacement | `draftOrderCreate` + `draftOrderComplete` (no payment) | `write_draft_orders` |
+| Send it again | `fulfillmentCreate` on the remaining fulfilment order | `write_merchant_managed_fulfillment_orders` |
+
+`/health` lists all four as NOT_IMPLEMENTED with the scope beside them, and the model is told
+in one line not to attempt them.
+
+Shipping is not a scope at all: Easyship is an external provider and needs credentials
+(`CROOKS_EASYSHIP_TOKEN`) and a client that this build does not have. Its row says
+DISCONNECTED and names both — see `app/shipping/`.
+
 ## Adding a scope, in order
 
 1. Dev Dashboard → the app → Configuration → Admin API access scopes → add the scope → save

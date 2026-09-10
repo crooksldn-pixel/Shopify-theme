@@ -24,11 +24,11 @@ from typing import Any
 
 log = logging.getLogger("crooks.memory")
 
-# Per scope (a login and a conversation). Four, because that is what the anticipation layer's
-# own bound is — three background reads about the record on screen and one guess about the next
-# one (app/anticipation/engine.py: MAX_ANTICIPATED, measured by bench/anticipation.py). This is
-# the outer wall; the finer per-source and per-lane bounds are that layer's.
-MAX_IN_FLIGHT = 4
+# Per scope (a login and a conversation). Six: the anticipation layer's own bound is four reads
+# that spend a source's rate (app/anticipation/engine.py: MAX_ANTICIPATED, measured by
+# bench/anticipation.py) plus the Mac's own internal reads, which spend nothing. This is the
+# outer wall; the finer per-source and per-lane bounds are that layer's.
+MAX_IN_FLIGHT = 6
 MAX_PER_TURN = 2
 TIMEOUT_S = 6.0
 

@@ -12,7 +12,7 @@ can only bring one of these forward, and there is exactly one place — this tab
 prediction acquires a tool name.
 
     order_opened  →  P1  the customer's history, the linked inbox, the shipping state
-                     P2  the next record in the set being worked through
+                     P2  the next record in the set, and the thread a reply would need
 
 P1 is the record on screen: the owner is looking at it and the reads are ones the card itself
 would ask for. P2 is a guess about where he goes next, and is the first thing cancelled.
@@ -115,6 +115,26 @@ def _shipping_state(signal: Signal) -> Prediction | None:
     )
 
 
+def _email_thread(signal: Signal) -> Prediction | None:
+    """The thread itself, when the order has one waiting.
+
+    This is the "likely action prerequisite" of §18: drafting a reply needs the thread read,
+    and the tablet's own drilldown into it reads the same entity key — so the prefetch pays for
+    the tap as well as the draft. Speculative, because most orders with an email do not get a
+    reply written to them.
+    """
+    thread = str(signal.ids.get("thread_id") or "")
+    if not thread:
+        return None
+    from app.memory import ENTITY
+
+    return Prediction(
+        key=f"thread:{thread}", tier=P2, tool="gmail_read_thread",
+        args={"thread_id": thread}, source="gmail", why="order.email_thread",
+        level=LEVEL_RULE, memory=(ENTITY, f"email_thread:{thread}"),
+    )
+
+
 def _set_neighbour(signal: Signal) -> Prediction | None:
     """The likely next record: the one after this in the set being worked through. The single
     most-used gesture on the tablet is Next, and this is the read it costs."""
@@ -135,6 +155,7 @@ for _rule in (
     Rule("order.linked_email", ("order_opened",), P1, _linked_email, predicts="email_checked"),
     Rule("order.shipping_state", ("order_opened",), P1, _shipping_state, predicts="tracking_checked"),
     Rule("order.next_in_set", ("order_opened", "next_record"), P2, _set_neighbour, predicts="next_record"),
+    Rule("order.email_thread", ("order_opened", "email_checked"), P2, _email_thread, predicts="reply_drafted"),
 ):
     register_rule(_rule)
 

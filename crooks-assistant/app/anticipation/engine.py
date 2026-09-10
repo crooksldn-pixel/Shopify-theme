@@ -73,20 +73,28 @@ log = logging.getLogger("crooks.anticipation")
 # reads begin to wait. Ten seconds between records and even five are comfortable, but the
 # bound has to hold at the fast cadence, not the comfortable one.
 #
-# Hence: at most TWO anticipated reads of any one source, which is the bound that matters; at
-# most four in total across sources (Shopify, Gmail, and the Mac's own internal reads, which
-# spend nothing); and of those four at most two of the speculative P2 kind, so a guess about
-# the next record can never crowd out the reads about the record on screen. The brief asks for
-# roughly 2-4 concurrent speculative reads; this is four in total with the per-source half at
-# two. Re-run the bench and move them if the store's pricing changes.
+# Hence: at most TWO anticipated reads of any one source, which is the bound that matters, and
+# at most four SOURCE-SPENDING reads in total (so Shopify at two and Gmail at two, together).
+# Of those four at most two may be the speculative P2 kind, so a guess about the next record
+# can never crowd out the reads about the record on screen. The brief asks for roughly 2-4
+# concurrent speculative reads; this is four, with the per-source half at two. Re-run the bench
+# and move them if the store's pricing changes.
+#
+# The Mac's own internal reads (source "mac" — the shipping context, which asks a provider that
+# is not connected and returns a dictionary) spend no source budget and are not counted against
+# the four. They are still bounded: `MAX_PER_SIGNAL` here and `MAX_IN_FLIGHT` per scope in the
+# prefetcher, which is the outer wall for everything.
 MAX_ANTICIPATED = 4
 MAX_PER_SOURCE = 2
 MAX_SPECULATIVE = 2
-# What one signal may start, however many rules fire. A signal that wants six reads is a rule
+# What one signal may start, however many rules fire. A signal that wants eight reads is a rule
 # problem, not a budget to spend.
-MAX_PER_SIGNAL = 4
+MAX_PER_SIGNAL = 6
 # How many predictions are kept for the debug view. Bounded: this is a diagnostic, not a log.
 HISTORY = 200
+# How often the learned table is written to disk. Every fifth thing learned rather than every
+# one: the file is small, but this runs beside a request the owner is waiting on.
+SAVE_EVERY = 5
 
 
 @dataclass
@@ -201,6 +209,8 @@ class Anticipator:
                 edge = self.learner.observe(previous[0], signal.event)
                 if edge is not None:
                     decision.learned = f"{edge.state}->{edge.event}"
+                    if self.learner.observed % SAVE_EVERY == 0:
+                        self.learner.save()
             if previous is not None and (previous[1], previous[2]) != (signal.kind, signal.ref):
                 # The owner moved to a different record. Everything read on a hunch about the
                 # last one is about the wrong thing now.
@@ -283,11 +293,18 @@ class Anticipator:
             if self.memory.get(tier, key) is not None:
                 return "already held, and fresh"
         prefetcher = self.prefetcher
-        if prefetcher.in_flight_for(signal.scope) >= self.max_anticipated:
-            return "this conversation already has as much in flight as it may"
-        if prediction.source != "mac" and prefetcher.in_flight_for(signal.scope, source=prediction.source) >= self.max_per_source:
-            # The bound that matters: a source's concurrency belongs to the owner first.
-            return f"{prediction.source} already has as much read on a hunch as it may"
+        if prediction.source != "mac":
+            # Only source-spending reads count against these two. The Mac's own internal reads
+            # spend nothing and are bounded by the prefetcher's own per-scope wall.
+            spending = sum(
+                prefetcher.in_flight_for(signal.scope, source=source)
+                for source in ("shopify", "gmail")
+            )
+            if spending >= self.max_anticipated:
+                return "this conversation already has as much in flight as it may"
+            if prefetcher.in_flight_for(signal.scope, source=prediction.source) >= self.max_per_source:
+                # The bound that matters: a source's rate belongs to the owner first.
+                return f"{prediction.source} already has as much read on a hunch as it may"
         if prediction.speculative and prefetcher.in_flight_for(signal.scope, lane=P2) >= self.max_speculative:
             return "the speculative lane is full"
         from app.memory.coalesce import current as coalescer
@@ -356,19 +373,29 @@ class Anticipator:
 
     async def _read(self, prediction: Prediction, session: Any) -> Any:
         """Make the read. Through the read scheduler for a tool — which refuses writes, paces
-        the source and records the plan as PREDICTED — or through the closed internal table."""
+        the source and records the plan as PREDICTED — or through the closed internal table.
+
+        Coalesced by the read's identity, NOT by the conversation's: two conversations that
+        want the same record want one request. The scope keeps their prefetch TASKS apart, so
+        one can be cancelled without the other losing its answer; the flight underneath is
+        shared, and so is the tiered cache it lands in.
+        """
         if prediction.internal:
             from app.anticipation import internal
 
             return await internal.run(prediction.internal, prediction.args)
+        from app.memory.coalesce import current as coalescer
         from app.reads.scheduler import Read, ReadPlan, run_plan
 
-        plan = ReadPlan(
-            [Read(prediction.key.split(":", 1)[0] or "read", prediction.tool, dict(prediction.args), source=prediction.source)],
-            label=f"anticipate:{prediction.why}", origin=PREDICTED, why=prediction.why,
-        )
-        result = await run_plan(plan, session=session, turn_id=getattr(session, "turn_id", "") or "")
-        return next(iter(result.values.values()), None)
+        async def once() -> Any:
+            plan = ReadPlan(
+                [Read(prediction.key.split(":", 1)[0] or "read", prediction.tool, dict(prediction.args), source=prediction.source)],
+                label=f"anticipate:{prediction.why}", origin=PREDICTED, why=prediction.why,
+            )
+            result = await run_plan(plan, session=session, turn_id=getattr(session, "turn_id", "") or "")
+            return next(iter(result.values.values()), None)
+
+        return await coalescer().run(prediction.key, once)
 
     # ------------------------------------------------------------------ level 3
 

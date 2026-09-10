@@ -49,8 +49,13 @@ def order_features(order: dict[str, Any] | None, *, extension: dict[str, Any] | 
         out.append("high_value")
     email = extension.get("email") if extension.get("email") is not None else order.get("email")
     if isinstance(email, dict):
-        out.append("has_email")
-        if email.get("waiting_since") or email.get("needs_reply") or email.get("unanswered"):
+        # The inbox part is a dictionary whether or not there is anything in it — "available"
+        # and a list — so what counts is a CORRELATED thread, not the part's presence. Read the
+        # part instead of the threads and every order in the shop has email on it.
+        threads = [t for t in (email.get("threads") or []) if isinstance(t, dict)]
+        out.append("has_email" if threads else "no_email")
+        if any(t.get("sender_match") and (t.get("waiting_since") or t.get("awaiting_reply") or t.get("unanswered"))
+               for t in threads):
             out.append("inbound_unanswered")
     elif email is None:
         out.append("no_email")
@@ -73,6 +78,19 @@ def for_order(
     address = str(order.get("customer_email") or customer.get("email") or "").strip().lower()
     if "@" in address:
         ids["email"] = address
+    # The thread on the order, when the inbox part has landed: what a reply would have to read,
+    # and what the tablet's drilldown into it reads too.
+    email = (extension or {}).get("email") if isinstance((extension or {}).get("email"), dict) else (
+        order.get("email") if isinstance(order.get("email"), dict) else {}
+    )
+    thread = str((email or {}).get("thread_id") or "")
+    if not thread:
+        threads = [t for t in ((email or {}).get("threads") or []) if isinstance(t, dict)]
+        # "thread_id" from the correlated part, "id" from the raw Gmail shape: both appear,
+        # depending on which layer the dictionary came through.
+        thread = str(threads[0].get("thread_id") or threads[0].get("id") or "") if threads else ""
+    if thread:
+        ids["thread_id"] = thread
     features = list(order_features(order, extension=extension))
     neighbours = neighbours_of(session, branch)
     if neighbours:
