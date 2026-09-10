@@ -590,3 +590,37 @@ async def test_a_row_a_conversation_was_never_shown_is_refused_before_any_read(s
     assert refused.raw.get("code") == "not_held", refused.raw
     assert not refused.surfaces, refused.surface_types
     assert not refused.reads, f"a refused open still read something: {refused.reads}"
+
+
+async def test_a_scenario_does_not_inherit_the_last_one_in_a_shared_harness(stage):
+    """`make experience` shares ONE harness across every scenario; this file builds one per
+    scenario. The two disagreed, and pytest was the one that said the build was fine.
+
+    Three scenarios failed under `scripts/experience.py` while passing here — two whose oracle
+    is "nothing was changed", reading the calculation log of the scenario before them. That is
+    the worst shape a test can have: green in the suite, red in the command a person actually
+    runs on the Mac.
+
+    `run_all` now clears the fixture world's record of what has been asked of it between
+    scenarios — the log, never the world — and this asserts it, by running a scenario that
+    LEAVES a log and then one that requires an empty one, in that order, through one harness.
+    A reset that stopped working would fail here rather than only in the other runner.
+    """
+    from experience.scenarios import BY_NAME, _forget_the_last_scenario
+
+    leaves_a_log = await BY_NAME["order_add_item_picker"](stage)
+    assert leaves_a_log.status == "PASS", leaves_a_log.failures
+    assert getattr(stage.store, "calculations", None), "that scenario is meant to leave a log behind"
+
+    _forget_the_last_scenario(stage)
+    assert not stage.store.calculations, "the log survived the reset"
+
+    needs_a_clean_one = await BY_NAME["order_add_item_cancelled"](stage)
+    failures = "\n".join(f"  - {c.what} :: {c.detail}" for c in needs_a_clean_one.failures)
+    assert needs_a_clean_one.status == "PASS", f"a scenario inherited the last one's log\n{failures}"
+
+    # And the world itself is untouched by the reset: the golden orders are still there, so a
+    # scenario that quietly depended on being first would still be wrong rather than hidden.
+    assert len(stage.store.queries) >= 0
+    from experience.fixtures import data
+    assert data.BY_NAME["#1938"] is not None

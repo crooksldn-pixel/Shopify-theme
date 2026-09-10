@@ -136,3 +136,58 @@ def test_nothing_changed_is_said_plainly(tmp_path, manifest):
     same = json.loads(json.dumps(record["current"]))
     record["previous"] = same
     assert spoken_delta(record) == "Nothing has changed since the last build — same tools, same questions, same cards."
+
+
+def test_the_spoken_delta_is_one_breath_however_much_moved():
+    """"What can you do now?" is READ ALOUD, and this pass is exactly the build that makes it
+    long: the capability manifest went from nothing to eighteen families, so the delta had
+    fifteen new things to recite. It came out at 435 characters — half a minute of the
+    assistant listing tools at somebody who asked a one-line question — and the golden
+    scenario's own oracle (under 400) caught it in `make experience` while the offline suite
+    stayed green, because pytest builds a fresh harness with no previous build to compare to.
+
+    The card carries the list. The sentence carries the shape of it: at most a few per section
+    and the rest counted, and if that still runs long, only the counts.
+    """
+    from app.capabilities.delta import SPOKEN_CHARS, spoken_delta
+
+    def manifest(reads, writes, batches, dims, cards):
+        return {
+            "build": "b", "fingerprint": "f",
+            "reads": [{"name": f"read_{i}", "what": f"look up the thing numbered {i} in some detail"} for i in range(reads)],
+            "writes": [{"name": f"write_{i}", "what": f"change the thing numbered {i} for you"} for i in range(writes)],
+            "batches": [{"name": f"batch_{i}", "what": f"do the numbered thing {i} to a whole set"} for i in range(batches)],
+            "query_dimensions": {"metrics": [f"metric_{i}" for i in range(dims)]},
+            "ui_components": [f"card_{i}" for i in range(cards)],
+        }
+
+    # Nothing moved, and a modest move: both said in full.
+    same = manifest(4, 2, 1, 2, 2)
+    quiet = spoken_delta({"previous": same, "current": same})
+    assert "Nothing has changed" in quiet, quiet
+
+    modest = spoken_delta({"previous": same, "current": manifest(6, 3, 1, 3, 3)})
+    assert len(modest) <= SPOKEN_CHARS, f"{len(modest)} chars: {modest}"
+    assert "read_4" in modest or "look up the thing numbered 4" in modest, modest
+
+    # And the build this pass actually is: a great deal moved at once.
+    lots = spoken_delta({"previous": manifest(0, 0, 0, 0, 0),
+                         "current": manifest(20, 9, 5, 12, 8)})
+    assert len(lots) <= SPOKEN_CHARS, f"{len(lots)} chars, over the bound: {lots}"
+    assert "Since the last build" in lots, lots
+    # It says how much rather than pretending nothing was left out.
+    assert "more" in lots or "on the card" in lots, lots
+
+
+def test_the_spoken_delta_names_what_went_as_well_as_what_arrived():
+    """A build that REMOVED something must say so — a delta that only ever adds would let a
+    capability disappear quietly, which is the failure the manifest exists to prevent."""
+    from app.capabilities.delta import SPOKEN_CHARS, spoken_delta
+
+    before = {"build": "a", "reads": [{"name": "gone_read", "what": "the thing that went away"}],
+              "writes": [], "batches": [], "query_dimensions": {}, "ui_components": []}
+    after = {"build": "b", "reads": [], "writes": [], "batches": [],
+             "query_dimensions": {}, "ui_components": []}
+    said = spoken_delta({"previous": before, "current": after})
+    assert "gone" in said.lower(), said
+    assert len(said) <= SPOKEN_CHARS, said

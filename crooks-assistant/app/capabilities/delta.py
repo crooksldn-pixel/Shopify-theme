@@ -122,8 +122,22 @@ _SECTION_WORDS = {"reads": "new things I can look up", "writes": "new changes I 
                   "ui_components": "new cards"}
 
 
-def spoken_delta(record: dict[str, Any], *, limit: int = 8) -> str:
-    """The delta in one breath, in the owner's words."""
+# What a spoken answer may be. The scenario oracle asks for under 400 characters and it is
+# right to: this is READ ALOUD, and 435 characters of it — which is what an eighteen-family
+# manifest produced — is half a minute of the assistant reciting a list at somebody who asked
+# a one-line question. The CARD carries the whole list; the sentence carries the shape of it.
+SPOKEN_CHARS = 360
+SPOKEN_PER_SECTION = 3
+
+
+def spoken_delta(record: dict[str, Any], *, limit: int = SPOKEN_PER_SECTION) -> str:
+    """The delta in one breath, in the owner's words.
+
+    "In one breath" is a bound, not a figure of speech. At most `limit` things per section are
+    named and the rest are counted, and if the sentence still runs long the sections are
+    summarised instead — because a build that adds forty things is exactly the build whose
+    delta must not be recited.
+    """
     d = delta(record)
     if d["first_build"]:
         counts = (record.get("current") or {}).get("counts") or {}
@@ -138,6 +152,9 @@ def spoken_delta(record: dict[str, Any], *, limit: int = 8) -> str:
         if not gained:
             continue
         words = ", ".join(_readable(a) for a in gained[:limit])
+        if len(gained) > limit:
+            rest = len(gained) - limit
+            words = f"{words} and {rest} more"
         parts.append(f"{_SECTION_WORDS[section]}: {words}")
     lost = d["removed"]
     if lost:
@@ -145,7 +162,19 @@ def spoken_delta(record: dict[str, Any], *, limit: int = 8) -> str:
     changed = d["changed"]
     if changed and not parts:
         parts.append(", ".join(f"{_readable(c)} works differently" for c in changed[:4]))
-    return "Since the last build — " + "; ".join(parts) + "."
+    said = "Since the last build — " + "; ".join(parts) + "."
+    if len(said) <= SPOKEN_CHARS:
+        return said
+    # Still too long to say: count the sections rather than naming anything in them. The card
+    # beside it has every entry, which is where a list belongs.
+    counted = []
+    for section in ("reads", "writes", "batches", "query_dimensions", "ui_components"):
+        gained = [a for a in d["added"] if a["section"] == section]
+        if gained:
+            counted.append(f"{len(gained)} {_SECTION_WORDS[section]}")
+    if lost:
+        counted.append(f"{len(lost)} gone")
+    return "Since the last build — " + ", ".join(counted) + ". They are on the card."
 
 
 def _readable(entry: dict[str, Any]) -> str:

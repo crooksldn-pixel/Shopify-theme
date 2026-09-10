@@ -586,8 +586,33 @@ async def run_all(h: Harness, only: str = "") -> list[Result]:
         chosen = [(n, fn) for n, fn in chosen if n in LIVE_SCENARIOS]
     out: list[Result] = []
     for name, fn in chosen:
+        _forget_the_last_scenario(h)
         try:
             out.append(await fn(h))
         except Exception as exc:  # noqa: BLE001 — one broken scenario must not hide the others
             out.append(Result(name, name, error=f"{type(exc).__name__}: {exc}"))
     return out
+
+
+def _forget_the_last_scenario(h: Harness) -> None:
+    """Clear the fixture world's own record of what has been asked of it.
+
+    `tests/test_experience.py` builds a harness per scenario; this runner shares ONE across all
+    of them, and the two disagreed. A scenario whose oracle is "nothing was changed" read the
+    calculation log of the scenario before it and failed here while passing under pytest —
+    which is the worst shape a test can have, because `make experience` is the command a person
+    runs on the Mac and pytest is the one that says the build is fine.
+
+    Only the LOG is cleared, never the world: the orders, the inbox and the catalogue are the
+    golden data and a scenario that depended on being first would still be wrong. What goes is
+    the record of calls, which belongs to a scenario and not to the shop.
+    """
+    store = getattr(h, "store", None)
+    for name in ("calculations", "queries"):
+        log = getattr(store, name, None)
+        if isinstance(log, list):
+            log.clear()
+    if isinstance(getattr(store, "calculated", None), dict):
+        store.calculated.clear()
+    if isinstance(getattr(store, "mutations_sent", None), int):
+        store.mutations_sent = 0
