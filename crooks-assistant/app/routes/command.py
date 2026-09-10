@@ -27,7 +27,7 @@ from fastapi.responses import JSONResponse
 from app import commands
 from app.observability import timeline
 from app.presentation import present
-from app.routes.actions import session_matches
+from app.routes.actions import session_matches, writes_context
 
 router = APIRouter(tags=["command"])
 log = logging.getLogger("crooks.command")
@@ -121,7 +121,7 @@ async def command(
         # doing nothing. A button that moves a cursor and draws nothing is the worst of both.
         calls = await _read_member(runtime, session, needs)
         outcome.changed["read"] = bool(calls)
-    ui = present(calls, session=session, writes=await _writes(runtime))
+    ui = present(calls, session=session, writes=await _writes(request))
     if outcome.surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in outcome.surfaces] + ui
     return {
@@ -171,15 +171,24 @@ async def _read_member(runtime, session, needs: dict) -> list:
     return list(result.calls)
 
 
-async def _writes(runtime) -> dict:
-    """What the action rail on a replayed card may offer.
+async def _writes(request: Request) -> dict:
+    """What the action rail on a replayed card may offer THIS caller.
 
-    The same table `/health` builds, so a card redrawn by a tap offers exactly the actions it
-    offered when it was first read — and offers none at all when changes are switched off.
+    `writes_context` is the same function /turn uses, and using it is the whole point: a card
+    redrawn by a tap must offer exactly what the same card offered when it was read, no more.
+
+    This used to build its own dict — `{"enabled": ..., "capabilities": await
+    runtime.capabilities()}` — which was wrong twice. Every consumer in app/presentation.py
+    reads `writes["allowed"]`, which was absent, so the rail fell back to None. And
+    `runtime.capabilities()` is the MAC's table, not this caller's: `writes_context` runs
+    `caller_check` first and returns no capabilities at all when the caller may not apply
+    changes — no allow-list, a request from the Mac itself with CROOKS_WRITES_LOCAL_OWNER
+    false, or an identity Tailscale cannot verify. /command ran none of that, so a tapped card
+    carried live chips that /turn deliberately suppresses on the same order, with no code or
+    reason on it to say why a tap would fail.
     """
     try:
-        return {"enabled": bool(runtime.settings.writes_enabled),
-                "capabilities": await runtime.capabilities()}
+        return await writes_context(request)
     except Exception as exc:  # noqa: BLE001 — a rail is not worth failing a navigation for
         log.info("could not read the capability table for a command: %s", exc)
         return {}

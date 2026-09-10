@@ -58,6 +58,13 @@ class Runtime:
     # comparison the Mac makes locally rather than a question for the model.
     manifest: Any = None
     capability_record: Any = None
+    # The last per-change table `capabilities()` worked out, kept so the capability card can
+    # say which changes are actually ready without asking Shopify for its scopes again. The
+    # card read this attribute from the day it was written and NOTHING EVER SET IT, so every
+    # change and every bulk row came back "unknown" — on the one card whose whole job is
+    # answering "what can you do?", where a change blocked for want of a scope then looked
+    # exactly like one that is ready.
+    capability_states: dict[str, dict[str, str]] = field(default_factory=dict)
     # The tiered read cache (app/memory). Never consulted by a write.
     memory: Any = None
     started_at: float = field(default_factory=time.time)
@@ -78,6 +85,13 @@ class Runtime:
             self.order_cache.warm(int(self.settings.analytics_warm_days))
         except Exception as exc:  # noqa: BLE001 — a cold cache is a slower first answer, not a fault
             log.debug("order cache warm-up not started: %s", exc)
+
+    # Deliberately NOT warmed at boot. The lifespan runs before anything can swap the clients,
+    # so a boot-time scope read goes to whatever client `build()` made — the real store, in a
+    # fixture run — which is how the order cache used to hang the harness on the network. The
+    # table fills instead on the first /health poll or the first turn that checks whether a
+    # change may be applied, both of which happen within seconds of the tablet waking up; until
+    # then the card says "unknown", which is the honest answer when nobody has checked.
 
     def refresh_catalogue_soon(self) -> None:
         """Kick the hourly catalogue refresh off beside the current turn rather than in front
@@ -288,7 +302,17 @@ class Runtime:
                 out[operation] = {"state": "blocked", "detail": f"blocked — Shopify {scope} scope missing", "scope": scope}
             else:
                 out[operation] = {"state": state, "detail": detail or f"ready — {operation.replace('_', ' ')}", "scope": scope}
-        out.update(await self._gmail_capabilities())
+        try:
+            out.update(await self._gmail_capabilities())
+        except Exception as exc:  # noqa: BLE001
+            # Gmail not answering says nothing about the Shopify half, and the Shopify half is
+            # most of the table. Losing all of it to one failed credential check is not an
+            # improvement on losing none of it.
+            log.warning("could not read the Gmail capabilities: %s", exc)
+        # Whoever asked — /health, the order card's rail, a write preflight — has just paid for
+        # this, so the answer is kept where the capability card looks for it. Set before the
+        # return rather than at the call sites so a half answer is still an answer.
+        self.capability_states = out
         return out
 
 

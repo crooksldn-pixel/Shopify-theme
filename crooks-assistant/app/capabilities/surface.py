@@ -104,9 +104,38 @@ def _grouped(manifest: dict[str, Any], states: dict[str, dict[str, Any]] | None)
             "label": LABELS.get(area, area[:1].upper() + area[1:]),
             "count": len(mine),
             "truncated": len(mine) > MAX_PER_GROUP,
-            "items": mine[:MAX_PER_GROUP],
+            "items": _representative(mine),
         })
     return groups
+
+
+def _representative(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """At most MAX_PER_GROUP rows, drawn from every kind rather than the first kind.
+
+    The list is sorted reads, then changes, then bulk, and taking `[:MAX_PER_GROUP]` off the
+    front of that meant the reads ate the whole group: "the shop" has nine reads and nine
+    changes, so the card showed nine reads and ONE change — and dropped cancel, refund, note,
+    address, fulfilment, inventory and both tag operations — while its own subtitle said
+    "17 readings · 14 changes" and the group carried "More than shown."
+
+    So the budget is shared out a kind at a time, in the same order, until it runs out: every
+    kind that exists in a group is represented before any kind gets a second helping. The rows
+    stay in their sorted order, so the card does not reshuffle between builds.
+    """
+    if len(entries) <= MAX_PER_GROUP:
+        return entries
+    by_kind: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries:
+        by_kind.setdefault(entry["kind"], []).append(entry)
+    kept: list[dict[str, Any]] = []
+    while len(kept) < MAX_PER_GROUP and any(by_kind.values()):
+        for kind in ("read", "change", "bulk"):
+            queue = by_kind.get(kind)
+            if not queue or len(kept) >= MAX_PER_GROUP:
+                continue
+            kept.append(queue.pop(0))
+    order = {id(e): i for i, e in enumerate(entries)}
+    return sorted(kept, key=lambda e: order[id(e)])
 
 
 def build_surface(

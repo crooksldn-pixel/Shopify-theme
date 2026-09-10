@@ -193,6 +193,14 @@ async def turn(
     # again — "make it shorter and more apologetic" rather than "rewrite Millie's draft to be
     # shorter and more apologetic". The binding belongs to THIS half of the orb and expires;
     # a sentence spoken to the other half never picks it up (app/session/branch.py).
+    # What the owner SAID, kept apart from what the model is told. The continuation note below
+    # is an instruction to the model — "[this applies to order #1938]" — and while it was
+    # spliced into `text` itself, everything downstream read the annotated string as the
+    # transcript: `live.heard`, which /state returns and the tablet prints under the orb, and
+    # `question`, which the payload carries and the turn log records. The owner tapped Note,
+    # said "make it shorter", and saw his own words come back with a machine instruction
+    # stapled to them.
+    spoken = text
     continuation = branch.voice_target()
     if continuation:
         branch.release_voice()      # one sentence, one binding, taken or abandoned
@@ -212,7 +220,7 @@ async def turn(
     # the procedure for this one — an order, a customer, a period, "next", "what can you do"
     # — it runs it and answers, with no model on the critical path. A recipe that is not sure
     # defers, and the turn carries on to Claude exactly as it did before.
-    live.heard = text.strip()
+    live.heard = spoken.strip()
     lane, lane_why, intent, recipe = _route(text, branch)
     if timeline.current().active is not None:
         timeline.emit(
@@ -235,7 +243,7 @@ async def turn(
         if fast is not None:
             return await _answer(
                 runtime, session_id, fast.answer, request=request, timings=timings, started=started,
-                transcript=transcript_info, question=text.strip(), speak=speak, calls=fast.calls,
+                transcript=transcript_info, question=spoken.strip(), speak=speak, calls=fast.calls,
                 epoch=epoch, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
                 lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
                 surfaces=fast.surfaces, writes=fast_writes,
@@ -246,7 +254,7 @@ async def turn(
 
     # What was heard, on the session now, so the tablet can show it while Claude thinks
     # rather than only once the answer lands — a mis-heard question is visible at once.
-    live.heard = text.strip()
+    live.heard = spoken.strip()
 
     # What the Mac already knows about applying a change from this request, before the model
     # is asked: a change proposed while changes are off must never be announced as something
@@ -320,7 +328,7 @@ async def turn(
         timings=timings,
         started=started,
         transcript=transcript_info,
-        question=text.strip(),
+        question=spoken.strip(),
         tool_calls=[
             {
                 "name": c.name, "ok": c.ok, "error": c.error, "ms": c.duration_ms,

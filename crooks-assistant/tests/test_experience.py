@@ -383,3 +383,47 @@ async def test_a_named_person_is_not_answered_from_whoever_the_open_order_belong
         about_it = await stage.say(words, session_id="named")
         assert about_it.recipe_id == "order_address_lookup", f"{words!r} → {about_it.recipe_id!r}"
         assert "Mia Jones" in about_it.answer
+
+
+async def test_a_card_redrawn_by_a_tap_offers_what_the_spoken_card_offered(stage):
+    """The rail is the same rail, because it comes from the same place.
+
+    `/command` built its own writes dict — `{"enabled": ..., "capabilities": await
+    runtime.capabilities()}` — while every consumer in `app/presentation.py` reads
+    `writes["allowed"]`, which was not in it. And `runtime.capabilities()` is the MAC's table:
+    `writes_context`, which /turn uses, runs `caller_check` first and returns NO capabilities
+    when the caller may not apply changes at all. So a tapped card could carry live chips that
+    /turn deliberately suppresses on the same order, with nothing on it to say why a tap would
+    be refused. Both paths go through `writes_context` now.
+    """
+    spoken = await stage.say("show me order 1938", session_id="rail")
+    assert spoken.action_ids, "the spoken card has a rail to compare against"
+
+    await stage.touch("navigation.back", session_id="rail")
+    tapped = await stage.touch("open.entity", session_id="rail",
+                               kind="order", ref="gid://shopify/Order/1938")
+    assert tapped.raw.get("ok") is True, tapped.raw
+    assert sorted(set(tapped.action_ids)) == sorted(set(spoken.action_ids)), (
+        f"tapped={sorted(set(tapped.action_ids))} spoken={sorted(set(spoken.action_ids))}"
+    )
+    # And each chip agrees about whether it can be applied, not just that it exists.
+    by_id = {a.get("operation") or a.get("id"): a.get("enabled") for a in spoken.actions}
+    for action in tapped.actions:
+        name = action.get("operation") or action.get("id")
+        assert action.get("enabled") == by_id.get(name), f"{name} differs between tap and voice"
+
+    # The case that separates the two implementations: the same command from a caller that may
+    # NOT apply changes — here the Mac itself, with no Tailscale identity, which
+    # `caller_check` refuses while CROOKS_WRITES_LOCAL_OWNER is false. `writes_context` hands
+    # back no capabilities at all for such a caller, so the rail is empty; the old dict handed
+    # back `runtime.capabilities()`, the Mac's own table, and the card carried live chips.
+    local = await stage.client.post("/command", data={
+        "session_id": "rail", "command": "open.entity",
+        "kind": "order", "ref": "gid://shopify/Order/1938"})
+    assert local.status_code == 200, local.text
+    offered = [
+        a.get("operation") or a.get("id")
+        for item in (local.json().get("ui") or [])
+        for a in ((item.get("data") or {}).get("actions") or [])
+    ]
+    assert offered == [], f"a caller who cannot apply changes was offered {sorted(set(offered))}"

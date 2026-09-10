@@ -103,3 +103,28 @@ async def test_cancelling_stops_the_listening(stage):
     await stage.touch("voice.bind", family="order.add_note", session_id="tv8")
     await stage.touch("voice.cancel", session_id="tv8")
     assert stage.branch("tv8").voice_target() is None
+
+
+async def test_the_owner_is_shown_his_own_words_not_the_note_added_for_the_model(stage):
+    """The continuation note is an instruction to the model, not a transcript.
+
+    `_with_continuation` rebound `text` itself, so everything downstream read the annotated
+    string as what the owner had said: `live.heard`, which /state returns and the tablet prints
+    under the orb, and `question`, which the payload carries and the turn log records. Tapping
+    Note and saying "make it shorter" showed those words back with a machine instruction
+    stapled on. The model still needs the note — that is the whole point of binding a control —
+    so the two are simply kept apart.
+    """
+    said = "make it shorter and more apologetic"
+    await stage.say("show me order 1938", session_id="tv9")
+    await stage.touch("voice.bind", family="order.add_note", session_id="tv9")
+
+    before = len(stage.provider.calls)
+    answered = await stage.say(said, session_id="tv9")
+
+    assert answered.raw.get("question") == said, answered.raw.get("question")
+    assert "[" not in str(answered.raw.get("question") or ""), "a bracketed note reached the owner"
+
+    # And the model was told what the words apply to, which is why the binding exists.
+    asked = " ".join(str(getattr(c, "prompt", c)) for c in stage.provider.calls[before:])
+    assert "order.add_note" in asked or "1938" in asked, "the model lost the continuation"
