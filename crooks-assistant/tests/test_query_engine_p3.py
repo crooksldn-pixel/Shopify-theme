@@ -271,6 +271,17 @@ def test_the_filters_and_their_aliases_narrow_the_rows(filters, expected, rows):
     assert got == expected, f"{filters} -> {sorted(got)}"
 
 
+def test_every_example_the_refusals_offer_parses_for_its_own_entity():
+    """The refusal hands the planner a spec to copy. One that did not parse would send it
+    round the loop this whole pass exists to end."""
+    from app.analytics.query import ENTITIES, schema_help
+
+    for entity in ENTITIES:
+        example = schema_help(entity)["example"]
+        parsed = parse(example, now=NOW)
+        assert parsed.entity == example["entity"], f"{entity}: the example became {parsed.entity}"
+
+
 def test_every_alias_in_the_table_resolves_to_a_filter_that_exists():
     from app.analytics.query import FILTERS
 
