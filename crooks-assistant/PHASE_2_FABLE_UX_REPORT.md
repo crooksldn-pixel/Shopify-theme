@@ -5,7 +5,23 @@ page in Chromium at the Galaxy Tab A 8.0's 800 × 1280, driven through its own `
 and its own buttons, against the fixture world. Nothing was deployed and nothing was
 written; the live read-only run refused itself for want of a credential (§10).
 
-<!-- SHAS -->
+## Commits and final SHA
+
+| # | SHA | Commit |
+|---|---|---|
+| 1 | `9608cf5` | Measure the tablet, then give five surfaces back their screen |
+| 2 | `5174cb4` | A list becomes a way into its records, and the set chip stops lying |
+| 3 | `181864a` | The email leg of the graph, which had no destination |
+| 4 | `23ad3fb` | Back and Next stop fighting each other, and say where you are |
+| 5 | `1fa4156` | The tablet tells the Mac what the next sentence is about |
+| 6 | `f360aa3` | An email gets the rail the order always had |
+| 7 | `d03e630` | The glass language, natively, and a dock in the band the thumb already rests in |
+| 8 | `7ef14b6` | A read that failed is drawn as a read that failed |
+| 9 | `e4e9c76` | This report |
+| 10 | HEAD | This report, with the SHAs above filled in — the final SHA of Phase 2 |
+
+**Last behavioural SHA: `7ef14b6`.** Phase 1 ended at `6a1b8e1`; `git log --oneline
+6a1b8e1..HEAD` lists everything above, 22 files, +1,900 / −180 lines.
 
 ---
 
@@ -49,7 +65,7 @@ drives the page's own control.
 | 6 | **An email thread had no controls.** `rail()` was called from `renderOrder` and nowhere else. Reply, Rewrite, Archive registered on the Mac, reachable by sentence only. | `grep -n "rail(" web/ui.js` → one call | Fixed `f360aa3` — Reply (`email.reply`, arms the mic) + Archive (staged row action); gate §10 |
 | 7 | **"Which customers need replying to?" drew five cards and none said who.** A revenue ranking, a working set, a metric group, a table, a second working set — three titled "Recent customers". 1,886px. | before-needs-reply.png | Fixed `9608cf5` — one queue card, 1,070px |
 | 8 | **Nothing in the deck was tappable, and the email leg was unreachable offline.** `open.entity` had no caller; fixture thread ids were not hex and `_ID_KIND` refused every one. | `grep open.entity web/app.js` → 0 | Fixed `5174cb4`, `181864a` — rows, prior orders, entity chips open records |
-| 9 | **A failed inbox read was drawn as work in progress, forever.** "Checking the inbox…" byte-identical 34.8s later; with the tab closed, indistinguishable from an all-clear. | error/partial audit | Fixed (commit 8) — region settles in words with the sentence to retry; tab marked |
+| 9 | **A failed inbox read was drawn as work in progress, forever.** "Checking the inbox…" byte-identical 34.8s later; with the tab closed, indistinguishable from an all-clear. | error/partial audit | Fixed (`7ef14b6`) — region settles in words with the sentence to retry; tab marked |
 | 10 | **An email thread does not show the order it is about** (§10, "especially important"). The correlation runs order → threads; the reverse needs a read the presenter must not invent. | thread card text: no money, no status, no link | **Not fixed — named.** §9 |
 
 ### P1
@@ -97,7 +113,7 @@ Phase 1 left them. Two contracts were *extended*, neither rebuilt:
 | `1fa4156` | Touch → voice: `family` on `AvailableAction`, `voice.bind` from `primeAction`, the armed band from the branch, Cancel; gate §9. |
 | `f360aa3` | The email rail: `available_email_actions`, `rail()` learns "stage" mode; gate §10. |
 | `d03e630` | The glass language as tokens, tactile states, the dock; audit gains blur/animation/frame probes and both device classes. |
-| commit 8 | A read that failed is drawn as a read that failed. |
+| `7ef14b6` | A read that failed is drawn as a read that failed. |
 
 ---
 
@@ -284,7 +300,7 @@ borders for their glass, as the stylesheet's header has always required.
    Proposed: `/branches/{id}/focus` replies with `ui` (a `replay()` of the branch's entity,
    exactly as `/command` does), and "ready" on a chip draws the result on tap.
 3. **The Mac does not distinguish "failed" from "pending"** on `/context/order`. The tablet
-   settles on its own clock (commit 8). A `failed: [...]` field beside `pending` would let it
+   settles on its own clock (`7ef14b6`). A `failed: [...]` field beside `pending` would let it
    settle the moment the Mac knows, and would fix P1 #17 ("No customer on this order.").
 4. **Rewrite** needs the draft surface to carry the thread it replies to.
 5. **A reload leaves the deck empty** although the branch holds the record, the tab and the
@@ -330,7 +346,7 @@ borders for their glass, as the stylesheet's header has always required.
 
 ## 12. Commits and final SHA
 
-See the top of this file.
+Listed at the top of this file.
 
 ---
 
