@@ -346,6 +346,36 @@ async def needs_reply(h: Harness) -> Result:
                           bool(expected) and bool(answered),
                           f"{len(expected)} waiting, {len(answered)} not"))
     body = " ".join(str(item.get("data")) for item in c.surfaces)
+
+    # The answer itself, against the world's own arithmetic. Until now this scenario checked
+    # only that a card was drawn and that the newsletter sender was absent from it — both of
+    # which are trivially true of a card offering NOBODY, which is what it was drawing: the
+    # fake inbox could not parse the correlation query, so every customer came back "emailed
+    # us: no" and the assistant said "Nobody is waiting on a reply" in a world with three
+    # people waiting. A scenario that cannot tell that apart from the right answer is not a
+    # test of this question.
+    waiting = {p.name for p in world.people.values()
+               if any(p.email in max(t.messages, key=lambda m: (-m.days_ago, m.hour)).sender
+                      for t in expected)}
+    # In the ANSWER as well as on the card. The card's table lists every customer whatever
+    # their state, so "the name appears somewhere in the payload" is true even when the
+    # assistant said nobody was waiting — which is how this passed while being wrong.
+    named = {name for name in waiting if name in c.answer}
+    on_card = {name for name in waiting if name in body}
+    r.checks.append(check("everyone the world says is waiting is named as waiting",
+                          named == waiting, f"named={sorted(named)} expected={sorted(waiting)}"))
+    r.checks.append(check("and each of them is on the card to act on",
+                          on_card == waiting, f"on_card={sorted(on_card)}"))
+    # On the SPOKEN answer, not the card. The card's table is "who has written" and rightly
+    # lists everyone with their state — David Randall belongs on it, marked as replied to.
+    # What must not happen is his being named as someone still waiting.
+    replied_to = {p.name for p in world.people.values() if p.name not in waiting}
+    wrongly = {name for name in replied_to if name and name in c.answer}
+    r.checks.append(check("and nobody we have already answered is named as waiting",
+                          not wrongly, f"named anyway: {sorted(wrongly)}"))
+    r.checks.append(check("the spoken answer counts them rather than reading them all out",
+                          str(len(waiting)) in c.answer and len(c.answer) < 200,
+                          f"answer={c.answer[:90]!r}"))
     r.checks.append(check("the automated sender is not offered as a customer",
                           data.NEWSLETTER_SENDER not in body, "newsletter sender present"))
     return r
@@ -377,8 +407,8 @@ async def unsupported_edit(h: Harness) -> Result:
                     session_id="unsup")
     r.captures.append(c)
     r.checks.append(check("does not take the fast lane", c.lane != "FAST", f"lane={c.lane}"))
-    r.checks.append(check("nothing was changed in the shop", not getattr(h.store, "mutations", []),
-                          f"mutations={getattr(h.store, 'mutations', [])}"))
+    r.checks.append(check("nothing was changed in the shop", getattr(h.store, "mutations_sent", -1) == 0,
+                          f"mutations_sent={getattr(h.store, 'mutations_sent', 'NO COUNTER')}"))
     claimed = any(word in c.answer.lower() for word in ("added", "i've added", "done", "updated the order"))
     r.checks.append(check("does not claim to have added it", not claimed, f"answer={c.answer[:120]!r}"))
     r.checks.append(check("no success card was drawn", c.surface("success") is None,
@@ -458,9 +488,13 @@ async def progressive_enrichment(h: Harness) -> Result:
         c.enrichment_ms = round(ms, 1)
         r.checks.append(check("the rest is collected separately", isinstance(extension, dict),
                               f"enrichment={ms:.0f}ms keys={sorted(extension)[:6]}"))
-        r.checks.append(check("first useful UI is measured apart from the whole turn",
-                              c.first_ui_ms is not None,
-                              f"first_ui={c.first_ui_ms}ms enrichment={c.enrichment_ms}ms"))
+        # Three numbers that have to be three numbers. This check used to be
+        # `c.first_ui_ms is not None`, which restated the surface check eleven lines above and
+        # could not fail — because first_ui_ms WAS total_ms, assigned from the same variable.
+        r.checks.append(check("the card, the round trip and the enrichment are three measurements",
+                              c.first_ui_ms is not None and c.first_ui_ms < c.total_ms
+                              and c.enrichment_ms is not None,
+                              f"card={c.first_ui_ms}ms round_trip={c.total_ms:.1f}ms enrichment={c.enrichment_ms}ms"))
     return r
 
 

@@ -50,7 +50,14 @@ async def test_an_order_lookup_that_is_fast_and_empty_is_a_failure(stage):
 
 async def test_the_fast_lane_never_answers_an_entity_question_with_prose(stage):
     """Every recipe that answers about a record must draw one. A recipe added later that
-    forgets to return calls or a surface fails here rather than on the workbench."""
+    forgets to return calls or a surface fails here rather than on the workbench.
+
+    Both halves of that are asserted. The lane check used to be a filter — `if lane == "FAST"
+    and prose_only` — so the failure it was written for went unseen: a recipe deleted, renamed
+    or whose family stops matching drops the question to the model, which answers it in prose,
+    and the list stayed empty and the test stayed green. Falling off the fast lane is the
+    regression, not an exemption from the check.
+    """
     asked = [
         "show me order 1938",
         "show me today's orders",
@@ -58,11 +65,14 @@ async def test_the_fast_lane_never_answers_an_entity_question_with_prose(stage):
         "where is order 1938",
         "how much have we sold today?",
     ]
-    empty = []
+    empty, deferred = [], []
     for question in asked:
         capture = await stage.say(question)
-        if capture.lane == "FAST" and capture.prose_only:
+        if capture.lane != "FAST":
+            deferred.append((question, capture.lane, capture.recipe_id))
+        elif capture.prose_only:
             empty.append((question, capture.recipe_id, capture.answer[:60]))
+    assert not deferred, f"these stopped being answered deterministically: {deferred}"
     assert not empty, f"fast answers with nothing on screen: {empty}"
 
 
@@ -146,8 +156,13 @@ async def test_again_never_reopens_a_different_order(stage):
         assert other.recipe_id != "order_reopen", (
             f"{words!r} reopened the branch's order instead of the one it named"
         )
-        assert other.data("order").get("order_number") != "#1938", (
-            f"{words!r} showed the wrong order"
+        # `data()` returns {} when there is no surface at all, so `!= "#1938"` was also
+        # satisfied by a turn that drew NOTHING — which is the prose_only failure this whole
+        # package exists to catch. Say which of the two outcomes is acceptable.
+        shown = other.data("order").get("order_number")
+        assert shown != "#1938", f"{words!r} showed the wrong order"
+        assert shown is None or shown == "#1912", (
+            f"{words!r} showed {shown!r}, which is neither the order it named nor a deferral"
         )
 
 

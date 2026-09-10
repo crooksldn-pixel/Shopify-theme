@@ -131,10 +131,15 @@ def _markdown(payload: dict[str, Any], results: list[Any]) -> str:
             lines += [""]
 
     lines += ["## First useful UI", "",
-              "Not the same as the whole turn. The first column is when there was something",
-              "worth looking at; the last is when everything, speech included, had finished.",
+              "**Card** is the Mac's own time to an answer with something to look at — the",
+              "backend's measure of its own work, which is the part of the experience this",
+              "machine decides. **Round trip** adds the transport: ASGI in the fixture world,",
+              "Wi-Fi on the workbench. **Enrichment** is the regions that were still loading",
+              "when the card was drawn, and is measured by a second request.",
               "",
-              "| Scenario | Asked | How | First UI | Enrichment | Complete |",
+              "Nothing here includes speech: no run calls /speak.",
+              "",
+              "| Scenario | Asked | How | Card | Enrichment | Round trip |",
               "|---|---|---|---|---|---|"]
     for row in payload["timings"]:
         lines.append(

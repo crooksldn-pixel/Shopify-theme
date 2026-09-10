@@ -297,10 +297,26 @@ class Harness:
             tools=[str((t or {}).get("name") or "") for t in (payload.get("tools") or []) if isinstance(t, dict)],
             reads=reads, total_ms=elapsed, raw=payload,
         )
-        # A surface arrived with the response, so the moment the response landed IS the moment
-        # something useful was on screen. A turn that showed nothing has no first-UI time —
-        # None rather than the total, because "the paragraph arrived" is not a UI measurement.
-        capture.first_ui_ms = round(elapsed, 1) if capture.surfaces else None
+        # What the MAC took to have something worth looking at, which is the number the
+        # tablet's experience is made of and the only part of it this machine controls. It is
+        # the backend's own measure, reported on the turn; `total_ms` is the round trip, which
+        # here is ASGI and on the workbench is Wi-Fi.
+        #
+        # These were the same number until now — `first_ui_ms` was assigned `elapsed`, the same
+        # value as `total_ms` — so the report printed one measurement in two columns under a
+        # heading saying they were different things, and the scenario check that "first useful
+        # UI is measured apart from the whole turn" could not fail. A turn that showed nothing
+        # still has no first-UI time: "the paragraph arrived" is not a UI measurement.
+        served = payload.get("timings_ms")
+        served_total = served.get("total") if isinstance(served, dict) else None
+        if served_total is None:
+            # A tap: /command reports the whole request as `served_ms` (its `ms` stops before
+            # the read a cursor move can cause).
+            served_total = payload.get("served_ms")
+        capture.first_ui_ms = (
+            round(float(served_total), 1) if capture.surfaces and isinstance(served_total, (int, float))
+            else (round(elapsed, 1) if capture.surfaces else None)
+        )
         branch = self.branch(session_id, capture.branch_id)
         entity = getattr(branch, "entity", None)
         if isinstance(entity, dict) and entity.get("ref"):
@@ -346,13 +362,26 @@ async def harness(*, live: bool = False, writes: bool = True):
 
                 store, gmail = arm_read_only(runtime)
             else:
+                from app.runtime import _make_customer_lookup
+                from app.tools import gmail_writes
                 from experience.fixtures import FixtureShopify, fixture_gmail
 
                 store, gmail = FixtureShopify(), fixture_gmail()
                 runtime.shopify = store
                 shopify_tools.bind(store)
                 runtime.gmail = gmail
-                gmail_tools.bind(gmail, getattr(runtime, "customer_lookup", None))
+                # `runtime.customer_lookup` does not exist — production wires the lookup as a
+                # closure over the store — so this bound None and the Shopify half of every
+                # inbox decision was dead code in every scenario: `known_customer` was None on
+                # every thread, and "the automated sender is not offered as a customer" passed
+                # only because the fixture's sender matches on its address alone.
+                gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(store))
+                # And the WRITE module keeps its own client, bound separately at boot. Left
+                # alone, every draft, send and archive in the fixture world went to the client
+                # `runtime.build()` made — the real one. Under pytest conftest turns that into
+                # an error; `scripts/experience.py` on the Mac has no such net.
+                gmail_writes.bind(gmail, customer=_make_customer_lookup(store),
+                                  policy=lambda: runtime.settings)
             runtime.sessions = SessionManager()
             # The order cache, warmed the way boot warms it — but awaited. Production kicks
             # this off in the background and the first question of the day is answered from

@@ -133,6 +133,12 @@ async def command(
         "branch": branch.public(),
         "session_id": session.session_id,
         "ms": round(elapsed, 1),
+        # `ms` above is how long the COMMAND took to resolve, measured before the read a
+        # cursor move can cause and before the card is built — which is the number the
+        # timeline wants. `served_ms` is the whole request, which is what the owner waited
+        # and what a benchmark should print. They are the same for a replay and differ by
+        # a Shopify round trip when memory had dropped the record.
+        "served_ms": round((time.perf_counter() - started) * 1000, 1),
         # Named so the timeline and the report can tell a tap from a sentence without guessing.
         "lane": "TOUCH",
         "model_calls": 0,

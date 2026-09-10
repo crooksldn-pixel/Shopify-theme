@@ -68,8 +68,9 @@ async def serve_fixture_world(port: int):
     import uvicorn
 
     from app.main import app
+    from app.runtime import _make_customer_lookup
     from app.session.manager import SessionManager
-    from app.tools import gmail_tools, shopify_tools
+    from app.tools import gmail_tools, gmail_writes, shopify_tools
     from experience.fixtures import FixtureShopify, fixture_gmail
     from experience.harness import RecordingProvider, _warm
 
@@ -92,7 +93,12 @@ async def serve_fixture_world(port: int):
     runtime.shopify = store
     runtime.gmail = gmail
     shopify_tools.bind(store)
-    gmail_tools.bind(gmail, getattr(runtime, "customer_lookup", None))
+    # Both Gmail modules, and the real customer cross-reference — the same three the harness
+    # binds, and for the same reasons: `runtime.customer_lookup` does not exist, and the write
+    # module holds its own client which would otherwise still be the real one.
+    gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(store))
+    gmail_writes.bind(gmail, customer=_make_customer_lookup(store),
+                      policy=lambda: runtime.settings)
     runtime.sessions = SessionManager()
     runtime.settings = runtime.settings.model_copy(update={
         "writes_enabled": True, "allowed_logins": "owner@example.com",

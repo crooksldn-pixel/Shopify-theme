@@ -47,76 +47,102 @@ class _Request:
         return self._value
 
 
+# Quoted phrases, parentheses as their own tokens, and everything else a bare word. Splitting
+# parentheses out is the whole point: the application builds
+#
+#     newer_than:30d -in:trash -in:spam -in:chats (from:mia@example.com OR "1938")
+#
+# and while `\S+` was the tokeniser, "(from:mia@example.com" arrived with its bracket attached,
+# so `startswith("from:")` was False, it fell through to the literal-substring test at the end,
+# and NO THREAD EVER MATCHED. Every customer came back "emailed us: no", the correlation found
+# nobody, and "which customers need replying to?" answered "nobody is waiting" in a world with
+# three people waiting — with the golden scenario green, because it only checked that the card
+# was drawn and that the newsletter sender was absent, which is trivially true of a card
+# offering no one.
+_TOKEN = re.compile(r'"[^"]*"|[()]|[^\s()]+')
+
+
 def _query_terms(query: str) -> list[str]:
-    """The bits of a Gmail query the fixture understands: quoted phrases and bare words."""
-    return [t.strip('"').lower() for t in re.findall(r'"[^"]*"|\S+', query or "")]
+    """The bits of a Gmail query the fixture understands, brackets excluded."""
+    return [t.strip('"').lower() for t in _TOKEN.findall(query or "") if t not in "()"]
+
+
+def _parse(query: str) -> list[list[str]]:
+    """One Gmail query as AND-groups of OR-alternatives.
+
+    A bare term is a group of one, so everything outside brackets is ANDed exactly as before;
+    a bracketed group is satisfied by any one of its alternatives, which is what OR means and
+    what the correlation query relies on.
+    """
+    groups: list[list[str]] = []
+    current: list[str] | None = None
+    for raw in _TOKEN.findall(query or ""):
+        if raw == "(":
+            current = []
+            continue
+        if raw == ")":
+            if current:
+                groups.append(current)
+            current = None
+            continue
+        token = raw.strip('"').lower()
+        if not token or token in ("and", "or"):
+            continue          # the separator inside a group; AND is the default outside one
+        if current is None:
+            groups.append([token])
+        else:
+            current.append(token)
+    if current:
+        groups.append(current)
+    return groups
 
 
 def _thread_matches(thread, query: str) -> bool:
-    terms = _query_terms(query)
     text = " ".join(
         f"{m.sender} {m.subject} {m.body}" for m in thread.messages
     ).lower()
     labels = {label for m in thread.messages for label in m.labels}
-    for term in terms:
-        if term in ("and", "or"):
-            continue
-        if term.startswith("-"):
-            negated = term[1:]
-            if negated.startswith("in:") or negated.startswith("label:"):
-                if negated.split(":", 1)[1].upper() in labels:
-                    return False
-                continue
-            if negated.startswith("from:"):
-                if negated.split(":", 1)[1] in text:
-                    return False
-                continue
-            if negated == "from:me":
-                if "SENT" in labels and len(thread.messages) == 1:
-                    return False
-                continue
-            if negated in text:
-                return False
-            continue
-        if term.startswith("category:"):
-            wanted = term.split(":", 1)[1]
-            if wanted == "primary" and "CATEGORY_UPDATES" in labels:
-                return False
-            continue
-        if term.startswith("in:") or term.startswith("label:"):
-            wanted = term.split(":", 1)[1].upper()
-            if wanted in ("INBOX", "UNREAD", "SENT") and wanted not in labels:
-                return False
-            continue
-        if term.startswith("from:"):
-            if term.split(":", 1)[1] not in text:
-                return False
-            continue
-        if term.startswith("newer_than:") or term.startswith("older_than:"):
-            # Honoured, not skipped. A fake inbox that ignores the window makes every
-            # question about a period pass whatever window the code asked for, so a recipe
-            # that reads "today" and then fetches a week looks correct here and is wrong on
-            # the real mailbox. Gmail's form is a count and a unit: 1d, 2w, 3m, 1y.
-            match = re.fullmatch(r"(newer_than|older_than):(\d+)([dwmy])", term)
-            if match is None:
-                continue
-            scale = {"d": 1, "w": 7, "m": 30, "y": 365}[match.group(3)]
-            window = int(match.group(2)) * scale
-            newest = min((m.days_ago for m in thread.messages), default=0.0)
-            if match.group(1) == "newer_than" and newest > window:
-                return False
-            if match.group(1) == "older_than" and newest <= window:
-                return False
-            continue
-        if term.startswith("after:") or term.startswith("before:"):
-            continue
-        if term.startswith("subject:"):
-            if term.split(":", 1)[1] not in text:
-                return False
-            continue
-        if term not in text:
-            return False
-    return True
+    return all(
+        any(_term_matches(term, thread, text, labels) for term in group)
+        for group in _parse(query)
+    )
+
+
+def _term_matches(term: str, thread, text: str, labels: set) -> bool:
+    """Whether one term of a query is satisfied by this thread.
+
+    A term the fixture does not model is not a reason to exclude a thread, so it answers True.
+    """
+    if term.startswith("-"):
+        negated = term[1:]
+        if negated.startswith("in:") or negated.startswith("label:"):
+            return negated.split(":", 1)[1].upper() not in labels
+        if negated == "from:me":
+            return not ("SENT" in labels and len(thread.messages) == 1)
+        if negated.startswith("from:"):
+            return negated.split(":", 1)[1] not in text
+        return negated not in text
+    if term.startswith("category:"):
+        return not (term.split(":", 1)[1] == "primary" and "CATEGORY_UPDATES" in labels)
+    if term.startswith("in:") or term.startswith("label:"):
+        wanted = term.split(":", 1)[1].upper()
+        return wanted not in ("INBOX", "UNREAD", "SENT") or wanted in labels
+    if term.startswith("from:") or term.startswith("subject:"):
+        return term.split(":", 1)[1] in text
+    if term.startswith("newer_than:") or term.startswith("older_than:"):
+        # Honoured, not skipped. A fake inbox that ignores the window makes every question
+        # about a period pass whatever window the code asked for, so a recipe that reads
+        # "today" and then fetches a week looks correct here and is wrong on the real mailbox.
+        # Gmail's form is a count and a unit: 1d, 2w, 3m, 1y.
+        match = re.fullmatch(r"(newer_than|older_than):(\d+)([dwmy])", term)
+        if match is None:
+            return True
+        window = int(match.group(2)) * {"d": 1, "w": 7, "m": 30, "y": 365}[match.group(3)]
+        newest = min((m.days_ago for m in thread.messages), default=0.0)
+        return newest <= window if match.group(1) == "newer_than" else newest > window
+    if term.startswith("after:") or term.startswith("before:"):
+        return True
+    return term in text
 
 
 class _Threads:

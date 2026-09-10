@@ -83,6 +83,7 @@ _TIME_POSSESSIVE = frozenset({
     "today", "yesterday", "tomorrow", "week", "weeks", "month", "months", "year", "years",
     "day", "days", "morning", "afternoon", "evening", "tonight", "weekend", "quarter",
     "this", "last", "next", "it", "that", "there", "who", "what", "let",
+    "customer", "order", "buyer", "client", "shopper", "recipient", "company",
 })
 _OWNER_OF = re.compile(r"\b([a-z]+)'s\b")
 
@@ -332,8 +333,8 @@ FAMILIES: tuple[Family, ...] = (
            blocks=("mutation", "order_number", "metric", "email", "ranking", "period",
                    "known_name", "possessive_name"),
            entities=("customer", "order"), base=0.74, max_words=12),
-    Family("order_status_lookup", needs=("status",), boosts=("order_number", "order", "has_entity", "deixis"), blocks=("mutation", "metric", "address"), entities=("order",), base=0.72, max_words=14),
-    Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email"), entities=("order",), base=0.72, max_words=14),
+    Family("order_status_lookup", needs=("status",), boosts=("order_number", "order", "has_entity", "deixis"), blocks=("mutation", "metric", "address", "possessive_name"), entities=("order",), base=0.72, max_words=14),
+    Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email", "possessive_name"), entities=("order",), base=0.72, max_words=14),
     Family("customer_purchase_lookup", needs=("known_name", "bought"), boosts=("customer", "question"), blocks=("mutation",), entities=("customer",), base=0.72, max_words=14),
     Family("best_sellers_period", needs=("ranking",), boosts=("period", "question", "metric"), blocks=("mutation", "email", "stock", "running_out", "order_number", "customer"), base=0.65, floor=0.72, max_words=14),
     # Blocks "customer" because "how many" is in _METRIC: without it "how many customers do we

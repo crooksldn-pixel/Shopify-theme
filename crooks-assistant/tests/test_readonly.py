@@ -67,7 +67,7 @@ def test_the_refusal_has_words_for_the_card():
     assert "read-only" in _COMMIT_BLOCKED_WORDS["read_only"].lower()
 
 
-def test_the_live_clients_have_no_working_mutation():
+async def test_the_live_clients_have_no_working_mutation():
     """Defence in depth: even with the latch somehow released, the clients a live run binds
     cannot write. The latch would have to fail AND the client would have to be the wrong
     class before anything could be sent."""
@@ -79,7 +79,12 @@ def test_the_live_clients_have_no_working_mutation():
                  lambda: gmail.modify_thread("t", add=[], remove=[])):
         with pytest.raises((LiveWriteAttempted, readonly.WriteRefused)):
             call()
-    assert ReadOnlyShopify.mutate is not ShopifyClient.mutate
+    # Not `ReadOnlyShopify.mutate is not ShopifyClient.mutate`: that says the subclass defines
+    # its own method and nothing about what it does. An override that logged and returned {} —
+    # swallowing the mutation and letting the caller believe it worked — would satisfy it.
+    store = ReadOnlyShopify("fake.myshopify.com", "2025-07")
+    with pytest.raises((LiveWriteAttempted, readonly.WriteRefused)):
+        await store.mutate("order_note_append", {"id": "gid://shopify/Order/1", "note": "x"})
 
 
 # ------------------------------------------------------- what a live run actually binds

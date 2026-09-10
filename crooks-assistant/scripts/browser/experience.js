@@ -128,8 +128,14 @@ async function main() {
   if (card) {
     check('it has tabs to spread the detail over', card.tabs.length >= 3, `tabs=${card.tabs.join('/')}`);
     const tappable = card.buttons.filter((b) => b.w >= 32 && b.h >= 32);
+    // No `card.buttons.length === 0 ||` disjunct. This is the only check in the suite that
+    // looks at the rendered DOM, and while an empty rail counted as a pass, a card that drew
+    // with its action rail missing produced a fully green browser run — the exact failure the
+    // sibling ASGI test guards against with a non-empty `action_ids`.
+    check('the card has controls at all', card.buttons.length > 0,
+      `buttons=${card.buttons.length}`);
     check('its controls are big enough for a finger',
-      card.buttons.length === 0 || tappable.length === card.buttons.length,
+      card.buttons.length > 0 && tappable.length === card.buttons.length,
       `${tappable.length}/${card.buttons.length} at 32px+`);
     check('the card fits the tablet', card.width <= VIEWPORT.width, `card=${card.width}px viewport=${VIEWPORT.width}px`);
   }
