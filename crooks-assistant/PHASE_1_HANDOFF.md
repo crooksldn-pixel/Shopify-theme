@@ -297,8 +297,24 @@ would have to fail AND the engine would have to fail before anything could be se
 ## 12. Where this ends
 
 Branch: `claude/crooks-assistant-build-lgxlau`.
-Final commit: see `git log -1` on that branch — the tip at handoff is recorded in
-`PHASE_1_UX_BASELINE.md`'s footer and in the session's final report.
 
-Suite at handoff: **1381 passed, 2 deselected**, ruff clean, 78 Node tests, 15/15 scenarios,
-17 browser checks.
+Final code commit: **`f517877`** (`f517877194a2059c41de1b4750c80a20547221b0`). This document is the commit after it, so
+`git log -1` on the branch shows one further commit whose only content is this line — the SHA
+of the last commit that changed behaviour is the one above.
+
+Suite at handoff:
+
+| | |
+|---|---|
+| pytest, offline | **1383 passed, 2 deselected** (1342 baseline + 41) |
+| ruff | clean across `app config scripts tests experience` |
+| Node | 78 pass, 0 fail; every page script parses |
+| golden scenarios | 15/15, 92 checks |
+| browser checks | 19/19 at 800x1280 and at 400px |
+| screenshots | 4, in `reports/experience/<run>/screenshots/` |
+
+The only change anywhere near `app/actions/` is a six-line refusal in `ActionEngine.commit`
+when the read-only latch is down — additive, and before anything is claimed. The 25 action
+invariants are untouched.
+
+**No deployment occurred.**
