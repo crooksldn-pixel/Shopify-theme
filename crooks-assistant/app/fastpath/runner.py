@@ -100,7 +100,7 @@ def _adopt_latest_set(ctx: Ctx) -> bool:
     # "Next" must count from the same place, or the same word means two different things.
     ctx.branch.workflow = Workflow(
         workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=ws.kind,
-        operation="review", cursor=-1, total=len(ws.members),
+        label=ws.label, operation="review", cursor=-1, total=len(ws.members),
     )
     return True
 

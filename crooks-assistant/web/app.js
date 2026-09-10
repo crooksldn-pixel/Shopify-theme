@@ -1078,6 +1078,27 @@ async function goNext() {
   if (moved.answer) el.answer.textContent = moved.answer;
 }
 
+// Open a record the current screen linked to. The same command the words reach, so a tap on
+// the third row and "open the third one" land in exactly the same place — and neither asks the
+// model to work out which record was meant.
+async function openEntity(kind, ref, label) {
+  if (!kind || !ref) return;
+  T.record('navigate', { nav: 'open_entity', name: kind, entity: ref });
+  haptic(HAPTIC.start);
+  const opened = await semanticCommand('open.entity', { kind, ref, label });
+  if (opened && opened.ok && Array.isArray(opened.ui) && opened.ui.length) {
+    const rendered = window.CrooksUI.render(opened.ui, renderOpts());
+    if (rendered.nodes.length) {
+      pushContext(rendered.nodes, opened.ui, opened.answer || '');
+      if (opened.answer) el.answer.textContent = opened.answer;
+      return;
+    }
+  }
+  // The Mac no longer holds it, or could not draw it. Say so rather than doing nothing at all.
+  if (opened && opened.answer) el.answer.textContent = opened.answer;
+  else if (opened && opened.detail) el.answer.textContent = opened.detail;
+}
+
 // One semantic command, posted the way the tablet posts everything else: which command, and
 // which record. Never what the command should do — the Mac decides that (app/commands.py).
 async function semanticCommand(name, extra) {
@@ -1135,14 +1156,23 @@ function renderRecent() {
 
 // The working set the conversation holds: a chip that stays in the nav while the owner
 // opens an order and comes back, so "these" keeps its meaning on screen.
+//
+// It follows the BRANCH, not whatever card happened to be drawn. Reading it off a working_set
+// card meant the chip only changed when one appeared — so asking "which customers need
+// replying to?" after a list of orders left the chip reading "3 ORDERS · Orders" while the
+// Mac's cursor had moved to three customers. The chip is the one thing on screen that says
+// what "these" means, and it was naming the wrong set.
 let currentSet = null;
-function noteWorkingSets(items) {
-  for (const item of items || []) {
-    if (item && item.type === 'working_set' && item.data && item.data.set_id) {
-      currentSet = { set_id: String(item.data.set_id), label: String(item.data.label || ''), count: Number(item.data.count) || 0, kind: String(item.data.kind || '') };
-      T.record('working_set', { id: currentSet.set_id, count: currentSet.count, label: currentSet.label, name: currentSet.kind });
-    }
-  }
+function noteWorkingSet(workflow) {
+  if (!workflow || !workflow.set_id) { currentSet = null; return; }
+  if (currentSet && currentSet.set_id === workflow.set_id) return;
+  currentSet = {
+    set_id: String(workflow.set_id),
+    label: String(workflow.label || ''),
+    count: Number(workflow.total) || 0,
+    kind: String(workflow.kind || ''),
+  };
+  T.record('working_set', { id: currentSet.set_id, count: currentSet.count, label: currentSet.label, name: currentSet.kind });
 }
 function setChip() {
   if (!currentSet) return null;
@@ -1204,7 +1234,6 @@ function renderTurn(data) {
     el.errline.textContent = ui.errors[0].recovery || '';
   }
   if (ui.stack) currentStack = ui.stack;
-  noteWorkingSets(data.ui);
   // The attention surface shows only what this turn returned; a count from this morning
   // must not sit on the screen at four o'clock as if it were still true.
   const attention = (data.ui || []).filter((i) => i && i.type === 'attention' && i.data && Array.isArray(i.data.items));
@@ -1398,6 +1427,9 @@ let branchState = null;
 function noteBranch(branch) {
   if (!branch || typeof branch !== 'object' || !branch.branch_id) return;
   branchState = branch;
+  // The set chip comes with the branch, so a tap that moves the cursor and a sentence that
+  // opens a different list both keep it honest.
+  noteWorkingSet(branch.workflow);
   focusedBranch = branch.branch_id;
   branches = branches.map((b) => (b.branch_id === branch.branch_id ? branch : b));
   if (!branches.some((b) => b.branch_id === branch.branch_id)) branches = [branch];
@@ -1995,6 +2027,15 @@ el.cards.addEventListener('click', (event) => {
   const chip = target && target.closest ? target.closest('.rail-chip') : null;
   if (chip) {
     T.record('rail_tap', { action: chip.dataset.action || '', state: chip.getAttribute('aria-disabled') === 'true' ? 'disabled' : 'enabled' });
+    return;
+  }
+  // A row that names a record opens it. `open.entity` has existed on the Mac since Phase 1 and
+  // nothing on the page ever posted it, so the only way from a list of today's orders to one of
+  // them was to say its number — the graph was navigable by voice and by voice alone. The row
+  // carries the kind and the id it was given on the card, so nothing is looked up again.
+  const link = target && target.closest ? target.closest('[data-ref][data-kind]') : null;
+  if (link && !busy) {
+    openEntity(link.dataset.kind, link.dataset.ref, (link.textContent || '').trim().slice(0, 60));
     return;
   }
   // A chip carrying a question asks it. The capability card draws six of these and their

@@ -1122,7 +1122,7 @@ def _open_workflow(ctx: Ctx, body: dict[str, Any], *, kind: str, operation: str,
     ctx.branch.set_id = ws.set_id
     # Before the first member, so the first "Next" lands on it — the same place a set adopted
     # by a bare "Next" starts from (app/fastpath/runner.py).
-    ctx.branch.workflow = Workflow(workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=kind, operation=operation, cursor=-1, total=len(ws.members))
+    ctx.branch.workflow = Workflow(workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=kind, label=ws.label, operation=operation, cursor=-1, total=len(ws.members))
 
 
 register(Recipe(

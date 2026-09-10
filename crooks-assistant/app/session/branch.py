@@ -45,6 +45,11 @@ class Workflow:
     workflow_id: str
     set_id: str
     kind: str
+    # What a person calls this set. The tablet's set chip — the thing on screen that says what
+    # "these" currently means — used to read it off a `working_set` CARD, so the chip only
+    # changed when a card happened to be drawn. It now comes from here, with the rest of the
+    # branch, which is the only copy that is always right.
+    label: str = ""
     operation: str = "review"
     cursor: int = 0
     total: int = 0
@@ -69,6 +74,7 @@ class Workflow:
     def public(self) -> dict[str, Any]:
         return {
             "workflow_id": self.workflow_id, "set_id": self.set_id, "kind": self.kind,
+            "label": self.label,
             "operation": self.operation, "position": self.position, "total": self.total,
             "at_end": self.at_end(), "at_start": self.at_start(),
         }

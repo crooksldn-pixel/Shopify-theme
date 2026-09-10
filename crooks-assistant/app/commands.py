@@ -135,6 +135,26 @@ def run(name: str, ctx: Ctx) -> Outcome:
 # --------------------------------------------------------------------------- replay
 
 
+def may_open(ctx: Ctx, kind: str, ref: str) -> bool:
+    """Whether THIS conversation is allowed to see that record at all.
+
+    Kept apart from whether the Mac happens to hold it, because they are different questions
+    with different answers. An empty `replay()` used to mean both — "I have not got it" and
+    "it is not yours" — so a caller that wanted to READ a record it did not hold could not tell
+    a cache miss from a refusal. Opening a row from a list is exactly that caller: a listing
+    holds summaries, so the record is legitimately not cached, and the tap must read it. Only
+    this check may turn that into a refusal.
+    """
+    from app.tools.gate import id_kind_ok
+
+    argument = f"{kind}_id" if kind != "email_thread" else "thread_id"
+    issued = getattr(ctx.session, "issued_ids", None) or frozenset()
+    if ref in issued and id_kind_ok(argument, ref):
+        return True
+    log.warning("refused: %s %s was not issued to this conversation", kind, ref)
+    return False
+
+
 def replay(ctx: Ctx, kind: str, ref: str) -> list[Any]:
     """The card for a record the Mac already holds, rebuilt without asking the shop.
 
@@ -154,19 +174,11 @@ def replay(ctx: Ctx, kind: str, ref: str) -> list[Any]:
     from app.memory import ENTITY
     from app.memory import current as memory
     from app.providers.base import ToolCall
-    from app.tools.gate import id_kind_ok
 
     tool = REPLAY_TOOL.get(kind, "")
-    if not tool or not ref:
+    if not tool or not ref or not may_open(ctx, kind, ref):
         return []
     argument = f"{kind}_id" if kind != "email_thread" else "thread_id"
-    issued = getattr(ctx.session, "issued_ids", None) or frozenset()
-    if ref not in issued or not id_kind_ok(argument, ref):
-        # Not a record this conversation was shown, or an id of another kind wearing this
-        # one's name. The caller turns this into "ask for it and I will read it again", which
-        # goes through the gate and either reads it properly or refuses.
-        log.warning("replay refused: %s %s was not issued to this conversation", kind, ref)
-        return []
     held = memory().get(ENTITY, f"{kind}:{ref}", allow_stale=True)
     if held is None:
         return []
@@ -359,22 +371,35 @@ def _open_entity(ctx: Ctx) -> Outcome:
     """Open a record the current screen linked to.
 
     The tablet posts the kind and the ref it was already given on the card — it does not have
-    to describe the record, and the model is not asked to find it again. A record the Mac no
-    longer holds is refused rather than half-drawn: the caller then asks for it out loud, which
-    reads it properly.
+    to describe the record, and the model is not asked to find it again.
+
+    When the Mac already holds the record this is a replay and costs nothing. When it does not,
+    it is READ, the way a cursor move onto an unheld member is: `needs_read` names it and the
+    route reads it through the gate. It used to refuse instead — "ask for it and I will read it
+    again" — which is a reasonable sentence in a conversation and a dead end under a finger. A
+    list of today's orders holds summaries, not full records, so tapping any row on any list
+    fell into exactly that case: the one route from a list to an order was to say its number.
     """
     kind, ref = ctx.arg("kind"), ctx.arg("ref")
     if kind not in ENTITY_KINDS:
         return Outcome.refused("unknown_kind", f"I do not know how to open a {kind or 'record'}.")
     if not ref:
         return Outcome.refused("no_ref", "That link does not say which record it points at.")
-    calls = replay(ctx, kind, ref)
-    if not calls:
-        return Outcome.refused("not_held", "I no longer have that one to hand; ask for it and I will read it again.")
     label = ctx.arg("label") or ref
+    if not may_open(ctx, kind, ref):
+        # Never shown to this conversation. Refused before anything is read, which is both the
+        # safe answer and the cheap one.
+        return Outcome.refused("not_held", "I no longer have that one to hand; ask for it and I will read it again.")
+    calls = replay(ctx, kind, ref)
+    if not calls and kind not in REPLAY_TOOL:
+        return Outcome.refused("not_held", "I no longer have that one to hand; ask for it and I will read it again.")
     ctx.branch.visit(kind, ref, label)
-    return Outcome(answer=f"{label}.", calls=calls,
-                   changed={"entity": {"kind": kind, "ref": ref, "label": label}, "replayed": True})
+    changed: dict[str, Any] = {
+        "entity": {"kind": kind, "ref": ref, "label": label}, "replayed": bool(calls),
+    }
+    if not calls:
+        changed["needs_read"] = {"kind": kind, "ref": ref, "set_kind": _SET_KIND.get(kind, "")}
+    return Outcome(answer=f"{label}.", calls=calls, changed=changed)
 
 
 register(Command("open.entity", "Open a linked record", _open_entity, voice=False))

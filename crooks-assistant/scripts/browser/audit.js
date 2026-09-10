@@ -211,6 +211,26 @@ async function main() {
   await ask('what can you do now?');
   await record('capability', 'What can you do now?');
 
+  // Tapping a row must open the record it names. `open.entity` existed on the Mac from Phase 1
+  // and nothing on the page posted it, so a list was a picture of the orders rather than a way
+  // into them.
+  await ask("show me today's orders");
+  const opened = await page.evaluate(async () => {
+    const row = document.querySelector('#cards .row.tappable[data-kind="order"]');
+    if (!row) return { tapped: false, why: 'no tappable order row' };
+    const was = (document.querySelector('#cards .card') || {}).dataset || {};
+    row.click();
+    await new Promise((r) => setTimeout(r, 1200));
+    const now = document.querySelector('#cards .card');
+    return {
+      tapped: true,
+      wasType: was.type || '',
+      nowType: (now && now.dataset.type) || '',
+      nowRef: (now && now.dataset.ref) || '',
+    };
+  });
+  await record('row-tap', 'Tapping a row on the order list', JSON.stringify(opened));
+
   await browser.close();
   const ok = errors.length === 0;
   process.stdout.write(`${JSON.stringify({ ok, errors: errors.slice(0, 4), surfaces, shots })}\n`);

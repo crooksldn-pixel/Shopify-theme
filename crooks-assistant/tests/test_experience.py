@@ -544,3 +544,49 @@ async def test_a_question_that_names_its_own_subject_is_not_swallowed_by_a_tappe
     for words in ("make it shorter and more apologetic", "he wants it by friday"):
         _, glued = await bound(words, f"dict-{abs(hash(words)) % 1000}")
         assert glued, f"{words!r} was not taken as the note it was dictating"
+
+
+async def test_opening_a_row_reads_the_record_when_the_mac_does_not_hold_it(stage):
+    """A list is a way into its records, not a picture of them.
+
+    `open.entity` replayed from memory or refused, and a listing holds summaries — so tapping
+    any row of any list hit "I no longer have that one to hand; ask for it and I will read it
+    again". That is a reasonable sentence in a conversation and a dead end under a finger: the
+    only route from today's orders to one of them was to say its number out loud.
+
+    It reads now, the way a cursor landing on an unheld member already did. What must NOT
+    change is who may ask: `replay()` returned nothing both for "not cached" and for "not
+    yours", and reading on an empty replay would have turned the second into a read attempt.
+    The two are separate questions now, and only the permission one refuses.
+    """
+    listed = await stage.say("show me today's orders", session_id="rows")
+    rows = listed.data("order_list").get("orders") or []
+    assert rows, listed.surface_types
+    ref = str(rows[0].get("order_id") or "")
+    assert ref, rows[0]
+
+    opened = await stage.touch("open.entity", session_id="rows", kind="order", ref=ref)
+    assert opened.raw.get("ok") is True, opened.raw
+    assert opened.data("order").get("order_id") == ref, opened.surface_types
+    assert opened.reads, "a record the Mac did not hold should have been read"
+
+    # A second tap on the same row is free: it is held now.
+    again = await stage.touch("open.entity", session_id="rows", kind="order", ref=ref)
+    assert again.raw.get("ok") is True and not again.reads, again.reads
+
+
+async def test_a_row_a_conversation_was_never_shown_is_refused_before_any_read(stage):
+    """The permission half of the same change, which is the half worth a test.
+
+    A session that was never issued the id must be refused outright — not read on its behalf
+    and not handed an error card after the gate catches it downstream. Nothing is read.
+    """
+    await stage.say("show me order 1938", session_id="ownerRows")
+    await stage.say("hello", session_id="strangerRows")
+
+    refused = await stage.touch("open.entity", session_id="strangerRows",
+                                kind="order", ref="gid://shopify/Order/1938")
+    assert refused.raw.get("ok") is False, refused.raw
+    assert refused.raw.get("code") == "not_held", refused.raw
+    assert not refused.surfaces, refused.surface_types
+    assert not refused.reads, f"a refused open still read something: {refused.reads}"

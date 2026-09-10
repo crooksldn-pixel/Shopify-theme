@@ -216,11 +216,21 @@
     return card('assistant', [kicker('Assistant'), text(d.text).length > 420 ? expandable(body) : body]);
   }
 
+  // A row that names an order opens it. The id has always been on the wire; nothing on the
+  // page ever used it, so the list was a picture of the orders rather than a way into them —
+  // the only route to #1938 from a list of today's orders was to say its number out loud.
+  // `data-ref` and `data-kind` are what the deck's click handler posts to `open.entity`, which
+  // is the same command the word "open that one" reaches.
   function orderRow(o) {
-    return h('li', { class: 'row' }, [
+    const ref = text(o.order_id);
+    return h('li', {
+      class: ref ? 'row tappable' : 'row', role: ref ? 'button' : null, tabindex: ref ? '0' : null,
+      data: ref ? { ref, kind: 'order' } : {},
+    }, [
       h('span', { class: 'row-main' }, [h('strong', { text: text(o.order_number, '—') }), ' ', text(o.customer_name)]),
       h('span', { class: 'row-sub', text: formatDate(o.placed_at) }),
       h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: text(o.total) }), badge(o.fulfillment)]),
+      ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
     ]);
   }
 
@@ -695,23 +705,31 @@
 
   function renderEmailList(d, opts) {
     const threads = list(d.threads, 10);
+    // A badge that is on every row is not information. In the inbox it separates customers
+    // from strangers and earns its place; on the work queue every row is a customer by
+    // construction, so three identical green badges were three pieces of furniture.
+    const mixed = threads.some((t) => !t.known_customer) && threads.some((t) => t.known_customer);
     return card('email_list', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email'), h('h2', { class: 'card-title', text: text(d.title, 'Email') }), h('p', { class: 'card-meta', text: num(d.count) === null ? '' : `${d.count} thread${d.count === 1 ? '' : 's'}` })])]),
       h('ul', { class: 'rows' }, threads.map((t) => {
-        const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { ref: text(t.thread_id) } }, [
+        const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { ref: text(t.thread_id), kind: 'email_thread' } }, [
           h('span', { class: 'row-main' }, [h('strong', { text: text(t.from, '—') }), ' — ', text(t.subject, '(no subject)')]),
           h('span', { class: 'row-sub', text: text(t.snippet) }),
           h('span', { class: 'row-side' }, [
             h('span', { class: 'card-meta', text: formatDate(t.date) }),
-            t.known_customer ? badge('Customer', 'quiet ok') : null,
+            mixed && t.known_customer ? badge('Customer', 'quiet ok') : null,
             t.likely_bulk ? badge('Bulk', 'quiet') : null,
           ]),
           rowActions(t, opts),
+          // The affordance instead of the sentence. This card used to end with 'Say "read that
+          // one" to open a thread.' — a line of instruction under rows that gave no sign of
+          // being tappable at all. A chevron says it on every row, once, and costs no height.
+          h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }),
         ]);
         row.addEventListener('click', () => row.classList.toggle('is-open'));
         return row;
       })),
-      h('p', { class: 'card-note', text: 'Say "read that one" to open a thread.' }),
+      d.note ? h('p', { class: 'card-note', text: text(d.note) }) : null,
     ], opts);
   }
 
