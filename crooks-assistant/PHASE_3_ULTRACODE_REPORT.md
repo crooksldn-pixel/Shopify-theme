@@ -354,6 +354,48 @@ new latency numbers are printed live, and `crooks-status` shows the family state
 
 ---
 
+## 9. The thirty-two acceptance scenarios (§31), and what covers each
+
+`experience/scenario_packs/` collects golden scenarios one file per family; 24 are registered
+at the time of writing (`make experience-list`). Browser checks are the 61 at both viewports.
+
+| # | Scenario | Covered by |
+| --- | --- | --- |
+| 1 | "Show me order 1938" → rich workspace | `order_lookup` |
+| 2 | Tap Shipping / Items / Customer | `tabs`, and `spoken_tab` for the spoken form |
+| 3 | "Show me the full shipping address" | `full_address` |
+| 4 | "What else has this customer ordered?" | `customer_history` |
+| 5 | Tap previous order → Back | `back` |
+| 6 | "Show me today's orders" | `today_orders` |
+| 7 | Next twice → Back → voice "Next" | `next_previous` |
+| 8 | Tap a random order row | browser check (a row opens its order) |
+| 9 | "Which customers need replying to?" | `needs_reply` |
+| 10 | Open email → linked order visible | `linked_entities`; the graph pack when it lands |
+| 11 | Tap Reply → unclipped armed state | tablet gate `06-armed-reply` |
+| 12 | Speak reply → correct thread and draft state | `unsupported_edit` covers the refusal path; the compose family covers the rest |
+| 13 | Cancel reply → next question not swallowed | tablet gate (Cancel clears, the next hold posts) |
+| 14 | Order → email | `linked_entities` |
+| 15 | Email → order | the graph work (`tests/test_graph.py`) |
+| 16 | Two-finger split → ZERO speech turn | tablet gate, the CDP two-finger spread |
+| 17 | Visible Split button | tablet gate |
+| 18 | Switch left/right → visibly different workspaces | tablet gate, `split_branches`, `spoken_switch` |
+| 19 | Aside task completes → result retrievable | `tests/test_split_workspaces.py` (READY + `branch.show`) |
+| 20 | Merge → structured result, no proposal approved | tablet gate (pinch merges), `tests/test_branches.py` |
+| 21 | "Add a black medium Convict hoodie" | the order-edit family |
+| 22 | "Create an order for …" | **not built** — see the unresolved list |
+| 23 | "Create a 15% discount called TEST15" | the commerce-writes family |
+| 24 | "Add £10 store credit" | the commerce-writes family |
+| 25 | Arbitrary external email | the compose family |
+| 26 | Deliberately mis-transcribed email | the compose family's precision input |
+| 27 | "Send it instead" | the compose family |
+| 28 | The compound order → email → draft | the graph family's compound recipe |
+| 29 | Old international unfulfilled order | the query-engine family |
+| 30 | Reload while on an order | tablet gate (the workspace comes back) |
+| 31 | Failed customer read → FAILED, not "no customer" | `tests/web/ui.test.js`, `tests/test_context.py` |
+| 32 | 601 × 889 → no clipped armed UI | tablet gate, and the density measurements above |
+
+---
+
 _This report is being written as the pass completes. Sections still to come: the remaining
 capability families (order editing, discount codes, store credit, abandoned checkouts,
 arbitrary email compose, precision input, the query engine, anticipation, the learned layer,
