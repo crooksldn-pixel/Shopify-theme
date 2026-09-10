@@ -281,6 +281,84 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         root="inventorySetQuantities",
         validate=lambda key, value: key == "input" and inventory_input_ok(value),
     ),
+    # Phase 3: adding a line to an order (app/tools/shopify_writes.py, app/families/order_edit.py).
+    # Three mutations, and only the third changes the order. `orderEditBegin` opens a
+    # CalculatedOrder — a scratch copy Shopify prices for us — and `orderEditAddVariant` puts
+    # the variant on THAT. Nothing the customer or the shop can see moves until
+    # `orderEditCommit`, which is why the financial consequence on the card is Shopify's own
+    # arithmetic rather than ours, and why the first two run at PREPARE time and the third
+    # only after the owner's gesture.
+    #
+    # Beginning an edit leaves the same state however many times it is done (a fresh scratch
+    # copy), so it may be resent after a proven scope refusal. Adding a variant and
+    # committing may not: a second send would be a second line, or a second commit.
+    "order_edit_begin": ReviewedMutation(
+        name="order_edit_begin",
+        document="""
+            mutation CrooksOrderEditBegin($id: ID!) {
+              orderEditBegin(id: $id) {
+                calculatedOrder { id committed }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str},
+        scope="write_order_edits",
+        idempotent=True,
+        root="orderEditBegin",
+    ),
+    # `allowDuplicates: false` is sent always and is never an argument: the owner asking for
+    # a second hoodie means one more of the hoodie, not a second line saying the same thing.
+    # Shopify may therefore fold the addition into a line the order already has — which is
+    # why the proof is "a line for that variant carrying at least the quantity asked for"
+    # and never "one more line than before" (see _verify_order_add_item).
+    "order_edit_add_variant": ReviewedMutation(
+        name="order_edit_add_variant",
+        document="""
+            mutation CrooksOrderEditAddVariant($id: ID!, $variantId: ID!, $quantity: Int!, $allowDuplicates: Boolean!) {
+              orderEditAddVariant(id: $id, variantId: $variantId, quantity: $quantity, allowDuplicates: $allowDuplicates) {
+                calculatedLineItem {
+                  id
+                  title
+                  variantTitle
+                  quantity
+                  originalUnitPriceSet { shopMoney { amount currencyCode } }
+                }
+                calculatedOrder {
+                  id
+                  subtotalPriceSet { shopMoney { amount currencyCode } }
+                  totalPriceSet { shopMoney { amount currencyCode } }
+                  totalOutstandingSet { shopMoney { amount currencyCode } }
+                  lineItems(first: 50) { edges { node { id quantity variant { id } } } }
+                }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "variantId": str, "quantity": int, "allowDuplicates": bool},
+        scope="write_order_edits",
+        max_chars=200,
+        idempotent=False,
+        root="orderEditAddVariant",
+    ),
+    # The one that changes the order. `notifyCustomer: false` is sent always: an email about
+    # money now owed is the owner's to send in his own words, not a side effect of a tap.
+    "order_edit_commit": ReviewedMutation(
+        name="order_edit_commit",
+        document="""
+            mutation CrooksOrderEditCommit($id: ID!, $notifyCustomer: Boolean!, $staffNote: String!) {
+              orderEditCommit(id: $id, notifyCustomer: $notifyCustomer, staffNote: $staffNote) {
+                order { id name }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "notifyCustomer": bool, "staffNote": str},
+        scope="write_order_edits",
+        max_chars=200,
+        idempotent=False,
+        root="orderEditCommit",
+    ),
 }
 
 _GID = re.compile(r"^gid://shopify/[A-Za-z]+/\d+$")

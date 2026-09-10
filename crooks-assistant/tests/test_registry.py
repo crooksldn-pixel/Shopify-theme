@@ -157,7 +157,15 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # schema object). About 1.7 KB together, half of it paid back by tightening the address
     # tool's per-field descriptions. The block is what every turn ON THE MODEL PATH pays —
     # a fast-lane turn pays none of it — and a tool added here has to earn its bytes.
-    assert total <= 24_300, f"the tool block is {total} bytes"
+    #
+    # 25_300 covers Phase 3's order item editing, which is the one thing the September
+    # session's "add a black hoodie to this order" needed and did not have: a read that
+    # resolves words to a variant id (shopify_variant_search, ~590 bytes) and the write that
+    # adds it (shopify_order_add_item, ~460). About 1.05 KB for the family, and both schemas
+    # are already pared to the fields the model must name — the detail about calculated
+    # orders and what the customer will owe lives in app/families/order_edit.py and on the
+    # card, not in a description every turn pays for.
+    assert total <= 25_300, f"the tool block is {total} bytes"
     batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
     # 2,300 covers the fifth batch tool — the same campaign as batch_email_drafts, sent
     # rather than saved — which shares its schema object and adds two lines of description.

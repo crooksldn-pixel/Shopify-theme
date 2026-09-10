@@ -11,9 +11,13 @@ The response is the shape `/turn` returns: an answer, a `ui` list, the branch st
 tablet renders a tap and a spoken instruction with the same code, and so does everything
 downstream of it — the timeline, the report, the experience harness.
 
-Nothing here can change the shop or the inbox. Every command in the registry is a read or a
-move; a change is a proposal and goes to `/actions`, which has the staging, the gesture, the
-freshness reread and the verification that a change needs and a tap on a tab does not.
+Nothing here can change the shop or the inbox. Almost every command in the registry is a read
+or a move. One kind is not — a command may PROPOSE a change (`_stage_change`), which is what
+the brief means by "the model or a touch command proposes": the Mac reads the entity afresh,
+builds and stores the exact execution arguments, and answers with a card that is still
+waiting. Applying it is `/actions/{id}/commit` with a proposal id and nothing else, and that
+is where the gesture, the freshness reread and the verification live. So this route can put a
+change in front of the owner; it cannot make one.
 """
 
 from __future__ import annotations
@@ -106,6 +110,12 @@ async def command(
         # synchronous and read nothing themselves; the recipe reads, through the same
         # scheduler and the same read tools a sentence would use, and no model.
         outcome = await _run_recipe(runtime, session, branch, str(recipe_id), outcome)
+    staging = outcome.changed.get("stage") if outcome.ok and isinstance(outcome.changed, dict) else None
+    if isinstance(staging, dict):
+        # A command that PROPOSES a change — the touch half of "the model or a touch command
+        # proposes" (app/families/order_edit.py). Same reason as the recipe above: a command
+        # is synchronous, and preparing a change is a fresh read of the entity.
+        outcome = await _stage_change(request, runtime, session, staging, outcome)
     elapsed = (time.perf_counter() - started) * 1000
 
     timeline.emit(
@@ -209,10 +219,18 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     recipe = RECIPES.get(recipe_id)
     if recipe is None:
         return command_mod.Outcome.refused("unknown_recipe", f"There is no recipe called {recipe_id!r}.")
-    intent = Intent(family=recipe.intent_family, confidence=1.0, signals=signals_for("", branch=branch), reason="a tap")
+    # A tap can be about something as well as somewhere. A landing is not — Orders is Orders —
+    # but a picker is about a product, and the words that narrow it come from the control that
+    # was tapped. They travel where a sentence's own parameters travel, `intent.slots`, so a
+    # recipe reads them from one place whether they were said or tapped; `text` is what was
+    # said, and is empty for a tap. Neither can carry an execution argument: a recipe cannot
+    # write (app/fastpath/recipes.py assert_read_only).
+    intent = Intent(family=recipe.intent_family, confidence=1.0, signals=signals_for("", branch=branch), reason="a tap",
+                    slots={str(k)[:40]: v for k, v in (outcome.changed.get("slots") or {}).items()})
     branch.working("opening " + str(outcome.changed.get("area") or recipe.ui))
     try:
-        answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent, text="", memory=memory()))
+        answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent,
+                                                   text=str(outcome.changed.get("said") or ""), memory=memory()))
     finally:
         branch.idle()
     if answer.deferred:
@@ -296,3 +314,78 @@ async def _writes(request: Request) -> dict:
     except Exception as exc:  # noqa: BLE001 — a rail is not worth failing a navigation for
         log.info("could not read the capability table for a command: %s", exc)
         return {}
+
+
+async def _stage_change(request: Request, runtime, session, staging: dict, outcome):
+    """A touch command that proposes a change: PREPARE it, and nothing more.
+
+    This is the same path `POST /actions/row` takes, for the same reason — the tablet named
+    an action and a record, and the Mac decides everything else. It resolves the registered
+    write tool, checks that a gesture from THIS caller could work at all, and hands the
+    arguments to `dispatch`, which is where the gate checks that every id was issued to this
+    conversation and the action engine stores the execution the tool prepared from a fresh
+    read. The card that comes back is still waiting: nothing here can commit, and the only
+    route to a mutation remains `POST /actions/{id}/commit` with a proposal id.
+
+    The refusals are the write boundary's own, in the words the commit route uses, so a tap
+    that could not be applied says why here rather than after the owner has held the card.
+    """
+    from app.routes.actions import _write_status_soon, caller_check
+    from app.tools import registry
+    from app.tools.dispatch import dispatch
+
+    tool = str(staging.get("tool") or "")
+    args = staging.get("args")
+    try:
+        spec = registry.get(tool)
+    except KeyError:
+        spec = None
+    if spec is None or spec.write is None or not spec.write.complete or not isinstance(args, dict):
+        # Fail closed. A command naming a tool this build does not carry, or one with no
+        # reviewed write definition, prepares nothing.
+        log.warning("a command asked to stage %r, which is not a reviewed write tool", tool)
+        return commands.Outcome.refused("unknown_change", "That is not a change this build can prepare.")
+    caller, code, detail, spoken_key = caller_check(request)
+    if code:
+        log.warning(
+            "staging refused: %s — %s (login=%s proxied=%s)", code, detail,
+            request.headers.get("tailscale-user-login", "") or "-", bool(request.headers.get("x-forwarded-for")),
+        )
+        return commands.Outcome.refused(spoken_key or code, detail)
+    status = await _write_status_soon(runtime, spec.write.operation)
+    if not status.ready:
+        return commands.Outcome.refused(status.code, status.detail)
+
+    calls: list = []
+    await dispatch(tool, dict(args), session=session, timeout_s=runtime.settings.tool_timeout_s, calls=calls)
+    proposal_id = next((c.proposal_id for c in calls if getattr(c, "proposal_id", None)), "")
+    if not proposal_id:
+        why = next((str(c.error) for c in calls if not c.ok and c.error), "That change could not be prepared.")
+        timeline.emit("command_stage", session_id=session.session_id, tool=tool, ok=False, detail=why[:200])
+        return commands.Outcome.refused("not_prepared", why[:200])
+    runtime.actions.deliver(proposal_id)
+    proposal = runtime.actions.find(proposal_id)
+    timeline.emit("command_stage", session_id=session.session_id, turn_id=getattr(session, "turn_id", "") or None,
+                  tool=tool, ok=True, proposal_id=proposal_id,
+                  risk=(proposal.risk if proposal is not None else None),
+                  interaction=(proposal.interaction if proposal is not None else None))
+    return commands.Outcome(
+        answer=_staged_words(proposal), calls=calls,
+        changed={**outcome.changed, "staged": True, "proposal_id": proposal_id,
+                 "operation": spec.write.operation},
+    )
+
+
+def _staged_words(proposal) -> str:
+    """What the tablet says about a change it has just prepared: the tool's own read-back and
+    the gesture that would apply it. Both are fixed text from the Mac — the read-back was
+    built by the write tool from what it read, and the gesture's words come from the
+    interaction grammar. No model is on this path."""
+    if proposal is None:
+        return "That is prepared and waiting on the card."
+    from app.actions.grammar import words_for
+
+    what = str(proposal.summary.get("read_back") or "").strip()
+    verb = words_for(proposal.interaction)["verb"]
+    lead = f"Ready to {what}" if what else "That is prepared"
+    return f"{lead}. Nothing has changed yet; {verb}."

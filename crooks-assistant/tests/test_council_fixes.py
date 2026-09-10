@@ -320,7 +320,12 @@ def test_the_context_lines_tell_the_model_what_the_mac_knows():
     assert lines[1].startswith("[Last read-layer query:") and "commerce_aggregate" in lines[1]
     assert lines[2].startswith("[This asks for") and "commerce_aggregate" in lines[2] and s.hinted
     s.last_query = None
-    assert _context_lines(s, "hello") == [] and not s.hinted
+    # Nothing of the CONVERSATION is left to say. What may still be there is the capability
+    # family block, which is a fact about the Mac rather than about this session and is added
+    # for every question (app/routes/turn.py `_family_lines`); a family registered by a Phase
+    # 3 module makes it appear, and it must not be mistaken for state that failed to clear.
+    rest = [line for line in _context_lines(s, "hello") if not line.startswith("[Capability families")]
+    assert rest == [] and not s.hinted
 
 
 async def test_batch_state_after_a_lost_connection(client):

@@ -45,6 +45,11 @@ UI_TYPES = frozenset({
     # ago · last from Mia · no reply from us". Built by the recipe from the thread's own
     # reply state, never from the prose.
     "reply_state",
+    # which variant the owner means (app/families/order_edit.py): candidate rows read from
+    # the catalogue, a quantity stepper, and one button that asks the Mac to PREPARE the
+    # addition. Nothing on it changes anything; the confirmation card that follows still
+    # waits for the gesture. Built by a recipe, bounded by `variant_picker` below.
+    "variant_picker",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
@@ -1257,3 +1262,62 @@ def _window_title(result: dict[str, Any]) -> str:
     if ago == 0:
         return f"Last {days} days"
     return f"{days} day{'s' if days != 1 else ''}, ending {ago} day{'s' if ago != 1 else ''} ago"
+
+
+# --------------------------------------------------------- the variant picker (order_edit)
+#
+# The one card in the vocabulary that is drawn from a READ and leads to a change. It is
+# bounded here for the same reason every other card is: the recipe hands over a tool result,
+# and what reaches the tablet is copied key by key with an explicit cap. A candidate row
+# carries the variant id the tap sends back and nothing the tablet could turn into an
+# execution argument — the price and the options on it are for the owner's eyes, and the Mac
+# reads the price again from Shopify when it prepares the change.
+
+MAX_PICKER_CANDIDATES = 8
+MAX_PICKER_OPTIONS = 4
+# What one tap may add. The stepper's ceiling on the glass and the write tool's own bound
+# (app/tools/shopify_writes.py MAX_ADD_QUANTITY) are the same number, held in both places:
+# the tablet cannot post its way past it and the Mac would refuse it anyway.
+MAX_PICKER_QUANTITY = 20
+
+
+def variant_picker(
+    result: dict[str, Any], *, order_id: str, order_number: str, quantity: int = 1, note: str = "",
+) -> dict[str, Any]:
+    """The picker's data, from a `shopify_variant_search` result. Read-only, bounded, whitelisted."""
+    candidates = []
+    for candidate in _list(result.get("candidates"), MAX_PICKER_CANDIDATES):
+        variant_id = _text(candidate.get("variant_id"), 200)
+        if not variant_id:
+            continue
+        candidates.append({
+            "variant_id": variant_id,
+            "title": _text(candidate.get("title"), 80),
+            "variant": _text(candidate.get("variant"), 60),
+            "options": [_text(o, 30) for o in _list_strings(candidate.get("options"), MAX_PICKER_OPTIONS)],
+            "sku": _text(candidate.get("sku"), 40),
+            "price": _text(candidate.get("price_display") or candidate.get("price"), 20),
+            "available": _int(candidate.get("available")),
+            "for_sale": bool(candidate.get("for_sale")),
+        })
+    confident = candidates[0]["variant_id"] if (result.get("confident") and len(candidates) == 1) else None
+    return {
+        "order_id": _text(order_id, 200),
+        "order_number": _order_number(order_number),
+        "candidates": candidates,
+        "count": _int(result.get("count")) or len(candidates),
+        "quantity": max(1, min(int(quantity or 1), MAX_PICKER_QUANTITY)),
+        "max_quantity": MAX_PICKER_QUANTITY,
+        # Exactly one variant matched every word the owner gave: the row is pre-selected, and
+        # the owner still taps Add. Never a reason to skip the card.
+        "confident_variant_id": confident,
+        "note": _text(note or result.get("note"), MAX_NOTE_CHARS),
+    }
+
+
+def _list_strings(value: Any, limit: int) -> list[str]:
+    """A bounded list of plain strings. `_list` drops anything that is not an object, which is
+    right for rows and silently wrong for a list of option words."""
+    if not isinstance(value, list):
+        return []
+    return [str(v) for v in value[:limit] if isinstance(v, (str, int, float)) and str(v).strip()]

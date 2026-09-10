@@ -95,6 +95,12 @@ _KNOWN_TOOLS = frozenset({
     "commerce_aggregate", "commerce_query", "inventory_query", "commerce_capabilities", "email_query",
     # Gmail — M9
     "gmail_search", "gmail_read_thread", "gmail_find_in_email",
+    # Phase 3 families, each adding its own reads. Deliberately named here and not derived
+    # from the registry: "an unregistered tool is denied, so adding a tool without a rule
+    # cannot grant access" is the rule this list IS, and a read reaches the model only when
+    # somebody has written its name down. shopify_variant_search resolves words to variant
+    # ids for order editing (app/families/order_edit.py).
+    "shopify_variant_search",
 })
 
 # Tools that may only be called with an id this session already handed to the assistant. Stops

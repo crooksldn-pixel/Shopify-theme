@@ -40,6 +40,9 @@ SURFACE_TYPES = frozenset({
     "assistant",
     # who is waiting on whom in one thread (app/families/order_email.py)
     "reply_state",
+    # which variant the owner means, before anything is staged (app/families/order_edit.py):
+    # candidate rows, a quantity, and one button that asks the Mac to prepare the change.
+    "variant_picker",
 })
 
 # Which entity kinds may be named. A kind outside this set is a bug in a builder, not a new

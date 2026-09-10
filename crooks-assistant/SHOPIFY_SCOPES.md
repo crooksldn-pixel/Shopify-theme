@@ -42,6 +42,14 @@ read_marketplace_fulfillment_orders
 | Address | `orderUpdate` (shippingAddress + note) | `write_orders` |
 | Fulfil | `fulfillmentCreate` | `write_merchant_managed_fulfillment_orders` |
 | Stock | `inventorySetQuantities` (compare-and-swap) | `write_inventory` |
+| Add an item to an order | `orderEditCommit` (after `orderEditBegin` + `orderEditAddVariant`) | `write_order_edits` |
+
+`write_order_edits` covers all three of the order-edit mutations, and only the third changes
+anything: the first two build and price a CalculatedOrder — a scratch copy of the order —
+which is how the card can say what the line costs, what the order becomes and what the
+customer will owe before the owner's gesture. Without the scope the whole family says so and
+names itself (`app/families/order_edit.py`), the write tool is not offered to Claude at all,
+and every other change goes on working.
 
 Nothing executes without `CROOKS_WRITES_ENABLED=true`, a login on `CROOKS_ALLOWED_LOGINS`,
 that login on the tablet making the gesture, and the scope above — checked on every commit.
