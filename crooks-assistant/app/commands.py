@@ -1,0 +1,381 @@
+"""What the owner meant, once it no longer matters whether he said it or tapped it.
+
+Saying "go back" and tapping Back are the same instruction. Before this module they were two
+implementations of it: the spoken one (`app/fastpath/library.py:_nav_back`) moved the cursor,
+rebuilt the record from memory and said a sentence; the tapped one
+(`app/routes/branches.py:back`) moved the cursor and returned bare JSON, leaving the tablet to
+redraw the screen from whatever it still had. Two implementations of one idea drift, and these
+had: the same gesture produced a card in one direction and did not in the other.
+
+So a semantic command is named once here, and both ends resolve into it. The fast lane's
+navigation recipes call `run()`; `POST /command` calls `run()`. Neither contains any logic of
+its own about what Back means.
+
+Three properties hold for everything in this file, and the tests hold them:
+
+- **Deterministic.** No command here consults the model. Back, Next, a tab, an expanded row and
+  opening a record the Mac already holds are all answerable from state the Mac already has, and
+  putting a language model on that path buys nothing and costs a second.
+- **Read-only.** Nothing here changes anything in the shop or the inbox. A command that would
+  is not a command, it is a proposal, and proposals go through the action engine
+  (`app/actions/engine.py`) with its staging, its gesture and its verification — untouched by
+  this module.
+- **Argument-free in the sense that matters.** A tap posts which command and which record, and
+  the Mac decides what that means. It cannot post what the command should do.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any
+
+from app.surfaces import ENTITY_KINDS
+
+# Which tool re-reads a record of each kind, for rebuilding a card from what the Mac still
+# holds rather than asking the shop again. A kind absent from here cannot be replayed and the
+# command says so instead of drawing an empty card.
+REPLAY_TOOL = {
+    "order": "shopify_order_detail",
+    "customer": "shopify_customer_history",
+    "email_thread": "gmail_read_thread",
+}
+
+# The tabs each surface offers. Held here rather than in the renderer because "show shipping"
+# spoken and a tap on Shipping have to reach the same place, and only one of those two ever
+# sees the DOM.
+TABS: dict[str, tuple[str, ...]] = {
+    "order": ("overview", "items", "shipping", "customer", "email"),
+    "customer": ("overview", "orders", "email"),
+    "capability": ("orders", "customers", "products", "email", "analytics", "system"),
+}
+
+
+@dataclass
+class Outcome:
+    """What a command did. The same shape whether it was spoken or tapped."""
+
+    ok: bool = True
+    answer: str = ""
+    code: str = ""                                  # set when ok is False
+    detail: str = ""
+    calls: list[Any] = field(default_factory=list)  # ToolCalls, so present() draws the card
+    surfaces: list[Any] = field(default_factory=list)
+    changed: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def refused(cls, code: str, detail: str) -> Outcome:
+        return cls(ok=False, code=code, detail=detail, answer=detail)
+
+
+@dataclass(frozen=True)
+class Command:
+    """One named thing the owner can mean."""
+
+    name: str
+    what: str
+    run: Callable[[Any], Outcome]
+    # Which of the two ends can reach it. Almost everything is both; a few are touch-only
+    # because there is no natural sentence for them ("expand this row").
+    voice: bool = True
+    touch: bool = True
+    # What has to be open for the command to mean anything.
+    needs_entity: tuple[str, ...] = ()
+    needs_workflow: bool = False
+
+
+@dataclass
+class Ctx:
+    """Everything a command may read. Deliberately the same shape the fast lane hands a
+    recipe, so a recipe can delegate without adapting anything."""
+
+    runtime: Any
+    session: Any
+    branch: Any
+    args: dict[str, Any] = field(default_factory=dict)
+
+    def arg(self, name: str, default: str = "") -> str:
+        return str(self.args.get(name) or default).strip()
+
+
+REGISTRY: dict[str, Command] = {}
+
+
+def register(command: Command) -> Command:
+    if command.name in REGISTRY:
+        raise ValueError(f"the command {command.name!r} is already registered")
+    REGISTRY[command.name] = command
+    return command
+
+
+def get(name: str) -> Command | None:
+    return REGISTRY.get(name)
+
+
+def run(name: str, ctx: Ctx) -> Outcome:
+    """Resolve one semantic command. Never raises: an unknown command is a refusal, because
+    an unrecognised tap must not be able to take the backend down."""
+    command = REGISTRY.get(name)
+    if command is None:
+        return Outcome.refused("unknown_command", f"There is no command called {name!r}.")
+    if command.needs_entity:
+        entity = getattr(ctx.branch, "entity", None) or {}
+        if entity.get("kind") not in command.needs_entity:
+            return Outcome.refused("no_entity", "There is nothing open to do that to.")
+    if command.needs_workflow and getattr(ctx.branch, "workflow", None) is None:
+        return Outcome.refused("no_set", "There is no list open to move through.")
+    return command.run(ctx)
+
+
+# --------------------------------------------------------------------------- replay
+
+
+def replay(ctx: Ctx, kind: str, ref: str) -> list[Any]:
+    """The card for a record the Mac already holds, rebuilt without asking the shop.
+
+    This is what makes Back and Next feel instant and what makes them free: the read happened
+    when the record was first opened, and going back to it is not a new question. Nothing is
+    drawn that memory cannot supply — a stale entry produces no card rather than a wrong one.
+    """
+    from app.memory import ENTITY
+    from app.memory import current as memory
+    from app.providers.base import ToolCall
+
+    tool = REPLAY_TOOL.get(kind, "")
+    if not tool or not ref:
+        return []
+    held = memory().get(ENTITY, f"{kind}:{ref}", allow_stale=True)
+    if held is None:
+        return []
+    return [ToolCall(name=tool, args={f"{kind}_id": ref}, ok=True, result=held.value)]
+
+
+def _land(ctx: Ctx, entry: Any, *, words: str) -> Outcome:
+    calls = replay(ctx, entry.kind, entry.ref)
+    if entry.tab:
+        ctx.branch.mark(tab=entry.tab)
+    return Outcome(
+        answer=words,
+        calls=calls,
+        changed={"entity": {"kind": entry.kind, "ref": entry.ref, "label": entry.label},
+                 "tab": entry.tab, "replayed": bool(calls)},
+    )
+
+
+# --------------------------------------------------------------------------- navigation
+
+
+def _back(ctx: Ctx) -> Outcome:
+    entry = ctx.branch.back()
+    if entry is None:
+        return Outcome(answer="That is as far back as this conversation goes.", changed={"landed": False})
+    return _land(ctx, entry, words=f"Back to {entry.label}.")
+
+
+def _forward(ctx: Ctx) -> Outcome:
+    entry = ctx.branch.forward()
+    if entry is None:
+        return Outcome(answer="There is nothing forward of here.", changed={"landed": False})
+    return _land(ctx, entry, words=f"Forward to {entry.label}.")
+
+
+def _home(ctx: Ctx) -> Outcome:
+    """The start of this branch's trail.
+
+    It goes through the same landing the other two do, so home draws the record it lands on
+    rather than announcing a move and leaving the screen where it was — which is what it did
+    when it set nav_index by hand.
+    """
+    if not ctx.branch.nav:
+        return Outcome(answer="There is nothing to go back to yet.", changed={"landed": False})
+    while ctx.branch.nav_index > 0:
+        entry = ctx.branch.back()
+        if entry is None:
+            break
+    entry = ctx.branch.nav[0]
+    ctx.branch.nav_index = 0
+    ctx.branch.entity = {"kind": entry.kind, "ref": entry.ref, "label": entry.label}
+    return _land(ctx, entry, words=f"Back to the start: {entry.label}.")
+
+
+register(Command("navigation.back", "The record before this one", _back))
+register(Command("navigation.forward", "The record after this one", _forward))
+register(Command("navigation.home", "The start of this trail", _home))
+
+
+# --------------------------------------------------------------------------- the cursor
+
+
+def _member_words(ctx: Ctx, label: str) -> str:
+    workflow = ctx.branch.workflow
+    where = f"{workflow.position} of {workflow.total}"
+    return f"{label}. {where}." if label else f"{where}."
+
+
+# Which tool reads one member of a set of each kind, and what that kind of record is called.
+MEMBER_READ = {
+    "orders": ("shopify_order_detail", "order_id", "order"),
+    "customers": ("shopify_customer_history", "customer_id", "customer"),
+    "emails": ("gmail_read_thread", "thread_id", "email_thread"),
+}
+
+
+def move_cursor(session: Any, branch: Any, *, forward: bool) -> dict[str, Any]:
+    """The cursor move, and nothing else.
+
+    This is the whole of what "Next" means, and it is arithmetic. It lives here rather than in
+    the fast lane's runner because a tap on Next and the word "next" have to move the same
+    cursor by the same amount and stop at the same ends — and while the arithmetic lived in the
+    runner, keyed on a recipe id, a tapped Next could not reach it at all.
+
+    Reads nothing, so it is safe on either path. Returns what happened.
+    """
+    from app.analytics import sets as working_sets
+
+    workflow = getattr(branch, "workflow", None)
+    if workflow is None:
+        return {"moved": False, "code": "no_set"}
+    ws = working_sets.get(session, workflow.set_id)
+    if ws is None or not ws.members:
+        return {"moved": False, "code": "empty_set"}
+    total = len(ws.members)
+    workflow.total = total
+    # The cursor starts at -1, before the first member, so the first "next" lands on 0.
+    target = workflow.cursor + (1 if forward else -1)
+    if target >= total:
+        return {"moved": False, "code": "at_end", "cursor": workflow.cursor, "total": total}
+    if target < 0:
+        return {"moved": False, "code": "at_start", "cursor": workflow.cursor, "total": total}
+    workflow.cursor = target
+    ref = ws.members[target]
+    label = ws.labels.get(ref) or ref
+    _, _, kind = MEMBER_READ.get(ws.kind, ("", "", "order"))
+    if ref not in workflow.visited:
+        workflow.visited.append(ref)
+    return {"moved": True, "cursor": target, "total": total, "ref": ref, "label": label,
+            "kind": kind, "set_kind": ws.kind, "set_id": ws.set_id}
+
+
+def _step_cursor(ctx: Ctx, *, forward: bool) -> Outcome:
+    """Move the cursor and show what it now points at.
+
+    Bounds are the point: a cursor that runs off the end and reports the last member again is
+    worse than one that says it has finished, because the owner walking a queue of eleven has
+    no way to tell the eleventh from the end.
+    """
+    moved = move_cursor(ctx.session, ctx.branch, forward=forward)
+    if not moved.get("moved"):
+        code = str(moved.get("code") or "")
+        if code == "at_end":
+            return Outcome(answer="That is the last one.", changed=moved)
+        if code == "at_start":
+            return Outcome(answer="That is the first one.", changed=moved)
+        return Outcome.refused(code or "no_set", "There is no list open to move through.")
+    kind, ref, label = str(moved["kind"]), str(moved["ref"]), str(moved["label"])
+    ctx.branch.visit(kind, ref, label, set_id=str(moved.get("set_id") or ""))
+    calls = replay(ctx, kind, ref)
+    outcome = Outcome(answer=_member_words(ctx, label), calls=calls, changed={**moved, "replayed": bool(calls)})
+    if not calls:
+        # Memory does not hold this member. The caller reads it: the route can await, and the
+        # fast lane already has a read plan for exactly this.
+        outcome.changed["needs_read"] = {"kind": kind, "ref": ref, "set_kind": moved.get("set_kind")}
+    return outcome
+
+
+register(Command("workflow.next", "The next one in the open list",
+                 lambda ctx: _step_cursor(ctx, forward=True), needs_workflow=True))
+register(Command("workflow.previous", "The one before it in the open list",
+                 lambda ctx: _step_cursor(ctx, forward=False), needs_workflow=True))
+
+
+# --------------------------------------------------------------------------- opening
+
+
+def _open_entity(ctx: Ctx) -> Outcome:
+    """Open a record the current screen linked to.
+
+    The tablet posts the kind and the ref it was already given on the card — it does not have
+    to describe the record, and the model is not asked to find it again. A record the Mac no
+    longer holds is refused rather than half-drawn: the caller then asks for it out loud, which
+    reads it properly.
+    """
+    kind, ref = ctx.arg("kind"), ctx.arg("ref")
+    if kind not in ENTITY_KINDS:
+        return Outcome.refused("unknown_kind", f"I do not know how to open a {kind or 'record'}.")
+    if not ref:
+        return Outcome.refused("no_ref", "That link does not say which record it points at.")
+    calls = replay(ctx, kind, ref)
+    if not calls:
+        return Outcome.refused("not_held", "I no longer have that one to hand; ask for it and I will read it again.")
+    label = ctx.arg("label") or ref
+    ctx.branch.visit(kind, ref, label)
+    return Outcome(answer=f"{label}.", calls=calls,
+                   changed={"entity": {"kind": kind, "ref": ref, "label": label}, "replayed": True})
+
+
+register(Command("open.entity", "Open a linked record", _open_entity, voice=False))
+
+
+# --------------------------------------------------------------------------- the surface
+
+
+def _select_tab(ctx: Ctx) -> Outcome:
+    """Which part of the open record is showing.
+
+    The selected tab is branch state rather than something only the DOM knows, so it survives
+    a reload, a branch switch and a Back, and so "show me the shipping" and a tap on Shipping
+    are the same operation.
+    """
+    surface, tab = ctx.arg("surface"), ctx.arg("tab").lower()
+    allowed = TABS.get(surface or _surface_of(ctx), ())
+    if not allowed:
+        return Outcome.refused("no_tabs", "That screen has no tabs.")
+    if tab not in allowed:
+        return Outcome.refused("unknown_tab", f"That screen has no {tab!r} tab.")
+    ctx.branch.mark(tab=tab)
+    return Outcome(answer="", changed={"tab": tab})
+
+
+def _surface_of(ctx: Ctx) -> str:
+    entity = getattr(ctx.branch, "entity", None) or {}
+    return str(entity.get("kind") or "")
+
+
+def _expand_row(ctx: Ctx) -> Outcome:
+    """A row opened in place. Recorded on the branch so a Back that returns here returns to
+    the same shape of screen, rather than to a list that has forgotten what was open."""
+    ref = ctx.arg("ref")
+    if not ref:
+        return Outcome.refused("no_ref", "That row does not say which record it is.")
+    expanded = list(getattr(ctx.branch, "expanded", []) or [])
+    if ref in expanded:
+        expanded.remove(ref)
+    else:
+        expanded.append(ref)
+    ctx.branch.expanded = expanded[-12:]
+    return Outcome(answer="", changed={"expanded": list(ctx.branch.expanded)})
+
+
+register(Command("surface.tab", "Show one part of the open record", _select_tab))
+register(Command("surface.expand", "Open a row where it sits", _expand_row, voice=False))
+# The spoken shortcuts people actually use. Each is the tab command with its argument fixed,
+# so there is still one implementation of "show the shipping".
+register(Command("order.open_shipping", "The shipping on this order",
+                 lambda ctx: _select_tab(Ctx(ctx.runtime, ctx.session, ctx.branch, {"surface": "order", "tab": "shipping"})),
+                 needs_entity=("order",)))
+register(Command("order.open_items", "What is on this order",
+                 lambda ctx: _select_tab(Ctx(ctx.runtime, ctx.session, ctx.branch, {"surface": "order", "tab": "items"})),
+                 needs_entity=("order",)))
+register(Command("customer.open_orders", "What this customer has ordered",
+                 lambda ctx: _select_tab(Ctx(ctx.runtime, ctx.session, ctx.branch, {"surface": "customer", "tab": "orders"})),
+                 needs_entity=("customer",)))
+
+
+def public() -> list[dict[str, Any]]:
+    """The command table, for the capability manifest and the feature matrix. Derived from the
+    registry so the matrix cannot claim a command that does not exist."""
+    return [
+        {"name": c.name, "what": c.what, "voice": c.voice, "touch": c.touch,
+         "needs_entity": list(c.needs_entity), "needs_workflow": c.needs_workflow}
+        for c in sorted(REGISTRY.values(), key=lambda c: c.name)
+    ]

@@ -209,14 +209,22 @@ async def turn(
     # aside says this on its own chip rather than taking his attention (brief section 17).
     branch.working(_working_words(lane, intent))
     if lane == "FAST" and recipe is not None:
-        fast = await _fast(runtime, live, branch, intent, recipe, text)
+        # The rail is worked out beside the read, not after it. A fast turn used to answer
+        # with `writes` still None — that variable is set further down, on the path the fast
+        # lane returns before reaching — so present() built the card with no actions on it and
+        # an order looked up quickly offered nothing to do with the order. The preflight is
+        # cached, so asking for it here costs the turn nothing it was not already paying.
+        fast, fast_writes = await asyncio.gather(
+            _fast(runtime, live, branch, intent, recipe, text),
+            writes_context(request) if request is not None else _none(),
+        )
         if fast is not None:
             return await _answer(
                 runtime, session_id, fast.answer, request=request, timings=timings, started=started,
                 transcript=transcript_info, question=text.strip(), speak=speak, calls=fast.calls,
                 epoch=epoch, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
                 lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
-                surfaces=fast.surfaces,
+                surfaces=fast.surfaces, writes=fast_writes,
             )
         lane, lane_why = "NORMAL", "the fast path deferred"
 
@@ -837,7 +845,15 @@ async def _answer(
         writes = await writes_context(request)
     if proposed and writes is not None and not writes["allowed"] and writes["spoken"]:
         answer = f"{answer.rstrip()} {writes['spoken']}"
-    elif not proposed:
+    # `writes` on the wire is about a proposal: it tells the tablet whether a tap on the card
+    # this turn produced could apply it, and on a turn that proposed nothing there is nothing
+    # for it to describe. But the same table is also where the order card's rail comes from —
+    # which changes make sense for THIS order and which the store has granted — and a read
+    # turn is exactly when the rail matters. Nulling the one variable did both, so every
+    # order looked up came back with an empty `actions` list and nothing to do with it. The
+    # rail keeps the table; the payload keeps its old contract.
+    rail = writes
+    if not proposed:
         writes = None
     # The card leaves for the tablet now; its wait for the tap starts now.
     for proposal_id in proposed:
@@ -860,7 +876,7 @@ async def _answer(
     timings["total"] = (time.perf_counter() - started) * 1000
     # What the screen shows beside the answer: cards chosen from the tool results, never from
     # the prose. See app/presentation.py for the vocabulary and the bounds.
-    ui = present(calls, session=session, error_kind=error_kind, writes=writes)
+    ui = present(calls, session=session, error_kind=error_kind, writes=rail)
     # A card a recipe built for itself, for an answer no tool produced. It goes in front of
     # the context stack and behind nothing: it IS the answer to the question that was asked.
     if surfaces:

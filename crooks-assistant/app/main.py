@@ -26,6 +26,7 @@ from app.routes import (
     admin,
     batches,
     branches,
+    command,
     context,
     health,
     media,
@@ -163,6 +164,7 @@ app.include_router(admin.router)
 app.include_router(actions.router)
 app.include_router(batches.router)
 app.include_router(branches.router)
+app.include_router(command.router)
 app.include_router(context.router)
 app.include_router(media.router)
 app.include_router(observe.router)

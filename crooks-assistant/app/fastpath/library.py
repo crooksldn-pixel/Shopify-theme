@@ -248,18 +248,26 @@ def _nav_plan(ctx: Ctx) -> ReadPlan | None:     # noqa: ARG001
     return None
 
 
+def _command(ctx: Ctx, name: str) -> FastAnswer:
+    """A spoken instruction that is a semantic command, handed to the one implementation of it.
+
+    Back, Forward and Home are the same operations a tap performs, and there is now one of
+    each rather than two. `app/commands.py` is where they live; this is the spoken door into
+    them, and it contains no navigation logic of its own.
+    """
+    from app import commands
+
+    outcome = commands.run(name, commands.Ctx(ctx.runtime, ctx.session, ctx.branch))
+    return FastAnswer(answer=outcome.answer, calls=list(outcome.calls),
+                      surfaces=list(outcome.surfaces), trace={"command": name, **outcome.changed})
+
+
 def _nav_back(ctx: Ctx, result: ReadResult) -> FastAnswer:      # noqa: ARG001
-    entry = ctx.branch.back()
-    if entry is None:
-        return FastAnswer(answer="That is as far back as this conversation goes.", trace={"nav": "back", "landed": False})
-    return FastAnswer(answer=f"Back to {entry.label}.", trace={"nav": "back", "landed": True, "ref": entry.ref},
-                      calls=_replay(ctx, entry))
+    return _command(ctx, "navigation.back")
 
 
 def _nav_home(ctx: Ctx, result: ReadResult) -> FastAnswer:      # noqa: ARG001
-    ctx.branch.nav_index = 0 if ctx.branch.nav else -1
-    ctx.branch.entity = None if not ctx.branch.nav else {"kind": ctx.branch.nav[0].kind, "ref": ctx.branch.nav[0].ref, "label": ctx.branch.nav[0].label}
-    return FastAnswer(answer="Back to the start.", trace={"nav": "home"})
+    return _command(ctx, "navigation.home")
 
 
 def _replay(ctx: Ctx, entry) -> list[Any]:

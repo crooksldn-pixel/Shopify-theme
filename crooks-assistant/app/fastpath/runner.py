@@ -106,15 +106,21 @@ def _adopt_latest_set(ctx: Ctx) -> bool:
 
 
 def _advance(recipe: recipe_mod.Recipe, ctx: Ctx) -> None:
-    """The cursor move, before the read. "Next" is a += 1; that is the fix for the thirty
-    second turn, and it happens here rather than anywhere a model could reach."""
-    workflow = ctx.branch.workflow
-    if workflow is None:
+    """The cursor move, before the read.
+
+    The arithmetic itself is `app/commands.py:move_cursor`, which is also what a tap on Next
+    reaches. It used to live here, keyed on a recipe id, where touch could not get at it — so
+    the word "next" and the button called Next were two implementations of one idea and were
+    free to disagree about where a list ends.
+    """
+    from app.commands import move_cursor
+
+    if ctx.branch.workflow is None:
         return
-    if recipe.recipe_id == "working_set_next" and not workflow.at_end():
-        workflow.cursor += 1
-    elif recipe.recipe_id == "working_set_previous" and workflow.cursor > 0:
-        workflow.cursor -= 1
+    if recipe.recipe_id == "working_set_next":
+        move_cursor(ctx.session, ctx.branch, forward=True)
+    elif recipe.recipe_id == "working_set_previous":
+        move_cursor(ctx.session, ctx.branch, forward=False)
 
 
 def _keep(recipe: recipe_mod.Recipe, ctx: Ctx, result: ReadResult) -> None:

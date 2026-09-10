@@ -115,6 +115,10 @@ class Branch:
     nav_index: int = -1
     tab: str = ""
     scroll: int = 0
+    # Rows opened in place on the current surface, by ref. Branch state rather than something
+    # only the DOM knows, so a Back that returns here returns to the same shape of screen, and
+    # a half put aside keeps its own.
+    expanded: list[str] = field(default_factory=list)
 
     # What it has seen, most recent first.
     recent_entities: list[dict[str, str]] = field(default_factory=list)
@@ -247,7 +251,7 @@ class Branch:
             "branch_id": self.branch_id, "parent_id": self.parent_id or None, "status": self.status,
             "label": self.label, "entity": self.entity, "set_id": self.set_id or None,
             "workflow": self.workflow.public() if self.workflow else None,
-            "tab": self.tab or None, "scroll": self.scroll,
+            "tab": self.tab or None, "scroll": self.scroll, "expanded": list(self.expanded),
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
             "task": dict(self.task) if self.task else None,
