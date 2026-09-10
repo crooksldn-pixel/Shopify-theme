@@ -543,6 +543,11 @@ SCENARIOS: tuple[tuple[str, Callable[[Harness], Awaitable[Result]]], ...] = (
     ("enrichment", progressive_enrichment),
 )
 
+# The Phase 3 families' scenarios, one pack per family (experience/scenario_packs/*), so a
+# new family adds a file rather than a line to the tuple above.
+from experience.scenario_packs import collect as _collect_packs  # noqa: E402
+
+SCENARIOS = SCENARIOS + tuple(s for s in _collect_packs() if s[0] not in {n for n, _ in SCENARIOS})
 BY_NAME = dict(SCENARIOS)
 
 
