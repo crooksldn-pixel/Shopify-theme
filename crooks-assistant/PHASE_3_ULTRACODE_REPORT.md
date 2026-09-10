@@ -159,20 +159,34 @@ order in 400 ms and then spent eight seconds writing a sentence about it looked 
 that spent eight seconds reading. `enrichment_pending` names the regions a card left loading,
 so final enrichment pairs with the `/context/order` request that finishes it.
 
-Bench (`make bench-lanes`, 200 orders, 40 ms per source request; baseline quoted from the real
-session of 9 September 2026):
+Bench (`make bench-lanes`, 200 orders, 40 ms per source request; re-run on the merged build.
+The "then" column is the real session of 9 September 2026):
 
-| Asked | Then, on the tablet | Now, the Mac's own work |
-| --- | --- | --- |
-| Which customers are waiting on a reply | 29.0 s (28.1 s of it Claude) | 87 ms, FAST |
-| Next | 30.4 s (29.4 s of it Claude) | 0 ms, FAST |
-| Tap Orders | not asked in that session | 2 ms, FAST |
-| Tap Sales | not asked in that session | 4 ms, FAST |
-| Tap Products | not asked in that session | 3 ms, FAST |
+| Asked | Then, on the tablet | Now, the Mac's own work | Target |
+| --- | --- | --- | --- |
+| What more can you do now? | 76.6 s (75.5 s of it Claude, 0 tool calls) | **0 ms**, FAST | 50 ms |
+| Read me the full address | 36.8 s (35.2 s of it Claude, 1 tool call) | **41 ms**, FAST | 1.0 s |
+| Next · Next again | 30.4 s each (29.4 s of it Claude) | **0 ms**, FAST | 750 ms |
+| Which customers are waiting on a reply | 29.0 s (28.1 s of it Claude, 0 tool calls) | **85 ms**, FAST | 4.0 s |
+| Order 1938, cold · again | not asked in that session | 84 ms · 41 ms, FAST | 1.0 s |
+| Which orders are late | not asked in that session | **944 ms**, FAST | 2.5 s |
+| What sold best this month | not asked in that session | 126 ms, FAST | 2.5 s |
+| Tap Orders · Sales · Products | not asked in that session | 2 ms each, FAST | 1.5–2.5 s |
+| Go back | not asked in that session | 0 ms, FAST | 100 ms |
 
-17 of 17 bench rows answer with **no model call**. The landing figures are warm: their reads go
-through the order cache, which the Mac warms at start-up, so this is what the second tap of the
-day costs. The first tap pays the cache warm.
+**17 of 17 bench rows answer with no model call.** Four of those rows are sentences the live
+session actually said and waited 29 to 77 seconds for; three of the four made **no tool call at
+all** in that session, which is to say the whole wait was the model deciding it had nothing to
+look up.
+
+The landing figures are warm: their reads go through the order cache, which the Mac warms at
+start-up, so this is what the second tap of the day costs. The first tap pays the warm.
+
+**The slowest recipe, and why it is worth naming:** `delayed_orders` is 944 ms, an order of
+magnitude above every other row. It is inside its target and it is not new — but it got slower
+in this pass, because the golden world gained an order that has been waiting fourteen days and
+the recipe now has more to sort and more to draw. That is the shape to watch on the real store,
+where "what is late" is the question with the most rows behind it. Nothing else exceeds 130 ms.
 
 ### 2.4 The capability manifest, made user-useful (§29)
 
