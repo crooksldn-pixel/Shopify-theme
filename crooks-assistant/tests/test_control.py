@@ -964,3 +964,15 @@ def test_the_app_reads_every_document_field_from_the_contract_and_no_other(butto
     declared = set(re.findall(r"^\s*let ([a-z][A-Za-z0-9]*):", source, flags=re.MULTILINE))
     unknown = {name for name in declared if name not in printed}
     assert unknown == set(), f"the app decodes {sorted(unknown)}, which crooks-control does not print"
+
+
+def test_a_quiet_run_does_not_silence_the_next_one(here, capsys):
+    """The quiet is per run, not for the life of the process. It leaked once — a JSON run in
+    one test left the printed lines out of every later one — and the three tests that caught
+    it were in another file, which is a bad way to find out."""
+    update.run(check=True, quiet=True)
+    capsys.readouterr()
+    update.stage_deps(["app/routes/turn.py"], check_only=False)
+    assert "unchanged" in capsys.readouterr().out
+    code, _doc = update.run(check=True, quiet=False)
+    assert code == 0 and "crooks-update" in capsys.readouterr().out

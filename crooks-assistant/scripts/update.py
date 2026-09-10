@@ -298,12 +298,24 @@ def _document(**fields) -> dict:
 def run(*, check: bool = False, branch: str = "", test: bool = False, quiet: bool = False) -> tuple[int, dict]:
     """The whole command, once, as (exit code, document). `quiet` prints nothing and is what
     --json and CROOKS Control use; everything else is identical either way — one flow, so a
-    button cannot take a different path through this than the typed command does."""
+    button cannot take a different path through this than the typed command does.
+
+    The quiet is put back afterwards whatever happened: a stage called on its own — by a
+    test, or by another script — prints its line, and a run that swallowed the next caller's
+    output would be a silence nobody could explain.
+    """
     global _LINES, _QUIET
 
+    _LINES, _QUIET = [], quiet
+    try:
+        return _run(check=check, branch=branch, test=test, quiet=quiet)
+    finally:
+        _QUIET = False
+
+
+def _run(*, check: bool, branch: str, test: bool, quiet: bool) -> tuple[int, dict]:
     from config.settings import get_settings
 
-    _LINES, _QUIET = [], quiet
     port = get_settings().port
     doc = _document(check=check, stages=_LINES)
     if not quiet:
