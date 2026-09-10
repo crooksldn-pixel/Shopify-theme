@@ -11,6 +11,7 @@ Nothing here writes. Nothing here calls a model.
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -572,11 +573,36 @@ register(Recipe(
 # falls back to the branch's current entity when no number was said, which is exactly this
 # case. A second recipe rather than a second condition, because recipe_for maps one family to
 # one recipe and the two families are genuinely different questions.
+_DIGITS = re.compile(r"\b(\d{3,6})\b")
+
+
+def _reopen_plan(ctx: Ctx) -> ReadPlan | None:
+    """Show the open order again — but only if it IS the order being asked about.
+
+    "Show it again" means the record on screen. "Show me 1912 again" names a different one,
+    and `spoken_order_numbers` will not extract a bare number (a bare 2025 is a year, not an
+    order), so without this check the branch's entity was used instead and the wrong order was
+    re-opened confidently, on the fast lane. A named number that does not match what is open
+    is not a re-render, so this defers and the turn goes to a path that can look 1912 up.
+    """
+    known = ctx.entity("order")
+    if not known:
+        return None
+    said = {m for m in _DIGITS.findall(ctx.text or "")}
+    if said:
+        entity = getattr(ctx.branch, "entity", None) or {}
+        mine = set(_DIGITS.findall(str(entity.get("label") or ""))) | set(_DIGITS.findall(known))
+        if not (said & mine):
+            return None
+    return ReadPlan([Read("detail", "shopify_order_detail", {"order_id": known},
+                          source="shopify", cost=90.0)], label="order_reopen")
+
+
 register(Recipe(
     recipe_id="order_reopen", intent_family="order_reopen", required_entities=("order",),
     read_primitives=("shopify_order_detail",), parallel_nodes=(("detail",),), ui="order",
     cache_policy=CACHE_ENTITY, min_confidence=0.74, target_ms=700,
-    plan=_order_plan, render=_order_render,
+    plan=_reopen_plan, render=_order_render,
 ))
 
 

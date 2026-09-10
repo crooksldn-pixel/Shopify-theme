@@ -122,3 +122,30 @@ async def test_back_draws_the_record_even_when_memory_has_dropped_it(stage):
     assert (back.entity or {}).get("ref") == "gid://shopify/Order/1938", back.entity
     # Where the read came from — the store, or a warm read-layer cache — is not this test's
     # business. That a card appeared after memory had dropped the record is.
+
+
+async def test_again_never_reopens_a_different_order(stage):
+    """The trap in "show me 1938 again": the number is not extracted.
+
+    A bare number is deliberately not read as an order number — a bare 2025 is a year — so a
+    reopen falls back to whatever the branch has open. That is right for "show it again" and
+    catastrophic for "show me 1912 again", which named a different order and got 1938: a
+    confident wrong answer on the fast lane, which is the exact failure this pass exists to
+    remove. A named number that does not match what is open defers instead.
+    """
+    opened = await stage.say("show me order 1938", session_id="again")
+    assert opened.data("order").get("order_number") == "#1938"
+
+    for words in ("show me 1938 again", "1938 again", "show it again", "show that again"):
+        same = await stage.say(words, session_id="again")
+        assert same.recipe_id == "order_reopen", f"{words!r} took {same.recipe_id!r}"
+        assert same.data("order").get("order_number") == "#1938", words
+
+    for words in ("show me 1912 again", "1912 again"):
+        other = await stage.say(words, session_id="again")
+        assert other.recipe_id != "order_reopen", (
+            f"{words!r} reopened the branch's order instead of the one it named"
+        )
+        assert other.data("order").get("order_number") != "#1938", (
+            f"{words!r} showed the wrong order"
+        )
