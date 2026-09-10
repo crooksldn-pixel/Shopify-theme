@@ -27,6 +27,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'batch_action', 'batch_result', 'capability', 'reply_state',
     'variant_picker',
     'batch_action', 'batch_result', 'capability', 'reply_state', 'email_compose',
+    'workspace',
   ]));
 });
 

@@ -57,6 +57,13 @@ UI_TYPES = frozenset({
     # from that copy when a gesture asks for them. Built by the family, not from a tool
     # result: nothing has been read and nothing has been staged when it is drawn.
     "email_compose",
+    # something being BUILT, before anything is proposed (app/families/_workspace.py): the
+    # discount code of §12, the order of §11, the store credit of §13. The same card for
+    # all three — fields, a small closed choice or two, the facts the Mac read, and the
+    # button that would prepare it — and the same rule as the composer above: a keystroke
+    # posts the field's NAME and the characters, the Mac validates them into its own copy,
+    # and the execution arguments are built from that copy when a gesture asks for them.
+    "workspace",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})

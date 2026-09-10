@@ -577,7 +577,14 @@ def test_the_page_never_posts_the_email_with_a_gesture():
 def test_the_typed_value_reaches_the_mac_through_a_command_and_not_a_write_route():
     app_js = (WEB / "app.js").read_text(encoding="utf-8")
     block = app_js[app_js.index("compose · begin"): app_js.index("compose · end")]
-    assert "semanticCommand('compose.field'" in block
+    # One precision-field component now serves every family that has fields (the composer,
+    # and the discount/order/credit workspaces of app/families/_workspace.py), so WHICH
+    # command a keystroke posts is read off the card the Mac drew, with the composer's own
+    # as the default for a card built before the seam existed. What has not changed, and is
+    # what this test is for, is that a keystroke posts a semantic COMMAND carrying an id, a
+    # field name and the characters — and never touches a write route.
+    assert "control.dataset.post || 'compose.field'" in block
+    assert "semanticCommand(post, { compose_id: composeId, field: name, value })" in block
     assert "COMPOSE_DEBOUNCE_MS = 400" in block
     # A field must never reach a write route, and typing must never begin a recording.
     for forbidden in ("/actions/", "startRecording", "sendAudio", "fetch("):

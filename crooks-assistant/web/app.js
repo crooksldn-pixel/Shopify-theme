@@ -2928,8 +2928,12 @@ setState('READY');
 const composeDebounce = new Map();
 const COMPOSE_DEBOUNCE_MS = 400;
 
+// The card a field belongs to: the composer, or any other card the Mac has put precision
+// fields on (app/families/_workspace.py draws a discount code, an order and a credit the
+// same way). `.card` is on every one of them, and `closest` finds the nearest — so a field
+// inside a folded card still redraws the card it is in and not the fold around it.
 function composeCardFor(node) {
-  return node && node.closest ? node.closest('.card-email_compose') : null;
+  return node && node.closest ? node.closest('.card') : null;
 }
 
 // A re-render of one card, in place. `pushContext` is wrong here — a corrected address is not
@@ -2957,7 +2961,13 @@ async function composeFieldChanged(control) {
   const card = composeCardFor(control);
   const caret = typeof control.selectionStart === 'number' ? control.selectionStart : null;
   const value = String(control.value === undefined ? '' : control.value);
-  const answered = await semanticCommand('compose.field', { compose_id: composeId, field: name, value });
+  // Which command a keystroke in THIS field posts. The Mac put it on the card
+  // (web/ui.js `field`), because the page must not have to know that a discount code's
+  // characters go to the discount family and an address's go to the composer. Absent — an
+  // older card, a card built before this seam — the composer's own command, which is what
+  // every field on the tablet posted before there was a second kind.
+  const post = control.dataset.post || 'compose.field';
+  const answered = await semanticCommand(post, { compose_id: composeId, field: name, value });
   if (!answered) return;                                   // offline: the field keeps what was typed
   if (!answered.ok) { toast(String(answered.detail || 'That could not be applied.')); return; }
   if (!Array.isArray(answered.ui) || !answered.ui.length || !card) return;

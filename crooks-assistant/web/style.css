@@ -1165,3 +1165,32 @@ html[data-lite] .orb-zone{transition:none}
 .compose-btn.risk-red{border-color:var(--bad);background:var(--bad-dim);color:var(--ink)}
 .compose-btn.quiet{flex:0 1 auto;min-width:0;border-color:var(--border-subtle);background:transparent;color:var(--ink-3);font-weight:500}
 .compose-btn[disabled]{opacity:.5;pointer-events:none}
+/* ---------------------------------------------------- workspace (app/families/_workspace.py)
+ *
+ * The card for something being BUILT — a discount code, an order made from nothing, a credit
+ * on an account. It borrows the field and the button above deliberately: one precision input
+ * with one status ring, everywhere, is the whole point of having a component. What it adds is
+ * the two things a form needs and a composer does not — the facts the Mac read (which are
+ * read-only, and must not look typeable) and a small closed choice the thumb makes.
+ */
+.card.card-workspace{padding:14px 18px 18px}
+.ws-facts{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.ws-fact{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ws-fact dt{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.ws-fact dd{margin:0;font-size:14px;color:var(--ink);text-align:right;word-break:break-word}
+.ws-fact.tone-warn dd{color:var(--warn)}
+.ws-fact.tone-bad dd{color:var(--bad)}
+.ws-fact.tone-ok dd{color:var(--ok)}
+.ws-fields{display:flex;flex-direction:column}
+.ws-choices{display:flex;flex-direction:column;gap:10px;margin:14px 0 0}
+.ws-choice{display:flex;flex-direction:column;gap:6px}
+.ws-options{display:flex;flex-wrap:wrap;gap:8px}
+.ws-opt{
+  min-height:var(--tap);padding:9px 14px;
+  font:inherit;font-size:14px;font-weight:500;color:var(--ink-3);cursor:pointer;
+  border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:transparent;
+  transition:transform var(--t-1),background var(--t-1);
+}
+.ws-opt.is-on{color:var(--ink);font-weight:600;border-color:var(--border-active);background:var(--glass-control-active);box-shadow:var(--inset-hi)}
+.ws-opt:active{transform:scale(.96);transition-duration:var(--motion-press)}
+.card-note.tone-warn{color:var(--warn)}

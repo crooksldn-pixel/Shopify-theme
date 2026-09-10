@@ -1817,8 +1817,12 @@
       maxlength: num(s.maxlength) ? String(num(s.maxlength)) : null,
       'aria-label': text(s.label, name),
       'aria-invalid': status === 'invalid' ? 'true' : 'false',
-      // What a keystroke posts: WHICH composer and WHICH field. Never what to do with it.
-      data: { compose: text(s.compose_id), field: name, kind },
+      // What a keystroke posts: WHICH workspace and WHICH field. Never what to do with it.
+      // `post` is the semantic command the Mac put on the card — `compose.field` for an
+      // email, `discount.field` for a code being written — so that one component serves
+      // every family and the page still does not know what any field MEANS. Absent, the
+      // composer's own command is assumed, which is what every existing card sends.
+      data: { compose: text(s.compose_id), field: name, kind, post: text(s.post, 'compose.field') },
     });
     // Both, because a textarea's text is its content and an input's is its value, and the
     // page reads `.value` for both.
@@ -1905,6 +1909,73 @@
     return node;
   }
 
+  // Something being BUILT, before anything has been proposed (app/families/_workspace.py):
+  // a discount code, an order made from nothing, a credit on a customer's account. One card
+  // for all three, because the Mac sends what is on it — the fields and their kinds, the
+  // closed choices, the facts it read, the notes it wants said, and the buttons — and this
+  // file only decides how that looks.
+  //
+  // Everything a finger can do here carries a command NAME and its own arguments, which the
+  // delegated handler on `#cards` posts (web/app.js). Nothing here knows what "prepare"
+  // means and nothing here may: the values are the Mac's, the arguments of the change are
+  // built there when a gesture asks for them, and this card cannot make one.
+  function renderWorkspace(d, opts) {
+    const settings = opts || {};
+    const id = text(d.workspace_id);
+    const post = text(d.field_command);
+    const facts = list(d.facts, 10);
+    const choices = list(d.choices, 4);
+    const blocked = text(d.blocked);
+
+    const factRows = facts.length ? h('dl', { class: 'ws-facts' }, facts.map((f) => h('div', { class: `ws-fact${text(f.tone) ? ' tone-' + text(f.tone) : ''}` }, [
+      h('dt', { text: text(f.label) }),
+      h('dd', { text: text(f.value, '—') }),
+    ]))) : null;
+
+    const choiceRows = choices.map((c) => h('div', { class: 'ws-choice', role: 'group', 'aria-label': text(c.label, text(c.name)) }, [
+      h('span', { class: 'field-label', text: text(c.label, text(c.name)) }),
+      h('div', { class: 'ws-options' }, list(c.options, 6).map((o) => h('button', {
+        class: `ws-opt${o.selected === true ? ' is-on' : ''}`,
+        type: 'button',
+        'aria-pressed': o.selected === true ? 'true' : 'false',
+        data: { command: text(d.choose_command, 'workspace.choose'), args: `workspace_id=${id}&field=${text(c.name)}&option=${text(o.id)}` },
+      }, [h('span', { text: text(o.label, text(o.id)) })]))),
+    ]));
+
+    const inputs = list(d.fields, 8).map((f) => field({
+      kind: text(f.kind, 'text'), name: text(f.name), label: text(f.label), value: f.value,
+      status: f.status, hint: f.hint, compose_id: id, post, maxlength: num(f.maxlength) || 80,
+      rows: num(f.rows) || null, placeholder: text(f.placeholder),
+    }, settings));
+
+    const buttons = list(d.actions, 4).map((a) => h('button', {
+      class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${a.enabled === false ? ' quiet' : ''}`,
+      type: 'button',
+      disabled: a.enabled === false ? true : null,
+      data: { command: text(a.command), args: text(a.args), action: text(a.id) },
+    }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]));
+
+    const node = card('workspace', [
+      h('div', { class: 'card-head' }, [
+        h('div', {}, [
+          kicker(text(d.kicker, 'Not created yet')),
+          h('h2', { class: 'card-title', text: text(d.title, 'Building') }),
+          h('p', { class: 'card-sub', text: text(d.subtitle) }),
+        ]),
+        h('div', { class: 'badges' }, [badge(blocked ? 'Not ready' : 'Draft', blocked ? 'warn' : '')]),
+      ]),
+      factRows,
+      inputs.length ? h('div', { class: 'ws-fields' }, inputs) : null,
+      choiceRows.length ? h('div', { class: 'ws-choices' }, choiceRows) : null,
+      blocked ? h('p', { class: 'card-note tone-warn', text: blocked }) : null,
+      strings(d.notes, 4).map((n) => h('p', { class: 'card-note', text: n })),
+      buttons.length ? h('div', { class: 'compose-actions', role: 'group', 'aria-label': 'What to do with this' }, buttons) : null,
+      h('p', { class: 'future', text: 'Nothing is created until you authorise the card that follows.' }),
+    ], settings);
+    node.dataset.workspace = id;
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1934,6 +2005,7 @@
     reply_state: renderReplyState,
     variant_picker: renderVariantPicker,
     email_compose: renderEmailCompose,
+    workspace: renderWorkspace,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
