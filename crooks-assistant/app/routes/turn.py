@@ -172,6 +172,9 @@ async def turn(
     # card — the owner is told again what applies it. Anything else said is an instruction.
     # Which half of the orb is being spoken to, before anything is withdrawn: a question
     # asked over here is not a new instruction to a card waiting over there.
+    # A recipe's half of a compound answer, when there is one: its cards and its reads are
+    # carried into the model turn below rather than ending it (brief section 16).
+    fast_partial = None
     branch = live.branch(branch_id)
     # Everything downstream that is handed only the session — the action engine when it
     # stages, working sets when they are created — asks the session which half is speaking.
@@ -264,7 +267,16 @@ async def turn(
                 fast_writes = await preflight
             else:
                 preflight.cancel()
-        if fast is not None:
+        if fast is not None and fast.partial and fast.continuation:
+            # The recipe drew the workspace and says the rest is Claude's (brief section 16).
+            # The turn does NOT end here: the cards are kept, the continuation is put to the
+            # model, and one answer comes back with both halves. The alternative — returning
+            # the recipe's sentence and arming the branch — made the owner ask twice, which is
+            # what the bench's thirty-five-second compound turn already cost him once.
+            fast_partial = fast
+            timings["fast_partial"] = (time.perf_counter() - started) * 1000
+            lane, lane_why = "NORMAL", f"the fast path drew {recipe.recipe_id} and handed the words to Claude"
+        elif fast is not None:
             return await _answer(
                 runtime, session_id, fast.answer, request=request, timings=timings, started=started,
                 transcript=transcript_info, question=spoken.strip(), speak=speak,
@@ -280,7 +292,8 @@ async def turn(
                 # numbers are nearly the same.
                 measures={"recipe_reads_ms": (fast.trace or {}).get("critical_path_ms") or (fast.trace or {}).get("ms")},
             )
-        lane, lane_why = "NORMAL", "the fast path deferred"
+        elif fast is None:
+            lane, lane_why = "NORMAL", "the fast path deferred"
 
     await _ensure_provider_started(runtime)
 
@@ -312,6 +325,10 @@ async def turn(
         prompt_text = f"{prompt_text}\n\n{set_line}"
     for extra in _context_lines(live, text, runtime=runtime):
         prompt_text = f"{prompt_text}\n\n{extra}"
+    if fast_partial is not None and fast_partial.continuation:
+        # Last, so it is the freshest thing in front of the model, and marked as the Mac's own
+        # reading rather than something the owner said.
+        prompt_text = f"{prompt_text}\n\n{fast_partial.continuation}"
     where = _branch_line(branch)
     if where:
         prompt_text = f"{prompt_text}\n\n{where}"
@@ -325,6 +342,10 @@ async def turn(
     # part of the prompt is written anywhere, here or on the timeline. Kept apart from
     # `timings`, which is milliseconds and is published as such.
     measures = {"model_input_chars": len(prompt_text), "tool_schema_bytes": _tool_schema_bytes(runtime)}
+    if fast_partial is not None:
+        # The facts were in hand when the RECIPE finished reading, not when the model's
+        # sentence landed — which is exactly the gap section 25 asks to be measured.
+        measures["recipe_reads_ms"] = (fast_partial.trace or {}).get("critical_path_ms") or (fast_partial.trace or {}).get("ms")
     t0 = time.perf_counter()
     result = await _provider_turn(runtime, session_id, prompt_text, branch)
     timings["agent"] = (time.perf_counter() - t0) * 1000
@@ -371,9 +392,16 @@ async def turn(
                 "proposal_id": c.proposal_id,
                 "tool_call_id": getattr(c, "tool_call_id", "") or None,
             }
-            for c in result.tool_calls
+            for c in list(result.tool_calls) + (list(fast_partial.calls) if fast_partial is not None else [])
         ] + [],
-        calls=result.tool_calls,
+        # The recipe's cards, in front of whatever the model's own reads drew. A compound
+        # answer is one screen: the workspace the Mac built and the sentence Claude wrote
+        # about it, not two turns' worth of cards (brief section 16).
+        calls=(
+            list(fast_partial.calls if fast_partial.drawn is None else fast_partial.drawn) + list(result.tool_calls or [])
+            if fast_partial is not None else result.tool_calls
+        ),
+        surfaces=(list(fast_partial.surfaces) if fast_partial is not None else None),
         speak=speak,
         lost_thread=lost_thread,
         epoch=epoch,

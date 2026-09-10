@@ -942,3 +942,110 @@ async def test_a_cancel_without_a_half_still_abandons_the_session(client):
     assert (await turn).json()["answer"] == "Too late."
     await asyncio.sleep(0)
     assert calls == []
+
+
+# ------------------------------------- a compound answer is one turn, not two
+
+
+async def test_a_partial_recipe_hands_its_cards_and_its_words_to_the_model_in_one_turn(client):
+    """Brief section 16: the workspace is drawn by the Mac and the sentence is written by
+    Claude, in ONE answer.
+
+    The recipe used to return its own sentence and arm the branch, so the owner had to ask
+    twice — which is what the bench's thirty-five-second compound turn cost him once already.
+    Now a `partial` answer carrying a `continuation` does not end the turn: its cards are kept,
+    its reads reach the log, and the continuation goes in front of the model.
+    """
+    from app.fastpath.models import FastAnswer
+    from app.providers.base import ToolCall, TurnResult
+    from app.surfaces import Freshness, Surface
+
+    runtime = app.state.runtime
+    seen: list[str] = []
+
+    async def turn(session_id, text):
+        seen.append(text)
+        return TurnResult(text="They are waiting on the second hoodie. I have drafted the reply.", session_id=session_id)
+
+    runtime.provider.turn = turn
+
+    drawn = ToolCall(name="shopify_order_detail", args={"order_id": "gid://shopify/Order/1"}, ok=True,
+                     result={"order_id": "gid://shopify/Order/1", "order_number": "#1938", "items": []})
+    surface = Surface(surface_type="reply_state", ui_type="metric_group",
+                      data={"title": "Waiting", "metrics": [{"label": "since", "value": "5h"}]},
+                      title="Waiting", subtitle="", freshness=Freshness(source="gmail", complete=True, caveat=""))
+
+    def answered():
+        return FastAnswer(
+            answer="Mia wrote about 1938 five hours ago.",
+            calls=[drawn], drawn=[drawn], surfaces=[surface], partial=True,
+            continuation="[The Mac has read the order and the thread. Say in one sentence what "
+                         "they are waiting for, then call gmail_draft_reply(thread_id='t1', order_id='o1', body=…).]",
+            trace={"ms": 4.0, "critical_path_ms": 3.7},
+        )
+
+    import app.routes.turn as turn_mod
+    from app.fastpath import RECIPES
+    from app.fastpath.intent import Intent, signals_for
+
+    # The routing of this sentence has its own tests (tests/test_graph.py); what is under test
+    # here is what happens AFTER a recipe says "partial, and here is what to tell Claude".
+    real_fast, real_route = turn_mod._fast, turn_mod._route
+    recipe = RECIPES["order_email_reply"]
+
+    def route(text, branch):
+        return "FAST", "under test", Intent(family=recipe.intent_family, confidence=1.0, signals=signals_for(text, branch=branch)), recipe
+
+    async def fast(runtime_, session, branch, intent, recipe_, text):
+        return answered()
+
+    turn_mod._fast, turn_mod._route = fast, route
+    try:
+        body = (await client.post("/turn", json={"text": "have they emailed about this order and draft the reply",
+                                                 "session_id": "compound"})).json()
+    finally:
+        turn_mod._fast, turn_mod._route = real_fast, real_route
+
+    # ONE answer, and it is the model's — the recipe's sentence was the interim one.
+    assert body["answer"].startswith("They are waiting on the second hoodie")
+    # The model was asked, and the continuation was in front of it.
+    assert seen and "gmail_draft_reply" in seen[-1] and "one sentence" in seen[-1]
+    # The recipe's cards survived into that answer, in front of the model's own.
+    types = [item["type"] for item in body["ui"]]
+    assert "metric_group" in types and "order" in types, types
+    # And the turn is recorded as the NORMAL lane that it became, with the recipe's reads on it.
+    assert body["lane"] == "NORMAL"
+    assert any(call["name"] == "shopify_order_detail" for call in body.get("tool_calls") or []), body.get("tool_calls")
+
+
+async def test_a_partial_recipe_with_nothing_to_hand_over_still_answers_on_its_own(client):
+    """`partial` alone does not mean "ask the model": a recipe that read part of what was asked
+    and said so keeps its own answer. Only a continuation moves the turn on."""
+    from app.fastpath.models import FastAnswer
+    from app.providers.base import TurnResult
+
+    runtime = app.state.runtime
+    asked: list[str] = []
+
+    async def turn(session_id, text):
+        asked.append(text)
+        return TurnResult(text="should not be reached", session_id=session_id)
+
+    runtime.provider.turn = turn
+    import app.routes.turn as turn_mod
+
+    real_fast = turn_mod._fast
+
+    async def fast(runtime_, session, branch, intent, recipe, text):
+        return FastAnswer(answer="Three orders today; the inbox did not answer.", partial=True, trace={"ms": 2.0})
+
+    turn_mod._fast = fast
+    try:
+        body = (await client.post("/turn", json={"text": "show me today's orders", "session_id": "partial-only"})).json()
+    finally:
+        turn_mod._fast = real_fast
+    _ = FastAnswer
+
+    assert body["answer"].startswith("Three orders today")
+    assert body["lane"] == "FAST"
+    assert asked == [], "the model was asked for an answer the recipe had already given"

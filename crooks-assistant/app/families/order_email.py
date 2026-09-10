@@ -619,6 +619,11 @@ def _render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         # The reading is done; the sentence about what they are waiting for and the draft itself
         # are Claude's, so this turn is not the whole answer and does not claim to be.
         partial=True,
+        # And Claude is asked in THIS turn: `app/routes/turn.py` carries these cards into the
+        # model turn and puts this prompt in front of it, so one answer comes back with the
+        # workspace already drawn. Only when the owner asked for the reply — a sentence that
+        # only asked whether they had written is answered, not handed on.
+        continuation=prompt if asked else "",
         trace={
             "threads_considered": len(candidates), "confidence": confidence,
             "waiting": waiting, "replied": bool(state["replied"]),

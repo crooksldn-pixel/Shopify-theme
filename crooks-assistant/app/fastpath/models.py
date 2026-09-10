@@ -65,6 +65,17 @@ class FastAnswer:
     trace: dict[str, Any] = field(default_factory=dict)
     # A recipe that finds it cannot honestly answer says so here and the turn goes to Claude.
     defer: str = ""
+    # The model's half of a compound answer (brief section 16). A recipe that has drawn the
+    # workspace but cannot write the sentence — "tell me what they are waiting for, and draft
+    # the reply" needs prose and a draft, which is Claude's — puts here what Claude should be
+    # told, and the turn goes ON to the model with the cards already built. Without it the
+    # recipe either answered half the question and stopped, or the owner had to ask a second
+    # time; the bench's worst turn was thirty-five seconds of exactly that.
+    #
+    # It is an INSTRUCTION, never an answer: it quotes what was read and names the tool to
+    # call. Only read with `partial` set, and never written to the timeline — it carries a
+    # customer's words.
+    continuation: str = ""
 
     @property
     def deferred(self) -> bool:
