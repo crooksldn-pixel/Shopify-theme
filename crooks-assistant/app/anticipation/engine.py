@@ -17,8 +17,9 @@ Every hard rule of §18 is mechanical here rather than advisory:
   starts. An internal prediction can only name something in the closed table in
   app/anticipation/internal.py. There is no third path, so there is no path to a mutation.
 * **The owner outranks it.** `owner_read()` is called by the read scheduler whenever a
-  REQUESTED plan runs, and stands the speculative lane down for that conversation. A context
-  change (a different record) cancels the lot for that conversation.
+  REQUESTED plan runs, and stands the speculative lane down for the half of the workspace he
+  asked it of. A context change — a different record on that half — cancels that half's
+  speculation outright. The other half is untouched: he did not ask it anything.
 * **Deduped and coalesced.** A prediction whose key is already in flight is skipped; a
   prediction whose answer is already fresh in the tiered cache is skipped; what does run goes
   into that same cache, so the requested read that follows finds it there instead of asking
