@@ -279,3 +279,65 @@ async def test_the_inbox_answers_for_the_period_it_was_asked_about(stage):
     # Gmail's newer_than, so a shorter window genuinely returns fewer threads.
     assert day.data("email_list") or day.answer
     assert int(day.answer.split()[0]) < int(week.answer.split()[0]), (day.answer, week.answer)
+
+
+async def test_neither_half_of_the_orb_inherits_the_others_list(stage):
+    """Two halves, two lists — or, on the half that listed nothing, no list.
+
+    Working sets were session state with no record of which half made them, so the newest set
+    on the conversation answered for both. A half looking at one order would take over the
+    other half's rows on "next", and — the part that reaches the write path — the model was
+    told in the prompt that "these" and "all of them" meant those rows, with the set_id to act
+    on them. `WorkingSet.branch_id` and `session.acting_branch` make a list belong somewhere.
+    """
+    session = "orb"
+    await stage.say("show me order 1938", session_id=session)
+    forked = await stage.client.post(
+        "/branches/fork", data={"session_id": session},
+        headers={"Tailscale-User-Login": "owner@example.com", "X-Forwarded-For": "100.64.0.9"},
+    )
+    other = forked.json()["branch_id"]
+    await stage.say("which customers are waiting on a reply", session_id=session, branch_id=other)
+
+    # The half that listed nothing has nothing to walk, and says so rather than borrowing.
+    walked = await stage.say("next", session_id=session)
+    assert walked.recipe_id != "working_set_next", walked.answer
+    for name in ("Raman", "Fenwick", "Randall"):
+        assert name not in walked.answer, f"the other half's rows reached this one: {walked.answer!r}"
+
+    # And nothing tells the model that "these" means the other half's rows.
+    before = len(stage.provider.calls)
+    await stage.say("tell me what you make of it", session_id=session)
+    asked = " ".join(str(getattr(c, "prompt", c)) for c in stage.provider.calls[before:])
+    assert "Working set" not in asked, asked[asked.find("[Working set"):][:200]
+
+    # The half that DID list still has its list, and can walk it.
+    stepped = await stage.say("next", session_id=session, branch_id=other)
+    assert stepped.recipe_id == "working_set_next", stepped.answer
+
+
+async def test_the_session_records_which_half_a_turn_was_addressed_to(stage):
+    """`acting_branch` is how a proposal reaches the half that asked for it.
+
+    `stage()` stamped `session.focused_branch`, while every reader of that field assumes the
+    asking one — so a change proposed by the half that is put aside was filed against the half
+    on screen. A spoken "yes" over here then applied a change asked for over there, the card
+    survived the next instruction that should have withdrawn it, and a BACKGROUND half's
+    proposal passed the check that exists to stop a background half committing anything.
+    """
+    session = "stamp"
+    await stage.say("show me order 1938", session_id=session)
+    forked = await stage.client.post(
+        "/branches/fork", data={"session_id": session},
+        headers={"Tailscale-User-Login": "owner@example.com", "X-Forwarded-For": "100.64.0.9"},
+    )
+    other = forked.json()["branch_id"]
+    live = stage.runtime.sessions.get(session)
+    # Focus stays where the fork left it; the turn is addressed to the other half.
+    live.focused_branch = [b for b in live.branches if b != other][0]
+    await stage.say("show me order 1940", session_id=session, branch_id=other)
+    assert live.acting_branch == other, live.acting_branch
+
+    assert live.acting_branch != live.focused_branch, (
+        "this test is only meaningful while the two differ"
+    )

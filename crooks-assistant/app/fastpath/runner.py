@@ -91,7 +91,7 @@ def _adopt_latest_set(ctx: Ctx) -> bool:
     from app.analytics import sets as working_sets
     from app.session.branch import Workflow
 
-    ws = working_sets.latest(ctx.session)
+    ws = working_sets.latest(ctx.session, branch_id=getattr(ctx.branch, "branch_id", "") or "")
     if ws is None or not ws.members:
         return False
     ctx.branch.set_id = ws.set_id

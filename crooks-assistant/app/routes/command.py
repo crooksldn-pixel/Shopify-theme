@@ -82,6 +82,9 @@ async def command(
         return _refuse(400, "not_tappable", f"{name!r} is not something the tablet can post.")
 
     branch = session.branch(branch_id) if branch_id else session.branch()
+    # A tap is addressed to a half too, and anything it causes downstream — a read that opens
+    # a working set, a proposal — must be filed against that half rather than the focused one.
+    session.acting_branch = branch.branch_id
     started = time.perf_counter()
     outcome = commands.run(name, commands.Ctx(runtime, session, branch, {
         "kind": (kind or "").strip()[:40],

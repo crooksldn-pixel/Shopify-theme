@@ -36,6 +36,10 @@ class WorkingSet:
     expires_at: float
     session_id: str
     turn_id: str
+    # Which half of the orb listed it. A set is a place in ONE conversation on ONE half —
+    # "these" said to the half looking at an order does not mean the rows the other half
+    # pulled up — and without this the newest set on the session answered for both.
+    branch_id: str = ""
     provenance: dict[str, Any] = field(default_factory=dict)   # tool, query, parent, step
     sample: tuple[dict[str, Any], ...] = ()
     totals: dict[str, Any] = field(default_factory=dict)
@@ -94,6 +98,7 @@ def create(
     ws = WorkingSet(
         set_id=new_set_id(), kind=kind, members=tuple(ids), label=" ".join(str(label or "").split())[:80] or kind,
         created_at=now, expires_at=now + TTL_S, session_id=str(getattr(session, "session_id", "") or ""), turn_id=str(getattr(session, "turn_id", "") or ""),
+        branch_id=str(getattr(session, "acting_branch", "") or getattr(session, "focused_branch", "") or ""),
         provenance=dict(provenance or {}), sample=tuple({"ref": str(s.get("ref") or ""), "label": str(s.get("label") or "")[:60]} for s in (sample or [])[:MAX_SAMPLE]),
         totals={k: v for k, v in (totals or {}).items() if isinstance(v, (int, float, str)) and not isinstance(v, bool)}, truncated=truncated,
         labels={ref: str(name)[:MAX_LABEL] for ref, name in (labels or {}).items() if ref in set(ids) and name},
@@ -140,9 +145,18 @@ def get(session: Any, set_id: str, *, clock=time.time) -> WorkingSet | None:
     return ws
 
 
-def latest(session: Any, *, kind: str | None = None) -> WorkingSet | None:
+def latest(session: Any, *, kind: str | None = None, branch_id: str | None = None) -> WorkingSet | None:
+    """The newest set, optionally only the ones a given half listed.
+
+    `branch_id` is not a filter for tidiness. A half that has never listed anything has no
+    list to walk, and saying "next" there must say so — not reach across the orb and adopt
+    whatever the other half was working through, which is a set naming records this half was
+    never shown. Pass "" to mean sets made before halves were being recorded.
+    """
     held = _held(session)
-    candidates = [s for s in held.values() if kind is None or s.kind == kind]
+    candidates = [s for s in held.values()
+                  if (kind is None or s.kind == kind)
+                  and (branch_id is None or s.branch_id == branch_id or not s.branch_id)]
     # Ties on the clock go to the set made last (dict order is insertion order).
     return max(reversed(candidates), key=lambda s: s.created_at) if candidates else None
 
@@ -166,14 +180,26 @@ def _fields(ws: WorkingSet) -> dict[str, Any]:
     return {name: getattr(ws, name) for name in WorkingSet.__slots__}   # type: ignore[attr-defined]
 
 
-def prompt_line(session: Any, *, clock=time.time) -> str:
-    """What the model is told at the top of a turn about the set in focus: one line."""
+def prompt_line(session: Any, *, branch: Any = None, clock=time.time) -> str:
+    """What the model is told at the top of a turn about the set in focus: one line.
+
+    Scoped to the half being spoken to. `session.focus["set"]` is session state, so while this
+    read it alone a half that had listed nothing was told, in the sentence the model acts on,
+    that "these" and "all of them" meant the OTHER half's rows — and given the set_id to act
+    on them with. That reaches the write path: a bulk change is built from a set_id.
+    """
     ws = None
+    branch_id = str(getattr(branch, "branch_id", "") or "") if branch is not None else None
+    held_set = str(getattr(branch, "set_id", "") or "") if branch is not None else ""
+    if held_set:
+        ws = get(session, held_set, clock=clock)
     focus = getattr(session, "focus", None)
-    if isinstance(focus, dict) and focus.get("set"):
+    if ws is None and isinstance(focus, dict) and focus.get("set"):
         ws = get(session, focus["set"], clock=clock)
+        if ws is not None and branch_id is not None and ws.branch_id and ws.branch_id != branch_id:
+            ws = None      # the other half's list: not what "these" means over here
     if ws is None:
-        ws = latest(session)
+        ws = latest(session, branch_id=branch_id)
     if ws is None:
         return ""
     return (

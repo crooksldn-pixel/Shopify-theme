@@ -112,6 +112,13 @@ class Session:
     # `issued_ids`, above, which every branch shares because they are one conversation.
     branches: dict[str, Any] = field(default_factory=dict)
     focused_branch: str = ""
+    # Which half THIS turn is addressed to, which is not always the focused one: the tablet
+    # posts a branch_id, and a question asked of the half that was put aside must not be
+    # filed against the half on screen. Set once per turn beside `turn_id`, and read by the
+    # layers that only ever receive a session — the action engine, and working sets. Without
+    # it a change proposed by one half was stamped with the other, and a "yes" spoken to the
+    # wrong half applied it.
+    acting_branch: str = ""
 
     def set_state(self, state: str, detail: str = "") -> None:
         self.state = state

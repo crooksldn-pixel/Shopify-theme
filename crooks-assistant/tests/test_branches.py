@@ -199,11 +199,38 @@ async def test_another_logins_session_gets_nothing_of_it(client):
 
 # ------------------------------------------- a change belongs to where it was asked
 
-def test_a_staged_change_carries_the_branch_that_staged_it():
-    from pathlib import Path
+async def test_a_staged_change_carries_the_branch_that_staged_it():
+    """The property this test is named for, asserted rather than grepped.
 
-    engine = Path("app/actions/engine.py").read_text(encoding="utf-8")
-    assert 'branch_id=str(getattr(session, "focused_branch", "") or "")' in engine
+    It used to check that `app/actions/engine.py` contained a particular line of source —
+    and the line it pinned was `focused_branch`, which is NOT the branch that staged the
+    change whenever the tablet addresses a half that is not on screen. A test that reads the
+    implementation can only ever agree with it; this one drives the engine and looks at what
+    came out, and it is what makes the four properties below hold: a spoken "yes" matched
+    against the speaking half, `revoke_pending` withdrawing by half, `/branches/{id}
+    /background` refusing a half with a change waiting, and a BACKGROUND half never
+    committing (the test directly beneath this one).
+    """
+    from app.actions import engine as engine_module
+    from app.actions.engine import ActionEngine
+    from app.actions.ledger import NullLedger
+    from app.tools import shopify_tools
+    from tests.test_actions import ORDER, Clock, FakeStore, stage
+
+    shopify_tools.bind(FakeStore(note="Gift wrap please"))
+    engine_module._engine = ActionEngine(ledger=NullLedger(), clock=Clock())
+
+    session = Session(session_id="staged")
+    session.issue(ORDER)
+    session.epoch = 1
+    on_screen, put_aside = session.branch().branch_id, "br_put_aside"
+    session.focused_branch = on_screen
+    session.acting_branch = put_aside
+
+    _, proposal = await stage(session)
+    assert proposal.branch_id == put_aside, (
+        "the change was filed against the half on screen, not the half that asked for it"
+    )
 
 
 def test_a_change_in_a_backgrounded_half_cannot_be_committed():

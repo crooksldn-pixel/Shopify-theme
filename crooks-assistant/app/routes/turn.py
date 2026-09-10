@@ -173,6 +173,9 @@ async def turn(
     # Which half of the orb is being spoken to, before anything is withdrawn: a question
     # asked over here is not a new instruction to a card waiting over there.
     branch = live.branch(branch_id)
+    # Everything downstream that is handed only the session — the action engine when it
+    # stages, working sets when they are created — asks the session which half is speaking.
+    live.acting_branch = branch.branch_id
     waiting = _waiting_proposal(runtime, live, branch.branch_id)
     if waiting is not None and is_affirmation(text):
         live.heard = text
@@ -264,7 +267,7 @@ async def turn(
         prompt_text = f"{prompt_text}\n\n{lookup}"
     from app.analytics import sets as working_sets
 
-    set_line = working_sets.prompt_line(live)
+    set_line = working_sets.prompt_line(live, branch=branch)
     if set_line:
         prompt_text = f"{prompt_text}\n\n{set_line}"
     for extra in _context_lines(live, text):

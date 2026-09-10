@@ -126,7 +126,13 @@ class ActionEngine:
             proposal_id=new_proposal_id(),
             session_id=session.session_id,
             epoch=session.epoch,
-            branch_id=str(getattr(session, "focused_branch", "") or ""),
+            # The half that ASKED, not the half in focus. They differ whenever the tablet
+            # posts a branch_id for a half that is not on screen, and everything that reads
+            # this field assumes the asking one: a spoken "yes" is matched against the
+            # speaking branch, `revoke_pending` withdraws by branch, `/branches/{id}
+            # /background` refuses a half with a change waiting, and a BACKGROUND half is
+            # never allowed to commit. Stamped with the focused branch, all four inverted.
+            branch_id=str(getattr(session, "acting_branch", "") or getattr(session, "focused_branch", "") or ""),
             tool_name=spec.name,
             operation=spec.write.operation,
             risk=risk,

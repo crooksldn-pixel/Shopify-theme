@@ -635,3 +635,24 @@ async def test_a_wrong_turning_is_not_announced_to_the_owner(store, engine, sess
     # A rule, by contrast, is still reported plainly.
     denied = await dispatch("shopify_cancel_order", {"order_id": ORDER}, session=session, timeout_s=5)
     assert denied.startswith("REFUSED") and "Tell the user plainly" in denied
+
+
+async def test_a_proposal_is_stamped_with_the_half_that_asked_not_the_half_in_focus(session):
+    """`stage()` read `session.focused_branch`, and every reader of the field assumes the
+    asking one — so a change proposed by the half put aside was filed against the half on
+    screen. Four documented properties inverted at once: a spoken "yes" on the focused half
+    applied the other half's change; `revoke_pending` on the asking half skipped the card, so
+    it outlived the instruction that made it; `/branches/{id}/background` stopped seeing a
+    half that had a change waiting; and a BACKGROUND half's proposal passed the check that
+    exists to stop a background half committing anything, because it wore the ACTIVE half's
+    id. The turn routes now set `acting_branch`, and this is what reads it."""
+    session.focused_branch = "br_on_screen"
+    session.acting_branch = "br_put_aside"
+    _, proposal = await stage(session)
+    assert proposal.branch_id == "br_put_aside"
+
+    # And with nothing addressed — a caller that never set it — the focused half still serves.
+    session.acting_branch = ""
+    session.epoch += 1
+    _, later = await stage(session, note="A second note, so it is a second proposal")
+    assert later.branch_id == "br_on_screen"
