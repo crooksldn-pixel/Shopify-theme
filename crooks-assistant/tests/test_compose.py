@@ -583,6 +583,24 @@ def test_the_typed_value_reaches_the_mac_through_a_command_and_not_a_write_route
     for forbidden in ("/actions/", "startRecording", "sendAudio", "fetch("):
         assert forbidden not in block, forbidden
     assert "window.__crooksCommandDelegate" in block, "the shared delegate must be guarded"
+    # A thumb on the dock while a field has focus sends what was typed and puts the keyboard
+    # away, before the turn redraws the deck.
+    assert "el.talk.addEventListener('pointerdown'" in block
+    assert "composeFieldChanged(active)" in block and "active.blur()" in block
+
+
+def test_the_hold_surface_is_not_over_the_composer():
+    """The block above says typing cannot start a recording BECAUSE of the DOM, not because of
+    a check. That claim has to be true of the DOM: #talk is a sibling of the deck, and in
+    context mode — the only mode with cards in it — it is the band along the bottom."""
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    deck, talk, cards = html.index('id="deck"'), html.index('id="talk"'), html.index('id="cards"')
+    assert deck < cards < talk, "the hold surface must come after the deck, as its sibling"
+    assert 'id="talk"' not in html[deck:html.index('id="timings"')], "#talk must not be inside the deck"
+    css = (WEB / "style.css").read_text(encoding="utf-8")
+    band = css[css.index('body[data-mode="context"] .talk{'):]
+    band = band[: band.index("}")]
+    assert "bottom:0" in band and "height:var(--dock)" in band, band
 
 
 # --------------------------------------------------------------------------- the model's way in

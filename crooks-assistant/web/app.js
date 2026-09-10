@@ -2979,12 +2979,30 @@ if (!window.__crooksCommandDelegate) {
   });
 }
 
-// (c) A field has the keyboard. Space and Enter belong to the text, not to the microphone —
-// the hold control's own keydown handler is on `el.talk`, and this stops a key pressed inside
-// a field from reaching it if the focus is ever moved there by the browser.
-document.addEventListener('keydown', (event) => {
-  const inField = event.target && event.target.closest ? event.target.closest('.field-input') : null;
-  if (inField && (event.key === ' ' || event.key === 'Enter')) event.stopPropagation();
+// (c) A field has the keyboard, and the microphone is still the dock's.
+//
+// Typing cannot start a recording, and it is the DOM that guarantees it rather than a check:
+// the hold surface (#talk) is a SIBLING of the deck and not an ancestor, so a key pressed in
+// a field never reaches its keydown handler; and in context mode #talk is the 112px band at
+// the bottom, so it does not sit over the card either. The field swallows its own pointer
+// events (web/ui.js), so a finger in it never reaches the deck's delegated click handler or
+// its gesture probe.
+//
+// What does need doing is the other direction. A thumb landing on the dock while a field has
+// focus must send what was typed BEFORE the turn redraws the deck — otherwise the last few
+// characters of an address are lost to the debounce — and must put the keyboard away, or the
+// answer arrives behind it. Capture, so it runs before onHoldStart; it stops nothing, so the
+// hold itself behaves exactly as it does anywhere else.
+el.talk.addEventListener('pointerdown', () => {
+  const active = document.activeElement;
+  if (!active || !active.classList || !active.classList.contains('field-input')) return;
+  const key = `${active.dataset.compose}:${active.dataset.field}`;
+  if (composeDebounce.has(key)) {
+    clearTimeout(composeDebounce.get(key));
+    composeDebounce.delete(key);
+    composeFieldChanged(active);
+  }
+  active.blur();
 }, true);
 
 // A composer's card is drawn by a FAST recipe that has not written the words yet: the Mac
