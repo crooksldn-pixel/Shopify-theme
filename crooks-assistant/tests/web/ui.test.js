@@ -25,6 +25,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'success', 'error', 'context_stack',
     'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set',
     'batch_action', 'batch_result', 'capability', 'reply_state',
+    'variant_picker',
   ]));
 });
 
@@ -1101,4 +1102,85 @@ test('the reply state is one line, warn-toned while the customer is waiting, and
   // The Mac's own line wins when it sent one, verbatim.
   const given = UI.renderItem({ type: 'reply_state', data: { line: HOSTILE } }, {});
   assert.equal(textOf(given.querySelectorAll('.reply-line')[0]), HOSTILE);
+});
+
+
+/* ---- the variant picker (app/families/order_edit.py). What is asserted here is the write
+   boundary as it appears on the glass: Add carries the command's name and three identities
+   and a number, it carries nothing until a variant is chosen, and it can never carry a
+   price, a total or anything else the Mac decided. */
+
+const PICKER = {
+  order_id: 'gid://shopify/Order/1938', order_number: '#1938', count: 2, quantity: 1, max_quantity: 20,
+  confident_variant_id: null, note: '',
+  candidates: [
+    { variant_id: 'gid://shopify/ProductVariant/9102', title: 'Convict Hoodie', variant: 'Black / M', options: ['Black', 'M'], sku: 'CRK-HOOD-BLK-M', price: '£60.00', available: 4, for_sale: true },
+    { variant_id: 'gid://shopify/ProductVariant/9104', title: 'Convict Hoodie', variant: 'Bone / M', options: ['Bone', 'M'], sku: 'CRK-HOOD-BON-M', price: '£60.00', available: 9, for_sale: true },
+  ],
+};
+
+test('the picker chooses nothing on its own, and Add carries only ids and a number', () => {
+  const node = UI.renderItem({ type: 'variant_picker', data: PICKER }, {});
+  const rows = node.querySelectorAll('.variant-row');
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((r) => r.getAttribute('aria-pressed') === 'false'), 'nothing is pre-selected without a confident match');
+  const add = node.querySelectorAll('.variant-add')[0];
+  assert.equal(add.dataset.command, 'order_edit.stage');
+  assert.equal(add.disabled, true, 'Add does nothing until a variant is chosen');
+  assert.deepEqual(JSON.parse(add.dataset.args), { order_id: PICKER.order_id, variant_id: '', quantity: 1 });
+
+  rows[1].dispatch('click');
+  assert.deepEqual(rows.map((r) => r.getAttribute('aria-pressed')), ['false', 'true'], 'one at a time');
+  assert.equal(add.disabled, false);
+  assert.deepEqual(JSON.parse(add.dataset.args), {
+    order_id: 'gid://shopify/Order/1938', variant_id: 'gid://shopify/ProductVariant/9104', quantity: 1,
+  });
+  // The whole payload, key by key: nothing the Mac decided travels back from the tablet.
+  assert.deepEqual(Object.keys(JSON.parse(add.dataset.args)).sort(), ['order_id', 'quantity', 'variant_id']);
+});
+
+test('the stepper stays between one and the ceiling the Mac sent, and the payload follows it', () => {
+  const node = UI.renderItem({ type: 'variant_picker', data: Object.assign({}, PICKER, { max_quantity: 3 }) }, {});
+  const [down, up] = [node.querySelectorAll('.step-btn')[0], node.querySelectorAll('.step-btn')[1]];
+  const value = node.querySelectorAll('.step-value')[0];
+  const add = node.querySelectorAll('.variant-add')[0];
+  node.querySelectorAll('.variant-row')[0].dispatch('click');
+  down.dispatch('click');
+  assert.equal(textOf(value), '1', 'never below one');
+  up.dispatch('click'); up.dispatch('click'); up.dispatch('click'); up.dispatch('click');
+  assert.equal(textOf(value), '3', 'never above the ceiling');
+  assert.equal(JSON.parse(add.dataset.args).quantity, 3);
+  down.dispatch('click');
+  assert.equal(JSON.parse(add.dataset.args).quantity, 2);
+});
+
+test('one confident match is pre-selected and still needs the tap; a variant not for sale cannot be chosen', () => {
+  const one = UI.renderItem({ type: 'variant_picker', data: Object.assign({}, PICKER, {
+    count: 1, confident_variant_id: 'gid://shopify/ProductVariant/9102', candidates: [PICKER.candidates[0]],
+  }) }, {});
+  const row = one.querySelectorAll('.variant-row')[0];
+  assert.equal(row.getAttribute('aria-pressed'), 'true');
+  const add = one.querySelectorAll('.variant-add')[0];
+  assert.equal(add.disabled, false);
+  assert.equal(JSON.parse(add.dataset.args).variant_id, 'gid://shopify/ProductVariant/9102');
+  assert.match(textOf(one), /Nothing is added until you confirm/);
+
+  const off = UI.renderItem({ type: 'variant_picker', data: Object.assign({}, PICKER, {
+    count: 1, candidates: [Object.assign({}, PICKER.candidates[0], { for_sale: false, available: 0 })],
+  }) }, {});
+  const dead = off.querySelectorAll('.variant-row')[0];
+  dead.dispatch('click');
+  assert.equal(dead.getAttribute('aria-pressed'), 'false', 'a variant not for sale is not selectable');
+  assert.equal(off.querySelectorAll('.variant-add')[0].disabled, true);
+  assert.match(textOf(off), /not for sale/);
+});
+
+test('every string on the picker arrives as text, never as markup', () => {
+  const node = UI.renderItem({ type: 'variant_picker', data: Object.assign({}, PICKER, {
+    order_number: HOSTILE, note: HOSTILE,
+    candidates: [{ variant_id: 'gid://shopify/ProductVariant/1', title: HOSTILE, variant: HOSTILE, options: [HOSTILE], price: HOSTILE, for_sale: true }],
+  }) }, {});
+  const body = textOf(node);
+  assert.ok(body.includes(HOSTILE));
+  assert.equal(node.querySelectorAll('script').length, 0);
 });

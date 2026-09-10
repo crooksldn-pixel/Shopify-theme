@@ -1053,3 +1053,52 @@ html[data-lite] .orb-zone{transition:none}
 .card.card-reply_state{padding:14px 18px}
 .reply-line{font-size:16px;font-weight:600;color:var(--ink);margin:2px 0 4px;word-break:break-word}
 .reply-line.warn{color:var(--warn)}
+
+
+/* ---- order item editing (app/families/order_edit.py): the variant picker. Rows are doors
+   with a pressed state — selection is carried by fill, border and a mark, never by a
+   hairline (Phase 2 P2 #19) — and every control on the card is at least --tap high, because
+   this one ends in money leaving the customer's card. */
+.card.card-variant_picker{padding:14px 18px 16px}
+.variant-rows{display:flex;flex-direction:column;gap:8px;margin:10px 0 12px}
+.variant-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  min-height:var(--tap);padding:10px 12px;text-align:left;
+  border-radius:var(--radius-control);border:1px solid var(--border-rest);
+  background:var(--glass-control);box-shadow:var(--inset-hi);color:var(--ink);cursor:pointer;
+  transition:background var(--motion-press) var(--ease-standard),border-color var(--motion-press) var(--ease-standard);
+}
+.variant-row:active{background:var(--glass-control-active)}
+.variant-row[aria-pressed="true"]{
+  background:var(--glass-surface-strong);border-color:var(--border-active);box-shadow:var(--shadow-active);
+}
+.variant-row[aria-pressed="true"] .variant-title::before{content:"✓ ";color:var(--ink-2)}
+.variant-row.is-off{opacity:var(--opacity-disabled);cursor:default}
+.variant-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.variant-title{font-size:15px;font-weight:600;color:var(--ink);word-break:break-word}
+.variant-options{font-size:12px;color:var(--ink-3)}
+.variant-side{display:flex;flex-direction:column;align-items:flex-end;gap:3px;white-space:nowrap}
+.variant-price{font-size:15px;font-weight:600;color:var(--ink)}
+.variant-stock{font-size:11px;color:var(--ink-4)}
+
+/* How many, and the one button that asks the Mac to prepare it. The stepper's targets are
+   square at --tap so a thumb on an 8-inch screen cannot hit both. */
+.variant-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stepper{
+  display:flex;align-items:center;gap:2px;
+  border-radius:var(--radius-control);border:1px solid var(--border-rest);background:var(--glass-control);
+}
+.step-btn{
+  min-width:var(--tap);min-height:var(--tap);display:inline-flex;align-items:center;justify-content:center;
+  border:0;background:transparent;color:var(--ink);font-size:20px;line-height:1;cursor:pointer;
+  border-radius:var(--radius-control);
+}
+.step-btn:active{background:var(--glass-control-active)}
+.step-value{min-width:34px;text-align:center;font-size:17px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.variant-add{
+  flex:1 1 auto;min-height:var(--tap);padding:10px 16px;border-radius:var(--radius-control);
+  border:1px solid var(--border-active);background:var(--glass-surface-strong);
+  color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;
+}
+.variant-add:active{background:var(--glass-control-active)}
+.variant-add.is-off{opacity:var(--opacity-disabled);cursor:default;border-color:var(--border-subtle)}

@@ -2857,3 +2857,68 @@ setState('READY');
 // still holds rather than starting from nothing.
 drawBranchBar();
 restoreWorkspace();
+
+/* ---------------------------------------------------------- a card's own command · begin
+ *
+ * One delegated handler for every button a card draws with `data-command`. The button says
+ * WHICH command and carries its own `data-args` — ids and small values the Mac issued, never
+ * an argument of a change (app/routes/command.py bounds what a command may be posted). This
+ * posts them through `semanticCommand`, the same door Back, Next and the dock go through, and
+ * draws whatever the Mac answers with.
+ *
+ * Delegated rather than wired per button because the deck is redrawn constantly: a listener
+ * attached to a node that is about to be replaced is a button that stops working after the
+ * first Back. Generic rather than per family for the same reason the command registry is
+ * generic — the page must not know what any of these mean.
+ *
+ * The guard is because more than one family adds this block; the first one to run owns it.
+ */
+if (!window.__crooksCommandDelegate) {
+  window.__crooksCommandDelegate = true;
+  if (el.cards) {
+    el.cards.addEventListener('click', async (event) => {
+      const button = event.target && event.target.closest ? event.target.closest('[data-command]') : null;
+      if (!button || button.disabled) return;
+      const name = String(button.dataset.command || '').trim();
+      if (!name) return;
+      if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+      // Voice wins over a tap, here as at every other control on the glass.
+      if (actionBlocked()) { toast('Finish speaking first.'); return; }
+      let args = {};
+      try { args = JSON.parse(button.dataset.args || '{}'); } catch { args = {}; }
+      if (!args || typeof args !== 'object' || Array.isArray(args)) return;
+      const label = button.querySelector ? (button.querySelector('[class$="-label"]') || button) : button;
+      const was = label ? label.textContent : '';
+      button.disabled = true;
+      if (label && label !== button) label.textContent = 'Preparing…';
+      haptic(HAPTIC.start);
+      const reply = await semanticCommand(name, args);
+      T.record('card_command', {
+        name: name, outcome: reply ? (reply.ok ? 'ok' : String(reply.code || 'refused')) : 'offline',
+        proposal_id: reply && reply.changed ? reply.changed.proposal_id : undefined,
+        ms: reply ? reply.served_ms : undefined,
+      });
+      if (!reply || reply.ok !== true) {
+        // Refused, or the Mac is away. Say why and give the button back — a control that
+        // goes dead on a refusal is worse than one that says what happened.
+        toast(String((reply && (reply.detail || reply.answer)) || 'The Mac did not answer.'));
+        button.disabled = false;
+        if (label && label !== button) label.textContent = was;
+        return;
+      }
+      if (Array.isArray(reply.ui) && reply.ui.length) {
+        const rendered = window.CrooksUI.render(reply.ui, renderOpts());
+        if (rendered.nodes.length) {
+          pushContext(rendered.nodes, reply.ui, reply.answer || '');
+          el.heard.textContent = '';
+        }
+      }
+      if (reply.answer) {
+        el.answer.textContent = reply.answer;
+        speakAnswer(reply.answer);
+      }
+      if (label && label !== button) label.textContent = 'Waiting for you';
+    });
+  }
+}
+/* ------------------------------------------------------------ a card's own command · end */

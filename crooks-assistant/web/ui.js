@@ -1670,6 +1670,98 @@
     ], opts);
   }
 
+  // ---- which variant the owner means (app/families/order_edit.py). The one card in the
+  // vocabulary that is drawn from a read and leads to a change, so its rules are the write
+  // boundary's: the rows carry the variant ids the Mac issued and the price it read, the
+  // stepper carries a small integer, and Add posts THOSE — never a price, never a total.
+  // Everything the change will actually send is built on the Mac from a fresh read after
+  // this button is pressed, and the card that comes back still waits for a hold.
+  function renderVariantPicker(d, opts) {
+    const rows = list(d.candidates, 8);
+    const max = num(d.max_quantity) === null ? 20 : Math.max(1, d.max_quantity);
+    const orderId = text(d.order_id);
+    let chosen = rows.some((r) => text(r.variant_id) === text(d.confident_variant_id)) ? text(d.confident_variant_id) : '';
+    let quantity = Math.max(1, Math.min(num(d.quantity) === null ? 1 : d.quantity, max));
+
+    const add = h('button', {
+      class: 'variant-add', type: 'button',
+      data: { command: 'order_edit.stage', args: '{}' },
+    }, [h('span', { class: 'variant-add-label', text: 'Add to order' })]);
+    const count = h('span', { class: 'step-value', 'aria-live': 'polite', text: String(quantity) });
+
+    function refresh() {
+      // The button's payload, rebuilt whenever the choice or the number changes: three
+      // identities and an integer, which is the whole of what the tablet is allowed to say.
+      add.dataset.args = JSON.stringify({ order_id: orderId, variant_id: chosen, quantity: quantity });
+      add.disabled = !chosen || !orderId;
+      add.setAttribute('aria-disabled', add.disabled ? 'true' : 'false');
+      if (add.disabled) add.classList.add('is-off'); else add.classList.remove('is-off');
+      count.textContent = String(quantity);
+    }
+
+    const buttons = rows.map((r) => {
+      const ref = text(r.variant_id);
+      const options = strings(r.options, 4);
+      const sale = r.for_sale !== false;
+      const available = num(r.available);
+      const row = h('button', {
+        class: `variant-row${sale ? '' : ' is-off'}`, type: 'button',
+        'aria-pressed': ref && ref === chosen ? 'true' : 'false',
+        'aria-disabled': sale ? 'false' : 'true',
+        data: { ref: ref, kind: 'variant' },
+      }, [
+        h('span', { class: 'variant-main' }, [
+          h('span', { class: 'variant-title', text: text(r.title, '—') }),
+          h('span', { class: 'variant-options', text: options.length ? options.join(' · ') : text(r.variant) }),
+        ]),
+        h('span', { class: 'variant-side' }, [
+          h('span', { class: 'variant-price', text: text(r.price, '—') }),
+          sale
+            ? (available === null ? null : h('span', { class: 'variant-stock', text: `${available} in stock` }))
+            : badge('not for sale', 'bad'),
+        ]),
+      ]);
+      if (sale && ref) {
+        row.addEventListener('click', () => {
+          chosen = ref;
+          for (const other of buttons) other.setAttribute('aria-pressed', other === row ? 'true' : 'false');
+          refresh();
+        });
+      }
+      return row;
+    });
+
+    function step(by, label) {
+      return h('button', { class: 'step-btn', type: 'button', 'aria-label': label }, [h('span', { text: by < 0 ? '−' : '+' })]);
+    }
+    const down = step(-1, 'One fewer');
+    const up = step(1, 'One more');
+    down.addEventListener('click', () => { quantity = Math.max(1, quantity - 1); refresh(); });
+    up.addEventListener('click', () => { quantity = Math.min(max, quantity + 1); refresh(); });
+
+    // Add has no listener of its own, deliberately. The page does not know what "add" means
+    // and must not: the button carries the command's NAME and its own data, and one delegated
+    // handler on `#cards` posts them (web/app.js). A disabled button dispatches no click, so
+    // "nothing chosen" is enforced by the same flag the eye reads.
+
+    const node = card('variant_picker', [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker(text(d.order_number) ? `Add to ${text(d.order_number)}` : 'Add an item'),
+        h('h2', { class: 'card-title', text: rows.length === 1 ? 'One match' : `${num(d.count) === null ? rows.length : d.count} to choose from` }),
+        h('p', { class: 'card-sub', text: 'Nothing is added until you confirm the card that follows.' }),
+      ])]),
+      h('div', { class: 'variant-rows', role: 'group', 'aria-label': 'Items' }, buttons),
+      d.note ? h('p', { class: 'card-note', text: text(d.note) }) : null,
+      h('div', { class: 'variant-foot' }, [
+        h('div', { class: 'stepper', role: 'group', 'aria-label': 'How many' }, [down, count, up]),
+        add,
+      ]),
+    ], opts);
+    if (orderId) node.dataset.order = orderId;
+    refresh();
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1697,6 +1789,7 @@
     capability: renderCapability,
     batch_result: renderBatchResult,
     reply_state: renderReplyState,
+    variant_picker: renderVariantPicker,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
