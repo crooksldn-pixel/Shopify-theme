@@ -24,7 +24,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation',
     'success', 'error', 'context_stack',
     'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set',
-    'batch_action', 'batch_result', 'capability',
+    'batch_action', 'batch_result', 'capability', 'reply_state',
   ]));
 });
 
@@ -1013,4 +1013,92 @@ test('the strings a card renders are text, never markup', () => {
   const body = textOf(out.nodes[0]);
   assert.ok(body.includes(HOSTILE), 'the hostile string survives as text');
   assert.ok(!out.nodes[0].allHtml || !/<script/i.test(out.nodes[0].allHtml()), 'and never as markup');
+});
+
+// ---- the graph family: the order under an email thread, and the reply-state line.
+
+test('a confidently linked order is one tappable strip under the thread head, with its reasons', () => {
+  const node = UI.renderItem({ type: 'email_thread', data: {
+    thread_id: 'aa70d3f83dbef06e', subject: 'Order 1938 — can I add to it?', messages: [{ from: 'Mia Jones', body: 'Is it too late?' }],
+    linked_order: { order_id: 'gid://shopify/Order/1938', order_number: '#1938', total: '£89.00', fulfillment: 'unfulfilled', customer_name: 'Mia Jones' },
+    linked_customer: { customer_id: 'gid://shopify/Customer/7001', name: 'Mia Jones' },
+    link_confidence: 'confident', link_provenance: ['order number 1938 in the subject', 'sender is the customer on that order'],
+  } }, {});
+  const strip = node.querySelectorAll('.link-strip')[0];
+  assert.ok(strip, 'the strip is drawn');
+  assert.equal(strip.dataset.kind, 'order', 'a tap opens an order');
+  assert.equal(strip.dataset.ref, 'gid://shopify/Order/1938', 'by the id the Mac gave, never a number typed on the page');
+  assert.equal(strip.getAttribute('role'), 'button');
+  assert.match(textOf(strip), /Linked order/);
+  assert.match(textOf(strip), /#1938 · £89.00 · unfulfilled/);
+  const customer = node.querySelectorAll('.link-customer')[0];
+  assert.ok(customer, 'the customer bridge is a chip');
+  assert.equal(customer.dataset.kind, 'customer');
+  assert.equal(customer.dataset.ref, 'gid://shopify/Customer/7001');
+  assert.match(textOf(node.querySelectorAll('.link-why')[0]), /order number 1938 in the subject · sender is the customer on that order/);
+  assert.equal(node.querySelectorAll('.link-none').length, 0, 'no "no order" line beside a linked order');
+});
+
+test('several possible orders are chips, each a door to its own order', () => {
+  const node = UI.renderItem({ type: 'email_thread', data: {
+    thread_id: 'aa70d3f83dbef06e', subject: 'Hello', messages: [{ from: 'Mia', body: 'x' }],
+    possible_orders: [
+      { order_id: 'gid://shopify/Order/1938', order_number: '#1938', total: '£89.00', fulfillment: 'unfulfilled' },
+      { order_id: 'gid://shopify/Order/1912', order_number: '#1912', total: '£65.00', fulfillment: 'fulfilled' },
+    ],
+    link_confidence: 'possible', link_provenance: ['sender is the customer on 2 recent orders'],
+  } }, {});
+  assert.equal(node.querySelectorAll('.link-strip').length, 0, 'a possible link is never drawn as the confident strip');
+  const chips = node.querySelectorAll('.link-chip');
+  assert.equal(chips.length, 2);
+  assert.deepEqual(chips.map((c) => c.dataset.ref), ['gid://shopify/Order/1938', 'gid://shopify/Order/1912']);
+  assert.ok(chips.every((c) => c.dataset.kind === 'order'));
+  assert.match(textOf(node), /Possibly about/);
+  assert.match(textOf(node), /#1912 · £65.00 · fulfilled/);
+});
+
+test('no confident order is a quiet line with the reason, and nothing on it opens anything', () => {
+  const node = UI.renderItem({ type: 'email_thread', data: {
+    thread_id: 'a413d264183cfe94', subject: 'Report', messages: [{ from: 'Shipping Updates', body: 'x' }],
+    linked_order: null, possible_orders: [], linked_customer: null,
+    link_confidence: 'none', link_provenance: ['order cache not warm'],
+  } }, {});
+  assert.match(textOf(node.querySelectorAll('.link-none')[0]), /No confident order is linked/);
+  assert.match(textOf(node.querySelectorAll('.link-why')[0]), /order cache not warm/);
+  assert.equal(node.querySelectorAll('.link-strip').length + node.querySelectorAll('.link-chip').length, 0);
+  // A thread from before the strip existed still renders: the fields are simply absent.
+  const old = UI.renderItem({ type: 'email_thread', data: { subject: 's', messages: [{ from: 'M', body: 'b' }] } }, {});
+  assert.ok(old && old.querySelectorAll('.link-none').length === 1);
+});
+
+test('the link strip prints the Mac\'s strings as text and never as markup', () => {
+  const node = UI.renderItem({ type: 'email_thread', data: {
+    subject: 's', messages: [{ from: 'M', body: 'b' }],
+    linked_order: { order_id: 'gid://shopify/Order/1', order_number: HOSTILE, total: HOSTILE, fulfillment: HOSTILE },
+    link_confidence: 'confident', link_provenance: [HOSTILE],
+  } }, {});
+  const body = textOf(node);
+  assert.ok(body.includes(HOSTILE));
+  assert.ok(!node.allHtml || !/<script/i.test(node.allHtml()));
+});
+
+test('the reply state is one line, warn-toned while the customer is waiting, and opens its thread', () => {
+  const waiting = UI.renderItem({ type: 'reply_state', data: {
+    thread_id: 'aa70d3f83dbef06e', order_number: '#1938', latest_direction: 'inbound', replied: false,
+    waiting_since: '5h ago', last_from: 'Mia', confidence: 'confident', provenance: ['sender is the customer on that order'],
+  } }, {});
+  const line = waiting.querySelectorAll('.reply-line')[0];
+  assert.equal(textOf(line), 'Waiting since 5h ago · last from Mia · no reply from us');
+  assert.ok(line.classList.contains('warn'));
+  assert.match(textOf(waiting), /about #1938/);
+  const open = waiting.querySelectorAll('.link-chip')[0];
+  assert.equal(open.dataset.kind, 'email_thread');
+  assert.equal(open.dataset.ref, 'aa70d3f83dbef06e');
+  const answered = UI.renderItem({ type: 'reply_state', data: { latest_direction: 'outbound', replied: true, replied_since: '2h ago', last_from: 'us' } }, {});
+  const calm = answered.querySelectorAll('.reply-line')[0];
+  assert.equal(textOf(calm), 'We replied 2h ago · last from us');
+  assert.ok(!calm.classList.contains('warn'));
+  // The Mac's own line wins when it sent one, verbatim.
+  const given = UI.renderItem({ type: 'reply_state', data: { line: HOSTILE } }, {});
+  assert.equal(textOf(given.querySelectorAll('.reply-line')[0]), HOSTILE);
 });

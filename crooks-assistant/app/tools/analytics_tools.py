@@ -7,6 +7,7 @@ language can express. All of them read; none of them can change anything."""
 from __future__ import annotations
 
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Any
@@ -324,14 +325,77 @@ EMAIL_THREADS_PER_CUSTOMER = 3
 
 
 _reply_state = None       # async (thread_id) -> the thread's own direction and stamps, or None
+# Our own mailbox address (a string, or a callable that gives one), when the runtime binds it.
+# A thread whose latest message is ours is outbound however it was found; without the address
+# the SENT label on the message still says so, so this is belt and braces, not a requirement.
+_own_address = None
+# A sender that is a machine: nobody there is waiting on a reply, and a thread from one is
+# not "the customer emailed us" however neatly it mentions an order number. Shopify's own
+# abandoned-checkout and shipping notifications come from addresses like these.
+_NOISE_SENDER = re.compile(
+    r"(no[-_.]?reply|do[-_.]?not[-_.]?reply|notifications?@|mailer(?:-daemon)?@|bounce|newsletter|marketing@|"
+    r"abandoned|checkout@|shipping-updates|postmaster@)",
+    re.I,
+)
 
 
-def bind_email(threads_for=None, replied=None, reply_state=None) -> None:
-    global _threads_for, _replied, _reply_state
+def bind_email(threads_for=None, replied=None, reply_state=None, own_address=None) -> None:
+    global _threads_for, _replied, _reply_state, _own_address
     _threads_for = threads_for
     _replied = replied
     _reply_state = reply_state
+    _own_address = own_address
     _email_cache.clear()
+
+
+def _own() -> str:
+    try:
+        value = _own_address() if callable(_own_address) else _own_address
+    except Exception:  # noqa: BLE001 — a profile read that fails is "unknown", not a crash
+        return ""
+    return str(value or "").strip().lower()
+
+
+def _noise(thread: dict[str, Any], own: str) -> str:
+    """Why this thread does not count on the INBOUND side, or empty when it does.
+
+    The September queue offered an automated carrier report as a customer waiting on a
+    reply, and would have offered an abandoned-checkout nudge the same way: the listing found
+    them by the order number in the subject, and nothing asked who wrote them.
+    """
+    sender = str(thread.get("from_email") or "").strip().lower()
+    if thread.get("likely_bulk"):
+        return "bulk"
+    if sender and _NOISE_SENDER.search(sender):
+        return "automated"
+    if own and sender == own:
+        return "ours"
+    return ""
+
+
+def _confidence(thread: dict[str, Any], email: str, terms: list[str]) -> str:
+    """How sure it is that THIS thread is this customer writing about their order: their own
+    address, vouched for by the receiving server or carrying their order number, is confident;
+    anything else the listing turned up is possible. Never inferred from a name."""
+    sender = str(thread.get("from_email") or "").strip().lower()
+    theirs = bool(email) and sender == email.strip().lower()
+    mentions = bool(_related_orders([thread], terms))
+    if theirs and (thread.get("authenticated") or mentions):
+        return "confident"
+    return "possible"
+
+
+def _related_orders(threads: list[dict[str, Any]], terms: list[str]) -> list[str]:
+    """The customer's own order numbers that appear in these threads' subjects and snippets."""
+    from app.context.graph import order_numbers_in
+
+    wanted = {str(t).rsplit("-", 1)[-1].lstrip("#") for t in terms if t}
+    found: list[str] = []
+    for t in threads:
+        for n in order_numbers_in(f"{t.get('subject', '')} {t.get('snippet', '')}"):
+            if n in wanted and n not in found:
+                found.append(n)
+    return found
 
 
 async def _customer_threads(email: str, terms: list[str], days: int, *, clock) -> dict[str, Any]:
@@ -341,10 +405,21 @@ async def _customer_threads(email: str, terms: list[str], days: int, *, clock) -
     if held is not None and now - held[0] < EMAIL_CACHE_S:
         return held[1]
     found = await _threads_for(sender=email, terms=terms, days=days)
-    threads = [t for t in (found.get("threads") or []) if isinstance(t, dict)]
+    own = _own()
+    threads: list[dict[str, Any]] = []
+    ignored: list[str] = []
+    for t in found.get("threads") or []:
+        if not isinstance(t, dict):
+            continue
+        why = _noise(t, own)
+        if why:
+            ignored.append(why)
+        else:
+            threads.append(t)
     looked_at = threads[:EMAIL_THREADS_PER_CUSTOMER]
     replied = None
     states: list[dict[str, Any]] = []
+    checked_ids: list[str] = []
     if found.get("available") and looked_at:
         for t in looked_at:
             thread_id = str(t.get("thread_id") or "")
@@ -358,6 +433,7 @@ async def _customer_threads(email: str, terms: list[str], days: int, *, clock) -
                     state = None
             if state is not None:
                 states.append(state)
+                checked_ids.append(thread_id)
             elif _replied is not None:
                 # No per-message view of this thread: fall back to "did anything go out",
                 # which is weaker, and is recorded as weaker (no stamps to fold).
@@ -370,9 +446,22 @@ async def _customer_threads(email: str, terms: list[str], days: int, *, clock) -
     folded = _fold_reply_states(states)
     if folded["checked_threads"]:
         replied = folded["has_reply_after_latest_inbound"]
+    confidences = [_confidence(t, email, terms) for t in looked_at]
+    confidence = "confident" if "confident" in confidences else ("possible" if confidences else "none")
+    related = _related_orders(looked_at, terms)
+    # Why the row says what it says, in one place, so the queue can print it and a test can
+    # hold it: which threads were looked at, the stamps the answer turned on, and how sure the
+    # link between this person and these threads is.
+    provenance = {
+        "threads_checked": len(states), "thread_ids": checked_ids,
+        "latest_inbound_at": folded["latest_inbound_at"], "latest_outbound_at": folded["latest_outbound_at"],
+        "latest_direction": folded["latest_direction"], "related_orders": related, "confidence": confidence,
+        "ignored": len(ignored), "ignored_why": sorted(set(ignored)),
+    }
     out = {
         "available": bool(found.get("available")), "reason": found.get("reason"), "threads": looked_at,
         "count": len(threads), "replied": replied, **folded,
+        "related_orders": related, "confidence": confidence, "provenance": provenance,
     }
     _email_cache[key] = (now, out)
     return out
@@ -508,6 +597,12 @@ async def email_query(set_id: str, days: int = 30) -> dict:
             "latest_direction": mail.get("latest_direction") or ("none" if not has_mail else "unknown"),
             "has_reply_after_latest_inbound": mail.get("has_reply_after_latest_inbound"),
             "needs_reply": bool(mail.get("needs_reply")),
+            # The customer's own order numbers found in their threads, how sure the link is,
+            # and the whole account of how the row was decided (app/tools/analytics_tools.py
+            # `_customer_threads`). The queue prints the first two; the report keeps the third.
+            "related_orders": list(mail.get("related_orders") or []),
+            "confidence": str(mail.get("confidence") or ("none" if not has_mail else "unknown")),
+            "provenance": dict(mail.get("provenance") or {}),
         })
     # Waiting on us first: that is what the question is usually for.
     rows.sort(key=lambda r: (not r.get("needs_reply"), not r["emailed"], str(r.get("customer_name") or "")))

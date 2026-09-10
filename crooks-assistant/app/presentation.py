@@ -20,6 +20,7 @@ before the tool ran; this runs afterwards and only shapes what is already known.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from app.actions import grammar
@@ -40,6 +41,10 @@ UI_TYPES = frozenset({
     # what this build can do, grouped (app/capabilities/surface.py). Built by a recipe rather
     # than from a tool result: the manifest is read from the registry, not from the shop.
     "capability",
+    # who is waiting on whom in one thread (app/families/order_email.py): "Waiting since 5h
+    # ago · last from Mia · no reply from us". Built by the recipe from the thread's own
+    # reply state, never from the prose.
+    "reply_state",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
@@ -279,6 +284,11 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
             "message_count": _int(result.get("message_count")) or len(messages),
             "truncated": bool(result.get("truncated")) or len(messages) < (_int(result.get("messages_shown")) or 0),
             "messages": messages,
+            # The order this thread is about, from the rows the Mac already holds — the
+            # reverse of the order card's email region, and the strip the thread card draws
+            # (Phase 2 P0 #10: a thread showed its words and hid its order). Bounded here;
+            # the confidence and the reasons ride beside the link so a wrong one is visible.
+            **_thread_links(result),
         })]
     return []
 
@@ -624,6 +634,61 @@ def _message(m: dict[str, Any]) -> dict[str, Any]:
         "date": _text(m.get("date")),
         "subject": _text(m.get("subject")),
         "body": _text(m.get("body"), MAX_BODY_CHARS),
+    }
+
+
+MAX_LINK_PROVENANCE = 4
+
+
+def _linked_order(row: dict[str, Any]) -> dict[str, Any]:
+    total = row.get("total")
+    shown = _money_display(float(total), str(row.get("currency") or "GBP")) if isinstance(total, (int, float)) else _money_text(total)
+    return {
+        "order_id": _text(row.get("order_id")),
+        "order_number": _order_number(row.get("order_number")),
+        "total": shown,
+        "fulfillment": _status(row.get("fulfillment")),
+        "customer_name": _text(row.get("customer_name")),
+        "customer_id": _text(row.get("customer_id")),
+    }
+
+
+def _thread_links(result: dict[str, Any]) -> dict[str, Any]:
+    """The thread → order link, from `app/context/graph.py` over the order cache's rows.
+
+    The presenter must not invent a read, so the only source is what the cache holds now. A
+    cold cache — the first minute after a restart — is said plainly ("order cache not warm")
+    rather than reported as "no order", which is the difference between "not yet" and "no".
+    """
+    from app.context import graph
+
+    rows: list[dict[str, Any]] = []
+    warm = False
+    try:
+        from app.tools.analytics_tools import cache
+
+        held = cache()
+        rows = held.rows()
+        warm = bool(rows) and held.status().get("synced_at") is not None
+    except Exception:  # noqa: BLE001 — no cache bound (tests, a Mac without Shopify) is a cold cache
+        warm = False
+    if warm:
+        # The cache's clock, not the wall clock: the rows are stamped by it, and a test that
+        # sets it sets what "recent" means.
+        found = graph.linked_orders_for_thread(result, rows=rows, clock=getattr(held, "clock", None) or time.time)
+    else:
+        found = {"linked": [], "confidence": "none", "provenance": ["order cache not warm"], "customer": None}
+    confidence = str(found.get("confidence") or "none")
+    if confidence not in ("confident", "possible", "none"):
+        confidence = "none"
+    linked = [_linked_order(r) for r in _list(found.get("linked"), graph.MAX_POSSIBLE)]
+    customer = found.get("customer") if isinstance(found.get("customer"), dict) else None
+    return {
+        "linked_order": linked[0] if confidence == "confident" and linked else None,
+        "possible_orders": linked if confidence == "possible" else [],
+        "linked_customer": {"customer_id": _text(customer.get("customer_id")), "name": _text(customer.get("name"))} if customer and customer.get("customer_id") else None,
+        "link_confidence": confidence,
+        "link_provenance": [_text(p, 120) for p in (found.get("provenance") or [])[:MAX_LINK_PROVENANCE] if isinstance(p, str)],
     }
 
 
@@ -1037,6 +1102,15 @@ def _remember(items: list[dict[str, Any]], session: Session) -> None:
             session.remember_context("customer", data.get("name") or "", data.get("customer_id") or "", limit=MAX_CONTEXT)
         elif kind == "email_thread":
             session.remember_context("email", data.get("subject") or "(no subject)", data.get("thread_id") or "", limit=MAX_CONTEXT)
+            # The strip's orders and customer came from the cache, not from a tool result, so
+            # nothing else issued them — and `open.entity` refuses a ref the conversation was
+            # never shown. The card shows them; that is the showing.
+            for order in [data.get("linked_order"), *(data.get("possible_orders") or [])]:
+                if isinstance(order, dict) and order.get("order_id"):
+                    session.issue(str(order["order_id"]))
+            bridged = data.get("linked_customer")
+            if isinstance(bridged, dict) and bridged.get("customer_id"):
+                session.issue(str(bridged["customer_id"]))
         elif kind in {"inventory", "product"}:
             for p in data.get("products", [])[:1]:
                 session.remember_context("product", p.get("title") or "", p.get("product_id") or "", limit=MAX_CONTEXT)

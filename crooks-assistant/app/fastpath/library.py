@@ -1002,6 +1002,34 @@ def _set_id_of(body: Any, key: str = "set") -> str:
     return str(body.get("set_id") or "")
 
 
+# The same question, asked again inside this window, gets the short form: the owner has just
+# heard "1 of 25 customers checked" and is asking whether anything has changed, not for the
+# scope of the check read out a second time.
+NEEDS_REPLY_REPEAT_S = 600.0
+
+
+def _first_names(rows: list[dict[str, Any]], limit: int = 3) -> str:
+    names = [str(r.get("customer_name") or "someone").split()[0] for r in rows[:limit]]
+    rest = len(rows) - len(names)
+    if rest > 0:
+        names.append(f"{rest} other{'s' if rest > 1 else ''}")
+    if len(names) <= 1:
+        return names[0] if names else "nobody"
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _asked_again(ctx: Ctx, *, clock=time.time) -> bool:
+    """Whether this is a repeat of the question within the window; stamps the session either
+    way. A session without the attribute (a bare stand-in in a test) is never a repeat."""
+    now = float(clock())
+    last = float(getattr(ctx.session, "last_needs_reply_at", 0.0) or 0.0)
+    try:
+        ctx.session.last_needs_reply_at = now
+    except AttributeError:
+        return False
+    return bool(last) and 0 <= now - last < NEEDS_REPLY_REPEAT_S
+
+
 def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     body = result.values.get("mail")
     if not isinstance(body, dict):
@@ -1011,6 +1039,7 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     counts = body.get("counts") or {}
     unchecked = int(counts.get("unchecked") or 0)
     total = int(counts.get("contacted") or 0) + int(counts.get("not_contacted") or 0) + unchecked or len(rows)
+    again = _asked_again(ctx)
     # What "next" walks here is the MESSAGES, not the people. Opening the customers set meant
     # tapping Next on "Waiting on a reply" drew Mia Jones's customer profile — three orders,
     # £213 lifetime — instead of the message she is waiting on an answer to. The queue is a
@@ -1025,17 +1054,23 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     waiting_set = _set_id_of(body, "set_needs_reply")
     if waiting_set and ctx.branch.workflow is None:
         _open_workflow(ctx, body, kind="customers", operation="reply", set_id=waiting_set)
-    if not waiting:
-        tail = f" {unchecked} could not be checked." if unchecked else ""
-        return FastAnswer(answer=f"Nobody is waiting on a reply — {len(rows)} of {total} customers checked.{tail}", calls=list(result.calls),
-                          partial=bool(unchecked) or result.partial, trace={"rows": len(rows), "waiting": 0, "unchecked": unchecked})
-    names = ", ".join(str(r.get("customer_name") or "someone") for r in waiting[:3])
     tail = f" {unchecked} could not be checked." if unchecked else ""
+    if not waiting:
+        answer = "Still nobody." if again else f"Nobody is waiting on a reply — {len(rows)} of {total} customers checked.{tail}"
+        return FastAnswer(answer=answer, calls=list(result.calls),
+                          partial=bool(unchecked) or result.partial, trace={"rows": len(rows), "waiting": 0, "unchecked": unchecked, "repeat": again})
+    if again:
+        # "Still just Mia." — no scope sentence: it was said the first time, and the owner is
+        # asking whether anything moved, not how wide the check was.
+        answer = f"Still {'just ' if len(waiting) == 1 else ''}{_first_names(waiting)}."
+    else:
+        names = ", ".join(str(r.get("customer_name") or "someone") for r in waiting[:3])
+        answer = f"{len(waiting)} of {len(rows)} customers checked are waiting on a reply: {names}{' and others' if len(waiting) > 3 else ''}.{tail}"
     return FastAnswer(
-        answer=f"{len(waiting)} of {len(rows)} customers checked are waiting on a reply: {names}{' and others' if len(waiting) > 3 else ''}.{tail}",
+        answer=answer,
         surfaces=[_waiting_surface(waiting, unchecked=unchecked)], drawn=[],
         calls=list(result.calls), partial=bool(unchecked) or result.partial,
-        trace={"rows": len(rows), "waiting": len(waiting), "unchecked": unchecked},
+        trace={"rows": len(rows), "waiting": len(waiting), "unchecked": unchecked, "repeat": again},
     )
 
 
@@ -1114,7 +1149,13 @@ def _waiting_surface(waiting: list[dict[str, Any]], *, unchecked: int = 0):
 
     threads = []
     for row in waiting[:10]:
-        orders = [str(o) for o in (row.get("orders") or []) if o][:2]
+        # The order numbers the THREADS name, when the correlation found any — that is what
+        # the email is about — and the customer's recent orders otherwise. With how sure the
+        # link between this person and these threads is, because the row is a decision to
+        # reply and a wrong link is a reply to the wrong question.
+        related = [str(o).lstrip("#") for o in (row.get("related_orders") or []) if o][:3]
+        orders = [f"#{o}" for o in related] or [str(o) for o in (row.get("orders") or []) if o][:2]
+        confidence = str(row.get("confidence") or "")
         count = int(row.get("thread_count") or row.get("threads") or 0)
         threads.append({
             "thread_id": str(row.get("last_thread_id") or ""),
@@ -1123,10 +1164,13 @@ def _waiting_surface(waiting: list[dict[str, Any]], *, unchecked: int = 0):
             # What ties it to the shop, which is why this is one system and not two.
             "snippet": " · ".join(filter(None, [
                 ", ".join(orders),
+                confidence if confidence in ("confident", "possible") else "",
                 f"{count} threads" if count > 1 else "",
             ])),
             "date": _since(row.get("latest_inbound_at")),
             "known_customer": True,
+            "related_orders": related,
+            "confidence": confidence[:12],
         })
     note = f"{unchecked} could not be checked." if unchecked else ""
     return Surface(

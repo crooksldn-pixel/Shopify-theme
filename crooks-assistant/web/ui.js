@@ -868,9 +868,62 @@
     // only by a spoken sentence, and the only way out of a thread was to put the tablet down.
     return card('email_thread', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email thread'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-meta', text: [num(d.message_count) === null ? '' : `${d.message_count} message${d.message_count === 1 ? '' : 's'}`, d.truncated ? 'older messages not shown' : ''].filter(Boolean).join(' · ') })])]),
+      linkedOrderStrip(d),
       rail(d.actions, opts, d.thread_id),
       h('div', {}, nodes),
     ], opts);
+  }
+
+  // The order this thread is about, under the head, from what the Mac worked out
+  // (app/context/graph.py) and never from the words on the card. A confident link is one
+  // tappable row; a possible one is up to three chips; nothing is a quiet line. `data-kind`
+  // and `data-ref` are what the deck's click handler posts to `open.entity` — the same
+  // command a tapped list row reaches — so the strip is a door, not a caption. The reasons
+  // ride underneath in small type, because a wrong link on the thread the owner is about to
+  // reply to is worse than none, and he can only judge it if he can see why it was drawn.
+  function linkedOrderStrip(d) {
+    const confidence = text(d.link_confidence, 'none');
+    const why = strings(d.link_provenance, 4).join(' · ');
+    const note = why ? h('p', { class: 'link-why', text: why }) : null;
+    const chip = (o, cls) => {
+      const ref = text(o.order_id);
+      const words = [text(o.order_number, 'order'), text(o.total), text(o.fulfillment)].filter(Boolean).join(' · ');
+      return h(ref ? 'button' : 'span', {
+        class: `link-chip${cls ? ' ' + cls : ''}`, type: ref ? 'button' : null,
+        data: ref ? { ref, kind: 'order' } : {},
+      }, [h('span', { class: 'link-chip-label', text: words }), ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null]);
+    };
+    const customer = d.linked_customer && typeof d.linked_customer === 'object' && text(d.linked_customer.customer_id)
+      ? h('button', { class: 'link-chip link-customer', type: 'button', data: { ref: text(d.linked_customer.customer_id), kind: 'customer' } }, [
+        h('span', { class: 'link-chip-label', text: text(d.linked_customer.name, 'Customer') }),
+      ])
+      : null;
+    if (confidence === 'confident' && d.linked_order && typeof d.linked_order === 'object') {
+      const o = d.linked_order;
+      const ref = text(o.order_id);
+      const row = h('div', {
+        class: `link-strip is-confident${ref ? ' tappable' : ''}`, role: ref ? 'button' : null, tabindex: ref ? '0' : null,
+        data: ref ? { ref, kind: 'order' } : {},
+      }, [
+        h('span', { class: 'link-kicker', text: 'Linked order' }),
+        h('span', { class: 'link-main', text: [text(o.order_number, 'order'), text(o.total), text(o.fulfillment)].filter(Boolean).join(' · ') }),
+        ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
+      ]);
+      return h('div', { class: 'link-block' }, [row, customer ? h('div', { class: 'link-chips' }, [customer]) : null, note]);
+    }
+    const possible = list(d.possible_orders, 3);
+    if (confidence === 'possible' && possible.length) {
+      return h('div', { class: 'link-block is-possible' }, [
+        h('span', { class: 'link-kicker', text: 'Possibly about' }),
+        h('div', { class: 'link-chips' }, possible.map((o) => chip(o)).concat(customer ? [customer] : [])),
+        note,
+      ]);
+    }
+    return h('div', { class: 'link-block is-none' }, [
+      h('p', { class: 'link-none', text: 'No confident order is linked' }),
+      customer ? h('div', { class: 'link-chips' }, [customer]) : null,
+      note,
+    ]);
   }
 
   function renderEmailDraft(d, opts) {
@@ -1591,6 +1644,32 @@
     return node;
   }
 
+  // Who is waiting on whom in one thread, in one line: "Waiting since 5h ago · last from
+  // Mia · no reply from us". The Mac worked it out from the thread's own labels and stamps
+  // (app/families/order_email.py); the page prints the words it was given. Warn-toned while
+  // the customer is the one waiting, because that is the only state that asks for a hand.
+  function renderReplyState(d, opts) {
+    const waiting = text(d.latest_direction) === 'inbound' && d.replied !== true;
+    const parts = [];
+    if (waiting && text(d.waiting_since)) parts.push(`Waiting since ${text(d.waiting_since)}`);
+    else if (text(d.latest_direction) === 'outbound') parts.push(`We replied ${text(d.replied_since, 'already')}`);
+    else if (text(d.latest_direction) === 'none') parts.push('No email either way');
+    if (text(d.last_from)) parts.push(`last from ${text(d.last_from)}`);
+    if (text(d.latest_direction) === 'inbound') parts.push(d.replied === true ? 'answered since' : 'no reply from us');
+    const line = text(d.line) || parts.join(' · ');
+    const ref = text(d.thread_id);
+    const order = text(d.order_number);
+    return card('reply_state', [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker('Reply state'),
+        h('p', { class: `reply-line${waiting ? ' warn' : ''}`, text: line || '—' }),
+        h('p', { class: 'card-meta', text: [order ? `about ${order}` : '', text(d.confidence) ? `${text(d.confidence)} link` : ''].filter(Boolean).join(' · ') }),
+      ])]),
+      strings(d.provenance, 4).length ? h('p', { class: 'link-why', text: strings(d.provenance, 4).join(' · ') }) : null,
+      ref ? h('button', { class: 'link-chip', type: 'button', data: { ref, kind: 'email_thread' } }, [h('span', { class: 'link-chip-label', text: 'Open the thread' })]) : null,
+    ], opts);
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1617,6 +1696,7 @@
     batch_action: renderBatchAction,
     capability: renderCapability,
     batch_result: renderBatchResult,
+    reply_state: renderReplyState,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',

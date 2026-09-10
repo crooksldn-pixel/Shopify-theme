@@ -1027,3 +1027,29 @@ html[data-lite] .orb-zone{transition:none}
   font-size:22px;line-height:1;color:var(--ink-4);transition:color var(--t-1),transform var(--t-1);
 }
 .row.tappable:active .row-go{color:var(--ink-2);transform:translateY(-50%) translateX(2px)}
+
+/* ---- the graph family (app/families/order_email.py): the order under an email thread,
+   and the reply-state line. The confident strip is a door — the same tappable shape as a
+   list row — and the reasons sit under it in small type so a wrong link can be seen for one. */
+.link-block{margin:8px 0 10px}
+.link-strip{
+  display:flex;align-items:center;gap:10px;min-height:var(--tap);padding:10px 12px;
+  border-radius:var(--radius-control);background:var(--glass-control);border:1px solid var(--border-subtle);
+  box-shadow:var(--inset-hi);cursor:pointer;position:relative;padding-right:30px;
+}
+.link-strip:active{background:var(--glass-control-active);border-color:var(--border-active)}
+.link-kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600;white-space:nowrap}
+.link-main{font-size:15px;font-weight:600;color:var(--ink);word-break:break-word}
+.link-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.link-chip{
+  display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 12px;border-radius:999px;
+  border:1px solid var(--border-rest);background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;cursor:pointer;
+}
+.link-chip:active{background:var(--glass-control-active);border-color:var(--border-active)}
+.link-chip .row-go{position:static;transform:none;font-size:18px}
+.link-customer{color:var(--ink)}
+.link-none{font-size:13px;color:var(--ink-3);margin:0}
+.link-why{font-size:11px;color:var(--ink-4);letter-spacing:.02em;margin:6px 0 0;word-break:break-word}
+.card.card-reply_state{padding:14px 18px}
+.reply-line{font-size:16px;font-weight:600;color:var(--ink);margin:2px 0 4px;word-break:break-word}
+.reply-line.warn{color:var(--warn)}
