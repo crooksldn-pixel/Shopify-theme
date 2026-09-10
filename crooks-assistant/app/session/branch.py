@@ -142,6 +142,13 @@ class Branch:
     # a sentence spoken to the other. It expires, because a binding the owner has forgotten
     # about is a sentence applied to the wrong thing.
     voice_context: dict[str, Any] | None = None
+    # An email being composed on this half (app/families/compose.py): who it is to, what it
+    # is about, the words so far, and the status of each field. Held here and NOWHERE else,
+    # because it is the Mac's copy of a change that has not been prepared yet: the tablet
+    # posts a compose id and a typed value, and the execution arguments are built from THIS
+    # dictionary when the owner's gesture asks for them. A composer is one half's, like every
+    # other position — an email started on the left is not what "send it" means on the right.
+    compose: dict[str, Any] | None = None
 
     # What it has seen, most recent first.
     recent_entities: list[dict[str, str]] = field(default_factory=list)
@@ -358,6 +365,15 @@ class Branch:
                                "prompt": self.voice_context.get("prompt", ""), "phrase": self.voice_context.get("phrase", ""),
                                "expires_at": self.voice_context.get("expires_at")}
                               if self.voice_target() else None),
+            # The composer, in five fields: enough for the tablet to know one is open and
+            # what it is to, never the body (that is on the card the Mac drew, and a branch
+            # summary goes out with every reply).
+            "compose": ({"compose_id": str(self.compose.get("compose_id") or ""),
+                         "kind": str(self.compose.get("kind") or ""),
+                         "to": str(self.compose.get("to") or "")[:254],
+                         "subject": str(self.compose.get("subject") or "")[:120],
+                         "thread_id": str(self.compose.get("thread_id") or "")}
+                        if isinstance(self.compose, dict) and self.compose.get("compose_id") else None),
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
             "task": dict(self.task) if self.task else None,

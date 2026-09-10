@@ -1762,6 +1762,149 @@
     return node;
   }
 
+  // ------------------------------------------------------------------ precision input
+  //
+  // A field the owner types into, for the values a microphone gets wrong: an address, a SKU,
+  // a tracking number, a size, a quantity, a code, an amount. One component, so that every
+  // family's field behaves the same way and there is one place where a keystroke's route to
+  // the Mac is decided.
+  //
+  // It is CONTROLLED and it is the Mac that controls it. `value`, `status` and `hint` come off
+  // the payload; typing posts `compose.field` (web/app.js), the Mac validates the characters
+  // into its own copy and answers with the card again, and this draws what came back. Nothing
+  // here decides whether a value is good, and nothing here is an argument to a change: the
+  // execution arguments are built on the Mac from the Mac's copy when a gesture asks for them.
+  //
+  // Three statuses, three rings: ok, uncertain (heard rather than typed — look at it),
+  // invalid. `uncertain` exists because a mis-heard address is a perfectly valid address
+  // belonging to somebody else, and only the owner can tell.
+  const FIELD_KINDS = {
+    email:    { tag: 'input', type: 'email', inputmode: 'email', autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false' },
+    address:  { tag: 'textarea', rows: 3, inputmode: 'text', autocapitalize: 'words', spellcheck: 'false' },
+    text:     { tag: 'textarea', rows: 6, inputmode: 'text', autocapitalize: 'sentences' },
+    sku:      { tag: 'input', type: 'text', inputmode: 'text', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false', pattern: '[A-Za-z0-9._-]+' },
+    tracking: { tag: 'input', type: 'text', inputmode: 'text', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false', pattern: '[A-Za-z0-9]+' },
+    variant:  { tag: 'input', type: 'text', inputmode: 'text', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' },
+    quantity: { tag: 'input', type: 'text', inputmode: 'numeric', autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false', pattern: '[0-9]{1,4}' },
+    code:     { tag: 'input', type: 'text', inputmode: 'text', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false', pattern: '[A-Za-z0-9-]+' },
+    money:    { tag: 'input', type: 'text', inputmode: 'decimal', autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false', pattern: '[0-9]+([.][0-9]{1,2})?' },
+  };
+  const FIELD_STATUSES = ['ok', 'uncertain', 'invalid'];
+
+  // A single line of text, whatever the payload said. A field's LABEL and HINT are the Mac's
+  // words; its value is the owner's.
+  function fieldStatus(value) {
+    return FIELD_STATUSES.indexOf(text(value)) !== -1 ? text(value) : 'ok';
+  }
+
+  function field(spec, opts) {
+    const s = spec && typeof spec === 'object' ? spec : {};
+    const settings = opts || {};
+    const kind = FIELD_KINDS[text(s.kind)] ? text(s.kind) : 'text';
+    const shape = FIELD_KINDS[kind];
+    const name = text(s.name);
+    const status = fieldStatus(s.status);
+    const control = h(shape.tag, {
+      class: 'field-input',
+      type: shape.tag === 'input' ? shape.type : null,
+      rows: shape.tag === 'textarea' ? String(num(s.rows) || shape.rows) : null,
+      inputmode: shape.inputmode,
+      pattern: shape.pattern || null,
+      autocapitalize: shape.autocapitalize,
+      autocomplete: shape.autocomplete || null,
+      spellcheck: shape.spellcheck || null,
+      placeholder: text(s.placeholder) || null,
+      maxlength: num(s.maxlength) ? String(num(s.maxlength)) : null,
+      'aria-label': text(s.label, name),
+      'aria-invalid': status === 'invalid' ? 'true' : 'false',
+      // What a keystroke posts: WHICH composer and WHICH field. Never what to do with it.
+      data: { compose: text(s.compose_id), field: name, kind },
+    });
+    // Both, because a textarea's text is its content and an input's is its value, and the
+    // page reads `.value` for both.
+    control.value = text(s.value);
+    if (shape.tag === 'textarea') control.textContent = text(s.value);
+    // The deck holds a delegated click handler that opens a record from any [data-ref], a
+    // pointer probe that records gestures, and — in orb mode — a hold surface over the whole
+    // stage. A finger landing in a field must reach the field and go no further, or typing an
+    // address would open a record or start a recording.
+    const swallow = (event) => { if (event && typeof event.stopPropagation === 'function') event.stopPropagation(); };
+    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'click', 'touchstart', 'keydown', 'keyup']) {
+      control.addEventListener(type, swallow);
+    }
+    if (typeof settings.onField === 'function') {
+      control.addEventListener('input', () => settings.onField(name, control.value, control));
+    }
+    const hint = h('p', { class: 'field-hint', text: text(s.hint) });
+    hint.hidden = !text(s.hint);
+    return h('label', { class: `field field-${kind} is-${status}`, data: { field: name, status } }, [
+      h('span', { class: 'field-label', text: text(s.label, name) }),
+      control,
+      hint,
+    ]);
+  }
+
+  // An email being written, before anything has been prepared (app/families/compose.py).
+  // The one card with editable fields on it. Save draft and Send carry an action id and a
+  // mode and nothing else — the words of the email are on the Mac, and the whole point of
+  // this card is that they stay there until a gesture asks for them.
+  function renderEmailCompose(d, opts) {
+    const settings = opts || {};
+    const id = text(d.compose_id);
+    const reply = text(d.kind) === 'reply';
+    const to = d.to && typeof d.to === 'object' ? d.to : {};
+    const subject = d.subject && typeof d.subject === 'object' ? d.subject : {};
+    const body = d.body && typeof d.body === 'object' ? d.body : {};
+    const when = d.resolved_when && typeof d.resolved_when === 'object' ? d.resolved_when : null;
+    const meta = [];
+    if (when && text(when.date)) meta.push(`${text(when.phrase, 'when')} · ${text(when.date)}`);
+    if (reply && text(d.thread_id)) meta.push('in the same thread');
+    const buttons = list(d.actions, 4).map((a) => {
+      const staged = text(a.mode) === 'stage';
+      const mode = text(a.id) === 'send' ? 'send' : 'draft';
+      const chip = h('button', {
+        class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${staged ? '' : ' quiet'}`,
+        type: 'button',
+        // The whole payload of a gesture on this card: which command, which composer, and —
+        // for a staging button — draft or send. `data-args` is read by the page's delegated
+        // handler (web/app.js); there is no path from here to the body of the email.
+        data: {
+          command: staged ? 'compose.stage' : 'compose.discard',
+          args: staged ? `compose_id=${id}&mode=${mode}` : `compose_id=${id}`,
+          action: text(a.id),
+        },
+      }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
+      return chip;
+    });
+    const node = card('email_compose', [
+      h('div', { class: 'card-head' }, [
+        h('div', {}, [
+          kicker(reply ? 'Reply · not sent' : 'New email · not sent'),
+          h('h2', { class: 'card-title', text: text(d.about, reply ? 'A reply' : 'An email') }),
+          h('p', { class: 'card-meta', text: meta.join(' · ') }),
+        ]),
+        h('div', { class: 'badges' }, [badge(reply ? 'Reply' : 'New', 'warn')]),
+      ]),
+      reply ? null : field({
+        kind: 'email', name: 'to', label: 'To', value: to.value, status: to.status, hint: to.hint,
+        compose_id: id, maxlength: 254, placeholder: 'name@example.com',
+      }, settings),
+      field({
+        kind: 'text', name: 'subject', label: 'Subject', value: subject.value, status: subject.status,
+        hint: subject.hint, compose_id: id, maxlength: 120, rows: 2, placeholder: text(subject.placeholder),
+      }, settings),
+      field({
+        kind: 'text', name: 'body', label: 'Body', value: body.value, status: body.status,
+        hint: body.hint, compose_id: id, maxlength: 2000, rows: 8, placeholder: text(body.placeholder),
+      }, settings),
+      text(d.original) ? h('p', { class: 'compose-said', text: `You said: ${text(d.original)}` }) : null,
+      h('div', { class: 'compose-actions', role: 'group', 'aria-label': 'What to do with this email' }, buttons),
+      h('p', { class: 'future', text: 'Nothing is saved or sent until you tap.' }),
+    ], settings);
+    node.dataset.compose = id;
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -1790,6 +1933,7 @@
     batch_result: renderBatchResult,
     reply_state: renderReplyState,
     variant_picker: renderVariantPicker,
+    email_compose: renderEmailCompose,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
@@ -1867,5 +2011,5 @@
     }, [h('span', { class: 'chip-kind', text: text(e.kind) }), h('span', { class: 'chip-label', text: text(e.label) })]));
   }
 
-  return { render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h };
+  return { render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h, field, FIELD_KINDS };
 });

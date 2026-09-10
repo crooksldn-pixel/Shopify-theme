@@ -50,6 +50,13 @@ UI_TYPES = frozenset({
     # addition. Nothing on it changes anything; the confirmation card that follows still
     # waits for the gesture. Built by a recipe, bounded by `variant_picker` below.
     "variant_picker",
+    # an email being written (app/families/compose.py). The one card on the tablet with
+    # editable fields on it, and it is still not a way round the write boundary: a keystroke
+    # posts `compose.field` — an id, a field NAME and the typed value — which the Mac
+    # validates into its own copy of the composer, and the execution arguments are built
+    # from that copy when a gesture asks for them. Built by the family, not from a tool
+    # result: nothing has been read and nothing has been staged when it is drawn.
+    "email_compose",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
@@ -183,6 +190,14 @@ def present(
 
 
 def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
+    if name in ("gmail_compose_open", "gmail_compose_fill"):
+        # The composer's card is built by the family that owns the context
+        # (app/families/compose.py `compose_surface`), which copies it key by key and bounds
+        # every string exactly as this file does — it is the Mac's own state, not a tool
+        # result to be re-shaped here. Only well-formed items of the one type are taken, and
+        # `present()` filters against UI_TYPES again on the way out.
+        return [item for item in (result.get("_surfaces") or [])
+                if isinstance(item, dict) and item.get("type") == "email_compose" and isinstance(item.get("data"), dict)]
     if name in ANALYTIC_TOOLS:
         from app.analytics.present import build, working_set_items
 

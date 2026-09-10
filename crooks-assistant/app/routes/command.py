@@ -110,12 +110,15 @@ async def command(
         # synchronous and read nothing themselves; the recipe reads, through the same
         # scheduler and the same read tools a sentence would use, and no model.
         outcome = await _run_recipe(runtime, session, branch, str(recipe_id), outcome)
-    staging = outcome.changed.get("stage") if outcome.ok and isinstance(outcome.changed, dict) else None
-    if isinstance(staging, dict):
+    wanted = outcome.changed.get("stage") if outcome.ok and isinstance(outcome.changed, dict) else None
+    if isinstance(wanted, dict):
         # A command that PROPOSES a change — the touch half of "the model or a touch command
-        # proposes" (app/families/order_edit.py). Same reason as the recipe above: a command
-        # is synchronous, and preparing a change is a fresh read of the entity.
-        outcome = await _stage_change(request, runtime, session, staging, outcome)
+        # proposes": Add on the variant picker (app/families/order_edit.py), Save draft or Send
+        # on the composer (app/families/compose.py). Same reason as the recipe above: a command
+        # is synchronous, and preparing a change is a fresh read of the entity. What the tablet
+        # named is a registered write tool and the arguments THE MAC built from its own
+        # context; the gesture is still to come.
+        outcome = await _stage_change(request, runtime, session, branch, wanted, outcome)
     elapsed = (time.perf_counter() - started) * 1000
 
     timeline.emit(
@@ -316,7 +319,7 @@ async def _writes(request: Request) -> dict:
         return {}
 
 
-async def _stage_change(request: Request, runtime, session, staging: dict, outcome):
+async def _stage_change(request: Request, runtime, session, branch, staging: dict, outcome):
     """A touch command that proposes a change: PREPARE it, and nothing more.
 
     This is the same path `POST /actions/row` takes, for the same reason — the tablet named
@@ -361,18 +364,27 @@ async def _stage_change(request: Request, runtime, session, staging: dict, outco
     proposal_id = next((c.proposal_id for c in calls if getattr(c, "proposal_id", None)), "")
     if not proposal_id:
         why = next((str(c.error) for c in calls if not c.ok and c.error), "That change could not be prepared.")
-        timeline.emit("command_stage", session_id=session.session_id, tool=tool, ok=False, detail=why[:200])
+        timeline.emit("command_stage", session_id=session.session_id, branch_id=getattr(branch, "branch_id", None),
+                      tool=tool, ok=False, detail=why[:200])
         return commands.Outcome.refused("not_prepared", why[:200])
     runtime.actions.deliver(proposal_id)
     proposal = runtime.actions.find(proposal_id)
+    # The card this one replaces — a draft turned into a send. Withdrawn only now that the
+    # replacement exists: doing it first leaves the owner with nothing to tap when the send
+    # could not be prepared.
+    withdrawn = runtime.actions.revoke_ids([str(x) for x in (staging.get("revoke") or [])], "replaced by " + tool)
     timeline.emit("command_stage", session_id=session.session_id, turn_id=getattr(session, "turn_id", "") or None,
-                  tool=tool, ok=True, proposal_id=proposal_id,
+                  branch_id=getattr(branch, "branch_id", None), tool=tool, ok=True, proposal_id=proposal_id,
                   risk=(proposal.risk if proposal is not None else None),
-                  interaction=(proposal.interaction if proposal is not None else None))
+                  interaction=(proposal.interaction if proposal is not None else None),
+                  revoked=withdrawn or None)
     return commands.Outcome(
         answer=_staged_words(proposal), calls=calls,
-        changed={**outcome.changed, "staged": True, "proposal_id": proposal_id,
-                 "operation": spec.write.operation},
+        # `stage` is cleared: it was the instruction to this function, and a tablet that read
+        # it back off the payload would be reading the Mac's own working note.
+        changed={**outcome.changed, "stage": None, "staged": True, "proposal_id": proposal_id,
+                 "operation": spec.write.operation, "revoked": withdrawn,
+                 "what": str(staging.get("what") or "")[:80]},
     )
 
 

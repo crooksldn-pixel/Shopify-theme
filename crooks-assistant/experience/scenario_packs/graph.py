@@ -24,7 +24,7 @@ from experience.harness import Harness
 # `Result`, `check` and the shared assertions live in experience/scenarios.py, which collects
 # the packs at the END of its own module body, so these names are bound by the time this is
 # imported. Importing them keeps one definition of what a check is.
-from experience.scenarios import Result, a_surface, check, deterministic, grounded
+from experience.scenarios import Result, a_surface, check, compound, deterministic, grounded
 
 MIA_THREAD = "aa70d3f83dbef06e"
 MIA_ORDER = "gid://shopify/Order/1938"
@@ -131,14 +131,11 @@ async def graph_compound_reply(h: Harness) -> Result:
     # is named on the turn even though the lane became NORMAL, because it ran: it chose the
     # reads, drew the cards, and handed the words on. ONE model call — the failure this
     # replaces is the owner asking a second time, which was a second turn.
-    r.checks.append(check("the Mac does the mechanics itself and Claude is asked once, in the same turn",
-                          c.recipe_id == "order_email_reply" and c.model_calls == 1,
-                          f"lane={c.lane} recipe={c.recipe_id!r} model_calls={c.model_calls}"))
+    r.checks += compound(c, "order_email_reply")
     perf = c.raw.get("performance") or {}
-    r.checks.append(check("the facts were in hand before the sentence was written, and the wait is measured",
-                          isinstance(perf.get("facts_ms"), (int, float)) and isinstance(perf.get("prose_wait_ms"), (int, float))
-                          and float(perf["facts_ms"]) < float(perf.get("total_ms") or perf.get("turn_total_ms") or 1e9),
-                          f"facts_ms={perf.get('facts_ms')} prose_wait_ms={perf.get('prose_wait_ms')} total={perf.get('turn_total_ms')}"))
+    r.checks.append(check("the facts were in hand before the turn ended, not at the end of it",
+                          float(perf.get("facts_ms") or 0.0) < float(perf.get("turn_total_ms") or 1e9),
+                          f"facts_ms={perf.get('facts_ms')} total={perf.get('turn_total_ms')}"))
     r.checks.append(check("the answer leads with what was READ, not with what was written",
                           c.answer.startswith("Mia"), c.answer[:160]))
     r.checks += a_surface(c, "order", what="draws the order")

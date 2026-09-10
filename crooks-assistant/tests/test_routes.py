@@ -129,6 +129,12 @@ async def test_audio_test_reports_decode_failure(client):
     assert body["ok"] is False and "error" in body
 
 
+# What the Mac says about ITSELF after the question: the standing capability block, which is
+# there on every turn once any capability family is registered (app/families/*, and
+# `turn._family_lines`). It is not part of the question and must never be counted as though
+# it were — the cap below is on the QUESTION.
+
+
 async def test_text_is_capped(client):
     body = (await client.post("/turn", json={"text": "x" * 10_000, "session_id": "cap"})).json()
     assert body["error_kind"] is None
@@ -155,6 +161,7 @@ async def test_turn_goes_through_the_provider_once(client):
     clock, rest = sent.split("\n", 1)
     question = rest.split("\n\n[", 1)[0]
     assert question == "hello" and clock.startswith("[Now: ") and clock.endswith("Europe/London]")
+    assert sent.count("hello") == 1
 
 
 async def test_a_spoken_order_number_is_looked_up_before_the_model_is_asked(client, monkeypatch):

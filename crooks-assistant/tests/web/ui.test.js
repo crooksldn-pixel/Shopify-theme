@@ -26,6 +26,7 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set',
     'batch_action', 'batch_result', 'capability', 'reply_state',
     'variant_picker',
+    'batch_action', 'batch_result', 'capability', 'reply_state', 'email_compose',
   ]));
 });
 
@@ -1183,4 +1184,183 @@ test('every string on the picker arrives as text, never as markup', () => {
   const body = textOf(node);
   assert.ok(body.includes(HOSTILE));
   assert.equal(node.querySelectorAll('script').length, 0);
+});
+
+/* ---------------------------------------------------------- compose (app/families/compose.py) */
+
+const COMPOSER = {
+  compose_id: 'cmp_ab12cd34ef', kind: 'new',
+  to: { value: '1232candlestickhorse@gmail.com', status: 'ok', hint: '' },
+  to_name: '',
+  subject: { value: 'Free for a shoot on Sunday?', status: 'ok', placeholder: 'the assistant is writing this' },
+  body: { value: 'Hi, are you free next Sunday?', status: 'ok', placeholder: 'the assistant is writing this' },
+  thread_id: '', about: 'asking if they are free for a shoot next Sunday',
+  resolved_when: { date: '2026-09-13', phrase: 'next sunday' },
+  original: 'Write an email to a model asking if they are free for a shoot next Sunday.',
+  actions: [
+    { id: 'save_draft', label: 'Save draft', mode: 'stage' },
+    { id: 'send', label: 'Send', mode: 'stage', risk: 'red' },
+    { id: 'discard', label: 'Discard' },
+  ],
+  unexpected_field: 'THIS IS NOT FOR THE OWNER AND MUST NOT BE DRAWN',
+};
+
+function composer(patch) {
+  return UI.renderItem({ type: 'email_compose', data: Object.assign({}, COMPOSER, patch || {}) }, {});
+}
+
+test('a precision field carries its kind, its target size and where a keystroke goes', () => {
+  const wrap = UI.field({ kind: 'email', name: 'to', label: 'To', value: 'sam@crooksldn.com', status: 'ok', compose_id: 'cmp_1', maxlength: 254 }, {});
+  const input = wrap.querySelectorAll('.field-input')[0];
+  assert.equal(input.tagName, 'INPUT');
+  assert.equal(input.getAttribute('type'), 'email');
+  assert.equal(input.getAttribute('inputmode'), 'email');
+  assert.equal(input.getAttribute('autocapitalize'), 'none');
+  assert.equal(input.getAttribute('maxlength'), '254');
+  // Identity, never an instruction: which composer and which field, and nothing else.
+  assert.equal(input.dataset.compose, 'cmp_1');
+  assert.equal(input.dataset.field, 'to');
+  assert.equal(input.value, 'sam@crooksldn.com');
+  // 44px lives in the stylesheet (tests/test_compose.py asserts it there); the class that
+  // carries it has to be on the control or that assertion is about nothing.
+  assert.ok(input.classList.contains('field-input'));
+});
+
+test('every field kind has an input mode, and an unknown kind falls back rather than breaking', () => {
+  for (const kind of ['email', 'text', 'address', 'sku', 'tracking', 'variant', 'quantity', 'code', 'money']) {
+    const input = UI.field({ kind, name: 'x' }, {}).querySelectorAll('.field-input')[0];
+    assert.ok(input, kind);
+    assert.ok(input.getAttribute('inputmode'), `${kind} has no inputmode`);
+    assert.equal(input.tagName, UI.FIELD_KINDS[kind].tag.toUpperCase(), kind);
+  }
+  const numeric = UI.field({ kind: 'quantity', name: 'q' }, {}).querySelectorAll('.field-input')[0];
+  assert.equal(numeric.getAttribute('inputmode'), 'numeric');
+  assert.equal(numeric.getAttribute('pattern'), '[0-9]{1,4}');
+  // A kind nobody registered draws a plain text field; it never draws nothing.
+  const unknown = UI.field({ kind: 'hologram', name: 'x' }, {});
+  assert.ok(unknown.classList.contains('field-text'));
+});
+
+test('a field says its status three ways, and only the Mac decides which', () => {
+  const seen = {};
+  for (const status of ['ok', 'uncertain', 'invalid']) {
+    const wrap = UI.field({ kind: 'email', name: 'to', value: 'x', status, hint: `because ${status}` }, {});
+    seen[status] = wrap.className;
+    assert.ok(wrap.classList.contains(`is-${status}`), status);
+    assert.equal(wrap.dataset.status, status);
+    assert.equal(textOf(wrap.querySelectorAll('.field-hint')[0]), `because ${status}`);
+    assert.equal(wrap.querySelectorAll('.field-input')[0].getAttribute('aria-invalid'), status === 'invalid' ? 'true' : 'false');
+  }
+  assert.equal(new Set(Object.values(seen)).size, 3, 'the three statuses must not render alike');
+  // A status the Mac did not send is not invented as a failure.
+  assert.ok(UI.field({ kind: 'email', name: 'to', status: 'catastrophic' }, {}).classList.contains('is-ok'));
+  // No hint, no hint line.
+  assert.equal(UI.field({ kind: 'email', name: 'to', status: 'ok' }, {}).querySelectorAll('.field-hint')[0].hidden, true);
+});
+
+test('typing hands the characters to opts, and the value and status come back through opts', () => {
+  const seen = [];
+  const wrap = UI.field({ kind: 'email', name: 'to', value: '', status: 'invalid', hint: 'no address yet', compose_id: 'cmp_1' },
+                        { onField: (name, value) => seen.push([name, value]) });
+  const input = wrap.querySelectorAll('.field-input')[0];
+  input.value = '1232candlestickhorse@gmail.com';
+  input.dispatch('input');
+  assert.deepEqual(seen, [['to', '1232candlestickhorse@gmail.com']]);
+  // The component is controlled: the Mac's answer is a fresh spec, and the field shows THAT.
+  const answered = UI.field({ kind: 'email', name: 'to', value: '1232candlestickhorse@gmail.com', status: 'ok', hint: '', compose_id: 'cmp_1' }, {});
+  assert.equal(answered.querySelectorAll('.field-input')[0].value, '1232candlestickhorse@gmail.com');
+  assert.ok(answered.classList.contains('is-ok'));
+  assert.equal(answered.querySelectorAll('.field-hint')[0].hidden, true);
+});
+
+test('a finger in a field never reaches the deck underneath it', () => {
+  const input = UI.field({ kind: 'email', name: 'to' }, {}).querySelectorAll('.field-input')[0];
+  for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'click', 'touchstart', 'keydown', 'keyup']) {
+    let stopped = false;
+    input.dispatch(type, { stopPropagation: () => { stopped = true; } });
+    assert.ok(stopped, `${type} bubbled into the deck's handlers`);
+  }
+  // And it carries no [data-ref]/[data-kind], which is what the deck's click handler opens on.
+  assert.equal(input.dataset.ref, undefined);
+  assert.equal(input.dataset.kind, 'email');   // the field's own kind, not an entity kind
+});
+
+test('the composer draws the email as fields, with what it is about and the date resolved', () => {
+  const node = composer();
+  assert.equal(node.dataset.type, 'email_compose');
+  assert.equal(node.dataset.compose, 'cmp_ab12cd34ef');
+  const fields = node.querySelectorAll('.field-input');
+  assert.deepEqual(fields.map((f) => f.dataset.field), ['to', 'subject', 'body']);
+  assert.ok(fields.every((f) => f.dataset.compose === 'cmp_ab12cd34ef'));
+  assert.match(textOf(node), /asking if they are free for a shoot next Sunday/);
+  assert.match(textOf(node), /next sunday · 2026-09-13/);
+  assert.match(textOf(node), /Nothing is saved or sent until you tap/);
+  // A reply has no To field: its recipient is the thread's and the Mac reads it there.
+  const reply = composer({ kind: 'reply', thread_id: 'aa70d3f83dbef06e' });
+  assert.deepEqual(reply.querySelectorAll('.field-input').map((f) => f.dataset.field), ['subject', 'body']);
+  assert.match(textOf(reply), /in the same thread/);
+});
+
+test('the composer\'s buttons post an id and a mode, and never the email', () => {
+  const buttons = composer().querySelectorAll('.compose-btn');
+  assert.deepEqual(buttons.map((b) => [b.dataset.command, b.dataset.args]), [
+    ['compose.stage', 'compose_id=cmp_ab12cd34ef&mode=draft'],
+    ['compose.stage', 'compose_id=cmp_ab12cd34ef&mode=send'],
+    ['compose.discard', 'compose_id=cmp_ab12cd34ef'],
+  ]);
+  // Send is the grave one and says so in more than a colour name.
+  assert.ok(buttons[1].classList.contains('risk-red'));
+  assert.ok(!buttons[0].classList.contains('risk-red'));
+  for (const button of buttons) {
+    const args = String(button.dataset.args);
+    for (const forbidden of ['Free for a shoot', 'are you free', '@gmail.com', 'subject=', 'body=', 'to=']) {
+      assert.ok(args.indexOf(forbidden) === -1, `${button.dataset.action} carries ${forbidden}`);
+    }
+  }
+});
+
+test('a field on the card that the renderer does not know is not drawn anywhere', () => {
+  // The renderer draws the fields it names and nothing else — not into the text, not into an
+  // attribute. The composer's continuation prompt used to arrive this way and be relayed back
+  // by the tablet; it now goes straight to the model inside the turn (app/routes/turn.py), and
+  // this stays because the next thing the Mac puts on a card by accident should not be drawn
+  // either.
+  const node = composer();
+  assert.ok(textOf(node).indexOf('THIS IS NOT FOR THE OWNER') === -1);
+  (function walk(el) {
+    for (const [k, v] of Object.entries(el.attributes)) {
+      assert.ok(String(v).indexOf('THIS IS NOT FOR THE OWNER') === -1, `${el.tagName}[${k}] leaked it`);
+    }
+    for (const c of el.children) walk(c);
+  })(node);
+});
+
+test('a hostile email lands in the composer as text, never as markup', () => {
+  const node = composer({
+    to: { value: HOSTILE, status: 'invalid', hint: HOSTILE }, to_name: HOSTILE,
+    subject: { value: HOSTILE, status: 'ok', placeholder: HOSTILE },
+    body: { value: HOSTILE, status: 'ok', placeholder: HOSTILE },
+    about: HOSTILE, original: HOSTILE,
+    actions: [{ id: 'save_draft', label: HOSTILE, mode: 'stage' }],
+  });
+  assert.ok(textOf(node).includes(HOSTILE));
+  const tags = new Set();
+  (function walk(el) { for (const c of el.children) { tags.add(c.tagName); walk(c); } })(node);
+  assert.ok(!tags.has('IMG') && !tags.has('SCRIPT'));
+  // The VALUE of a field is a property, not an attribute built from data — but the
+  // placeholder is an attribute, so it has to be checked too.
+  (function walk(el) {
+    for (const [k, v] of Object.entries(el.attributes)) {
+      if (k === 'placeholder' || k === 'aria-label') continue;   // text, by construction
+      assert.ok(!String(v).includes('<'), `${el.tagName}[${k}] carries markup`);
+    }
+    for (const c of el.children) walk(c);
+  })(node);
+});
+
+test('a composer with fields the Mac did not send still renders', () => {
+  const bare = UI.renderItem({ type: 'email_compose', data: { compose_id: 'cmp_1', kind: 'new' } }, {});
+  assert.ok(bare && bare.dataset.type === 'email_compose');
+  assert.equal(bare.querySelectorAll('.compose-btn').length, 0, 'no actions, no buttons');
+  assert.deepEqual(bare.querySelectorAll('.field-input').map((f) => f.dataset.field), ['to', 'subject', 'body']);
 });

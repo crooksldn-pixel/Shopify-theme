@@ -37,14 +37,22 @@ def test_the_scopes_asked_for_are_modify_and_compose_and_never_the_whole_mailbox
 
 
 def test_the_gmail_reads_are_two_and_every_other_gmail_tool_is_a_staged_write():
+    from app.families import load_all
     from app.tools import gmail_writes  # noqa: F401 — registers the writes
     from app.tools.registry import all_specs
 
+    # A Phase 3 family may add a Gmail tool of its own, and the point of this test is that a
+    # tool it adds cannot be a write in disguise. Loading them makes the assertion cover them
+    # rather than depending on whether an earlier test module happened to import one.
+    load_all()
     reads = sorted(s.name for s in all_specs() if s.name.startswith("gmail_") and s.write is None)
     writes = sorted(s.name for s in all_specs() if s.name.startswith("gmail_") and s.write is not None)
-    assert reads == ["gmail_find_in_email", "gmail_read_thread", "gmail_search"]
+    # The composer's two (app/families/compose.py) change only the Mac's own copy of an email
+    # nobody has prepared yet: no source is touched and neither can reach a Gmail write method.
+    assert reads == ["gmail_compose_fill", "gmail_compose_open", "gmail_find_in_email", "gmail_read_thread", "gmail_search"]
     assert writes == ["gmail_draft_new", "gmail_draft_reply", "gmail_send_new", "gmail_send_reply", "gmail_thread_archive"]
     assert all(s.write.complete and s.write.mutation.startswith("gmail:") for s in all_specs() if s.name in writes)
+    assert all(s.batch is None for s in all_specs() if s.name in reads), "a read is not a bulk change either"
 
 
 # --- bulk detection ----------------------------------------------------------

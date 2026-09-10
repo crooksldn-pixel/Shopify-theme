@@ -112,6 +112,29 @@ def deterministic(capture: Any) -> Check:
                  f"model_calls={capture.model_calls}")
 
 
+def compound(capture: Any, recipe: str = "") -> list[Check]:
+    """A section 16 turn: the Mac chose the reads and drew the cards, and Claude was asked
+    ONCE, in the same turn, for the words.
+
+    Not `deterministic` — there IS a model call, and pretending otherwise would be the sort
+    of check that cannot fail. Not a plain model turn either, and that is the distinction
+    worth asserting: the recipe is named on the turn, so the workspace was the Mac's own work
+    and did not wait for the sentence. The failure it replaces is the owner asking twice.
+    """
+    checks = [check("the Mac drew the workspace and Claude was asked once, in the same turn",
+                    capture.model_calls == 1 and bool(capture.recipe_id),
+                    f"model_calls={capture.model_calls} recipe={capture.recipe_id!r} lane={capture.lane}")]
+    if recipe:
+        checks.append(check(f"the workspace is {recipe}'s", capture.recipe_id == recipe,
+                            f"recipe={capture.recipe_id!r}"))
+    perf = capture.raw.get("performance") or {}
+    checks.append(check("and the wait after the facts were in hand is measured, not guessed",
+                        isinstance(perf.get("facts_ms"), (int, float))
+                        and isinstance(perf.get("prose_wait_ms"), (int, float)),
+                        f"facts_ms={perf.get('facts_ms')} prose_wait_ms={perf.get('prose_wait_ms')}"))
+    return checks
+
+
 def entity_is(capture: Any, kind: str, ref: str = "") -> Check:
     got = capture.entity or {}
     ok = got.get("kind") == kind and (not ref or got.get("ref") == ref)

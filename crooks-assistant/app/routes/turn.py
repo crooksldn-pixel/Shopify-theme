@@ -672,6 +672,12 @@ _CARRIES_ITS_OWN_SUBJECT = frozenset({
     # own right, and a tapped Note must not swallow it as note text.
     "order_latest", "order_email_draft", "order_email_waiting",
     "unfulfilled_orders", "international_orders", "order_add_item",
+    # And the composer's three. "Write an email to <address> …" names the address it is going
+    # to; "make it shorter" and "send it instead" name the composer or the draft in front of
+    # the owner. None of them is dictation for a control tapped a moment ago — the composer's
+    # own fields are typed into, and its rewrite arrives as words with a composer open, which
+    # is a different mechanism from a bound control.
+    "email_compose_any", "compose_rewrite", "draft_send_instead",
 })
 
 

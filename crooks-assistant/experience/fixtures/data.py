@@ -571,3 +571,28 @@ INTERNATIONAL_ORDER = OrderSpec(1927, FIONN, 14, 11, "78.00", "UNFULFILLED", "PA
 ORDERS.append(INTERNATIONAL_ORDER)
 BY_ID[INTERNATIONAL_ORDER.order_id] = INTERNATIONAL_ORDER
 BY_NAME[INTERNATIONAL_ORDER.name] = INTERNATIONAL_ORDER
+# --------------------------------------------------------------------------- the composer
+# APPENDED for app/families/compose.py. The address a shoot is booked at: nobody in this
+# world has ordered anything, which is the whole point — it is the recipient Shopify cannot
+# supply, and the bench sentence was refused for want of it. Invented, like every other
+# address in this file, and it must stay so.
+COMPOSE_TO = "1232candlestickhorse@gmail.com"
+COMPOSE_SENTENCE = (
+    "Write an email to a model asking if they're free for a shoot next Sunday. "
+    f"Their email is {COMPOSE_TO}. Don't send it yet."
+)
+COMPOSE_DICTATED = (
+    "Write an email to a model asking if they're free for a shoot next Sunday. "
+    "Their email is 1232 candlestick horse at gmail dot com. Don't send it yet."
+)
+COMPOSE_SUBJECT = "Free for a shoot on Sunday?"
+COMPOSE_BODY = "Hi, are you free for a shoot next Sunday? Let me know and I'll send the call sheet."
+
+
+def next_sunday(now: datetime | None = None) -> str:
+    """The Sunday a scenario should expect, worked out in the SHOP's zone from the SHOP's
+    clock — the same two facts `app/families/compose.py::resolve_when` uses, and computed
+    here independently so the check can fail if that function's rule ever changes."""
+    today = (now or datetime.now(SHOP_TZ)).date()
+    ahead = (6 - today.weekday()) % 7
+    return (today + timedelta(days=ahead or 7)).isoformat()

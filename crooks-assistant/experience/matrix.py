@@ -3,7 +3,10 @@
 A matrix maintained by hand is a document that is wrong the first time somebody adds a recipe
 and forgets it. Every column here is read from the thing that actually decides:
 
-    voice            an intent family exists for it (app/fastpath/intent.py FAMILIES)
+    voice            an intent family exists for it (app/fastpath/intent.py, core AND the
+                     families that register through `extend()` — a Phase 3 family is as real
+                     as a Phase 1 one, and iterating only the core tuple left every one of
+                     them off this table)
     touch            a semantic command exists for it (app/commands.py REGISTRY)
     touch → voice    the command arms a spoken continuation (commands.SPOKEN_CONTROLS)
     fast path        a recipe is registered for the family (app/fastpath/recipes.py RECIPES)
@@ -50,6 +53,30 @@ COVERAGE: dict[str, tuple[str, ...]] = {
     "voice.bind": (),
     "voice.cancel": (),
     "navigation.forward": (),
+    # Phase 3's families. Each of these is reached by a sentence the live session actually
+    # said, and each row names the golden scenario that proves it.
+    "landing_orders": ("landing_orders",),
+    "landing_inbox": ("landing_inbox",),
+    "landing_sales": ("landing_sales",),
+    "landing_products": ("landing_products",),
+    "order_tab_show": ("spoken_tab",),
+    "order_latest": ("spoken_latest",),
+    "branch_switch": ("spoken_switch",),
+    "order_email_draft": ("graph_compound_reply", "graph_order_to_email", "graph_no_email_about_this_order"),
+    "order_email_waiting": ("graph_compound_reply",),
+    "unfulfilled_orders": ("query_undelivered",),
+    "international_orders": ("query_international_waiting",),
+    "order_add_item": ("order_add_item_picker", "order_add_item_ambiguous", "order_add_item_cancelled"),
+    "email_compose_any": ("compose_open", "compose_dictated"),
+    "draft_send_instead": ("compose_send_instead", "compose_send_spoken"),
+    # `compose_rewrite` has no scenario of its own: the rewrite is asserted in
+    # tests/test_compose.py, where the words handed to the model can be read without a
+    # customer's email going through a transcript. Shown as uncovered, which is honest.
+    "compose_rewrite": (),
+    "open.area": ("landing_orders", "landing_inbox", "landing_sales", "landing_products"),
+    "compose.field": ("compose_dictated",),
+    "compose.stage": ("compose_stage",),
+    "order_edit.stage": ("order_add_item_picker",),
 }
 
 # Operations a live read-only run must not exercise, whatever their scenario does. Nothing is
@@ -60,16 +87,22 @@ NOT_LIVE_SAFE: frozenset[str] = frozenset()
 
 def build() -> list[dict[str, Any]]:
     """One row per semantic operation, derived."""
-    import app.fastpath.library  # noqa: F401 — registers the recipes
+    import app.fastpath.library  # noqa: F401 — registers the core recipes
     from app import commands
-    from app.fastpath.intent import FAMILIES
-    from app.fastpath.recipes import RECIPES
+    from app.families import load_all
+    from app.fastpath.intent import all_families
+    from app.fastpath.recipes import recipe_for
     from experience.scenarios import BY_NAME
 
+    load_all()
     rows: list[dict[str, Any]] = []
 
-    for family in FAMILIES:
-        recipe = RECIPES.get(family.name)
+    for family in all_families():
+        # `recipe_for`, not `RECIPES[family.name]`: the registry is keyed by recipe id, and a
+        # Phase 3 family's recipe is often named for what it does rather than for the family
+        # (order_email_draft is answered by order_email_reply). Looking it up by name reported
+        # "no fast path" for recipes that plainly have one.
+        recipe = recipe_for(family.name)
         scenarios = COVERAGE.get(family.name, ())
         rows.append({
             "operation": family.name,

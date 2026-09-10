@@ -125,6 +125,7 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     staging rules live in the system prompt once, not in each description."""
     import json
 
+    from app.families import load_all
     from app.providers.max_agent_sdk import withheld_tools
     from app.tools import (  # noqa: F401
         analytics_tools,
@@ -135,6 +136,11 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
         shopify_writes,
     )
 
+    # The Phase 3 families' tools are part of the block the model reads (app/runtime.py calls
+    # this at boot), and they were being counted or not depending on whether an earlier test
+    # module happened to import them: the same assertion produced 24,788 bytes run alone and
+    # 26,259 in the suite. Loading them here makes the budget cover what production offers.
+    load_all()
     specs = registry.all_specs()
     offered = [s for s in specs if s.name not in withheld_tools(specs, writes_enabled=True)]
     assert offered, "nothing offered"
@@ -158,14 +164,34 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # tool's per-field descriptions. The block is what every turn ON THE MODEL PATH pays —
     # a fast-lane turn pays none of it — and a tool added here has to earn its bytes.
     #
-    # 25_300 covers Phase 3's order item editing, which is the one thing the September
-    # session's "add a black hoodie to this order" needed and did not have: a read that
-    # resolves words to a variant id (shopify_variant_search, ~590 bytes) and the write that
-    # adds it (shopify_order_add_item, ~460). About 1.05 KB for the family, and both schemas
-    # are already pared to the fields the model must name — the detail about calculated
-    # orders and what the customer will owe lives in app/families/order_edit.py and on the
-    # card, not in a description every turn pays for.
-    assert total <= 25_300, f"the tool block is {total} bytes"
+    # 26_400 covers Phase 3's four families, now that load_all() means they are counted.
+    #
+    # Order item editing (app/families/order_edit.py) is about 1.05 KB: a read that resolves
+    # words to a variant id (shopify_variant_search, ~590 bytes) and the write that adds it
+    # (shopify_order_add_item, ~460) — the one thing "add a black hoodie to this order" needed
+    # and did not have.
+    #
+    # The composer (app/families/compose.py) is 2,085 bytes, measured: 1,471 for
+    # gmail_compose_open and gmail_compose_fill, and 614 for the `to`/`to_name`/`compose_id`
+    # properties on the two new-email tools — paid twice, because those two share one schema
+    # object. What it buys is the recipient the shop cannot supply.
+    #
+    # Every schema here is already pared to the fields the model must name: the detail about
+    # calculated orders, about what the customer will owe, and about what may be staged lives
+    # in the families and on the cards, not in a description every turn pays for.
+    # Measured after the merge: 27,357. The arithmetic, from 24,300 at the end of Phase 2:
+    # order item editing about +1,050 (shopify_variant_search ~590, shopify_order_add_item
+    # ~460), the composer +2,085 (1,471 for its two reads, 614 for `to`/`to_name`/`compose_id`
+    # paid twice because the two new-email tools share one schema object), and the read
+    # language came out SMALLER than it went in even after adding international, city, unpaid
+    # and the ageing alias — its two per-tool filter blurbs replaced one that was paid twice.
+    #
+    # Every schema here is already pared to the fields the model must name: the detail about
+    # calculated orders, about what the customer will owe, and about what may be staged lives
+    # in the families and on the cards, not in a description every turn pays for. And the
+    # ceiling is the WORST case — `runtime.withheld_by_family()` takes a family's tools away
+    # when the store or the connection cannot serve it, so a Mac missing a scope pays less.
+    assert total <= 27_500, f"the tool block is {total} bytes"
     batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
     # 2,300 covers the fifth batch tool — the same campaign as batch_email_drafts, sent
     # rather than saved — which shares its schema object and adds two lines of description.

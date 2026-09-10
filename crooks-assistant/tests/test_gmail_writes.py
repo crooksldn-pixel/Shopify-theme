@@ -284,7 +284,21 @@ def test_every_email_change_is_declared_with_its_tier_gesture_and_kind_of_call(n
     assert spec.tier is tier and spec.write.complete and spec.write.kind == kind and spec.write.mutation == mutation
     assert gesture_for(tier.value, kind) == gesture
     assert (spec.write.undo is not None) == spec.write.reversible
-    assert "to" not in spec.input_schema["properties"] and "cc" not in spec.input_schema["properties"], "the recipient is never the model's"
+    # The recipient is never the model's to invent, and a copy header is nobody's at all.
+    #
+    # Phase 3 restates the first half rather than dropping it (app/families/compose.py). The
+    # two NEW-email tools take an explicit `to`: an address the owner dictated, which is the
+    # one recipient Shopify cannot supply, and which is admitted ONLY with the compose_id of a
+    # composer the gate has already held to this conversation — so an address still cannot
+    # arrive from a model mid-sentence. A REPLY's recipient is still read from the thread, and
+    # the checks for that are in tests/test_compose.py beside this one.
+    assert "cc" not in spec.input_schema["properties"] and "bcc" not in spec.input_schema["properties"], "a copy header is nobody's"
+    if name in ("gmail_draft_new", "gmail_send_new"):
+        recipient = spec.input_schema["properties"]["to"]
+        assert recipient["type"] == "string" and recipient["maxLength"] <= 254, "an address is one bounded line"
+        assert "compose_id" in spec.issued_id_args, "an address must ride with an issued composer id"
+    else:
+        assert "to" not in spec.input_schema["properties"], "a reply's recipient is never the model's"
 
 
 def test_the_gate_wants_issued_ids_and_refuses_a_recipient_argument():

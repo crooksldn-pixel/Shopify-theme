@@ -266,19 +266,20 @@ branch physically and accepts it:
 1. **On the Mac, in the project:** `git fetch origin` then
    `git log --oneline HEAD..origin/claude/crooks-assistant-build-lgxlau` to read what is
    coming.
-2. **Check before applying:** `make update CHECK=1` (or `python3 scripts/control.py update
-   --check --json`). It reports the current and candidate SHA, whether it is a fast-forward,
-   whether the tree is dirty and whether dependencies changed. A dirty tree or a diverged
-   branch **stops** the update; it never discards local work.
+2. **Check before applying:** `make update CHECK=1` — or `crooks-update --check`, the same
+   script. It reports the current and candidate SHA, whether it is a fast-forward, whether
+   the tree is dirty and whether dependencies changed, and changes nothing. A dirty tree or a
+   diverged branch **stops** the update; there is no `--force` and no reset.
 3. **Apply:** `make update`. That fast-forwards, installs dependencies if they changed,
    restarts through the existing launchd agents, and verifies `/health`.
 4. **Verify on the Mac:** `crooks-status` — or the Control app's status view — and check that
    the build id moved, every check is green, and the capability families read as expected.
 5. **Verify on the tablet:** open CROOKS OS, confirm the dock lands, and read the settings
    sheet's "What I can do".
-6. **If it does not come up:** `make restart` once. If it is still unhealthy, the last known
-   good SHA is in `logs/last_known_good.json`; `git checkout <that sha> && make restart`
-   returns to it. Nothing in this pass moves a branch destructively.
+6. **If it does not come up:** `make restart` once. If it is still unhealthy, the SHA to go
+   back to is the one step 1 printed as the current build before the update;
+   `git checkout <that sha> && make restart` returns to it. Nothing in this pass moves a
+   branch destructively, and the update never discards uncommitted work.
 
 Scopes: any family whose state reads MISSING_SCOPE needs its scope granted in the Shopify
 admin before it will work. The families table names the scope; §6 above lists the new ones.

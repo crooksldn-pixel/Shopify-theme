@@ -1126,3 +1126,42 @@ html[data-lite] .orb-zone{transition:none}
 }
 .variant-add:active{background:var(--glass-control-active)}
 .variant-add.is-off{opacity:var(--opacity-disabled);cursor:default;border-color:var(--border-subtle)}
+/* ------------------------------------------------------------------ compose (app/families/compose.py)
+ *
+ * The precision field and the composer card. The field is the only place on this tablet where
+ * a finger types, so its two jobs are size and honesty: 44px of target at minimum (the
+ * measured floor from the Phase 2 audit), and a ring that says what the Mac made of what was
+ * typed — ok, uncertain (heard rather than typed, look at it), invalid. The ring is fill AND
+ * border AND a line of words, never colour alone: the glass pass's rule, and the only one
+ * that survives a workbench light.
+ */
+.field{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.field-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.field-input{
+  min-height:44px;width:100%;box-sizing:border-box;padding:11px 12px;
+  font:inherit;font-size:16px;line-height:1.45;color:var(--ink);
+  background:var(--glass-control);border:1px solid var(--border-rest);border-radius:var(--radius-control);
+  box-shadow:var(--inset-hi);-webkit-appearance:none;appearance:none;resize:vertical;
+}
+.field-input::placeholder{color:var(--ink-4)}
+.field-input:focus{outline:none;background:var(--glass-control-active);border-color:var(--border-active);box-shadow:0 0 0 3px rgba(235,232,224,.12)}
+.field-hint{margin:0;font-size:12px;color:var(--ink-3);word-break:break-word}
+.field.is-ok .field-input{border-color:var(--ok)}
+.field.is-uncertain .field-input{border-color:var(--warn);background:var(--warn-dim)}
+.field.is-uncertain .field-hint{color:var(--warn)}
+.field.is-invalid .field-input{border-color:var(--bad);background:var(--bad-dim)}
+.field.is-invalid .field-hint{color:var(--bad)}
+.card.card-email_compose{padding:14px 18px 18px}
+.compose-said{margin:12px 0 0;font-size:12px;color:var(--ink-4);word-break:break-word}
+.compose-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
+.compose-btn{
+  flex:1 1 auto;min-height:var(--tap);min-width:96px;padding:10px 16px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font:inherit;font-size:15px;font-weight:600;color:var(--ink);cursor:pointer;
+  border-radius:var(--radius-control);border:1px solid var(--border-active);background:var(--glass-control-active);
+  box-shadow:var(--inset-hi);transition:transform var(--t-1),background var(--t-1);
+}
+.compose-btn:active{transform:scale(.96);background:var(--glass-control);transition-duration:var(--motion-press)}
+.compose-btn.risk-red{border-color:var(--bad);background:var(--bad-dim);color:var(--ink)}
+.compose-btn.quiet{flex:0 1 auto;min-width:0;border-color:var(--border-subtle);background:transparent;color:var(--ink-3);font-weight:500}
+.compose-btn[disabled]{opacity:.5;pointer-events:none}
