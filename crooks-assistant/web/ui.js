@@ -60,6 +60,12 @@
   };
   const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
   const list = (value, limit) => (Array.isArray(value) ? value.slice(0, limit || 50).filter((v) => v && typeof v === 'object') : []);
+  // The same bound, for the fields the backend sends as plain strings. `list` drops anything
+  // that is not an object — which is right for rows and wrong, silently, for an array of
+  // sentences: the capability card's "Try asking" chips and the whole "Since the last build"
+  // section were filtered to nothing and never appeared on screen at all, while the code that
+  // draws them read as though they did.
+  const strings = (value, limit) => (Array.isArray(value) ? value.slice(0, limit || 50).map((v) => text(v)).filter(Boolean) : []);
 
   // ------------------------------------------------------------------ formatting
 
@@ -1311,7 +1317,7 @@
     const groups = list(d.groups, 8);
     const counts = d.counts && typeof d.counts === 'object' ? d.counts : {};
     const changed = d.changed && typeof d.changed === 'object' ? d.changed : null;
-    const examples = list(d.examples, 6).map((x) => text(x)).filter(Boolean);
+    const examples = strings(d.examples, 6);
     const meta = [];
     if (num(counts.reads) !== null) meta.push(`${counts.reads} readings`);
     if (num(counts.changes) !== null) meta.push(d.writes_enabled ? `${counts.changes} changes` : 'changes off');
@@ -1331,13 +1337,13 @@
         h('p', { class: 'card-meta', text: meta.join(' \u00b7 ') }),
       ])]),
       d.note ? h('p', { class: 'card-note', text: text(d.note) }) : null,
-      changed && (list(changed.added, 12).length || list(changed.gone, 12).length)
+      changed && (strings(changed.added, 12).length || strings(changed.gone, 12).length)
         ? section('cap-changed', 'Since the last build', [
-            list(changed.added, 12).length
-              ? h('ul', { class: 'cap-rows' }, list(changed.added, 12).map((x) => h('li', { class: 'cap-row new', text: '+ ' + text(x) })))
+            strings(changed.added, 12).length
+              ? h('ul', { class: 'cap-rows' }, strings(changed.added, 12).map((x) => h('li', { class: 'cap-row new', text: '+ ' + x })))
               : null,
-            list(changed.gone, 12).length
-              ? h('ul', { class: 'cap-rows' }, list(changed.gone, 12).map((x) => h('li', { class: 'cap-row gone', text: '\u2212 ' + text(x) })))
+            strings(changed.gone, 12).length
+              ? h('ul', { class: 'cap-rows' }, strings(changed.gone, 12).map((x) => h('li', { class: 'cap-row gone', text: '\u2212 ' + x })))
               : null,
           ])
         : null,

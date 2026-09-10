@@ -75,11 +75,21 @@ async function main() {
   // says so in `skipped` and the check above fails.
   await page.evaluate(() => {
     window.__crooksDraw = (payload) => {
-      const root = document.querySelector('#cards, .cards, main') || document.body;
+      // Into the deck the application itself renders into, and no other. A selector LIST
+      // matches in document order, not in the order it is written, so '#cards, .cards, main'
+      // resolved to <main> — the wrapper — and `innerHTML = ''` then deleted #cards along with
+      // every delegated listener bound to it. The checks still rendered and still passed, but
+      // they were measuring a page the tablet never builds: nothing tappable was connected to
+      // anything. A browser check that draws outside the app's own container can only test the
+      // renderer, which the node tests already do.
+      const root = document.querySelector('#cards') || document.querySelector('.cards') || document.body;
       const out = window.CrooksUI.render(payload.ui || [], {});
-      root.innerHTML = '';
+      root.replaceChildren();
       out.nodes.forEach((n) => root.appendChild(n));
-      return { nodes: out.nodes.length, skipped: out.skipped };
+      // The deck is where cards live, and the page hides it until there is something in it.
+      // Putting cards there without showing it is how the screenshots came back as the orb.
+      document.body.dataset.mode = 'context';
+      return { nodes: out.nodes.length, skipped: out.skipped, root: root.id || root.className || 'body' };
     };
   });
   const hasRenderer = await page.evaluate(() => Boolean(window.CrooksUI && window.CrooksUI.render));
@@ -193,6 +203,33 @@ async function main() {
   check('the capability card has something in it', capsBody && capsBody.height > 80 && capsBody.text > 40,
     JSON.stringify(capsBody));
   await shot('04-capabilities');
+
+  // Every chip the capability card offers must BE a question, not look like one. These are
+  // drawn as real <button>s carrying the text to ask, and for a while nothing listened to
+  // them: six styled, tappable controls on every answer to "what can you do", each of which
+  // did nothing at all — no turn, no toast, not even a telemetry line. A browser is the only
+  // thing that can tell a wired button from an unwired one.
+  const chips = await page.evaluate(() => {
+    const found = Array.from(document.querySelectorAll('[data-ask]'));
+    return { count: found.length, first: found.length ? (found[0].dataset.ask || '') : '' };
+  });
+  check('the capability card offers questions to tap', chips.count > 0, JSON.stringify(chips));
+  const asked = await page.evaluate(() => {
+    // Watch what the page does with the tap, rather than trusting that it did something.
+    const posts = [];
+    const real = window.fetch;
+    window.fetch = (url, opts) => { posts.push(String(url)); return real(url, opts); };
+    // Ask silently. The question is what this check is about; speaking the answer would send
+    // the page to /speak, which has no voice credential in a fixture run and correctly answers
+    // 503 — a real backend refusal, not a fault in the page, and not this check's subject.
+    const speak = document.querySelector('#speak-toggle, [name="speak"]');
+    if (speak && speak.checked) speak.checked = false;
+    const chip = document.querySelector('[data-ask]');
+    if (chip) chip.click();
+    return new Promise((resolve) => setTimeout(() => { window.fetch = real; resolve(posts); }, 500));
+  });
+  check('tapping one asks it', asked.some((u) => u.includes('/turn')),
+    `posted=${asked.join(',') || 'nothing'}`);
 
   check('no script error during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 

@@ -9,7 +9,9 @@ had: the same gesture produced a card in one direction and did not in the other.
 
 So a semantic command is named once here, and both ends resolve into it. The fast lane's
 navigation recipes call `run()`; `POST /command` calls `run()`. Neither contains any logic of
-its own about what Back means.
+its own about what Back means. `POST /branches/{id}/back` survives as a position-only endpoint
+for a caller that wants where the trail is and no card — it moves through `move_nav`, this
+file's arithmetic, so it cannot drift from the other two; it simply does not draw.
 
 Three properties hold for everything in this file, and the tests hold them:
 

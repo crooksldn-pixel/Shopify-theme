@@ -891,3 +891,31 @@ test('a row action is inert when the page has nowhere to send it', () => {
   const button = node.querySelector('.row-btn');
   assert.doesNotThrow(() => button.dispatch('click', { stopPropagation() {} }));
 });
+
+// The renderer's two array helpers are not interchangeable, and one of them failing quietly
+// is how a whole section of a card disappears while the code that draws it still reads fine.
+test('a card region fed plain strings renders them', () => {
+  const data = {
+    build: 'b7', counts: { reads: 12, changes: 3 }, writes_enabled: true,
+    groups: [{ area: 'shop', label: 'The shop', items: [{ what: 'Read an order', kind: 'read', state: 'ready' }] }],
+    examples: ['Show me order 1938', "Show me today's orders"],
+    changed: { added: ['order_reopen: show it again'], gone: ['old_thing: went away'] },
+  };
+  const out = UI.render([{ type: 'capability', data }], {});
+  assert.equal(out.nodes.length, 1);
+  const body = textOf(out.nodes[0]);
+  // The chips: real questions, drawn, and carrying the text to ask.
+  assert.match(body, /Try asking/);
+  for (const q of data.examples) assert.ok(body.includes(q), `missing chip ${q}`);
+  // And the build delta, which is fed the same shape and vanished the same way.
+  assert.match(body, /Since the last build/);
+  assert.ok(body.includes('order_reopen: show it again'));
+  assert.ok(body.includes('old_thing: went away'));
+});
+
+test('the strings a card renders are text, never markup', () => {
+  const out = UI.render([{ type: 'capability', data: { build: 'b', examples: [HOSTILE], groups: [] } }], {});
+  const body = textOf(out.nodes[0]);
+  assert.ok(body.includes(HOSTILE), 'the hostile string survives as text');
+  assert.ok(!out.nodes[0].allHtml || !/<script/i.test(out.nodes[0].allHtml()), 'and never as markup');
+});

@@ -269,13 +269,30 @@ async def forward(request: Request, branch_id: str, session_id: str = Form(defau
 
 
 async def _step(request: Request, branch_id: str, session_id: str, *, forward: bool) -> JSONResponse | dict:
+    """Move one branch's trail, for a caller that wants the position and not the card.
+
+    The move itself is `app/commands.py:move_nav` — the same arithmetic `POST /command` and the
+    fast lane's navigation recipes use. It called `branch.back()`/`branch.forward()` directly
+    until now, which made this the second implementation of Back that `app/commands.py`'s
+    docstring names by path and says it removed; the two were free to drift, and this one had
+    no branch-status check, so it would walk the trail of a branch that had been merged away.
+
+    What it deliberately does NOT do is draw. A caller that wants the record wants
+    `POST /command`, which replays it, reads it when memory has dropped it, and says a
+    sentence. This returns where the branch now is, and nothing else.
+    """
+    from app import commands
+
     session, refusal = _session(request, session_id)
     if refusal is not None:
         return refusal
     if branch_id not in session.branches:
         return _refuse(404, "unknown_branch", "There is no such branch in this conversation.")
     branch = session.branches[branch_id]
-    entry = branch.forward() if forward else branch.back()
+    if branch.status != "ACTIVE":
+        return _refuse(409, "branch_closed", f"That half is {branch.status.lower()} and no longer moves.")
+    moved = commands.move_nav(branch, "forward" if forward else "back")
+    entry = branch.nav[branch.nav_index] if moved.get("landed") and 0 <= branch.nav_index < len(branch.nav) else None
     timeline.emit("branch_navigated", session_id=session.session_id, branch_id=branch_id,
                   nav="forward" if forward else "back", landed=bool(entry), depth=max(0, branch.nav_index))
     return {"branch": branch.public(), "landed": entry.public() if entry is not None else None}

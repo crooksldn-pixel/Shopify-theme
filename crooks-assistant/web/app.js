@@ -1046,10 +1046,17 @@ async function goBack() {
       return;
     }
   }
-  if (landed && landed.ok && landed.answer && !(landed.ui || []).length) {
-    // The Mac says there is nothing further back. Say so rather than silently doing nothing.
-    el.answer.textContent = landed.answer;
+  if (landed && landed.ok) {
+    // The Mac answered, and answered that there is nowhere further back. Say so and STAY.
+    // This used to fall through to the local walk below, which is worse than doing nothing:
+    // `pushContext` appends, so a tapped Back had already grown the local stack, and
+    // `historyIndex - 1` was therefore the card the owner had just navigated AWAY from. The
+    // screen went forwards while the voice said there was nothing behind it.
+    if (landed.answer) el.answer.textContent = landed.answer;
+    return;
   }
+  // Only now: the request itself failed — the Mac asleep, the tailnet dropped — and a Back
+  // button that does nothing when the network hiccups is worse than one briefly out of step.
   if (historyIndex > 0) showHistory(historyIndex - 1);
   else goHome();
 }
@@ -1084,14 +1091,35 @@ async function semanticCommand(name, extra) {
   try {
     const response = await fetch('/command', { method: 'POST', body: form, cache: 'no-store' });
     if (!response.ok && response.status >= 500) return null;
-    return await response.json();
+    const payload = await response.json();
+    // The Mac answers every command with the branch as it now stands. Taking it here rather
+    // than at each call site is the point: while only the /turn handler called noteBranch,
+    // the page kept a second copy of the cursor and the tab that commands were already
+    // correcting, and the Next button's visibility was decided from whatever the last SPOKEN
+    // turn had said — so tapping through a list left Next showing at the end of it.
+    if (payload && payload.branch) noteBranch(payload.branch);
+    return payload;
   } catch {
     return null;   // offline: the caller falls back to what it can do locally
   }
 }
 
-function goHome() {
+// Home, like Back and Next, is a move on the Mac's trail — `navigation.home` walks the branch
+// to its first stop and redraws that record. This was left on the old client-only path when
+// the other two were wired up, so tapping Home put the tablet on the orb screen while the
+// branch stayed exactly where it was, and the next "next" carried on from there.
+async function goHome() {
   T.record('navigate', { nav: 'home', from: historyIndex });
+  const landed = await semanticCommand('navigation.home');
+  if (landed && landed.ok && Array.isArray(landed.ui) && landed.ui.length) {
+    const rendered = window.CrooksUI.render(landed.ui, renderOpts());
+    if (rendered.nodes.length) {
+      pushContext(rendered.nodes, landed.ui, landed.answer || '');
+      if (landed.answer) el.answer.textContent = landed.answer;
+      return;
+    }
+  }
+  // Nothing to go back to, or the Mac is unreachable: the orb screen, as before.
   setMode('orb');
   renderRecent();
 }
@@ -1965,7 +1993,24 @@ el.cards.addEventListener('click', (event) => {
     return;
   }
   const chip = target && target.closest ? target.closest('.rail-chip') : null;
-  if (chip) T.record('rail_tap', { action: chip.dataset.action || '', state: chip.getAttribute('aria-disabled') === 'true' ? 'disabled' : 'enabled' });
+  if (chip) {
+    T.record('rail_tap', { action: chip.dataset.action || '', state: chip.getAttribute('aria-disabled') === 'true' ? 'disabled' : 'enabled' });
+    return;
+  }
+  // A chip carrying a question asks it. The capability card draws six of these and their
+  // comment has always promised "tapping one is answered without the model — they post the
+  // same text a spoken question would"; nothing listened, so they were styled, tappable
+  // buttons that did nothing at all. They post the same body the transcript path posts, so
+  // the question takes the same lane, the same recipe and the same presenter.
+  const ask = target && target.closest ? target.closest('[data-ask]') : null;
+  if (ask && !busy) {
+    const text = (ask.dataset.ask || '').trim();
+    if (!text) return;
+    T.record('chip_ask', { text: text.slice(0, 60) });
+    unlockSpeech();
+    stopSpeaking();
+    submit({ text, session_id: sessionId, turns, speak: el.speakToggle.checked }, false);
+  }
 });
 el.cards.addEventListener('error', (event) => {
   const target = event.target;
