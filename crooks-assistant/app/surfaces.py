@@ -38,6 +38,8 @@ SURFACE_TYPES = frozenset({
     "analytics", "email_list", "email_thread", "email_draft", "email_queue", "work_queue",
     "capability", "attention", "confirmation", "batch", "result", "error", "context",
     "assistant",
+    # who is waiting on whom in one thread (app/families/order_email.py)
+    "reply_state",
 })
 
 # Which entity kinds may be named. A kind outside this set is a bug in a builder, not a new
