@@ -615,3 +615,52 @@ async def test_a_shopify_that_does_not_answer_is_neither_missing_nor_unsupported
     probed = await sc._probe(Runtime(set(), sample=MIA, store=Half()))
     assert probed["state"] == "TEMPORARILY_UNAVAILABLE"
     assert "store credit check did not answer" in probed["detail"]
+
+
+async def test_the_probe_gets_a_real_customer_from_the_cache_rather_than_guessing_ready():
+    """Whether a store HAS store credit is a per-store Shopify setting, not a scope — so the
+    two grants can both be present and the feature still be off.
+
+    Without a customer to ask about, `_probe` returned READY with "proven on first use". READY
+    means `runtime.withheld_by_family()` OFFERS the write tool to the model, so the first time
+    the owner asked for a credit Claude would attempt it and the shop would refuse. That is
+    the fifteen seconds of attempting-refused-operations section 29 exists to remove, and
+    "proven on first use" is the owner paying for the proof.
+
+    `Runtime.store_credit_sample` takes one customer id off the orders the Mac has already
+    warmed, so the probe is conclusive and nothing was read for its own sake. Empty stays a
+    fine answer — no cache, or no order with a customer on it — and then the old
+    READY-unproven wording is honest again.
+    """
+    from app.runtime import Runtime
+
+    class Cache:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def rows(self):
+            return self._rows
+
+    runtime = Runtime.__new__(Runtime)
+    runtime.order_cache = None
+    assert runtime.store_credit_sample == "", "no cache is not a customer"
+
+    runtime.order_cache = Cache([])
+    assert runtime.store_credit_sample == "", "an empty cache is not a customer"
+
+    runtime.order_cache = Cache([{"customer": None}, {"not a dict": 1}])
+    assert runtime.store_credit_sample == "", "an order with no customer on it is not a customer"
+
+    runtime.order_cache = Cache([
+        {"customer": None},
+        {"customer": {"customer_id": "gid://shopify/Customer/7001", "name": "Mia Jones"}},
+        {"customer": {"customer_id": "gid://shopify/Customer/7002"}},
+    ])
+    assert runtime.store_credit_sample == "gid://shopify/Customer/7001"
+
+    class Broken:
+        def rows(self):
+            raise RuntimeError("the cache is mid-sync")
+
+    runtime.order_cache = Broken()
+    assert runtime.store_credit_sample == "", "a cache that raises must not fail a health check"

@@ -53,6 +53,11 @@ class Runtime:
     timeline: Any = None
     # The recent orders the read layer answers from (app/analytics/cache.py).
     order_cache: Any = None
+    # A real customer id, for the capability probes that can only answer a question about
+    # somebody. Store credit is the one that needs it: whether a store HAS store credit is a
+    # per-store Shopify setting, not a scope, and the only way to find out is to ask about an
+    # account. Read from the order cache the Mac warms at start-up (see `store_credit_sample`)
+    # rather than fetched, so a probe costs nothing and no customer is read for its own sake.
     # What this build can do, generated from the registries (app/capabilities), and the
     # record that holds the previous build's beside it — so "what more can you do now?" is a
     # comparison the Mac makes locally rather than a question for the model.
@@ -82,6 +87,38 @@ class Runtime:
     def warm_orders_soon(self) -> None:
         """Start reading the recent window of orders in the background, so the first question
         about sales or stock is answered from memory. Never awaited by a turn."""
+        self._warm_analytics()
+
+    @property
+    def store_credit_sample(self) -> str:
+        """One customer id from what the order cache already holds, or "".
+
+        `app/families/store_credit.py::_probe` asks Shopify whether that customer has a store
+        credit account: the grants can both be present and the feature still be off, because
+        Shopify enables store credit per store. Without an id the probe returned READY with
+        "proven on first use" — and READY means the write tool IS offered to the model, so the
+        first time the owner asked, Claude would attempt it and the shop would refuse. That is
+        precisely the fifteen seconds of attempting-refused-operations that section 29 exists
+        to remove, so the probe is made conclusive here instead.
+
+        Empty is a fine answer: no cache yet, or a warm that found no order with a customer
+        on it. The probe then says READY-unproven, as it did before, and nothing is claimed
+        that was not checked.
+        """
+        cache = self.order_cache
+        if cache is None:
+            return ""
+        try:
+            rows = cache.rows()
+        except Exception:  # noqa: BLE001 — a probe input is never a reason to fail a health check
+            return ""
+        for row in rows:
+            customer = row.get("customer") if isinstance(row, dict) else None
+            if isinstance(customer, dict) and customer.get("customer_id"):
+                return str(customer["customer_id"])
+        return ""
+
+    def _warm_analytics(self) -> None:
         if self.order_cache is None or int(getattr(self.settings, "analytics_warm_days", 0) or 0) <= 0:
             return
         try:
