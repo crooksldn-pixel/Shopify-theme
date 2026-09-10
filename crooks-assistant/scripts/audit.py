@@ -81,8 +81,12 @@ def _print(payload: dict, label: str) -> None:
         for e in payload["errors"]:
             print(f"  {RED}script error{RESET} {e[:110]}")
     print()
-    print(f"  {DIM}{'surface':<15}{'chrome':>8}{'scroll':>9}{'screens':>9}{'small':>7}{'below':>7}{'spoken':>8}{RESET}")
+    print(f"  {DIM}{'surface':<15}{'chrome':>8}{'scroll':>9}{'screens':>9}{'small':>7}{'below':>7}{'spoken':>8}{'blur':>6}{'anim':>6}{RESET}")
     for s in payload.get("surfaces") or []:
+        if s["name"].startswith("frames"):
+            print(f"  {s['name']:<15}{DIM}mean {s.get('meanMs')}ms · p95 {s.get('p95Ms')}ms · worst {s.get('worstMs')}ms · "
+                  f"{s.get('over32ms')} over 32ms · blur {s.get('blurLayers')} · anim {s.get('animating')}{RESET}")
+            continue
         chrome = s.get("contentStartsAt")
         screens = s.get("screensToScroll") or 0
         small, below = s.get("tooSmall") or 0, s.get("belowFold") or 0
@@ -94,6 +98,8 @@ def _print(payload: dict, label: str) -> None:
             f"{_tone(small, 0, 1)}{small:>7}{RESET}"
             f"{_tone(below, 0, 3)}{below:>7}{RESET}"
             f"{_tone(s.get('spokenChars', 0), 140, 220)}{s.get('spokenChars', 0):>8}{RESET}"
+            f"{_tone(s.get('blurLayers', 0), 3, 6)}{s.get('blurLayers', 0):>6}{RESET}"
+            f"{_tone(s.get('animating', 0), 2, 5)}{s.get('animating', 0):>6}{RESET}"
         )
     print()
     for s in payload.get("surfaces") or []:
@@ -102,10 +108,13 @@ def _print(payload: dict, label: str) -> None:
             notes.append(f"{RED}spills sideways{RESET}")
         if s.get("repeated"):
             notes.append(f"{AMBER}repeated{RESET} {DIM}{', '.join(s['repeated'][:4])}{RESET}")
+        if s.get("note") and s["name"] in ("home", "dock", "home-after", "row-tap", "graph-hops"):
+            notes.append(f"{DIM}{s['note'][:150]}{RESET}")
         if notes:
             print(f"  {s['name']:<15} {' · '.join(notes)}")
     print(f"\n{DIM}chrome = pixels before the first card · scroll = deck height · screens = scroll/viewport{RESET}")
     print(f"{DIM}small = tap targets under 44px · below = tappables below the fold · spoken = characters said{RESET}")
+    print(f"{DIM}blur = live backdrop-filter layers · anim = elements animating forever (the reference: 66 and ~120){RESET}")
     print(f"{DIM}screenshots: {OUT / label}{RESET}")
 
 

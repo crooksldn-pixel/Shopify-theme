@@ -376,7 +376,15 @@ def test_the_shell_is_the_orb_not_a_dashboard():
     assert 'id="talk"' in INDEX and "Hold to speak" in INDEX
     assert "System ready." in INDEX and "What do you need?" in INDEX
     assert "How can I help" not in INDEX
-    assert INDEX.count("<nav") <= 1
+    # Two navs and no more: the context rail (where the conversation has been) and the dock
+    # (four areas, either side of the hold). No sidebar, no menu, no tabs across the top —
+    # the orb is the shell, and the dock is a shortcut into what the orb already answers.
+    assert INDEX.count("<nav") == 2 and 'id="context-nav"' in INDEX and 'id="dock"' in INDEX
+    assert "<aside" not in INDEX and "sidebar" not in INDEX.lower() and "<menu" not in INDEX
+    # Every dock icon asks a sentence the fast lane answers; none is a route of its own.
+    import re
+    asks = re.findall(r'class="dock-btn"[^>]*data-ask="([^"]+)"', INDEX)
+    assert len(asks) == 4 and all(a.strip() for a in asks)
 
 
 def test_the_voice_request_cannot_hang_the_tablet():

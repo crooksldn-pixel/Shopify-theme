@@ -167,8 +167,43 @@ async function main() {
     const answer = document.querySelector('#answer');
     out.spoken = answer ? (answer.textContent || '').trim() : '';
     out.spokenChars = out.spoken.length;
+    // What the glass costs. Every element with a live backdrop-filter is a separate
+    // compositing pass over everything behind it; every element with a running animation
+    // is a frame the GPU cannot skip. The reference measured 66 and ~120 on one page.
+    const all = Array.from(document.querySelectorAll('body *'));
+    out.blurLayers = all.filter((e) => { const b = getComputedStyle(e).backdropFilter; return b && b !== 'none' && e.getClientRects().length; }).length;
+    out.animating = all.filter((e) => { const cs = getComputedStyle(e); return cs.animationName !== 'none' && cs.animationIterationCount === 'infinite' && e.getClientRects().length; }).length;
     return out;
   }, MIN_TAP);
+
+  /* Frame time while the deck scrolls and a tab changes: the two things a hand does most.
+   * Relative numbers — this is a workstation's Chromium, not the Tab A — but the same probe
+   * before and after a styling change says whether the change made frames longer. */
+  const jank = async () => page.evaluate(() => new Promise((resolve) => {
+    const deck = document.querySelector('#cards');
+    const frames = [];
+    let last = performance.now();
+    let n = 0;
+    const tabs = Array.from(document.querySelectorAll('#cards [role="tab"]'));
+    const tick = (now) => {
+      frames.push(now - last); last = now; n += 1;
+      if (deck) deck.scrollTop = (n % 40) * 12;
+      if (tabs.length && n % 15 === 0) tabs[(n / 15) % tabs.length].click();
+      if (n < 90) requestAnimationFrame(tick);
+      else {
+        frames.shift();
+        const sorted = frames.slice().sort((a, b) => a - b);
+        resolve({
+          frames: frames.length,
+          meanMs: +(frames.reduce((a, b) => a + b, 0) / frames.length).toFixed(1),
+          p95Ms: +sorted[Math.floor(sorted.length * 0.95)].toFixed(1),
+          worstMs: +sorted[sorted.length - 1].toFixed(1),
+          over32ms: frames.filter((f) => f > 32).length,
+        });
+      }
+    };
+    requestAnimationFrame(tick);
+  }));
 
   const record = async (name, title, note) => {
     const m = await measure();
@@ -179,6 +214,17 @@ async function main() {
     surfaces.push(m);
     return m;
   };
+
+  // The orb screen, before any question: the dock and the atmosphere, on their own. The hold
+  // label must sit clear of the dock here — in context mode the two share a band by design.
+  const orbScreen = await page.evaluate(() => {
+    const label = document.querySelector('#talk-label').getBoundingClientRect();
+    const dockTop = Math.min(...Array.from(document.querySelectorAll('.dock-btn')).map((b) => b.getBoundingClientRect().top));
+    return { mode: document.body.dataset.mode, lit: document.querySelectorAll('.dock-btn[aria-pressed="true"]').length,
+      labelBottom: Math.round(label.bottom), dockTop: Math.round(dockTop), labelClearsDock: label.bottom <= dockTop,
+      lite: document.documentElement.dataset.lite === '1' };
+  });
+  await record('home', 'The orb screen', JSON.stringify(orbScreen));
 
   // ---------------------------------------------------------------- P0 workflows
 
@@ -251,6 +297,63 @@ async function main() {
     return out;
   });
   await record('graph-hops', 'order to prior order to customer, by finger', JSON.stringify(hops));
+
+  // The dock: a tap on an area lands on that area's surface and lights the icon; the lit icon
+  // follows what is on screen (a spoken question that changes area moves it); nothing lights
+  // on the orb screen. And its geometry: every icon a finger can hit, none under the pill.
+  const dock = await page.evaluate(async () => {
+    const out = { steps: [] };
+    const lit = () => Array.from(document.querySelectorAll('.dock-btn[aria-pressed="true"]')).map((b) => b.dataset.area).join(',') || 'none';
+    const cardType = () => ((document.querySelector('#cards .card') || {}).dataset || {}).type || '';
+    const tap = async (area) => {
+      const b = document.querySelector(`.dock-btn[data-area="${area}"]`);
+      if (!b) { out.steps.push({ area, missing: true }); return; }
+      b.click();
+      await new Promise((r) => setTimeout(r, 1400));
+      out.steps.push({ tapped: area, card: cardType(), lit: lit(), mode: document.body.dataset.mode });
+    };
+    await tap('orders');
+    await tap('email');
+    await tap('sales');
+    await tap('products');
+    const btns = Array.from(document.querySelectorAll('.dock-btn')).map((b) => { const r = b.getBoundingClientRect(); return { area: b.dataset.area, x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; });
+    const pill = document.querySelector('#talk-label').getBoundingClientRect();
+    out.geometry = { buttons: btns, pill: { x: Math.round(pill.x), y: Math.round(pill.y), w: Math.round(pill.width), h: Math.round(pill.height) } };
+    out.overlapsPill = btns.some((b) => b.x < pill.x + pill.width && b.x + b.w > pill.x && b.y < pill.y + pill.height && b.y + b.h > pill.y);
+    out.small = btns.filter((b) => b.w < 44 || b.h < 44).length;
+    const deck = document.querySelector('#cards');
+    out.deckClearsDock = deck ? parseInt(getComputedStyle(deck).paddingBottom, 10) >= 112 : false;
+    return out;
+  });
+  await record('dock', 'The dock, tapped through each area', JSON.stringify({ steps: dock.steps, overlapsPill: dock.overlapsPill, small: dock.small, deckClearsDock: dock.deckClearsDock }));
+  // Home is the FIRST RECORD of the trail (navigation.home), not the orb screen: the lit icon
+  // must follow the record it lands on, which after the walk above is the order list.
+  await page.evaluate(() => { const h = document.querySelector('#home-btn'); if (h) h.click(); });
+  await page.waitForTimeout(900);
+  const home = await page.evaluate(() => ({
+    mode: document.body.dataset.mode,
+    card: ((document.querySelector('#cards .card') || {}).dataset || {}).type || '',
+    lit: Array.from(document.querySelectorAll('.dock-btn[aria-pressed="true"]')).map((b) => b.dataset.area).join(',') || 'none',
+  }));
+  await record('home-after', 'Home: the lit icon follows the record it lands on', JSON.stringify(home));
+  // Frame time, on the order card, as a hand would use it — first as this machine is
+  // classed (a Chromium reporting four cores or fewer is lite, as the Tab A is), then with
+  // the full design forced on, so the cost of the glass is a number and not a guess.
+  await ask('show me order 1938');
+  const liteNow = await page.evaluate(() => document.documentElement.dataset.lite === '1');
+  const frames = await jank();
+  const cost = await measure();
+  surfaces.push({ name: liteNow ? 'frames-lite' : 'frames-full', title: `Frame time while scrolling and switching tabs (${liteNow ? 'lite device' : 'full design'})`,
+    note: JSON.stringify(frames), blurLayers: cost.blurLayers, animating: cost.animating, ...frames });
+  await page.goto(`${BASE}?dev=1&lite=${liteNow ? 0 : 1}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => { for (const b of document.querySelectorAll('.dev-banner')) b.remove(); });
+  await ask('show me order 1938');
+  const framesOther = await jank();
+  const costOther = await measure();
+  surfaces.push({ name: liteNow ? 'frames-full' : 'frames-lite', title: `Frame time while scrolling and switching tabs (${liteNow ? 'full design, forced' : 'lite, forced'})`,
+    note: JSON.stringify(framesOther), blurLayers: costOther.blurLayers, animating: costOther.animating, ...framesOther });
+  await shot(liteNow ? 'order-detail-full' : 'order-detail-lite');
 
   await browser.close();
   const ok = errors.length === 0;

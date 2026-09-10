@@ -37,6 +37,11 @@
     const memory = navigator.deviceMemory || 8;
     const tabA = /SM-T29\d/.test(navigator.userAgent || '');
     if (cores <= 4 || memory <= 3 || tabA) document.documentElement.dataset.lite = '1';
+    // `?lite=0` / `?lite=1` overrides the guess, so the cost of the full design can be measured
+    // on a machine that is not lite, and the lite design checked on one that is.
+    const forced = new URLSearchParams(location.search).get('lite');
+    if (forced === '0') delete document.documentElement.dataset.lite;
+    if (forced === '1') document.documentElement.dataset.lite = '1';
   } catch { /* leave the defaults */ }
 })();
 
@@ -47,8 +52,8 @@ const el = {
   system: $('system'), systemTitle: $('system-title'), systemSub: $('system-sub'), systemNote: $('system-note'),
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
   heard: $('heard'), answer: $('answer'), errline: $('errline'), toast: $('toast'), timings: $('timings'),
-  context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
-  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'),
+  context: $('context'), nav: $('context-nav'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
+  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'),
   nextBtn: $('next-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
@@ -219,6 +224,7 @@ function setConn(state, text) {
 function setMode(mode) {
   if (el.body.dataset.mode === mode) return;
   el.body.dataset.mode = mode;
+  if (mode === 'orb') lightDock([]);
   el.talk.setAttribute('aria-label', mode === 'orb' ? 'Hold to speak' : 'Hold to speak (dock)');
   // Beside the cards the orb is shown at under a third of its size; it draws at that size
   // rather than painting twelve times the pixels it shows.
@@ -1018,11 +1024,34 @@ function canGoBack(index) {
   return typeof index === 'number' ? index > 0 : historyIndex > 0;
 }
 
+// Which area the screen is showing, from the card types on it — the Mac's description of
+// the record, never the last thing tapped. A tap on Orders that lands on a list lights Orders;
+// so does "show me today's orders" said out loud; so does Back arriving at that list.
+const AREA_OF = {
+  order: 'orders', order_list: 'orders', attention: 'orders',
+  email_list: 'email', email_thread: 'email', email_draft: 'email', work_queue: 'email', email_queue: 'email',
+  sales_summary: 'sales', metric_group: 'sales', trend: 'sales', comparison: 'sales',
+  ranking: 'products', product: 'products', inventory: 'products', table: 'products', matrix: 'products',
+};
+function lightDock(nodes) {
+  if (!el.dock) return;
+  let area = '';
+  for (const node of nodes || []) {
+    const type = node && node.dataset ? node.dataset.type : '';
+    if (AREA_OF[type]) { area = AREA_OF[type]; break; }
+  }
+  for (const btn of el.dock.querySelectorAll('.dock-btn')) {
+    btn.setAttribute('aria-pressed', btn.dataset.area === area ? 'true' : 'false');
+  }
+  el.body.dataset.area = area;
+}
+
 function showHistory(index) {
   if (index < 0 || index >= history.length) return;
   historyIndex = index;
   clear(el.cards);
   for (const node of history[index].nodes) el.cards.appendChild(node);
+  lightDock(history[index].nodes);
   el.cards.scrollTop = 0;
   scrollMax = 0;
   el.deck.dataset.depth = String(Math.min(2, index));
@@ -1272,6 +1301,11 @@ function renderStackChips() {
     },
   });
   for (const chip of chips) el.stack.appendChild(chip);
+  // The rail's far edge fades only when there is more beyond it. Measured after layout.
+  if (el.nav) {
+    const mark = () => { el.nav.dataset.overflow = el.nav.scrollWidth > el.nav.clientWidth + 1 ? '1' : ''; };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(mark); else mark();
+  }
 }
 
 function renderAttentionSurface() {
@@ -2243,6 +2277,22 @@ if (el.armedCancel) {
     // The reply carries the branch, so `noteBranch` has already taken the band down. If the
     // Mac could not be reached, take it down here rather than leaving a band that lies.
     if (!released) drawArmed(null);
+  });
+}
+// A dock icon asks its sentence. The same body the transcript path posts, so the tap takes the
+// same lane, the same recipe and the same presenter as the words would — and the lit item is
+// decided by what comes back, not by the tap.
+if (el.dock) {
+  el.dock.addEventListener('click', (event) => {
+    const btn = event.target && event.target.closest ? event.target.closest('.dock-btn[data-ask]') : null;
+    if (!btn || busy) return;
+    const text = (btn.dataset.ask || '').trim();
+    if (!text) return;
+    haptic(HAPTIC.start);
+    T.record('chip_ask', { text: text.slice(0, 60), name: `dock:${btn.dataset.area || ''}` });
+    unlockSpeech();
+    stopSpeaking();
+    submit({ text, session_id: sessionId, turns, speak: el.speakToggle.checked }, false);
   });
 }
 el.backBtn.addEventListener('click', goBack);
