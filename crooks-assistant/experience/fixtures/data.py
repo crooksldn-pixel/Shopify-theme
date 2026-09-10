@@ -596,3 +596,37 @@ def next_sunday(now: datetime | None = None) -> str:
     today = (now or datetime.now(SHOP_TZ)).date()
     ahead = (6 - today.weekday()) % 7
     return (today + timedelta(days=ahead or 7)).isoformat()
+
+
+# --------------------------------------------------------------------------- the discounts
+# APPENDED for app/families/discounts.py. Two codes that already exist, because the read the
+# family makes BEFORE it creates anything is a read of a real conflict: a scenario asserting
+# "SUMMER15 is taken and the card says what by" has to have something for it to be taken by.
+# One is a percentage and one is money off, so both shapes of Shopify's `customerGets.value`
+# union are exercised rather than the one shape a test happened to write.
+#
+# Strictly additive: no order number and no list position moves for these.
+DISCOUNTS: dict[str, dict[str, Any]] = {
+    "SUMMER15": {
+        "id": "gid://shopify/DiscountCodeNode/8801",
+        "title": "Summer sale",
+        "status": "ACTIVE",
+        "startsAt": _at(30),
+        "endsAt": None,
+        "usageLimit": None,
+        "asyncUsageCount": 46,
+        "value": {"__typename": "DiscountPercentage", "percentage": 0.15},
+    },
+    "FRIENDS5": {
+        "id": "gid://shopify/DiscountCodeNode/8802",
+        "title": "Friends and family",
+        "status": "EXPIRED",
+        "startsAt": _at(120),
+        "endsAt": _at(60),
+        "usageLimit": 200,
+        "asyncUsageCount": 188,
+        "value": {"__typename": "DiscountAmount", "amount": {"amount": "5.00", "currencyCode": CURRENCY}},
+    },
+}
+# A code nothing in the golden world uses, for the scenario that creates one.
+DISCOUNT_FREE_CODE = "AUTUMN20"

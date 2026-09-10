@@ -42,6 +42,13 @@ SCOPES = (
     # reason as the rest — a scenario about what the card says must not pass or fail on a
     # scope. A store without it is the MISSING_SCOPE case, and that is a unit test.
     "write_order_edits",
+    # Phase 3: the commerce writes (app/families/discounts.py, order_create.py,
+    # store_credit.py). Granted here for the same reason as the rest — a scenario about what
+    # a card says must not pass or fail on a scope. A store without one of them is the
+    # MISSING_SCOPE case, and that is a unit test.
+    "read_discounts", "write_discounts",
+    "read_draft_orders", "write_draft_orders",
+    "read_store_credit_accounts", "write_store_credit_account_transactions",
 )
 
 
@@ -423,3 +430,34 @@ _CALCULATIONS: dict[str, Any] = {
     "order_edit_begin": _order_edit_begin,
     "order_edit_add_variant": _order_edit_add_variant,
 }
+
+
+# ------------------------------------------------------------ the commerce writes (Phase 3)
+#
+# The READS the three creation families make before they propose anything: whether a discount
+# code is taken. Nothing here answers a creation — `discount_code_create`,
+# `draft_order_create`, `draft_order_complete` and `store_credit_credit` are all absent from
+# `_CALCULATIONS` above and fall through to the refusal, which is the point: a scenario sees
+# the card the owner would authorise, and the shop is never changed by seeing it.
+
+
+def _discount_by_code(_store: FixtureShopify, v: dict) -> dict:
+    """One code, as `app/families/discounts.py` reads it before it prepares a creation. A
+    code the golden world does not have answers null, which is what "the code is free" is."""
+    code = str(v.get("code") or "").upper()
+    found = data.DISCOUNTS.get(code)
+    if found is None:
+        return {"data": {"codeDiscountNodeByCode": None}}
+    return {"data": {"codeDiscountNodeByCode": {
+        "id": found["id"],
+        "codeDiscount": {
+            "__typename": "DiscountCodeBasic",
+            "title": found["title"], "status": found["status"],
+            "startsAt": found["startsAt"], "endsAt": found["endsAt"],
+            "usageLimit": found["usageLimit"], "asyncUsageCount": found["asyncUsageCount"],
+            "customerGets": {"value": copy.deepcopy(found["value"])},
+        },
+    }}}
+
+
+_HANDLERS["CrooksDiscountByCode"] = _discount_by_code

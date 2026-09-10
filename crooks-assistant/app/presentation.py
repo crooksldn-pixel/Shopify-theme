@@ -67,6 +67,10 @@ UI_TYPES = frozenset({
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
+# The read tools that put a workspace on the owner's screen (app/families/_workspace.py).
+# Each returns the Mac's own card under `_surfaces`, and `_from_result` below takes it as it
+# is rather than re-shaping state that never came from the shop.
+WORKSPACE_TOOLS = frozenset({"shopify_discount_open", "shopify_order_open", "shopify_store_credit_open"})
 
 # Bounds. The tablet is 8 inches wide; more than this is a spreadsheet, not an answer.
 MAX_ORDERS = 10
@@ -205,6 +209,14 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
         # `present()` filters against UI_TYPES again on the way out.
         return [item for item in (result.get("_surfaces") or [])
                 if isinstance(item, dict) and item.get("type") == "email_compose" and isinstance(item.get("data"), dict)]
+    if name in WORKSPACE_TOOLS:
+        # The workspace's card, for exactly the same reason: it is built by the family that
+        # owns the context (app/families/_workspace.py `surface`), which copies it key by key
+        # and bounds every string as this file does, because it is the Mac's own state and
+        # not a tool result to be re-shaped here. Only well-formed items of the one type are
+        # taken, and `present()` filters against UI_TYPES again on the way out.
+        return [item for item in (result.get("_surfaces") or [])
+                if isinstance(item, dict) and item.get("type") == "workspace" and isinstance(item.get("data"), dict)]
     if name in ANALYTIC_TOOLS:
         from app.analytics.present import build, working_set_items
 
