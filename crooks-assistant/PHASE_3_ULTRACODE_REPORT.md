@@ -5,7 +5,7 @@ pushed for the owner to test physically on the Samsung first; the deployment ste
 end of this report and none of them has been run.
 
 - **Starting SHA** `644be75` (the Phase 2 report's final commit)
-- **Final SHA** _see the last line of this report_
+- **Final SHA** `461a8b4` — the commit before this line was written; §16 has the test set as run
 - **Branch** `claude/crooks-assistant-build-lgxlau`
 - **Coding environment** Linux, no Keychain, no Shopify or Gmail credentials, no Claude
   subscription for the assistant's own provider. Everything below was proved against the
@@ -394,7 +394,9 @@ new latency numbers are printed live, and `crooks-status` shows the family state
 ## 9. The thirty-two acceptance scenarios (§31), and what covers each
 
 `experience/scenario_packs/` collects golden scenarios one file per family; 24 are registered
-at the time of writing (`make experience-list`). Browser checks are the 61 at both viewports.
+— 55 of them now (`make experience-list`), and all 55 pass in the shared-harness runner as
+well as one-per-test under pytest, which was not true until the reset below was rebuilt.
+Browser checks are the 61 at both viewports.
 
 | # | Scenario | Covered by |
 | --- | --- | --- |
@@ -609,8 +611,10 @@ memory.
 | Semantic commands the tablet may post | 13 | **22** | 9 |
 | UI types the tablet can draw | 26 | **29** | 3 |
 | Golden scenarios | 15 | **40** | 25 |
-| Offline tests | 1,465 | **1,728** | 263 |
+| Offline tests | 1,465 | **2,040** | 575 |
+| Golden scenarios in the shared runner | 15 | **55**, all passing | 40 |
 | Browser checks | 61 at one viewport | **61 at both** | the 601 × 889 gate |
+| Node tests (renderer, folding, service worker, telemetry) | 92 | **115** | 23 |
 | Tool schema bytes offered to the model | 24,300 | **27,357** | +3,057 |
 
 Two rows deserve reading twice.
@@ -882,3 +886,56 @@ the execution arguments are still built from that copy on the Mac when a gesture
 them — so the tablet is not the data authority. But it is the largest surface the tablet has
 ever had for putting text into something that will later be staged, and it deserves the
 Samsung test in §8 before it is trusted with a real recipient.
+
+---
+
+## 16. The final test set, as run
+
+Every number here is from one sequence on the final tree, not collected from different points
+in the pass.
+
+| | Result |
+| --- | --- |
+| `ruff check app config scripts tests experience bench` | clean |
+| `pytest tests` | **2,040 passed, 2 skipped, 0 failed** (3m05s) |
+| The two skips | `tests/test_gmail_tools.py:175` no Gmail token; `tests/test_shopify_tools.py:190` no Shopify Keychain entry — printed, not hidden |
+| `make experience` (one shared harness, as a person runs it) | **55/55 scenarios** |
+| Browser gate, 800 × 1280 and 601 × 889 | **61 checks, 0 failures** |
+| `node --test` × 4 (renderer, folding, service worker, telemetry) | **115 passed, 0 failed** |
+| `node --check` on `app.js`, `ui.js`, `telemetry.js`, `sw.js` | parses |
+| `make bench-lanes` | **17 of 17 rows answered with no model call** |
+| Screenshots | 13, retaken against this tree, 7 at 800 × 1280 and 6 at 601 × 889 |
+
+### The one defect I got wrong twice, written down because it is the useful part
+
+`make experience` runs every scenario through **one** harness; `tests/test_experience.py` builds
+one per test. The two disagreed, and pytest is the runner that says the build is fine while
+`make experience` is the one a person runs on the Mac.
+
+- **First time:** three scenarios failed in the shared runner and passed under pytest, reading
+  the previous scenario's calculation log. Fixed by clearing the fields — **from the runner**,
+  in a different file from the declarations. Green.
+- **Second time, the same day:** two agents added `drafts`, `drafts_by_id`, `draft_number` and
+  an anticipation layer. The reset went stale, `make experience` fell to 52/55, and an
+  order-creation scenario failed with a previous scenario's draft in its detail. The identical
+  defect in a new field.
+- **The fix that holds** changes the shape rather than the list: `FixtureShopify.forget_scenario()`
+  sits under its own field declarations, the anticipation layer is replaced rather than partly
+  reset, the tiered cache is emptied — because a read already held is one the layer rightly
+  declines to predict, which reads as "nothing was predicted" in the next scenario — and the
+  runner asks instead of reaching in.
+- **The guard** is what makes it stop: a used-then-forgotten shop is compared field by field
+  against a fresh one, so a field recorded per scenario and not cleared fails in the file that
+  adds it. Proven able to fail — removing one `.clear()` makes it name exactly `['drafts']`.
+
+The lesson worth keeping: a reset that enumerates somebody else's fields is a defect with a
+delay on it, and "the suite is green" is not the same claim as "the thing a person runs is
+green".
+
+---
+
+**Final SHA `461a8b4`**, on `claude/crooks-assistant-build-lgxlau`.
+
+**Not deployed.** The running build is untouched, no real Shopify or Gmail write was made from
+this machine at any point, and none of the deployment steps in §6 has been run. They are yours
+to run when you have tested the branch on the Samsung.
