@@ -548,3 +548,419 @@ def test_the_detached_build_a_rollback_leaves_is_never_itself_marked_good(runnin
     assert control.rollback_document(yes=True)["ok"] is True
     doc = control.mark_good_document()
     assert doc["ok"] is False and "detached HEAD" in doc["stop"]["reason"]
+
+
+# ---------------------------------------------------------------- the update, on a click
+
+
+def stub_restart_and_health(monkeypatch, running, *, build: str = "b-after", healthy: bool = True):
+    """launchd and /health belong to the Mac. What is being tested here is the order of the
+    stages and what the document says about them, so those two are stubbed and everything
+    else — git, the fast-forward, the file that records the good build — is real."""
+    upd = control.update_module()
+    kicked: list[str] = []
+
+    def restart(*, check_only, port):
+        kicked.append("restart")
+        upd.say(upd.OK, "restart", "kicked (stubbed here; launchd is the Mac's)")
+
+    monkeypatch.setattr(upd, "stage_restart", restart)
+    if healthy:
+        after = health_doc(build=build)
+
+        def verify(*, check_only, port):
+            upd.say(upd.OK, "verify", f"all good · {after['build']}")
+            return after
+
+        monkeypatch.setattr(upd, "stage_verify", verify)
+        running["health"] = after
+    return kicked
+
+
+def test_the_update_does_not_apply_without_the_click(running, here, monkeypatch):
+    candidate = commit_upstream(here)
+    stub_restart_and_health(monkeypatch, running)
+    doc = control.apply_document(yes=False)
+    assert doc["command"] == "apply" and doc["ok"] is False
+    assert doc["next"] == "click_to_apply" and doc["stop"]["stage"] == "click"
+    assert doc["build"]["candidate"]["sha"] == candidate
+    assert doc["click"] == {"label": "Update now", "command": ["crooks-control", "apply", "--yes"], "enabled": True}
+    assert head(here) != candidate, "it showed the plan and moved nothing"
+
+
+def test_the_clicked_update_moves_the_build_verifies_it_and_marks_it_good(running, here, monkeypatch):
+    was = head(here)
+    candidate = commit_upstream(here)
+    kicked = stub_restart_and_health(monkeypatch, running, build="b-after")
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is True and doc["next"] == "done"
+    assert head(here) == candidate and kicked == ["restart"]
+    assert doc["update"]["moved"] is True and doc["update"]["verified"] is True
+    assert doc["build"]["was"]["sha"] == was and doc["build"]["current"]["sha"] == candidate
+    assert [s["stage"] for s in doc["stages"]] == ["tablet", "mark"]
+    assert doc["tablet"]["url"] == "https://crooks-assistant.taildfb357.ts.net/"
+    assert doc["marked_good"]["sha"] == candidate and doc["marked_good"]["build"] == "b-after"
+    assert doc["marked_good"]["recorded_by"] == "crooks-control apply"
+    assert control.read_known_good()["sha"] == candidate, "and it is on disk, for the next rollback"
+
+
+def test_a_tablet_with_no_route_is_a_warning_and_not_a_rollback(running, here, monkeypatch):
+    """The Mac is well; only the tablet's door is shut. Rolling a good build back for that
+    would be worse than saying so — and the colour goes AMBER on the next status either way."""
+    candidate = commit_upstream(here)
+    running["host"] = None
+    stub_restart_and_health(monkeypatch, running)
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is True and doc["next"] == "done"
+    assert doc["stages"][0] == {"stage": "tablet", "state": "warn", "detail": "Tailscale is not serving port 8000"}
+    assert doc["marked_good"]["sha"] == candidate
+    assert control.status_document()["state"] == "AMBER"
+
+
+def test_an_update_with_nothing_to_pull_marks_nothing(running, here, monkeypatch):
+    stub_restart_and_health(monkeypatch, running)
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is True and doc["next"] == "up_to_date"
+    assert doc["update"]["moved"] is False and doc["marked_good"] is None
+    assert control.read_known_good() is None, "an update that did nothing proves nothing"
+
+
+def test_a_health_check_that_does_not_come_back_offers_the_rollback(running, here, monkeypatch):
+    """Step 9 failed. The code moved and the backend did not answer, so the document's answer
+    is the rollback — to the build that was recorded good before the update."""
+    good = head(here)
+    control.mark_good_document()
+    commit_upstream(here)
+    monkeypatch.setattr(control.update_module(), "stage_restart", lambda **kw: None)
+
+    def unhealthy(**_kw):
+        raise update.Stopped("The backend did not come back healthy within 90 seconds.")
+
+    monkeypatch.setattr(control.update_module(), "stage_verify", unhealthy)
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is False and doc["next"] == "rollback"
+    assert doc["stop"]["stage"] == "verify" and "did not come back healthy" in doc["stop"]["reason"]
+    assert doc["update"]["moved"] is True and doc["update"]["verified"] is False
+    assert doc["rollback"]["safe"] is True and doc["rollback"]["sha"] == good
+    assert control.read_known_good()["sha"] == good, "the record still names the build that worked"
+
+
+def test_an_update_that_never_moved_is_blocked_rather_than_rolled_back(running, here, monkeypatch):
+    control.mark_good_document()
+    commit_upstream(here)
+    (here / "app.py").write_text("mine\n", encoding="utf-8")
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is False and doc["next"] == "blocked"
+    assert doc["stop"]["stage"] == "branch" and "app.py" in doc["stop"]["reason"]
+    assert (here / "app.py").read_text(encoding="utf-8") == "mine\n"
+
+
+def test_the_update_runs_the_offline_suite_before_it_restarts(running, here, monkeypatch):
+    commit_upstream(here)
+    (here / ".venv" / "bin").mkdir(parents=True)
+    fake = here / ".venv" / "bin" / "pytest"
+    fake.write_text("#!/bin/sh\necho '1550 passed'\nexit 0\n", encoding="utf-8")
+    fake.chmod(0o755)
+    stub_restart_and_health(monkeypatch, running)
+    doc = control.apply_document(yes=True)
+    stages = {s["stage"]: s for s in doc["update"]["stages"]}
+    assert doc["update"]["tested"] is True and "1550 passed" in stages["tests"]["detail"]
+    order = [s["stage"] for s in doc["update"]["stages"]]
+    assert order.index("tests") < order.index("restart"), "a build that fails never restarts"
+
+
+# ------------------------------------------------------------------------- no secrets
+
+
+TOKEN = "shpat_" + "9f3a" * 8
+
+
+def test_no_secret_reaches_the_app_even_when_health_quotes_one(running, here, monkeypatch, capsys):
+    """A real-looking credential in the environment AND echoed back inside a /health detail —
+    which is how it would happen: a client library putting the token in an error message. The
+    assertion is over the actual bytes the app would read."""
+    monkeypatch.setenv("CROOKS_SHOPIFY_STATIC_TOKEN", TOKEN)
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "el-secret-key-abcdefghijkl")
+    running["health"]["checks"]["shopify"] = check(False, f"401 Unauthorized for token {TOKEN}")
+    running["health"]["checks"]["gmail"] = check(False, "refresh failed: sk-ant-api03-Aa1Bb2Cc3Dd4Ee5")
+    running["health"]["voice"] = {"api_key": "el-secret-key-abcdefghijkl", "voice": "Derek"}
+    assert control.main(["status"]) == 1
+    out = capsys.readouterr().out
+    assert TOKEN not in out and "shpat_" not in out
+    assert "el-secret-key-abcdefghijkl" not in out
+    assert "sk-ant-api03" not in out
+    assert out.count(control.MASK) >= 3, "and it says something was taken out"
+    assert "401 Unauthorized for token" in out, "the diagnosis survives; only the credential goes"
+    assert json.loads(out)["state"] == "RED"
+
+
+def test_redaction_leaves_the_identifiers_the_app_needs(running, here, monkeypatch, capsys):
+    """A SHA is forty hex characters and a build id is not a secret. A redactor that eats them
+    is a control app that cannot tell two builds apart."""
+    monkeypatch.setenv("CROOKS_SHOPIFY_STATIC_TOKEN", TOKEN)
+    assert control.main(["status"]) == 0
+    out = capsys.readouterr().out
+    doc = json.loads(out)
+    assert doc["build"]["current"]["sha"] == head(here)
+    assert doc["build"]["current"]["build"] == "b-2026-09-10-abc"
+    assert doc["rows"][0]["value"] == "answering on 127.0.0.1:8000"
+
+
+def test_a_field_whose_name_says_credential_goes_whatever_is_in_it():
+    out = control.redact({"authorization": "Bearer abc", "token": "anything at all",
+                          "url": "https://x-access-token:ghp_AbCdEf123456@github.com/o/r.git",
+                          "sha": "a" * 40, "detail": "ready"}, secrets=[])
+    assert out["authorization"] == control.MASK and out["token"] == control.MASK
+    assert "ghp_" not in out["url"] and out["url"].startswith("https://x-access-token:")
+    assert out["sha"] == "a" * 40 and out["detail"] == "ready"
+
+
+def test_the_environment_is_read_for_shapes_not_for_use(monkeypatch):
+    monkeypatch.setenv("SOMETHING_SECRET", "a-long-enough-value")
+    monkeypatch.setenv("CROOKS_PORT", "8000")
+    found = control.environment_secrets()
+    assert "a-long-enough-value" in found
+    assert "8000" not in found, "a port is not a credential, and a short value is not one either"
+
+
+# --------------------------------------------------------------------- the buttons
+
+
+REQUIRED_BUTTONS = {
+    "open": "Open CROOKS OS", "restart": "Restart", "update": "Update", "check": "Check for update",
+    "tests": "Run tests", "tests_ui": "Run UI tests", "session_start": "Start live recording",
+    "session_stop": "Stop recording", "report": "Generate report", "report_open": "Open latest report",
+    "logs": "Open logs", "folder": "Open project folder",
+}
+
+
+@pytest.fixture()
+def buttons(monkeypatch):
+    monkeypatch.setattr(control, "port", lambda: 8000)
+    monkeypatch.setattr(control, "tablet_route", lambda p: ("crooks.ts.net", ""))
+    return control.actions_document()["actions"]
+
+
+def test_every_button_the_brief_asks_for_is_there(buttons):
+    labels = {action["id"]: action["label"] for action in buttons}
+    assert REQUIRED_BUTTONS.items() <= labels.items()
+    assert "rollback" in labels, "and the one the update flow needs when health fails"
+
+
+def test_every_button_runs_something_that_exists(buttons):
+    """The point of the list: the app hard-codes no command. So every command here has to be
+    real — an existing script, an existing folder, a URL."""
+    for action in buttons:
+        assert action["kind"] in ("shell", "control", "open_url", "open_path"), action["id"]
+        if action["kind"] in ("shell", "control"):
+            argv = action["command"]
+            assert argv and Path(argv[0]).name in ("python", "python3", "pytest"), action
+            for argument in argv[1:]:
+                if argument.endswith(".py"):
+                    assert Path(argument).is_file(), f"{action['id']} runs {argument}, which is not there"
+            assert Path(action["cwd"]).is_dir()
+        elif action["kind"] == "open_path":
+            assert Path(action["path"]).parent.is_dir(), action["id"]
+        else:
+            assert action["url"].startswith("http"), action["id"]
+
+
+def test_the_buttons_that_change_the_mac_ask_first(buttons):
+    asks = {action["id"] for action in buttons if action["confirm"]}
+    assert asks == {"restart", "update", "rollback"}
+    for action in buttons:
+        if action["confirm"]:
+            assert "?" in action["confirm_text"], action["id"]
+
+
+def test_no_button_runs_git_or_launchctl_itself(buttons):
+    """Everything goes through the scripts that already exist. A button that shelled out to
+    git would be a second updater, with its own idea of what is safe."""
+    for action in buttons:
+        for word in action.get("command", []):
+            assert Path(word).name not in ("git", "launchctl", "sudo"), action
+
+
+# ------------------------------------------------------- the contract the Swift side reads
+
+
+def test_the_contract_names_every_field_each_document_returns(running, here, monkeypatch):
+    """The --json contract test. If a document grows a field, or renames one, and the contract
+    is not told, this fails — which is the only way the Swift side cannot silently drift."""
+    contract = control.contract_document()
+    assert contract["version"] == control.CONTRACT
+    envelope_keys = set(contract["envelope_keys"])
+    assert envelope_keys == {"contract", "command", "ok", "at"}
+    stub_restart_and_health(monkeypatch, running)
+    commit_upstream(here)
+    documents = {
+        "status": control.status_document(),
+        "plan": control.plan_document(),
+        "actions": control.actions_document(),
+        "contract": contract,
+        "mark-good": control.mark_good_document(),
+        "rollback": control.rollback_document(yes=False),
+        "apply": control.apply_document(yes=False),
+    }
+    for name, doc in documents.items():
+        assert set(doc) & envelope_keys == envelope_keys, f"{name} is missing an envelope field"
+        assert doc["contract"] == control.CONTRACT and doc["command"] == name
+        named = set(contract["documents"][name])
+        assert set(doc) - envelope_keys <= named, f"{name} returns {sorted(set(doc) - envelope_keys - named)}, which the contract does not name"
+    # And the two the app polls are named exactly, not merely covered.
+    for name in ("status", "actions"):
+        assert set(documents[name]) - envelope_keys == set(contract["documents"][name])
+
+
+def test_the_contract_names_the_four_colours_and_the_three_essentials():
+    contract = control.contract_document()
+    assert set(contract["states"]) == set(control.COLOURS)
+    assert all(name in contract["states"]["RED"] for name in control.ESSENTIAL)
+
+
+def test_the_command_line_prints_one_document_per_subcommand(running, here, capsys):
+    for what, expected in (("status", 0), ("actions", 0), ("contract", 0), ("mark-good", 0)):
+        assert control.main([what]) == expected, what
+        doc = json.loads(capsys.readouterr().out)
+        assert doc["command"] == what and doc["contract"] == control.CONTRACT
+
+
+def test_a_failure_inside_the_control_command_still_prints_a_document(monkeypatch, capsys):
+    monkeypatch.setattr(control, "status_document", lambda **kw: 1 / 0)
+    assert control.main(["status"]) == 1
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["ok"] is False and doc["command"] == "status"
+    assert "ZeroDivisionError" in doc["stop"]["reason"]
+
+
+def test_nothing_in_crooks_os_calls_the_updater_or_the_control_command():
+    """The updater's own docstring: it runs when George types it, and not otherwise. The app
+    is a click, which is the same thing; the backend is not."""
+    import subprocess as sp
+
+    hits = sp.run(["grep", "-rn", "--include=*.py", "--include=*.js", "--include=*.html",
+                   "-e", "scripts.update", "-e", "scripts/update.py", "-e", "crooks-update",
+                   "-e", "scripts.control", "-e", "crooks-control", "app", "config", "web", "experience"],
+                  cwd=Path.cwd(), capture_output=True, text=True).stdout.strip()
+    assert hits == "", f"something inside CROOKS OS reaches the updater:\n{hits}"
+
+
+def test_only_the_control_command_writes_the_known_good_build():
+    import subprocess as sp
+
+    hits = sp.run(["grep", "-rln", "--include=*.py", "--include=*.swift", "--include=*.md",
+                    "last_known_good", "app", "config", "web", "scripts", "tests", "experience", "mac"],
+                  cwd=Path.cwd(), capture_output=True, text=True).stdout.split()
+    assert sorted(hits) == ["scripts/control.py", "tests/test_control.py"], hits
+
+
+# --------------------------------------------------------- the Swift side, as text only
+
+
+SWIFT_DIR = Path("mac/CrooksControl")
+
+
+def swift_sources() -> str:
+    files = sorted(SWIFT_DIR.rglob("*.swift"))
+    assert files, "there are no Swift sources to check"
+    return "\n".join(path.read_text(encoding="utf-8") for path in files)
+
+
+def swift_documents() -> str:
+    """The one file the JSON is decoded in. Every type the app reads is here, which is what
+    lets the field scan below mean something."""
+    return (SWIFT_DIR / "Sources" / "CrooksControl" / "Documents.swift").read_text(encoding="utf-8")
+
+
+def test_the_app_is_a_renderer_and_runs_no_command_of_its_own(buttons):
+    """It cannot be compiled here, so what CAN be checked is checked: the app knows the name
+    of this script and nothing else. No git, no launchctl, no pytest, no curl — every one of
+    those would be a second opinion about how to update or restart this Mac."""
+    source = swift_sources()
+    for forbidden in ("git ", "\"git\"", "launchctl", "pytest", "curl", "tailscale", "uvicorn", "rm -rf"):
+        assert forbidden not in source, f"the app reaches for {forbidden!r} itself"
+    assert "control.py" in source and "crooks-control" in source
+
+
+def test_the_app_renders_the_colours_and_rows_this_side_produces(buttons):
+    source = swift_sources()
+    for colour in control.COLOURS:
+        assert f'"{colour}"' in source, colour
+    assert f"contract == {control.CONTRACT}" in source or f"contract: {control.CONTRACT}" in source or str(control.CONTRACT) in source
+    for action in buttons:
+        assert action["kind"] in source, action["kind"]
+
+
+def test_the_app_does_not_carry_a_credential_or_an_endpoint_of_its_own():
+    source = swift_sources()
+    assert "sk-ant" not in source and "shpat_" not in source
+    assert "https://api." not in source, "the app talks to this Mac and to nothing else"
+
+
+def test_the_bundle_is_a_menu_bar_app_that_starts_no_window():
+    """LSUIElement is what makes it a menu-bar app rather than one with a Dock icon and a
+    window: the plist is checked here because nothing else on this machine can."""
+    import plistlib
+
+    with open(SWIFT_DIR / "Info.plist", "rb") as handle:
+        plist = plistlib.load(handle)
+    assert plist["LSUIElement"] is True
+    assert plist["CFBundleExecutable"] == "CrooksControl"
+    assert plist["CFBundleIdentifier"] == "com.crooks.control"
+    assert plist["LSMinimumSystemVersion"] == "13.0"
+
+
+def test_the_build_script_is_posix_and_refuses_to_run_anywhere_but_the_mac():
+    script = SWIFT_DIR / "build.sh"
+    assert script.stat().st_mode & 0o111, "it has to be runnable"
+    checked = subprocess.run(["sh", "-n", str(script)], capture_output=True, text=True)
+    assert checked.returncode == 0, checked.stderr
+    text = script.read_text(encoding="utf-8")
+    assert "Darwin" in text and "has to run on the Mac" in text
+    assert "set -eu" in text, "a build script that carries on after a failure builds nothing"
+    assert plistless(text), "the bundle's Info.plist is copied, not written by hand twice"
+
+
+def plistless(text: str) -> bool:
+    return "cp \"$HERE/Info.plist\"" in text
+
+
+def test_the_package_declares_the_platform_the_app_needs():
+    manifest = (SWIFT_DIR / "Package.swift").read_text(encoding="utf-8")
+    assert "swift-tools-version:5.9" in manifest
+    assert ".macOS(.v13)" in manifest, "MenuBarExtra is macOS 13"
+    assert "dependencies" not in manifest, "it depends on nothing it would have to fetch"
+
+
+def test_the_app_reads_every_document_field_from_the_contract_and_no_other(buttons):
+    """Every key the Swift side decodes has to be a key this side prints. Swift's
+    convertFromSnakeCase turns last_known_good into lastKnownGood, so the comparison is made
+    in that direction."""
+    import re
+
+    def camel(name: str) -> str:
+        head, *rest = name.split("_")
+        return head + "".join(part.capitalize() for part in rest)
+
+    printed = set()
+    for document in (control.contract_document()["documents"].values()):
+        printed.update(camel(key) for key in document)
+    printed.update(camel(key) for key in ("contract", "command", "ok", "at"))
+    # Everything /health and the update document carry, which the app also decodes.
+    printed.update(camel(key) for key in (
+        "sha", "short", "branch", "detached", "subject", "build", "version", "recorded_at",
+        "dirty", "blocking", "stops", "available", "safe", "reason", "note", "commands",
+        "stage", "state", "detail", "key", "label", "value", "id", "kind", "group",
+        "command", "cwd", "url", "path", "confirm", "confirm_text", "why", "actions",
+        "behind", "ahead", "fast_forward", "deps", "changed_files", "moved", "tested",
+        "restarted", "verified", "stages", "stop", "current", "candidate", "was",
+        "active", "name", "host", "local", "port", "issues", "degraded", "rows", "next",
+        "state", "headline", "enabled", "documents", "states", "envelope_keys",
+        "marked_good", "last_known_good", "local_work", "test_session", "click", "update",
+        "tablet", "mutation", "rollback", "check", "at",
+    ))
+    source = swift_documents()
+    # `let x: T` in a Decodable struct is a field the app expects to be there.
+    declared = set(re.findall(r"^\s*let ([a-z][A-Za-z0-9]*):", source, flags=re.MULTILINE))
+    unknown = {name for name in declared if name not in printed}
+    assert unknown == set(), f"the app decodes {sorted(unknown)}, which crooks-control does not print"
