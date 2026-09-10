@@ -320,7 +320,12 @@ def test_the_context_lines_tell_the_model_what_the_mac_knows():
     assert lines[1].startswith("[Last read-layer query:") and "commerce_aggregate" in lines[1]
     assert lines[2].startswith("[This asks for") and "commerce_aggregate" in lines[2] and s.hinted
     s.last_query = None
-    assert _context_lines(s, "hello") == [] and not s.hinted
+    # Nothing to say about the last change or the last query leaves only the standing line:
+    # the capability families and their states (app/capabilities/families.py), which is there
+    # on every turn so the model stops attempting what this Mac cannot do.
+    remaining = _context_lines(s, "hello")
+    assert not s.hinted
+    assert [line for line in remaining if not line.startswith("[Capability families")] == [], remaining
 
 
 async def test_batch_state_after_a_lost_connection(client):

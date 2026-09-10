@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.analytics.query import DELIVERY_WORD, TRACKING_UNAVAILABLE
+from app.analytics.query import DELIVERY_WORD
 from app.capabilities import families as capability_families
 from app.fastpath import library
 from app.fastpath.intent import Family, extend
@@ -147,18 +147,22 @@ extend([
            blocks=_NOT_THIS, base=0.9, floor=0.7, max_words=16),
 ])
 
-# What this Mac cannot know, in the one table that reaches /health, the manifest and the system
-# prompt (app/capabilities/families.py). Registered as a family precisely so that the model is
-# TOLD once, at the start of the turn, rather than discovering it a refused query at a time —
-# which is what cost the tablet 45 s on one question.
+# What this Mac cannot know, in the one table that reaches /health, the manifest and the model's
+# own context (app/capabilities/families.py, app/routes/turn.py:_family_lines). Registered as a
+# family precisely so the model is TOLD once, at the top of the turn, rather than discovering it
+# a refused query at a time — which is what cost the tablet 45 s on one question.
+#
+# DISCONNECTED rather than NOT_SUPPORTED_BY_STORE: the shop can be told a tracking number, and
+# often is. What is missing is anything that reports back, and that is a provider nobody has
+# connected. `detail` carries no full stop: `families.words()` adds one, and the line the model
+# reads is short because it is paid on every model-path turn.
+#
+# Only this one. A READY read family would add a line to every turn saying the Mac can list
+# orders — which the tool block already says, in more detail, for nothing extra.
 capability_families.register(capability_families.CapabilityFamily(
     key="delivery_tracking", label="Delivery status", area="shipping",
     what="whether a parcel has actually arrived",
     state="DISCONNECTED",
-    detail=TRACKING_UNAVAILABLE,
-))
-capability_families.register(capability_families.CapabilityFamily(
-    key="order_state_query", label="Orders by state, age and destination", area="orders",
-    what="list what is still to go out — unfulfilled, waiting longest, going abroad — as a set to work through",
-    tools=("commerce_query",), state="READY", detail="ready",
+    detail="no carrier is connected, so whether a parcel arrived is not a fact this Mac holds — "
+           "only fulfilled/unfulfilled, and whether a tracking number exists",
 ))
