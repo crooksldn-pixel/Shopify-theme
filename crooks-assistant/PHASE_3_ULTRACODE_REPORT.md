@@ -571,3 +571,93 @@ timeline keeps the tool name and a character count, because the prompt quotes a 
 `facts_ms` takes the recipe's reads over the model's last tool step on such a turn. Reading a
 draft being *composed* as "when the facts arrived" would report a twenty-second turn as twenty
 seconds of reading and nothing waited, which is the inverse of the number §25 asks for.
+
+---
+
+## 12. What changed, counted
+
+Phase 2 ended at `644be75`. Every number here is read from the code at both SHAs, not from
+memory.
+
+| | End of Phase 2 | Now | New |
+| --- | --- | --- | --- |
+| Intent families (a sentence the router can act on) | 19 | **34** | 15 |
+| Fast-path recipes | 19 | **34** | 15 |
+| Registered tools | 48 | **55** | 7 |
+| Reviewed write operations | 20 | **21** | 1 |
+| Capability families in the manifest | **0** | **18** | 18 |
+| Semantic commands the tablet may post | 13 | **22** | 9 |
+| UI types the tablet can draw | 26 | **29** | 3 |
+| Golden scenarios | 15 | **40** | 25 |
+| Offline tests | 1,465 | **1,728** | 263 |
+| Browser checks | 61 at one viewport | **61 at both** | the 601 × 889 gate |
+| Tool schema bytes offered to the model | 24,300 | **27,357** | +3,057 |
+
+Two rows deserve reading twice.
+
+**One new write operation.** `order_edit_add_line` is the only mutation this pass adds, and
+that is the point: the brief says *do not create a second mutation system*, so everything else
+new here either reads, moves the screen, or stages through the write path that already existed
+and was already reviewed. The seven new tools are five reads and two that write only into the
+Mac's own copy of an email that has not been prepared yet.
+
+**The capability manifest went from zero to eighteen.** It was not that the manifest was
+incomplete — it was **empty**, so `/health families` returned nothing and the settings sheet
+could say nothing about the fourteen write operations that already worked. Fifteen of the
+eighteen are for capabilities that already existed. Two coverage tests now make it a test
+failure to add a write operation or a model-facing read tool that no family names, so the
+manifest cannot go stale the way it went empty.
+
+**And the tool block is a cost, not a win.** 3,057 bytes more on every model-path turn. The
+arithmetic is written into `tests/test_registry.py` beside the ceiling — order editing about
+1,050, the composer 2,085 measured, and the read language came out *smaller* than it went in.
+It is also the worst case: `runtime.withheld_by_family()` takes a family's tools away when the
+store or the connection cannot serve it, so a Mac missing a scope pays less. Set against it,
+the family line on the prompt went from 420 characters a turn to 0 when everything is ready.
+
+### The feature matrix
+
+`make matrix` derives what can be reached and how from the registries rather than from a
+document. It had a bug worth naming: `build()` iterated only the **core** family tuple, so not
+one of Phase 3's fifteen families appeared in it — a matrix whose only job is to look complete
+is worse than no matrix, and this one was quietly incomplete by fifteen rows. It now reads
+`all_families()` and looks recipes up by family rather than by name (a Phase 3 family's recipe
+is often named for what it does, so `order_email_draft` is answered by `order_email_reply`, and
+looking it up by name reported "no fast path" for recipes that plainly have one).
+
+| | Count |
+| --- | --- |
+| Operations in the matrix | 56 |
+| Intent families | 34 — all 34 with a fast path |
+| Families exercised by a golden scenario | 25 |
+| Operations no scenario exercises | 24, listed by `uncovered()` rather than hidden |
+
+The 24 uncovered ones are mostly pre-existing commands (`surface.expand`, `voice.cancel`,
+`workflow.next`) and four read families that have unit tests but no scenario. `compose_rewrite`
+is deliberately among them: the rewrite is asserted in `tests/test_compose.py`, where the words
+handed to the model can be read without a customer's email going through a transcript.
+
+---
+
+## 13. Scope requirements, in one place
+
+| Capability | Scope | On this machine | On the Mac |
+| --- | --- | --- | --- |
+| Order item editing | `write_order_edits` | `TEMPORARILY_UNAVAILABLE` — there is no token here, so the scope check cannot answer | `MISSING_SCOPE` until the scope is granted, naming it; `READY` after. The probe reads `access_scopes()` and never sends a mutation |
+| Writing an email to any address | `gmail.compose` | `READY` | Already granted — no action |
+| Delivery status | — | `DISCONNECTED` | `DISCONNECTED`. No carrier is integrated; this is a state, not a failure, and it is what stops the model attempting it |
+| Everything else this pass added | — | `READY` | Reads and screen moves; no scope |
+
+The distinction in those first two columns is worth keeping straight: `TEMPORARILY_UNAVAILABLE`
+means *the question could not be asked*, and `MISSING_SCOPE` means *it was asked and the answer
+was no*. Collapsing them would let a Shopify outage read as a permissions problem, and the
+owner would go looking in the admin for something that was never wrong.
+
+One new setting: `CROOKS_SHOP_COUNTRY_CODE`, default `GB`, which is how "international" means
+*not this country*. No credential is touched by anything in this pass.
+
+**How to grant `write_order_edits`:** it is a scope on the app the Mac's Admin API token belongs
+to, so it is granted in the Shopify admin and the token re-issued. Until it is, the family says
+so in the settings sheet, its tools are withheld from the model, and *"add a black hoodie to
+this order"* is answered with the reason rather than attempted — which is the behaviour the
+brief asks for: **do not claim the feature is ready when permission is absent.**
