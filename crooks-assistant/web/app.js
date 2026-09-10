@@ -1006,6 +1006,17 @@ function armDeckExpiry() {
   }, DECK_IDLE_MS);
 }
 
+// Is there anywhere back from here? Three ways there can be: the list cursor can step back,
+// the Mac's trail has a stop behind this one, or the local render cache does. Kept in one
+// place because two writers set the Back chip — showHistory on every draw, noteBranch on
+// every reply — and they used to disagree about what Back was for.
+function canGoBack(index) {
+  const workflow = branchState && branchState.workflow;
+  if (workflow && !workflow.at_start) return true;
+  if (branchState && branchState.can_back) return true;
+  return typeof index === 'number' ? index > 0 : historyIndex > 0;
+}
+
 function showHistory(index) {
   if (index < 0 || index >= history.length) return;
   historyIndex = index;
@@ -1014,12 +1025,24 @@ function showHistory(index) {
   el.cards.scrollTop = 0;
   scrollMax = 0;
   el.deck.dataset.depth = String(Math.min(2, index));
-  el.backBtn.hidden = index === 0;
-  // Next belongs to the list, not to the history: it is offered whenever the Mac says a set
-  // is open and the cursor is not already at its end.
+  // Both chips keep their slots for the whole walk, and grey out at the ends rather than
+  // vanishing.
+  //
+  // Back used to be `hidden` at the start of a list, so the FIRST Next tap made it appear —
+  // and Next slid 68px (9.1mm) to the right, out from under the thumb that had just pressed
+  // it, onto the spot the 60px Back chip now occupied. Driven with real taps at one fixed
+  // point, tap one advanced the list and tap two at the identical point hit BACK. Walking a
+  // queue one-handed is a repeated press in one place; the control under that place must not
+  // change identity between presses.
+  const workflow = branchState && branchState.workflow;
+  el.backBtn.hidden = false;
+  el.backBtn.disabled = !canGoBack(index);
   if (el.nextBtn) {
-    const workflow = branchState && branchState.workflow;
-    el.nextBtn.hidden = !workflow || Boolean(workflow.at_end);
+    // Next belongs to the list, not to the history: it exists while a set is open, and greys
+    // at the end of it. It used to hide itself on `at_end`, which shuffled the rail a third
+    // time at exactly the moment the owner was tapping fastest.
+    el.nextBtn.hidden = !workflow;
+    el.nextBtn.disabled = Boolean(workflow && workflow.at_end);
   }
   renderStackChips();
   setMode('context');
@@ -1036,13 +1059,29 @@ function showHistory(index) {
 // history stays as a render cache and a fallback: if the request fails — the Mac asleep, the
 // tailnet dropped — the screen still goes back, because a Back button that does nothing when
 // the network hiccups is worse than one that is occasionally out of step.
+//
+// And while a list is open, Back is the INVERSE OF NEXT rather than the branch's trail. That
+// was the last place two cursors still shared one pair of buttons: Next moved the list
+// cursor, Back moved the navigation stack, and nothing on the tablet ever moved the list
+// cursor backwards. `workflow.at_end` is sticky, Next hid itself on it, and
+// `workflow.previous` — registered at app/commands.py:363 and reachable by voice since
+// Phase 1 — had no caller anywhere in web/. So overshooting a queue by one was permanent:
+// measured, three Nexts then two Backs left the owner standing on member 1 of 3 with Next
+// gone, and the only way forward again was to say the whole question out loud a second time.
+// Stepping the cursor back clears `at_end` on its own, so Next comes back by itself.
 async function goBack() {
   T.record('navigate', { nav: 'back', from: historyIndex, to: historyIndex > 0 ? historyIndex - 1 : -1 });
-  const landed = await semanticCommand('navigation.back');
+  const workflow = branchState && branchState.workflow;
+  const stepping = Boolean(workflow && !workflow.at_start);
+  const landed = await semanticCommand(stepping ? 'workflow.previous' : 'navigation.back');
   if (landed && landed.ok && Array.isArray(landed.ui) && landed.ui.length) {
     const rendered = window.CrooksUI.render(landed.ui, renderOpts());
     if (rendered.nodes.length) {
       pushContext(rendered.nodes, landed.ui, landed.answer || '');
+      // Say where it landed. This used to write #answer only on the FAILURE branch, so a
+      // successful Back left the previous turn's sentence standing over a different record —
+      // measured reading "That is the last one." above member 1 of 3, twice in a row.
+      if (landed.answer) el.answer.textContent = landed.answer;
       return;
     }
   }
@@ -1070,6 +1109,11 @@ async function goNext() {
     const rendered = window.CrooksUI.render(moved.ui, renderOpts());
     if (rendered.nodes.length) {
       pushContext(rendered.nodes, moved.ui, moved.answer || '');
+      // `_member_words` (app/commands.py:266) already returns "Priya Raman. 1 of 3." and this
+      // threw it away, passing it to pushContext as a history LABEL and writing #answer only
+      // when the move failed. Measured: three successful Next taps, three different orders,
+      // and one unchanged line reading "3 orders today; 2 still to go out." over all of them.
+      if (moved.answer) el.answer.textContent = moved.answer;
       T.record('navigate', { nav: 'next', cursor: (moved.changed || {}).cursor, total: (moved.changed || {}).total });
       return;
     }
@@ -1181,8 +1225,19 @@ function setChip() {
   chip.className = 'chip chip-set';
   chip.dataset.set = currentSet.set_id;
   chip.setAttribute('aria-pressed', 'false');
-  const kind = document.createElement('span'); kind.className = 'chip-kind'; kind.textContent = `${currentSet.count} ${currentSet.kind}`;
-  const label = document.createElement('span'); label.className = 'chip-label'; label.textContent = currentSet.label;
+  // Where you are in the list, not just how long it is. Nothing on the tablet said "2 of 3":
+  // the position lived in a sentence that was overwritten by the next turn, so walking a
+  // queue was walking blind — there was no way to tell the third order from the end of it,
+  // or to know whether a tap you half-saw had registered. The numbers are already on the
+  // branch (`Workflow.position` / `.total`, app/session/branch.py:61), and they change on
+  // every step, so they are read live rather than off `currentSet`, which caches identity.
+  const workflow = branchState && branchState.workflow;
+  const at = workflow && workflow.set_id === currentSet.set_id ? Number(workflow.position) || 0 : 0;
+  const kind = document.createElement('span'); kind.className = 'chip-kind';
+  // The kicker counts; the label names. It used to read "3 ORDERS" beside a label already
+  // reading "Orders", which spent rail width saying one word twice.
+  kind.textContent = at > 0 ? `${at} of ${currentSet.count}` : `${currentSet.count}`;
+  const label = document.createElement('span'); label.className = 'chip-label'; label.textContent = currentSet.label || currentSet.kind;
   chip.appendChild(kind); chip.appendChild(label);
   chip.addEventListener('click', () => {
     T.record('navigate', { nav: 'set_chip', id: currentSet ? currentSet.set_id : '' });
@@ -1436,7 +1491,8 @@ function noteBranch(branch) {
   branches = branches.map((b) => (b.branch_id === branch.branch_id ? branch : b));
   if (!branches.some((b) => b.branch_id === branch.branch_id)) branches = [branch];
   drawBranchBar();
-  el.backBtn.hidden = !branch.can_back && historyIndex <= 0;
+  el.backBtn.hidden = false;
+  el.backBtn.disabled = !canGoBack();
   T.record('branch', { id: branch.branch_id, name: branch.status, depth: branch.depth, label: branch.label || undefined });
 }
 

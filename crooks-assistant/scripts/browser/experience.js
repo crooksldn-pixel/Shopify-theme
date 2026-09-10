@@ -43,7 +43,16 @@ async function main() {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
+  page.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    // Not the /speak stub two lines below. Section 8 drives the page's own submit(), which
+    // speaks, so the browser logs a failed resource load for the 503 this file itself
+    // fulfils. Counting that would fail every run over a fault this file created. Matched on
+    // the URL rather than on the word, so a real 503 from anywhere else still counts.
+    const from = (m.location && m.location() && m.location().url) || '';
+    if (from.includes('/speak')) return;
+    errors.push(`console: ${m.text()}`);
+  });
   // No voice under test: a 503 is what the tablet already handles when ElevenLabs is absent.
   await page.route('**/speak', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{"ok":false,"kind":"no_key","reason":"no voice under test"}' }));
 
@@ -236,6 +245,94 @@ async function main() {
   });
   check('tapping one asks it', asked.some((u) => u.includes('/turn')),
     `posted=${asked.join(',') || 'nothing'}`);
+
+  // ---- 8. the list, walked with a thumb rather than with fetch
+  //
+  // Everything above this line posts to /command directly, which is why nothing above it
+  // caught what a hand catches immediately. Three P0s lived under those green checks: Back
+  // was `hidden` until the first Next, so the first tap made it appear and slid Next 68px out
+  // from under the thumb — a second tap in the same place hit BACK; `workflow.at_end` hid
+  // Next for good, and `workflow.previous` had no caller anywhere in web/, so overshooting a
+  // queue by one was permanent; and the position the Mac computes was written to #answer only
+  // when a move FAILED, so three successful steps left one stale sentence over three
+  // different orders. All three are properties of the page's own controls, so this section
+  // touches the page's own controls and nothing else.
+  await page.goto(`${BASE}?dev=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => { for (const b of document.querySelectorAll('.dev-banner')) b.remove(); });
+  // The diagnostics field posts exactly what the microphone posts — the same submit().
+  const say = async (text) => {
+    await page.evaluate(() => {
+      const sheet = document.querySelector('#settings');
+      const dev = document.querySelector('#dev');
+      if (dev) dev.hidden = false;
+      if (sheet && !sheet.open && sheet.showModal) sheet.showModal();
+    });
+    await page.fill('#dev-text', text);
+    await page.press('#dev-text', 'Enter');
+    await sleep(1100);
+    await page.evaluate(() => { const sheet = document.querySelector('#settings'); if (sheet && sheet.open) sheet.close(); });
+    await sleep(300);
+  };
+  const walkState = () => page.evaluate(() => {
+    const rect = (sel) => {
+      const e = document.querySelector(sel);
+      if (!e) return null;
+      const b = e.getBoundingClientRect();
+      return { x: Math.round(b.x), w: Math.round(b.width), hidden: Boolean(e.hidden), disabled: Boolean(e.disabled) };
+    };
+    const card = document.querySelector('#cards .card');
+    return {
+      back: rect('#back-btn'), next: rect('#next-btn'),
+      ref: (card && card.dataset.ref) || '', type: (card && card.dataset.type) || '',
+      answer: ((document.querySelector('#answer') || {}).textContent || '').trim(),
+      chip: ((document.querySelector('#stack .chip-set') || {}).textContent || '').trim(),
+    };
+  });
+
+  await say("show me today's orders");
+  const atList = await walkState();
+  check('a list offers Next, and keeps a slot for Back rather than a gap',
+    Boolean(atList.next && !atList.next.hidden && !atList.next.disabled)
+    && Boolean(atList.back && !atList.back.hidden && atList.back.disabled),
+    JSON.stringify(atList).slice(0, 200));
+
+  // The thumb test: one point on the glass, pressed twice.
+  const thumb = await page.evaluate(() => {
+    const b = document.querySelector('#next-btn').getBoundingClientRect();
+    return { x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) };
+  });
+  await page.touchscreen.tap(thumb.x, thumb.y);
+  await sleep(1200);
+  const first = await walkState();
+  await page.touchscreen.tap(thumb.x, thumb.y);
+  await sleep(1200);
+  const second = await walkState();
+  check('two taps on the same pixel both go forwards',
+    first.type === 'order' && second.type === 'order' && first.ref && second.ref && first.ref !== second.ref
+    && /1 of 3/.test(first.answer) && /2 of 3/.test(second.answer),
+    `1st=${first.ref} "${first.answer}" 2nd=${second.ref} "${second.answer}"`);
+  check('neither chip moves under the thumb while the list is walked',
+    first.next.x === atList.next.x && second.next.x === atList.next.x
+    && first.back.x === atList.back.x && second.back.x === atList.back.x,
+    `next x ${atList.next.x}/${first.next.x}/${second.next.x} back x ${atList.back.x}/${first.back.x}/${second.back.x}`);
+  check('the screen says where in the list you are, on the card as well as in the sentence',
+    /2\s*of\s*3/.test(second.chip), `chip="${second.chip}"`);
+
+  await page.touchscreen.tap(thumb.x, thumb.y);
+  await sleep(1200);
+  const end = await walkState();
+  check('the end of a list greys Next in its slot rather than deleting it',
+    Boolean(end.next && !end.next.hidden && end.next.disabled && end.next.x === atList.next.x),
+    JSON.stringify(end.next));
+
+  await page.evaluate(() => document.querySelector('#back-btn').click());
+  await sleep(1200);
+  const stepped = await walkState();
+  check('Back steps the list cursor back, and Next comes alive again',
+    stepped.ref === second.ref && Boolean(stepped.next && !stepped.next.disabled) && /2 of 3/.test(stepped.answer),
+    `ref=${stepped.ref} next=${JSON.stringify(stepped.next)} answer="${stepped.answer}"`);
+  await shot('05-list-walk');
 
   check('no script error during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 

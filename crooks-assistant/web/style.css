@@ -171,6 +171,10 @@ body[data-mode="context"] .errline{display:none}
 .chip:active{transform:scale(.97)}
 .chip[aria-pressed="true"],.chip.is-active{background:var(--glass-3);border-color:var(--line-2);color:var(--ink)}
 .chip[data-dead]{opacity:.45;pointer-events:none}
+/* A chip at the end of its walk keeps its slot and stops being pressable. It must not
+   be `hidden`: the chips beside it slide into the gap, and on an 8-inch screen that
+   moves the next control 68px out from under a thumb mid-tap. */
+.chip:disabled{opacity:.32;pointer-events:none;cursor:default}
 .chip .chip-kind{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
 .chip .chip-label{max-width:180px;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;font-size:13px}
 .chip-home{color:var(--ink)}
