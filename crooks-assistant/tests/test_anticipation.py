@@ -1,0 +1,440 @@
+"""The anticipation layer (§18) and the learned layer behind it (§19).
+
+Every hard rule in those two sections is an oracle here, and each one can fail: a speculative
+read that is not cancelled when the owner speaks, a prediction that fires below the confidence
+threshold, a table that learns from three observations, a decay that does not decay, a reset
+that leaves rows behind, a predicted read that looks like a requested one, or any path at all
+from this layer to a write — each of those breaks a test in this file.
+"""
+
+from __future__ import annotations
+
+import asyncio
+
+import pytest
+
+from app.anticipation import engine as engine_mod
+from app.anticipation import rules as rules_mod
+from app.anticipation.learning import (
+    HALF_LIFE_S,
+    MIN_OBSERVATIONS,
+    THRESHOLD,
+    Learner,
+)
+from app.anticipation.models import P1, P2, PREDICTED, REQUESTED, Prediction, Signal, clean_state
+from app.memory import ENTITY, Memory
+from app.memory.prefetch import Prefetcher
+from app.providers.base import ToolCall
+from app.session.models import Session
+
+
+@pytest.fixture()
+def session():
+    s = Session(session_id="s1", login="owner@example.com")
+    s.turn_id = "turn_x"
+    return s
+
+
+@pytest.fixture()
+def learner():
+    return Learner(clock=_clock())
+
+
+def _clock(start: float = 1_000_000.0):
+    """A clock a test can move. Decay is a fact about elapsed time, so it has to be steerable
+    rather than waited for."""
+
+    state = {"now": start}
+
+    def clock() -> float:
+        return state["now"]
+
+    clock.advance = lambda seconds: state.__setitem__("now", state["now"] + seconds)  # type: ignore[attr-defined]
+    return clock
+
+
+@pytest.fixture()
+def anticipator(learner):
+    return engine_mod.Anticipator(learner=learner, prefetcher=Prefetcher(), memory=Memory())
+
+
+def order_signal(**over) -> Signal:
+    base = dict(
+        event="order_opened", session_id="s1", login="owner@example.com", branch_id="b1",
+        kind="order", ref="gid://shopify/Order/1", features=("unfulfilled", "international", "old"),
+        ids={"order_id": "gid://shopify/Order/1", "customer_id": "gid://shopify/Customer/9",
+             "email": "jo@example.com"},
+        neighbours=("gid://shopify/Order/2",),
+    )
+    base.update(over)
+    return Signal(**base)
+
+
+@pytest.fixture()
+def dispatched(monkeypatch):
+    """Every read the layer makes, with a delay long enough to be caught in flight."""
+    import app.tools.gmail_tools  # noqa: F401 — registered so the plan can name them
+    import app.tools.shopify_tools  # noqa: F401
+
+    seen: list[str] = []
+
+    async def fake_dispatch(name, args, *, session, timeout_s, calls=None):  # noqa: ARG001
+        seen.append(name)
+        await asyncio.sleep(0.05)
+        if calls is not None:
+            calls.append(ToolCall(name=name, args=args, ok=True, duration_ms=50.0, result={"read": name}))
+        return "{}"
+
+    monkeypatch.setattr("app.tools.dispatch.dispatch", fake_dispatch)
+    return seen
+
+
+# --------------------------------------------------------------------- §18 the bounds
+
+
+async def test_opening_an_order_starts_the_background_reads_and_one_guess(anticipator, session, dispatched):
+    decision = await anticipator.on_signal(order_signal(), session=session)
+    started = {p.why: p for p in decision.started}
+    assert "order.customer_history" in started and started["order.customer_history"].tier == P1
+    assert "order.shipping_state" in started
+    # Three at a time is the bound, so the fourth rule is skipped with a reason rather than run.
+    assert len(decision.started) <= anticipator.max_anticipated
+    assert all(reason for reason in decision.skipped.values())
+    await asyncio.sleep(0.1)
+
+
+async def test_a_prediction_whose_answer_is_already_held_does_not_run(anticipator, session, dispatched):
+    anticipator.memory.put(ENTITY, "customer:gid://shopify/Customer/9", {"held": True}, source="shopify")
+    decision = await anticipator.on_signal(order_signal(), session=session)
+    assert decision.skipped.get("history:gid://shopify/Customer/9") == "already held, and fresh"
+    assert "order.customer_history" not in {p.why for p in decision.started}
+    await asyncio.sleep(0.1)
+
+
+async def test_the_same_read_is_not_started_twice(anticipator, session, dispatched):
+    first = await anticipator.on_signal(order_signal(), session=session)
+    assert first.started
+    again = await anticipator.on_signal(order_signal(), session=session)
+    assert not again.started
+    assert all("in flight" in why or "already" in why or "full" in why for why in again.skipped.values())
+    await asyncio.sleep(0.1)
+
+
+async def test_the_speculative_lane_has_its_own_smaller_bound(session, dispatched, learner):
+    a = engine_mod.Anticipator(learner=learner, prefetcher=Prefetcher(), memory=Memory(),
+                               max_anticipated=6, max_speculative=1)
+    signal = order_signal(neighbours=("gid://shopify/Order/2", "gid://shopify/Order/3"))
+    decision = await a.on_signal(signal, session=session)
+    speculative = [p for p in decision.started if p.tier == P2]
+    assert len(speculative) <= 1
+    await asyncio.sleep(0.1)
+
+
+async def test_the_owner_asking_for_something_stands_the_speculation_down(anticipator, session, dispatched):
+    engine_mod.install(anticipator)
+    try:
+        decision = await anticipator.on_signal(order_signal(), session=session)
+        assert any(p.tier == P2 for p in decision.started), "no speculative read to cancel"
+        in_flight_before = anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session))
+        # The owner asks for something. A REQUESTED plan is what the scheduler runs for a
+        # question, a tap or a recipe, and that is where the stand-down happens.
+        from app.reads.scheduler import Read, ReadPlan, run_plan
+
+        await run_plan(ReadPlan([Read("wanted", "shopify_find_order", {"query": "1938"})], label="asked"), session=session)
+        assert anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session), lane=P2) == 0
+        assert anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session)) < in_flight_before
+        assert any(row["outcome"] == "cancelled" for row in anticipator.explain())
+    finally:
+        engine_mod.install(None)
+        await asyncio.sleep(0.1)
+
+
+async def test_a_predicted_plan_does_not_cancel_itself(anticipator, session, dispatched):
+    engine_mod.install(anticipator)
+    try:
+        await anticipator.on_signal(order_signal(), session=session)
+        before = anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session), lane=P2)
+        from app.reads.scheduler import Read, ReadPlan, run_plan
+
+        await run_plan(
+            ReadPlan([Read("guess", "shopify_order_detail", {"order_id": "x"})], label="anticipate:x", origin=PREDICTED),
+            session=session,
+        )
+        assert anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session), lane=P2) == before
+    finally:
+        engine_mod.install(None)
+        await asyncio.sleep(0.1)
+
+
+async def test_moving_to_another_record_cancels_what_was_read_about_the_last_one(anticipator, session, dispatched):
+    await anticipator.on_signal(order_signal(), session=session)
+    assert anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session)) > 0
+    moved = await anticipator.on_signal(order_signal(ref="gid://shopify/Order/77", ids={"order_id": "gid://shopify/Order/77"}), session=session)
+    assert moved.cancelled > 0
+    await asyncio.sleep(0.1)
+
+
+async def test_two_conversations_never_cancel_or_count_against_each_other(anticipator, dispatched):
+    one = Session(session_id="s1", login="owner@example.com")
+    two = Session(session_id="s2", login="somebody@else")
+    await anticipator.on_signal(order_signal(session_id="s1"), session=one)
+    await anticipator.on_signal(order_signal(session_id="s2", login="somebody@else"), session=two)
+    scope_one, scope_two = engine_mod.scope_of(one), engine_mod.scope_of(two)
+    assert scope_one != scope_two
+    assert anticipator.prefetcher.in_flight_for(scope_one) > 0
+    assert anticipator.prefetcher.in_flight_for(scope_two) > 0
+    anticipator.owner_read(one)
+    assert anticipator.prefetcher.in_flight_for(scope_two) > 0
+    await asyncio.sleep(0.1)
+
+
+# --------------------------------------------------------------------- §18 no writes, ever
+
+
+def test_no_rule_can_ever_name_a_write():
+    """Structural, not a spot check: every registered rule's prediction is either a registered
+    read tool or a name in the closed internal table. A rule that named a write tool, or a tool
+    that later gained one, fails here."""
+    import app.tools.gmail_writes  # noqa: F401
+    import app.tools.shopify_writes  # noqa: F401
+    from app.anticipation import internal
+    from app.tools import registry
+
+    signal = order_signal()
+    for rule in rules_mod.all_rules():
+        prediction = rule.build(signal)
+        if prediction is None:
+            continue
+        if prediction.internal:
+            assert internal.known(prediction.internal)
+            continue
+        spec = registry.get(prediction.tool)
+        assert spec.write is None and spec.batch is None, f"{rule.rule_id} names {prediction.tool}"
+
+
+async def test_a_prediction_naming_a_write_is_refused_and_never_dispatched(anticipator, session, monkeypatch):
+    import app.tools.shopify_writes  # noqa: F401
+
+    called: list[str] = []
+
+    async def fake_dispatch(name, args, *, session, timeout_s, calls=None):  # noqa: ARG001
+        called.append(name)
+        return "{}"
+
+    monkeypatch.setattr("app.tools.dispatch.dispatch", fake_dispatch)
+    monkeypatch.setattr(rules_mod, "deterministic", lambda _s: [
+        Prediction(key="bad", tier=P1, tool="shopify_order_note_append", args={"order_id": "1"}, why="a_write"),
+    ])
+    decision = await anticipator.on_signal(order_signal(), session=session)
+    assert decision.skipped.get("bad") == "not a read"
+    assert not decision.started and called == []
+    assert anticipator.counts()["refused_writes"] == 1
+
+
+def test_the_internal_reads_are_a_closed_table():
+    from app.anticipation import internal
+
+    assert set(internal.READS) == {"shipping_status"}
+    assert not internal.known("shopify_order_note_append")
+
+
+# --------------------------------------------------------------------- §19 what is learned
+
+
+def test_a_state_cannot_carry_an_identifier():
+    assert clean_state("order_opened", ("unfulfilled", "international")) == "order_opened[international,unfulfilled]"
+    # Anything not in the vocabulary is dropped rather than recorded.
+    assert clean_state("order_opened", ("jo@example.com", "1938", "unfulfilled")) == "order_opened[unfulfilled]"
+    with pytest.raises(ValueError):
+        clean_state("order_1938_opened")
+
+
+def test_a_signals_state_is_all_the_learner_is_given(learner):
+    signal = order_signal()
+    learner.observe(signal.state, "email_checked")
+    rows = learner.inspect()["rows"]
+    assert rows and all("Order" not in row["state"] and "@" not in row["state"] for row in rows)
+    assert rows[0]["state"] == "order_opened[international,old,unfulfilled]"
+
+
+def test_nothing_is_learned_below_the_minimum_number_of_observations(learner):
+    state = order_signal().state
+    for _ in range(MIN_OBSERVATIONS - 1):
+        learner.observe(state, "tracking_checked")
+    assert learner.likely(state) == []
+    learner.observe(state, "tracking_checked")
+    assert [e.event for e in learner.likely(state)] == ["tracking_checked"]
+
+
+def test_a_transition_below_the_confidence_threshold_does_not_predict(learner):
+    state = order_signal().state
+    # Seen often enough, but a coin toss between two next steps: neither clears the bar.
+    for _ in range(MIN_OBSERVATIONS + 2):
+        learner.observe(state, "tracking_checked")
+        learner.observe(state, "email_checked")
+    assert learner.likely(state) == []
+    assert 0.4 < learner.confidence(state, "tracking_checked") < THRESHOLD
+    for _ in range(12):
+        learner.observe(state, "tracking_checked")
+    assert [e.event for e in learner.likely(state)] == ["tracking_checked"]
+
+
+def test_old_patterns_decay(learner):
+    state = order_signal().state
+    for _ in range(8):
+        learner.observe(state, "tracking_checked")
+    before = learner.inspect()["rows"][0]
+    assert before["predicts"] is True
+    learner.clock.advance(HALF_LIFE_S * 3)      # a season and a half later
+    after = learner.inspect()["rows"][0]
+    assert after["weight"] < before["weight"] / 4
+    assert after["observations"] == before["observations"], "the history is kept; the weight is what decays"
+    assert after["predicts"] is False and learner.likely(state) == []
+
+
+def test_a_reset_empties_the_table(learner, tmp_path):
+    kept = Learner(path=tmp_path / "transitions.json", clock=learner.clock)
+    state = order_signal().state
+    for _ in range(6):
+        kept.observe(state, "tracking_checked")
+    kept.save()
+    assert (tmp_path / "transitions.json").exists()
+    assert kept.reset() > 0
+    assert kept.inspect()["rows"] == [] and kept.likely(state) == []
+    assert not (tmp_path / "transitions.json").exists()
+    # And a fresh learner over the same path finds nothing.
+    assert Learner(path=tmp_path / "transitions.json", clock=learner.clock).inspect()["rows"] == []
+
+
+def test_the_table_survives_a_restart_but_refuses_a_hand_edited_identifier(tmp_path):
+    path = tmp_path / "transitions.json"
+    first = Learner(path=path, clock=_clock())
+    state = order_signal().state
+    for _ in range(5):
+        first.observe(state, "email_checked")
+    first.save()
+    again = Learner(path=path, clock=first.clock)
+    assert [e.event for e in again.likely(state)] == ["email_checked"]
+    path.write_text(path.read_text().replace(state, "order_opened[unfulfilled]_1938"), encoding="utf-8")
+    third = Learner(path=path, clock=first.clock)
+    assert third.inspect()["rows"] == [] and third.rejected >= 1
+
+
+def test_the_learned_vocabulary_holds_no_write(learner):
+    """§19: no learned write execution, ever. The events the table can hold are reads and
+    moves; there is no name in it that could be turned into a change."""
+    from app.anticipation.models import EVENTS
+
+    assert learner.observe(order_signal().state, "order_cancelled") is None
+    assert learner.rejected == 1
+    for event in EVENTS:
+        assert not any(word in event for word in ("cancel", "refund", "send", "fulfil", "tag", "set", "create"))
+
+
+# --------------------------------------------------------------------- §19 telling them apart
+
+
+async def test_a_predicted_read_is_labelled_differently_from_a_requested_one(anticipator, session, dispatched, tmp_path):
+    """The distinction rides on the record that was already there: the read plan's origin, and
+    the memory entry's provenance — not on a parallel ledger kept by this layer."""
+    from app.observability import session as sessions_mod
+    from app.observability import timeline as timeline_mod
+
+    timeline = timeline_mod.Timeline(sessions_mod.TestSessions(tmp_path))
+    timeline_mod.install(timeline)
+    timeline.start("anticipation")
+    try:
+        await anticipator.on_signal(order_signal(), session=session)
+        await asyncio.sleep(0.2)
+        from app.reads.scheduler import Read, ReadPlan, run_plan
+
+        await run_plan(ReadPlan([Read("asked", "shopify_find_order", {"query": "1938"})], label="asked"), session=session)
+        timeline.flush()
+        events = timeline_mod.read_events(sessions_mod.TestSessions(tmp_path).timeline_path(timeline.active))
+    finally:
+        timeline.stop()
+        timeline_mod.install(timeline_mod.NullTimeline())
+    plans = [e for e in events if e["kind"] == "read_plan"]
+    origins = {e.get("label"): e.get("origin") for e in plans}
+    assert origins.get("asked") == REQUESTED
+    assert any(label and label.startswith("anticipate:") and origin == PREDICTED for label, origin in origins.items())
+    # Every prediction is logged, with what asked for it.
+    predictions = [e for e in events if e["kind"] == "prediction"]
+    assert predictions and all(e["origin"] == PREDICTED and e["why"] for e in predictions)
+    # And what it filled in says so where the value is used.
+    entry = anticipator.memory.get(ENTITY, "shipping:gid://shopify/Order/1")
+    assert entry is not None and entry.public()["provenance"]["origin"] == PREDICTED
+
+
+async def test_a_predicted_read_that_is_used_is_counted_as_such(anticipator, session, dispatched):
+    await anticipator.on_signal(order_signal(), session=session)
+    await asyncio.sleep(0.2)
+    memory = anticipator.memory
+    before = memory.counts()["predicted_hits"]
+    assert memory.get(ENTITY, "customer:gid://shopify/Customer/9") is not None
+    assert memory.counts()["predicted_hits"] == before + 1
+
+
+async def test_the_debug_view_says_why_something_was_prefetched(anticipator, session, dispatched):
+    await anticipator.on_signal(order_signal(), session=session)
+    report = anticipator.report()
+    assert report["counts"]["started"] >= 1
+    rows = report["predictions"]
+    assert rows and all(row["why"] and row["origin"] == PREDICTED for row in rows)
+    assert {row["level"] for row in rows} <= {1, 2}
+    assert report["learned"]["min_observations"] == MIN_OBSERVATIONS
+    await asyncio.sleep(0.1)
+
+
+async def test_a_learned_transition_reads_something_no_rule_would_have(anticipator, session, dispatched):
+    """The brief's own example, mechanically: the owner checks the inbox on an old unfulfilled
+    international order and then, again and again, looks at the tracking. No deterministic rule
+    fires on "the inbox was checked" — so before the habit is learned nothing is read, and
+    after it is, the tracking state is."""
+    signal = Signal(
+        event="email_checked", session_id="s1", login="owner@example.com", branch_id="b1",
+        kind="order", ref="gid://shopify/Order/1", features=("unfulfilled", "international", "old"),
+        ids={"order_id": "gid://shopify/Order/1"},
+    )
+    cold = await anticipator.on_signal(signal, session=session, learn=False)
+    assert cold.started == [] and cold.skipped == {}
+    for _ in range(8):
+        anticipator.learner.observe(signal.state, "tracking_checked")
+    warm = await anticipator.on_signal(signal, session=session, learn=False)
+    learned = [p for p in warm.started if p.level == 2]
+    assert learned, "the learned table predicted nothing"
+    for prediction in learned:
+        assert prediction.why == f"learned:{signal.state}->tracking_checked"
+        assert prediction.tier == P2, "a learned read is speculative, whatever tier its rule is"
+        assert prediction.observations >= MIN_OBSERVATIONS and prediction.confidence >= THRESHOLD
+    await asyncio.sleep(0.1)
+
+
+async def test_a_learned_habit_puts_the_read_it_is_about_first(anticipator, session, dispatched):
+    """When a deterministic rule already makes the read, the habit does not add a second one —
+    it moves that read to the front of the queue, which is what decides who gets the source's
+    slots when four reads want two."""
+    signal = order_signal()
+    plain = anticipator._predictions(signal)
+    assert [p.why for p in plain][0] == "order.customer_history"
+    for _ in range(9):
+        anticipator.learner.observe(signal.state, "tracking_checked")
+    taught = anticipator._predictions(signal)
+    first = taught[0]
+    assert first.why == "order.shipping_state+learned"
+    assert first.observations >= MIN_OBSERVATIONS and first.tier == P1
+    assert len(taught) == len(plain), "a habit about a read already planned must not add a second"
+
+
+async def test_a_suggestion_is_only_made_at_high_confidence_and_is_only_words(anticipator, session, dispatched):
+    signal = order_signal()
+    quiet = await anticipator.on_signal(signal, session=session, learn=False)
+    assert quiet.suggestions == []
+    for _ in range(10):
+        anticipator.learner.observe(signal.state, "tracking_checked")
+    loud = await anticipator.on_signal(signal, session=session, learn=False)
+    assert loud.suggestions and loud.suggestions[0]["next"] == "tracking_checked"
+    assert loud.suggestions[0]["confidence"] >= 0.8 and loud.suggestions[0]["level"] == 3
+    # A suggestion is a sentence about a READ or a move. Nothing acts on it.
+    assert all("cancel" not in s["why"] and "refund" not in s["why"] for s in loud.suggestions)
+    await asyncio.sleep(0.1)
