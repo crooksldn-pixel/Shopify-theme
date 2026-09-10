@@ -269,6 +269,16 @@ an exact command to run on the Mac instead.
 | Any real mutation | Forbidden by the brief, and the fixture Shopify raises on every mutation so a test can only ever exercise prepare, observe, present and verify | The owner's own gesture on the tablet, once he has read the card |
 | The model's own behaviour on the new prompts | No subscription here; the fixture harness stubs the provider | Ask the questions on the tablet and read `make watch` |
 
+The offline suite reports this itself rather than hiding it: **two tests skip, loudly**, and
+they are the only two —
+
+    SKIPPED tests/test_gmail_tools.py:175  no Gmail token.json
+    SKIPPED tests/test_shopify_tools.py:190  no Shopify credentials in the Keychain
+
+— and the browser gate skips the same way when Chromium is absent (it is not absent here; it
+ran, 61 checks at both viewports). A check that cannot run has proved nothing, and saying so
+is the difference between a suite that is green and a suite that is honest.
+
 Nothing in this pass depends on a credential to be *correct* — every write's prepare,
 precondition, verification and refusal path is exercised against the fixture, and the fixture
 refuses every mutation, which is what makes those tests able to fail.
