@@ -114,6 +114,7 @@ _KNOWN_TOOLS = frozenset({
     # one by one because this is an allow-list: a read tool absent from it is denied, which
     # is what makes adding a tool without a rule impossible.
     "shopify_discount_check", "shopify_discount_open",
+    "shopify_abandoned_checkouts",
 })
 
 # Tools that may only be called with an id this session already handed to the assistant. Stops

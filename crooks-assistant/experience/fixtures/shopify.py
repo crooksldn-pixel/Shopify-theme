@@ -460,4 +460,41 @@ def _discount_by_code(_store: FixtureShopify, v: dict) -> dict:
     }}}
 
 
+def _abandoned_checkouts(_store: FixtureShopify, v: dict) -> dict:
+    """The checkouts begun and not paid for, filtered by the same window the application
+    sends. The completed one is returned WITH its `completedAt` rather than hidden here: the
+    filter is the application's (`app/families/abandoned.py`), and a fixture that pre-filtered
+    would leave that line untested."""
+    since = _iso(str(_CREATED_FROM.search(str(v.get("q") or "")).group(1)) if _CREATED_FROM.search(str(v.get("q") or "")) else "1970-01-01")
+    limit = max(1, int(v.get("n") or 25))
+    chosen = []
+    for checkout in sorted(data.ABANDONED, key=lambda c: c["days_ago"]):
+        created = _iso(data._at(checkout["days_ago"]))
+        if created < since:
+            continue
+        person = checkout["customer"]
+        chosen.append({"node": {
+            "id": checkout["id"],
+            "name": checkout["name"],
+            "createdAt": data._at(checkout["days_ago"]),
+            "completedAt": data._at(max(0.0, checkout["days_ago"] - 0.1)) if checkout["completed"] else None,
+            "totalPriceSet": data._money(f"{data.abandoned_total(checkout):.2f}"),
+            "customer": ({"id": person.customer_id, "displayName": person.name} if person else None),
+            "lineItems": {"edges": [
+                {"node": {
+                    "title": VARIANTS[variant]["product"]["title"],
+                    "variantTitle": VARIANTS[variant]["title"],
+                    "quantity": quantity,
+                    "variant": {"id": variant},
+                    "product": {"id": VARIANTS[variant]["product"]["id"], "title": VARIANTS[variant]["product"]["title"]},
+                }}
+                for variant, quantity in checkout["lines"]
+            ]},
+        }})
+    return {"data": {"abandonedCheckouts": {
+        "edges": chosen[:limit], "pageInfo": {"hasNextPage": len(chosen) > limit},
+    }}}
+
+
 _HANDLERS["CrooksDiscountByCode"] = _discount_by_code
+_HANDLERS["CrooksAbandonedCheckouts"] = _abandoned_checkouts

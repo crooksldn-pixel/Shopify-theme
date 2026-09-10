@@ -178,10 +178,10 @@ def code_fingerprint(node: dict[str, Any] | None, code: str) -> dict[str, Any]:
 
 @tool(
     name=CHECK_TOOL,
-    description="Whether a discount code already exists in the shop, and what it does if it does. Reads only.",
+    description="Whether a discount code already exists in the shop, and what it does if it does.",
     input_schema={
         "type": "object",
-        "properties": {"code": {"type": "string", "maxLength": 32, "description": "The code, as customers would type it."}},
+        "properties": {"code": {"type": "string", "maxLength": 32}},
         "required": ["code"],
     },
     tier=Tier.GREEN,
@@ -461,19 +461,18 @@ async def _fill_collision(workspace: dict[str, Any]) -> None:
 @tool(
     name=OPEN_TOOL,
     description=(
-        "Put a discount code on the owner's screen as editable fields, having first read whether "
-        "the shop already uses that code, and return its workspace_id. Creates nothing. Give "
-        "percent OR amount; dates as YYYY-MM-DD."
+        "Put a discount code on the owner's screen as fields, after reading whether the shop "
+        "already uses that code, and return its workspace_id. Creates nothing."
     ),
     input_schema={
         "type": "object",
         "properties": {
-            "code": {"type": "string", "maxLength": 32, "description": "As customers will type it."},
-            "percent": {"type": "number", "minimum": 0.01, "maximum": 100, "description": "Per cent off, e.g. 15."},
+            "code": {"type": "string", "maxLength": 32},
+            "percent": {"type": "number", "minimum": 0.01, "maximum": 100, "description": "Per cent off: 15, not 0.15."},
             "amount": {"type": "number", "minimum": 0.01, "maximum": MAX_DISCOUNT_AMOUNT, "description": "Money off instead."},
             "starts": {"type": "string", "maxLength": 10, "description": "YYYY-MM-DD; today if unsaid."},
-            "ends": {"type": "string", "maxLength": 10, "description": "YYYY-MM-DD, if it stops."},
-            "uses": {"type": "integer", "minimum": 1, "maximum": MAX_DISCOUNT_USES, "description": "Total uses allowed."},
+            "ends": {"type": "string", "maxLength": 10, "description": "YYYY-MM-DD."},
+            "uses": {"type": "integer", "minimum": 1, "maximum": MAX_DISCOUNT_USES},
             "once_each": {"type": "boolean", "description": "One use per customer."},
         },
         "required": ["code"],
