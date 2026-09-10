@@ -1448,6 +1448,8 @@ function applyBranches(shape) {
   const split = branches.length > 1 ? 1 : 0;
   const which = branches.length > 1 && branches[1] && branches[1].branch_id === focusedBranch ? 1 : 0;
   if (orb && typeof orb.setSplit === 'function') orb.setSplit(split, which);
+  // What `busy` means changed with the focus: this half's turn, not the other's.
+  syncBusy();
   T.record('branches', { count: branches.length, id: focusedBranch });
 }
 
@@ -1634,10 +1636,14 @@ function noteBranch(branch) {
   // The set chip comes with the branch, so a tap that moves the cursor and a sentence that
   // opens a different list both keep it honest.
   noteWorkingSet(branch.workflow);
+  const before = focusedBranch;
   focusedBranch = branch.branch_id;
   if (!deckBranch) deckBranch = branch.branch_id;
   branches = branches.map((b) => (b.branch_id === branch.branch_id ? branch : b));
   if (!branches.some((b) => b.branch_id === branch.branch_id)) branches = [branch];
+  // The first answer names the half the tablet had been calling '_' until now.
+  if (!before && inflight.has('_')) { inflight.set(turnKey(focusedBranch), inflight.get('_')); inflight.delete('_'); }
+  if (before !== focusedBranch) syncBusy();
   drawBranchBar();
   el.backBtn.hidden = false;
   el.backBtn.disabled = !canGoBack();
@@ -2128,41 +2134,69 @@ function startStatePolling() {
 function stopStatePolling() { if (statePoll) { clearInterval(statePoll); statePoll = null; } }
 
 const SPEAK_HEADERS_TIMEOUT_MS = 6000;    // the Mac gives a prefetch 4 s for its first byte; past this, Android speaks
-let turnAbort = null;         // the in-flight /turn, so holding through a slow one can drop it
+let turnAbort = null;         // the focused half's in-flight /turn, so holding through a slow one can drop it
 const TURN_TIMEOUT_MS = 130000; // a little over the backend's own 120 s turn timeout
 
+// The turns in flight, one per half of the orb. Each half thinks on its own conversation on
+// the Mac (app/providers/max_agent_sdk.py), so a question to the right half is not queued
+// behind a thirty-second one on the left: it is asked now, and answered when it is answered.
+// `busy` — which every hold, tap and card reads — is about the half on screen: its turn is
+// in flight, or it is free. Switching halves switches what `busy` means (syncBusy).
+const inflight = new Map();   // branch key -> { controller, startedAt, timeout }
+function turnKey(branchId) { return branchId || '_'; }
+function syncBusy() {
+  const mine = inflight.get(turnKey(focusedBranch));
+  busy = Boolean(mine);
+  el.talk.dataset.busy = busy ? 'true' : 'false';
+  turnAbort = mine ? mine.controller : null;
+  if (mine) { turnStartedAt = mine.startedAt; startStatePolling(); } else stopStatePolling();
+}
+function cancelForm(branchId) {
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  if (branchId) form.append('branch_id', branchId);
+  return form;
+}
+
 async function submit(body, isAudio) {
-  busy = true;
-  el.talk.dataset.busy = 'true';
+  // The half this question is for, fixed now: the owner may tap the other half while it
+  // is being answered, and the answer must still land on the half that asked.
+  const key = turnKey(focusedBranch);
+  const askedBranch = focusedBranch;
+  if (inflight.has(key)) return;   // one question at a time per half; the hold gate makes this unreachable
   // A card cannot be tapped while a question is in flight (actionBlocked). Whether this
   // question withdraws it is the Mac's decision, answered with the turn: a fumbled hold or
   // a recording that said nothing withdraws nothing.
   el.errline.textContent = '';
   el.heard.textContent = '';
-  turnStartedAt = Date.now();
+  const startedAt = Date.now();
   T.record('turn_submitted', {
     screen: el.body.dataset.mode || '', index: historyIndex, entities: history[historyIndex] ? history[historyIndex].entities : [],
     audio_ms: isAudio ? lastRecordingMs : undefined, turns, before: liveActionSurface() ? 'live_card' : undefined,
+    branch: askedBranch || undefined, concurrent: inflight.size || undefined,
   });
   setState(isAudio ? 'TRANSCRIBING' : 'THINKING');
-  startStatePolling();
   const controller = new AbortController();
-  turnAbort = controller;
   const timeout = setTimeout(() => {
     controller.abort();
     // The Mac may still be holding the turn; tell it to let go so the next question is not
     // queued behind a dead one.
-    const form = new FormData();
-    form.append('session_id', sessionId);
-    cancelTurn(form, 'it will time out on its own');
+    cancelTurn(cancelForm(askedBranch), 'it will time out on its own');
   }, TURN_TIMEOUT_MS);
+  inflight.set(key, { controller, startedAt, timeout });
+  syncBusy();
+  // Whether the owner is still looking at the half that asked. Checked when the answer
+  // lands: an answer for the other half goes to the Mac's copy of that half's screen
+  // (branch.show draws it when its chip is tapped), never over the cards on screen.
+  const stillHere = () => key === '_' || turnKey(focusedBranch) === key;
   try {
     const options = isAudio
       ? { method: 'POST', body, signal: controller.signal }
       : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal };
     const response = await fetch('/turn', options);
     if (!response.ok) {
-      T.record('turn_failed', { status: response.status, ms: Date.now() - turnStartedAt });
+      T.record('turn_failed', { status: response.status, ms: Date.now() - startedAt });
+      if (!stillHere()) { decks.delete(askedBranch); toast('The other half hit a problem.'); return; }
       lastWasError = true;
       lastErrorTitle = response.status === 403 ? 'Not allowed' : 'The Mac hit a problem';
       el.errline.textContent = response.status === 403
@@ -2181,10 +2215,21 @@ async function submit(body, isAudio) {
     currentTurnId = data.turn_id ? String(data.turn_id) : '';
     if ('test_session_id' in data) T.configure({ test_session: data.test_session_id || null });
     T.setContext({ session_id: sessionId, turn_id: currentTurnId });
-    T.record('turn_response', { ms: Date.now() - turnStartedAt, error_kind: data.error_kind || undefined, items: (data.ui || []).map((i) => i && i.type), answer_chars: String(data.answer || '').length, turns: data.turns });
+    T.record('turn_response', { ms: Date.now() - startedAt, error_kind: data.error_kind || undefined, items: (data.ui || []).map((i) => i && i.type), answer_chars: String(data.answer || '').length, turns: data.turns, elsewhere: !stillHere() || undefined });
     turns = typeof data.turns === 'number' ? data.turns : turns + 1;
     if (data.lost_thread) turns = 0;
     store.set('crooks.turns', String(turns));
+    if (!stillHere()) {
+      // The owner is talking to the other half. This half's chip says READY (the Mac marked
+      // it so, seeing the focus elsewhere); its cards are the Mac's to redraw when tapped.
+      // Nothing here is spoken over the conversation he is having now.
+      decks.delete(askedBranch);
+      if (data.branches) applyBranches(data.branches);
+      if (Array.isArray(data.revoked) && data.revoked.length) settleProposals(data.revoked, 'revoked', 'Withdrawn');
+      haptic(HAPTIC.done);
+      toast('The other half has an answer. Tap it to see.');
+      return;
+    }
     el.heard.textContent = data.question ? `“${data.question}”` : '';
     el.answer.textContent = data.answer;
     lastWasError = Boolean(data.error_kind);
@@ -2208,12 +2253,11 @@ async function submit(body, isAudio) {
   } catch (error) {
     if (controller.signal.aborted && controller.cancelled) {
       // The owner moved on: nothing to report, the next question is already being asked.
-      el.heard.textContent = '';
-      el.answer.textContent = '';
-      setState('READY');
+      if (stillHere()) { el.heard.textContent = ''; el.answer.textContent = ''; setState('READY'); }
       return;
     }
-    T.record('turn_failed', { status: 0, aborted: controller.signal.aborted, ms: Date.now() - turnStartedAt });
+    T.record('turn_failed', { status: 0, aborted: controller.signal.aborted, ms: Date.now() - startedAt });
+    if (!stillHere()) { decks.delete(askedBranch); toast('The other half hit a problem.'); return; }
     lastWasError = true;
     lastErrorTitle = controller.signal.aborted ? 'The Mac took too long' : 'The Mac did not answer';
     el.errline.textContent = controller.signal.aborted
@@ -2227,13 +2271,11 @@ async function submit(body, isAudio) {
     if (!controller.signal.aborted) setTimeout(checkReachable, 0);   // after `finally` clears busy
   } finally {
     clearTimeout(timeout);
-    if (turnAbort === controller) turnAbort = null;
-    stopStatePolling();
-    busy = false;
-    el.talk.dataset.busy = 'false';
-    applyUpdateWhenIdle();
+    inflight.delete(key);
+    syncBusy();
+    if (!inflight.size) applyUpdateWhenIdle();
     // If speech is off there is no onend to settle the state, so do it here.
-    if (!el.speakToggle.checked) setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
+    if (!el.speakToggle.checked && stillHere()) setState(lastWasError ? 'ERROR' : 'READY', lastWasError ? lastErrorTitle : '');
   }
 }
 
@@ -2333,9 +2375,9 @@ function cancelTurnAndListen() {
   T.record('turn_cancelled', { ms: Date.now() - turnStartedAt });
   turnAbort.cancelled = true;
   turnAbort.abort();
-  const form = new FormData();
-  form.append('session_id', sessionId);
-  cancelTurn(form, 'the abort already freed the tablet');
+  // This half's turn, and only this half's: the other half may be mid-thought about
+  // something else, and a cancel here must not stop it.
+  cancelTurn(cancelForm(focusedBranch), 'the abort already freed the tablet');
   haptic(HAPTIC.start);
   // submit()'s finally clears busy once the abort lands; start listening right after it —
   // if the thumb is still down. A thumb that lifted meanwhile just wanted the question gone.
@@ -2469,21 +2511,41 @@ if (el.armedCancel) {
     if (!released) drawArmed(null);
   });
 }
-// A dock icon asks its sentence. The same body the transcript path posts, so the tap takes the
-// same lane, the same recipe and the same presenter as the words would — and the lit item is
-// decided by what comes back, not by the tap.
+// A dock icon opens a place. It posts the semantic command `open.area` — which area, nothing
+// else — and the Mac runs that landing's recipe: fixed reads, no model, the same presenter a
+// sentence reaches (app/families/landings.py). The lit item is decided by what comes back.
+// On the bench the dock asked a sentence through the whole turn pipeline, and "show me
+// today's orders" on a quiet afternoon drew an empty list: a place must have a shape whatever
+// was said before it. The sentence survives as the fallback for a landing the Mac cannot
+// draw just now (a source that did not answer), so the tap still does something.
 if (el.dock) {
   el.dock.addEventListener('click', (event) => {
-    const btn = event.target && event.target.closest ? event.target.closest('.dock-btn[data-ask]') : null;
+    const btn = event.target && event.target.closest ? event.target.closest('.dock-btn[data-area]') : null;
     if (!btn || busy) return;
-    const text = (btn.dataset.ask || '').trim();
-    if (!text) return;
+    const area = (btn.dataset.area || '').trim();
+    if (!area) return;
     haptic(HAPTIC.start);
-    T.record('chip_ask', { text: text.slice(0, 60), name: `dock:${btn.dataset.area || ''}` });
+    T.record('navigate', { nav: 'dock', name: area });
     unlockSpeech();
     stopSpeaking();
-    submit({ text, session_id: sessionId, turns, speak: el.speakToggle.checked }, false);
+    openArea(area, (btn.dataset.ask || '').trim());
   });
+}
+async function openArea(area, fallback) {
+  const opened = await semanticCommand('open.area', { area });
+  if (opened && opened.ok && Array.isArray(opened.ui) && opened.ui.length) {
+    const rendered = window.CrooksUI.render(opened.ui, renderOpts());
+    if (rendered.nodes.length) {
+      pushContext(rendered.nodes, opened.ui, opened.answer || '');
+      el.heard.textContent = '';
+      if (opened.answer) el.answer.textContent = opened.answer;
+      T.record('render', { name: `dock:${area}`, items: opened.ui.map((i) => i && i.type), ms: opened.served_ms });
+      return;
+    }
+  }
+  T.record('chip_ask', { text: fallback.slice(0, 60), name: `dock:${area}:fallback`, detail: opened ? String(opened.code || opened.detail || '').slice(0, 80) : 'offline' });
+  if (fallback) submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false);
+  else if (opened && (opened.answer || opened.detail)) el.answer.textContent = opened.answer || opened.detail;
 }
 el.backBtn.addEventListener('click', goBack);
 if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);

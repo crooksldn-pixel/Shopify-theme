@@ -112,6 +112,16 @@ class Branch:
     status: str = "ACTIVE"
     label: str = ""
     created_at: float = field(default_factory=time.time)
+    # This half's own count of instructions. A turn records it when it starts and a tool
+    # call compares (app/providers/max_agent_sdk.py): a later instruction to THIS half means
+    # the turn is answering a replaced question and its calls act for nobody — while an
+    # instruction to the other half, which also moves the session's epoch, means nothing
+    # here. Without it the two halves could not think at once: the right half's question
+    # refused every tool call the left half was still making.
+    instruction_seq: int = 0
+    # A /cancel aimed at this half. Read where the session-wide flag is read; set only by
+    # a cancel that names the half, so a cancel on the left never silences the right.
+    abandoned: bool = False
 
     # Where the branch is.
     entity: dict[str, str] | None = None          # {"kind","ref","label"}

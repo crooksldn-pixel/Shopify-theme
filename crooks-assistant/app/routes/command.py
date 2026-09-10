@@ -66,15 +66,21 @@ async def command(
     session_id = (session_id or "").strip()
     if not session_id:
         return _refuse(400, "wrong_session", "The session is missing.")
+    name = (command or "").strip()
     try:
         session = runtime.sessions.get(session_id)
     except KeyError:
-        return _refuse(409, "no_session", "That conversation has gone; ask again.")
+        # A tap on a fresh tablet — the dock from the idle screen — is as legitimate a first
+        # request as a sentence is, and /turn creates the conversation for a sentence. A
+        # command about a record the tablet claims to have, though, has nothing to be about
+        # when the conversation is gone: those still say so.
+        if name not in FRESH_START:
+            return _refuse(409, "no_session", "That conversation has gone; ask again.")
+        session = runtime.sessions.get_or_create(session_id)
     if not session_matches(session, request):
         # A conversation is its first caller's, on this route as on every other.
         return _refuse(403, "wrong_session", "That conversation belongs to another login.")
 
-    name = (command or "").strip()
     spec = commands.get(name)
     if spec is None:
         return _refuse(400, "unknown_command", f"There is no command called {name!r}.")
@@ -86,14 +92,20 @@ async def command(
     # a working set, a proposal — must be filed against that half rather than the focused one.
     session.acting_branch = branch.branch_id
     started = time.perf_counter()
-    outcome = commands.run(name, commands.Ctx(runtime, session, branch, {
+    outcome = commands.run(name, commands.Ctx(runtime, session, branch, await _arguments(request, {
         "kind": (kind or "").strip()[:40],
         "ref": (ref or "").strip()[:MAX_REF_CHARS],
         "label": (label or "").strip()[:120],
         "tab": (tab or "").strip()[:40],
         "surface": (surface or "").strip()[:40],
         "family": (family or "").strip()[:40],
-    }))
+    })))
+    recipe_id = outcome.changed.get("recipe") if outcome.ok and isinstance(outcome.changed, dict) else None
+    if recipe_id:
+        # A command that names a place rather than a record — a dock landing. Commands are
+        # synchronous and read nothing themselves; the recipe reads, through the same
+        # scheduler and the same read tools a sentence would use, and no model.
+        outcome = await _run_recipe(runtime, session, branch, str(recipe_id), outcome)
     elapsed = (time.perf_counter() - started) * 1000
 
     timeline.emit(
@@ -124,6 +136,11 @@ async def command(
     ui = present(calls, session=session, writes=await _writes(request))
     if outcome.surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in outcome.surfaces] + ui
+    if any(item.get("type") != "context_stack" for item in ui):
+        # What this half now shows, kept on the Mac: a tap that drew cards is as much this
+        # half's workspace as a sentence that did, and `branch.show` redraws it after a
+        # switch or a reload (app/session/branch.py).
+        branch.shown(ui, outcome.answer, "")
     return {
         "ok": True,
         "command": name,
@@ -143,6 +160,64 @@ async def command(
         "lane": "TOUCH",
         "model_calls": 0,
     }
+
+
+# Commands a tablet may post before the conversation exists on the Mac.
+FRESH_START = frozenset({"open.area"})
+
+# Bounds on what a tap may carry. A command's arguments are identities and small values —
+# an id, a field name, an address typed into a precision field, a quantity — never an
+# execution argument (those the Mac builds); the bound keeps a runaway client from posting
+# a document.
+MAX_ARGS = 24
+MAX_ARG_CHARS = 8000
+RESERVED = frozenset({"session_id", "command", "branch_id"})
+
+
+async def _arguments(request: Request, named: dict[str, str]) -> dict[str, str]:
+    """Every field the tablet posted, the named ones already bounded, the rest bounded here.
+    A family's command takes its own arguments (`area`, `compose_id`, `quantity` …) without
+    this route having to know each one; the command decides what they mean."""
+    try:
+        form = await request.form()
+    except Exception:  # noqa: BLE001 — not a form body: only the named fields
+        return dict(named)
+    args = dict(named)
+    for key, value in list(form.multi_items())[:MAX_ARGS + len(RESERVED) + len(named)]:
+        if key in RESERVED or key in args or not isinstance(value, str):
+            continue
+        if len(args) >= MAX_ARGS + len(named):
+            break
+        args[str(key)[:40]] = value[:MAX_ARG_CHARS]
+    return args
+
+
+async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
+    """A FAST recipe, run for a tap. The same runner the fast lane uses (app/fastpath), the
+    same read-only assertion, the same timeline event; the intent is the recipe's own family
+    at full confidence, because a tap on Orders is not ambiguous."""
+    from app import commands as command_mod
+    from app.fastpath import RECIPES
+    from app.fastpath import run as run_recipe
+    from app.fastpath.intent import Intent, signals_for
+    from app.fastpath.models import Ctx as RecipeCtx
+    from app.memory import current as memory
+
+    recipe = RECIPES.get(recipe_id)
+    if recipe is None:
+        return command_mod.Outcome.refused("unknown_recipe", f"There is no recipe called {recipe_id!r}.")
+    intent = Intent(family=recipe.intent_family, confidence=1.0, signals=signals_for("", branch=branch), reason="a tap")
+    branch.working("opening " + str(outcome.changed.get("area") or recipe.ui))
+    try:
+        answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent, text="", memory=memory()))
+    finally:
+        branch.idle()
+    if answer.deferred:
+        return command_mod.Outcome.refused("landing_unavailable", f"That could not be drawn just now ({answer.defer}).")
+    calls = list(answer.calls if answer.drawn is None else answer.drawn)
+    changed = {**outcome.changed, "lane": "FAST", "recipe_id": recipe_id, "partial": bool(answer.partial),
+               "reads": list((answer.trace or {}).get("reads") or []), "ms": (answer.trace or {}).get("ms")}
+    return command_mod.Outcome(answer=answer.answer, calls=calls, surfaces=list(answer.surfaces), changed=changed)
 
 
 async def _read_member(runtime, session, needs: dict) -> list:

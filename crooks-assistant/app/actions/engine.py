@@ -41,6 +41,7 @@ from app.actions.models import (
 )
 from app.clients.shopify import ShopifyPreconditionFailed
 from app.session.models import Session
+from app.tools.context import acting_branch
 from app.tools.registry import ToolSpec
 
 log = logging.getLogger("crooks.actions")
@@ -132,7 +133,7 @@ class ActionEngine:
             # speaking branch, `revoke_pending` withdraws by branch, `/branches/{id}
             # /background` refuses a half with a change waiting, and a BACKGROUND half is
             # never allowed to commit. Stamped with the focused branch, all four inverted.
-            branch_id=str(getattr(session, "acting_branch", "") or getattr(session, "focused_branch", "") or ""),
+            branch_id=acting_branch(session),
             tool_name=spec.name,
             operation=spec.write.operation,
             risk=risk,

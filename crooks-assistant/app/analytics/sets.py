@@ -14,6 +14,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.tools.context import acting_branch
+
 KINDS = ("orders", "customers", "products", "variants", "emails")
 MAX_SETS = 12
 MAX_MEMBERS = 500
@@ -98,7 +100,7 @@ def create(
     ws = WorkingSet(
         set_id=new_set_id(), kind=kind, members=tuple(ids), label=" ".join(str(label or "").split())[:80] or kind,
         created_at=now, expires_at=now + TTL_S, session_id=str(getattr(session, "session_id", "") or ""), turn_id=str(getattr(session, "turn_id", "") or ""),
-        branch_id=str(getattr(session, "acting_branch", "") or getattr(session, "focused_branch", "") or ""),
+        branch_id=acting_branch(session),
         provenance=dict(provenance or {}), sample=tuple({"ref": str(s.get("ref") or ""), "label": str(s.get("label") or "")[:60]} for s in (sample or [])[:MAX_SAMPLE]),
         totals={k: v for k, v in (totals or {}).items() if isinstance(v, (int, float, str)) and not isinstance(v, bool)}, truncated=truncated,
         labels={ref: str(name)[:MAX_LABEL] for ref, name in (labels or {}).items() if ref in set(ids) and name},
