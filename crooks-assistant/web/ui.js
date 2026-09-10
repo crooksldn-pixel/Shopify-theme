@@ -409,23 +409,39 @@
   // button that does something; it primes the hold with the words that ask for the change,
   // so the ask, the proposal and the gesture stay exactly what they are by voice. A chip the
   // Mac disabled shows its one reason and does nothing.
-  function rail(actions, opts) {
+  //
+  // Two kinds of chip share the rail. An "ask" chip primes the hold (and, when it carries a
+  // family, tells the Mac what the next sentence is about). A "stage" chip is a row action
+  // (app/actions/rows.py) on the record itself: the tap asks the Mac to PREPARE the change,
+  // and the card that comes back still waits for a gesture. `ref` is the record the stage
+  // chips act on; it is posted back with the action id and nothing else.
+  function rail(actions, opts, ref) {
     const list_ = list(actions, 6);
     if (!list_.length) return null;
     return h('div', { class: 'rail', role: 'group', 'aria-label': 'Changes' }, list_.map((a) => {
-      const enabled = a.enabled === true && Boolean(text(a.instruction));
+      const staged = text(a.mode) === 'stage';
+      const enabled = a.enabled === true && (staged ? Boolean(text(ref)) : Boolean(text(a.instruction)));
       const chip = h('button', {
         class: `rail-chip risk-${text(a.risk) === 'red' ? 'red' : 'amber'}${enabled ? '' : ' is-off'}`, type: 'button',
-        'aria-disabled': enabled ? 'false' : 'true',
+        'aria-disabled': enabled ? 'false' : 'true', title: staged ? text(a.detail) : null,
         // `family` is the spoken control this chip arms, when it arms one — the Mac's own
         // mapping (commands.SPOKEN_CONTROLS), carried here so the page never invents one and
         // so the armed chip can be found again when the Mac says it is listening.
-        data: { action: text(a.id), mode: text(a.mode, 'ask'), family: text(a.family) },
+        data: { action: text(a.id), mode: text(a.mode, 'ask'), family: text(a.family), ref: staged ? text(ref) : null },
       }, [
         h('span', { class: 'rail-label', text: text(a.label, '—') }),
         !enabled && a.reason ? h('span', { class: 'rail-why', text: text(a.reason) }) : null,
       ]);
-      if (enabled) chip.addEventListener('click', () => { if (opts && typeof opts.onAction === 'function') opts.onAction(a, chip); });
+      if (enabled && staged) {
+        chip.addEventListener('click', (event) => {
+          if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+          if (!opts || typeof opts.onRowAction !== 'function' || chip.disabled) return;
+          chip.disabled = true;
+          opts.onRowAction(text(a.id), text(ref), chip);
+        });
+      } else if (enabled) {
+        chip.addEventListener('click', () => { if (opts && typeof opts.onAction === 'function') opts.onAction(a, chip); });
+      }
       return chip;
     }));
   }
@@ -792,8 +808,12 @@
       if (!last) msg.addEventListener('click', () => msg.classList.toggle('is-collapsed'));
       return msg;
     });
+    // The rail. `rail()` was called from one place — the order card — so an email had no
+    // controls on the tablet at all: Reply, Rewrite and Archive were on the Mac and reachable
+    // only by a spoken sentence, and the only way out of a thread was to put the tablet down.
     return card('email_thread', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email thread'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-meta', text: [num(d.message_count) === null ? '' : `${d.message_count} message${d.message_count === 1 ? '' : 's'}`, d.truncated ? 'older messages not shown' : ''].filter(Boolean).join(' · ') })])]),
+      rail(d.actions, opts, d.thread_id),
       h('div', {}, nodes),
     ], opts);
   }

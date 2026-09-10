@@ -1543,6 +1543,11 @@ function noteTab(kind, name, label) {
 // A row's own button. The answer is a staged change with its card; it still waits for a
 // gesture, exactly as one the assistant proposed does.
 async function rowAction(action, ref, button) {
+  // A rail chip carries its label in a span; a row button IS its label. Both come here.
+  const label = button ? (button.querySelector('.rail-label') || button) : null;
+  const was = label ? label.textContent : '';
+  if (label && !button.querySelector('.rail-label')) label.textContent = 'Preparing…';
+  const restore = () => { if (button) { button.disabled = false; if (label) label.textContent = was; } };
   const form = new FormData();
   form.append('session_id', sessionId);
   form.append('action', action);
@@ -1553,10 +1558,10 @@ async function rowAction(action, ref, button) {
     T.record('row_action', { action, status: response.status, outcome: response.ok ? 'staged' : 'refused', proposal_id: data && data.proposal_id });
     if (!response.ok) {
       toast(String((data && data.detail) || 'That could not be prepared.'));
-      if (button) { button.disabled = false; button.textContent = 'Archive'; }
+      restore();
       return;
     }
-    if (button) button.textContent = 'Waiting for you';
+    if (label) label.textContent = 'Waiting for you';
     if (data && Array.isArray(data.ui) && data.ui.length) {
       const rendered = window.CrooksUI.render(data.ui, renderOpts());
       if (rendered.nodes.length) {
@@ -1567,7 +1572,7 @@ async function rowAction(action, ref, button) {
   } catch {
     T.record('row_action', { action, status: 0, outcome: 'refused' });
     toast('The Mac did not answer.');
-    if (button) { button.disabled = false; button.textContent = 'Archive'; }
+    restore();
   }
 }
 

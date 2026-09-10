@@ -421,6 +421,31 @@ async function main() {
       after.shown === false && after.any === 0, JSON.stringify(after));
   }
 
+  // ---- 10. an email has controls
+  //
+  // `rail()` was drawn on the order card and nowhere else, so an email thread on the tablet
+  // had no Reply, no Rewrite and no Archive: the Mac had all three registered and reachable
+  // by a spoken sentence only, and the only way out of a thread was to put the tablet down.
+  await say('which customers need replying to?');
+  await page.evaluate(() => { const row = document.querySelector('#cards .row.tappable[data-kind="email_thread"]'); if (row) row.click(); });
+  await sleep(1400);
+  const thread = await page.evaluate(() => {
+    const card = document.querySelector('#cards .card');
+    const chips = Array.from(document.querySelectorAll('#cards .card .rail-chip'));
+    return {
+      type: (card && card.dataset.type) || '',
+      chips: chips.map((c) => ({ label: (c.textContent || '').trim(), mode: c.dataset.mode, family: c.dataset.family || '', ref: c.dataset.ref || '', off: c.getAttribute('aria-disabled') === 'true', h: Math.round(c.getBoundingClientRect().height) })),
+    };
+  });
+  check('tapping a waiting thread opens it', thread.type === 'email_thread', `type=${thread.type}`);
+  check('and the thread has a rail: Reply arms the microphone, Archive prepares the change',
+    thread.chips.some((c) => c.label === 'Reply' && c.family === 'email.reply' && !c.off)
+    && thread.chips.some((c) => c.label === 'Archive' && c.mode === 'stage' && c.ref && !c.off),
+    JSON.stringify(thread.chips));
+  check('its chips are big enough for a finger', thread.chips.length > 0 && thread.chips.every((c) => c.h >= 44),
+    thread.chips.map((c) => `${c.label}:${c.h}px`).join(' '));
+  await shot('07-email-thread');
+
   check('no script error during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
 
   await browser.close();

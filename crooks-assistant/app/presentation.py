@@ -142,6 +142,10 @@ def present(
                 # The rail: which changes make sense for this order, decided on the Mac from
                 # the order's own state and what the store has granted this Mac.
                 item["data"]["actions"] = _actions(call.result, capabilities)
+            if item["type"] == "email_thread":
+                # The same rail for an email. Reply arms the microphone for this thread;
+                # Archive is the row action the list already carries, on the thread itself.
+                item["data"]["actions"] = _email_actions(item["data"], capabilities, row_actions.get("email_thread"))
             items.append(item)
             if item["type"] == "order" and item["data"].get("detail"):
                 # What the order needs, read on the Mac, as its own card after the order.
@@ -357,6 +361,21 @@ def _actions(order: dict[str, Any], capabilities: dict[str, Any]) -> list[dict[s
             "family": _text(a.get("family"), 40),
         }
         for a in available_actions(order, capabilities)[:6]
+    ]
+
+
+def _email_actions(thread: dict[str, Any], capabilities: dict[str, Any],
+                   row_actions: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    from app.actions.available import available_email_actions
+
+    return [
+        {
+            "id": _text(a.get("id"), 20), "label": _text(a.get("label"), 20), "operation": _text(a.get("operation"), 40),
+            "risk": "red" if a.get("risk") == "red" else "amber", "enabled": bool(a.get("enabled")),
+            "reason": _text(a.get("reason"), 60), "instruction": _text(a.get("instruction"), 120), "mode": _text(a.get("mode"), 12) or "ask",
+            "family": _text(a.get("family"), 40), "detail": _text(a.get("detail"), 160),
+        }
+        for a in available_email_actions(thread, capabilities, row_actions=row_actions)
     ]
 
 

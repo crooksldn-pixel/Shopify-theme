@@ -343,6 +343,28 @@ def test_a_summary_is_bounded():
 # --------------------------------------------------------------------------- the rail
 
 
+def test_the_email_thread_carries_a_rail_of_its_own():
+    """Reply arms the microphone for this thread; Archive is the row action the list already
+    carries, on the thread itself. `rail()` used to be drawn on the order card alone, so an
+    email on the tablet had no controls at all."""
+    import app.tools.gmail_writes  # noqa: F401  — Archive is offered only when its write tool is registered
+
+    thread = {"thread_id": "aa70d3f83dbef06e", "message_count": 2, "messages_shown": 2,
+              "messages": [{"from": "Mia Jones", "from_email": "mia@example.com", "subject": "Order #1938", "body": "Can I add to it?", "date": "2026-09-10"}]}
+    caps = {"gmail_draft_reply": {"state": "ready"}, "gmail_thread_archive": {"state": "ready"}}
+    card = present([ok("gmail_read_thread", thread)], writes={"allowed": True, "capabilities": caps})[0]
+    assert card["type"] == "email_thread"
+    actions = card["data"]["actions"]
+    assert [(a["id"], a["mode"]) for a in actions] == [("reply", "ask"), ("email_archive", "stage")]
+    assert actions[0]["family"] == "email.reply" and actions[0]["instruction"] == "Reply to this email"
+    assert actions[1]["detail"], "a staged chip says what it does, under a confirm"
+    # No draft capability: no Reply. Archive is gated by rows.actions_for on the write tool.
+    only_archive = present([ok("gmail_read_thread", thread)], writes={"allowed": True, "capabilities": {}})[0]
+    assert [a["id"] for a in only_archive["data"]["actions"]] == ["email_archive"]
+    # Changes off: nothing on the rail, exactly as on the order card.
+    assert present([ok("gmail_read_thread", thread)])[0]["data"]["actions"] == []
+
+
 def test_the_order_card_carries_the_rail_only_from_the_macs_capabilities():
     caps = {"order_note_append": {"state": "ready"}, "order_cancel": {"state": "ready"}}
     open_order = {**DETAIL, "fulfillment": "UNFULFILLED", "fulfillments": [], "items": [{"title": "Yard Jeans", "unfulfilled_quantity": 1}], "refundable": True}

@@ -905,6 +905,37 @@ test('an email row carries the buttons the Mac listed, and posts only which and 
   assert.ok(button.disabled, 'and the button cannot be pressed twice while it is being prepared');
 });
 
+test('an email thread carries a rail: Reply primes the hold, Archive asks the Mac to prepare', () => {
+  const primed = [];
+  const staged = [];
+  const node = UI.renderItem({ type: 'email_thread', data: {
+    thread_id: 'aa70d3f83dbef06e', subject: 'Order #1938', messages: [{ from: 'Mia', body: 'Can I add to it?' }],
+    actions: [
+      { id: 'reply', label: 'Reply', mode: 'ask', enabled: true, instruction: 'Reply to this email', family: 'email.reply' },
+      { id: 'email_archive', label: 'Archive', mode: 'stage', enabled: true, detail: 'Out of the inbox; nothing is deleted.' },
+    ],
+  } }, { onAction: (a) => primed.push(a.id), onRowAction: (action, ref) => staged.push([action, ref]) });
+  const chips = node.querySelectorAll('.rail-chip');
+  assert.deepEqual(chips.map((c) => c.textContent), ['Reply', 'Archive']);
+  assert.equal(chips[0].dataset.family, 'email.reply', 'the chip says which spoken control it arms');
+  assert.equal(chips[1].dataset.ref, 'aa70d3f83dbef06e', 'a staged chip knows which record it is on');
+  chips[0].dispatch('click', { stopPropagation() {} });
+  chips[1].dispatch('click', { stopPropagation() {} });
+  assert.deepEqual(primed, ['reply']);
+  assert.deepEqual(staged, [['email_archive', 'aa70d3f83dbef06e']], 'the id and the thread, and nothing else');
+  assert.ok(chips[1].disabled, 'and Archive cannot be pressed twice while it is being prepared');
+});
+
+test('a staged chip with no record to act on is off, whatever the Mac said', () => {
+  const node = UI.renderItem({ type: 'email_thread', data: {
+    subject: 's', messages: [{ from: 'M', body: 'b' }],
+    actions: [{ id: 'email_archive', label: 'Archive', mode: 'stage', enabled: true }],
+  } }, { onRowAction: () => { throw new Error('must not be asked'); } });
+  const chip = node.querySelector('.rail-chip');
+  assert.equal(chip.getAttribute('aria-disabled'), 'true');
+  assert.doesNotThrow(() => chip.dispatch('click', { stopPropagation() {} }));
+});
+
 test('a row action is inert when the page has nowhere to send it', () => {
   const node = UI.renderItem({ type: 'email_list', data: { threads: [
     { thread_id: 't1', from: 'M', subject: 's', actions: [{ id: 'email_archive', label: 'Archive', enabled: true }] },

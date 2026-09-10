@@ -146,6 +146,38 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     return [a.public() for a in enabled + disabled]
 
 
+def available_email_actions(thread: dict[str, Any], capabilities: dict[str, dict[str, Any]] | None,
+                            *, row_actions: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """The rail for one email thread. The same shape as the order rail, for the same reason:
+    the tablet renders what it is given and never decides what a chip means.
+
+    Two kinds of chip share it. Reply arms the microphone — it binds `email.reply` to this
+    thread so the sentence that follows is the reply, and nothing is staged by the tap. Archive
+    is a row action (app/actions/rows.py): a tap asks the Mac to PREPARE the change, and the
+    card that comes back still waits for a gesture. Both are gated by what this Mac can do.
+
+    Until this existed, `rail()` was called from exactly one place — the order card — so an
+    email on the tablet had no controls at all: Reply, Rewrite and Archive were registered on
+    the Mac and reachable only by a spoken sentence.
+    """
+    caps = capabilities or {}
+    if not str(thread.get("thread_id") or ""):
+        return []
+    out: list[AvailableAction] = []
+    draft = caps.get("gmail_draft_reply")
+    if isinstance(draft, dict) and draft.get("state") in ("ready", "unknown"):
+        out.append(AvailableAction("reply", "Reply", "gmail_draft_reply", "amber", True, "",
+                                   "Reply to this email", family="email.reply"))
+    public = [a.public() for a in out]
+    # The row actions come already gated (actions_for checks the write tool is registered and
+    # changes are on); they are appended as they are, so Archive on the rail is the same
+    # action as Archive beside a row, resolved by the same table.
+    for a in row_actions or []:
+        if isinstance(a, dict) and a.get("id"):
+            public.append(dict(a))
+    return public[:6]
+
+
 def context_rank(order: dict[str, Any], facts: dict[str, Any] | None = None) -> list[str]:
     """The chips the order's context puts first, in order: a customer's email that mentions
     cancelling puts the cancel first and the reply beside it; one that mentions an address
