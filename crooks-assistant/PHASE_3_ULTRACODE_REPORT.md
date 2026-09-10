@@ -28,14 +28,15 @@ possible.
 | Tapping the other half changed who was listening, not what was on screen | **Impossible** | `tests/test_split_workspaces.py` plus a browser check that switching halves changes the visible cards |
 | A half finished a ten-second turn with nothing on the tablet | **Impossible** | `branch.ready(...)` when the focus is elsewhere, asserted in `tests/test_split_workspaces.py` |
 | The dock was decorative unless already in an interaction | **Impossible** | `experience/scenario_packs/landings.py` — four landings, each tapped from an idle tablet, no model; the tablet gate asserts the tap lands by command, not by sentence |
-| `commerce_query` failed three times running with "sort by :" | _see §13_ | — |
-| An email thread showed no linked order | **Impossible** | `tests/test_graph.py` and `experience/scenario_packs/graph.py` |
-| "Add a black hoodie to this order" refused | _see §10_ | — |
-| Discount code, store credit, abandoned checkouts refused | _see §12_ | — |
-| An email to an address that is not a customer refused | _see §11_ | — |
-| "No, don't save a draft, you want it sent" took 25 s and failed | _see §11_ | — |
+| `commerce_query` failed three times running with "sort by :" | **Impossible** | §11.3 — the six reconstructed live attempts, each of which now parses or carries a `schema_help` whose offered example is itself parsed by the test |
+| An email thread showed no linked order | **Impossible** | §11.4 — `tests/test_graph.py` and `experience/scenario_packs/graph.py`, and the thread says *why* it belongs to that order |
+| "Add a black hoodie to this order" refused | **Built** | §11.1 — `shopify_order_add_item` on the action engine, with a variant picker that never guesses. Needs the `write_order_edits` scope |
+| Discount code, store credit, abandoned checkouts refused | _see §12_ | The commerce-writes family; state at the end of this report |
+| An email to an address that is not a customer refused | **Built** | §11.2 — the composer, and the gate's own id rule is what keeps an arbitrary address safe |
+| "No, don't save a draft, you want it sent" took 25 s and failed | **Built on the touch path** | §11.2 — the draft is loaded into the composer as a send, one gesture away. Not staged from the spoken path, by construction |
 | The armed state was clipped in a dock pill 788 px below the finger | **Impossible** | The armed pill is drawn on the control; the tablet gate asserts it is unclipped, inside the card, with a 44 px Cancel |
 | A failed customer read was drawn as "no customer" | **Impossible** | `tests/web/ui.test.js` and `tests/test_context.py` — a failed region says so and the tab is marked |
+| The compound turn — "have they emailed about this … and draft the reply" — took 35 s | **One turn** | §11.5 — the recipe draws the workspace and Claude writes the words in the same turn; the recipe's grounded sentence leads |
 | Compound surfaces over 3,300 CSS px | **Reduced, measured** | §22 below: the three compound landings now fit one screen at 601 × 889 |
 
 ---
@@ -416,9 +417,133 @@ ElevenLabs key; that is the environment, not the build.
 
 ---
 
-_This report is being written as the pass completes. Sections still to come: the remaining
-capability families (order editing, discount codes, store credit, abandoned checkouts,
-arbitrary email compose, precision input, the query engine, anticipation, the learned layer,
-the Control app, the analyser and recorder), the capability matrix before and after, scope
-requirements, test counts, screenshots, the slowest scenarios, unresolved weaknesses, and the
-deployment steps._
+## 11. The capability families, one at a time
+
+Each of these is one module under `app/families/`, registering its own tools, commands,
+recipes, intent families and capability state on import. Adding a capability is adding a file.
+
+### 11.1 Order item editing (§10) — `order_edit`
+
+The live session asked *"add a black medium Convict hoodie to this order"* and was refused. It
+is now a named reviewed mutation, `shopify_order_add_item`, on the existing action engine:
+`orderEditBegin` → `orderEditAddVariant` → `orderEditCommit`, with the calculated order read
+back before the commit so the card can say what the customer will owe.
+
+It needs a read the build did not have — `shopify_variant_search`, words to a variant id — and
+that read is where the ambiguity lives. "A black medium Convict hoodie" may match one variant,
+several, or none, and the family never guesses: a new UI type, `variant_picker`, draws the
+candidates with their SKU, price and stock, and **Add** is disabled until the owner picks one.
+A confident single match is pre-selected and *still* needs the tap.
+
+What travels back from the tablet when Add is pressed is `{order_id, variant_id, quantity}` and
+nothing else — asserted key by key in `tests/web/ui.test.js`, because a price or a total coming
+back from the tablet would be the write boundary leaking. The Mac builds the execution
+arguments from its own fresh read.
+
+- **Scope required:** `write_order_edits`. Absent, the family is MISSING_SCOPE and says so.
+- **Not done:** there is no "Add item" chip on the order card's rail, so the picker is reached
+  by the sentence rather than from the card; and there is no spoken route to the commit — the
+  mutation guard makes the whole path touch, which is the design, not a gap.
+
+### 11.2 An email to any address, and precision input (§7, §8) — `compose`
+
+Two live failures, one cause. *"Write an email to a model asking if they're free for a shoot
+next Sunday, their email is …"* was refused because every recipient in the build came from
+Shopify. And *"no, don't save a draft, you want it sent"* took 25 seconds and failed.
+
+The composer is the first card on the tablet with **editable fields** on it, and it is still not
+a way round the write boundary. A keystroke posts `compose.field` — a composer id, a field
+*name*, and the typed value — the Mac validates the characters into its own copy, and the
+execution arguments are built from that copy when a gesture asks for them. `field()` in
+`web/ui.js` is one generic component for the values a microphone gets wrong (email, address,
+SKU, tracking number, variant, quantity, code, amount), so every family's field behaves the
+same way and there is one place where a keystroke's route to the Mac is decided.
+
+Three statuses, three rings: **ok**, **uncertain**, **invalid**. `uncertain` exists because a
+mis-heard address is a perfectly valid address belonging to somebody else, and only the owner
+can tell — so a dictated "1232 candlestick horse at gmail dot com" is normalised, marked
+uncertain, and **cannot be staged** until the owner has looked at it.
+
+The gate turned out to enforce the safety property for free. Its write rule requires at least
+one issued id, and an email address can never be one (`_ID_SHAPE` has no `@`), so `to` is
+admitted only alongside `compose_id` — which the Mac minted and issued. An arbitrary address
+can therefore only be staged from a composer whose card the owner has already read.
+
+**The mutation guard was not lifted.** `intent.resolve` refused to score any sentence carrying
+a mutation verb, and both bench sentences carry one ("write", "send"). A `Family` may now
+declare `serves_mutation_words`, and `resolve` narrows the candidate set to families that
+declared it when the sentence has one — so a family that has not opted in is unreachable by a
+mutation sentence however well its signals match, and "cancel it" still returns no family with
+the reason *asks for a change*. All three compose families that opted in are read-only:
+`read_primitives=()`, and `assert_read_only` is run over them in a test.
+
+- **Scope required:** none new. `gmail.compose` was already granted.
+- **Not done:** "send it instead" does not stage from the *voice* path. The fast lane cannot
+  stage, by construction, so spoken it draws the composer loaded from the draft's own stored
+  execution with **Send** (red) on it, and the stage happens on that gesture. The one-gesture
+  behaviour §8 asks for is complete on the touch path.
+
+### 11.3 The read language, and every sort shape a planner sends (§15) — `query_language`
+
+`commerce_query` failed three times running in the live session, once printing the empty
+`sort by :`. The failures were reconstructed from the session and each is now a test that can
+fail: nineteen sort shapes a planner actually sends, the empty key, unknown-versus-known sort
+keys, and what counts as a missing dimension rather than a spec to fix.
+
+Every refusal now carries `schema_help` — attached in the `parse()` wrapper, so it is on the
+refusals raised before the metrics were even in scope — and the offered example **is itself
+parsed by a test**, because a refusal that suggests a shape which does not work is worse than a
+bare refusal. Measured at 350–460 characters including the dispatcher's suffix.
+
+Two operational questions no longer reach the model at all: *"can you see if any of our orders
+are undelivered or unfulfilled"* (0.79 FAST) and *"find a real international order that has
+been waiting too long and hasn't been fulfilled"* (0.79 FAST). "International" means *not this
+country*, read from the shop where the shop reports it.
+
+And *undelivered* is answered honestly rather than approximately: **no carrier is connected**,
+so whether a parcel arrived is not a fact this Mac holds — only fulfilled/unfulfilled, and
+whether a tracking number exists. That is a registered DISCONNECTED capability family, which
+is what puts the one standing line on every model prompt telling it not to try.
+
+- **Scope required:** none — reads only, no new GraphQL, no model-generated queries. One new
+  setting, `CROOKS_SHOP_COUNTRY_CODE` (default GB).
+- **Not done:** an enum filter takes one value, not a list. The Shop GraphQL query is
+  deliberately *not* extended to ask Shopify for its own country: that one query is where the
+  timezone comes from, and a field the token's scopes may not cover would fail all of it.
+
+### 11.4 Email ↔ order, both directions (§5, §6) — `graph`
+
+An email thread showed no linked order on the tablet even though the backend had the
+correlation — which the Phase 2 analyser reported as "email correlation missing: never". The
+link is now on the card, in both directions, and a thread says *why* it belongs to an order:
+the address and the order number, not the customer's name.
+
+The needs-reply queue also stopped counting things that are not customers waiting. An
+automated carrier report was offered as somebody awaiting a reply, because the listing found it
+by the order number in its subject and nothing asked who wrote it.
+
+### 11.5 The compound turn (§16) — one workspace, one sentence, one turn
+
+The worst real turn was *"check whether they've emailed us about this, tell me what they're
+waiting for, and draft the reply"* — roughly 35 seconds, almost all of it Claude rediscovering
+mechanics it rediscovers every time.
+
+A `FastAnswer` may now be `partial` and carry a **continuation**: an instruction to the model
+that `app/routes/turn.py` appends to the prompt *instead of ending the turn*. The recipe's
+cards are kept, its reads are on the log, and one answer comes back in two halves —
+
+> **the recipe's grounded sentence leads, and the model's follows it.**
+
+The order is the point. A fact that was *read* cannot be displaced by one that was *generated*,
+and the grounded half is what the owner still hears if the model fails. The continuation prompt
+is told not to repeat the mechanical half, so nobody hears who wrote and whether we replied
+twice in one breath.
+
+It is handed over only when the thing being asked for can actually be done: while changes are
+off, the owner is told so plainly and the model is never asked for a draft the gate would
+refuse. The continuation is never written to the timeline and never reaches the tablet — the
+timeline keeps the tool name and a character count, because the prompt quotes a customer.
+
+`facts_ms` takes the recipe's reads over the model's last tool step on such a turn. Reading a
+draft being *composed* as "when the facts arrived" would report a twenty-second turn as twenty
+seconds of reading and nothing waited, which is the inverse of the number §25 asks for.
