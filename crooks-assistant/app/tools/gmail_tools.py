@@ -127,7 +127,13 @@ def _decode_part(part: dict) -> str:
     if not data:
         return ""
     try:
-        return base64.urlsafe_b64decode(data.encode()).decode("utf-8", errors="replace")
+        # Padded before decoding. Gmail's `body.data` is base64url and its padding is not
+        # guaranteed — an unpadded string is a length that is not a multiple of four, which
+        # `urlsafe_b64decode` raises on, which this except swallowed, which meant the message
+        # HAD NO BODY. Every fixture message reads that way (experience/fixtures/data.py
+        # encodes with the padding stripped, exactly as the API may), so every email body read
+        # offline was empty: "what are they waiting for" had nothing to read but the subject.
+        return base64.urlsafe_b64decode(data.encode() + b"=" * (-len(data) % 4)).decode("utf-8", errors="replace")
     except Exception:  # noqa: BLE001
         return ""
 

@@ -444,3 +444,20 @@ def test_the_queue_rows_carry_the_related_orders_and_the_confidence():
     assert mia["snippet"] == "#1938 · confident", "the thread's own order, not the customer's whole history"
     assert priya["related_orders"] == [] and priya["confidence"] == "possible"
     assert priya["snippet"] == "#1940 · possible", "no number in the thread: the recent orders stand in, and the row says it is only possible"
+
+
+def test_an_unpadded_gmail_body_still_has_words_in_it():
+    """Gmail's `body.data` is base64url and its padding is not guaranteed. Unpadded, it raised
+    inside `_decode_part`, the raise was swallowed, and the message HAD NO BODY — so the reply
+    state and the continuation prompt had nothing but a subject line to work from. The fixture
+    inbox encodes exactly that way (experience/fixtures/data.py)."""
+    import base64
+
+    from app.tools.gmail_tools import _decode_part
+
+    text = "Hi, I have just placed order 1938. Is it too late to add a cap to it? Thanks, Mia."
+    unpadded = base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
+    assert len(unpadded) % 4 != 0, "this fixture no longer exercises the unpadded case"
+    assert _decode_part({"mimeType": "text/plain", "body": {"data": unpadded}}) == text
+    assert _decode_part({"mimeType": "text/plain", "body": {"data": ""}}) == ""
+    assert _decode_part({"mimeType": "text/plain", "body": {"data": "!!!not base64!!!"}}) == ""
