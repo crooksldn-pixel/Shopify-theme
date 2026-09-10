@@ -466,7 +466,10 @@ def test_e_the_report_reads_the_command_and_navigation_events(tmp_path):
 
     posted = [e for e in rec.controls if e["kind"] == "command"]
     assert sum(1 for e in posted if e.get("ok") is False) == 2
-    # A tap is not a turn: most of these belong to none, and that is reported rather than lost.
+    # A tap is not a turn: these were all made between two questions, so they belong to none —
+    # and that is REPORTED rather than quietly filed against whichever turn ran last.
+    assert "Commands outside any turn: 27" in markdown
+    assert all(not t.commands for t in rec.turns), "no tap here happened while a turn was running"
     assert all(e in rec.controls for t in rec.turns for e in t.commands)
 
 

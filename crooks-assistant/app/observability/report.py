@@ -537,12 +537,15 @@ def reconstruct(events: list[dict[str, Any]], *, capability_states: dict[str, di
             else:
                 orphans.append(event)
         elif kind in ("command", "command_stage", "row_action"):
-            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            # `_turn_during`, not `_turn_in_flight`: a hydration that lands after the answer
+            # belongs to the turn it was for, and a tap thirty seconds later belongs to nothing.
+            # Most taps belong to no turn — a tap is not a turn — and saying so is the point.
+            turn = turn_for(event) or _turn_during(turns, order, event)
             if turn is not None:
                 turn.commands.append(event)
             controls.append(event)
         elif kind.startswith("branch_"):
-            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            turn = turn_for(event) or _turn_during(turns, order, event)
             if turn is not None:
                 turn.branch_events.append(event)
             controls.append(event)
@@ -610,6 +613,23 @@ def reconstruct(events: list[dict[str, Any]], *, capability_states: dict[str, di
     _mark_repeats(result)
     return Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans,
                           unknown_kinds=unknown, controls=controls, collisions=collisions)
+
+
+def _turn_during(turns: dict[str, Turn], order: list[str], event: dict[str, Any]) -> Turn | None:
+    """The turn that was actually RUNNING at that moment, or None.
+
+    Stricter than `_turn_in_flight`, which reaches thirty seconds past a turn's end because a
+    context hydration that lands after the answer is still that answer's. A tap is not: one made
+    while the Mac was thinking belongs to that turn, and one made afterwards belongs to the
+    owner working the screen between two questions.
+    """
+    ts = float(event.get("ts") or 0.0)
+    for turn_id in reversed(order):
+        turn = turns[turn_id]
+        end = turn.finished_at or (turn.started_at + 30.0)
+        if turn.started_at <= ts <= end:
+            return turn
+    return None
 
 
 def _turn_in_flight(turns: dict[str, Turn], order: list[str], event: dict[str, Any]) -> Turn | None:
@@ -1405,7 +1425,8 @@ def intelligence(rec: Reconstruction, registered: list[str], *, capability_state
         if v is None or v.mutation or not v.unplaced or not (t.question or "").strip():
             continue
         shape = f"{t.cluster}: " + " ".join((t.question or "").lower().split()[:4])
-        entry = read_gaps.setdefault(shape, {"n": 0, "turns": [], "reason": v.reason or "no family matched"})
+        why = v.disagreement or v.reason or "no family matched"
+        entry = read_gaps.setdefault(shape, {"n": 0, "turns": [], "reason": why})
         entry["n"] += 1
         entry["turns"].append(t.turn_id)
     relations = [(t.turn_id, sig) for t in turns for sig in t.signals if "surface drew no order" in sig]
