@@ -17,6 +17,7 @@ import time
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse
 
+from app import readonly
 from app.actions import grammar
 from app.observability import timeline
 from app.presentation import present, present_action, present_proposal_state
@@ -385,6 +386,13 @@ async def commit(request: Request, proposal_id: str, session_id: str = Form(defa
     if result.proposal is None:
         timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, code=result.code, detail="no such proposal", ms=_elapsed(started))
         return _refuse(404 if result.code == "unknown" else 403, result.code, "No such proposal for this session.")
+    if result.code == "read_only":
+        # A backend latched read-only for an acceptance run. The card is untouched and still
+        # says PENDING: nothing was claimed, so nothing has to be un-claimed.
+        log.warning("commit refused: read_only — %s", readonly.reason())
+        timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id,
+                      turn_id=result.proposal.turn_id or None, code="read_only", ms=_elapsed(started))
+        return _refuse(403, "read_only", "This backend is in read-only test mode and cannot apply changes.")
     if result.code == "not_armed":
         log.warning("commit refused: not_armed — a hold gesture without its hold (caller=%s)", caller)
         timeline.emit("action_commit_refused", session_id=session_id.strip(), proposal_id=proposal_id, turn_id=result.proposal.turn_id or None, code="not_armed", nonce_present=bool(nonce), ms=_elapsed(started))

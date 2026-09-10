@@ -23,6 +23,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from app import readonly
+
 log = logging.getLogger("crooks.gmail")
 
 SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
@@ -411,6 +413,7 @@ class GmailClient:
     # --- the writes: named, fixed shapes, one call each
 
     def create_draft(self, raw: str, thread_id: str | None) -> dict:
+        readonly.assert_writable("creating a Gmail draft")
         body = {"message": {"raw": raw, **({"threadId": thread_id} if thread_id else {})}}
         def call():
             draft = self.service().users().drafts().create(userId="me", body=body).execute()
@@ -419,9 +422,11 @@ class GmailClient:
         return self._run("Could not save the draft", call)
 
     def delete_draft(self, draft_id: str) -> None:
+        readonly.assert_writable("deleting a Gmail draft")
         self._run("Could not delete the draft", lambda: self.service().users().drafts().delete(userId="me", id=draft_id).execute())
 
     def send_message(self, raw: str, thread_id: str | None) -> dict:
+        readonly.assert_writable("sending a Gmail message")
         body = {"raw": raw, **({"threadId": thread_id} if thread_id else {})}
         def call():
             sent = self.service().users().messages().send(userId="me", body=body).execute()
@@ -429,11 +434,13 @@ class GmailClient:
         return self._run("Could not send", call)
 
     def send_draft(self, draft_id: str) -> dict:
+        readonly.assert_writable("sending a Gmail draft")
         def call():
             sent = self.service().users().drafts().send(userId="me", body={"id": draft_id}).execute()
             return {"message_id": str(sent.get("id") or ""), "thread_id": str(sent.get("threadId") or "")}
         return self._run("Could not send the draft", call)
 
     def modify_thread(self, thread_id: str, *, add: list[str], remove: list[str]) -> None:
+        readonly.assert_writable("relabelling a Gmail thread")
         body = {"addLabelIds": list(add), "removeLabelIds": list(remove)}
         self._run("Could not change the thread's labels", lambda: self.service().users().threads().modify(userId="me", id=thread_id, body=body).execute())

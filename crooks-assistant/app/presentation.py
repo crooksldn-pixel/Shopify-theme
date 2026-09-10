@@ -695,6 +695,7 @@ _COMMIT_BLOCKED_WORDS = {
     "scope_missing": "The store has not granted the permission this change needs.",
     "gmail_scope_missing": "The Gmail credential cannot make this change yet.",
     "identity_unverified": "The Mac could not confirm this tablet's identity with Tailscale.",
+    "read_only": "This backend is in read-only test mode and cannot apply changes.",
 }
 
 

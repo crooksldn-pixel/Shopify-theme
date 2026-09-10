@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
+from app import readonly
 from app.actions.grammar import ARMED_FOR_S, dwell_ms, gesture_for
 from app.actions.ledger import ActionLedger, NullLedger
 from app.actions.models import (
@@ -348,6 +349,11 @@ class ActionEngine:
         A member of a batch is committed only by its batch (`via_batch` names it): the
         batch's gesture authorised it, so no arming of its own is looked for; and a commit
         that names the member directly is refused, whatever it carries."""
+        if readonly.active():
+            # A process latched read-only refuses here as well as at the client, so that the
+            # card says why in the owner's words and the ledger records a refusal rather than
+            # a failed send. Nothing is claimed and the proposal stays exactly as it was.
+            return CommitResult(self.find(proposal_id), "read_only", "")
         proposal = self.find(proposal_id)
         if proposal is None:
             return CommitResult(None, "unknown", "")

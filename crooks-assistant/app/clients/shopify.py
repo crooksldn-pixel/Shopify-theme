@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from app import readonly
 from app.secrets import keychain
 
 log = logging.getLogger("crooks.shopify")
@@ -582,6 +583,9 @@ class ShopifyClient:
         """Send one reviewed mutation by name. The document comes from REVIEWED_MUTATIONS,
         the variables must be exactly the set it declares, and every string is bounded. There
         is no way to pass a document in."""
+        # Before the name is even looked up. Every Shopify change in the application comes
+        # through here, so a process that has latched read-only cannot make one.
+        readonly.assert_writable(f"the Shopify mutation {name!r}")
         reviewed = REVIEWED_MUTATIONS.get(name)
         if reviewed is None:
             raise ShopifyError(f"Refused: {name!r} is not a reviewed mutation.")

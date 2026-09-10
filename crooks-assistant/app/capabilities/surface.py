@@ -20,18 +20,20 @@ from typing import Any
 
 from app.surfaces import Freshness, Surface
 
-# The parts of the shop, in the order an owner thinks about them. `_source_of` in manifest.py
-# already tags every tool with one of these areas; this fixes the order and gives each a word.
-AREAS: tuple[tuple[str, str], ...] = (
-    ("orders", "Orders"),
-    ("customers", "Customers"),
-    ("products", "Products and stock"),
-    ("email", "Email"),
-    ("analytics", "Sales and reporting"),
-    ("system", "The assistant itself"),
-)
-_AREA_ORDER = {name: i for i, (name, _) in enumerate(AREAS)}
-_AREA_LABEL = dict(AREAS)
+# What the manifest calls each area, and what to call it on screen. The manifest tags every
+# tool by prefix (app/capabilities/manifest.py:_FAMILY) and those tags are its words, not
+# these — so anything it invents that is not listed here still gets a group, under its own
+# name. A capability that quietly vanished from this surface because nobody updated a table
+# would be the worst kind of wrong: the screen would say the assistant cannot do something it
+# can.
+LABELS: dict[str, str] = {
+    "the shop": "The shop",
+    "the inbox": "The inbox",
+    "the read layer": "Sales and stock",
+    "bulk changes": "Bulk changes",
+    "the Mac": "The assistant",
+}
+ORDER = tuple(LABELS)
 
 MAX_PER_GROUP = 10
 MAX_EXAMPLES = 6
@@ -79,19 +81,16 @@ def _grouped(manifest: dict[str, Any], states: dict[str, dict[str, Any]] | None)
             entry["state"] = "unknown"
 
     groups: list[dict[str, Any]] = []
-    for area, label in AREAS:
+    for area in sorted({e["area"] for e in entries}, key=lambda a: (ORDER.index(a) if a in ORDER else len(ORDER), a)):
         mine = [e for e in entries if e["area"] == area]
-        if not mine:
-            continue
         mine.sort(key=lambda e: ({"read": 0, "change": 1, "bulk": 2}[e["kind"]], e["name"]))
         groups.append({
             "area": area,
-            "label": label,
+            "label": LABELS.get(area, area[:1].upper() + area[1:]),
             "count": len(mine),
             "truncated": len(mine) > MAX_PER_GROUP,
             "items": mine[:MAX_PER_GROUP],
         })
-    groups.sort(key=lambda g: _AREA_ORDER.get(g["area"], 99))
     return groups
 
 

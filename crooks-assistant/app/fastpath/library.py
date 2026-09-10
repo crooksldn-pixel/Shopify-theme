@@ -626,7 +626,11 @@ def _customer_history_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
 
 register(Recipe(
     recipe_id="customer_history_lookup", intent_family="customer_history_lookup",
-    required_entities=("customer", "order"),
+    # Deliberately none. `required_entities` means ALL of them (app/fastpath/runner.py), and
+    # this recipe needs EITHER a customer or an order to work from — declaring both made it
+    # defer every time only an order was open, which is the commonest way to ask it. The plan
+    # returns None when there is nothing to work from, and a plan of None is already a defer.
+    required_entities=(),
     read_primitives=("shopify_order_detail", "shopify_customer_history"),
     parallel_nodes=(("detail",), ("history",)), ui="customer", cache_policy=CACHE_ENTITY,
     min_confidence=0.74, target_ms=1500, plan=_customer_history_plan, render=_customer_history_render,

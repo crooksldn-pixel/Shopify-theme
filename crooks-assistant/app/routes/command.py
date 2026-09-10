@@ -108,7 +108,15 @@ async def command(
             "ms": round(elapsed, 1), "lane": "TOUCH",
         }
 
-    ui = present(outcome.calls, session=session, writes=await _writes(runtime))
+    calls = list(outcome.calls)
+    needs = outcome.changed.get("needs_read") if isinstance(outcome.changed, dict) else None
+    if isinstance(needs, dict) and not calls:
+        # The cursor landed on a record the Mac does not hold. Memory makes Back and Next
+        # instant when it can; when it cannot, the record is read here rather than the tap
+        # doing nothing. A button that moves a cursor and draws nothing is the worst of both.
+        calls = await _read_member(runtime, session, needs)
+        outcome.changed["read"] = bool(calls)
+    ui = present(calls, session=session, writes=await _writes(runtime))
     if outcome.surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in outcome.surfaces] + ui
     return {
@@ -124,6 +132,32 @@ async def command(
         "lane": "TOUCH",
         "model_calls": 0,
     }
+
+
+async def _read_member(runtime, session, needs: dict) -> list:
+    """Read one record, through the same scheduler and the same tools a recipe would use.
+
+    Not a shortcut around the gate: `run_plan` refuses a plan naming anything but a read, and
+    the tools are the registered ones. A tap can therefore cause a read and can never cause
+    anything else.
+    """
+    from app.commands import MEMBER_READ
+    from app.reads.scheduler import Read, ReadPlan, run_plan
+
+    tool, argument, _kind = MEMBER_READ.get(str(needs.get("set_kind") or ""), ("", "", ""))
+    ref = str(needs.get("ref") or "")
+    if not tool or not ref:
+        return []
+    plan = ReadPlan([Read("member", tool, {argument: ref},
+                          source="gmail" if tool.startswith("gmail_") else "shopify")],
+                    label="command:member")
+    try:
+        result = await run_plan(plan, session=session, timeout_s=6.0,
+                                turn_id=getattr(session, "turn_id", ""))
+    except Exception as exc:  # noqa: BLE001 — a tap that cannot read says so; it never fails the app
+        log.info("a command could not read %s: %s", tool, exc)
+        return []
+    return list(result.calls)
 
 
 async def _writes(runtime) -> dict:

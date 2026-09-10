@@ -194,7 +194,11 @@ class Signals:
         return out
 
 
-_DEIXIS = frozenset({"that", "this", "it", "them", "those", "these", "they", "him", "her", "their"})
+# Pointing at what is already on screen. "She" and "he" belong here for the same reason "her"
+# and "him" do: they refer to the record in front of the owner, not to a person named in the
+# sentence.
+_DEIXIS = frozenset({"that", "this", "it", "them", "those", "these", "they", "him", "her",
+                     "their", "she", "he", "his", "hers"})
 
 
 def signals_for(text: str, *, branch: Any = None) -> Signals:
@@ -311,8 +315,14 @@ FAMILIES: tuple[Family, ...] = (
            entities=("order",), base=0.76, max_words=8),
     # "What else has this customer ordered?" — the person is whoever the open record belongs
     # to, so no name has to be resolved.
-    Family("customer_history_lookup", needs=("bought", "has_entity"), boosts=("customer", "question", "deixis"),
-           blocks=("mutation", "order_number", "metric", "email", "ranking", "period"),
+    # "What else has THIS customer ordered?" — the person is whoever the open record belongs
+    # to. Blocked by a name, because a name means a different question: "has Daniel bought
+    # from us before" is about Daniel whatever is on screen, and answering it from the open
+    # order would report on whoever that order belongs to. customer_purchase_lookup takes
+    # the named case; this one takes the pronoun.
+    Family("customer_history_lookup", needs=("bought", "has_entity", "deixis"), boosts=("customer", "question"),
+           blocks=("mutation", "order_number", "metric", "email", "ranking", "period",
+                   "known_name", "possessive_name"),
            entities=("customer", "order"), base=0.74, max_words=12),
     Family("order_status_lookup", needs=("status",), boosts=("order_number", "order", "has_entity", "deixis"), blocks=("mutation", "metric", "address"), entities=("order",), base=0.72, max_words=14),
     Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email"), entities=("order",), base=0.72, max_words=14),
