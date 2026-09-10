@@ -652,3 +652,41 @@ def test_an_unpadded_gmail_body_still_has_words_in_it():
     assert _decode_part({"mimeType": "text/plain", "body": {"data": unpadded}}) == text
     assert _decode_part({"mimeType": "text/plain", "body": {"data": ""}}) == ""
     assert _decode_part({"mimeType": "text/plain", "body": {"data": "!!!not base64!!!"}}) == ""
+
+
+def test_a_sentence_that_names_a_number_is_not_answered_from_the_order_on_screen():
+    """"Any email from him about 1938" is two candidate subjects — the record on screen and a
+    number that may be an order, a tracking number or a year, because a bare one is
+    deliberately never extracted as an order number. The recipe declines to plan it and Claude
+    takes the turn, which is how it was answered in September."""
+    from app.families import load_all
+    from app.fastpath.intent import resolve
+    from app.fastpath.models import Ctx
+    from app.fastpath.recipes import RECIPES
+    from app.reads.scheduler import ReadResult
+    from app.session.branch import Branch
+    from app.session.models import Session
+
+    load_all()
+    recipe = RECIPES["order_email_reply"]
+    session = Session(session_id="s-number")
+    branch = Branch(branch_id="b", session_id="s-number")
+    branch.visit("order", MIA_ORDER_ID := "gid://shopify/Order/1938", "#1938")
+
+    def ctx_for(text: str) -> Ctx:
+        return Ctx(runtime=None, session=session, branch=branch, intent=resolve(text, branch=branch), text=text)
+
+    about_this = ctx_for("have they emailed about this order")
+    assert recipe.plan(about_this) is not None, "the deictic question is exactly what this recipe is for"
+    assert [r.name for r in recipe.plan(about_this).reads] == ["detail", "threads", "thread"]
+    assert recipe.plan(about_this).reads[0].args == {"order_id": MIA_ORDER_ID}
+
+    for named in ("any email from him about 1938", "has she emailed about 1936"):
+        declined = ctx_for(named)
+        assert recipe.plan(declined) is None, named
+        assert recipe.render(declined, ReadResult()).defer, named
+
+    # And with nothing open there is nothing for "this" to mean.
+    empty = Ctx(runtime=None, session=session, branch=Branch(branch_id="b2", session_id="s-number"),
+                intent=resolve("have they emailed about this order", branch=None), text="have they emailed about this order")
+    assert recipe.plan(empty) is None

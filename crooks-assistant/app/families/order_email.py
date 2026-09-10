@@ -61,6 +61,7 @@ of what was said.
 
 from __future__ import annotations
 
+import re
 import time
 from email.utils import parsedate_to_datetime
 from typing import Any
@@ -421,23 +422,45 @@ def _thread_args(values: dict[str, Any]) -> dict[str, Any] | None:
     return {"thread_id": str(chosen.get("thread_id"))} if chosen and confidence == "confident" else None
 
 
+_NUMBER_SAID = re.compile(r"\b\d{3,6}\b")
+
+
+def _names_a_record(ctx: Ctx) -> bool:
+    """Whether the sentence names a record by number instead of pointing at the open one.
+
+    This family's whole subject is "this" — the order the owner is looking at. A number in the
+    sentence is him naming something, and `spoken_order_numbers` deliberately will not extract
+    a bare one (a bare 2025 is a year, "over 500" is money), so what reaches here cannot be
+    told apart: "any email from him about 1938" may be the open order, another order, a
+    tracking number or a date. `library._names_another_order` guards the same hazard for the
+    order recipes — "the right shape of answer, the wrong customer's address, spoken aloud".
+
+    It is deliberately the cautious version of that guard: ANY number, even one that matches
+    the order on screen, sends the turn to Claude, which can look up whatever was said and ask.
+    What it costs is one phrasing ("any email from him about 1938") answered in a model turn,
+    the way it was in September. What it buys is that a family which opens a customer's thread
+    and offers to write to them never does so on a number it could not parse.
+    """
+    return bool(_NUMBER_SAID.search(ctx.text or ""))
+
+
 def _plan(ctx: Ctx) -> ReadPlan | None:
     """The order, then the inbox around it, then the one thread. Three waves, because each
     genuinely needs the one before it: the search needs the customer's address, and the thread
-    read needs to know which thread is worth opening."""
+    read needs to know which thread is worth opening.
+
+    The order is always the one the conversation is ON. Both families block `order_number` and
+    the plan declines a bare one, so there is no "find it first" wave here; with nothing open
+    the runner defers before the plan is asked for at all (`required_entities`).
+    """
     known = ctx.entity("order")
-    number = ctx.order_number
-    reads: list[Read] = []
-    if known and not library._names_another_order(ctx, known):
-        reads.append(Read("detail", "shopify_order_detail", {"order_id": known}, source="shopify", cost=90.0))
-    elif number:
-        reads.append(Read("find", "shopify_find_order", {"query": number}, source="shopify", cost=30.0))
-        reads.append(Read("detail", "shopify_order_detail", library._detail_args, source="shopify", after=("find",), cost=90.0))
-    else:
+    if not known or _names_a_record(ctx):
         return None
-    reads.append(Read("threads", "gmail_search", _threads_args, source="gmail", after=("detail",), cost=2.0))
-    reads.append(Read("thread", "gmail_read_thread", _thread_args, source="gmail", after=("threads",), cost=1.0))
-    return ReadPlan(reads, label="order_email_reply", timeout_s=10.0)
+    return ReadPlan([
+        Read("detail", "shopify_order_detail", {"order_id": known}, source="shopify", cost=90.0),
+        Read("threads", "gmail_search", _threads_args, source="gmail", after=("detail",), cost=2.0),
+        Read("thread", "gmail_read_thread", _thread_args, source="gmail", after=("threads",), cost=1.0),
+    ], label="order_email_reply", timeout_s=10.0)
 
 
 def _call(result: ReadResult, node: str):
@@ -507,6 +530,8 @@ def _arm(ctx: Ctx, *, thread_id: str, subject: str) -> bool:
 
 
 def _render(ctx: Ctx, result: ReadResult) -> FastAnswer:
+    if _names_a_record(ctx):
+        return FastAnswer(answer="", defer="the sentence names a record by number rather than the one open")
     order = result.values.get("detail")
     if not isinstance(order, dict) or not order.get("order_id"):
         return FastAnswer(answer="", defer="the order did not resolve to one record")
@@ -611,8 +636,10 @@ def _render(ctx: Ctx, result: ReadResult) -> FastAnswer:
 # other's way: the second blocks `email`, so a sentence carrying both (the bench's compound
 # one) matches the first alone and never lands in an ambiguous tie.
 _PLAN_AND_RENDER = {"plan": _plan, "render": _render}
-_READS = ("shopify_find_order", "shopify_order_detail", "gmail_search", "gmail_read_thread")
-_WAVES = (("find",), ("detail",), ("threads",), ("thread",))
+_READS = ("shopify_order_detail", "gmail_search", "gmail_read_thread")
+# Three waves, each waiting on the one before it. Documented here so a dependency added to
+# `_plan` without saying so is caught by tests/test_fastpath.py rather than on the workbench.
+_WAVES = (("detail",), ("threads",), ("thread",))
 
 register(Recipe(
     recipe_id="order_email_reply", intent_family="order_email_draft", required_entities=("order",),
@@ -632,6 +659,13 @@ register(Recipe(
 _NOT_THIS = (
     "mutation", "metric", "ranking", "stock", "running_out", "period", "status", "address",
     "bought", "again", "possessive_name", "known_name",
+    # And a number. This family's subject is the record in front of the owner — "this" — and a
+    # sentence carrying BOTH a pronoun and an order number has two candidate subjects: "any
+    # email from him about 1938" is the customer on screen and an order that may be somebody
+    # else's. Choosing between them is a judgement, not a lookup, so it goes to Claude, which
+    # can look up both and ask. (It is also how that question was answered in the September
+    # recording — one model turn, one gmail_search — and there was nothing wrong with it.)
+    "order_number",
 )
 extend([
     # "Check whether they've emailed us about this" / "have they emailed about this order" /
