@@ -93,6 +93,27 @@ class FixtureShopify(ShopifyClient):
         }
         self._tz = ZoneInfo(data.SHOP_TIMEZONE)
 
+    def forget_scenario(self) -> None:
+        """Drop the record of what has been ASKED of this shop, and nothing else.
+
+        `experience/scenarios.py::run_all` shares one store across every scenario where
+        `tests/test_experience.py` builds one per test, and the two disagreed twice: first over
+        the calculation log, then — after a fix that listed the fields to clear in the runner —
+        over `drafts`, which was added here afterwards. A reset that names fields from another
+        file goes stale every time somebody adds one, so it lives here, beside them.
+
+        What is NOT cleared is the WORLD: `scopes`, `_shop`, `_tz` and the opening store-credit
+        balances are the golden data, and a scenario that quietly depended on being first
+        should still be wrong rather than hidden.
+        """
+        self.queries.clear()
+        self.calculations.clear()
+        self.calculated.clear()
+        self.drafts.clear()
+        self.drafts_by_id.clear()
+        self.draft_number = 4000
+        self.mutations_sent = 0
+
     # ---------------------------------------------------------------- the seam
 
     async def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:

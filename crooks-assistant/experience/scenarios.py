@@ -606,13 +606,40 @@ def _forget_the_last_scenario(h: Harness) -> None:
     Only the LOG is cleared, never the world: the orders, the inbox and the catalogue are the
     golden data and a scenario that depended on being first would still be wrong. What goes is
     the record of calls, which belongs to a scenario and not to the shop.
+
+    Each owner clears its own. The first version of this listed the store's fields here, and it
+    went stale within the day — `drafts` was added to the fixture afterwards and leaked, which
+    is the same failure a second time. So: the store forgets its log
+    (`FixtureShopify.forget_scenario`), the anticipation layer is replaced with a fresh one,
+    and the tiered cache is emptied. A scenario that opens an order and predicts the reads
+    around it must find nothing already held, or "something was predicted at all" is false
+    through no fault of the code.
     """
     store = getattr(h, "store", None)
-    for name in ("calculations", "queries"):
-        log = getattr(store, name, None)
-        if isinstance(log, list):
-            log.clear()
-    if isinstance(getattr(store, "calculated", None), dict):
-        store.calculated.clear()
-    if isinstance(getattr(store, "mutations_sent", None), int):
-        store.mutations_sent = 0
+    forget = getattr(store, "forget_scenario", None)
+    if callable(forget):
+        forget()
+    else:  # a store without the hook — clear what every fake has
+        for name in ("calculations", "queries"):
+            log = getattr(store, name, None)
+            if isinstance(log, list):
+                log.clear()
+        if isinstance(getattr(store, "mutations_sent", None), int):
+            store.mutations_sent = 0
+
+    # The anticipation layer holds in-flight predictions, a position per conversation and
+    # counters a scenario asserts on. A fresh one is cleaner than a partial reset.
+    try:
+        from app.anticipation import engine as anticipation
+
+        anticipation.install(None)
+    except Exception:  # noqa: BLE001 — a runner that cannot reset it still runs the scenarios
+        pass
+    # And the cache, because a read already held is a read the layer rightly declines to
+    # predict — which reads as "nothing was predicted" in the scenario after it.
+    try:
+        from app.memory import current as memory
+
+        memory().clear()
+    except Exception:  # noqa: BLE001
+        pass

@@ -624,3 +624,49 @@ async def test_a_scenario_does_not_inherit_the_last_one_in_a_shared_harness(stag
     assert len(stage.store.queries) >= 0
     from experience.fixtures import data
     assert data.BY_NAME["#1938"] is not None
+
+
+def test_the_fixture_shop_forgets_every_field_it_records_a_scenario_in():
+    """The guard that stops this recurring, rather than a third fix for a fourth field.
+
+    The first version of the reset listed the store's fields in the RUNNER, and it went stale
+    the same day: `drafts` was added to the fixture afterwards, leaked, and an order-creation
+    scenario failed with the previous scenario's draft in its detail — the identical failure a
+    second time, in a new field.
+
+    So this compares a shop that has been USED and then told to forget against a shop straight
+    out of the box, field by field. A new mutable field recorded per scenario and not cleared
+    fails HERE, in the file that adds it, rather than in whichever scenario happens to run
+    after it next month.
+    """
+    from experience.fixtures.shopify import FixtureShopify
+
+    fresh = FixtureShopify()
+    used = FixtureShopify()
+
+    # Use it the way a scenario does: ask it things, and leave a draft behind.
+    used.queries.append(("CrooksOrders", {"first": 10}))
+    used.calculations.append(("order_edit_begin", {"id": "gid://shopify/Order/1938"}))
+    used.calculated["gid://shopify/CalculatedOrder/1938"] = {"id": "x"}
+    used.drafts.append({"customerId": "gid://shopify/Customer/7003"})
+    used.drafts_by_id["gid://shopify/DraftOrder/4000"] = {"id": "gid://shopify/DraftOrder/4000"}
+    used.draft_number += 1
+    used.mutations_sent += 1
+
+    used.forget_scenario()
+
+    # Public attributes only. The underscored ones are the shop's own machinery — the shop
+    # document, its timezone, a lock — and a lock differs by identity on every construction,
+    # which would make this test fail for a reason that is not a leak. Everything a scenario
+    # is recorded in is public, which is what makes the rule safe rather than convenient.
+    differ = sorted(
+        name for name, value in vars(used).items()
+        if not name.startswith("_") and vars(fresh).get(name) != value
+    )
+    assert not differ, (
+        "these fields survived forget_scenario(), so one scenario inherits them from the "
+        f"last in `make experience`: {differ}"
+    )
+    # The world is deliberately still there — the reset drops the log, not the shop.
+    assert used.scopes == fresh.scopes
+    assert used.store_credit == fresh.store_credit, "an opening balance is the world, not a log"
