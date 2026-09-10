@@ -271,6 +271,17 @@ def test_the_gate_stages_it_only_with_both_ids_issued_and_a_sane_quantity():
                     issued_ids={"gid://shopify/Customer/7", HOODIE}).disposition is Disposition.DENY
 
 
+def test_the_steppers_ceiling_and_the_tools_bound_are_the_same_number():
+    """The picker's stepper stops at the number the write tool would refuse. Two ceilings in
+    two files drift, and the shape of that drift is a button that posts a quantity the Mac
+    then rejects — so they are asserted to agree rather than kept in step by hand."""
+    from app.presentation import MAX_PICKER_QUANTITY
+    from app.tools.shopify_writes import MAX_ADD_QUANTITY
+
+    assert MAX_PICKER_QUANTITY == MAX_ADD_QUANTITY
+    assert registry.get(TOOL).input_schema["properties"]["quantity"]["maximum"] == MAX_ADD_QUANTITY
+
+
 def test_the_read_that_finds_the_variant_is_a_read_and_the_family_declares_both():
     search = registry.get(SEARCH)
     assert search.write is None and search.batch is None and search.tier is Tier.GREEN
