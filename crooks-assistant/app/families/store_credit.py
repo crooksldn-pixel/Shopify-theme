@@ -205,9 +205,9 @@ def _balance(workspace: dict[str, Any]) -> float | None:
         return None
     currency = ws.value(workspace, "currency", "GBP").upper()
     matching = [a for a in accounts if str(a.get("currency") or "").upper() == currency]
-    if not matching:
-        return 0.0 if accounts is not None else None
-    return matching[0].get("balance")
+    # No account in that currency, and the shop HAS been read: nothing, which is a balance
+    # and not an unknown. "Not read yet" is the None above, and the card says which.
+    return matching[0].get("balance") if matching else 0.0
 
 
 def _blocked(workspace: dict[str, Any]) -> str:
