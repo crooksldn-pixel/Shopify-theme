@@ -220,7 +220,7 @@ def test_the_commands_point_at_the_checkout_rather_than_copying_it(tmp_path, mon
     bin_dir = tmp_path / "bin"
     monkeypatch.setattr(install_commands, "BIN", bin_dir)
     assert install_commands.install(root=Path.cwd(), bin_dir=bin_dir) == 0
-    for name, script in install_commands.COMMANDS.items():
+    for name, (script, _fixed) in install_commands.COMMANDS.items():
         wrapper = bin_dir / name
         assert wrapper.exists() and wrapper.stat().st_mode & 0o111, name
         body = wrapper.read_text(encoding="utf-8")
@@ -230,8 +230,18 @@ def test_the_commands_point_at_the_checkout_rather_than_copying_it(tmp_path, mon
     assert not any((bin_dir / name).exists() for name in install_commands.COMMANDS)
 
 
-def test_the_commands_are_the_three_the_brief_asked_for():
-    assert sorted(install_commands.COMMANDS) == ["crooks-status", "crooks-update", "crooks-watch"]
+def test_the_commands_are_the_ones_the_brief_asked_for():
+    """Three for running it, four for testing it. The four are one script with a switch each,
+    so a change to the runner cannot leave one of them behind."""
+    assert sorted(install_commands.COMMANDS) == [
+        "crooks-status", "crooks-test", "crooks-test-live", "crooks-test-scenario",
+        "crooks-test-ui", "crooks-update", "crooks-watch",
+    ]
+    test_commands = {n: a for n, (s, a) in install_commands.COMMANDS.items() if n.startswith("crooks-test")}
+    assert {n for n, (s, _) in install_commands.COMMANDS.items() if n.startswith("crooks-test")
+            and s == "scripts/experience.py"} == set(test_commands), "one runner, four doors"
+    assert test_commands == {"crooks-test": "", "crooks-test-ui": "--ui",
+                             "crooks-test-live": "--live", "crooks-test-scenario": "--scenario"}
 
 
 # ------------------------------------------------------------------- the bench

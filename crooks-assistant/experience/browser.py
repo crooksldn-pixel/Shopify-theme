@@ -14,6 +14,7 @@ scenarios asserted on.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -128,11 +129,7 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
             env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
         )
     finally:
-        server.should_exit = True
-        try:
-            await asyncio.wait_for(task, timeout=10)
-        except (TimeoutError, asyncio.CancelledError):
-            task.cancel()
+        await _stop(server, task)
 
     payload: dict[str, Any] = {}
     for line in reversed((result.stdout or "").strip().splitlines()):
@@ -171,11 +168,7 @@ async def run_checks() -> dict[str, Any]:
             env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
         )
     finally:
-        server.should_exit = True
-        try:
-            await asyncio.wait_for(task, timeout=10)
-        except (TimeoutError, asyncio.CancelledError):
-            task.cancel()
+        await _stop(server, task)
     for line in reversed((result.stdout or "").strip().splitlines()):
         try:
             return {"skipped": False, **json.loads(line)}
@@ -183,3 +176,21 @@ async def run_checks() -> dict[str, Any]:
             continue
     return {"skipped": False, "ok": False, "checks": [
         {"name": "browser run", "ok": False, "detail": (result.stdout + result.stderr)[-400:]}]}
+
+
+async def _stop(server: Any, task: asyncio.Task) -> None:
+    """Shut the fixture backend down without leaving a traceback in the suite's output.
+
+    uvicorn's socket closes a beat after the serve task returns, and anything still finishing
+    then raises "Event loop is closed" into stderr — noise that reads like a failure in a run
+    that passed. A moment for the loop to drain removes it.
+    """
+    server.should_exit = True
+    try:
+        await asyncio.wait_for(asyncio.shield(task), timeout=10)
+    except (TimeoutError, asyncio.CancelledError):
+        task.cancel()
+        with contextlib.suppress(BaseException):
+            await task
+    # A beat for uvicorn's transports to finish closing before the loop goes.
+    await asyncio.sleep(0.25)

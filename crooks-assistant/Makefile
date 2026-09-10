@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence bench-lanes commands commands-remove update watch
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence bench-lanes commands commands-remove update watch
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -34,6 +34,13 @@ help:
 	@echo "  make chat            ask questions by typing (cheaper than the tablet)"
 	@echo "  make acceptance      the 18-command Day 1 test; add SPOKEN=1 to score spoken runs"
 	@echo "  make accept          everything provable without the store: lint, Node, pytest, a server, latency, the page in Chromium"
+	@echo ""
+	@echo "The experience suite — real turns against a golden shop, and the page in a browser:"
+	@echo "  make experience      the golden scenarios; writes reports/experience/<run>/"
+	@echo "  make experience-ui   the same, and drives the page in Chromium for screenshots"
+	@echo "  make experience-live the same questions against the REAL shop and inbox, read-only"
+	@echo "  make experience-list what there is to run    (SCENARIO=back runs one)"
+	@echo "  make matrix          which operations are reachable by voice, by touch, and tested"
 	@echo "  make dev             the backend alone, with auto-reload, for working on the code"
 	@echo "  make whisper-server  speech recognition alone (prints build steps if not built yet)"
 	@echo "  make bench           choose the Whisper model from your tablet recordings"
@@ -145,6 +152,21 @@ bench-intelligence:
 
 accept:
 	$(PY) scripts/accept.py $(if $(SHOTS),--shots $(SHOTS),) $(if $(NO_BROWSER),--no-browser,)
+
+experience:
+	$(PY) scripts/experience.py $(if $(SCENARIO),--scenario $(SCENARIO),)
+
+experience-ui:
+	$(PY) scripts/experience.py --ui $(if $(SCENARIO),--scenario $(SCENARIO),)
+
+experience-live:
+	$(PY) scripts/experience.py --live $(if $(SCENARIO),--scenario $(SCENARIO),)
+
+experience-list:
+	@$(PY) scripts/experience.py --list
+
+matrix:
+	@$(PY) -c "import sys; sys.path.insert(0,'.'); from experience.matrix import markdown; print(markdown())"
 
 secrets:
 	$(PY) scripts/set_secrets.py --all

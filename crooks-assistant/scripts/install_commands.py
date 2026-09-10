@@ -24,16 +24,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BIN = Path.home() / ".local" / "bin"
 
+# name -> (script, the arguments that name implies). The four test commands are one script
+# with a switch each, because they are one thing done four ways and a second copy of the
+# runner would be a second thing to keep in step.
 COMMANDS = {
-    "crooks-update": "scripts/update.py",
-    "crooks-status": "scripts/status.py",
-    "crooks-watch": "scripts/watch.py",
+    "crooks-update": ("scripts/update.py", ""),
+    "crooks-status": ("scripts/status.py", ""),
+    "crooks-watch": ("scripts/watch.py", ""),
+    "crooks-test": ("scripts/experience.py", ""),
+    "crooks-test-ui": ("scripts/experience.py", "--ui"),
+    "crooks-test-live": ("scripts/experience.py", "--live"),
+    "crooks-test-scenario": ("scripts/experience.py", "--scenario"),
 }
 
 WRAPPER = """#!/bin/sh
 # Written by `make commands` in {root}. Points at the checkout rather than copying it, so a
 # git pull updates this command too. Delete it, or run `make commands-remove`, to undo.
-exec "{python}" "{script}" "$@"
+exec "{python}" "{script}" {fixed} "$@"
 """
 
 
@@ -45,9 +52,9 @@ def python_for(root: Path) -> Path:
 def install(root: Path = ROOT, bin_dir: Path = BIN) -> int:
     bin_dir.mkdir(parents=True, exist_ok=True)
     python = python_for(root)
-    for name, script in COMMANDS.items():
+    for name, (script, fixed) in COMMANDS.items():
         target = bin_dir / name
-        target.write_text(WRAPPER.format(root=root, python=python, script=root / script), encoding="utf-8")
+        target.write_text(WRAPPER.format(root=root, python=python, script=root / script, fixed=fixed), encoding="utf-8")
         target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
         print(f"  ok     {target}")
     path = os.environ.get("PATH", "")

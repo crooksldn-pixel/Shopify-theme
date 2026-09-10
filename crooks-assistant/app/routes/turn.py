@@ -972,6 +972,17 @@ async def _answer(
             # it; the timeline and the report built from it get "[address]".
             answer=_written(answer, names), error_kind=error_kind, lost_thread=lost_thread, abandoned=abandoned,
             ui=[item["type"] for item in ui], ui_entities=_ui_entities(ui), proposed=proposed or None, revoked=list(revoked or []) or None,
+            # What the owner was actually shown, as a fact separate from which components drew
+            # it: the surfaces this turn produced, whether anything was shown at all, and what
+            # it offered to do next. A turn that answered in words and drew nothing is the
+            # failure this pass exists for, and `surfaces: []` is what it looks like here.
+            surfaces=[item.get("surface") or item["type"] for item in ui if item["type"] != "context_stack"] or None,
+            showed_nothing=not any(item["type"] != "context_stack" for item in ui),
+            actions=sorted({
+                str(a.get("operation") or a.get("id") or "")
+                for item in ui if isinstance(item.get("data"), dict)
+                for a in (item["data"].get("actions") or []) if isinstance(a, dict)
+            }) or None,
             writes_code=(None if writes is None or writes.get("allowed") else writes.get("code")),
             speak_requested=speak, tts_prefetched=bool(speak and answer and not abandoned),
             tool_calls=[{"tool": c.get("name"), "ok": c.get("ok"), "ms": c.get("ms"), "tool_call_id": c.get("tool_call_id") or None, "proposal_id": c.get("proposal_id")} for c in tool_calls] or None,
