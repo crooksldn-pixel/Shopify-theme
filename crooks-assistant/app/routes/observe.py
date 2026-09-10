@@ -4,6 +4,8 @@
   GET  /test-session/status           the session in progress, if any (the Mac itself only)
   POST /test-session/stop             end it (the Mac itself only)
   POST /telemetry            {session_id, events: [...]}   the tablet's batch; always 204
+  GET  /anticipation                  why anything was prefetched (the Mac itself only)
+  POST /anticipation/reset            forget every learned pattern (the Mac itself only)
 
 The control routes answer only requests made on the Mac (no X-Forwarded-For: nothing
 `tailscale serve` proxied), so a tablet cannot start or stop a session. Telemetry is taken
@@ -96,6 +98,35 @@ async def stop(request: Request) -> JSONResponse | dict:
         return {"stopped": False, "detail": "No test session is running."}
     log.info("test session stopped: %s", session.test_session_id)
     return {"stopped": True, **_summary(session), "path": str(runtime.tests.timeline_path(session)), "events": runtime.timeline.counts}
+
+
+@router.get("/anticipation", response_model=None)
+async def anticipation(request: Request, scope: str = "") -> JSONResponse | dict:
+    """Why was this prefetched? (§19's debug view.)
+
+    Every prediction the layer has made — the rule or the learned transition behind it, its
+    confidence, how many observations were behind that, and whether it landed — beside the
+    learned table itself with its arithmetic shown. The Mac itself only: this is the owner's
+    view of what his machine has been guessing about him, and it is not the tablet's business.
+    """
+    if not _local(request):
+        return JSONResponse(status_code=403, content={"code": "not_local", "detail": "Asked on the Mac itself."})
+    from app.anticipation import engine as anticipation_mod
+
+    return anticipation_mod.current().report(scope=str(scope or "")[:120])
+
+
+@router.post("/anticipation/reset", response_model=None)
+async def anticipation_reset(request: Request) -> JSONResponse | dict:
+    """Forget every learned pattern. The Mac itself only; §19 asks for resettable and this is
+    it — the table goes, its file goes, and nothing that was learned survives."""
+    if not _local(request):
+        return JSONResponse(status_code=403, content={"code": "not_local", "detail": "Reset on the Mac itself."})
+    from app.anticipation import engine as anticipation_mod
+
+    dropped = anticipation_mod.current().learner.reset()
+    log.info("the learned anticipation table was reset (%s transitions)", dropped)
+    return {"reset": True, "transitions_dropped": dropped, "learned": anticipation_mod.current().learner.inspect()}
 
 
 @router.post("/telemetry")

@@ -4,8 +4,9 @@ for next — and nothing else.
 Four rules, all of them bounds:
 
 * READ ONLY. Nothing here can reach a write tool; `_READABLE` is the whole vocabulary.
-* BOUNDED. At most `MAX_IN_FLIGHT` at a time, at most `MAX_PER_TURN` started per turn, each
-  with its own timeout, and never for a source already at its concurrency limit.
+* BOUNDED. At most `MAX_IN_FLIGHT` at a time PER SCOPE (a login and a conversation), at most
+  `MAX_PER_TURN` started per turn, each with its own timeout, and never for a source already at
+  its concurrency limit.
 * CANCELABLE. Everything started is tracked and dropped when the branch is cancelled or the
   conversation moves on.
 * FRESHNESS AWARE. A prefetch whose answer is already fresh in memory does not run.
@@ -23,7 +24,11 @@ from typing import Any
 
 log = logging.getLogger("crooks.memory")
 
-MAX_IN_FLIGHT = 3
+# Per scope (a login and a conversation). Six: the anticipation layer's own bound is four reads
+# that spend a source's rate (app/anticipation/engine.py: MAX_ANTICIPATED, measured by
+# bench/anticipation.py) plus the Mac's own internal reads, which spend nothing. This is the
+# outer wall; the finer per-source and per-lane bounds are that layer's.
+MAX_IN_FLIGHT = 6
 MAX_PER_TURN = 2
 TIMEOUT_S = 6.0
 
@@ -56,15 +61,25 @@ class Prefetcher:
             return False
         return spec.write is None and spec.batch is None
 
-    def start(self, key: str, factory, *, branch_id: str = "") -> bool:
-        """Begin one speculative read. False when a bound says no."""
+    def start(self, key: str, factory, *, branch_id: str = "", scope: str = "", lane: str = "", source: str = "") -> bool:
+        """Begin one speculative read. False when a bound says no.
+
+        `scope` is the isolation key — a login and a conversation (app/anticipation/models.py).
+        The bound is PER SCOPE: one owner's speculative reads must not stop another's from
+        starting, and a session that has moved on must not hold the budget of one that has not.
+        `lane` is which kind of anticipation asked ("p1" background, "p2" speculative), so the
+        speculative half can be cancelled without touching the other. `source` is which
+        upstream it reads, so a caller can keep its own per-source bound: the scheduler gives
+        Shopify four concurrent slots and Gmail three, and speculation that fills them is
+        speculation the owner queues behind.
+        """
         if key in self._tasks and not self._tasks[key].done():
             return False
         self._reap()
         # In flight, not held: `_reap` keeps a finished task for a while so `collect` can
         # still find it, and counting those against the limit would stop prefetching for
         # twelve seconds after three quick reads.
-        if sum(1 for t in self._tasks.values() if not t.done()) >= MAX_IN_FLIGHT:
+        if self.in_flight_for(scope) >= MAX_IN_FLIGHT:
             return False
         try:
             loop = asyncio.get_running_loop()
@@ -82,6 +97,9 @@ class Prefetcher:
 
         task = loop.create_task(guarded())
         task.crooks_branch = branch_id      # type: ignore[attr-defined]
+        task.crooks_scope = scope           # type: ignore[attr-defined]
+        task.crooks_lane = lane             # type: ignore[attr-defined]
+        task.crooks_source = source         # type: ignore[attr-defined]
         task.crooks_started = time.monotonic()   # type: ignore[attr-defined]
         self._tasks[key] = task
         self.started += 1
@@ -106,6 +124,40 @@ class Prefetcher:
                 task.cancel()
                 del self._tasks[key]
                 stopped += 1
+        self.cancelled += stopped
+        return stopped
+
+    def in_flight_for(self, scope: str = "", *, lane: str = "", source: str = "") -> int:
+        """How many of this scope's reads are still running — all of them, or one lane's, or
+        one source's."""
+        return sum(
+            1 for t in self._tasks.values()
+            if not t.done()
+            and getattr(t, "crooks_scope", "") == scope
+            and (not lane or getattr(t, "crooks_lane", "") == lane)
+            and (not source or getattr(t, "crooks_source", "") == source)
+        )
+
+    def cancel_scope(self, scope: str, *, lane: str = "", branch_id: str = "") -> int:
+        """Drop this scope's speculative reads — one lane of them, one HALF's, or all of them.
+
+        This is what "a real owner request always outranks speculative work" costs: a read
+        nobody is waiting for, stopped. It is per scope because a cancellation belongs to the
+        conversation that caused it and to no other, and per branch when a branch is named
+        because the two halves of a split workspace are two places the owner is working: a
+        question asked of one must not throw away what was being read for the other.
+        """
+        stopped = 0
+        for key, task in list(self._tasks.items()):
+            if getattr(task, "crooks_scope", "") != scope or task.done():
+                continue
+            if lane and getattr(task, "crooks_lane", "") != lane:
+                continue
+            if branch_id and getattr(task, "crooks_branch", "") != branch_id:
+                continue
+            task.cancel()
+            del self._tasks[key]
+            stopped += 1
         self.cancelled += stopped
         return stopped
 

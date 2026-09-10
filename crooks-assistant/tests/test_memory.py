@@ -194,10 +194,38 @@ async def test_prefetch_is_bounded_and_cancellable():
         await release.wait()
         return "late"
 
-    assert [p.start(f"k{i}", slow, branch_id="br1") for i in range(5)] == [True, True, True, False, False]
-    assert p.counts()["in_flight"] == prefetch.MAX_IN_FLIGHT
-    assert p.cancel_branch("br1") == 3
+    limit = prefetch.MAX_IN_FLIGHT
+    started = [p.start(f"k{i}", slow, branch_id="br1") for i in range(limit + 2)]
+    # Written against the constant rather than repeating its value: the bound moved once
+    # already (three to four, when the anticipation layer took the prefetcher over) and this
+    # assertion is about there BEING a bound.
+    assert started == [True] * limit + [False, False]
+    assert p.counts()["in_flight"] == limit
+    assert p.cancel_branch("br1") == limit
     assert p.counts()["in_flight"] == 0
+    release.set()
+
+
+async def test_the_bound_is_per_conversation_and_so_is_the_cancellation():
+    """Two logins, or two conversations, must not spend each other's budget: one owner's
+    speculative reads cannot stop another's from starting, and standing one down must not
+    touch the other. The scope is the isolation key (app/anticipation/models.py)."""
+    p = prefetch.Prefetcher()
+    release = asyncio.Event()
+
+    async def slow():
+        await release.wait()
+        return "late"
+
+    mine = [p.start(f"a{i}", slow, scope="owner|s1", lane="p2", source="shopify") for i in range(prefetch.MAX_IN_FLIGHT)]
+    assert all(mine)
+    assert p.start("b0", slow, scope="else|s2", lane="p1", source="shopify") is True
+    assert p.in_flight_for("owner|s1") == prefetch.MAX_IN_FLIGHT
+    assert p.in_flight_for("else|s2") == 1
+    assert p.in_flight_for("owner|s1", lane="p1") == 0
+    assert p.in_flight_for("owner|s1", source="gmail") == 0
+    assert p.cancel_scope("owner|s1", lane="p2") == prefetch.MAX_IN_FLIGHT
+    assert p.in_flight_for("else|s2") == 1, "another conversation's read was cancelled"
     release.set()
 
 

@@ -100,6 +100,11 @@ class Memory:
         self.misses = 0
         self.evictions = 0
         self.invalidations = 0
+        # Of the hits, the ones served from something the anticipation layer read before it was
+        # asked for (provenance origin "predicted", app/anticipation/engine.py). This is how
+        # the effect of anticipation on a turn is MEASURED rather than claimed: it is published
+        # on every turn's performance block under `cache`, beside the hits it is part of.
+        self.predicted_hits = 0
 
     # -------------------------------------------------------------- read/write
 
@@ -121,6 +126,8 @@ class Memory:
             entry.used_at = now
             entry.hits += 1
             self.hits += 1
+            if entry.provenance.get("origin") == "predicted":
+                self.predicted_hits += 1
             return entry
 
     def put(
@@ -182,7 +189,8 @@ class Memory:
         with self._lock:
             sizes = {tier: len(bucket) for tier, bucket in self._tiers.items()}
         return {"hits": self.hits, "misses": self.misses, "evictions": self.evictions,
-                "invalidations": self.invalidations, "sizes": sizes}
+                "invalidations": self.invalidations, "predicted_hits": self.predicted_hits,
+                "sizes": sizes}
 
     def clear(self) -> None:
         with self._lock:

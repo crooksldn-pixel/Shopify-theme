@@ -67,7 +67,40 @@ async def order_extension(request: Request, order_id: str, session_id: str = "")
     log.info("context extension served for %s (pending=%s)", order_id, ",".join(shaped["pending"]) or "-")
     timeline.emit("context_request", context_request_id=request_id, session_id=session.session_id, turn_id=session.turn_id or None, order_id=order_id, status=200, ms=_ms(started), pending=list(shaped.get("pending") or []), landed=[k for k in ("history", "email") if shaped.get(k) is not None])
     shaped["context_request_id"] = request_id
+    # The tablet asks for this the moment an order card is up, spoken or tapped, so it is
+    # where "an order opened" is known for certain. The anticipation layer (§18) reads the
+    # background and speculative parts from here; what it started, and why, comes back on the
+    # payload so the tablet can show it and a scenario can assert it. Never awaited for its
+    # own sake: the reads are background work and this route already has its answer.
+    shaped["anticipated"] = await _anticipate(session, order_id, shaped)
     return shaped
+
+
+async def _anticipate(session, order_id: str, shaped: dict) -> dict:
+    """Tell the anticipation layer an order is open, and report what it decided.
+
+    Wrapped: a failure in a speculative layer must never turn a served card into a 500.
+    """
+    try:
+        from app.anticipation import engine as anticipation
+        from app.anticipation import signals
+        from app.memory import ENTITY
+        from app.memory import current as memory
+
+        held = memory().get(ENTITY, f"order:{order_id}", allow_stale=True)
+        signal = signals.for_order(
+            order_id, held.value if held is not None else None, session=session,
+            branch=session.branch() if hasattr(session, "branch") else None, extension=shaped,
+        )
+        decision = await anticipation.observe(signal, session=session)
+        return {
+            "state": decision.state,
+            "reads": [{"why": p.why, "tier": p.tier, "level": p.level} for p in decision.started],
+            "suggestions": decision.suggestions,
+        }
+    except Exception as exc:  # noqa: BLE001 — anticipation is never worth a failed request
+        log.debug("anticipation on an opened order failed: %s", type(exc).__name__)
+        return {"state": "", "reads": [], "suggestions": []}
 
 
 def _ms(started: float) -> float:

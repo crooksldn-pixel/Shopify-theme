@@ -22,6 +22,10 @@ What it guarantees:
   and stops asking when it is spent.
 * Cancellation: one `asyncio.TaskGroup`-shaped run, cancelled as a unit.
 * Deterministic merge: results come back keyed by name, in plan order, whatever finished first.
+* AN ORIGIN. A plan says whether the OWNER asked for it or the anticipation layer predicted it
+  (`origin`, with `why`), which is what makes a predicted read distinguishable from a requested
+  one everywhere downstream — the timeline event, the report, the memory entry it fills. A
+  requested plan also stands the speculative lane down before it runs.
 * NO WRITES. A read whose tool has a WriteSpec or a BatchSpec is refused before the plan runs.
   Two writes must never be in flight together, and the way to guarantee that is to have no
   path from here to one.
@@ -84,6 +88,14 @@ class ReadPlan:
     reads: list[Read]
     label: str = ""
     timeout_s: float = PLAN_TIMEOUT_S
+    # Who wanted this. "requested" is the owner — a question, a tap, a recipe's reads for
+    # either; "predicted" is the anticipation layer reading before it was asked (§19 requires
+    # the two to be distinguishable). It rides on the plan rather than in a second record
+    # because the plan is already what the timeline writes down, and `why` says which rule or
+    # which learned transition asked. A requested plan also OUTRANKS speculation: `run_plan`
+    # stands the predicted lane down before it starts one.
+    origin: str = "requested"
+    why: str = ""
 
     def names(self) -> list[str]:
         return [r.name for r in self.reads]
@@ -147,6 +159,17 @@ def _layers(plan: ReadPlan) -> list[list[Read]]:
 async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = None, turn_id: str = "") -> ReadResult:
     """Run the graph. Never raises for a read that failed: a failure is a name in `errors`."""
     assert_reads_only(plan)
+    if plan.origin != "predicted":
+        # The owner has asked for something. Whatever was being read on a hunch for this
+        # conversation stands down first: it holds a source's concurrency and none of it is
+        # being waited for. Never raises, and a process with no anticipation layer installed
+        # does nothing here.
+        try:
+            from app.anticipation import engine as anticipation
+
+            anticipation.owner_read(session)
+        except Exception as exc:  # noqa: BLE001 — a read is not failed by a cancellation
+            log.debug("could not stand down the speculative lane: %s", exc)
     from app.tools.dispatch import dispatch
 
     result = ReadResult()
@@ -238,7 +261,8 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
     if timeline.current().active is not None:
         timeline.emit(
             "read_plan", session_id=getattr(session, "session_id", None), turn_id=turn_id or getattr(session, "turn_id", "") or None,
-            label=plan.label or None, groups=result.groups, fanout=max((len(g) for g in result.groups), default=0),
+            label=plan.label or None, origin=plan.origin, why=plan.why or None,
+            groups=result.groups, fanout=max((len(g) for g in result.groups), default=0),
             critical_path_ms=result.critical_path_ms, serial_ms=result.serial_ms, saved_ms=round(result.saved_ms, 1),
             spent=result.spent, ms=result.ms, skipped=result.skipped or None, errors=list(result.errors) or None,
             partial=result.partial,
