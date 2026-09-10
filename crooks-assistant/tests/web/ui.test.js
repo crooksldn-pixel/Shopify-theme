@@ -1365,3 +1365,112 @@ test('a composer with fields the Mac did not send still renders', () => {
   assert.equal(bare.querySelectorAll('.compose-btn').length, 0, 'no actions, no buttons');
   assert.deepEqual(bare.querySelectorAll('.field-input').map((f) => f.dataset.field), ['to', 'subject', 'body']);
 });
+
+/* ---------------------------------------------------------------- the workspace card
+ *
+ * Something being built, before anything is proposed (app/families/_workspace.py). The card
+ * is entirely the Mac's description of itself — which fields, of which kind, with what
+ * status; which closed choices; which facts; which buttons and what each one posts — so what
+ * these check is that this file draws exactly that and invents nothing.
+ */
+const WORKSPACE = {
+  workspace_id: 'dsc_abc123', kind: 'discount',
+  kicker: 'Discount code · not created', title: 'AUTUMN20', subtitle: 'from today, with no end date',
+  field_command: 'discount.field',
+  fields: [
+    { name: 'code', label: 'Code', kind: 'code', value: 'AUTUMN20', status: 'ok', hint: '', placeholder: 'SUMMER15', maxlength: 30 },
+    { name: 'value', label: 'Takes off', kind: 'money', value: '20', status: 'ok', hint: '', placeholder: '15', maxlength: 10 },
+    { name: 'currency', label: 'Currency', kind: 'code', value: 'GBP', status: 'ok', hint: '', placeholder: 'GBP', maxlength: 3 },
+  ],
+  choices: [
+    { name: 'basis', label: 'What it takes off', options: [{ id: 'percentage', label: 'Per cent', selected: true }, { id: 'amount', label: 'Money', selected: false }] },
+  ],
+  facts: [{ label: 'Takes off', value: '20%', tone: '' }, { label: 'That code', value: "free — nothing uses AUTUMN20", tone: 'ok' }],
+  notes: ['It applies to everything in the shop and combines with nothing else.'],
+  blocked: '',
+  actions: [
+    { id: 'prepare', label: 'Prepare the code', command: 'discount.stage', args: 'workspace_id=dsc_abc123', risk: 'red', enabled: true },
+    { id: 'discard', label: 'Discard', command: 'discount.discard', args: 'workspace_id=dsc_abc123', risk: '', enabled: true },
+  ],
+  unexpected_field: 'THIS IS NOT FOR THE OWNER AND MUST NOT BE DRAWN',
+};
+
+function workspace(patch) {
+  return UI.renderItem({ type: 'workspace', data: Object.assign({}, WORKSPACE, patch || {}) }, {});
+}
+
+test('the workspace draws the fields the Mac named, with the command its keystrokes post', () => {
+  const node = workspace();
+  assert.equal(node.dataset.type, 'workspace');
+  assert.equal(node.dataset.workspace, 'dsc_abc123');
+  const inputs = node.querySelectorAll('.field-input');
+  assert.deepEqual(inputs.map((f) => f.dataset.field), ['code', 'value', 'currency']);
+  assert.deepEqual(inputs.map((f) => f.dataset.kind), ['code', 'money', 'code']);
+  // Where a keystroke goes: this family's command, not the composer's default.
+  assert.deepEqual(inputs.map((f) => f.dataset.post), ['discount.field', 'discount.field', 'discount.field']);
+  assert.deepEqual(inputs.map((f) => f.dataset.compose), ['dsc_abc123', 'dsc_abc123', 'dsc_abc123']);
+  assert.equal(inputs[1].getAttribute('inputmode'), 'decimal');
+  assert.equal(inputs[0].value, 'AUTUMN20');
+  // The unexpected key is not drawn anywhere.
+  assert.ok(!textOf(node).includes('THIS IS NOT FOR THE OWNER'));
+});
+
+test('a field with no post falls back to the composer, so an older card still types', () => {
+  const wrap = UI.field({ kind: 'text', name: 'body', label: 'Body', value: 'x', compose_id: 'cmp_9' }, {});
+  assert.equal(wrap.querySelectorAll('.field-input')[0].dataset.post, 'compose.field');
+});
+
+test('the workspace buttons carry a command and an id and never a value of the change', () => {
+  const node = workspace();
+  const buttons = node.querySelectorAll('.compose-btn');
+  assert.deepEqual(buttons.map((b) => b.dataset.command), ['discount.stage', 'discount.discard']);
+  for (const b of buttons) {
+    assert.equal(b.dataset.args, 'workspace_id=dsc_abc123');
+    assert.ok(!/code=|value=|percent=/.test(b.dataset.args));
+  }
+  assert.ok(buttons[0].classList.contains('risk-red'));
+  // A closed choice is a button too, and posts which choice and which option.
+  const options = node.querySelectorAll('.ws-opt');
+  assert.deepEqual(options.map((o) => o.getAttribute('aria-pressed')), ['true', 'false']);
+  assert.equal(options[1].dataset.args, 'workspace_id=dsc_abc123&field=basis&option=amount');
+});
+
+test('a blocked workspace says why and its risky button cannot be pressed', () => {
+  const node = workspace({
+    blocked: "AUTUMN20 is already in use by 'Summer sale'. Pick another code.",
+    actions: [{ id: 'prepare', label: 'Prepare the code', command: 'discount.stage', args: 'workspace_id=dsc_abc123', risk: 'red', enabled: false }],
+  });
+  assert.ok(textOf(node).includes('already in use'));
+  assert.ok(textOf(node).includes('Not ready'));
+  assert.equal(node.querySelectorAll('.compose-btn')[0].disabled, true);
+});
+
+test('a hostile value lands in the workspace as text, never as markup', () => {
+  const node = workspace({
+    title: HOSTILE, subtitle: HOSTILE, kicker: HOSTILE,
+    fields: [{ name: 'code', label: HOSTILE, kind: 'code', value: HOSTILE, status: 'invalid', hint: HOSTILE, placeholder: HOSTILE, maxlength: 30 }],
+    facts: [{ label: HOSTILE, value: HOSTILE, tone: HOSTILE }],
+    notes: [HOSTILE],
+    choices: [{ name: 'basis', label: HOSTILE, options: [{ id: HOSTILE, label: HOSTILE, selected: false }] }],
+    actions: [{ id: 'prepare', label: HOSTILE, command: 'discount.stage', args: 'workspace_id=dsc_abc123', risk: 'red', enabled: true }],
+  });
+  assert.ok(textOf(node).includes(HOSTILE));
+  const tags = new Set();
+  (function walk(el) { for (const c of el.children) { tags.add(c.tagName); walk(c); } })(node);
+  assert.ok(!tags.has('IMG') && !tags.has('SCRIPT'));
+  (function walk(el) {
+    for (const [k, v] of Object.entries(el.attributes)) {
+      if (k === 'placeholder' || k === 'aria-label') continue;   // text, by construction
+      assert.ok(!String(v).includes('<'), `${el.tagName}[${k}] carries markup`);
+    }
+    for (const c of el.children) walk(c);
+  })(node);
+});
+
+test('a workspace the Mac sent nothing on still renders', () => {
+  const bare = UI.renderItem({ type: 'workspace', data: { workspace_id: 'ord_abc123' } }, {});
+  assert.ok(bare && bare.dataset.type === 'workspace');
+  assert.equal(bare.querySelectorAll('.field-input').length, 0);
+  assert.equal(bare.querySelectorAll('.compose-btn').length, 0, 'no actions, no buttons');
+  assert.ok(textOf(bare).includes('Nothing is created until you authorise'));
+});

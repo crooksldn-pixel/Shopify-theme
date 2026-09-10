@@ -1948,12 +1948,18 @@
       rows: num(f.rows) || null, placeholder: text(f.placeholder),
     }, settings));
 
-    const buttons = list(d.actions, 4).map((a) => h('button', {
-      class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${a.enabled === false ? ' quiet' : ''}`,
-      type: 'button',
-      disabled: a.enabled === false ? true : null,
-      data: { command: text(a.command), args: text(a.args), action: text(a.id) },
-    }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]));
+    const buttons = list(d.actions, 4).map((a) => {
+      const button = h('button', {
+        class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${a.enabled === false ? ' quiet' : ''}`,
+        type: 'button',
+        data: { command: text(a.command), args: text(a.args), action: text(a.id) },
+      }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
+      // The property, not an attribute: a disabled button dispatches no click, so "this
+      // cannot be prepared yet" is enforced by the same flag the eye reads on the card, and
+      // the delegated handler in web/app.js reads exactly this.
+      button.disabled = a.enabled === false;
+      return button;
+    });
 
     const node = card('workspace', [
       h('div', { class: 'card-head' }, [
