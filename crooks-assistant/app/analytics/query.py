@@ -365,12 +365,14 @@ def _date_window(raw: dict[str, Any]) -> tuple[dict[str, Any], set[str]]:
         if value is None or value == "":
             continue
         if name in _WINDOW_FROM:
-            window["start"], _ = str(value), used.add(key)
+            window["start"] = str(value)
         elif name in _WINDOW_TO:
-            window["end"], _ = str(value), used.add(key)
+            window["end"] = str(value)
         elif name in _WINDOW_ON:
             window["start"] = window["end"] = str(value)
-            used.add(key)
+        else:
+            continue
+        used.add(key)
     return window, used
 
 
