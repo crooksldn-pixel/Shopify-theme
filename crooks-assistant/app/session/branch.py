@@ -119,6 +119,13 @@ class Branch:
     # only the DOM knows, so a Back that returns here returns to the same shape of screen, and
     # a half put aside keeps its own.
     expanded: list[str] = field(default_factory=list)
+    # What the next thing said applies to, when the owner tapped a control that expects words.
+    # Tapping Rewrite on a draft binds the draft here and starts listening, so "make it shorter
+    # and more apologetic" lands on that draft without the owner naming it again. Held on the
+    # BRANCH, never on the session: a continuation armed on one half of the orb must not catch
+    # a sentence spoken to the other. It expires, because a binding the owner has forgotten
+    # about is a sentence applied to the wrong thing.
+    voice_context: dict[str, Any] | None = None
 
     # What it has seen, most recent first.
     recent_entities: list[dict[str, str]] = field(default_factory=list)
@@ -205,6 +212,38 @@ class Branch:
 
     # ---------------------------------------------------------------- memory
 
+    # How long a tapped control waits for the words that go with it. Long enough to think of
+    # the sentence, short enough that a tap made and abandoned does not catch the next question.
+    VOICE_CONTEXT_TTL_S = 120.0
+
+    def bind_voice(self, family: str, *, kind: str = "", ref: str = "", label: str = "",
+                   clock=time.time) -> dict[str, Any]:
+        """Arm this branch for a spoken continuation of a tapped control."""
+        self.voice_context = {
+            "family": family, "kind": kind, "ref": ref, "label": label,
+            "branch_id": self.branch_id, "at": clock(),
+            "expires_at": clock() + self.VOICE_CONTEXT_TTL_S,
+        }
+        return dict(self.voice_context)
+
+    def voice_target(self, *, clock=time.time) -> dict[str, Any] | None:
+        """What the next sentence applies to, or nothing.
+
+        Checks the branch it was armed on as well as the clock: a context that somehow reached
+        another half is not this half's, and is ignored rather than obeyed.
+        """
+        held = self.voice_context
+        if not held:
+            return None
+        if held.get("branch_id") != self.branch_id or clock() >= float(held.get("expires_at") or 0):
+            self.voice_context = None
+            return None
+        return dict(held)
+
+    def release_voice(self) -> None:
+        """One sentence, one binding. Cleared as soon as it has been used or abandoned."""
+        self.voice_context = None
+
     def remember_entity(self, kind: str, ref: str, label: str) -> None:
         if not (kind and ref):
             return
@@ -252,6 +291,10 @@ class Branch:
             "label": self.label, "entity": self.entity, "set_id": self.set_id or None,
             "workflow": self.workflow.public() if self.workflow else None,
             "tab": self.tab or None, "scroll": self.scroll, "expanded": list(self.expanded),
+            # What the tablet should show as the target of the next thing said, when a tapped
+            # control is waiting for words.
+            "listening_for": ({"family": self.voice_context["family"], "label": self.voice_context.get("label", "")}
+                              if self.voice_target() else None),
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
             "task": dict(self.task) if self.task else None,

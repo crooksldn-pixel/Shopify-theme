@@ -180,18 +180,30 @@ def _capability_summary(ctx: Ctx, result: ReadResult) -> FastAnswer:   # noqa: A
     from app.capabilities.manifest import spoken_summary
     from app.capabilities.surface import build_surface
 
-    manifest = getattr(ctx.runtime, "manifest", None)
-    if not manifest:
-        # Built here only if the runtime has none, and never with writes assumed on: saying
-        # "I can change things" while changes are switched off is the worst answer available.
-        settings = getattr(ctx.runtime, "settings", None)
-        manifest = build_manifest(build_id=getattr(ctx.runtime, "build", ""), writes_enabled=bool(getattr(settings, "writes_enabled", False)))
+    manifest = _current_manifest(ctx, build_manifest)
     spoken = spoken_summary(manifest)
     # The sentence and the card are built from the same manifest, so the screen cannot list a
     # capability the spoken answer denies. Thirty capabilities are a list, not a paragraph.
     surface = build_surface(manifest, spoken=spoken, states=_capability_states(ctx))
     return FastAnswer(answer=spoken, surfaces=[surface],
                       trace={"source": "manifest", "fingerprint": manifest.get("fingerprint")})
+
+
+def _current_manifest(ctx: Ctx, build_manifest) -> dict[str, Any]:
+    """What this build can do, as it stands now.
+
+    The runtime's manifest is built once at boot, and it lists no changes at all while writes
+    are off — so a manifest from a boot with writes off would tell the owner this Mac cannot
+    change anything, minutes after changes had been switched on. Rebuilt whenever it disagrees
+    with the setting that holds now. Never assumed on: saying "I can change things" while they
+    are off is the worst answer available.
+    """
+    settings = getattr(ctx.runtime, "settings", None)
+    writes_on = bool(getattr(settings, "writes_enabled", False))
+    manifest = getattr(ctx.runtime, "manifest", None)
+    if not manifest or bool(manifest.get("writes_enabled")) != writes_on:
+        manifest = build_manifest(build_id=getattr(ctx.runtime, "build", ""), writes_enabled=writes_on)
+    return manifest
 
 
 def _capability_states(ctx: Ctx) -> dict[str, dict[str, Any]] | None:
@@ -213,12 +225,20 @@ def _capability_delta(ctx: Ctx, result: ReadResult) -> FastAnswer:     # noqa: A
 
     record = getattr(ctx.runtime, "capability_record", None)
     if not record:
-        return FastAnswer(answer="", defer="no capability record on this backend")
+        # No previous build to compare against — a fresh Mac, or a log directory that has
+        # been cleared. "What can you do now?" is still a question this machine can answer
+        # from its own registry, so it answers it, rather than handing a question about
+        # itself to the model and drawing nothing.
+        return _capability_summary(ctx, result)
+    from app.capabilities.manifest import build as build_manifest
+
     spoken = spoken_delta(record)
-    current = record.get("current") if isinstance(record.get("current"), dict) else {}
     moved = compute_delta(record)
+    # The card lists what this build can do NOW; the record says only what moved since the
+    # last one. Building the card from the record instead described the build that was
+    # recorded, which is a different question from the one that was asked.
     surface = build_surface(
-        current or {}, spoken=spoken, states=_capability_states(ctx),
+        _current_manifest(ctx, build_manifest), spoken=spoken, states=_capability_states(ctx),
         changed={
             "since": moved.get("previous_build") or "",
             "added": [f"{e.get('name')}: {e.get('what')}" for e in (moved.get("added") or [])],

@@ -60,6 +60,7 @@ async def command(
     label: str = Form(default=""),
     tab: str = Form(default=""),
     surface: str = Form(default=""),
+    family: str = Form(default=""),
 ) -> JSONResponse | dict:
     runtime = request.app.state.runtime
     session_id = (session_id or "").strip()
@@ -88,6 +89,7 @@ async def command(
         "label": (label or "").strip()[:120],
         "tab": (tab or "").strip()[:40],
         "surface": (surface or "").strip()[:40],
+        "family": (family or "").strip()[:40],
     }))
     elapsed = (time.perf_counter() - started) * 1000
 

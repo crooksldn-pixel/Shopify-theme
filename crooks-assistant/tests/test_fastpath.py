@@ -196,16 +196,53 @@ def test_next_with_nothing_open_defers_rather_than_guessing(branch):
 
 
 async def test_a_recipe_that_cannot_answer_defers_and_never_invents(branch):
+    """A recipe with nothing to read defers rather than answering from nothing.
+
+    order_lookup is the case: no order number in the words and no order open, so there is
+    nothing to look up. It must go to Claude rather than pick an order.
+    """
+    session = Session(session_id="s1")
+    session.turn_id = "turn_x"
+    recipe = RECIPES["order_lookup"]
+
+    class Runtime:
+        pass
+
+    # No number in the words and no order open: `_order_plan` has nothing to build a read
+    # from and returns None, whatever store happens to be bound in this process.
+    assert branch.entity is None
+    answer = await run(recipe, Ctx(runtime=Runtime(), session=session, branch=branch,
+                                   intent=resolve("show me the order", branch=branch), text="show me the order"))
+    assert answer.deferred, f"answered {answer.answer!r} with nothing to look up"
+
+
+async def test_the_capability_delta_answers_the_answerable_part(branch):
+    """With no previous build recorded there is no delta — but "what more can you do now" is
+    still a question about this Mac, and this Mac has the register that answers it.
+
+    It used to defer, which sent a question about the assistant to the model and drew no card
+    at all. Answering the summary is not inventing: it comes from the same registry, and the
+    spoken line says plainly what it is.
+    """
     session = Session(session_id="s1")
     session.turn_id = "turn_x"
     recipe = RECIPES["capability_delta"]
 
     class Runtime:
         capability_record = None
+        manifest = None
+        build = "test"
 
-    answer = await run(recipe, Ctx(runtime=Runtime(), session=session, branch=branch, intent=resolve("what more can you do now", branch=branch), text="x"))
-    assert answer.deferred and answer.answer == ""
-    assert recipe.stats.deferred >= 1
+        class settings:      # noqa: N801 — a stand-in, not a class in the app
+            writes_enabled = False
+
+    answer = await run(recipe, Ctx(runtime=Runtime(), session=session, branch=branch,
+                                   intent=resolve("what more can you do now", branch=branch), text="x"))
+    assert not answer.deferred and answer.answer.strip()
+    assert answer.surfaces and answer.surfaces[0].surface_type == "capability"
+    # Never claims a change is possible while changes are off.
+    assert answer.surfaces[0].data["writes_enabled"] is False
+    assert answer.surfaces[0].data["counts"]["changes"] == 0
 
 
 # --------------------------------------------------------------- navigation

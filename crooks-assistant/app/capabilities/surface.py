@@ -50,10 +50,25 @@ EXAMPLES: tuple[str, ...] = (
 )
 
 
+MAX_WHAT_CHARS = 140
+
+
+def _clipped(words: str, limit: int = MAX_WHAT_CHARS) -> str:
+    """A sentence cut at a word, with an ellipsis to say it was cut.
+
+    Cutting at the character produced "any other order still to s", which reads as a typo
+    rather than as a truncation — and ran straight into the label beside it.
+    """
+    words = " ".join(str(words or "").split())
+    if len(words) <= limit:
+        return words
+    return words[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
+
 def _kind_of(entry: dict[str, Any], kind: str) -> dict[str, Any]:
     return {
         "name": str(entry.get("name") or ""),
-        "what": str(entry.get("what") or "")[:140],
+        "what": _clipped(entry.get("what")),
         "kind": kind,
         "area": str(entry.get("area") or "system"),
         "operation": str(entry.get("operation") or ""),
@@ -73,7 +88,7 @@ def _grouped(manifest: dict[str, Any], states: dict[str, dict[str, Any]] | None)
         state = states.get(entry["operation"]) if entry["operation"] else None
         if isinstance(state, dict):
             entry["state"] = str(state.get("state") or "")
-            entry["detail"] = str(state.get("detail") or "")[:140]
+            entry["detail"] = _clipped(state.get("detail"))
         elif entry["kind"] == "read":
             # A read needs no permission beyond the credential the health page already checks.
             entry["state"] = "ready"

@@ -783,3 +783,22 @@ html[data-lite] .orb-zone{transition:none}
 @keyframes branch-ready{0%,100%{box-shadow:0 0 0 0 rgba(79,157,105,0)}50%{box-shadow:0 0 0 4px rgba(79,157,105,.22)}}
 .branch-act{min-height:40px;padding:8px 14px;border-radius:999px;border:1px solid var(--line,#33363d);
   background:transparent;color:var(--ink-2,#b6b9c0);font-size:13px;font-weight:600}
+
+/* ---- the capability card: what this build can do, grouped by the part of the shop.
+   The kind ("Read", "Change", "Bulk") sits to the right of the sentence rather than after
+   it in the flow — before this it ran straight into the text, so a truncated line read
+   "any other order still to sRead". */
+.cap-rows{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.cap-row{
+  display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:baseline;
+  padding:10px 0;border-top:1px solid var(--line);min-height:var(--tap);
+}
+.cap-row:first-child{border-top:0}
+.cap-main{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:baseline}
+.cap-what{font-size:15px;color:var(--ink-2);line-height:1.45;word-break:break-word}
+.cap-kind{
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);
+  white-space:nowrap;justify-self:end;
+}
+.cap-row.new .cap-what,.cap-row.new{color:var(--good,#4f9d69)}
+.cap-row.gone{color:var(--ink-3);text-decoration:line-through}

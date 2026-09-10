@@ -185,6 +185,17 @@ async def turn(
             transcript=transcript_info, question=text, speak=speak, calls=calls, epoch=epoch, revoked=[],
         )
 
+    # A control was tapped that expects words, and these are the words. The sentence is about
+    # the record that was bound when it was tapped, so the owner does not have to name it
+    # again — "make it shorter and more apologetic" rather than "rewrite Millie's draft to be
+    # shorter and more apologetic". The binding belongs to THIS half of the orb and expires;
+    # a sentence spoken to the other half never picks it up (app/session/branch.py).
+    continuation = branch.voice_target()
+    if continuation:
+        branch.release_voice()      # one sentence, one binding, taken or abandoned
+        if not _is_a_command(text, branch):
+            text = _with_continuation(text, continuation)
+
     revoked = runtime.actions.revoke_pending(live, "new instruction", branch_id=branch.branch_id) + runtime.batches.revoke_pending(live, "new instruction")
     epoch = runtime.actions.advance_epoch(live, "new instruction", branch_id=branch.branch_id)
     runtime.batches.advance_epoch(live)
@@ -468,6 +479,48 @@ def _working_words(lane: str, intent) -> str:
     if lane == "DEEP":
         return "working through it"
     return _WORKING.get(getattr(intent, "family", ""), "working it out")
+
+
+# Families that are instructions to the assistant rather than words about a record. A
+# continuation must not swallow one: tapping Note and then saying "go back" abandons the note,
+# it does not write "go back" into it. Deciding this from the family rather than from a list of
+# phrases means it holds for however those things are said.
+_NEVER_A_CONTINUATION = frozenset({
+    "navigation_back", "navigation_home", "working_set_next", "working_set_previous",
+    "capability_summary", "capability_delta", "order_reopen",
+})
+
+
+def _is_a_command(text: str, branch: Any) -> bool:
+    """Whether this sentence is an instruction in its own right.
+
+    Resolved from the words the owner actually said, before any continuation note is added —
+    the note is for the model, and routing must not see it.
+    """
+    from app.fastpath import resolve
+
+    try:
+        return resolve(text, branch=branch).family in _NEVER_A_CONTINUATION
+    except Exception:  # noqa: BLE001 — a router that cannot decide is not a reason to fail a turn
+        return False
+
+
+def _with_continuation(text: str, continuation: dict) -> str:
+    """The sentence, with what it applies to said plainly beside it.
+
+    A bracketed note rather than a new mechanism: the recogniser's ambiguity note already uses
+    this shape, the model already reads it, and it survives being logged. The reference is the
+    record's id and its label — never its contents.
+    """
+    family = str(continuation.get("family") or "")
+    kind = str(continuation.get("kind") or "record").replace("_", " ")
+    label = str(continuation.get("label") or "").strip()
+    ref = str(continuation.get("ref") or "")
+    named = f" ({label})" if label else ""
+    return (
+        f"{text}\n[This continues {family} on the {kind} the owner is looking at{named}"
+        f"{f', id {ref}' if ref else ''}. Apply it to that record and to nothing else.]"
+    )
 
 
 def _fast_tool_calls(calls) -> list[dict]:

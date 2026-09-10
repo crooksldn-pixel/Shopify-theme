@@ -26,3 +26,8 @@ kb/.catalogue-cache.txt
 logs/test-sessions/
 reports/*
 !reports/.gitkeep
+
+# Experience run artefacts. The reports are a record of a run on one machine, not source.
+reports/experience/
+node_modules/
+package-lock.json

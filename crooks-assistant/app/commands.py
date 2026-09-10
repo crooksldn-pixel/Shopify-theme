@@ -371,11 +371,59 @@ register(Command("customer.open_orders", "What this customer has ordered",
                  needs_entity=("customer",)))
 
 
+# --------------------------------------------------------------------------- touch, then voice
+
+# The controls that expect words rather than a decision. Tapping one of these does not do
+# anything on its own — it says what the next sentence is about, and starts listening. The
+# family is what the sentence will be routed as; the record is what it will be applied to.
+SPOKEN_CONTROLS: dict[str, tuple[str, str]] = {
+    "email.rewrite": ("email_thread", "Rewrite this"),
+    "email.reply": ("email_thread", "Reply to this"),
+    "order.add_note": ("order", "Add a note"),
+    "order.change_address": ("order", "Change the address"),
+    "customer.ask": ("customer", "Ask about this customer"),
+    "set.filter": ("set", "Narrow these"),
+}
+
+
+def _bind_voice(ctx: Ctx) -> Outcome:
+    """A control was tapped that expects words. Bind what they will apply to, and listen.
+
+    Nothing is changed and nothing is proposed here. The owner has said what he is about to
+    talk about, which is a fact about the conversation, not an instruction — the instruction
+    is the sentence that follows, and it goes through /turn like every other sentence.
+    """
+    family = ctx.arg("family")
+    if family not in SPOKEN_CONTROLS:
+        return Outcome.refused("unknown_control", f"There is no spoken control called {family!r}.")
+    wants_kind, label = SPOKEN_CONTROLS[family]
+    entity = getattr(ctx.branch, "entity", None) or {}
+    kind = ctx.arg("kind") or str(entity.get("kind") or "")
+    ref = ctx.arg("ref") or str(entity.get("ref") or "")
+    if wants_kind != "set" and (kind != wants_kind or not ref):
+        return Outcome.refused("no_target", f"There is no {wants_kind.replace('_', ' ')} open to do that to.")
+    bound = ctx.branch.bind_voice(family, kind=kind, ref=ref,
+                                  label=ctx.arg("label") or str(entity.get("label") or ""))
+    return Outcome(answer="", changed={"listening_for": {"family": family, "label": bound.get("label", ""),
+                                                         "prompt": label}, "expires_at": bound.get("expires_at")})
+
+
+def _release_voice(ctx: Ctx) -> Outcome:
+    ctx.branch.release_voice()
+    return Outcome(answer="", changed={"listening_for": None})
+
+
+register(Command("voice.bind", "Say what the next sentence is about", _bind_voice, voice=False))
+register(Command("voice.cancel", "Stop waiting for words", _release_voice, voice=False))
+
+
 def public() -> list[dict[str, Any]]:
     """The command table, for the capability manifest and the feature matrix. Derived from the
     registry so the matrix cannot claim a command that does not exist."""
     return [
         {"name": c.name, "what": c.what, "voice": c.voice, "touch": c.touch,
-         "needs_entity": list(c.needs_entity), "needs_workflow": c.needs_workflow}
+         "needs_entity": list(c.needs_entity), "needs_workflow": c.needs_workflow,
+         # A control that binds a continuation is reached by touch and completed by voice.
+         "touch_then_voice": c.name == "voice.bind"}
         for c in sorted(REGISTRY.values(), key=lambda c: c.name)
     ]
