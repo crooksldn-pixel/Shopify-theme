@@ -351,18 +351,37 @@ async def test_the_recipe_redraws_the_workspace_with_what_the_shop_said_and_uses
     assert "already in use" in answer.answer and "Nothing is created" in answer.answer
 
 
-def test_the_recipe_cannot_be_reached_by_a_sentence_and_says_so():
+def test_the_recipe_is_reached_by_a_sentence_that_says_discount():
+    """This test used to assert the opposite — that no sentence could ever reach this family —
+    and it was wrong in a way that hid a real defect.
+
+    The family shipped with a fast-path recipe FOR the spoken route and a module docstring
+    saying that route "needs no model at all", alongside this test saying the route could
+    never be taken. Both could not be true. What was actually happening: `intent.resolve`
+    narrows a sentence carrying a mutation verb to families that declared
+    `serves_mutation_words`, this family had not declared it, and its only `needs` was
+    `mutation` — so it was structurally unreachable, and the brief's own section 12 example
+    went to the model.
+
+    It declares the opt-in now AND brings its own word, because the opt-in alone made it
+    answer every change the owner could ask for. Both halves are asserted above, per sentence.
+    """
     from app.fastpath.intent import family as intent_family
     from app.fastpath.intent import resolve, score, signals_for
 
     added = intent_family("discount_code")
     assert added is not None, "the family is registered"
+    assert added.serves_mutation_words is True, "its sentence is a mutation sentence"
     branch = type("B", (), {"entity": None, "set_id": "", "workflow": None, "resolutions": {}})()
     sentence = "create a discount code for fifteen per cent off"
     sig = signals_for(sentence, branch=branch)
     assert sig.mutation is True and score(added, sig) > 0
-    assert resolve(sentence, branch=branch).family == "", "and can still never win"
-    assert resolve(sentence, branch=branch).reason == "asks for a change"
+    assert resolve(sentence, branch=branch).family == "discount_code"
+
+    # And a change that is not a discount still gets the refusal this test used to check for,
+    # which is what makes the narrowing real rather than merely renamed.
+    other = resolve("cancel it", branch=branch)
+    assert other.family == "" and other.reason == "asks for a change"
 
 
 # --------------------------------------------------------------------------- preparing
@@ -663,3 +682,76 @@ async def test_a_collision_read_that_fails_does_not_claim_the_code_is_free(store
     workspace["facts"].pop("checked_code")
     notes = discounts.workspace_surface(workspace).data["notes"]
     assert any("has not been checked" in n for n in notes)
+
+
+import pytest  # noqa: E402 — appended section; the module's own imports are above
+
+
+@pytest.mark.parametrize("text", [
+    "create a 15% discount code called TEST15",
+    "make a discount code SUMMER20 for 20% off",
+    "create a discount code",
+    "set up a promo code",
+])
+def test_a_discount_sentence_reaches_this_family(text):
+    """Brief section 12's own example, and the shapes around it.
+
+    Two separate things kept it away. `intent.resolve` narrows a sentence carrying a mutation
+    verb to the families that declared `serves_mutation_words`, and this family had not — so
+    its only `needs` was the one signal it could never receive, and "create a 15% discount
+    code called TEST15" resolved to NO family and went to the model.
+    """
+    from app.families import load_all
+    from app.fastpath import choose_lane, recipe_for
+    from app.fastpath.intent import resolve
+    from app.session.models import Session
+
+    load_all()
+    branch = Session(session_id="d").branch()
+    intent = resolve(text, branch=branch)
+    assert intent.family == "discount_code", f"{text!r} -> {intent.family!r}"
+    lane, why, *_ = choose_lane(intent, recipe=recipe_for(intent.family), text=text)
+    assert lane == "FAST", f"{text!r} -> {lane} ({why})"
+
+
+@pytest.mark.parametrize("text", [
+    "cancel it",
+    "refund them the postage",
+    "mark 1938 fulfilled",
+    "send it",
+    "archive them all",
+])
+def test_a_change_that_is_not_a_discount_does_not_reach_this_family(text):
+    """The other half of the same fix, and the reason it is two changes rather than one.
+
+    Opting in with `needs=("mutation",)` alone made this family answer EVERY change the owner
+    could ask for — "cancel it", "refund them the postage" and "mark 1938 fulfilled" all
+    resolved here at 0.86, measured. Being unreachable had hidden how broad that `needs` was.
+    So the family brings its own word (`says_discount`, through the `signal()` seam) and needs
+    both.
+    """
+    from app.families import load_all
+    from app.fastpath.intent import resolve
+    from app.session.models import Session
+
+    load_all()
+    branch = Session(session_id="d").branch()
+    branch.entity = {"kind": "order", "ref": "gid://shopify/Order/1", "label": "#1938"}
+    assert resolve(text, branch=branch).family != "discount_code", text
+
+
+def test_code_alone_is_not_a_discount_word():
+    """An order number is a code and so is a tracking number. "Code" counts only beside a
+    discount word or a percentage — otherwise this family would take sentences about both."""
+    from app.families.discounts import _discount_sentence
+
+    class Sig:
+        def __init__(self, *words):
+            self.words = tuple(words)
+
+    assert _discount_sentence(Sig("create", "a", "discount", "code"))
+    assert _discount_sentence(Sig("make", "a", "promo"))
+    assert _discount_sentence(Sig("create", "a", "code", "for", "15%"))
+    assert not _discount_sentence(Sig("what", "is", "the", "tracking", "code"))
+    assert not _discount_sentence(Sig("add", "the", "code", "to", "the", "order"))
+    assert not _discount_sentence(Sig("take", "it", "off", "the", "order"))

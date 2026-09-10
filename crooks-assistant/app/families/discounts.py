@@ -59,7 +59,7 @@ from app.commands import Command, Outcome
 from app.commands import Ctx as CommandCtx
 from app.commands import register as register_command
 from app.families import _workspace as ws
-from app.fastpath.intent import Family, extend
+from app.fastpath.intent import Family, extend, signal
 from app.fastpath.models import Ctx, FastAnswer
 from app.fastpath.recipes import CACHE_NONE, Recipe, register
 from app.reads.scheduler import Read, ReadPlan, ReadResult
@@ -73,6 +73,21 @@ KIND = "discount"
 WORKSPACE_PREFIX = "dsc"
 CHECK_TOOL = "shopify_discount_check"
 OPEN_TOOL = "shopify_discount_open"
+
+# This family's own word, through the `signal()` seam. "Code" is not enough on its own — an
+# order number is a code and so is a tracking number — so it counts only beside a discount
+# word or a percentage. "Off" is deliberately absent: "take it off the order" is an edit.
+DISCOUNT_WORDS = frozenset({"discount", "discounts", "promo", "promotion", "voucher", "coupon"})
+
+
+def _discount_sentence(sig: Any) -> bool:
+    words = set(sig.words)
+    if words & DISCOUNT_WORDS:
+        return True
+    return bool(words & {"code", "codes"}) and any("%" in w for w in words)
+
+
+_SAYS_DISCOUNT = signal("says_discount", _discount_sentence)
 WRITE_TOOL = "shopify_discount_create"
 OPERATION = "discount_code_create"
 SCOPE = "write_discounts"
@@ -881,8 +896,22 @@ register(Recipe(
 # reachability is written down is a family whose reachability can be tested, and because the
 # recipe it names IS reached, by a tap, through `app/routes/command.py`.
 extend([
-    Family("discount_code", needs=("mutation",), boosts=(), blocks=("question", "metric", "email", "ranking"),
-           base=0.8, floor=0.75, max_words=14),
+    # Two things had to change together for the brief's own section 12 example — "create a
+    # 15%% discount code called TEST15" — to reach this family at all.
+    #
+    # `serves_mutation_words`, because `intent.resolve` narrows a mutation sentence to the
+    # families that have opted in, and this family's sentence is nothing BUT a mutation
+    # sentence. Safe, because the recipe cannot write: its one read primitive is
+    # `shopify_discount_check`, which has no write spec, and `recipes.assert_read_only` runs
+    # over it before every fast-lane turn. The creation still happens on a gesture.
+    #
+    # And `says_discount`, because `mutation` alone is every change the owner can ask for.
+    # Opting in with `needs=("mutation",)` made this family answer "cancel it", "refund them
+    # the postage" and "mark 1938 fulfilled" at 0.86 — measured. Being unreachable had hidden
+    # how broad the `needs` was; the guard was doing this family a favour.
+    Family("discount_code", needs=("mutation", _SAYS_DISCOUNT), boosts=(),
+           blocks=("question", "metric", "email", "ranking"),
+           base=0.8, floor=0.75, max_words=14, serves_mutation_words=True),
 ])
 
 
