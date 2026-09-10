@@ -260,3 +260,58 @@ async def test_the_route_addresses_the_halfs_conversation(monkeypatch):
     assert runtime.provider.seen == [("half", "b_left")]
     runtime.provider = Plain()
     assert (await _provider_turn(runtime, "s", "hi", branch)).text == "plain"
+
+
+# ------------------------------------------------------------------ section 25's three numbers
+
+
+def test_the_workspace_timing_separates_the_facts_from_the_prose():
+    """Brief section 25: time-to-first-useful-workspace measured APART from the whole turn.
+
+    The number that matters is the third one — how long the owner waited AFTER the Mac held
+    the data the cards are drawn from. On the live bench that was most of a twenty-five-second
+    turn, and a report that only prints the total cannot see it.
+    """
+    from app.routes.turn import _workspace_timing
+
+    # A model turn: two tool calls landed at 400 ms and 1,200 ms; the answer left at 9,000 ms.
+    timings = {"step:tool:shopify_order_detail": 400.0, "step:tool:gmail_read_thread": 1200.0,
+               "workspace": 9010.0, "total": 9020.0, "agent": 8800.0}
+    facts, workspace, waited = _workspace_timing(timings, calls=[], measures={})
+    assert facts == 1200.0, "the last read to land is when the workspace could have been drawn"
+    assert workspace == 9010.0
+    assert waited == 7820.0, "seven seconds of it was prose about data already read"
+
+    # The fast lane has no model steps; the recipe measures its own reads.
+    fast = {"workspace": 260.0, "total": 262.0}
+    facts, workspace, waited = _workspace_timing(fast, calls=[], measures={"recipe_reads_ms": 240.0})
+    assert (facts, workspace) == (240.0, 260.0) and waited == 22.0
+
+    # Neither: fall back to the reads themselves, which ran in parallel where they could.
+    class _Call:
+        def __init__(self, ms): self.duration_ms = ms
+
+    facts, _, waited = _workspace_timing({"total": 900.0}, calls=[_Call(120.0), _Call(300.0)], measures={})
+    assert facts == 300.0 and waited == 600.0
+
+    # A turn that read nothing — a capability answer, a navigation move — is not slow prose.
+    facts, workspace, waited = _workspace_timing({"workspace": 12.0, "total": 13.0}, calls=[], measures={})
+    assert facts is None and waited is None and workspace == 12.0
+
+
+def test_the_performance_record_names_the_regions_still_loading():
+    """An order card that left with its history and inbox still reading says so in the record,
+    so the report can pair it with the /context/order request that finishes the job."""
+    from app.routes.turn import _performance
+
+    ui = [
+        {"type": "order", "data": {"order_number": "#1938", "pending": ["history", "email"]}},
+        {"type": "context_stack", "data": {}},
+    ]
+    record = _performance({"total": 500.0, "workspace": 480.0}, lane="FAST", recipe_id="order_lookup",
+                          branch=None, calls=[], partial=False, session=None, measures={}, ui=ui)
+    assert record["enrichment_pending"] == ["email", "history"]
+    assert record["workspace_ms"] == 480.0
+    # And a turn whose cards are complete says nothing rather than an empty list.
+    assert _performance({"total": 500.0}, lane="FAST", recipe_id="x", branch=None, calls=[],
+                        partial=False, session=None, measures={}, ui=[{"type": "order", "data": {}}])["enrichment_pending"] is None

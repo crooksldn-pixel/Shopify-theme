@@ -274,6 +274,11 @@ async def turn(
                 epoch=epoch, seq=seq, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
                 lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
                 surfaces=fast.surfaces, writes=fast_writes,
+                # When the facts were in hand on this lane: the recipe's own measurement of
+                # its reads (section 25's time-to-first-useful-workspace). There is no model
+                # step to read it from, and the whole point of the lane is that the two
+                # numbers are nearly the same.
+                measures={"recipe_reads_ms": (fast.trace or {}).get("critical_path_ms") or (fast.trace or {}).get("ms")},
             )
         lane, lane_why = "NORMAL", "the fast path deferred"
 
@@ -394,7 +399,7 @@ def _written(text: str, names: set[str]) -> str:
     return redact_text(str(text or ""), names) if text else ""
 
 
-def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict) -> dict:
+def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict, ui: list | None = None) -> dict:
     """The turn's own measurements. No content, no arguments, no personal data: counts,
     milliseconds and names of tools."""
     from app.memory import current as memory
@@ -407,6 +412,7 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         sources[source] = round(sources.get(source, 0.0) + float(getattr(call, "duration_ms", 0.0) or 0.0), 1)
     model_ms = timings.get("agent")
     model_phases = sum(1 for key in timings if key.startswith("step:model"))
+    facts_ms, workspace_ms, waited_ms = _workspace_timing(timings, calls=calls, measures=measures)
     return {
         "lane": lane,
         "recipe_id": recipe_id or None,
@@ -425,11 +431,62 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "model_input_chars": measures.get("model_input_chars"),
         "tool_schema_bytes": measures.get("tool_schema_bytes"),
         "prefetch_ms": round(float(timings["prefetch"]), 1) if "prefetch" in timings else None,
+        # Section 25's three numbers, kept apart on purpose.
+        #
+        # `facts_ms` is when the Mac HELD the authoritative data the cards are drawn from —
+        # the last read to land. A progressive workspace could be on screen at that moment,
+        # and on the FAST lane it effectively is.
+        # `workspace_ms` is when the cards existed (present() returned).
+        # `prose_wait_ms` is the rest: what the owner waited AFTER the facts were in hand,
+        # which on the live bench was most of a twenty-five-second turn and is the number to
+        # attack. Do not wait ten seconds to polish a sentence about data already read.
+        "facts_ms": facts_ms,
+        "workspace_ms": workspace_ms,
+        "prose_wait_ms": waited_ms,
+        # Regions the cards left still loading. The tablet collects them from /context/order,
+        # whose own duration is on the timeline as `context_request` — so final enrichment is
+        # measured where it happens rather than guessed at here.
+        "enrichment_pending": sorted({
+            str(region) for item in (ui or [])
+            if isinstance(item, dict) and isinstance(item.get("data"), dict)
+            for region in (item["data"].get("pending") or []) if isinstance(region, str)
+        }) or None,
         "turn_total_ms": round(float(timings.get("total") or 0.0), 1),
         "cache": memory().counts(),
         "coalesced": coalescer().counts(),
         "prefetch": prefetcher().counts(),
     }
+
+
+def _workspace_timing(timings: dict, *, calls, measures: dict) -> tuple[float | None, float | None, float | None]:
+    """(when the facts were in hand, when the cards existed, what was waited after the facts).
+
+    The model path records a step per tool call at the moment it returned, offset from the
+    start of the turn (`step:tool:<name>`); the last of those is when the workspace COULD
+    have been drawn. The fast lane has no model, so its reads are its critical path, which
+    the recipe measures and passes here. A turn that read nothing — a capability answer, a
+    navigation move — has no facts time and is not counted as slow prose.
+    """
+    steps = [float(v) for k, v in timings.items() if k.startswith("step:tool:") and isinstance(v, (int, float))]
+    facts = max(steps) if steps else None
+    if facts is None:
+        recipe_ms = measures.get("recipe_reads_ms")
+        facts = float(recipe_ms) if isinstance(recipe_ms, (int, float)) else None
+    if facts is None and calls:
+        # No per-step offsets (a fast lane that did not report, a provider that does not
+        # measure): the reads themselves are the floor, run in parallel where they could be.
+        durations = [float(getattr(c, "duration_ms", 0.0) or 0.0) for c in calls]
+        facts = max(durations) if any(durations) else None
+    workspace = timings.get("workspace")
+    total = timings.get("total")
+    waited = None
+    if facts is not None and isinstance(total, (int, float)):
+        waited = round(max(0.0, float(total) - facts), 1)
+    return (
+        round(facts, 1) if facts is not None else None,
+        round(float(workspace), 1) if isinstance(workspace, (int, float)) else None,
+        waited,
+    )
 
 
 def _call_summary(call) -> str:
@@ -1044,6 +1101,10 @@ async def _answer(
     # the context stack and behind nothing: it IS the answer to the question that was asked.
     if surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in surfaces] + ui
+    # When the Mac had cards to show, as a fact and not an inference (brief section 25 asks
+    # for time-to-first-useful-workspace measured APART from the whole turn). Taken here,
+    # after present(), because this is the moment the workspace exists.
+    timings["workspace"] = (time.perf_counter() - started) * 1000
     turn_id = getattr(session, "turn_id", "") if session is not None else ""
     if branch is None and session is not None:
         branch = session.branch()
@@ -1067,7 +1128,7 @@ async def _answer(
             branch.remember_result(call.name, summary=_call_summary(call), ref=_call_ref(call), ms=float(getattr(call, "duration_ms", 0.0) or 0.0))
     # How this turn actually went, in numbers. Every field is measured; none of it is content.
     # This is what the report's speed section and the bench read (brief section 32).
-    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session, measures=measures or {})
+    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session, measures=measures or {}, ui=ui)
     if timeline.current().active is not None:
         # An answer that declines, held against what the Mac composes: a refusal of a best
         # seller, a breakdown, a comparison or a bulk change the tools could have made is a
