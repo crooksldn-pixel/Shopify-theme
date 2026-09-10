@@ -202,6 +202,46 @@ async def test_a_predicted_plan_does_not_cancel_itself(anticipator, session, dis
         await asyncio.sleep(0.1)
 
 
+async def test_a_question_asked_of_one_half_leaves_the_other_halfs_reads_alone(session, dispatched, learner, monkeypatch):
+    """Branch-safe (§18). The split workspace is two places the owner works; a question asked
+    of one is not a reason to throw away what was being read for the other.
+
+    The bounds are deliberately loosened here: they are per conversation, because a source's
+    rate is shared by both halves, and this test is about the cancellation rather than the
+    budget — with the shipped bounds the second half's Shopify reads are refused for the right
+    reason and there would be nothing to prove.
+    """
+    from app.memory import prefetch as prefetch_mod
+
+    monkeypatch.setattr(prefetch_mod, "MAX_IN_FLIGHT", 12)
+    anticipator = engine_mod.Anticipator(
+        learner=learner, prefetcher=Prefetcher(), memory=Memory(),
+        max_anticipated=8, max_speculative=4, max_per_source=4,
+    )
+    engine_mod.install(anticipator)
+    try:
+        left = await anticipator.on_signal(order_signal(branch_id="b_left"), session=session)
+        right = await anticipator.on_signal(
+            order_signal(branch_id="b_right", ref="gid://shopify/Order/5",
+                         ids={"order_id": "gid://shopify/Order/5", "customer_id": "gid://shopify/Customer/5"},
+                         neighbours=("gid://shopify/Order/6",)),
+            session=session,
+        )
+        assert any(p.tier == P2 for p in left.started) and any(p.tier == P2 for p in right.started)
+        assert right.cancelled == 0, "opening a record on the other half cancelled this one's reads"
+        # The owner speaks to the right-hand half: `acting_branch` is which half a turn is
+        # addressed to, and it is the only one that stands down.
+        session.acting_branch = "b_right"
+        anticipator.owner_read(session)
+        scope = engine_mod.scope_of(session)
+        assert anticipator.prefetcher.in_flight_for(scope, lane=P2) >= 1, "the other half was cancelled too"
+        left_over = [r for r in anticipator.explain() if r["outcome"] == "cancelled"]
+        assert left_over and all(r["read"] for r in left_over)
+    finally:
+        engine_mod.install(None)
+        await asyncio.sleep(0.15)
+
+
 async def test_moving_to_another_record_cancels_what_was_read_about_the_last_one(anticipator, session, dispatched):
     await anticipator.on_signal(order_signal(), session=session)
     assert anticipator.prefetcher.in_flight_for(engine_mod.scope_of(session)) > 0

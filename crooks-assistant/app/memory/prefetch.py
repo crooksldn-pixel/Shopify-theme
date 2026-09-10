@@ -138,18 +138,22 @@ class Prefetcher:
             and (not source or getattr(t, "crooks_source", "") == source)
         )
 
-    def cancel_scope(self, scope: str, *, lane: str = "") -> int:
-        """Drop this scope's speculative reads — one lane of them, or all of them.
+    def cancel_scope(self, scope: str, *, lane: str = "", branch_id: str = "") -> int:
+        """Drop this scope's speculative reads — one lane of them, one HALF's, or all of them.
 
         This is what "a real owner request always outranks speculative work" costs: a read
         nobody is waiting for, stopped. It is per scope because a cancellation belongs to the
-        conversation that caused it and to no other.
+        conversation that caused it and to no other, and per branch when a branch is named
+        because the two halves of a split workspace are two places the owner is working: a
+        question asked of one must not throw away what was being read for the other.
         """
         stopped = 0
         for key, task in list(self._tasks.items()):
             if getattr(task, "crooks_scope", "") != scope or task.done():
                 continue
             if lane and getattr(task, "crooks_lane", "") != lane:
+                continue
+            if branch_id and getattr(task, "crooks_branch", "") != branch_id:
                 continue
             task.cancel()
             del self._tasks[key]

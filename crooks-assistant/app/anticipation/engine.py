@@ -109,6 +109,7 @@ class Started:
     confidence: float
     observations: int
     scope: str
+    branch_id: str = ""
     ref: str = ""
     at: float = 0.0
     outcome: str = "in_flight"      # in_flight | landed | empty | cancelled
@@ -204,7 +205,12 @@ class Anticipator:
         decision = Decision(state=signal.state, scope=signal.scope)
         try:
             self.signals += 1
-            previous = self._last.get(signal.scope)
+            # Where this HALF of the conversation was. The split workspace is two places the
+            # owner works (app/session/branch.py), and moving on one is not moving on the
+            # other: keyed per branch, so a transition is learned per half and a context
+            # change cancels only that half's speculation.
+            where = f"{signal.scope}|{signal.branch_id}"
+            previous = self._last.get(where)
             if learn and previous is not None and previous[0]:
                 edge = self.learner.observe(previous[0], signal.event)
                 if edge is not None:
@@ -214,9 +220,9 @@ class Anticipator:
             if previous is not None and (previous[1], previous[2]) != (signal.kind, signal.ref):
                 # The owner moved to a different record. Everything read on a hunch about the
                 # last one is about the wrong thing now.
-                decision.cancelled = self.prefetcher.cancel_scope(signal.scope)
+                decision.cancelled = self.prefetcher.cancel_scope(signal.scope, branch_id=signal.branch_id)
                 self.cancelled += decision.cancelled
-            self._last[signal.scope] = (signal.state, signal.kind, signal.ref)
+            self._last[where] = (signal.state, signal.kind, signal.ref)
 
             predictions = self._predictions(signal)
             decision.suggestions = self._suggest(signal)
@@ -330,7 +336,8 @@ class Anticipator:
         record = Started(
             key=prediction.key, tier=prediction.tier, tool=prediction.tool or f"internal:{prediction.internal}",
             why=prediction.why, level=prediction.level, confidence=prediction.confidence,
-            observations=prediction.observations, scope=signal.scope, ref=signal.ref, at=self.clock(),
+            observations=prediction.observations, scope=signal.scope, branch_id=signal.branch_id,
+            ref=signal.ref, at=self.clock(),
         )
 
         async def read() -> Any:
@@ -419,14 +426,21 @@ class Anticipator:
     # ------------------------------------------------------------------ standing down
 
     def owner_read(self, session: Any) -> int:
-        """The owner asked for something: stand the speculative lane down for that
-        conversation. P1 stays — it is the record he is looking at."""
+        """The owner asked for something: stand the speculative lane down for the half he
+        asked it of. P1 stays — it is the record he is looking at — and the other half of a
+        split workspace is untouched, because he did not ask it anything.
+
+        `acting_branch` is which half this turn is addressed to, set once per turn beside the
+        turn id; empty means one workspace, and then the whole conversation stands down.
+        """
         scope = scope_of(session)
-        stopped = self.prefetcher.cancel_scope(scope, lane=P2)
+        branch_id = str(getattr(session, "acting_branch", "") or "")
+        stopped = self.prefetcher.cancel_scope(scope, lane=P2, branch_id=branch_id)
         if stopped:
             self.cancelled += stopped
             for record in self._history:
-                if record.scope == scope and record.outcome == "in_flight" and record.tier == P2:
+                if (record.scope == scope and record.outcome == "in_flight" and record.tier == P2
+                        and (not branch_id or record.branch_id == branch_id)):
                     record.outcome = "cancelled"
             from app.observability import timeline
 
