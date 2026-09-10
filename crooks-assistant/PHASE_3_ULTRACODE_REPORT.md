@@ -321,6 +321,39 @@ holds the empty case — but this is the place to be careful.
 
 ---
 
+## 8. What to test physically on the Samsung, in order
+
+Everything here was proved against fixtures and a real Chromium at 601 × 889. What a browser
+cannot prove is a thumb, a microphone and a real store. In rough order of what would be most
+embarrassing to have got wrong:
+
+1. **Two fingers on the orb.** Spread them. It must divide, buzz once, and say "Divided" — and
+   the assistant must not say it could not hear you. Then pinch to merge.
+2. **The Split control.** With one half, tap `Split` in the rail. Same outcome as the gesture.
+3. **Switch halves.** Ask each half a different question, then tap between them. The cards on
+   screen must change, not just who is listening. Then say "switch to the other half".
+4. **Both halves at once.** Ask the left half something slow ("how were sales last week"), and
+   while it is thinking ask the right half something quick ("order 1938"). The quick answer
+   should arrive first, and the slow one should land on its own half without stepping on it.
+5. **The dock, from the idle screen.** Tap Orders, Inbox, Sales, Products in turn, with nothing
+   said first. Each must draw a workspace, fast, and the second card of a kind should be folded
+   with a title you can tap open.
+6. **Hold to talk after typing.** Open a composer, type in a field, then hold the dock and
+   speak. Typing must never start a recording, and the hold must still work.
+7. **The armed state.** Tap Reply on an email. The pill must sit on the card, unclipped, with a
+   Cancel you can hit. Speak the reply; then do it again and tap Cancel, and check the next
+   question is not swallowed.
+8. **A failed read.** Hard to force deliberately; if the Mac loses Gmail mid-turn, an order's
+   Email tab must say it could not check rather than saying there is no email.
+9. **Settings → What I can do.** Read it. Every family should say READY or say exactly why not,
+   and any missing scope should name itself.
+10. **Reload while on an order.** Pull down to refresh. The workspace must come back.
+
+Say `make watch` on the Mac while testing: every turn's lane, recipe, timings and the three
+new latency numbers are printed live, and `crooks-status` shows the family states.
+
+---
+
 _This report is being written as the pass completes. Sections still to come: the remaining
 capability families (order editing, discount codes, store credit, abandoned checkouts,
 arbitrary email compose, precision input, the query engine, anticipation, the learned layer,

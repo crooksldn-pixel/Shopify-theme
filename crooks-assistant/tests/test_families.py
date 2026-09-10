@@ -126,6 +126,14 @@ def _core_table():
     return {f.key: f for f in families.all_families()}
 
 
+def _shipped(spec) -> bool:
+    """A tool the assistant ships, as opposed to a double another test module registered into
+    the process-global registry. Told apart by where the handler is defined: a double lives in
+    tests/. Without this the assertions below fail depending on which other test module ran
+    first, which is a flaky test rather than a true one."""
+    return str(getattr(spec.handler, "__module__", "")).startswith("app.")
+
+
 def test_every_existing_write_operation_belongs_to_a_named_family():
     """The family table was built for Phase 3's additions and started empty, so /health
     listed nothing and the settings sheet could say nothing about the fourteen write
@@ -134,7 +142,7 @@ def test_every_existing_write_operation_belongs_to_a_named_family():
 
     families = _core_table()
     claimed = {op for f in families.values() for op in f.operations}
-    registered = {s.write.operation for s in registry.all_specs() if s.write is not None}
+    registered = {s.write.operation for s in registry.all_specs() if s.write is not None and _shipped(s)}
     assert registered, "no write tools are registered at all — the check would pass vacuously"
     assert registered <= claimed, f"no family names these operations: {sorted(registered - claimed)}"
 
@@ -146,8 +154,9 @@ def test_every_read_tool_the_model_is_offered_belongs_to_a_named_family():
     claimed = {tool for f in families.values() for tool in f.tools}
     reads = {
         s.name for s in registry.all_specs()
-        if s.write is None and s.batch is None and not s.name.startswith("mock_")
+        if s.write is None and s.batch is None and not s.name.startswith("mock_") and _shipped(s)
     }
+    assert reads, "no read tools are registered at all — the check would pass vacuously"
     assert reads <= claimed, f"no family names these read tools: {sorted(reads - claimed)}"
 
 
