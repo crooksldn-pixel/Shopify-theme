@@ -438,3 +438,111 @@ async def test_a_suggestion_is_only_made_at_high_confidence_and_is_only_words(an
     # A suggestion is a sentence about a READ or a move. Nothing acts on it.
     assert all("cancel" not in s["why"] and "refund" not in s["why"] for s in loud.suggestions)
     await asyncio.sleep(0.1)
+
+
+# --------------------------------------------------------------------- what a signal says
+
+
+def test_the_shape_of_an_order_is_read_without_reading_the_order():
+    from app.anticipation import signals
+
+    features = signals.order_features({
+        "fulfillment": "UNFULFILLED", "shipping_address": {"country_code": "IE"},
+        "placed_at": "2020-01-01T00:00:00Z", "total": "£410.00",
+        "email": {"waiting_since": "5h"},
+    })
+    assert set(features) == {"unfulfilled", "international", "old", "high_value", "has_email",
+                             "inbound_unanswered", "untracked"}
+    home = signals.order_features({"fulfillment": "FULFILLED", "shipping_address": {"country_code": "GB"},
+                                   "fulfillments": [{"tracking": "AB1"}]})
+    assert "domestic" in home and "fulfilled" in home and "tracked" in home
+    # Everything a signal carries has to survive the state's allow-list, or it is not learned.
+    assert clean_state("order_opened", features)
+
+
+def test_the_neighbour_predicted_is_the_one_the_cursor_moves_to():
+    """A working set's members are ORDERED and the cursor is an index into them. Read through
+    `members_by_id`, which hands back a frozenset, the guess was the wrong record whenever the
+    hash said so — and a prediction about the wrong record is worse than no prediction."""
+    from app.analytics import sets as working_sets
+    from app.anticipation import signals
+
+    session = Session(session_id="s1", login="owner@example.com")
+    held = working_sets.create(session, kind="orders", members=["o1", "o2", "o3"], label="to go out")
+    branch = session.branch()
+    branch.workflow = type("W", (), {"set_id": held.set_id, "cursor": 0})()
+    assert signals.neighbours_of(session, branch)[0] == "o2"
+    branch.workflow.cursor = 1
+    assert signals.neighbours_of(session, branch) == ("o3", "o1")
+    branch.workflow.cursor = 2
+    assert signals.neighbours_of(session, branch) == ("o2",)
+
+
+def test_a_signal_built_from_an_order_keeps_the_ids_out_of_what_is_learned():
+    from app.anticipation import signals
+
+    session = Session(session_id="s1", login="owner@example.com")
+    signal = signals.for_order(
+        "gid://shopify/Order/1", {
+            "order_id": "gid://shopify/Order/1", "fulfillment": "UNFULFILLED",
+            "customer_id": "gid://shopify/Customer/9", "customer_email": "Jo@Example.com",
+            "shipping_address": {"country_code": "IE"},
+        },
+        session=session, branch=session.branch(),
+    )
+    assert signal.ids == {"order_id": "gid://shopify/Order/1",
+                          "customer_id": "gid://shopify/Customer/9", "email": "jo@example.com"}
+    assert "@" not in signal.state and "Order" not in signal.state
+    assert signal.scope == "owner@example.com|s1"
+
+
+# --------------------------------------------------------------------- the owner's own view
+
+
+@pytest.fixture()
+async def macs_client(monkeypatch):
+    """The application, as the Mac itself reaches it. Enough of test_routes.py's fixture to
+    ask the two /anticipation routes and no more."""
+    import httpx
+
+    from app.clients.elevenlabs import ScribeClient
+    from app.clients.elevenlabs_tts import VoiceClient
+    from app.main import app
+    from app.providers import max_agent_sdk
+
+    async def no_start(self):
+        raise RuntimeError("tests never start the real Claude provider")
+
+    async def fake_scribe_health(self):
+        return True, "fake scribe"
+
+    monkeypatch.setattr(max_agent_sdk.MaxAgentSDKProvider, "start", no_start)
+    monkeypatch.setattr(ScribeClient, "health", fake_scribe_health)
+    monkeypatch.setattr(VoiceClient, "health", lambda self: (True, "fake voice"))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            yield c
+
+
+async def test_the_debug_view_is_the_macs_own_and_the_reset_empties_the_table(macs_client):
+    """Inspectable and resettable (§19), and not from the tablet: this is the owner's view of
+    what his machine has been guessing about him."""
+    engine_mod.install(engine_mod.Anticipator(learner=Learner(), prefetcher=Prefetcher(), memory=Memory()))
+    try:
+        learned = engine_mod.current().learner
+        for _ in range(6):
+            learned.observe("order_opened[old,unfulfilled]", "tracking_checked")
+        body = (await macs_client.get("/anticipation")).json()
+        assert body["learned"]["rows"] and body["learned"]["rows"][0]["next"] == "tracking_checked"
+        assert body["counts"]["max_per_source"] >= 1
+        # Anything that came through the proxy — a tablet — is refused both routes.
+        tablet = {"Tailscale-User-Login": "owner@example.com", "X-Forwarded-For": "100.64.0.9"}
+        assert (await macs_client.get("/anticipation", headers=tablet)).status_code == 403
+        assert (await macs_client.post("/anticipation/reset", headers=tablet)).status_code == 403
+        reset = await macs_client.post("/anticipation/reset")
+        assert reset.status_code == 200 and reset.json()["transitions_dropped"] >= 1
+        assert reset.json()["learned"]["rows"] == []
+        assert (await macs_client.get("/anticipation")).json()["learned"]["rows"] == []
+    finally:
+        engine_mod.install(None)

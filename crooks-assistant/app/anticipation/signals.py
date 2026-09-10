@@ -98,10 +98,15 @@ def neighbours_of(session: Any, branch: Any) -> tuple[str, ...]:
     try:
         from app.analytics import sets as working_sets
 
-        members = working_sets.members_by_id(session).get(getattr(workflow, "set_id", ""), ())
+        held = working_sets.get(session, str(getattr(workflow, "set_id", "") or ""))
     except Exception:  # noqa: BLE001 — no sets held, no neighbours
         return ()
-    ordered = list(members)
+    if held is None:
+        return ()
+    # In ORDER. `members_by_id` hands back a frozenset — fine for the permission check it
+    # exists for, and useless here: the cursor is an index, so a set read out of order
+    # predicted the wrong record and the guess was wasted every time the hash said so.
+    ordered = list(held.members)
     if not ordered:
         return ()
     cursor = int(getattr(workflow, "cursor", 0) or 0)

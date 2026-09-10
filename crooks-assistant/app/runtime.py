@@ -455,6 +455,17 @@ def build(settings: Settings | None = None) -> Runtime:
 
     install_learner(Learner(path=settings.log_dir / "anticipation" / "transitions.json"))
 
+    # The shipping provider (§20). Easyship is the provider this shop is going to use and it
+    # is NOT integrated, so what is installed is its adapter in the only state it can honestly
+    # be in: refusing, and naming both halves of what is missing. Installing it rather than
+    # nothing is what makes the capability row and the shipping context say "Easyship is not
+    # connected: CROOKS_EASYSHIP_TOKEN is unset and the client is not written" instead of the
+    # vaguer "no provider" — the owner can act on the first and not on the second.
+    from app.shipping import install as install_shipping
+    from app.shipping.easyship import EasyshipProvider
+
+    install_shipping(EasyshipProvider())
+
     shopify_tools.bind(shopify)
     from app.analytics.cache import OrderCache
 

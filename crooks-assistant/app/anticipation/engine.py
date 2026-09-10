@@ -56,24 +56,29 @@ from app.anticipation.models import (
 
 log = logging.getLogger("crooks.anticipation")
 
-# The three bounds, and where the numbers come from.
+# The three bounds, and where the numbers come from. MEASURED, not chosen —
+# bench/anticipation.py, whose two halves rule one worry out and the real one in.
 #
-# MEASURED, not chosen. bench/anticipation.py holds N speculative reads of ONE source in
-# flight and then runs the owner's two-read plan of that same source through the scheduler,
-# reporting what the owner waited at each N. What contends is not the CPU, it is a source's
-# concurrency: `SOURCE_LIMITS` in app/reads/scheduler.py gives Shopify four simultaneous reads
-# and Gmail three, and every slot speculation is holding is a slot the owner queues behind.
-# The bench's numbers are in the report; the shape is that the owner's plan is flat while
-# speculation holds two of Shopify's four slots and steps up by roughly a whole read's latency
-# once it holds three, because the second read of his two-wide plan then has to wait for one
-# to finish. Gmail is worse: three slots, so two is already two thirds of it.
+# The worry that turns out NOT to bind is in-process queueing. Hold five speculative reads of
+# one source in flight and the owner's own two-read plan of that same source is unaffected:
+# +0.2 to +0.4 ms at a read modelled at 150 ms, and the same at 400 ms. The scheduler's
+# `SOURCE_LIMITS` semaphore is built PER PLAN, so speculation in its own plan never takes a
+# slot from his. Worth knowing, and worth not designing around.
 #
-# Hence: at most two anticipated reads of any ONE source, which is the bound that matters, and
-# at most four in total across sources — Shopify, Gmail and the Mac's own internal reads, which
-# contend with nothing. Of the four, at most two may be the speculative (P2) kind, so a guess
-# about the next record can never crowd out the reads about the record actually on screen.
-# The brief asks for roughly 2-4 concurrent speculative reads; this is 4 with the per-source
-# half of it at 2. Re-run the bench on the Mac and move them if the machine says otherwise.
+# What does bind is RATE. The scheduler prices a Shopify read at 60 points and records the
+# bucket refilling at 50 a second, so speculation spends refill the owner's next read needs.
+# At the fastest cadence the tablet actually produces — a record every three seconds, which is
+# a thumb on Next through a working set — one speculative Shopify read per open spends 40% of
+# the refill, two spend 80%, and three spend 120%: past the refill, which is where his own
+# reads begin to wait. Ten seconds between records and even five are comfortable, but the
+# bound has to hold at the fast cadence, not the comfortable one.
+#
+# Hence: at most TWO anticipated reads of any one source, which is the bound that matters; at
+# most four in total across sources (Shopify, Gmail, and the Mac's own internal reads, which
+# spend nothing); and of those four at most two of the speculative P2 kind, so a guess about
+# the next record can never crowd out the reads about the record on screen. The brief asks for
+# roughly 2-4 concurrent speculative reads; this is four in total with the per-source half at
+# two. Re-run the bench and move them if the store's pricing changes.
 MAX_ANTICIPATED = 4
 MAX_PER_SOURCE = 2
 MAX_SPECULATIVE = 2
