@@ -24,14 +24,23 @@ good turn. Adding those together and reporting 490 ms describes an experience no
 
 from __future__ import annotations
 
-import time
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any
+import os
 
-import httpx
+# Before anything imports the application. The lifespan warms the order cache at boot, and it
+# does so with whatever Shopify client the runtime was built with — which is the real one,
+# because the fixture is bound a moment later. That background read went to the real store,
+# and awaiting it here hung the harness on the network. Boot does not warm; the harness warms
+# once the fixture is in place, and then it is reading the golden world.
+os.environ.setdefault("CROOKS_ANALYTICS_WARM_DAYS", "0")
 
-from app.providers.base import TurnResult
+import time  # noqa: E402
+from contextlib import asynccontextmanager  # noqa: E402
+from dataclasses import dataclass, field  # noqa: E402
+from typing import Any  # noqa: E402
+
+import httpx  # noqa: E402
+
+from app.providers.base import TurnResult  # noqa: E402
 
 # The tablet on the workbench. Everything the harness sends carries these, because a request
 # that arrives without them is a request from the Mac itself and takes a different path
@@ -345,6 +354,11 @@ async def harness(*, live: bool = False, writes: bool = True):
                 runtime.gmail = gmail
                 gmail_tools.bind(gmail, getattr(runtime, "customer_lookup", None))
             runtime.sessions = SessionManager()
+            # The order cache, warmed the way boot warms it — but awaited. Production kicks
+            # this off in the background and the first question of the day is answered from
+            # memory; a scenario that raced it would sometimes ask a cold cache and be told
+            # there were no orders today, which is a flaky test dressed up as a bug report.
+            await _warm(runtime)
             transport = httpx.ASGITransport(app=app)
             async with httpx.AsyncClient(transport=transport, base_url="http://tablet") as client:
                 harness_ = Harness(client, runtime, provider, store, gmail, live=live)
@@ -353,3 +367,25 @@ async def harness(*, live: bool = False, writes: bool = True):
     finally:
         ScribeClient.health = scribe_health
         VoiceClient.health = voice_health
+
+
+async def _warm(runtime: Any, days: int = 90) -> None:
+    """Read the recent window into the order cache and wait for it.
+
+    The cache holds a late-binding callable for its client, so by the time this runs it is
+    reading whatever the harness bound. That is checked rather than assumed: a warm that went
+    to the real store would be a scenario quietly reading a real shop, which is the one thing
+    a fixture run must never do.
+    """
+    cache = getattr(runtime, "order_cache", None)
+    if cache is None:
+        return
+    client = cache._client()
+    if type(client).__name__ not in ("FixtureShopify", "ReadOnlyShopify"):
+        raise AssertionError(
+            f"the order cache would warm against {type(client).__name__}, which is not the "
+            "fixture or the read-only client. Refusing to read a real shop from the harness."
+        )
+    task = cache.warm(days)
+    if task is not None:
+        await task

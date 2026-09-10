@@ -61,6 +61,28 @@ def _rfc2822(days_ago: float, hour: int = 10, minute: int = 0) -> str:
     return _local(days_ago, hour, minute).strftime("%a, %d %b %Y %H:%M:%S %z")
 
 
+def _today_at(fraction: float) -> datetime:
+    """An instant this far through the day so far: 0.0 is just after midnight, 1.0 is now.
+
+    Today's orders are placed this way rather than at a fixed hour, because a question about
+    today covers midnight until NOW and nothing else. An order stamped "today at 9am" is in
+    the future for anyone running the suite before nine, and one stamped "two hours ago" is
+    YESTERDAY for anyone running it before two — either way the fixture works in the afternoon
+    and reports "no orders today" at breakfast, which is a flaky test with a plausible-sounding
+    failure. A fraction of the elapsed day is inside the window whatever the hour, and keeps
+    the three orders in a fixed order relative to each other.
+    """
+    midnight = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
+    elapsed = (NOW - midnight).total_seconds()
+    # A minute of headroom, so the newest order is never stamped in the same second as "now".
+    at = midnight + timedelta(seconds=max(0.0, min(fraction, 1.0) * max(0.0, elapsed - 60)))
+    return at
+
+
+def _today_iso(fraction: float) -> str:
+    return _today_at(fraction).astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _money(amount: str) -> dict[str, Any]:
     return {"shopMoney": {"amount": amount, "currencyCode": CURRENCY}}
 
@@ -175,6 +197,15 @@ class OrderSpec:
     cancel_reason: str = ""
     note: str = ""
     tags: list[str] = field(default_factory=list)
+    # Set for orders placed today: how far through the day so far, 0.0 to 1.0.
+    today_fraction: float | None = None
+
+    def placed_at(self) -> str:
+        return _today_iso(self.today_fraction) if self.today else _at(self.days_ago, self.hour)
+
+    @property
+    def today(self) -> bool:
+        return self.today_fraction is not None
 
     @property
     def order_id(self) -> str:
@@ -204,14 +235,14 @@ ORDERS: list[OrderSpec] = [
     # Today. The scenario order: multi-item, unfulfilled, a customer with history.
     OrderSpec(1938, MIA, 0, 9, "84.00", "UNFULFILLED", "PAID",
               [("gid://shopify/ProductVariant/9102", 1), ("gid://shopify/ProductVariant/9202", 1)],
-              _WINDSOR, note="", tags=["vip"]),
+              _WINDSOR, note="", tags=["vip"], today_fraction=0.5),
     # Today. Single item, unfulfilled — the second row of "today's orders".
     OrderSpec(1940, PRIYA, 0, 11, "18.00", "UNFULFILLED", "PAID",
-              [("gid://shopify/ProductVariant/9301", 1)], _MANCHESTER),
+              [("gid://shopify/ProductVariant/9301", 1)], _MANCHESTER, today_fraction=0.9),
     # Today. Fulfilled and tracked, so "today's orders" is not uniformly unfulfilled.
     OrderSpec(1939, DAVID, 0, 8, "60.00", "FULFILLED", "PAID",
               [("gid://shopify/ProductVariant/9103", 1)], _LEEDS,
-              tracking="AB1234567890GB", carrier="Royal Mail"),
+              tracking="AB1234567890GB", carrier="Royal Mail", today_fraction=0.15),
     # Four days ago, fulfilled but never tracked: the untracked case.
     OrderSpec(1936, MILLIE, 4, 14, "84.00", "FULFILLED", "PAID",
               [("gid://shopify/ProductVariant/9104", 1), ("gid://shopify/ProductVariant/9203", 1)],
@@ -275,16 +306,17 @@ def order_node(spec: OrderSpec) -> dict[str, Any]:
         fulfillments = [{
             "id": f"gid://shopify/Fulfillment/{spec.number}",
             "status": "SUCCESS",
-            "createdAt": _at(max(0.0, spec.days_ago - 1), 15),
+            "createdAt": _today_iso(min(1.0, (spec.today_fraction or 0) + 0.05)) if spec.today else _at(max(0.0, spec.days_ago - 1), 15),
             "trackingInfo": ([{"number": spec.tracking, "company": spec.carrier,
                                "url": f"https://track.example/{spec.tracking}"}] if spec.tracking else []),
         }]
+    placed = spec.placed_at()
     return {
         "id": spec.order_id,
         "name": spec.name,
-        "createdAt": _at(spec.days_ago, spec.hour),
-        "processedAt": _at(spec.days_ago, spec.hour),
-        "updatedAt": _at(max(0.0, spec.days_ago - 1), spec.hour),
+        "createdAt": placed,
+        "processedAt": placed,
+        "updatedAt": placed,
         "cancelledAt": _at(spec.cancelled_days_ago, 9) if spec.cancelled_days_ago is not None else None,
         "cancelReason": spec.cancel_reason or None,
         "closedAt": None,
@@ -450,10 +482,12 @@ class World:
         return BY_NAME[name if name.startswith("#") else f"#{name}"]
 
     def today(self) -> list[OrderSpec]:
-        """The orders a question about today should find, newest first. `days_ago == 0` is the
-        shop's current local day by construction, which is the same day the application asks
-        Shopify for."""
-        return sorted([o for o in self.orders if o.days_ago == 0], key=lambda o: o.hour, reverse=True)
+        """The orders a question about today should find, newest first.
+
+        An order is today's when it was placed minutes ago rather than days ago — which is
+        always inside the window a question about today asks for, whatever time the suite runs.
+        """
+        return sorted([o for o in self.orders if o.today], key=lambda o: -(o.today_fraction or 0))
 
     def orders_of(self, person: Person) -> list[OrderSpec]:
         return sorted([o for o in self.orders if o.person is person], key=lambda o: o.days_ago)

@@ -119,9 +119,16 @@ def _matches(spec: OrderSpec, search: str) -> bool:
     return True
 
 
+def _sort_key(spec: OrderSpec) -> tuple[float, float]:
+    """Newest first, in the same order Shopify would return them."""
+    if spec.today:
+        return (0.0, -float(spec.today_fraction or 0))
+    return (1.0, spec.days_ago)
+
+
 def _selected(search: str, limit: int) -> list[OrderSpec]:
     found = [o for o in ORDERS if _matches(o, search)]
-    found.sort(key=lambda o: (o.days_ago, -o.hour))
+    found.sort(key=_sort_key)
     return found[: max(1, int(limit or 10))]
 
 
@@ -163,7 +170,7 @@ def _customer_orders(_store: FixtureShopify, v: dict) -> dict:
     person = PEOPLE.get(str(v.get("id") or ""))
     if person is None:
         return {"data": {"customer": None}}
-    theirs = sorted([o for o in ORDERS if o.person is person], key=lambda o: o.days_ago)
+    theirs = sorted([o for o in ORDERS if o.person is person], key=_sort_key)
     first = theirs[-1] if theirs else None
     open_orders = [o for o in theirs if o.fulfillment != "FULFILLED" and o.cancelled_days_ago is None]
 
@@ -189,8 +196,8 @@ def _customer_orders(_store: FixtureShopify, v: dict) -> dict:
         "defaultEmailAddress": {"emailAddress": person.email},
         "lastOrder": ({"id": theirs[0].order_id, "name": theirs[0].name} if theirs else None),
         "firstOrder": {"edges": ([{"node": {"id": first.order_id, "name": first.name,
-                                            "processedAt": data._at(first.days_ago, first.hour),
-                                            "createdAt": data._at(first.days_ago, first.hour)}}] if first else [])},
+                                            "processedAt": first.placed_at(),
+                                            "createdAt": first.placed_at()}}] if first else [])},
         "openOrders": {"edges": [{"node": {"id": o.order_id, "name": o.name, "cancelledAt": None,
                                            "displayFulfillmentStatus": o.fulfillment}} for o in open_orders]},
         "orders": {"edges": [{"node": brief(o)} for o in theirs[: v.get("n") or 10]]},

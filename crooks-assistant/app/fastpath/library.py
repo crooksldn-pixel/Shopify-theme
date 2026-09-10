@@ -472,27 +472,18 @@ register(Recipe(
 
 
 def _order_list_plan(ctx: Ctx) -> ReadPlan | None:
-    """The orders in a period, as a list. `shopify_list_orders` already returns the shape the
-    order_list card is built from, so this is one read and one card."""
-    days, days_ago = _period_days(ctx.intent.signals.words)
-    return ReadPlan([Read("listing", "shopify_list_orders", {"days": days, "days_ago": days_ago, "limit": 10},
-                          source="shopify", cost=90.0)], label="order_list_period")
+    """The orders in a period, as a list to work through.
 
-
-def _period_days(words: tuple[str, ...]) -> tuple[int, int]:
-    """How wide a window the question asked for, and how far back it starts.
-
-    Deliberately small: the fast lane takes "today", "yesterday" and "this week" and defers
-    anything cleverer to the read layer, which can parse a period properly.
+    Through the read layer rather than `shopify_list_orders`, for one reason: `commerce_query`
+    publishes a working set, and a set is what makes the list navigable. "Next", "the third
+    one" and a tap on the third row are then the same cursor on the same members. A plain
+    listing draws the same card and leaves the owner with nothing to walk.
     """
-    have = set(words)
-    if "yesterday" in have:
-        return 1, 1
-    if "week" in have:
-        return 7, 0
-    if "month" in have:
-        return 30, 0
-    return 1, 0
+    return ReadPlan([Read("listing", "commerce_query", {
+        "entity": "orders", "period": period_from(ctx.intent.signals.words) or "today",
+        "sort": [{"metric": "placed_at", "direction": "desc"}], "limit": 25,
+        "title": "Orders",
+    }, source="shopify", cost=120.0)], label="order_list_period")
 
 
 def _order_list_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
@@ -505,25 +496,25 @@ def _order_list_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     body = result.values.get("listing")
     if not isinstance(body, dict):
         return FastAnswer(answer="", defer="the order list did not come back")
-    orders = [o for o in (body.get("orders") or []) if isinstance(o, dict)]
-    period = "today" if int(body.get("days") or 1) == 1 and not int(body.get("days_ago") or 0) else "in that period"
-    if not orders:
-        return FastAnswer(answer=f"No orders {period}.", calls=list(result.calls), trace={"rows": 0})
-    # The set the cursor walks, so "next" and a tap on the third row mean the same thing.
+    rows = [r for r in (body.get("rows") or []) if isinstance(r, dict)]
+    period = _period_words(body, fallback="in that period")
+    if not rows:
+        return FastAnswer(answer=f"No orders {period}." + _hedge(body), calls=list(result.calls), trace={"rows": 0})
+    # The set the cursor walks, so "next", "the third one" and a tap on the third row are one
+    # operation on one list.
     _open_workflow(ctx, body, kind="orders", operation="review", set_id=_set_id_of(body))
-    unfulfilled = sum(1 for o in orders if "unfulfilled" in str(o.get("fulfillment") or "").lower())
-    words = f"{len(orders)} order{'s' if len(orders) != 1 else ''} {period}"
+    unfulfilled = sum(1 for r in rows if "unfulfilled" in str(r.get("fulfillment") or r.get("status") or "").lower())
+    words = f"{_how_many(body, len(rows))} order{'s' if len(rows) != 1 else ''} {period}"
     if unfulfilled:
         words += f"; {unfulfilled} still to go out"
-    more = " There are more than I have shown." if body.get("truncated") else ""
-    return FastAnswer(answer=words + "." + more, calls=list(result.calls), partial=result.partial,
-                      trace={"rows": len(orders), "unfulfilled": unfulfilled})
+    return FastAnswer(answer=words + "." + _hedge(body), calls=list(result.calls), partial=result.partial,
+                      trace={"rows": len(rows), "unfulfilled": unfulfilled, "set_id": _set_id_of(body)})
 
 
 register(Recipe(
     recipe_id="order_list_period", intent_family="order_list_period",
-    read_primitives=("shopify_list_orders",), parallel_nodes=(("listing",),), ui="order_list",
-    cache_policy=CACHE_HOT, min_confidence=0.74, target_ms=900,
+    read_primitives=("commerce_query",), parallel_nodes=(("listing",),), ui="order_list",
+    cache_policy=CACHE_ANALYTICS, min_confidence=0.74, target_ms=1200,
     plan=_order_list_plan, render=_order_list_render,
 ))
 # Showing the open order again is the same procedure as looking it up: `_order_plan` already
