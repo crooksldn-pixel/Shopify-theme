@@ -125,6 +125,7 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     staging rules live in the system prompt once, not in each description."""
     import json
 
+    from app.families import load_all
     from app.providers.max_agent_sdk import withheld_tools
     from app.tools import (  # noqa: F401
         analytics_tools,
@@ -135,6 +136,11 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
         shopify_writes,
     )
 
+    # The Phase 3 families' tools are part of the block the model reads (app/runtime.py calls
+    # this at boot), and they were being counted or not depending on whether an earlier test
+    # module happened to import them: the same assertion produced 24,788 bytes run alone and
+    # 26,259 in the suite. Loading them here makes the budget cover what production offers.
+    load_all()
     specs = registry.all_specs()
     offered = [s for s in specs if s.name not in withheld_tools(specs, writes_enabled=True)]
     assert offered, "nothing offered"
@@ -157,7 +163,17 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # schema object). About 1.7 KB together, half of it paid back by tightening the address
     # tool's per-field descriptions. The block is what every turn ON THE MODEL PATH pays —
     # a fast-lane turn pays none of it — and a tool added here has to earn its bytes.
-    assert total <= 24_300, f"the tool block is {total} bytes"
+    #
+    # 26,400 covers the Phase 3 families, now that they are counted. The composer
+    # (app/families/compose.py) is 2,085 bytes of it, measured: 1,471 for gmail_compose_open
+    # and gmail_compose_fill, and 614 for the `to`/`to_name`/`compose_id` properties on the
+    # two new-email tools — paid twice, because those two share one schema object. What it
+    # buys is the recipient the shop cannot supply: the bench asked for an email to a model's
+    # own address and was refused, which is a refusal to do the job. It is also the smallest
+    # way to buy it — the composer's two tools carry no staging rules (those are in the system
+    # prompt once), and "write an email to <address> …" opens the composer on the fast lane
+    # without the model reading a byte of this.
+    assert total <= 26_400, f"the tool block is {total} bytes"
     batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
     # 2,300 covers the fifth batch tool — the same campaign as batch_email_drafts, sent
     # rather than saved — which shares its schema object and adds two lines of description.

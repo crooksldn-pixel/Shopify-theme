@@ -48,6 +48,17 @@ SETTLE_POLL_S = 0.5
 _URL = re.compile(r"https?://([^\s/]+)", re.I)
 _MESSAGE_ID = re.compile(r"^<[^\s<>@]+@[^\s<>@]+>$")
 
+# An address the owner dictated rather than one Shopify supplied (app/families/compose.py).
+# Strict on purpose: one address, no display name, no comma, no space, a real dotted domain
+# and a letters-only TLD. It is the last check before an address becomes a To header, and a
+# lenient one here would let "1232candlestickhorse at gmail" through as a recipient.
+MAX_ADDRESS_CHARS = 254
+EMAIL_ADDRESS = re.compile(
+    r"^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
+    r"@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$",
+    re.I,
+)
+
 _client: GmailClient | None = None
 _customer = None      # async (order_id, customer_id) -> {"name", "email", "label"}: read from Shopify
 _policy = None        # () -> settings
@@ -445,6 +456,10 @@ def _present_email(proposal) -> dict:
         facts.append({"label": "Order", "value": str(s["order_line"])})
     elif s.get("in_reply_to"):
         facts.append({"label": "Order", "value": "not checked — the reply goes to whoever wrote last in the thread", "tone": "warn"})
+    if s.get("off_shopify"):
+        # The whole point of the compose family, said on the card the gesture is on: this
+        # address is nobody the shop knows, and the owner is the only check on it.
+        facts.append({"label": "Recipient", "value": "not a Shopify customer — the address you gave", "tone": "warn"})
     if s.get("draft_used"):
         facts.append({"label": "Draft", "value": "the one waiting in Gmail, as it reads now"})
     if sending:
@@ -465,11 +480,15 @@ def _prepared_email(*, execution: dict, before: dict, expected_after: dict, enti
     read_back = f"{'send' if sending else 'draft'} {'a reply' if ctx else 'an email'} to {first}{about}"
     if execution.get("draft_id"):
         read_back = f"send the draft waiting for {first}{about}"
-    label = f"#{customer['label'].lstrip('#')}" if customer and customer.get("label") else "thread" if ctx else "customer"
+    # An address the owner dictated has no Shopify record behind it, so it has no order line
+    # and it must not be counted as a checked recipient — `to_checked` in the ledger means
+    # "the address came from the shop", and a compose to a stranger would have claimed it.
+    off_shopify = bool(customer and customer.get("off_shopify"))
+    label = f"#{customer['label'].lstrip('#')}" if customer and customer.get("label") else "thread" if ctx else "new email" if off_shopify else "customer"
     order_line = ""
     if customer and customer.get("label"):
         order_line = f"#{customer['label'].lstrip('#')} · the customer on the order"
-    elif customer:
+    elif customer and not off_shopify:
         order_line = "the customer's record in Shopify"
     return Prepared(
         execution=execution, before=before, expected_after=expected_after, entity_ref=entity_ref, entity_label=label,
@@ -477,10 +496,11 @@ def _prepared_email(*, execution: dict, before: dict, expected_after: dict, enti
             "title": title, "sending": sending, "to_line": to_line, "spoken_to": first, "subject": execution["subject"], "body": execution["body"],
             "in_reply_to": _provenance(ctx) if ctx else "", "verified_sender": bool(ctx and ctx["authenticated"]),
             "order_line": order_line, "draft_used": bool(execution.get("draft_id")),
+            "off_shopify": off_shopify,
             "from_line": sender, "read_back": read_back, "pii": [v for v in (to_email, to_name, execution["subject"]) if v],
             "ledger": {
                 "kind": kind, "reply": bool(ctx), "draft_used": bool(execution.get("draft_id")), "chars": len(execution["body"]),
-                "verified_sender": bool(ctx and ctx["authenticated"]), "to_checked": bool(customer),
+                "verified_sender": bool(ctx and ctx["authenticated"]), "to_checked": bool(customer) and not off_shopify,
             },
         },
     )
@@ -595,10 +615,37 @@ _NEW_SCHEMA = {
     "customer_id": {"type": "string", "description": "Or the customer, when there is no visible order."},
     "subject": {"type": "string", "maxLength": MAX_SUBJECT_CHARS, "description": "One plain line."},
     "body": {"type": "string", "maxLength": MAX_BODY_CHARS, "description": "The email, plainly. The sign-off is added."},
+    # The third recipient, added in Phase 3 for arbitrary compose (app/families/compose.py).
+    # An address is only admitted WITH the `compose_id` of a composer this conversation was
+    # given, and the gate checks that id against `session.issued_ids` like any other — so an
+    # address can only be staged from a composer whose card the owner has already seen, and
+    # never from an address a model produced mid-sentence. Nothing like this can be done with
+    # the address itself: an address is not a well-formed id (gate._ID_SHAPE has no "@").
+    "compose_id": {"type": "string", "description": "From gmail_compose_open; required with `to`."},
+    "to": {"type": "string", "maxLength": MAX_ADDRESS_CHARS, "description": "One address the owner gave, instead of an order or customer."},
+    "to_name": {"type": "string", "maxLength": 80, "description": "Their name, if said."},
 }
 
 
-async def _recipient(order_id: str, customer_id: str) -> dict[str, str]:
+async def _recipient(order_id: str, customer_id: str, to: str = "", to_name: str = "", compose_id: str = "") -> dict[str, str]:
+    """Who a new email is to. Three sources, exactly one of them: the order's customer, the
+    customer record, or an address the owner dictated into an open composer.
+
+    The bench refused "write an email to a model … their email is 1232candlestickhorse@
+    gmail.com" because a recipient had to be a Shopify customer. It does not any more — but
+    the address is still not the model's to invent: it arrives with a `compose_id` the gate
+    has already held to this conversation's issued ids, and `off_shopify` follows it onto the
+    card so the owner reads "not a Shopify customer" before the gesture.
+    """
+    address = " ".join(str(to or "").split())
+    if address:
+        if order_id or customer_id:
+            raise ToolError("Say which order — or which customer — or an address, not two of them.")
+        if not str(compose_id or "").strip():
+            raise ToolError("An email to an address is prepared from an open composer; call gmail_compose_open first.")
+        if len(address) > MAX_ADDRESS_CHARS or not EMAIL_ADDRESS.match(address):
+            raise ToolError(f"{address!r} is not an email address I can send to.")
+        return {"name": " ".join(str(to_name or "").split())[:80], "email": address.lower(), "label": "", "off_shopify": True}
     if bool(order_id) == bool(customer_id):
         raise ToolError("Say which order — or, without one, which customer — the email is to.")
     customer = await _order_customer(order_id, customer_id)
@@ -615,7 +662,7 @@ async def _recipient(order_id: str, customer_id: str) -> dict[str, str]:
     ),
     input_schema={"type": "object", "properties": dict(_NEW_SCHEMA), "required": ["subject", "body"]},
     tier=Tier.AMBER,
-    issued_id_args=("order_id", "customer_id"),
+    issued_id_args=("order_id", "customer_id", "compose_id"),
     write=WriteSpec(
         operation="gmail_draft_new", entity_kind="email", entity_arg="order_id", mutation="gmail:draft",
         observe=_observe_token, execute=_execute_draft, present=_present_email, entity=_entity_email, verify=_verify_drafted, settle=_settle_draft,
@@ -625,9 +672,9 @@ async def _recipient(order_id: str, customer_id: str) -> dict[str, str]:
         spoken_stale="That changed since it was prepared. Nothing was saved.",
     ),
 )
-async def gmail_draft_new(subject: str, body: str, order_id: str = "", customer_id: str = "") -> Prepared:
+async def gmail_draft_new(subject: str, body: str, order_id: str = "", customer_id: str = "", to: str = "", to_name: str = "", compose_id: str = "") -> Prepared:
     client = _g()
-    customer = await _recipient(order_id, customer_id)
+    customer = await _recipient(order_id, customer_id, to, to_name, compose_id)
     text = clean_body(body)
     line = clean_subject(subject)
     sender = await asyncio.to_thread(client.address)
@@ -635,7 +682,7 @@ async def gmail_draft_new(subject: str, body: str, order_id: str = "", customer_
     raw = build_raw(sender=sender, sender_name=str(getattr(_settings(), "gmail_from_name", "") or ""), to=customer["email"], to_name=customer.get("name", ""), subject=line, body=text, token=token)
     execution = {"thread_id": "", "token": token, "raw": raw, "to": customer["email"], "to_name": customer.get("name", ""), "subject": line, "body": text, "state": "draft"}
     before = {"drafts": 0, "sent": 0}
-    return _prepared_email(execution=execution, before=before, expected_after={"drafts": 1, "sent": 0}, entity_ref=str(order_id or customer_id), ctx=None, customer=customer,
+    return _prepared_email(execution=execution, before=before, expected_after={"drafts": 1, "sent": 0}, entity_ref=str(order_id or customer_id or compose_id), ctx=None, customer=customer,
                            sending=False, title="Save a draft", sender=sender, kind="draft_new")
 
 
@@ -648,7 +695,7 @@ async def gmail_draft_new(subject: str, body: str, order_id: str = "", customer_
     ),
     input_schema={"type": "object", "properties": dict(_NEW_SCHEMA), "required": []},
     tier=Tier.RED,
-    issued_id_args=("order_id", "customer_id"),
+    issued_id_args=("order_id", "customer_id", "compose_id"),
     write=WriteSpec(
         operation="gmail_send_new", entity_kind="email", entity_arg="order_id", mutation="gmail:send",
         observe=_observe_token, execute=_execute_send, present=_present_email, entity=_entity_email, verify=_verify_sent, settle=_settle_send,
@@ -658,9 +705,9 @@ async def gmail_draft_new(subject: str, body: str, order_id: str = "", customer_
         spoken_stale="That draft changed since it was prepared. Nothing was sent.",
     ),
 )
-async def gmail_send_new(subject: str = "", body: str = "", order_id: str = "", customer_id: str = "") -> Prepared:
+async def gmail_send_new(subject: str = "", body: str = "", order_id: str = "", customer_id: str = "", to: str = "", to_name: str = "", compose_id: str = "") -> Prepared:
     client = _g()
-    customer = await _recipient(order_id, customer_id)
+    customer = await _recipient(order_id, customer_id, to, to_name, compose_id)
     sender = await asyncio.to_thread(client.address)
     draft = None
     if str(body or "").strip() or str(subject or "").strip():
@@ -690,7 +737,7 @@ async def gmail_send_new(subject: str = "", body: str = "", order_id: str = "", 
         raise ToolError("That was already sent.")
     if draft is not None:
         before["draft_sha"] = draft["sha"]
-    return _prepared_email(execution=execution, before=before, expected_after={"drafts": 0, "sent": 1}, entity_ref=str(order_id or customer_id), ctx=None, customer=customer,
+    return _prepared_email(execution=execution, before=before, expected_after={"drafts": 0, "sent": 1}, entity_ref=str(order_id or customer_id or compose_id), ctx=None, customer=customer,
                            sending=True, title="Send the email", sender=sender, kind="send_new")
 
 

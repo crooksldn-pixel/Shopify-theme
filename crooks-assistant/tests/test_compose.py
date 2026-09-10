@@ -1,0 +1,585 @@
+"""The composer: an email to any address, and a draft corrected into a send.
+
+The two things these hold, because everything else in the family follows from them:
+
+* An arbitrary recipient does not weaken the write boundary. `to` is admitted only with the
+  `compose_id` of a composer this conversation was handed; the gate refuses it without one; a
+  reply's recipient is still read from the thread; a dictated address cannot be staged at all
+  until a finger has corrected it; and the arguments that reach Gmail are built on the Mac
+  from the Mac's own copy of the email, never from what the tablet posted.
+* A mutation sentence still leaves the fast lane unless a family has declared it answers such
+  a sentence with a read. "Cancel it" is unchanged; "write an email to <address>" reaches the
+  composer; "email them all" still goes to the model.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import date, datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+import pytest
+
+from app.actions.models import ActionStatus
+from app.families import compose as family
+from app.fastpath import recipes as recipe_mod
+from app.fastpath.intent import resolve
+from app.fastpath.models import Ctx as RecipeCtx
+from app.session.branch import Branch
+from app.session.models import Session
+from app.tools import registry
+from app.tools.gate import Disposition, Tier, classify
+
+WEB = Path(__file__).resolve().parents[1] / "web"
+ADDRESS = "1232candlestickhorse@gmail.com"
+BENCH = (
+    "Write an email to a model asking if they're free for a shoot next Sunday. "
+    f"Their email is {ADDRESS}. Don't send it yet."
+)
+DICTATED = (
+    "Write an email to a model asking if they're free for a shoot next Sunday. "
+    "Their email is 1232 candlestick horse at gmail dot com. Don't send it yet."
+)
+
+
+@pytest.fixture
+def branch() -> Branch:
+    return Branch(branch_id="br_compose", session_id="s1")
+
+
+@pytest.fixture
+def session() -> Session:
+    return Session(session_id="s1")
+
+
+# --------------------------------------------------------------------------- the address
+
+
+@pytest.mark.parametrize(("said", "value", "status"), [
+    (ADDRESS, ADDRESS, "ok"),
+    ("  Sam@CrooksLDN.com ", "sam@crooksldn.com", "ok"),
+    ("their email is 1232 candlestick horse at gmail dot com", ADDRESS, "uncertain"),
+    ("sam at crooksldn dot co dot uk", "sam@crooksldn.co.uk", "uncertain"),
+    ("send it to sam at crooksldn dot com", "sam@crooksldn.com", "uncertain"),
+    ("1232candlestickhorse at gmail", "1232candlestickhorse@gmail", "invalid"),
+    ("just a name", "just a name", "invalid"),
+    ("", "", "invalid"),
+])
+def test_an_address_is_read_and_its_soundness_is_said(said, value, status):
+    got_value, got_status, hint = family.check_address(said)
+    assert (got_value, got_status) == (value, status)
+    assert bool(hint) == (status != "ok"), "anything but ok has to say why"
+
+
+def test_a_dictated_address_is_never_treated_as_typed():
+    """The whole reason `uncertain` exists: "candle stick" and "candlestick" are both valid
+    addresses and only the owner knows which was meant."""
+    clean, status, _ = family.check_address("candle stick horse at gmail dot com")
+    assert status == "uncertain" and family.EMAIL_ADDRESS.match(clean), clean
+    assert family.check_address(clean)[1] == "ok", "typed, the same characters are sound"
+
+
+def test_an_address_that_is_not_one_cannot_reach_the_write_tool():
+    from app.tools.gmail_writes import EMAIL_ADDRESS
+
+    for bad in ("sam@", "@gmail.com", "sam@gmail", "sam gmail.com", "a@b.c d@e.f", "sam@-b.com", "sam@b..com"):
+        assert not EMAIL_ADDRESS.match(bad), bad
+    for good in (ADDRESS, "sam.o'neill@crooksldn.co.uk", "a+b@c-d.io"):
+        assert EMAIL_ADDRESS.match(good), good
+
+
+# --------------------------------------------------------------------------- the date
+
+
+@pytest.mark.parametrize(("said", "on", "expected"), [
+    ("free for a shoot next Sunday", date(2026, 9, 10), "2026-09-13"),   # a Thursday
+    ("free on Sunday", date(2026, 9, 10), "2026-09-13"),
+    ("next Sunday", date(2026, 9, 13), "2026-09-20"),                    # said ON a Sunday
+    ("tomorrow", date(2026, 9, 10), "2026-09-11"),
+    ("today", date(2026, 9, 10), "2026-09-10"),
+    ("next week", date(2026, 9, 10), "2026-09-17"),
+    ("on Friday", date(2026, 9, 10), "2026-09-11"),
+    ("this weekend", date(2026, 9, 10), "2026-09-12"),                   # the coming Saturday
+])
+def test_a_relative_date_becomes_one_date_in_the_shops_own_zone(said, on, expected):
+    now = datetime(on.year, on.month, on.day, 14, 30, tzinfo=ZoneInfo("Europe/London"))
+    assert family.resolve_when(said, now=now)["date"] == expected
+
+
+def test_a_sentence_with_no_date_in_it_invents_none():
+    assert family.resolve_when("write to sam about the fabric") == {}
+
+
+def test_the_date_is_the_shops_day_not_utcs():
+    """Half past eleven at night in London in July is already tomorrow in UTC. A date
+    resolved in UTC is then a day out — a bug that passes all day and fails at night."""
+    late = datetime(2026, 7, 2, 23, 30, tzinfo=ZoneInfo("Europe/London"))   # a Thursday
+    assert family.resolve_when("tomorrow", now=late)["date"] == "2026-07-03"
+
+
+# --------------------------------------------------------------------------- routing
+
+
+def test_the_bench_sentence_reaches_the_composer_and_not_the_model(branch):
+    intent = resolve(BENCH, branch=branch)
+    assert intent.family == "email_compose_any"
+    assert recipe_mod.recipe_for(intent.family).recipe_id == "email_compose_any"
+    assert intent.confidence >= recipe_mod.recipe_for(intent.family).min_confidence
+
+
+def test_a_mutation_sentence_with_no_address_is_still_the_models(branch):
+    """The exception is scoped to the families that declared it, so nothing else moved. If
+    this fails, the guard in `intent.resolve` has been widened rather than narrowed."""
+    for text in ("cancel it", "refund the lot", "archive them", "fulfil 1938",
+                 "tag these as vip", "email them all", "reply to millie", "send the draft"):
+        got = resolve(text, branch=branch)
+        assert got.family == "", f"{text!r} reached {got.family!r}"
+        assert got.reason == "asks for a change", text
+
+
+def test_send_instead_is_narrow_enough_to_leave_cancel_alone(branch):
+    for text in ("send it instead", "no, send it", "don't save a draft, send it",
+                 "actually send that", "we want this sent"):
+        assert resolve(text, branch=branch).family == "draft_send_instead", text
+    for text in ("send it", "send the draft", "cancel it"):
+        assert resolve(text, branch=branch).family != "draft_send_instead", text
+
+
+def test_a_rewrite_needs_a_composer_and_a_rewriting_word(branch):
+    assert resolve("make it shorter", branch=branch).family == ""
+    branch.compose = {"compose_id": "cmp_1", "kind": "new", "at": family._now()}
+    assert resolve("make it shorter", branch=branch).family == "compose_rewrite"
+    assert resolve("make it more apologetic", branch=branch).family == "compose_rewrite"
+    # A sentence about something else, said over an open composer, is not a rewrite of it.
+    for text in ("cancel order 1938", "archive them", "how many orders today"):
+        assert resolve(text, branch=branch).family != "compose_rewrite", text
+
+
+def test_every_compose_recipe_is_still_structurally_unable_to_write():
+    """`serves_mutation_words` withdraws the refusal to SCORE a sentence and nothing else.
+    A recipe that named a write tool would crash at import; these name no tool at all."""
+    ours = [r for r in recipe_mod.RECIPES.values()
+            if r.recipe_id in ("email_compose_any", "compose_rewrite", "draft_send_instead")]
+    assert len(ours) == 3
+    assert all(r.read_primitives == () for r in ours)
+    recipe_mod.assert_read_only({r.recipe_id: r for r in ours})
+
+
+# --------------------------------------------------------------------------- the composer
+
+
+def test_opening_a_composer_reads_nothing_and_stages_nothing(branch, session):
+    intent = resolve(BENCH, branch=branch)
+    ctx = RecipeCtx(runtime=None, session=session, branch=branch, intent=intent, text=BENCH)
+    answer = family._open_render(ctx, None)
+    assert not answer.deferred and answer.partial
+    assert not answer.calls and not session.proposals, "the composer prepared a change"
+    card = answer.surfaces[0].as_ui()
+    assert card["type"] == "email_compose"
+    data = card["data"]
+    assert data["to"] == {"value": ADDRESS, "status": "ok", "hint": ""}
+    assert data["kind"] == "new" and not data["thread_id"]
+    assert "shoot" in data["about"].lower() and "sunday" in data["about"].lower()
+    assert ADDRESS not in data["about"], "the address is addressing, not what it is about"
+    assert data["body"]["value"] == "" and data["body"]["status"] == "uncertain"
+    # The one copy that matters is the Mac's, and its id is now this conversation's.
+    assert branch.compose["to"] == ADDRESS
+    assert data["compose_id"] in session.issued_ids
+    assert ADDRESS in session.pii_seen
+
+
+def test_a_dictated_address_opens_the_composer_marked(branch, session):
+    intent = resolve(DICTATED, branch=branch)
+    ctx = RecipeCtx(runtime=None, session=session, branch=branch, intent=intent, text=DICTATED)
+    data = family._open_render(ctx, None).surfaces[0].as_ui()["data"]
+    assert data["to"] == {"value": ADDRESS, "status": "uncertain",
+                          "hint": "heard, not typed — check it before this goes anywhere"}
+
+
+def test_the_composer_summary_on_the_branch_is_bounded(branch, session):
+    secret = "PLEASE-DO-NOT-CARRY-THE-BODY"
+    family.open_compose(branch, kind="new", to=ADDRESS, subject="s", body=secret, about=secret)
+    summary = branch.public()["compose"]
+    assert set(summary) == {"compose_id", "kind", "to", "subject", "thread_id"}
+    assert summary["to"] == ADDRESS
+    # A branch summary goes out with every reply. The words of an unsent email do not.
+    assert secret not in str(summary)
+    branch.compose = None
+    assert branch.public()["compose"] is None
+
+
+def test_a_composer_goes_stale_rather_than_being_sent_tomorrow(branch):
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="s", body="b")
+    assert family.held(branch, compose_id) is not None
+    assert family.held(branch, "cmp_someone_elses") is None, "another half's id must not match"
+    branch.compose["at"] -= family.COMPOSE_TTL_S + 1
+    assert family.held(branch, compose_id) is None and branch.compose is None
+
+
+# --------------------------------------------------------------------------- typing into it
+
+
+def _ctx(runtime, session, branch, **args):
+    from app.commands import Ctx
+
+    return Ctx(runtime, session, branch, args)
+
+
+def test_a_typed_value_is_validated_into_the_macs_copy_and_nowhere_else(branch, session):
+    from app import commands
+
+    compose_id = family.open_compose(branch, to="", subject="", body="")
+    out = commands.run("compose.field", _ctx(None, session, branch, compose_id=compose_id,
+                                             field="to", value="1232 candlestick horse at gmail dot com"))
+    assert out.ok and out.changed["status"] == "uncertain"
+    assert branch.compose["to"] == ADDRESS
+    assert out.surfaces[0].as_ui()["data"]["to"]["status"] == "uncertain"
+    out = commands.run("compose.field", _ctx(None, session, branch, compose_id=compose_id,
+                                             field="to", value=ADDRESS))
+    assert out.ok and out.changed["status"] == "ok" and branch.compose["to_status"] == "ok"
+
+
+def test_the_tablet_cannot_name_a_key_of_the_macs_own_context(branch, session):
+    from app import commands
+
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="s", body="b")
+    for field in ("converts", "at", "thread_id", "to_status", "compose_id", ""):
+        out = commands.run("compose.field", _ctx(None, session, branch, compose_id=compose_id,
+                                                 field=field, value="x"))
+        assert not out.ok and out.code == "unknown_field", field
+    assert branch.compose["thread_id"] == "" and branch.compose["converts"] == ""
+
+
+def test_a_typed_value_is_bounded(branch, session):
+    from app import commands
+    from app.tools.gmail_writes import MAX_BODY_CHARS, MAX_SUBJECT_CHARS
+
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="s", body="b")
+    commands.run("compose.field", _ctx(None, session, branch, compose_id=compose_id,
+                                       field="subject", value="x" * (MAX_SUBJECT_CHARS + 500)))
+    commands.run("compose.field", _ctx(None, session, branch, compose_id=compose_id,
+                                       field="body", value="y" * (MAX_BODY_CHARS + 5000)))
+    assert len(branch.compose["subject"]) == MAX_SUBJECT_CHARS
+    assert len(branch.compose["body"]) == MAX_BODY_CHARS
+
+
+def test_typing_into_a_composer_that_is_not_there_is_refused(branch, session):
+    from app import commands
+
+    out = commands.run("compose.field", _ctx(None, session, branch, compose_id="cmp_nothing",
+                                             field="to", value=ADDRESS))
+    assert not out.ok and out.code == "no_composer"
+
+
+# --------------------------------------------------------------------------- the gesture
+
+
+def test_the_gesture_names_the_tool_and_the_macs_own_arguments(branch, session):
+    from app import commands
+
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="Free on Sunday?", body="Hello.")
+    out = commands.run("compose.stage", _ctx(None, session, branch, compose_id=compose_id, mode="draft"))
+    assert out.ok
+    staged = out.changed["stage"]
+    assert staged["tool"] == "gmail_draft_new"
+    assert staged["args"] == {"compose_id": compose_id, "to": ADDRESS, "to_name": "",
+                              "subject": "Free on Sunday?", "body": "Hello."}
+    assert not out.calls, "the command itself must not prepare anything"
+    send = commands.run("compose.stage", _ctx(None, session, branch, compose_id=compose_id, mode="send"))
+    assert send.changed["stage"]["tool"] == "gmail_send_new"
+
+
+def test_a_reply_never_carries_its_own_recipient(branch, session):
+    from app import commands
+
+    compose_id = family.open_compose(branch, kind="reply", to="mia@example.com",
+                                     subject="Re: 1938", body="On its way.", thread_id="aa70d3f83dbef06e")
+    out = commands.run("compose.stage", _ctx(None, session, branch, compose_id=compose_id, mode="send"))
+    staged = out.changed["stage"]
+    assert staged["tool"] == "gmail_send_reply"
+    assert staged["args"] == {"thread_id": "aa70d3f83dbef06e", "body": "On its way."}
+    assert "to" not in staged["args"], "a reply's recipient is read from the thread, always"
+
+
+@pytest.mark.parametrize(("to", "to_status", "subject", "body", "code"), [
+    (ADDRESS, "uncertain", "s", "b", "not_ready"),
+    ("", "invalid", "s", "b", "not_ready"),
+    (ADDRESS, "ok", "", "b", "not_ready"),
+    (ADDRESS, "ok", "s", "", "not_ready"),
+])
+def test_a_half_written_email_cannot_be_prepared(branch, session, to, to_status, subject, body, code):
+    from app import commands
+
+    compose_id = family.open_compose(branch, to=to, subject=subject, body=body)
+    branch.compose["to_status"] = to_status
+    out = commands.run("compose.stage", _ctx(None, session, branch, compose_id=compose_id, mode="draft"))
+    assert not out.ok and out.code == code, out
+    assert "stage" not in out.changed
+
+
+def test_an_unknown_mode_is_refused_rather_than_guessed(branch, session):
+    from app import commands
+
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="s", body="b")
+    out = commands.run("compose.stage", _ctx(None, session, branch, compose_id=compose_id, mode="post"))
+    assert not out.ok and out.code == "unknown_mode"
+
+
+def test_discarding_leaves_nothing_behind(branch, session):
+    from app import commands
+
+    compose_id = family.open_compose(branch, to=ADDRESS, subject="s", body="b")
+    out = commands.run("compose.discard", _ctx(None, session, branch, compose_id=compose_id))
+    assert out.ok and branch.compose is None
+    assert not commands.run("compose.discard", _ctx(None, session, branch, compose_id=compose_id)).ok
+
+
+# --------------------------------------------------------------------------- the gate
+
+
+def test_an_arbitrary_address_needs_a_composer_the_gate_has_seen():
+    """The permission story for the recipient, in four lines. An address is not a
+    well-formed id, so it could never carry this check itself; the compose id can."""
+    args = {"to": ADDRESS, "subject": "s", "body": "b"}
+    assert classify("gmail_draft_new", args).disposition is Disposition.DENY
+    assert "compose_id" in classify("gmail_draft_new", args).reason
+    with_id = {**args, "compose_id": "cmp_abcdef0123"}
+    assert classify("gmail_draft_new", with_id).disposition is Disposition.DENY, "an id nobody was issued"
+    assert classify("gmail_draft_new", with_id, issued_ids={"cmp_abcdef0123"}).disposition is Disposition.STAGE_FOR_OWNER
+    assert classify("gmail_send_new", with_id, issued_ids={"cmp_abcdef0123"}).disposition is Disposition.STAGE_FOR_OWNER
+
+
+def test_a_reply_still_refuses_a_recipient_argument():
+    for name in ("gmail_draft_reply", "gmail_send_reply"):
+        spec = registry.get(name)
+        assert "to" not in spec.input_schema["properties"], name
+        assert classify(name, {"thread_id": "aa70d3f83dbef06e", "body": "x", "to": ADDRESS},
+                        issued_ids={"aa70d3f83dbef06e"}).disposition is Disposition.DENY
+
+
+def test_no_email_tool_takes_a_copy_header():
+    for name in ("gmail_draft_new", "gmail_send_new", "gmail_draft_reply", "gmail_send_reply"):
+        properties = registry.get(name).input_schema["properties"]
+        assert "cc" not in properties and "bcc" not in properties, name
+
+
+def test_the_composers_own_tools_are_reads_and_are_declared_so():
+    for name in ("gmail_compose_open", "gmail_compose_fill"):
+        spec = registry.get(name)
+        assert spec.tier is Tier.GREEN and spec.write is None and spec.batch is None, name
+        assert "stages nothing" in spec.description.lower() or "nothing is saved or sent" in spec.description.lower(), name
+    # And a read of theirs cannot be reached with an id this conversation was never given.
+    assert classify("gmail_compose_fill", {"compose_id": "cmp_x0123456", "subject": "s", "body": "b"}).disposition is Disposition.DENY
+
+
+# --------------------------------------------------------------------------- draft → send
+
+
+class _Actions:
+    """Just enough of the engine for `draft.discard`: what it withdrew, by id."""
+
+    def __init__(self) -> None:
+        self.revoked: list[str] = []
+
+    def revoke_ids(self, ids, reason):
+        self.revoked += list(ids)
+        return len(ids)
+
+
+class _Runtime:
+    def __init__(self) -> None:
+        self.actions = _Actions()
+
+
+def _draft(session, branch, *, operation="gmail_draft_new", entity_ref="cmp_abcdef0123",
+           status=ActionStatus.PENDING, thread_id="", to=ADDRESS, body="Hello.", age=0.0):
+    from types import MappingProxyType
+
+    from app.actions.models import ActionProposal
+
+    proposal = ActionProposal(
+        proposal_id=f"prop_{len(session.proposals):04d}", session_id=session.session_id, epoch=1,
+        tool_name=operation, operation=operation, risk="AMBER", model_args=MappingProxyType({}),
+        execution=MappingProxyType({"thread_id": thread_id, "to": to, "to_name": "",
+                                    "subject": "Free on Sunday?", "body": body}),
+        entity_kind="email", entity_ref=entity_ref, entity_label="new email",
+        interaction="tap_commit", reversible=True, before={}, expected_after={}, summary={},
+        fingerprint="f", created_at=family._now() - age, expires_at=family._now() + 60,
+        status=status, branch_id=branch.branch_id,
+    )
+    session.proposals.append(proposal)
+    return proposal
+
+
+def test_send_instead_stages_the_draft_that_was_prepared(branch, session):
+    from app import commands
+
+    draft = _draft(session, branch)
+    out = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch))
+    assert out.ok
+    staged = out.changed["stage"]
+    assert staged["tool"] == "gmail_send_new"
+    assert staged["args"]["body"] == draft.execution["body"], "the same words, exactly"
+    assert staged["args"]["to"] == ADDRESS and staged["args"]["compose_id"] == "cmp_abcdef0123"
+    assert staged["revoke"] == [draft.proposal_id], "the draft's own card goes with it"
+
+
+def test_send_instead_finds_the_identity_the_mac_recorded(branch, session):
+    from app import commands
+
+    _draft(session, branch, entity_ref="gid://shopify/Order/1938")
+    args = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch)).changed["stage"]["args"]
+    assert args["order_id"] == "gid://shopify/Order/1938" and "to" not in args
+    session.proposals.clear()
+    _draft(session, branch, entity_ref="gid://shopify/Customer/7001")
+    args = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch)).changed["stage"]["args"]
+    assert args["customer_id"] == "gid://shopify/Customer/7001" and "to" not in args
+
+
+def test_a_reply_draft_becomes_a_reply_send(branch, session):
+    from app import commands
+
+    _draft(session, branch, operation="gmail_draft_reply", entity_ref="aa70d3f83dbef06e",
+           thread_id="aa70d3f83dbef06e")
+    staged = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch)).changed["stage"]
+    assert staged["tool"] == "gmail_send_reply"
+    assert staged["args"] == {"thread_id": "aa70d3f83dbef06e", "body": "Hello."}
+
+
+def test_a_draft_withdrawn_by_the_very_sentence_converting_it_is_still_findable(branch, session):
+    """`POST /turn` advances the epoch and withdraws this half's pending cards BEFORE the fast
+    lane runs, so the draft the owner is looking at is REVOKED by the words "send it
+    instead". If this stops holding, the bench sentence stops working and nothing else fails."""
+    from app import commands
+
+    _draft(session, branch, status=ActionStatus.REVOKED)
+    assert commands.run("draft.send_instead", _ctx(_Runtime(), session, branch)).ok
+
+
+def test_a_draft_from_ten_minutes_ago_is_not_what_it_means(branch, session):
+    from app import commands
+
+    _draft(session, branch, age=family.CONVERT_WINDOW_S + 5)
+    out = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch))
+    assert not out.ok and out.code == "no_draft"
+
+
+def test_another_halfs_draft_is_not_this_halfs_to_send(branch, session):
+    from app import commands
+
+    other = Branch(branch_id="br_other", session_id="s1")
+    _draft(session, other)
+    out = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch))
+    assert not out.ok and out.code == "no_draft"
+
+
+def test_asking_twice_is_refused_rather_than_sending_twice(branch, session):
+    from app import commands
+
+    _draft(session, branch)
+    _draft(session, branch, operation="gmail_send_new", status=ActionStatus.PENDING)
+    out = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch))
+    assert not out.ok and out.code == "already_ready"
+
+
+def test_with_no_draft_it_says_so_in_words(branch, session):
+    from app import commands
+
+    out = commands.run("draft.send_instead", _ctx(_Runtime(), session, branch))
+    assert not out.ok and out.code == "no_draft" and "say what the email should say" in out.detail.lower()
+
+
+def test_forgetting_the_draft_withdraws_its_card(branch, session):
+    from app import commands
+
+    draft = _draft(session, branch)
+    runtime = _Runtime()
+    out = commands.run("draft.discard", _ctx(runtime, session, branch))
+    assert out.ok and runtime.actions.revoked == [draft.proposal_id]
+
+
+# --------------------------------------------------------------------------- the card
+
+
+def test_the_card_says_the_address_is_nobody_the_shop_knows():
+    from app.tools.gmail_writes import _prepared_email, _present_email
+
+    prepared = _prepared_email(
+        execution={"thread_id": "", "token": "<t@x>", "raw": "", "to": ADDRESS, "to_name": "",
+                   "subject": "Free on Sunday?", "body": "Hello.", "state": "draft"},
+        before={}, expected_after={}, entity_ref="cmp_abcdef0123", ctx=None,
+        customer={"name": "", "email": ADDRESS, "label": "", "off_shopify": True},
+        sending=False, title="Save a draft", sender="orders@crooksldn.example", kind="draft_new",
+    )
+    facts = {f["label"]: f["value"] for f in _present_email(_AsProposal(prepared))["facts"]}
+    assert facts["To"] == ADDRESS
+    assert "not a Shopify customer" in facts["Recipient"]
+    assert "Order" not in facts, "there is no order and the card must not imply one"
+    assert prepared.entity_label == "new email"
+    # The ledger must not claim the address was checked against anything.
+    assert prepared.summary["ledger"]["to_checked"] is False
+
+
+def test_an_orders_own_card_is_unchanged_by_all_of_this():
+    from app.tools.gmail_writes import _prepared_email, _present_email
+
+    prepared = _prepared_email(
+        execution={"thread_id": "", "token": "<t@x>", "raw": "", "to": "mia@example.com",
+                   "to_name": "Mia Jones", "subject": "Your order", "body": "Hello.", "state": "draft"},
+        before={}, expected_after={}, entity_ref="gid://shopify/Order/1938", ctx=None,
+        customer={"name": "Mia Jones", "email": "mia@example.com", "label": "#1938"},
+        sending=False, title="Save a draft", sender="orders@crooksldn.example", kind="draft_new",
+    )
+    facts = {f["label"]: f["value"] for f in _present_email(_AsProposal(prepared))["facts"]}
+    assert facts["Order"] == "#1938 · the customer on the order"
+    assert "Recipient" not in facts
+    assert prepared.summary["ledger"]["to_checked"] is True
+
+
+class _AsProposal:
+    """A prepared change in the shape `present()` reads it: the summary and no undo."""
+
+    def __init__(self, prepared) -> None:
+        self.summary = prepared.summary
+        self.undo_of = None
+
+
+def test_the_composers_card_is_in_both_vocabularies():
+    from app.presentation import UI_TYPES
+    from app.surfaces import SURFACE_TYPES
+
+    assert "email_compose" in UI_TYPES and "email_compose" in SURFACE_TYPES
+    assert "email_compose: renderEmailCompose" in (WEB / "ui.js").read_text(encoding="utf-8")
+
+
+def test_the_field_is_at_least_44px_and_says_its_status_in_more_than_colour():
+    """The Phase 2 audit's measured floor, and the glass pass's rule that a state is never
+    carried by hue alone. Both are in the stylesheet, so both are asserted there."""
+    css = (WEB / "style.css").read_text(encoding="utf-8")
+    assert re.search(r"\.field-input\{[^}]*min-height:44px", css), "the field lost its tap target"
+    for status in ("ok", "uncertain", "invalid"):
+        assert f".field.is-{status} .field-input{{" in css, status
+    assert ".field.is-uncertain .field-hint{" in css and ".field.is-invalid .field-hint{" in css
+
+
+def test_the_page_never_posts_the_email_with_a_gesture():
+    """The composer's buttons carry an action id and a mode. If the body of the email ever
+    appears in `data-args`, the write boundary has been crossed in the renderer."""
+    source = (WEB / "ui.js").read_text(encoding="utf-8")
+    block = source[source.index("function renderEmailCompose"):]
+    block = block[: block.index("\n  const RENDERERS")]
+    assert "compose_id=${id}&mode=${mode}" in block
+    for forbidden in ("body.value", "subject.value", "&body=", "&subject=", "&to="):
+        assert forbidden not in block.replace("value: body.value", "").replace("value: subject.value", ""), forbidden
+
+
+def test_the_typed_value_reaches_the_mac_through_a_command_and_not_a_write_route():
+    app_js = (WEB / "app.js").read_text(encoding="utf-8")
+    block = app_js[app_js.index("compose · begin"): app_js.index("compose · end")]
+    assert "semanticCommand('compose.field'" in block
+    assert "COMPOSE_DEBOUNCE_MS = 400" in block
+    # A field must never reach a write route, and typing must never begin a recording.
+    for forbidden in ("/actions/", "startRecording", "sendAudio", "fetch("):
+        assert forbidden not in block, forbidden
+    assert "window.__crooksCommandDelegate" in block, "the shared delegate must be guarded"

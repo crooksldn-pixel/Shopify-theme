@@ -106,6 +106,14 @@ async def command(
         # synchronous and read nothing themselves; the recipe reads, through the same
         # scheduler and the same read tools a sentence would use, and no model.
         outcome = await _run_recipe(runtime, session, branch, str(recipe_id), outcome)
+    wanted = outcome.changed.get("stage") if outcome.ok and isinstance(outcome.changed, dict) else None
+    if isinstance(wanted, dict):
+        # A command that PREPARES a change: Save draft or Send on the composer
+        # (app/families/compose.py). Same reason as the recipe above — a command is
+        # synchronous and preparing a change is a fresh read — and the same shape: the
+        # command named a registered write tool and the arguments THE MAC built from its own
+        # context, and this stages them. The gesture is still to come.
+        outcome = await _stage_change(request, runtime, session, branch, wanted, outcome)
     elapsed = (time.perf_counter() - started) * 1000
 
     timeline.emit(
@@ -218,6 +226,65 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     changed = {**outcome.changed, "lane": "FAST", "recipe_id": recipe_id, "partial": bool(answer.partial),
                "reads": list((answer.trace or {}).get("reads") or []), "ms": (answer.trace or {}).get("ms")}
     return command_mod.Outcome(answer=answer.answer, calls=calls, surfaces=list(answer.surfaces), changed=changed)
+
+
+async def _stage_change(request: Request, runtime, session, branch, wanted: dict, outcome):
+    """Stage what a command prepared, exactly as `POST /actions/row` stages what a row button
+    prepared (app/routes/actions.py).
+
+    Every check that route makes is made here, in the same order and by the same functions,
+    because a tap that prepares a change on this route is the same event as a tap that
+    prepares one on that route:
+
+      * `_authorise` — this login may apply changes at all. /command does not run it for a
+        read, and staging is not a read: without this, a tablet that the Mac refuses at the
+        commit could still fill the screen with cards it will never be allowed to apply.
+      * `_write_status_soon` — the store has granted what this change needs.
+      * `dispatch` — the gate, then the write tool's own prepare step, which re-reads and
+        builds the execution arguments itself. Nothing the tablet posted reaches Gmail.
+      * `deliver` — the TTL starts when the card leaves for the tablet, not when it was made.
+
+    `revoke` is applied AFTER a successful stage and never before: it is the card this one
+    replaces (a draft turned into a send), and withdrawing it first would leave the owner
+    with nothing to tap if the send could not be prepared.
+    """
+    from app import commands as command_mod
+    from app.routes.actions import _authorise, _write_status_soon
+    from app.tools.dispatch import dispatch
+
+    tool_name = str(wanted.get("tool") or "")
+    args = wanted.get("args")
+    if not tool_name or not isinstance(args, dict):
+        return command_mod.Outcome.refused("not_prepared", "That change could not be prepared.")
+    _caller, refusal = _authorise(request)
+    if refusal is not None:
+        return command_mod.Outcome.refused(
+            _code_of(refusal) or "not_authorised", "This tablet is not allowed to apply changes.",
+        )
+    status = await _write_status_soon(runtime, tool_name)
+    if not status.ready:
+        return command_mod.Outcome.refused(status.code, status.detail)
+    calls: list = []
+    await dispatch(tool_name, dict(args), session=session, timeout_s=runtime.settings.tool_timeout_s, calls=calls)
+    proposal_id = next((c.proposal_id for c in calls if getattr(c, "proposal_id", None)), "")
+    if not proposal_id:
+        detail = next((str(c.error) for c in calls if not c.ok and c.error), "That change could not be prepared.")
+        timeline.emit("command_stage", session_id=session.session_id, branch_id=branch.branch_id,
+                      tool=tool_name, ok=False, detail=detail[:200])
+        return command_mod.Outcome.refused("not_prepared", detail[:200])
+    runtime.actions.deliver(proposal_id)
+    withdrawn = runtime.actions.revoke_ids([str(x) for x in (wanted.get("revoke") or [])], "replaced by " + tool_name)
+    timeline.emit("command_stage", session_id=session.session_id, branch_id=branch.branch_id,
+                  tool=tool_name, ok=True, proposal_id=proposal_id, revoked=withdrawn or None)
+    return command_mod.Outcome(
+        answer="", calls=calls,
+        changed={**outcome.changed, "stage": None, "staged": True, "proposal_id": proposal_id,
+                 "revoked": withdrawn, "what": str(wanted.get("what") or "")[:80]},
+    )
+
+
+def _code_of(response) -> str:
+    return str(getattr(response, "crooks_code", "") or "")
 
 
 async def _read_member(runtime, session, needs: dict) -> list:

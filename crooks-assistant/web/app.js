@@ -1371,6 +1371,10 @@ function renderTurn(data) {
   attentionItems = attention.length ? attention[0].data.items : [];
   renderAttentionSurface();
 
+  // A composer the Mac drew but has not written the words of yet asks for them (compose
+  // block, end of this file). Deferred inside, because this turn is still in flight.
+  relayComposeContinuation(data.ui, data.partial);
+
   const answer = data.answer || '';
   const renderInfo = { skipped: ui.skipped.length ? ui.skipped : undefined, errors: ui.errors.length ? ui.errors.map((e) => e.title || 'error') : undefined, attention: attentionItems.length || undefined, answer_chars: answer.length };
   if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui)) {
@@ -2850,6 +2854,168 @@ checkReachable();
 acquireWakeLock();
 setMode('orb');
 setState('READY');
+
+/* ============================================================ compose · begin
+ *
+ * The email being written (app/families/compose.py). Three things, and the third is the one
+ * that mattered on the bench.
+ *
+ * (a) A keystroke in a field posts `compose.field` — WHICH composer, WHICH field, and the
+ *     characters — after 400 ms of quiet. The Mac validates the characters into its own copy
+ *     of the email and answers with the card again; the card is swapped in place and the
+ *     caret is put back where the thumb left it. That is what makes the typed value safe: the
+ *     tablet has posted a value, not an argument, and the arguments of the change are still
+ *     built on the Mac from the Mac's copy when a gesture asks for them.
+ *
+ * (b) A button carrying `data-command` posts that command with `data-args`. Save draft and
+ *     Send carry a composer id and "draft" or "send"; the email itself is never on the wire.
+ *     Another half of this build adds the same generic handler, so this one is registered
+ *     once, under a flag, whichever lands first.
+ *
+ * (c) Typing must never start a recording, and the hold-to-talk on the dock must still work
+ *     with a field focused. The field swallows its own pointer events (web/ui.js), so the
+ *     deck's handlers never see them; the keyboard path is closed here, because the space bar
+ *     inside an address is a space and not a hold.
+ */
+
+// Where the thumb was, per field, so a re-render does not throw the caret to the end.
+const composeDebounce = new Map();
+const COMPOSE_DEBOUNCE_MS = 400;
+
+function composeCardFor(node) {
+  return node && node.closest ? node.closest('.card-email_compose') : null;
+}
+
+// A re-render of one card, in place. `pushContext` is wrong here — a corrected address is not
+// a new screen, and pushing one would put the composer on the back stack once per keystroke.
+function replaceCard(oldNode, items) {
+  if (!oldNode || !oldNode.parentNode || !window.CrooksUI) return null;
+  const rendered = window.CrooksUI.render(items, renderOpts());
+  const fresh = rendered.nodes[0];
+  if (!fresh) return null;
+  oldNode.parentNode.replaceChild(fresh, oldNode);
+  // The deck's own copy of what is on screen, so Back and a half-swap redraw the corrected
+  // card rather than the one before the correction.
+  const entry = history[historyIndex];
+  if (entry && Array.isArray(entry.nodes)) {
+    const at = entry.nodes.indexOf(oldNode);
+    if (at !== -1) entry.nodes[at] = fresh;
+  }
+  return fresh;
+}
+
+async function composeFieldChanged(control) {
+  const composeId = control.dataset.compose || '';
+  const name = control.dataset.field || '';
+  if (!composeId || !name) return;
+  const card = composeCardFor(control);
+  const caret = typeof control.selectionStart === 'number' ? control.selectionStart : null;
+  const value = String(control.value === undefined ? '' : control.value);
+  const answered = await semanticCommand('compose.field', { compose_id: composeId, field: name, value });
+  if (!answered) return;                                   // offline: the field keeps what was typed
+  if (!answered.ok) { toast(String(answered.detail || 'That could not be applied.')); return; }
+  if (!Array.isArray(answered.ui) || !answered.ui.length || !card) return;
+  const fresh = replaceCard(card, answered.ui);
+  if (!fresh) return;
+  T.record('compose_field', { name, status: String((answered.changed || {}).status || '') });
+  // The owner is still typing into this field. Put the focus and the caret back, or the
+  // second character of an address lands at the front of it.
+  const again = fresh.querySelector(`[data-field="${name}"] .field-input`) || fresh.querySelector(`.field-input[data-field="${name}"]`);
+  if (!again) return;
+  try {
+    again.focus({ preventScroll: true });
+    if (caret !== null && typeof again.setSelectionRange === 'function') again.setSelectionRange(caret, caret);
+  } catch { /* a browser that will not move the caret still has the value */ }
+}
+
+el.cards.addEventListener('input', (event) => {
+  const control = event.target && event.target.closest ? event.target.closest('[data-field].field-input') : null;
+  if (!control) return;
+  const key = `${control.dataset.compose}:${control.dataset.field}`;
+  clearTimeout(composeDebounce.get(key));
+  composeDebounce.set(key, setTimeout(() => { composeDebounce.delete(key); composeFieldChanged(control); }, COMPOSE_DEBOUNCE_MS));
+});
+// Leaving the field, or a picker committing a value, does not wait out the debounce: the
+// thumb is on its way to Send.
+el.cards.addEventListener('change', (event) => {
+  const control = event.target && event.target.closest ? event.target.closest('[data-field].field-input') : null;
+  if (!control) return;
+  const key = `${control.dataset.compose}:${control.dataset.field}`;
+  clearTimeout(composeDebounce.get(key));
+  composeDebounce.delete(key);
+  composeFieldChanged(control);
+});
+
+// (b) One delegated handler for every button that names a semantic command. Guarded because
+// another family adds the same one; whichever loads first owns it, and both draw the reply
+// the same way.
+if (!window.__crooksCommandDelegate) {
+  window.__crooksCommandDelegate = true;
+  el.cards.addEventListener('click', async (event) => {
+    const button = event.target && event.target.closest ? event.target.closest('[data-command]') : null;
+    if (!button || button.disabled) return;
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    const name = (button.dataset.command || '').trim();
+    if (!name || busy) return;
+    // `data-args` is a query string the MAC put on the card. Only identities and small
+    // values travel in it; the Mac decides what they mean, and a name it does not know is
+    // refused there.
+    const args = {};
+    for (const [key, value] of new URLSearchParams(button.dataset.args || '')) args[key] = value;
+    button.disabled = true;
+    haptic(HAPTIC.start);
+    unlockSpeech();
+    stopSpeaking();
+    const answered = await semanticCommand(name, args);
+    button.disabled = false;
+    T.record('command_tap', { command: name, ok: Boolean(answered && answered.ok), code: String((answered || {}).code || '') });
+    if (!answered) { toast('The Mac did not answer.'); return; }
+    if (!answered.ok) { toast(String(answered.detail || 'That could not be done.')); return; }
+    if (Array.isArray(answered.ui) && answered.ui.length && window.CrooksUI) {
+      const rendered = window.CrooksUI.render(answered.ui, renderOpts());
+      if (rendered.nodes.length) pushContext(rendered.nodes, answered.ui, answered.answer || '');
+    }
+    if (answered.answer) { el.answer.textContent = answered.answer; speakAnswer(answered.answer); }
+  });
+}
+
+// (c) A field has the keyboard. Space and Enter belong to the text, not to the microphone —
+// the hold control's own keydown handler is on `el.talk`, and this stops a key pressed inside
+// a field from reaching it if the focus is ever moved there by the browser.
+document.addEventListener('keydown', (event) => {
+  const inField = event.target && event.target.closest ? event.target.closest('.field-input') : null;
+  if (inField && (event.key === ' ' || event.key === 'Enter')) event.stopPropagation();
+}, true);
+
+// A composer's card is drawn by a FAST recipe that has not written the words yet: the Mac
+// answers `partial` and puts `continue_prompt` on the card — a sentence THE MAC wrote, naming
+// the tool that fills the Mac's own copy of the email. The tablet relays it and never renders
+// it; nothing here composes a prompt, and if the Mac sent none nothing is sent.
+//
+// Two details, both load-bearing. It is deferred, because `renderTurn` runs inside the turn
+// that is still in flight and `submit` refuses a second question on the same half — a
+// synchronous relay would be dropped in silence. And it is once per composer, because the
+// second turn draws the composer again with the words in it, and a relay on that would be a
+// conversation with itself.
+//
+// The honest shape is a second wave on the Mac (a recipe that answers, then asks the model),
+// which belongs in app/routes/turn.py. This is the tablet doing it until that exists.
+const composeContinued = new Set();
+function relayComposeContinuation(items, partial) {
+  if (!partial || !Array.isArray(items)) return;
+  for (const item of items) {
+    if (!item || item.type !== 'email_compose' || !item.data) continue;
+    const prompt = String(item.data.continue_prompt || '');
+    const id = String(item.data.compose_id || '');
+    if (!prompt || !id || composeContinued.has(id)) continue;
+    composeContinued.add(id);
+    T.record('compose_continue', { compose_id: id });
+    setTimeout(() => { if (!busy) submit({ text: prompt, session_id: sessionId, turns, speak: false }, false); }, 0);
+    return;
+  }
+}
+
+/* ============================================================== compose · end */
 
 // ------------------------------------------------------------------ boot
 // After every declaration above. The Split control is on the idle screen from the first

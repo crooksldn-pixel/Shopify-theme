@@ -155,6 +155,67 @@ _BOUGHT = frozenset({"bought", "buy", "buys", "ordered", "purchased", "spent", "
 # Complexity markers: a request with two clauses is not a fast path, whatever its words say.
 _JOIN = frozenset({"and", "then", "also", "plus", "after", "afterwards", "but", "however", "while", "whilst", "if", "unless", "because"})
 
+# ------------------------------------------------- appended for app/families/compose.py
+#
+# Four signals no family above reads, and each of them exists because the composer cannot be
+# told apart from something else without it.
+#
+# `has_address` — the words carry an email address. It is the ONLY thing separating "write an
+# email to 1232candlestickhorse@gmail.com" (a recipient the shop has never heard of, which is
+# what the composer is for) from "email them all" (which is about the open set and belongs to
+# the model). Dictated forms count, because that is how an address arrives through a
+# microphone: "1232 candlestick horse at gmail dot com".
+#
+# `send_instead` — the sentence corrects a draft into a send. Deliberately narrow: a send verb
+# AND a correction word, or a refusal of the draft, or "wanted it sent". Without the narrowness
+# "cancel it" would reach the composer, since it too is a mutation with a pointer in it — and
+# `tests/test_fastpath.py::test_a_mutation_verb_leaves_the_lane_whatever_else_it_says` says
+# exactly why that must not happen.
+#
+# `has_compose` / `rewrite` — a rewriting instruction, and a composer open on THIS half to
+# apply it to. Both are required together: "make it shorter" means nothing with no composer,
+# and "archive them" said over an open composer is not a rewrite.
+_ADDRESS_LITERAL = re.compile(r"[a-z0-9][a-z0-9._%+-]*@[a-z0-9][a-z0-9.-]*\.[a-z]{2,24}")
+# The local part is a run of at most seven words with NO full stop in it, and the domain is
+# labels joined by the word "dot". Both bounds are what stops the span swallowing the prose in
+# front of it: without them, "…free for a shoot next Sunday. Their email is 1232 candlestick
+# horse at gmail dot com" matched from "free", and the normaliser was handed a sentence.
+_ADDRESS_DICTATED = re.compile(
+    r"(?:[a-z0-9][a-z0-9_%+-]*\s+){0,6}[a-z0-9][a-z0-9_%+-]*"
+    r"\s+(?:at|@)\s+"
+    r"(?:[a-z0-9][a-z0-9-]*\s+(?:dot|\.)\s+){1,3}[a-z]{2,24}\b"
+)
+_SEND = frozenset({"send", "sent", "sending"})
+_INSTEAD = frozenset({"instead", "actually", "rather"})
+_REFUSAL = frozenset({"no", "nope", "dont", "don't", "doesnt", "doesn't", "not", "never"})
+_DRAFT_WORD = frozenset({"draft", "drafts", "drafted", "save", "saving", "saved"})
+_WANTED = frozenset({"want", "wanted", "wants", "meant"})
+_REWRITE = frozenset({
+    "shorter", "longer", "briefer", "warmer", "friendlier", "apologetic", "apologise",
+    "polite", "politer", "firmer", "softer", "blunter", "reword", "rewrite", "redo",
+    "rephrase", "shorten", "tighten", "lengthen", "subject", "tone", "wording", "sign",
+})
+
+
+def _address_span(lowered: str) -> str:
+    """The address in the words, as said. Literal first, then the dictated form."""
+    found = _ADDRESS_LITERAL.search(lowered)
+    if found:
+        return found.group(0)
+    found = _ADDRESS_DICTATED.search(lowered)
+    return found.group(0) if found else ""
+
+
+def _send_instead(words: tuple[str, ...]) -> bool:
+    have = set(words)
+    if not (have & _SEND):
+        return False
+    if have & _INSTEAD:
+        return True                                    # "send it instead", "actually send that"
+    if (have & _REFUSAL) and (words[0] in _REFUSAL or (have & _DRAFT_WORD)):
+        return True                                    # "no, send it", "don't save a draft, send it"
+    return "sent" in have and bool(have & _WANTED)     # "we want this sent"
+
 
 @dataclass(slots=True)
 class Signals:
@@ -188,12 +249,21 @@ class Signals:
     has_set: bool = False
     has_workflow: bool = False
     known_name: str = ""
+    # app/families/compose.py. `address_words` is the span as it was said, kept so the recipe
+    # normalises the same characters the router matched rather than searching again with a
+    # second regex that could disagree with this one.
+    has_address: bool = False
+    address_words: str = ""
+    send_instead: bool = False
+    has_compose: bool = False
+    rewrite: bool = False
 
     # Never written to the timeline, whatever it holds. `known_name` is a customer's name as
     # the owner said it; the observability rule is that telemetry carries ids, counts and
     # controlled words, and this is none of those. The router still uses it; the record says
-    # only that a name was recognised.
-    PRIVATE = ("words", "known_name")
+    # only that a name was recognised. `address_words` is an email address, which is the same
+    # kind of thing: `has_address` says one was found and the span never leaves the Mac.
+    PRIVATE = ("words", "known_name", "address_words")
 
     def as_dict(self) -> dict[str, Any]:
         out = {k: v for k, v in ((f, getattr(self, f)) for f in self.__slots__) if v and k not in self.PRIVATE}
@@ -241,7 +311,11 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         address=bool(have & _ADDRESS),
         bought=bool(have & _BOUGHT),
         deixis=bool(have & _DEIXIS),
+        address_words=_address_span(lowered),
+        send_instead=_send_instead(words),
+        rewrite=bool(have & _REWRITE),
     )
+    sig.has_address = bool(sig.address_words)
     # A direction is a direction only when the request names NOTHING ELSE. "Next" is a
     # direction; "next week's sales" is a question about sales, "what's the last order" is a
     # question about an order, and "has she bought before" is a question about a customer.
@@ -264,6 +338,7 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         sig.has_set = bool(getattr(branch, "set_id", ""))
         sig.has_workflow = getattr(branch, "workflow", None) is not None
         sig.known_name = _known_name(text or "", branch)
+        sig.has_compose = bool(getattr(branch, "compose", None))
     return sig
 
 
@@ -300,6 +375,25 @@ class Family:
     # A request longer than this many words is not this family, however it scores: a short
     # instruction is what the fast lane is for.
     max_words: int = 14
+    # Appended for app/families/compose.py, both defaulting to the behaviour every family
+    # above already has.
+    #
+    # `serves_mutation_words`: this family's sentence carries a mutation verb and is still a
+    # READ. "Write an email to <address>" and "send it instead" are instructions, and the
+    # fast lane must not try to SERVE a change — but drawing the composer, with the address
+    # the owner dictated resolved and the words printed, changes nothing and stages nothing.
+    # The exception withdraws only the refusal to SCORE the sentence: a recipe still names
+    # read tools alone (recipes.assert_read_only) and the read scheduler still refuses a plan
+    # with a write in it (reads/scheduler.assert_reads_only), so a family that declares this
+    # is no more able to write than any other. Every family that does not declare it keeps
+    # the blanket refusal, which is why "cancel it" still leaves the lane unscored.
+    serves_mutation_words: bool = False
+    # `many_clauses`: the joins penalty below says two clauses are two requests, and drops
+    # 0.25 per clause. A dictated email is ONE request with as many clauses as the owner
+    # cares to speak — "asking if they're free for a shoot next Sunday and whether they can
+    # bring boots" is not two questions — so the composer opts out of the penalty rather than
+    # the scorer growing a special case for long sentences generally.
+    many_clauses: bool = False
 
 
 FAMILIES: tuple[Family, ...] = (
@@ -400,6 +494,11 @@ _LOOKUP = {
     "has_set": lambda s: s.has_set,
     "has_workflow": lambda s: s.has_workflow,
     "known_name": lambda s: bool(s.known_name),
+    # app/families/compose.py
+    "has_address": lambda s: s.has_address,
+    "send_instead": lambda s: s.send_instead,
+    "has_compose": lambda s: s.has_compose,
+    "rewrite": lambda s: s.rewrite,
 }
 
 
@@ -442,7 +541,8 @@ def score(family: Family, sig: Signals) -> float:
         if _LOOKUP[name](sig):
             value += 0.07
     # Two clauses is two requests. The second one would be dropped silently, so decline both.
-    value -= 0.25 * max(0, sig.joins)
+    if not family.many_clauses:
+        value -= 0.25 * max(0, sig.joins)
     # A short instruction is the fast lane's home ground; a long one is probably nuanced.
     if len(sig.words) <= 4:
         value += 0.06
@@ -452,13 +552,21 @@ def score(family: Family, sig: Signals) -> float:
 def resolve(text: str, *, branch: Any = None) -> Intent:
     """The request as an intent. `family` empty means "this is the model's"."""
     sig = signals_for(text, branch=branch)
+    candidates = all_families()
     if sig.mutation:
-        return Intent(family="", confidence=0.0, signals=sig, reason="asks for a change")
-    scored = sorted(((score(f, sig), f) for f in all_families()), key=lambda pair: (-pair[0], pair[1].name))
+        # A change was asked for. Only the families that have declared they answer such a
+        # sentence with a READ are eligible; if none of them fits, the turn goes to Claude
+        # exactly as it always has, with the same reason on the timeline. Narrowing the
+        # candidate set rather than lifting the guard is what keeps this scoped: a family
+        # that has not opted in cannot be reached by a mutation sentence at all, however
+        # well its signals happen to match.
+        candidates = tuple(f for f in candidates if f.serves_mutation_words)
+    scored = sorted(((score(f, sig), f) for f in candidates), key=lambda pair: (-pair[0], pair[1].name)) or [(0.0, None)]
     best_value, best = scored[0]
     second_value, second = (scored[1] if len(scored) > 1 else (0.0, None))
-    if best_value <= 0:
-        return Intent(family="", confidence=0.0, signals=sig, reason="no family matched")
+    if best_value <= 0 or best is None:
+        return Intent(family="", confidence=0.0, signals=sig,
+                      reason="asks for a change" if sig.mutation else "no family matched")
     if best_value < best.floor:
         return Intent(family="", confidence=round(best_value, 3), signals=sig, runner_up=best.name, reason="below the family's confidence floor")
     if second is not None and second_value > 0 and best_value - second_value < MARGIN:

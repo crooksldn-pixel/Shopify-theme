@@ -95,6 +95,12 @@ _KNOWN_TOOLS = frozenset({
     "commerce_aggregate", "commerce_query", "inventory_query", "commerce_capabilities", "email_query",
     # Gmail — M9
     "gmail_search", "gmail_read_thread", "gmail_find_in_email",
+    # the composer's two reads (app/families/compose.py). Both change only the Mac's own copy
+    # of an email that has not been prepared yet: no source is touched, nothing is staged, and
+    # neither can reach a Gmail write method. They are on this list because it is an
+    # allow-list — a read tool absent from it is denied, which is the behaviour that makes
+    # adding a tool without a rule impossible.
+    "gmail_compose_open", "gmail_compose_fill",
 })
 
 # Tools that may only be called with an id this session already handed to the assistant. Stops
