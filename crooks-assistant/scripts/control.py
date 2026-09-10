@@ -703,7 +703,7 @@ def actions_document() -> dict:
          "command": [py, str(HERE / "experience.py"), "--ui"], "cwd": str(ROOT), "confirm": False,
          "why": "the golden scenarios, and the page driven in Chromium — the same as crooks-test-ui"},
         {"id": "session_start", "label": "Start live recording", "kind": "shell", "group": "test",
-         "command": [py, str(HERE / "test_session.py"), "start", "--name", "control"], "cwd": str(ROOT), "confirm": False,
+         "command": [py, str(HERE / "test_session.py"), "start", "--name", "from the Control app"], "cwd": str(ROOT), "confirm": False,
          "why": "begins a test session; nothing restarts and the tablet joins within a poll"},
         {"id": "session_stop", "label": "Stop recording", "kind": "shell", "group": "test",
          "command": [py, str(HERE / "test_session.py"), "stop"], "cwd": str(ROOT), "confirm": False,

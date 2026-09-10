@@ -979,3 +979,43 @@ def test_a_quiet_run_does_not_silence_the_next_one(here, capsys):
     assert "unchanged" in capsys.readouterr().out
     code, _doc = update.run(check=True, quiet=False)
     assert code == 0 and "crooks-update" in capsys.readouterr().out
+
+
+def test_the_restart_button_is_the_line_make_restart_runs(buttons):
+    """Not launchctl, and not an uninstall-and-install: the same script `make restart` runs,
+    which kickstarts the agents that were installed at login and leaves them installed. That
+    is how the backend and whisper-server keep starting when the Mac starts."""
+    restart = next(action for action in buttons if action["id"] == "restart")
+    makefile = (PROJECT / "Makefile").read_text(encoding="utf-8")
+    assert "scripts/install_launchd.py --restart" in makefile
+    assert restart["command"][1].endswith("scripts/install_launchd.py")
+    assert restart["command"][2:] == ["--restart"]
+    installer = (PROJECT / "scripts" / "install_launchd.py").read_text(encoding="utf-8")
+    assert "kickstart" in installer and "def restart" in installer
+
+
+def test_the_run_tests_button_is_the_offline_suite_make_test_runs(buttons):
+    tests = next(action for action in buttons if action["id"] == "tests")
+    makefile = (PROJECT / "Makefile").read_text(encoding="utf-8")
+    assert 'pytest -q -m "not live"' in makefile
+    assert Path(tests["command"][0]).name == "pytest"
+    assert tests["command"][1:] == ["-q", "-m", "not live"]
+    assert list(update.TEST_COMMAND[1:]) == tests["command"][1:], "and the update runs the same ones"
+
+
+def test_the_ui_test_button_is_the_command_that_already_exists(buttons):
+    ui = next(action for action in buttons if action["id"] == "tests_ui")
+    assert ui["command"][1].endswith("scripts/experience.py") and ui["command"][2] == "--ui"
+    from scripts import install_commands
+
+    assert install_commands.COMMANDS["crooks-test-ui"] == ("scripts/experience.py", "--ui")
+
+
+def test_opening_crooks_os_prefers_the_tablet_address_and_falls_back_to_this_mac(monkeypatch):
+    monkeypatch.setattr(control, "port", lambda: 8000)
+    monkeypatch.setattr(control, "tablet_route", lambda p: ("crooks.ts.net", ""))
+    routed = next(a for a in control.actions_document()["actions"] if a["id"] == "open")
+    assert routed["url"] == "https://crooks.ts.net/"
+    monkeypatch.setattr(control, "tablet_route", lambda p: (None, "not serving"))
+    local = next(a for a in control.actions_document()["actions"] if a["id"] == "open")
+    assert local["url"] == "http://127.0.0.1:8000/"
