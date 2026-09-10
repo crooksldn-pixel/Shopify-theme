@@ -157,6 +157,10 @@ async def command(
         # half's workspace as a sentence that did, and `branch.show` redraws it after a
         # switch or a reload (app/session/branch.py).
         branch.shown(ui, outcome.answer, "")
+    # A tap that opened a record is the other place the anticipation layer learns from and
+    # reads ahead of (§18) — the spoken half arrives at /context/order. Background work only,
+    # never awaited for its own sake, and never able to fail the tap.
+    await _anticipate(session, branch, name, outcome, calls)
     return {
         "ok": True,
         "command": name,
@@ -176,6 +180,47 @@ async def command(
         "lane": "TOUCH",
         "model_calls": 0,
     }
+
+
+# Which tap means which learnable event (app/anticipation/models.py: EVENTS). A command not
+# named here is not something the layer learns from; opening a record is, and so is a move.
+ANTICIPATED: dict[str, str] = {
+    "open.entity": "order_opened",
+    "workflow.next": "next_record",
+    "workflow.previous": "previous_record",
+    "surface.tab": "tab_opened",
+    "order.open_shipping": "tracking_checked",
+    "order.open_items": "tab_opened",
+}
+
+
+async def _anticipate(session, branch, command_name: str, outcome, calls) -> None:
+    """Tell the anticipation layer what the owner just tapped.
+
+    Only for a tap that landed on an ORDER, because that is the only shape the rules read so
+    far. Everything here is wrapped: a speculative layer must not be able to turn a tap that
+    worked into a failure, and it must not add a Shopify round trip of its own — the order it
+    describes is the one this tap already read.
+    """
+    event = ANTICIPATED.get(str(command_name or ""))
+    if event is None:
+        return
+    entity = outcome.changed.get("entity") if isinstance(outcome.changed, dict) else None
+    if not isinstance(entity, dict) or entity.get("kind") != "order" or not entity.get("ref"):
+        return
+    try:
+        from app.anticipation import engine as anticipation
+        from app.anticipation import signals
+
+        order = next(
+            (c.result for c in calls or []
+             if isinstance(getattr(c, "result", None), dict) and c.result.get("order_id") == entity["ref"]),
+            None,
+        )
+        signal = signals.for_order(str(entity["ref"]), order, session=session, branch=branch, event=event)
+        await anticipation.observe(signal, session=session)
+    except Exception as exc:  # noqa: BLE001 — never at the cost of the tap
+        log.debug("anticipation on a tap failed: %s", type(exc).__name__)
 
 
 # Commands a tablet may post before the conversation exists on the Mac.

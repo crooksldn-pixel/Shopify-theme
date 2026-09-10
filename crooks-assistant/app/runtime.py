@@ -447,6 +447,14 @@ def build(settings: Settings | None = None) -> Runtime:
 
     load_families()
 
+    # The anticipation layer's learned table (§19): local, private, on this Mac, beside its
+    # own logs. Installed here so every process shares one — and so a test, which points
+    # CROOKS_LOG_DIR at a temporary directory, never writes into the owner's.
+    from app.anticipation.learning import Learner
+    from app.anticipation.learning import install as install_learner
+
+    install_learner(Learner(path=settings.log_dir / "anticipation" / "transitions.json"))
+
     shopify_tools.bind(shopify)
     from app.analytics.cache import OrderCache
 
