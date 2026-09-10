@@ -720,8 +720,19 @@ def _history_from_order(values: dict[str, Any]) -> dict[str, Any] | None:
 def _customer_history_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     """The same card and the same sentence as a lookup by name — this is the same question
     asked a different way, and answering it differently would be a second implementation of
-    one thing. What differs is only how the customer was found."""
-    return _customer_render(ctx, result)
+    one thing. What differs is only how the customer was found.
+
+    And that difference is worth one line here. Reached from an order, the plan reads the order
+    first, purely to learn whose it is — so `present()` was handed two reads and drew two
+    cards, putting the order the owner is already looking at back on screen ABOVE the answer,
+    with the customer card starting 800 pixels down. Only the history is drawn; the order read
+    still reaches the log.
+    """
+    answer = _customer_render(ctx, result)
+    history = [c for c in answer.calls if getattr(c, "name", "") == "shopify_customer_history"]
+    if history and len(history) != len(answer.calls):
+        answer.drawn = history
+    return answer
 
 
 register(Recipe(
@@ -1014,8 +1025,85 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     tail = f" {unchecked} could not be checked." if unchecked else ""
     return FastAnswer(
         answer=f"{len(waiting)} of {len(rows)} customers checked are waiting on a reply: {names}{' and others' if len(waiting) > 3 else ''}.{tail}",
+        surfaces=[_waiting_surface(waiting, unchecked=unchecked)], drawn=[],
         calls=list(result.calls), partial=bool(unchecked) or result.partial,
         trace={"rows": len(rows), "waiting": len(waiting), "unchecked": unchecked},
+    )
+
+
+def _since(when: Any, *, now: float | None = None) -> str:
+    """How long ago, in the words a person would use. Worked out here because the Mac owns the
+    clock and the shop's timezone; the renderer prints whatever string it is given."""
+    import datetime as _dt
+
+    text = str(when or "").strip()
+    if not text:
+        return ""
+    # Gmail's own stamp is epoch milliseconds, which is what reaches here; an ISO string is
+    # accepted too because the Shopify side speaks that. Anything else is handed back as it
+    # came rather than guessed at — a wrong "3h ago" is worse than a date.
+    if text.lstrip("-").isdigit():
+        value = float(text)
+        at = value / 1000.0 if abs(value) > 1e11 else value
+    else:
+        try:
+            stamp = _dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return text
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=_dt.UTC)
+        at = stamp.timestamp()
+    seconds = (_dt.datetime.now(_dt.UTC).timestamp() if now is None else now) - at
+    if seconds < 0:
+        return "just now"
+    if seconds < 90 * 60:
+        return f"{max(1, int(seconds // 60))}m ago"
+    if seconds < 36 * 3600:
+        return f"{int(seconds // 3600)}h ago"
+    return f"{int(seconds // 86400)}d ago"
+
+
+def _waiting_surface(waiting: list[dict[str, Any]], *, unchecked: int = 0):
+    """The people waiting on us, as the thing the question asked for.
+
+    This recipe used to hand its raw reads to `present()`, which built whatever the analytic
+    results implied: a revenue RANKING of recent customers, a working set, a metric group, a
+    table, and a second working set — 1,886 pixels, five cards, three of them titled "Recent
+    customers", and not one of them saying who was waiting. The spoken answer named the three
+    people correctly while the screen showed a leaderboard.
+
+    So the answer is drawn from the rows the recipe already has, and says the three things the
+    owner needs to decide without opening anything: who, what about, and how long they have
+    been waiting. Tapping a row opens that thread — the thread id is on the row, so nothing has
+    to be looked up again.
+    """
+    from app.surfaces import Freshness, Surface
+
+    threads = []
+    for row in waiting[:10]:
+        orders = [str(o) for o in (row.get("orders") or []) if o][:2]
+        count = int(row.get("thread_count") or row.get("threads") or 0)
+        threads.append({
+            "thread_id": str(row.get("last_thread_id") or ""),
+            "from": str(row.get("customer_name") or row.get("customer_email") or "someone"),
+            "subject": str(row.get("last_subject") or "(no subject)"),
+            # What ties it to the shop, which is why this is one system and not two.
+            "snippet": " · ".join(filter(None, [
+                ", ".join(orders),
+                f"{count} threads" if count > 1 else "",
+            ])),
+            "date": _since(row.get("latest_inbound_at")),
+            "known_customer": True,
+        })
+    note = f"{unchecked} could not be checked." if unchecked else ""
+    return Surface(
+        surface_type="work_queue",
+        ui_type="email_list",
+        data={"title": "Waiting on a reply", "count": len(waiting), "threads": threads, "note": note},
+        title="Waiting on a reply",
+        subtitle=f"{len(waiting)} waiting" + (f" · {note}" if note else ""),
+        freshness=Freshness(source="gmail", complete=not unchecked,
+                            caveat=note or ""),
     )
 
 

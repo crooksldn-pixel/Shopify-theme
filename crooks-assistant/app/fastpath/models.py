@@ -46,6 +46,18 @@ class FastAnswer:
     # now?" consults the capability manifest, calls no tool, and so drew no card and spoke a
     # paragraph instead. These are appended to the turn's `ui` as they stand.
     surfaces: list[Any] = field(default_factory=list)
+    # Which of `calls` should become cards, when that is not all of them. `None` — the usual
+    # case — means all of them, and `calls` is what reaches the screen. `calls` ALWAYS reaches
+    # the turn log and the timeline, whatever this says: what was read is a fact about the
+    # turn, and what is worth looking at is a decision about the answer.
+    #
+    # Two recipes need the distinction. "Which customers need replying to?" passes `[]` and
+    # draws its own queue, because the cards its analytic reads imply were a revenue ranking,
+    # two working sets, a metric group and a table — five cards, none of which said who was
+    # waiting. "What else has this customer ordered?" reads the ORDER first, only to learn
+    # whose it is, and passes just the history: the order card was being redrawn above the
+    # answer, pushing the answer off the bottom of the screen.
+    drawn: list[Any] | None = None
     # Set when part of what was asked could not be read. The answer says so in words; this is
     # for the timeline and the report.
     partial: bool = False

@@ -259,7 +259,10 @@ async def turn(
         if fast is not None:
             return await _answer(
                 runtime, session_id, fast.answer, request=request, timings=timings, started=started,
-                transcript=transcript_info, question=spoken.strip(), speak=speak, calls=fast.calls,
+                transcript=transcript_info, question=spoken.strip(), speak=speak,
+                # What is worth looking at, which is not always everything that was read. The
+                # reads themselves still reach the log and the timeline, on the line below.
+                calls=fast.calls if fast.drawn is None else fast.drawn,
                 epoch=epoch, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
                 lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
                 surfaces=fast.surfaces, writes=fast_writes,

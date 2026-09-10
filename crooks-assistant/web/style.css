@@ -61,9 +61,11 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 }
 
 /* ------------------------------------------------------------------ top */
+/* 8 not 14: on a 1280px screen every band of chrome is content the owner cannot see, and the
+   wordmark does not need a cushion. */
 .top{
   position:relative;z-index:var(--z-chrome);display:flex;align-items:center;gap:var(--sp-3);
-  padding:14px 18px 10px;
+  padding:8px 18px 6px;
 }
 .wordmark{font-weight:800;letter-spacing:.32em;font-size:13px;color:var(--ink);padding-left:.32em}
 .conn{
@@ -135,11 +137,15 @@ body[data-mode="orb"] .context{
 }
 
 /* ---------- context mode: orb recedes upward, cards take the surface */
+/* 118px held a 58px orb and two 20px lines of text, which is 40px of air in the band that
+   stands between the question and the answer. The orb still says which state the assistant is
+   in — it is the only thing on screen that does — but at a size that leaves the reading to the
+   two lines beside it. */
 body[data-mode="context"] .orb-zone{
-  height:118px;flex-direction:row;align-items:center;justify-content:flex-start;
-  padding:0 18px 0 6px;gap:6px;
+  height:86px;flex-direction:row;align-items:center;justify-content:flex-start;
+  padding:0 18px 0 6px;gap:8px;
 }
-body[data-mode="context"] .orb-frame{transform:scale(.29);margin:calc(var(--orb) * -.355)}
+body[data-mode="context"] .orb-frame{transform:scale(.21);margin:calc(var(--orb) * -.395)}
 body[data-mode="context"] .orb-caption{text-align:left;margin:0;padding:0;min-width:0;flex:1}
 body[data-mode="context"] .heard{margin-top:4px;-webkit-line-clamp:1;font-size:13px}
 body[data-mode="context"] .answer{font-size:15px;-webkit-line-clamp:2;margin-top:4px;color:var(--ink-2);font-weight:400}
@@ -205,13 +211,21 @@ body[data-mode="context"] .errline{display:none}
 .card.is-fixture{border-color:var(--warn);border-style:dashed}
 @keyframes card-in{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
 .card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+/* The order header: identity on the left, money and state on the right, both reading from the
+   top down in order of what is asked first. The money sits with the badges because "how much"
+   and "is it paid" are one question on a workbench, and it is set in the same mono face as the
+   order number so the two read as a pair. */
+.head-main{min-width:0;flex:1}
+.head-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:0 0 auto}
+.head-total{margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--ink);line-height:1}
+.card-sub .badge{margin-left:8px;vertical-align:2px}
 .card-kicker{
   font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:600;
   margin:0 0 6px;
 }
 .card-title{margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.15;word-break:break-word}
 .card-title.mono{font-family:var(--mono);letter-spacing:0}
-.card-sub{margin:4px 0 0;font-size:15px;color:var(--ink-2);word-break:break-word}
+.card-sub{margin:4px 0 0;font-size:15px;color:var(--ink-2);word-break:break-word;display:flex;align-items:center;flex-wrap:wrap;gap:2px}
 .card-meta{font-size:12px;color:var(--ink-3);letter-spacing:.04em}
 .card-body{font-size:15px;line-height:1.5;color:var(--ink)}
 .card-note{font-size:13px;color:var(--ink-3);margin:10px 0 0}
@@ -760,7 +774,9 @@ html[data-lite] .orb-zone{transition:none}
 .tabbed{margin-top:10px}
 .tabbed .tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;scrollbar-width:none}
 .tabbed .tabs::-webkit-scrollbar{display:none}
-.tabbed .tab{flex:0 0 auto;min-height:38px;padding:8px 14px;border-radius:999px;border:1px solid var(--line,#33363d);
+/* 44, not 38: this rule is more specific than the .tab above it, so the card tabs were the
+   one control on every order, customer and capability card that a thumb could miss. */
+.tabbed .tab{flex:0 0 auto;min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--line,#33363d);
   background:transparent;color:var(--ink-2,#b6b9c0);font-size:13px;font-weight:600;white-space:nowrap}
 .tabbed .tab[aria-selected="true"]{background:var(--surface-2,#1d1f24);color:var(--ink-1,#f4f4f5);border-color:var(--ink-3,#6b6f78)}
 .tabbed .panel{padding-top:4px}
@@ -802,3 +818,16 @@ html[data-lite] .orb-zone{transition:none}
 }
 .cap-row.new .cap-what,.cap-row.new{color:var(--good,#4f9d69)}
 .cap-row.gone{color:var(--ink-3);text-decoration:line-through}
+
+/* The working set, as a strip rather than a card. It always sits under a list of the same
+   members and the nav bar carries the set as a chip, so its whole job is the arithmetic. */
+.card.set-strip{padding:12px 18px 14px}
+.set-strip-head{
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 10px;
+  font-size:13px;color:var(--ink-2);
+}
+.set-strip-kicker{
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);font-weight:600;
+}
+.set-strip-from{color:var(--ink-4);font-size:12px}
+.card.set-strip .stats{margin:0}

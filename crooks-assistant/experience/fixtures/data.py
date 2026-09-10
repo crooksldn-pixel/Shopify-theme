@@ -42,9 +42,27 @@ CURRENCY = "GBP"
 NOW = datetime.now(SHOP_TZ)
 
 
+# What Royal Mail Tracked 48 costs on every order in this world.
+SHIPPING = 5.0
+
+
 def _local(days_ago: float, hour: int, minute: int = 0) -> datetime:
-    """The instant `days_ago` shop-local days back, at a shop-local time of day."""
-    return (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    """The instant `days_ago` shop-local days back, at a shop-local time of day.
+
+    Today is the exception, and it is the same exception `_today_at` exists for: a message
+    stamped "today at 12:00" has not happened yet at eleven in the morning. That made every
+    thread from today read as "just now" on the work queue — the column that says how long
+    someone has been waiting, which is the whole reason to look at the queue at all. So a time
+    of day that is still ahead of us today is folded into the part of the day that has
+    happened, keeping the ORDER of today's messages while putting all of them in the past.
+    """
+    when = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if days_ago == 0 and when > NOW:
+        midnight = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
+        elapsed = (NOW - midnight).total_seconds()
+        through_the_day = (hour * 3600 + minute * 60) / 86400.0
+        when = midnight + timedelta(seconds=elapsed * through_the_day)
+    return when
 
 
 def _at(days_ago: float, hour: int = 10, minute: int = 0) -> str:
@@ -325,10 +343,15 @@ def order_node(spec: OrderSpec) -> dict[str, Any]:
         "tags": list(spec.tags),
         "note": spec.note,
         "email": spec.person.email,
-        "currentTotalPriceSet": _money(spec.total),
-        "totalPriceSet": _money(spec.total),
+        # The money adds up, which it did not: `spec.total` was the goods alone while the
+        # order also carried £5 of postage, so every order card showed Subtotal £84.00 +
+        # Shipping £5.00 + Tax £0.00 = Total £84.00. Shopify's totalPriceSet includes
+        # shipping, so the fixture was not modelling the shop it stands in for, and the one
+        # card the owner reads most had arithmetic on it that does not work.
+        "currentTotalPriceSet": _money(f"{subtotal + SHIPPING:.2f}"),
+        "totalPriceSet": _money(f"{subtotal + SHIPPING:.2f}"),
         "subtotalPriceSet": _money(f"{subtotal:.2f}"),
-        "totalShippingPriceSet": _money("5.00"),
+        "totalShippingPriceSet": _money(f"{SHIPPING:.2f}"),
         "totalTaxSet": _money("0.00"),
         "totalRefundedSet": _money(spec.total if spec.financial == "REFUNDED" else "0.00"),
         "totalOutstandingSet": _money("0.00"),

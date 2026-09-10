@@ -412,19 +412,30 @@
   function renderOrder(d, opts) {
     const items = list(d.items, 12);
     const tags = Array.isArray(d.tags) ? d.tags.slice(0, 3).map((t) => text(t)).filter(Boolean) : [];
+    // Number, who, how much, what state — the four things worth knowing in the first second,
+    // on two lines. The "ORDER" kicker went because the card already says #1938 in 30px mono;
+    // the customer's tags moved up beside their name because a VIP badge on a line of its own
+    // cost 30px to say one word; and the money came UP here, which is the point of the change.
+    // It was only in the Overview tab, so the total was never on screen with the status — and
+    // it was then repeated in the Money breakdown below, so £84.00 appeared four times on one
+    // card and not once in its header.
     const head = h('div', { class: 'card-head' }, [
-      h('div', {}, [
-        kicker('Order'),
+      h('div', { class: 'head-main' }, [
         h('h2', { class: 'card-title mono', text: text(d.order_number, '—') }),
-        h('p', { class: 'card-sub', text: text(d.customer_name) }),
+        h('p', { class: 'card-sub' }, [
+          h('span', { text: text(d.customer_name) }),
+          ...tags.map((t) => badge(t, 'quiet')),
+        ]),
         d.customer_email ? h('p', { class: 'card-meta', text: text(d.customer_email) }) : null,
-        tags.length ? h('p', { class: 'tags' }, tags.map((t) => badge(t, 'quiet'))) : null,
       ]),
-      h('div', { class: 'badges' }, [badge(d.fulfillment), badge(d.payment)]),
+      h('div', { class: 'head-side' }, [
+        d.total ? h('p', { class: 'head-total mono', text: text(d.total) }) : null,
+        h('div', { class: 'badges' }, [badge(d.fulfillment), badge(d.payment)]),
+      ]),
     ]);
+    // Placed and Total are in the header and the timeline now; repeating them here was most of
+    // what made the Overview tab a second copy of the card it sits inside.
     const overview = kv([
-      ['Placed', formatDate(d.placed_at)],
-      ['Total', d.total],
       ['Ships to', d.ships_to],
       ['Cancelled', d.cancelled_at ? [formatDate(d.cancelled_at), text(d.cancel_reason)].filter(Boolean).join(' · ') : ''],
     ], true);
@@ -1276,21 +1287,25 @@
     ].concat(analyticFoot(d)), opts);
   }
 
-  // The working set: what "these" means now — a count, a name, where it came from.
+  // The working set: what "these" means now, and what it comes to.
+  //
+  // This card always follows one that has just listed the very same members, and the nav bar
+  // carries the set as a chip besides — so a full-dress card repeating the title, re-listing
+  // "#1940 · #1938 · #1939" and explaining the word "these" was 276px of a 1280px screen to
+  // say three things the owner had just read. What is genuinely only here is the arithmetic
+  // over the set, so that is what is left: a strip of totals under the list they belong to.
   function renderWorkingSet(d, opts) {
-    const sample = list(d.sample, 5);
     const lines = list(d.lines, 3);
+    const where = d.step === 'filter' ? 'Narrowed' : d.step === 'correlate' ? 'Cross-referenced' : 'These';
     const node = card('working_set', [
-      h('div', { class: 'card-head' }, [h('div', {}, [
-        kicker(d.step === 'filter' ? 'Narrowed' : d.step === 'correlate' ? 'Cross-referenced' : 'Working set'),
-        h('h2', { class: 'card-title', text: text(d.label, 'Selection') }),
-        h('p', { class: 'card-meta', text: `${num(d.count) === null ? '?' : d.count} ${text(d.kind, 'items')} selected${d.truncated ? ' · first 500' : ''}` }),
-      ])]),
-      d.parent_label ? h('p', { class: 'card-note', text: `From: ${text(d.parent_label)}` }) : null,
+      h('p', { class: 'set-strip-head' }, [
+        h('span', { class: 'set-strip-kicker', text: where }),
+        h('span', { text: `${num(d.count) === null ? '?' : d.count} ${text(d.kind, 'items')}${d.truncated ? ' · first 500' : ''}` }),
+        d.parent_label ? h('span', { class: 'set-strip-from', text: `from ${text(d.parent_label)}` }) : null,
+      ]),
       lines.length ? h('div', { class: `stats${lines.length === 3 ? ' three' : ''}` }, lines.map((l) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: text(l.value, '—') }), h('div', { class: 'stat-k', text: text(l.label) })]))) : null,
-      sample.length ? h('p', { class: 'card-meta set-sample', text: sample.map((s) => text(s.label)).filter(Boolean).join(' · ') + (num(d.count) > sample.length ? ' …' : '') }) : null,
-      h('p', { class: 'card-note', text: 'Say "these" or "those" to ask about them, narrow them, or act on all of them.' }),
     ], opts);
+    node.classList.add('set-strip');
     node.dataset.set = text(d.set_id);
     return node;
   }

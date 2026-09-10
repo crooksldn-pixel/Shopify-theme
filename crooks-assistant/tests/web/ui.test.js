@@ -753,7 +753,12 @@ test('a table, a comparison, a matrix, a trend and a metric group all render fro
   assert.ok(textOf(metrics).includes('avg order · derived') && textOf(metrics).includes('Partial'));
 });
 
-test('a working set names what "these" means, shows a sample as text, and keeps its id on the node', () => {
+test('a working set says what "these" means and what it comes to, and keeps its id on the node', () => {
+  // It is a strip, not a card: it always sits under a list of the very same members and the
+  // nav bar carries the set as a chip, so re-listing "#1938 · …" and explaining the word
+  // "these" cost 276px of a 1280px screen to repeat what had just been read. What must still
+  // be here is the count, where it came from, the arithmetic over the set, and the id — that
+  // last one is what "act on all of them" resolves against.
   const out = UI.render([
     { type: 'working_set', data: { set_id: 'set_abc123456789', kind: 'orders', count: 23, label: 'Delayed orders ' + HOSTILE, parent_label: 'Unfulfilled ' + HOSTILE, step: 'filter', sample: [{ ref: 'gid://shopify/Order/1', label: '#1938' }, { ref: 'gid://shopify/Order/2', label: HOSTILE }], truncated: true, lines: [{ label: 'value', value: '£1,481.00' }] } },
     { type: 'working_set', data: { set_id: 'set_def', kind: 'customers', count: 2, label: 'emailed us', step: 'correlate', sample: [], lines: [] } },
@@ -763,10 +768,26 @@ test('a working set names what "these" means, shows a sample as text, and keeps 
   assert.equal(narrowed.dataset.set, 'set_abc123456789');
   assert.equal(narrowed.querySelectorAll('script, img').length, 0, 'hostile labels stay text');
   const t = textOf(narrowed);
-  assert.ok(t.includes('Narrowed') && t.includes('23 orders selected · first 500') && t.includes('From: Unfulfilled') && t.includes('#1938 · ') && t.includes('£1,481.00'));
-  assert.ok(t.includes(HOSTILE), 'the hostile label is printed verbatim as text');
-  assert.ok(textOf(correlated).includes('Cross-referenced') && textOf(correlated).includes('2 customers selected'));
-  assert.ok(!textOf(correlated).includes('From:'));
+  assert.ok(t.includes('Narrowed'), 'says how the set was made');
+  assert.ok(t.includes('23 orders') && t.includes('first 500'), 'says how many, and that it is capped');
+  assert.ok(t.includes('from Unfulfilled'), 'says what it was narrowed from');
+  assert.ok(t.includes('£1,481.00'), 'carries the arithmetic, which is the part only it has');
+  assert.ok(!t.includes('these'), 'does not spend a line explaining the word');
+  assert.ok(textOf(correlated).includes('Cross-referenced') && textOf(correlated).includes('2 customers'));
+  assert.ok(!textOf(correlated).includes('from '), 'a set with no parent claims none');
+});
+
+test('a working set strip does not re-list the members the card above it just listed', () => {
+  // The sample is still on the wire — the model and the batch card both use it — and the strip
+  // deliberately does not draw it. This is the duplication the Phase 2 audit measured.
+  const out = UI.render([{ type: 'working_set', data: {
+    set_id: 'set_abc', kind: 'orders', count: 3, label: 'Today', step: 'query',
+    sample: [{ ref: 'gid://shopify/Order/1', label: '#1940' }, { ref: 'gid://shopify/Order/2', label: '#1938' }],
+    lines: [{ label: 'value', value: '£162.00' }],
+  } }]);
+  const t = textOf(out.nodes[0]);
+  assert.ok(t.includes('£162.00'), 'the totals are the reason it exists');
+  assert.ok(!t.includes('#1940') && !t.includes('#1938'), 'the members belong to the list, not to the strip');
 });
 
 test('a batch card names the count, the scope, the excluded and every member, and its gesture carries the batch id', async () => {

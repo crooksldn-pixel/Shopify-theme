@@ -139,6 +139,19 @@ async def capabilities(h: Harness) -> Result:
     return r
 
 
+def _money(value: Any) -> float | None:
+    """A displayed amount as a number, or None when it is not one. Currency symbols, thousands
+    separators and a stray minus all survive; anything else is not silently read as zero."""
+    text = str(value or "").strip().replace(",", "")
+    for symbol in ("£", "$", "€", "GBP", "USD", "EUR"):
+        text = text.replace(symbol, "")
+    text = text.strip()
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
 async def order_lookup(h: Harness) -> Result:
     """The regression the whole pass exists to prevent (brief §29).
 
@@ -160,8 +173,22 @@ async def order_lookup(h: Harness) -> Result:
                           f"order_number={card.get('order_number')}"))
     r.checks.append(check("names the customer", str(card.get("customer_name")) == spec.person.name,
                           f"customer_name={card.get('customer_name')}"))
-    r.checks.append(check("carries the total", str(spec.total) in str(card.get("total") or ""),
-                          f"total={card.get('total')}"))
+    # Not "the total is £84.00". The card's own arithmetic is the thing worth holding: the
+    # fixture used to state a total that excluded the £5 of postage it also displayed, so every
+    # order card read Subtotal £84.00 + Shipping £5.00 + Tax £0.00 = Total £84.00. A magic
+    # number in a test cannot see that; a sum can.
+    money = card.get("money") if isinstance(card.get("money"), dict) else {}
+    parts = {k: _money(money.get(k)) for k in ("subtotal", "shipping", "tax")}
+    total = _money(card.get("total"))
+    r.checks.append(check("carries a total", total is not None, f"total={card.get('total')}"))
+    r.checks.append(check(
+        "and the money on it adds up",
+        total is not None and all(v is not None for v in parts.values())
+        and abs(sum(parts.values()) - total) < 0.005,
+        f"{parts} -> {card.get('total')}"))
+    r.checks.append(check("the goods come to what the items cost",
+                          parts["subtotal"] is not None and abs(parts["subtotal"] - float(spec.total)) < 0.005,
+                          f"subtotal={money.get('subtotal')} items={spec.total}"))
     items = card.get("items") or []
     r.checks.append(check("the items are reachable", len(items) == len(spec.items),
                           f"{len(items)} items, expected {len(spec.items)}"))
