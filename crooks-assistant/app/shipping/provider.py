@@ -81,13 +81,15 @@ class ShippingContext:
         branch here that can produce "checked Easyship" from `checked=False`, which is the
         point: the string and the flag cannot drift apart because there is only one string.
         """
+        if self.state == UNAVAILABLE and self.provider:
+            # Asked and failed, which is a different thing from never asked — and still not a
+            # claim about the shipment.
+            return f"{self.provider} did not answer{': ' + self.detail if self.detail else ''}."
         if not self.checked:
             missing = ", ".join(self.missing) or "no shipping provider is connected"
             return f"Shipping was not checked: {missing}."
         if self.state == NO_SHIPMENT:
             return f"{self.provider}: no shipment has been created for this order."
-        if self.state == UNAVAILABLE:
-            return f"{self.provider} did not answer{': ' + self.detail if self.detail else ''}."
         parts = [f"{self.provider}:"]
         parts.append(f"{self.carrier or 'a carrier'}" if self.shipment_created else "no shipment")
         if self.tracking:
