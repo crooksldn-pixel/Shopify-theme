@@ -127,11 +127,20 @@ async def graph_compound_reply(h: Harness) -> Result:
     r.captures.append(opened)
     c = await h.say(COMPOUND, scenario="graph_compound_reply", session_id="graph3")
     r.captures.append(c)
-    r.checks.append(check("the Mac answers it itself, with no model on the critical path",
-                          c.lane == "FAST" and c.recipe_id == "order_email_reply" and c.model_calls == 0,
+    # The mechanics are the Mac's and the synthesis is Claude's, in ONE turn (§16). The recipe
+    # is named on the turn even though the lane became NORMAL, because it ran: it chose the
+    # reads, drew the cards, and handed the words on. ONE model call — the failure this
+    # replaces is the owner asking a second time, which was a second turn.
+    r.checks.append(check("the Mac does the mechanics itself and Claude is asked once, in the same turn",
+                          c.recipe_id == "order_email_reply" and c.model_calls == 1,
                           f"lane={c.lane} recipe={c.recipe_id!r} model_calls={c.model_calls}"))
-    r.checks.append(check("and says so: the reading is done, the words are not",
-                          c.raw.get("partial") is True, f"partial={c.raw.get('partial')!r}"))
+    perf = c.raw.get("performance") or {}
+    r.checks.append(check("the facts were in hand before the sentence was written, and the wait is measured",
+                          isinstance(perf.get("facts_ms"), (int, float)) and isinstance(perf.get("prose_wait_ms"), (int, float))
+                          and float(perf["facts_ms"]) < float(perf.get("total_ms") or perf.get("turn_total_ms") or 1e9),
+                          f"facts_ms={perf.get('facts_ms')} prose_wait_ms={perf.get('prose_wait_ms')} total={perf.get('turn_total_ms')}"))
+    r.checks.append(check("the answer leads with what was READ, not with what was written",
+                          c.answer.startswith("Mia"), c.answer[:160]))
     r.checks += a_surface(c, "order", what="draws the order")
     r.checks += a_surface(c, "email_thread", what="draws the thread")
     r.checks += a_surface(c, "reply_state", what="draws the reply state")
@@ -165,9 +174,15 @@ async def graph_compound_reply(h: Harness) -> Result:
     r.checks.append(check("the reply is armed on that thread for the next thing the owner says",
                           listening.get("family") == "email.reply" and listening.get("ref") == MIA_THREAD,
                           f"listening_for={ {k: listening.get(k) for k in ('family', 'kind', 'ref')} }"))
-    r.checks.append(check("the draft is offered, never announced as done",
-                          "draft the reply" in c.answer.lower() and "drafted" not in c.answer.lower() and "sent" not in c.answer.lower(),
-                          c.answer[:200]))
+    # The recipe's half of the sentence no longer offers to draft — the owner asked for the
+    # draft and it is being written in the same breath, so offering would be asking twice. What
+    # it must still never do is claim the reply went out; the model's half is the fixture
+    # provider's fixed sentence here, so this is the Mac's half being checked.
+    lead = c.answer.split("[model answer]")[0]
+    r.checks.append(check("the Mac's half states the position and never claims the reply went out",
+                          "#1938" in lead and "not replied" in lead.lower()
+                          and "say the word" not in lead.lower() and "sent" not in lead.lower(),
+                          lead[:200]))
     r.checks.append(check("and nothing was staged: this family reads", not _staged(h, "graph3"),
                           f"proposals={[getattr(p, 'operation', p) for p in _staged(h, 'graph3')]}"))
     # Every tool this turn ran, held against the four reads the recipe declares. A write would

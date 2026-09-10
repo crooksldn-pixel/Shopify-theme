@@ -361,6 +361,13 @@ async def turn(
         result.tool_calls = _hydrated(live, prefetched + list(result.tool_calls or []))
 
     answer = result.text or "I could not work out an answer to that."
+    if fast_partial is not None and fast_partial.answer:
+        # The recipe's sentence LEADS, and the model's follows it. Section 16 splits this turn
+        # deliberately: the mechanics are the Mac's and the synthesis is Claude's, so the facts
+        # the owner hears first — who wrote, when, whether we replied — are the ones that were
+        # read, not the ones that were generated. It is also what is left if the model fails:
+        # the fallback sentence lands after a true one instead of instead of it.
+        answer = f"{fast_partial.answer.rstrip()} {answer}"
     if len(answer) > runtime.settings.max_answer_chars:
         # A forty-second spoken monologue is a bad product; truncate at a sentence boundary.
         cut = answer[: runtime.settings.max_answer_chars]
@@ -402,6 +409,10 @@ async def turn(
             if fast_partial is not None else result.tool_calls
         ),
         surfaces=(list(fast_partial.surfaces) if fast_partial is not None else None),
+        # A compound turn is still a recipe turn: it ran, it did the reads, and the report and
+        # the timeline should be able to say which one, next to the model call it handed on to.
+        # Nameless, the only NORMAL turns with `recipe_reads_ms` on them would be unattributable.
+        recipe_id=(recipe.recipe_id if fast_partial is not None and recipe is not None else ""),
         speak=speak,
         lost_thread=lost_thread,
         epoch=epoch,
@@ -494,12 +505,18 @@ def _workspace_timing(timings: dict, *, calls, measures: dict) -> tuple[float | 
     have been drawn. The fast lane has no model, so its reads are its critical path, which
     the recipe measures and passes here. A turn that read nothing — a capability answer, a
     navigation move — has no facts time and is not counted as slow prose.
+
+    A recipe's reads come FIRST where there are both. On a compound turn (§16) the cards are
+    the recipe's and the model is there to write about them, so the last model step is not
+    when the facts arrived — it is a draft being composed from facts already held, and
+    reading it as "facts_ms" would report a twenty-second turn as twenty seconds of reading
+    and nothing waited. Which is the opposite of the number §25 asks for.
     """
-    steps = [float(v) for k, v in timings.items() if k.startswith("step:tool:") and isinstance(v, (int, float))]
-    facts = max(steps) if steps else None
+    recipe_ms = measures.get("recipe_reads_ms")
+    facts = float(recipe_ms) if isinstance(recipe_ms, (int, float)) else None
     if facts is None:
-        recipe_ms = measures.get("recipe_reads_ms")
-        facts = float(recipe_ms) if isinstance(recipe_ms, (int, float)) else None
+        steps = [float(v) for k, v in timings.items() if k.startswith("step:tool:") and isinstance(v, (int, float))]
+        facts = max(steps) if steps else None
     if facts is None and calls:
         # No per-step offsets (a fast lane that did not report, a provider that does not
         # measure): the reads themselves are the floor, run in parallel where they could be.
@@ -619,6 +636,11 @@ def _working_words(lane: str, intent) -> str:
 _NEVER_A_CONTINUATION = frozenset({
     "navigation_back", "navigation_home", "working_set_next", "working_set_previous",
     "capability_summary", "capability_delta", "order_reopen",
+    # And every other way of saying "move the screen": the dock's four landings, a tab on the
+    # record, and the switch to the other half of the orb. Tap Note on #1938, say "open the
+    # inbox", and the inbox is what should open.
+    "landing_orders", "landing_inbox", "landing_sales", "landing_products",
+    "order_tab_show", "branch_switch",
 })
 # And these are the ones that NAME THEIR OWN SUBJECT, which the glue would then overrule. Tap
 # Add a note on #1938, then ask "how many orders today", and the model was handed
@@ -639,6 +661,12 @@ _CARRIES_ITS_OWN_SUBJECT = frozenset({
     "customer_history_lookup", "customer_purchase_lookup", "sales_breakdown_period",
     "best_sellers_period", "stock_cover_analysis", "delayed_orders", "inbox_state",
     "needs_reply",
+    # Phase 3's families, on the same rule. The email pair says which record it is asking
+    # about ("this order") and then reads the thread; the latest order and the two list
+    # questions name the set they want; adding an item to an order is an instruction in its
+    # own right, and a tapped Note must not swallow it as note text.
+    "order_latest", "order_email_draft", "order_email_waiting",
+    "unfulfilled_orders", "international_orders", "order_add_item",
 })
 
 

@@ -307,6 +307,10 @@ def continuation_prompt(*, order: dict[str, Any], thread: dict[str, Any], state:
     head = [
         f"The owner asked what {_clip(who, 60)} is waiting for on order {_clip(number, 20)}, and for the reply to be drafted.",
         "The Mac has already read all of this. Do not read it again.",
+        # And has already SAID the mechanical half out loud — `_render`'s sentence leads the
+        # answer this turn returns (app/routes/turn.py). Repeating it would have the owner hear
+        # who wrote and whether we replied twice in one breath.
+        "The owner has already been told who wrote, when, and whether we have replied. Do not repeat that.",
         f"Order {_clip(number, 20)}: {_clip(order.get('total'), 20)}, {_clip(order.get('fulfillment'), 24).lower()}, placed {_clip(order.get('placed_at'), 30)}."
         f" Customer {_clip(who, 60)} <{_clip(theirs, 80)}>, order_id={order_id} (issued to you).",
         f"Thread \"{_clip(thread.get('subject'), 90)}\", {int(state.get('messages') or len(messages))} message(s),"
@@ -314,7 +318,8 @@ def continuation_prompt(*, order: dict[str, Any], thread: dict[str, Any], state:
         f"{'; we have not replied since' if not state.get('replied') and state.get('latest_direction') == 'inbound' else ''}.",
     ]
     tail = [
-        f"In one sentence say what they are waiting for, then call gmail_draft_reply(thread_id='{thread_id}', order_id='{order_id}', body=…).",
+        f"In one sentence say what they actually want done — the thing behind the email, not its"
+        f" state — then call gmail_draft_reply(thread_id='{thread_id}', order_id='{order_id}', body=…).",
         "A draft only. The owner applies it with a gesture on the tablet; never send it yourself, and never say it has been sent.",
     ]
     fixed = "\n".join(head + tail)
@@ -603,7 +608,11 @@ def _render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     asked = _asks_to_draft(ctx)
     armed = asked and _may_draft(ctx) and _arm(ctx, thread_id=thread_id, subject=subject)
     if armed:
-        words += " Say the word and I will draft the reply."
+        # Nothing added. The owner asked for the draft and it is being written in this same
+        # turn — the continuation below puts it to Claude with the thread already read. Saying
+        # "say the word and I will draft the reply" to somebody who just said the word is the
+        # second ask this recipe exists to remove.
+        pass
     elif asked and not _may_draft(ctx):
         words += " Changes are off on this Mac, so I cannot draft a reply."
     elif _may_draft(ctx):
@@ -623,7 +632,11 @@ def _render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         # model turn and puts this prompt in front of it, so one answer comes back with the
         # workspace already drawn. Only when the owner asked for the reply — a sentence that
         # only asked whether they had written is answered, not handed on.
-        continuation=prompt if asked else "",
+        # Handed over only when the draft can actually be made: `armed` is asked AND allowed AND
+        # the thread accepted the binding. Putting the prompt to the model while changes are off
+        # would ask it for a `gmail_draft_reply` the gate refuses, and the owner would hear a
+        # refusal after being told plainly, one sentence earlier, that changes are off.
+        continuation=prompt if armed else "",
         trace={
             "threads_considered": len(candidates), "confidence": confidence,
             "waiting": waiting, "replied": bool(state["replied"]),

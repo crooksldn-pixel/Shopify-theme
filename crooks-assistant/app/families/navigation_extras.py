@@ -45,12 +45,14 @@ TAB_WORDS: dict[str, str] = {
     # reached by items, lines or contents.
     "items": "items", "item": "items", "lines": "items", "contents": "items",
     "customer": "customer", "buyer": "customer",
-    # Not a bare "email" either: with an order open, "show me the email" is genuinely
+    # No email word at all. A bare "show me the email" with an order open is genuinely
     # ambiguous between this order's Email tab and the inbox, and the router said so —
-    # 0.96 against 0.90, inside the margin, so nothing routed and the turn went to the model.
-    # The inbox owns the bare word; the tab is reached by a sentence that says which order it
-    # is about ("the email about this order"), and by the tap, which is never ambiguous.
-    "correspondence": "email",
+    # 0.96 against 0.90, inside the margin, so nothing routed. And a sentence that DOES say
+    # which order it is about ("the correspondence about this order") is answered better than
+    # this family can answer it: `app.families.order_email` reads the thread itself and draws
+    # it with a rail, which is more than moving the screen. Flipping the tab and leaving the
+    # owner to read it would have been the worse of two fast answers. The tap still reaches
+    # the Email tab, and it is never ambiguous.
 }
 # Not "last": walking a set, "the last one" means the PREVIOUS member, and
 # `working_set_previous` owns that word. "Latest" and "newest" cannot mean anything else.
@@ -114,7 +116,7 @@ def _tab_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     # The sentence says where the screen now is, and nothing else: what the tab holds is on
     # the card, and reading a shipping address aloud unasked is how PII gets spoken.
     words = {"shipping": f"The shipping for {label}.", "items": f"What is on {label}.",
-             "customer": f"The customer on {label}.", "email": f"The email about {label}."}
+             "customer": f"The customer on {label}."}
     return FastAnswer(answer=words.get(tab, f"{label}, on {tab}."), calls=calls,
                       trace={"tab": tab, "replayed": not result.calls})
 

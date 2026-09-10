@@ -50,7 +50,6 @@ def lane_for(text: str, branch) -> tuple[str, str]:
         ("show me the shipping", "order_tab_show"),
         ("show me the items", "order_tab_show"),
         ("show me the customer", "order_tab_show"),
-        ("the correspondence about this order", "order_tab_show"),
         ("show me the latest order", "order_latest"),
         ("the most recent order", "order_latest"),
         ("the newest order", "order_latest"),
@@ -70,6 +69,9 @@ def test_the_sentences_the_brief_names_take_the_fast_lane(text, family, branch):
         # is the regression this change actually caused: "address" was a shipping-tab word,
         # so the sentence that READS THE ADDRESS OUT became ambiguous and went to the model.
         ("read me the full address", "order_address_lookup"),
+        # There is no email tab word. `order_email_draft` reads the thread and draws it,
+        # which answers this sentence rather than pointing at where the answer is.
+        ("the correspondence about this order", "order_email_draft"),
         ("show me the full shipping address", "order_address_lookup"),
         # "The last one" is the cursor going back, not the newest order.
         ("the last one", "working_set_previous"),

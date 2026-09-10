@@ -1013,8 +1013,12 @@ async def test_a_partial_recipe_hands_its_cards_and_its_words_to_the_model_in_on
     finally:
         turn_mod._fast, turn_mod._route = real_fast, real_route
 
-    # ONE answer, and it is the model's — the recipe's sentence was the interim one.
-    assert body["answer"].startswith("They are waiting on the second hoodie")
+    # ONE answer, in two halves, in that order: the sentence the Mac READ leads, and the
+    # sentence the model WROTE follows it. The order is the point — a fact that was read
+    # cannot be displaced by one that was generated, and it is what the owner still hears
+    # if the model fails.
+    assert body["answer"] == ("Mia wrote about 1938 five hours ago. "
+                              "They are waiting on the second hoodie. I have drafted the reply."), body["answer"]
     # The model was asked, and the continuation was in front of it.
     assert seen and "gmail_draft_reply" in seen[-1] and "one sentence" in seen[-1]
     # The recipe's cards survived into that answer, in front of the model's own.

@@ -569,7 +569,11 @@ def test_the_continuation_names_the_draft_tool_with_both_ids_and_quotes_each_sid
     state = order_email.reply_state(thread["messages"], customer_email=MIA, now=NOW)
     prompt = order_email.continuation_prompt(order=order(1938), thread=thread, state=state)
     assert "gmail_draft_reply(thread_id='aa70d3f83dbef06e', order_id='gid://shopify/Order/1938', body=…)" in prompt
-    assert "In one sentence say what they are waiting for" in prompt
+    assert "In one sentence say what they actually want done" in prompt
+    # And the mechanical half is claimed by the Mac, not asked of the model: `_render`'s
+    # sentence leads the answer, so a prompt that asked for it again would have the owner
+    # hear who wrote and whether we replied twice in one breath.
+    assert "Do not repeat that." in prompt
     assert "issued to you" in prompt and "never send it yourself" in prompt
     assert "Is it too late to add a cap?" in prompt, "the model must not have to read the thread again"
     assert "Latest from us" in prompt and "Let me check the packing table." in prompt

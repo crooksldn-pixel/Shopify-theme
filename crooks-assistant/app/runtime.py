@@ -452,7 +452,13 @@ def build(settings: Settings | None = None) -> Runtime:
 
     order_cache = OrderCache(lambda: runtime.shopify)
     analytics_tools.bind(order_cache)
-    analytics_tools.bind_email(gmail_tools.threads_for, gmail_tools.replied, gmail_tools.reply_state)
+    # `own_address` is what tells an inbound customer email from our own reply and from a
+    # carrier report addressed to us: half the needs-reply noise filter is inert without it,
+    # which is how the September queue offered an automated carrier report as somebody
+    # waiting. Passed as the bound method, not its result — the profile is one network call
+    # and it is made lazily, once, the first time a thread is actually judged.
+    analytics_tools.bind_email(gmail_tools.threads_for, gmail_tools.replied, gmail_tools.reply_state,
+                               own_address=gmail.address)
     gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(shopify))
 
     kb = load(settings.kb_dir)

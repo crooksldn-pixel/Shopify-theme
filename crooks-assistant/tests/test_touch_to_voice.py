@@ -128,3 +128,31 @@ async def test_the_owner_is_shown_his_own_words_not_the_note_added_for_the_model
     # And the model was told what the words apply to, which is why the binding exists.
     asked = " ".join(str(getattr(c, "prompt", c)) for c in stage.provider.calls[before:])
     assert "order.add_note" in asked or "1938" in asked, "the model lost the continuation"
+
+
+def test_every_fast_path_family_is_classified_against_the_continuation_glue():
+    """A new family that nobody classified is a sentence the glue can swallow.
+
+    `_is_a_command` decides from the family the router resolved, which is the right way round
+    — it holds for however the thing is said. But the two sets it reads were hand-written for
+    the families that existed when the glue was, and a family added since is silently absent
+    from both: tap Note on #1938, say "open the inbox", and the model was handed the words as
+    note text with an instruction to apply them to that order and nothing else.
+
+    So the rule, as a test: every family the router can resolve is either an instruction to
+    the assistant or names its own subject. Dictation is what does NOT resolve to a confident
+    family (see the comment above the sets), so there is no third case to leave a hole for.
+    """
+    from app.families import load_all
+    from app.fastpath import intent
+    from app.routes import turn
+
+    load_all()
+    registered = {f.name for f in intent.all_families()}
+    assert len(registered) > 20, "the family table did not load — the check would pass vacuously"
+    classified = turn._NEVER_A_CONTINUATION | turn._CARRIES_ITS_OWN_SUBJECT
+    missing = sorted(registered - classified)
+    assert not missing, (
+        "these families are in neither set, so a tapped control would take their sentences "
+        f"as dictation: {missing}"
+    )
