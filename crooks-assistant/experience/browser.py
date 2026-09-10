@@ -101,8 +101,8 @@ async def serve_fixture_world(port: int):
     # binds, and for the same reasons: `runtime.customer_lookup` does not exist, and the write
     # module holds its own client which would otherwise still be the real one.
     gmail_tools.bind(gmail, customer_lookup=_make_customer_lookup(store))
-    gmail_writes.bind(gmail, customer=_make_customer_lookup(store),
-                      policy=lambda: runtime.settings)
+    # No `customer=` — see experience/harness.py for what passing one did.
+    gmail_writes.bind(gmail, policy=lambda: runtime.settings)
     runtime.sessions = SessionManager()
     runtime.settings = runtime.settings.model_copy(update={
         "writes_enabled": True, "allowed_logins": "owner@example.com",

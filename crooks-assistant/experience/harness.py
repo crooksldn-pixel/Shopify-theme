@@ -380,8 +380,14 @@ async def harness(*, live: bool = False, writes: bool = True):
                 # alone, every draft, send and archive in the fixture world went to the client
                 # `runtime.build()` made — the real one. Under pytest conftest turns that into
                 # an error; `scripts/experience.py` on the Mac has no such net.
-                gmail_writes.bind(gmail, customer=_make_customer_lookup(store),
-                                  policy=lambda: runtime.settings)
+                # No `customer=`: the write module's own fallback reads the customer off the
+                # order through `shopify_tools.hydrator()`, which is bound to the fixture store
+                # two lines up. What was passed here instead was `gmail_tools`' email->bool
+                # sender check, and `_order_customer` calls its lookup with TWO arguments — so
+                # every gmail_draft_new and gmail_send_new carrying an order_id failed in the
+                # fixture world with a TypeError about positional arguments. Found by the
+                # composer family, whose scenarios are the first to reach that path.
+                gmail_writes.bind(gmail, policy=lambda: runtime.settings)
             runtime.sessions = SessionManager()
             # The order cache, warmed the way boot warms it — but awaited. Production kicks
             # this off in the background and the first question of the day is answered from
