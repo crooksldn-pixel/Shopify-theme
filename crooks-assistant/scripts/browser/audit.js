@@ -231,6 +231,27 @@ async function main() {
   });
   await record('row-tap', 'Tapping a row on the order list', JSON.stringify(opened));
 
+  // The graph, walked with a finger only: order -> a prior order of the same customer ->
+  // the customer chip in the nav bar. Every hop used to need a spoken sentence.
+  await ask('show me order 1938');
+  const hops = await page.evaluate(async () => {
+    const out = [];
+    const tap = async (el, what) => {
+      if (!el) { out.push(`${what}: MISSING`); return; }
+      el.click();
+      await new Promise((r) => setTimeout(r, 1300));
+      const card = document.querySelector('#cards .card');
+      out.push(`${what}: ${(card && card.dataset.type) || 'none'} ${(card && card.dataset.ref) || ''}`);
+    };
+    const customerTab = Array.from(document.querySelectorAll('#cards [role="tab"]'))
+      .find((t) => (t.textContent || '').toLowerCase().includes('customer'));
+    if (customerTab) { customerTab.click(); await new Promise((r) => setTimeout(r, 400)); }
+    await tap(document.querySelector('#cards .hist-rows .row.tappable[data-kind="order"]'), 'prior order');
+    await tap(document.querySelector('#stack .chip[data-kind="customer"], #stack .chip[data-ref*="Customer"]'), 'customer chip');
+    return out;
+  });
+  await record('graph-hops', 'order to prior order to customer, by finger', JSON.stringify(hops));
+
   await browser.close();
   const ok = errors.length === 0;
   process.stdout.write(`${JSON.stringify({ ok, errors: errors.slice(0, 4), surfaces, shots })}\n`);

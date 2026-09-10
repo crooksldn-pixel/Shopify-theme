@@ -402,51 +402,58 @@ def _msg(mid: str, tid: str, sender: str, subject: str, body: str, days_ago: flo
     return Message(mid, tid, sender, to, subject, body, days_ago, hour, labels or ["INBOX", "UNREAD"])
 
 
+# Gmail thread and message ids are lowercase hex, and `app/tools/gate.py:_ID_KIND` holds them to
+# that shape — an id of the wrong form is not one this conversation was issued, whatever else is
+# true of it. The readable ids this world used ("t_mia_1938") were therefore refused by the
+# production guard, so no offline run could open an email at all: every tap on a thread came back
+# "I no longer have that one to hand", and the whole email leg of the graph was untestable here.
+# They are hex now, derived from those readable names so a failure can still be traced back to
+# the thread it is about.
 THREADS: list[Thread] = [
     # 1. Inbound, unanswered, about a live order. The needs-reply case.
-    Thread("t_mia_1938", [
-        _msg("m1", "t_mia_1938", f"Mia Jones <{MIA.email}>", "Order 1938 — can I add to it?",
+    Thread("aa70d3f83dbef06e", [
+        _msg("bbe40b57bc810975", "aa70d3f83dbef06e", f"Mia Jones <{MIA.email}>", "Order 1938 — can I add to it?",
              "Hi, I have just placed order 1938. Is it too late to add a cap to it? Thanks, Mia.",
              0, 12),
     ], about_order="#1938"),
 
     # 2. Inbound then our reply: answered, so it must NOT appear in needs-reply.
-    Thread("t_david_1939", [
-        _msg("m2", "t_david_1939", f"David Randall <{DAVID.email}>", "Where is 1939?",
+    Thread("58361c4d87dfeee5", [
+        _msg("f8c90502519407ee", "58361c4d87dfeee5", f"David Randall <{DAVID.email}>", "Where is 1939?",
              "Morning — any tracking for order 1939 yet?", 1, 9),
-        _msg("m3", "t_david_1939", f"CROOKS <{MAILBOX}>", "Re: Where is 1939?",
+        _msg("a59b1035eb72180a", "58361c4d87dfeee5", f"CROOKS <{MAILBOX}>", "Re: Where is 1939?",
              "Hi David, 1939 went out with Royal Mail, tracking AB1234567890GB. CROOKS",
              1, 11, labels=["SENT"], to=DAVID.email),
     ], about_order="#1939"),
 
     # 3. The house number. Millie's order has a street but no number; she sent it by email,
     #    in a thread that never mentions the order number.
-    Thread("t_millie_address", [
-        _msg("m4", "t_millie_address", f"Millie Fenwick <{MILLIE.email}>", "Delivery address",
+    Thread("7acacac7e3eac001", [
+        _msg("e3839e304572fbc6", "7acacac7e3eac001", f"Millie Fenwick <{MILLIE.email}>", "Delivery address",
              "Sorry — I think I left the house number off. It is 41 Sefton Park Road, Bristol BS7 9AL.",
              3, 16),
     ], about_order=""),
 
     # 4. A reply that arrived in its own thread rather than on the original: the cross-thread
     #    correlation case. Priya's order is 1940; this thread names it only in the body.
-    Thread("t_priya_separate", [
-        _msg("m5", "t_priya_separate", f"Priya Raman <{PRIYA.email}>", "Cap",
+    Thread("c28cf65d31fe6cbb", [
+        _msg("792550885738f37a", "c28cf65d31fe6cbb", f"Priya Raman <{PRIYA.email}>", "Cap",
              "Following up on my order 1940 — is the black cap the adjustable one?", 0, 13),
     ], about_order="#1940"),
 
     # 5. A notification. Not a customer, must never be offered as needing a reply.
-    Thread("t_notification", [
-        _msg("m6", "t_notification", f"Shipping Updates <{NEWSLETTER_SENDER}>",
+    Thread("a413d264183cfe94", [
+        _msg("402b445d24bb77d8", "a413d264183cfe94", f"Shipping Updates <{NEWSLETTER_SENDER}>",
              "Your weekly carrier report is ready",
              "This is an automated message. Do not reply. View your report online.",
              0, 6, labels=["INBOX", "UNREAD", "CATEGORY_UPDATES"]),
     ]),
 
     # 6. An older answered thread, for a customer's email history.
-    Thread("t_mia_1912", [
-        _msg("m7", "t_mia_1912", f"Mia Jones <{MIA.email}>", "Order 1912 arrived",
+    Thread("fe128e8f1ec5a51e", [
+        _msg("0c2bb5fd5350c039", "fe128e8f1ec5a51e", f"Mia Jones <{MIA.email}>", "Order 1912 arrived",
              "Got it, thank you — the hoodie fits perfectly.", 40, 10, labels=["INBOX"]),
-        _msg("m8", "t_mia_1912", f"CROOKS <{MAILBOX}>", "Re: Order 1912 arrived",
+        _msg("12f0298fd262b702", "fe128e8f1ec5a51e", f"CROOKS <{MAILBOX}>", "Re: Order 1912 arrived",
              "Glad to hear it, Mia. CROOKS", 40, 15, labels=["SENT"], to=MIA.email),
     ], about_order="#1912"),
 ]
@@ -457,7 +464,7 @@ BY_THREAD = {t.thread_id: t for t in THREADS}
 DRAFTS = [{
     "draft_id": "d_mia_1938",
     "message_id": "m_draft_1",
-    "thread_id": "t_mia_1938",
+    "thread_id": "aa70d3f83dbef06e",
     "to": MIA.email,
     "subject": "Re: Order 1938 — can I add to it?",
     "body": "Hi Mia, I have added the cap to 1938 and it will go out today. CROOKS",

@@ -1202,18 +1202,20 @@ function renderStackChips() {
   const chips = window.CrooksUI.renderStack(currentStack, {
     active: active.find((ref) => currentStack.some((e) => e.ref === ref)) || '',
     onSelect: (entry) => {
-      // Bring the most recent cards for that entity forward, if we still hold them.
+      // Bring the most recent cards for that entity forward, if we still hold them: that is
+      // instant and needs nobody.
       for (let i = history.length - 1; i >= 0; i--) {
         if (history[i].entities.indexOf(entry.ref) !== -1) { T.record('navigate', { nav: 'stack_chip', entity: entry.ref, to: i }); showHistory(i); haptic(HAPTIC.start); return; }
       }
-      T.record('navigate', { nav: 'dead_chip', entity: entry.ref });
+      // Otherwise ask the Mac. This used to be a dead end — the chip was greyed out and the
+      // tap recorded as 'dead_chip' — because liveness was decided from the TABLET's render
+      // history. So the CUSTOMER chip was disabled on the very first turn, when it is the
+      // only link on screen, and after four orders every customer chip in the bar was dead.
+      // The Mac can read a record it does not hold; the tablet is not the one to say no.
+      openEntity(entry.kind, entry.ref, entry.label);
     },
   });
-  for (const chip of chips) {
-    const held = history.some((entry) => entry.entities.indexOf(chip.dataset.ref) !== -1);
-    if (!held) { chip.dataset.dead = '1'; chip.setAttribute('aria-disabled', 'true'); chip.title = 'Ask for it again to see it'; }
-    el.stack.appendChild(chip);
-  }
+  for (const chip of chips) el.stack.appendChild(chip);
 }
 
 function renderAttentionSurface() {

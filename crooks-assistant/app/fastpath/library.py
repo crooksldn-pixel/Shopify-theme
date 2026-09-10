@@ -1011,11 +1011,19 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     counts = body.get("counts") or {}
     unchecked = int(counts.get("unchecked") or 0)
     total = int(counts.get("contacted") or 0) + int(counts.get("not_contacted") or 0) + unchecked or len(rows)
-    # Only when there IS a set of people waiting. Falling back to the parent set would leave
-    # the branch walking twenty-five customers under an operation called "reply", most of whom
-    # are not waiting for one.
+    # What "next" walks here is the MESSAGES, not the people. Opening the customers set meant
+    # tapping Next on "Waiting on a reply" drew Mia Jones's customer profile — three orders,
+    # £213 lifetime — instead of the message she is waiting on an answer to. The queue is a
+    # queue of things to reply to, so its cursor moves along the threads.
+    #
+    # And the thread ids go into `issued_ids`, because this card puts them on the screen. The
+    # gate's rule is that a conversation may only reach a record it was shown, and the surface
+    # is built here rather than harvested from a tool result, so nothing else would have
+    # issued them — which made every row of this card unopenable by the very check that
+    # exists to protect it.
+    _open_waiting_threads(ctx, body, waiting)
     waiting_set = _set_id_of(body, "set_needs_reply")
-    if waiting_set:
+    if waiting_set and ctx.branch.workflow is None:
         _open_workflow(ctx, body, kind="customers", operation="reply", set_id=waiting_set)
     if not waiting:
         tail = f" {unchecked} could not be checked." if unchecked else ""
@@ -1029,6 +1037,31 @@ def _needs_reply_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         calls=list(result.calls), partial=bool(unchecked) or result.partial,
         trace={"rows": len(rows), "waiting": len(waiting), "unchecked": unchecked},
     )
+
+
+def _open_waiting_threads(ctx: Ctx, body: dict[str, Any], waiting: list[dict[str, Any]]) -> None:
+    """Make the queue walkable and its rows openable: one set of the threads being waited on."""
+    from app.analytics import sets as working_sets
+
+    threads = [str(r.get("last_thread_id") or "") for r in waiting]
+    threads = [t for t in threads if t]
+    if not threads:
+        return
+    issue = getattr(ctx.session, "issue", None)
+    if callable(issue):
+        issue(*threads)
+    parent = working_sets.get(ctx.session, _set_id_of(body))
+    if parent is None:
+        return
+    labels = {
+        str(r.get("last_thread_id") or ""): str(r.get("customer_name") or r.get("last_subject") or "")[:60]
+        for r in waiting if r.get("last_thread_id")
+    }
+    made = working_sets.derive(
+        ctx.session, parent, members=threads, label="Waiting on a reply", step="correlate",
+        kind="emails", labels=labels, detail={"tool": "email_query", "which": "waiting"}, focus=False,
+    )
+    _open_workflow(ctx, body, kind="emails", operation="reply", set_id=made.set_id)
 
 
 def _since(when: Any, *, now: float | None = None) -> str:

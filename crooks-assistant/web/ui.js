@@ -362,11 +362,22 @@
     if (waiting.length) lines.push(h('li', { class: 'hist-line warn', text: `Also waiting to ship: ${waiting.join(', ')}` }));
     const recent = list(hist.recent, 5);
     if (hist.recent_truncated && recent.length && orders !== null) lines.push(h('li', { class: 'hist-line', text: `Last ${recent.length} of ${orders} orders shown` }));
-    const rows = recent.length ? h('ul', { class: 'rows compact hist-rows' }, recent.map((r) => h('li', { class: `row${r.current ? ' is-current' : ''}` }, [
-      h('span', { class: 'row-main' }, [h('strong', { text: text(r.order_number, '—') }), ' ', h('span', { class: 'card-meta', text: formatDate(r.placed_at, DAY_FMT) }), r.current ? badge('this order', 'quiet') : null]),
-      h('span', { class: 'row-sub', text: text(r.items_brief) }),
-      h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: text(r.total) }), badge(r.cancelled ? 'cancelled' : r.fulfillment)]),
-    ]))) : null;
+    // A customer's earlier orders are the second-commonest hop in the whole graph — you are
+    // looking at #1938 and you want the one before it — and they were plain text. The row that
+    // names #1912 opens #1912, unless it names the order you are already on.
+    const rows = recent.length ? h('ul', { class: 'rows compact hist-rows' }, recent.map((r) => {
+      const ref = r.current ? '' : text(r.order_id);
+      return h('li', {
+        class: `row${r.current ? ' is-current' : ''}${ref ? ' tappable' : ''}`,
+        role: ref ? 'button' : null, tabindex: ref ? '0' : null,
+        data: ref ? { ref, kind: 'order' } : {},
+      }, [
+        h('span', { class: 'row-main' }, [h('strong', { text: text(r.order_number, '—') }), ' ', h('span', { class: 'card-meta', text: formatDate(r.placed_at, DAY_FMT) }), r.current ? badge('this order', 'quiet') : null]),
+        h('span', { class: 'row-sub', text: text(r.items_brief) }),
+        h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: text(r.total) }), badge(r.cancelled ? 'cancelled' : r.fulfillment)]),
+        ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
+      ]);
+    })) : null;
     return [stats, lines.length ? h('ul', { class: 'hist-lines' }, lines) : null, rows];
   }
 
