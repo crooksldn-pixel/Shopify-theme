@@ -10,7 +10,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from app.analytics.periods import Period
-from app.analytics.query import DERIVED, MEASURED, METRICS, Query
+from app.analytics.query import DEFAULT_SHOP_COUNTRY, DERIVED, MEASURED, METRICS, Query
 from app.analytics.sets import MAX_MEMBERS
 
 MAX_SAMPLE = 5
@@ -42,6 +42,10 @@ def _item_matches(item: dict[str, Any], filters: dict[str, Any]) -> bool:
         return False
     if "sku" in filters and not _text_match(filters["sku"], item.get("sku")):
         return False
+    # "variant" as words rather than an id: "black / m" names the variant the label prints,
+    # and the sku is checked too because half the shop calls the variant by its code.
+    if "variant" in filters and not _text_match(filters["variant"], item.get("variant"), item.get("sku")):
+        return False
     if "size" in filters and str(item.get("size") or "").casefold() != filters["size"].casefold():
         return False
     if "colour" in filters and str(item.get("colour") or "").casefold() != filters["colour"].casefold():
@@ -51,12 +55,25 @@ def _item_matches(item: dict[str, Any], filters: dict[str, Any]) -> bool:
     return True
 
 
-_ITEM_FILTERS = ("product", "product_id", "variant_id", "sku", "size", "colour", "product_type")
+_ITEM_FILTERS = ("product", "product_id", "variant", "variant_id", "sku", "size", "colour", "product_type")
 
 
-def order_matches(order: dict[str, Any], filters: dict[str, Any], *, now: float, sets: dict[str, frozenset[str]] | None = None) -> bool:
+# What Shopify's financial status may be for each payment filter. Only the ones that are a
+# SET need saying: "unpaid" is every state that is not money in the bank, and Shopify has no
+# single word for it. Anything else is its own name, as it always was.
+_PAYMENT_STATES = {
+    "unpaid": ("PENDING", "AUTHORIZED", "PARTIALLY_PAID", "EXPIRED", "VOIDED"),
+}
+
+
+def order_matches(order: dict[str, Any], filters: dict[str, Any], *, now: float, sets: dict[str, frozenset[str]] | None = None,
+                  shop_country: str = "") -> bool:
     """Whether an order passes the order-level filters. Item-level filters pass when any item
-    matches; the items themselves are narrowed by `matching_items`."""
+    matches; the items themselves are narrowed by `matching_items`.
+
+    `shop_country` is the other half of the "international" filter — where the shop ships
+    from. It is passed in, never looked up: this file reads no store and no settings.
+    """
     cancelled = filters.get("cancelled", "false")
     if cancelled == "false" and order.get("cancelled"):
         return False
@@ -71,7 +88,7 @@ def order_matches(order: dict[str, Any], filters: dict[str, Any], *, now: float,
     payment = filters.get("payment")
     if payment and payment != "any":
         state = str(order.get("financial") or "").upper()
-        if state != payment.upper():
+        if state not in _PAYMENT_STATES.get(payment, (payment.upper(),)):
             return False
     if "has_tracking" in filters and bool(order.get("has_tracking")) != filters["has_tracking"]:
         return False
@@ -81,6 +98,16 @@ def order_matches(order: dict[str, Any], filters: dict[str, Any], *, now: float,
     if "customer_email" in filters and str(customer.get("email") or "").casefold() != filters["customer_email"].casefold():
         return False
     if "country_code" in filters and str(order.get("country_code") or "").upper() != filters["country_code"]:
+        return False
+    if "international" in filters:
+        home = (shop_country or DEFAULT_SHOP_COUNTRY).upper()
+        where = str(order.get("country_code") or "").upper()
+        # An order with no shipping country — a digital order, or an address Shopify withheld —
+        # is neither international nor domestic. It is left out of both rather than counted as
+        # home: "which of these are going abroad" must not answer with a guess.
+        if not where or filters["international"] != (where != home):
+            return False
+    if "city" in filters and not _text_match(filters["city"], order.get("city")):
         return False
     tags = {str(t).casefold() for t in order.get("tags") or []}
     if "tags" in filters and not all(t.casefold() in tags for t in filters["tags"]):
@@ -125,9 +152,10 @@ def matching_items(order: dict[str, Any], filters: dict[str, Any]) -> list[dict[
     return [i for i in order.get("items") or [] if _item_matches(i, filters)]
 
 
-def select(rows: list[dict[str, Any]], period: Period, filters: dict[str, Any], *, now: float, sets: dict[str, frozenset[str]] | None = None) -> list[dict[str, Any]]:
+def select(rows: list[dict[str, Any]], period: Period, filters: dict[str, Any], *, now: float, sets: dict[str, frozenset[str]] | None = None,
+           shop_country: str = "") -> list[dict[str, Any]]:
     start, end = period.start.timestamp(), period.end.timestamp()
-    return [o for o in rows if start <= float(o.get("ts") or 0) < end and order_matches(o, filters, now=now, sets=sets)]
+    return [o for o in rows if start <= float(o.get("ts") or 0) < end and order_matches(o, filters, now=now, sets=sets, shop_country=shop_country)]
 
 
 # --------------------------------------------------------------------- grouping keys
@@ -223,7 +251,10 @@ def aggregate(
 
 
 def _aggregate_period(query: Query, period: Period, rows: list[dict[str, Any]], *, now: float, zone: ZoneInfo, stock: dict[str, dict[str, Any]] | None, sets: dict[str, frozenset[str]] | None) -> dict[str, Any]:
-    orders = select(rows, period, query.filters, now=now, sets=sets)
+    # The shop's country travels with the query (app/analytics/query.py resolves it once), so
+    # the tool, the fast recipe and a test all compare an order's destination with the same
+    # home country.
+    orders = select(rows, period, query.filters, now=now, sets=sets, shop_country=str(query.extra.get("shop_country") or ""))
     if query.entity == "orders":
         return _orders_listing(query, orders, now=now, zone=zone)
     groups = tuple(query.group_by) if query.group_by else ()

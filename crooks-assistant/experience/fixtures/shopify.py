@@ -52,6 +52,9 @@ class FixtureShopify(ShopifyClient):
         self._shop = {
             "name": "CROOKS LDN (fixture)", "myshopifyDomain": domain,
             "ianaTimezone": data.SHOP_TIMEZONE, "currencyCode": data.CURRENCY,
+            # Where the golden shop ships from, so the "international" filter is answered from
+            # the shop rather than from a constant (app/analytics/query.py:shop_country_from).
+            "billingAddress": {"countryCodeV2": data.SHOP_COUNTRY},
         }
         self._tz = ZoneInfo(data.SHOP_TIMEZONE)
 
