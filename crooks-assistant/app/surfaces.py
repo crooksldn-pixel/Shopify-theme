@@ -46,6 +46,11 @@ SURFACE_TYPES = frozenset({
     # an email being written, before anything is prepared (app/families/compose.py): the
     # fields, their status, and the two gestures that could stage it
     "email_compose",
+    # something being BUILT before anything is proposed (app/families/_workspace.py): the
+    # discount code being written, the order being assembled, the credit being decided. One
+    # component for all three, so that a precision field behaves the same way wherever it
+    # appears and there is one place where a keystroke's route to the Mac is decided.
+    "workspace",
 })
 
 # Which entity kinds may be named. A kind outside this set is a bug in a builder, not a new

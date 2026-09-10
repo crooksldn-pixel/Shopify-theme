@@ -42,6 +42,13 @@ SCOPES = (
     # reason as the rest — a scenario about what the card says must not pass or fail on a
     # scope. A store without it is the MISSING_SCOPE case, and that is a unit test.
     "write_order_edits",
+    # Phase 3: the commerce writes (app/families/discounts.py, order_create.py,
+    # store_credit.py). Granted here for the same reason as the rest — a scenario about what
+    # a card says must not pass or fail on a scope. A store without one of them is the
+    # MISSING_SCOPE case, and that is a unit test.
+    "read_discounts", "write_discounts",
+    "read_draft_orders", "write_draft_orders",
+    "read_store_credit_accounts", "write_store_credit_account_transactions",
 )
 
 
@@ -65,6 +72,18 @@ class FixtureShopify(ShopifyClient):
         # "nothing was changed" is a check other scenarios make against that counter.
         self.calculations: list[tuple[str, dict[str, Any]]] = []
         self.calculated: dict[str, dict[str, Any]] = {}
+        # The DRAFT orders this run made (app/families/order_create.py). Kept apart from both
+        # of the above on purpose: a draft is a real object in the shop, which `calculations`
+        # are not, and it is not an order, which `mutations_sent` is asserted about.
+        self.drafts: list[dict[str, Any]] = []
+        self.drafts_by_id: dict[str, dict[str, Any]] = {}
+        self.draft_number = 4000
+        # Store credit, per customer id. The golden shop HAS store credit — Mia has £15 of
+        # it and nobody else has an account — because a scenario about what the card says
+        # needs a balance to say something about. Set to None for a shop that does not have
+        # the feature at all, which is the NOT_SUPPORTED_BY_STORE state
+        # (app/families/store_credit.py) and is a unit test as well as a switch here.
+        self.store_credit: dict[str, float] | None = {"gid://shopify/Customer/7001": 15.0}
         self._shop = {
             "name": "CROOKS LDN (fixture)", "myshopifyDomain": domain,
             "ianaTimezone": data.SHOP_TIMEZONE, "currencyCode": data.CURRENCY,
@@ -110,6 +129,23 @@ class FixtureShopify(ShopifyClient):
                 )
             self.calculations.append((name, copy.deepcopy(variables)))
             return calculation(self, dict(variables))
+        draft = _DRAFTS.get(name)
+        if draft is not None:
+            # `draftOrderCreate`, and only that. It makes the priced intermediate the owner's
+            # card is built from; `draft_order_complete`, which would make the ORDER, is not
+            # here and falls through to the refusal below. Held to the reviewed variable set
+            # and the reviewed input shape, which the real `mutate` checks and this seam
+            # would otherwise skip.
+            readonly.assert_writable(f"the Shopify mutation {name!r}")
+            reviewed = REVIEWED_MUTATIONS[name]
+            if set(variables) != set(reviewed.variables):
+                raise FixtureWriteAttempted(
+                    f"{name} was sent {sorted(variables)}; the reviewed document takes {sorted(reviewed.variables)}."
+                )
+            for key, value in variables.items():
+                if isinstance(value, dict) and reviewed.validate is not None and not reviewed.validate(key, value):
+                    raise FixtureWriteAttempted(f"{name}.{key} does not match the reviewed shape: {value!r}")
+            return draft(self, dict(variables))
         raise FixtureWriteAttempted(
             f"a fixture run tried to execute the mutation {name!r}. Fixture scenarios propose "
             "changes and inspect the proposal; they never execute one."
@@ -423,3 +459,175 @@ _CALCULATIONS: dict[str, Any] = {
     "order_edit_begin": _order_edit_begin,
     "order_edit_add_variant": _order_edit_add_variant,
 }
+
+
+# ------------------------------------------------------------ the commerce writes (Phase 3)
+#
+# The READS the three creation families make before they propose anything: whether a discount
+# code is taken. Nothing here answers a creation — `discount_code_create`,
+# `draft_order_create`, `draft_order_complete` and `store_credit_credit` are all absent from
+# `_CALCULATIONS` above and fall through to the refusal, which is the point: a scenario sees
+# the card the owner would authorise, and the shop is never changed by seeing it.
+
+
+def _discount_by_code(_store: FixtureShopify, v: dict) -> dict:
+    """One code, as `app/families/discounts.py` reads it before it prepares a creation. A
+    code the golden world does not have answers null, which is what "the code is free" is."""
+    code = str(v.get("code") or "").upper()
+    found = data.DISCOUNTS.get(code)
+    if found is None:
+        return {"data": {"codeDiscountNodeByCode": None}}
+    return {"data": {"codeDiscountNodeByCode": {
+        "id": found["id"],
+        "codeDiscount": {
+            "__typename": "DiscountCodeBasic",
+            "title": found["title"], "status": found["status"],
+            "startsAt": found["startsAt"], "endsAt": found["endsAt"],
+            "usageLimit": found["usageLimit"], "asyncUsageCount": found["asyncUsageCount"],
+            "customerGets": {"value": copy.deepcopy(found["value"])},
+        },
+    }}}
+
+
+def _abandoned_checkouts(_store: FixtureShopify, v: dict) -> dict:
+    """The checkouts begun and not paid for, filtered by the same window the application
+    sends. The completed one is returned WITH its `completedAt` rather than hidden here: the
+    filter is the application's (`app/families/abandoned.py`), and a fixture that pre-filtered
+    would leave that line untested."""
+    since = _iso(str(_CREATED_FROM.search(str(v.get("q") or "")).group(1)) if _CREATED_FROM.search(str(v.get("q") or "")) else "1970-01-01")
+    limit = max(1, int(v.get("n") or 25))
+    chosen = []
+    for checkout in sorted(data.ABANDONED, key=lambda c: c["days_ago"]):
+        created = _iso(data._at(checkout["days_ago"]))
+        if created < since:
+            continue
+        person = checkout["customer"]
+        chosen.append({"node": {
+            "id": checkout["id"],
+            "name": checkout["name"],
+            "createdAt": data._at(checkout["days_ago"]),
+            "completedAt": data._at(max(0.0, checkout["days_ago"] - 0.1)) if checkout["completed"] else None,
+            "totalPriceSet": data._money(f"{data.abandoned_total(checkout):.2f}"),
+            "customer": ({"id": person.customer_id, "displayName": person.name} if person else None),
+            "lineItems": {"edges": [
+                {"node": {
+                    "title": VARIANTS[variant]["product"]["title"],
+                    "variantTitle": VARIANTS[variant]["title"],
+                    "quantity": quantity,
+                    "variant": {"id": variant},
+                    "product": {"id": VARIANTS[variant]["product"]["id"], "title": VARIANTS[variant]["product"]["title"]},
+                }}
+                for variant, quantity in checkout["lines"]
+            ]},
+        }})
+    return {"data": {"abandonedCheckouts": {
+        "edges": chosen[:limit], "pageInfo": {"hasNextPage": len(chosen) > limit},
+    }}}
+
+
+def _customer_for_order(_store: FixtureShopify, v: dict) -> dict:
+    """One customer by id, as `app/families/order_create.py` reads them authoritatively
+    before it prices a draft. The golden world's people have no default address — which is
+    the honest state, and the one the card has to be able to say."""
+    person = PEOPLE.get(str(v.get("id") or ""))
+    if person is None:
+        return {"data": {"customer": None}}
+    return {"data": {"customer": {
+        "id": person.customer_id, "displayName": person.name,
+        "numberOfOrders": str(person.orders),
+        "defaultEmailAddress": {"emailAddress": person.email},
+        "defaultAddress": None,
+    }}}
+
+
+def _draft_order(store: FixtureShopify, v: dict) -> dict:
+    """A draft this run made, read back. Answers null for a draft the golden world does not
+    hold, which is what "the draft has gone" looks like."""
+    draft = store.drafts_by_id.get(str(v.get("id") or ""))
+    return {"data": {"draftOrder": copy.deepcopy(draft) if draft else None}}
+
+
+_HANDLERS["CrooksDiscountByCode"] = _discount_by_code
+_HANDLERS["CrooksAbandonedCheckouts"] = _abandoned_checkouts
+def _store_credit(store: FixtureShopify, v: dict) -> dict:
+    """A customer's store credit accounts. `store.store_credit` is None for a shop that does
+    NOT have store credit — the NOT_SUPPORTED_BY_STORE case, which a scenario has to be able
+    to produce, since Shopify enables the feature per store and the golden world has to be
+    able to be either kind of shop."""
+    person = PEOPLE.get(str(v.get("id") or ""))
+    if person is None:
+        return {"data": {"customer": None}}
+    node: dict[str, Any] = {
+        "id": person.customer_id, "displayName": person.name,
+        "defaultEmailAddress": {"emailAddress": person.email},
+        "storeCreditAccounts": None,
+    }
+    if store.store_credit is not None:
+        balance = store.store_credit.get(person.customer_id)
+        node["storeCreditAccounts"] = {"edges": (
+            [{"node": {"id": f"gid://shopify/StoreCreditAccount/{person.customer_id.rsplit('/', 1)[-1]}",
+                       "balance": {"amount": f"{balance:.2f}", "currencyCode": data.CURRENCY}}}]
+            if balance is not None else []
+        )}
+    return {"data": {"customer": node}}
+
+
+_HANDLERS["CrooksCustomerCandidates"] = _customers_search
+_HANDLERS["CrooksStoreCredit"] = _store_credit
+_HANDLERS["CrooksCustomerForOrder"] = _customer_for_order
+_HANDLERS["CrooksDraftOrder"] = _draft_order
+
+
+# The one CREATION the fixture answers, and it is the reason draft orders are the shape
+# §11 uses: `draftOrderCreate` makes a DRAFT — a real object, priced by Shopify, which is
+# not an order and for which nobody is charged — and the card the owner authorises is built
+# entirely from the numbers it comes back with. A scenario that could not see that card
+# could not check what he is being asked to agree to.
+#
+# It is counted in `drafts`, NOT in `mutations_sent` and NOT in `calculations`, because
+# those two mean different things that other scenarios rely on: "nothing was changed in the
+# shop" is asserted against `mutations_sent`, and a draft order IS a thing in the shop. A
+# scenario about order creation therefore asserts `drafts` has one entry and that no order
+# was completed — `draft_order_complete` is deliberately absent below and falls through to
+# the refusal with every other mutation in the application.
+
+
+def _draft_order_create(store: FixtureShopify, v: dict) -> dict:
+    body = dict(v.get("input") or {})
+    person = PEOPLE.get(str(body.get("customerId") or ""))
+    lines = [(str(line["variantId"]), int(line["quantity"])) for line in (body.get("lineItems") or [])]
+    goods = round(sum(float(VARIANTS[variant]["price"]) * quantity for variant, quantity in lines), 2)
+    postage = round(float((body.get("shippingLine") or {}).get("price") or 0.0), 2)
+    off = body.get("appliedDiscount") or {}
+    discount = round(goods * float(off.get("value") or 0) / 100.0, 2) if off.get("valueType") == "PERCENTAGE" else 0.0
+    total = round(goods - discount + postage, 2)
+    store.draft_number += 1
+    draft_id = f"gid://shopify/DraftOrder/{store.draft_number}"
+    node = {
+        "id": draft_id,
+        "name": f"#D{store.draft_number}",
+        "status": "OPEN",
+        "totalPriceSet": data._money(f"{total:.2f}"),
+        "subtotalPriceSet": data._money(f"{round(goods - discount, 2):.2f}"),
+        "totalShippingPriceSet": data._money(f"{postage:.2f}"),
+        "totalTaxSet": data._money("0.00"),
+        "customer": ({"id": person.customer_id, "displayName": person.name} if person else None),
+        "email": str(body.get("email") or ""),
+        "order": None,
+        "lineItems": {"edges": [
+            {"node": {
+                "id": f"gid://shopify/DraftOrderLineItem/{index}",
+                "title": VARIANTS[variant]["product"]["title"],
+                "variantTitle": VARIANTS[variant]["title"],
+                "quantity": quantity,
+                "originalUnitPriceSet": data._money(VARIANTS[variant]["price"]),
+            }}
+            for index, (variant, quantity) in enumerate(lines)
+        ]},
+    }
+    store.drafts.append(copy.deepcopy(body))
+    store.drafts_by_id[draft_id] = node
+    return {"data": {"draftOrderCreate": {"draftOrder": copy.deepcopy(node), "userErrors": []}}}
+
+
+_DRAFTS: dict[str, Any] = {"draft_order_create": _draft_order_create}

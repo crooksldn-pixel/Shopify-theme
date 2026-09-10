@@ -596,3 +596,95 @@ def next_sunday(now: datetime | None = None) -> str:
     today = (now or datetime.now(SHOP_TZ)).date()
     ahead = (6 - today.weekday()) % 7
     return (today + timedelta(days=ahead or 7)).isoformat()
+
+
+# --------------------------------------------------------------------------- the discounts
+# APPENDED for app/families/discounts.py. Two codes that already exist, because the read the
+# family makes BEFORE it creates anything is a read of a real conflict: a scenario asserting
+# "SUMMER15 is taken and the card says what by" has to have something for it to be taken by.
+# One is a percentage and one is money off, so both shapes of Shopify's `customerGets.value`
+# union are exercised rather than the one shape a test happened to write.
+#
+# Strictly additive: no order number and no list position moves for these.
+DISCOUNTS: dict[str, dict[str, Any]] = {
+    "SUMMER15": {
+        "id": "gid://shopify/DiscountCodeNode/8801",
+        "title": "Summer sale",
+        "status": "ACTIVE",
+        "startsAt": _at(30),
+        "endsAt": None,
+        "usageLimit": None,
+        "asyncUsageCount": 46,
+        "value": {"__typename": "DiscountPercentage", "percentage": 0.15},
+    },
+    "FRIENDS5": {
+        "id": "gid://shopify/DiscountCodeNode/8802",
+        "title": "Friends and family",
+        "status": "EXPIRED",
+        "startsAt": _at(120),
+        "endsAt": _at(60),
+        "usageLimit": 200,
+        "asyncUsageCount": 188,
+        "value": {"__typename": "DiscountAmount", "amount": {"amount": "5.00", "currencyCode": CURRENCY}},
+    },
+}
+# A code nothing in the golden world uses, for the scenario that creates one.
+DISCOUNT_FREE_CODE = "AUTUMN20"
+
+
+# ---------------------------------------------------------------- the abandoned checkouts
+# APPENDED for app/families/abandoned.py. Five checkouts begun and not paid for, and one
+# that WAS paid for in the end — the recovered one, which exists so that the filter on
+# `completedAt` is a filter over something rather than a line of code nothing exercises.
+#
+# The Black / M hoodie is in three of the five, which is what makes "the one that keeps
+# appearing" a real ranking rather than a list of one; one of those three has two of them,
+# so counting per checkout and counting units give different numbers and a scenario can tell
+# which the card did. Strictly additive: no order number and no list position moves.
+ABANDONED: list[dict[str, Any]] = [
+    {
+        "id": "gid://shopify/AbandonedCheckout/5501", "name": "#C5501", "days_ago": 0.4,
+        "completed": False, "customer": MIA,
+        "lines": [("gid://shopify/ProductVariant/9102", 1), ("gid://shopify/ProductVariant/9301", 1)],
+    },
+    {
+        "id": "gid://shopify/AbandonedCheckout/5502", "name": "#C5502", "days_ago": 1.5,
+        "completed": False, "customer": None,
+        "lines": [("gid://shopify/ProductVariant/9102", 2)],
+    },
+    {
+        "id": "gid://shopify/AbandonedCheckout/5503", "name": "#C5503", "days_ago": 3.2,
+        "completed": False, "customer": PRIYA,
+        "lines": [("gid://shopify/ProductVariant/9104", 1)],
+    },
+    {
+        "id": "gid://shopify/AbandonedCheckout/5504", "name": "#C5504", "days_ago": 6.8,
+        "completed": False, "customer": MILLIE,
+        "lines": [("gid://shopify/ProductVariant/9102", 1), ("gid://shopify/ProductVariant/9104", 1)],
+    },
+    {
+        "id": "gid://shopify/AbandonedCheckout/5505", "name": "#C5505", "days_ago": 11.0,
+        "completed": False, "customer": None,
+        "lines": [("gid://shopify/ProductVariant/9301", 3)],
+    },
+    # Begun, left, and then paid for. Not an abandonment, and the read must not count it.
+    {
+        "id": "gid://shopify/AbandonedCheckout/5506", "name": "#C5506", "days_ago": 2.0,
+        "completed": True, "customer": DAVID,
+        "lines": [("gid://shopify/ProductVariant/9102", 1)],
+    },
+    # Older than the fortnight the family looks at by default, so the window is a window.
+    {
+        "id": "gid://shopify/AbandonedCheckout/5507", "name": "#C5507", "days_ago": 40.0,
+        "completed": False, "customer": None,
+        "lines": [("gid://shopify/ProductVariant/9301", 1)],
+    },
+]
+
+
+def abandoned_total(checkout: dict[str, Any]) -> float:
+    """What the checkout was worth: the catalogue's prices plus postage, the same arithmetic
+    the shop does for an order. Computed here so a scenario asserting a total is asserting
+    arithmetic over the golden catalogue rather than a number somebody typed in."""
+    goods = sum(float(VARIANTS[v]["price"]) * q for v, q in checkout["lines"])
+    return round(goods + SHIPPING, 2)

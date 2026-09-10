@@ -681,6 +681,13 @@ _CARRIES_ITS_OWN_SUBJECT = frozenset({
     # own fields are typed into, and its rewrite arrives as words with a composer open, which
     # is a different mechanism from a bound control.
     "email_compose_any", "compose_rewrite", "draft_send_instead",
+    # And the commerce families' four (app/families/discounts.py, order_create.py,
+    # abandoned.py), on the same rule. "How many abandoned checkouts" is a question about the
+    # shop and names the window it wants; "create an order for Poppy De-Witt" names the
+    # person it is for; the two discount families name the code. None of them is dictation
+    # for a control tapped a moment ago — tap Add a note on #1938, ask what has been
+    # abandoned, and it is the abandonment that should be answered.
+    "abandoned_checkouts", "discount_code", "order_new", "order_new_line",
 })
 
 

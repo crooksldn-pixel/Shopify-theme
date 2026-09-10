@@ -149,6 +149,12 @@ class Branch:
     # dictionary when the owner's gesture asks for them. A composer is one half's, like every
     # other position — an email started on the left is not what "send it" means on the right.
     compose: dict[str, Any] | None = None
+    # A structured workspace being filled on this half (app/families/_workspace.py): the
+    # discount code being written, the order being built, the credit being decided. The same
+    # thing the composer is and for the same reason — the Mac's copy of a change nobody has
+    # proposed yet — and one at a time per half, because the execution arguments are built
+    # from THIS dictionary when a gesture asks for them and the owner is looking at one card.
+    workspace: dict[str, Any] | None = None
 
     # What it has seen, most recent first.
     recent_entities: list[dict[str, str]] = field(default_factory=list)
@@ -374,6 +380,14 @@ class Branch:
                          "subject": str(self.compose.get("subject") or "")[:120],
                          "thread_id": str(self.compose.get("thread_id") or "")}
                         if isinstance(self.compose, dict) and self.compose.get("compose_id") else None),
+            # What this half is BUILDING, in two fields: which workspace and what kind of
+            # thing it makes. Deliberately not its values — `has_workspace` below is about
+            # whether there is a screen to redraw, and this is about whether a discount, an
+            # order or a credit is half-written on this half; the values are on the card the
+            # Mac drew, and a branch summary goes out with every reply.
+            "building": ({"workspace_id": str(self.workspace.get("workspace_id") or ""),
+                          "kind": str(self.workspace.get("kind") or "")}
+                         if isinstance(self.workspace, dict) and self.workspace.get("workspace_id") else None),
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
             "task": dict(self.task) if self.task else None,

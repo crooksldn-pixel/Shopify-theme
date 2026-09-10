@@ -107,6 +107,15 @@ _KNOWN_TOOLS = frozenset({
     # allow-list — a read tool absent from it is denied, which is the behaviour that makes
     # adding a tool without a rule impossible.
     "gmail_compose_open", "gmail_compose_fill",
+    # The commerce families' reads (app/families/discounts.py, order_create.py,
+    # store_credit.py, abandoned.py). Each one either reads the shop and returns what it
+    # said, or reads the shop and puts a WORKSPACE on the Mac — a form the owner fills, which
+    # creates nothing and stages nothing and cannot reach a mutation. They are named here
+    # one by one because this is an allow-list: a read tool absent from it is denied, which
+    # is what makes adding a tool without a rule impossible.
+    "shopify_discount_check", "shopify_discount_open",
+    "shopify_abandoned_checkouts",
+    "shopify_order_open", "shopify_store_credit",
 })
 
 # Tools that may only be called with an id this session already handed to the assistant. Stops
@@ -133,6 +142,11 @@ _ID_KIND = {
     "thread_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
     "evidence_message_id": re.compile(r"^[0-9a-f]{6,}$", re.I),
     "set_id": re.compile(r"^set_[0-9a-f]{6,}$"),
+    # A workspace on the Mac — a discount being written, an order being built, a credit being
+    # decided (app/families/_workspace.py). Not a Shopify id: the thing does not exist yet,
+    # and the workspace is what the owner is authorising the creation of. Held to its shape
+    # here so that a Shopify gid, or a compose id, cannot be handed to a creation tool.
+    "workspace_id": re.compile(r"^(?:dsc|ord|crd)_[0-9a-f]{6,}$"),
 }
 
 

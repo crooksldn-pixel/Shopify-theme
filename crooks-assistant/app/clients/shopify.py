@@ -359,6 +359,137 @@ REVIEWED_MUTATIONS: dict[str, ReviewedMutation] = {
         idempotent=False,
         root="orderEditCommit",
     ),
+    # ------------------------------------------------------------ Phase 3: commerce writes
+    #
+    # Three families of NEW things, and each one is something the shop could not do before:
+    # a discount code, an order made from nothing, and money put on a customer's account.
+    # All three are creations, which changes nothing about the boundary — the Mac reads
+    # first, builds the input itself, and sends one named document after the gesture — but
+    # it does change what "the entity" is: there is no id to act on until the change has
+    # been made. So each acts on a WORKSPACE the Mac holds (app/families/_workspace.py),
+    # whose id is issued to the conversation like any other id, and each proves itself by
+    # reading the thing it made rather than by comparing a fingerprint of something already
+    # there.
+    #
+    # A discount code (app/families/discounts.py). One code, one value — a percentage or a
+    # fixed amount — an optional window and an optional usage limit. Never idempotent: sent
+    # twice it would collide with itself, so it is sent once and the collision is read
+    # BEFORE the card goes up as well as again at the tap.
+    "discount_code_create": ReviewedMutation(
+        name="discount_code_create",
+        document="""
+            mutation CrooksDiscountCodeCreate($basicCodeDiscount: DiscountCodeBasicInput!) {
+              discountCodeBasicCreate(basicCodeDiscount: $basicCodeDiscount) {
+                codeDiscountNode {
+                  id
+                  codeDiscount {
+                    ... on DiscountCodeBasic {
+                      title
+                      status
+                      startsAt
+                      endsAt
+                      usageLimit
+                      appliesOncePerCustomer
+                      codes(first: 1) { edges { node { code } } }
+                    }
+                  }
+                }
+                userErrors { field message code }
+              }
+            }
+        """,
+        variables={"basicCodeDiscount": dict},
+        scope="write_discounts",
+        max_chars=200,
+        idempotent=False,
+        root="discountCodeBasicCreate",
+        validate=lambda key, value: key == "basicCodeDiscount" and discount_code_input_ok(value),
+    ),
+    # An order made from nothing (app/families/order_create.py). TWO mutations, and the
+    # first is the reason this is safe to offer at all: `draftOrderCreate` makes a DRAFT — a
+    # real object, priced by Shopify, visible in Admin, which is not an order and for which
+    # nobody is charged — and `draftOrderComplete` turns that draft into the order. So the
+    # draft is the reviewable intermediate: every number on the card is Shopify's own
+    # arithmetic on the draft, and the gesture authorises the completion alone.
+    #
+    # Creating a draft is not idempotent — a second send is a second draft — so it is never
+    # resent, and the workspace remembers the one it made rather than making another.
+    "draft_order_create": ReviewedMutation(
+        name="draft_order_create",
+        document="""
+            mutation CrooksDraftOrderCreate($input: DraftOrderInput!) {
+              draftOrderCreate(input: $input) {
+                draftOrder {
+                  id
+                  name
+                  status
+                  totalPriceSet { shopMoney { amount currencyCode } }
+                  subtotalPriceSet { shopMoney { amount currencyCode } }
+                  totalShippingPriceSet { shopMoney { amount currencyCode } }
+                  totalTaxSet { shopMoney { amount currencyCode } }
+                  customer { id displayName }
+                  email
+                  lineItems(first: 20) {
+                    edges { node { id title quantity variantTitle originalUnitPriceSet { shopMoney { amount currencyCode } } } }
+                  }
+                }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"input": dict},
+        scope="write_draft_orders",
+        max_chars=500,
+        idempotent=False,
+        root="draftOrderCreate",
+        validate=lambda key, value: key == "input" and draft_order_input_ok(value),
+    ),
+    # The one that makes the order. `paymentPending` is decided on the Mac from the payment
+    # state chosen on the workspace; it is never a value the tablet posts.
+    "draft_order_complete": ReviewedMutation(
+        name="draft_order_complete",
+        document="""
+            mutation CrooksDraftOrderComplete($id: ID!, $paymentPending: Boolean!) {
+              draftOrderComplete(id: $id, paymentPending: $paymentPending) {
+                draftOrder {
+                  id
+                  name
+                  status
+                  order { id name }
+                }
+                userErrors { field message }
+              }
+            }
+        """,
+        variables={"id": str, "paymentPending": bool},
+        scope="write_draft_orders",
+        idempotent=False,
+        root="draftOrderComplete",
+    ),
+    # Money onto a customer's store credit account (app/families/store_credit.py). Money
+    # that can be spent, so never idempotent and never resent; the balance is read before
+    # the card, held to as the precondition, and read again to prove the new one.
+    "store_credit_credit": ReviewedMutation(
+        name="store_credit_credit",
+        document="""
+            mutation CrooksStoreCreditCredit($id: ID!, $creditInput: StoreCreditAccountCreditInput!) {
+              storeCreditAccountCredit(id: $id, creditInput: $creditInput) {
+                storeCreditAccountTransaction {
+                  amount { amount currencyCode }
+                  balanceAfterTransaction { amount currencyCode }
+                  account { id balance { amount currencyCode } }
+                }
+                userErrors { field message code }
+              }
+            }
+        """,
+        variables={"id": str, "creditInput": dict},
+        scope="write_store_credit_account_transactions",
+        max_chars=64,
+        idempotent=False,
+        root="storeCreditAccountCredit",
+        validate=lambda key, value: key == "creditInput" and store_credit_input_ok(value),
+    ),
 }
 
 _GID = re.compile(r"^gid://shopify/[A-Za-z]+/\d+$")
@@ -515,6 +646,161 @@ def inventory_input_ok(value: Any) -> bool:
         if not isinstance(q[key], int) or isinstance(q[key], bool) or not -MAX_STOCK_QUANTITY <= q[key] <= MAX_STOCK_QUANTITY:
             return False
     return q["quantity"] >= 0
+
+
+# ------------------------------------------------------------ Phase 3: the created things
+#
+# Three input shapes for three creations. Held here, beside the documents that carry them,
+# as well as where they are built — the same rule the refund and the address keep, and for
+# the same reason: the shape a mutation may be sent with is a reviewed fact about this
+# application, not a property of whichever function happened to assemble it.
+
+_CURRENCY = re.compile(r"^[A-Z]{3}$")
+# A discount code as Shopify stores it and as a person types it at the till: upper case,
+# digits and hyphens. Deliberately narrower than Shopify's own rule (which allows almost
+# anything) because a code with a space or a slash in it is a code the shop cannot read out.
+DISCOUNT_CODE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,29}$")
+# An instant, as Shopify wants it and as the Mac builds it: never a phrase, never a date on
+# its own — "the 12th" is a different moment in two time zones.
+_INSTANT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$")
+MAX_DISCOUNT_USES = 10_000
+MAX_DISCOUNT_AMOUNT = 1_000.0
+MAX_DRAFT_LINES = 20
+MAX_DRAFT_QUANTITY = 50
+MAX_STORE_CREDIT = 1_000.0
+
+
+def discount_code_input_ok(value: Any) -> bool:
+    """The DiscountCodeBasicInput shape this project sends: one code, one value — a
+    percentage of everything or a fixed amount off the order — for every customer, combining
+    with nothing, optionally within a window and optionally limited in use.
+
+    `percentage` is Shopify's fraction, between 0 and 1: 0.15 is fifteen per cent. Sending
+    15 there would be a fifteen-hundred-per-cent discount, which is exactly the class of
+    mistake a reviewed shape exists to make impossible.
+    """
+    allowed = {
+        "title", "code", "startsAt", "endsAt", "usageLimit", "appliesOncePerCustomer",
+        "customerSelection", "customerGets", "combinesWith",
+    }
+    required = {"title", "code", "startsAt", "customerSelection", "customerGets", "combinesWith"}
+    if not isinstance(value, dict) or set(value) - allowed or required - set(value):
+        return False
+    if not isinstance(value["title"], str) or not 1 <= len(value["title"]) <= 120 or "<" in value["title"]:
+        return False
+    if not isinstance(value["code"], str) or not DISCOUNT_CODE.match(value["code"]):
+        return False
+    for key in ("startsAt", "endsAt"):
+        if key in value and (not isinstance(value[key], str) or not _INSTANT.match(value[key])):
+            return False
+    if "usageLimit" in value:
+        limit = value["usageLimit"]
+        if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= MAX_DISCOUNT_USES:
+            return False
+    if "appliesOncePerCustomer" in value and not isinstance(value["appliesOncePerCustomer"], bool):
+        return False
+    # Everyone, and nothing else: a discount aimed at a segment is a different review.
+    if value["customerSelection"] != {"all": True}:
+        return False
+    # Never stacked. A code that combines with the shop's own automatic discounts can take
+    # an order below its cost without anybody deciding that it should.
+    if value["combinesWith"] != {"orderDiscounts": False, "productDiscounts": False, "shippingDiscounts": False}:
+        return False
+    gets = value["customerGets"]
+    if not isinstance(gets, dict) or set(gets) != {"value", "items"} or gets["items"] != {"all": True}:
+        return False
+    money = gets["value"]
+    if not isinstance(money, dict) or len(money) != 1:
+        return False
+    if "percentage" in money:
+        share = money["percentage"]
+        if isinstance(share, bool) or not isinstance(share, (int, float)) or not 0 < float(share) <= 1:
+            return False
+        return True
+    amount = money.get("discountAmount")
+    if not isinstance(amount, dict) or set(amount) != {"amount", "appliesOnEachItem"}:
+        return False
+    if amount["appliesOnEachItem"] is not False or not _DECIMAL.match(str(amount["amount"])):
+        return False
+    return 0 < float(amount["amount"]) <= MAX_DISCOUNT_AMOUNT
+
+
+def draft_order_input_ok(value: Any) -> bool:
+    """The DraftOrderInput shape this project sends: whose order it is, what is on it, where
+    it goes, and what the shop charges for postage. Never a price of ours — every line is a
+    variant id and a quantity, and Shopify prices it.
+
+    A draft with no lines is not an order anybody meant, and a draft with no customer is one
+    nobody can be told about; both are refused here as well as where the workspace is built.
+    """
+    allowed = {
+        "lineItems", "customerId", "email", "note", "tags", "useCustomerDefaultAddress",
+        "shippingAddress", "shippingLine", "appliedDiscount",
+    }
+    if not isinstance(value, dict) or set(value) - allowed or "lineItems" not in value or "customerId" not in value:
+        return False
+    if not _GID.match(str(value.get("customerId", ""))):
+        return False
+    lines = value["lineItems"]
+    if not isinstance(lines, list) or not lines or len(lines) > MAX_DRAFT_LINES:
+        return False
+    for line in lines:
+        if not isinstance(line, dict) or set(line) != {"variantId", "quantity"}:
+            return False
+        if not _GID.match(str(line["variantId"])):
+            return False
+        if not isinstance(line["quantity"], int) or isinstance(line["quantity"], bool) or not 1 <= line["quantity"] <= MAX_DRAFT_QUANTITY:
+            return False
+    if "email" in value and (not isinstance(value["email"], str) or not 3 <= len(value["email"]) <= 254 or "@" not in value["email"]):
+        return False
+    if "note" in value and (not isinstance(value["note"], str) or len(value["note"]) > 500):
+        return False
+    tags = value.get("tags")
+    if tags is not None and (not isinstance(tags, list) or len(tags) > 5 or any(not isinstance(t, str) or not 1 <= len(t) <= 40 for t in tags)):
+        return False
+    if "useCustomerDefaultAddress" in value and not isinstance(value["useCustomerDefaultAddress"], bool):
+        return False
+    if "shippingAddress" in value and not mailing_address_ok(value["shippingAddress"]):
+        return False
+    postage = value.get("shippingLine")
+    if postage is not None:
+        if not isinstance(postage, dict) or set(postage) != {"title", "price"}:
+            return False
+        if not isinstance(postage["title"], str) or not 1 <= len(postage["title"]) <= 60 or "<" in postage["title"]:
+            return False
+        if not _DECIMAL.match(str(postage["price"])):
+            return False
+    off = value.get("appliedDiscount")
+    if off is not None:
+        if not isinstance(off, dict) or set(off) != {"title", "value", "valueType"}:
+            return False
+        if off["valueType"] not in ("PERCENTAGE", "FIXED_AMOUNT"):
+            return False
+        if isinstance(off["value"], bool) or not isinstance(off["value"], (int, float)) or not 0 < float(off["value"]):
+            return False
+        if off["valueType"] == "PERCENTAGE" and float(off["value"]) > 100:
+            return False
+        if not isinstance(off["title"], str) or not 1 <= len(off["title"]) <= 60 or "<" in off["title"]:
+            return False
+    return True
+
+
+def store_credit_input_ok(value: Any) -> bool:
+    """The StoreCreditAccountCreditInput shape this project sends: one amount in one named
+    currency, and an expiry only when the owner set one. Money that can be spent, so the
+    bound is here as well as on the card."""
+    if not isinstance(value, dict) or set(value) - {"creditAmount", "expiresAt"} or "creditAmount" not in value:
+        return False
+    money = value["creditAmount"]
+    if not isinstance(money, dict) or set(money) != {"amount", "currencyCode"}:
+        return False
+    if not _CURRENCY.match(str(money["currencyCode"])) or not _DECIMAL.match(str(money["amount"])):
+        return False
+    if not 0 < float(money["amount"]) <= MAX_STORE_CREDIT:
+        return False
+    if "expiresAt" in value and (not isinstance(value["expiresAt"], str) or not _INSTANT.match(value["expiresAt"])):
+        return False
+    return True
 
 
 KEEPALIVE_CONNECTIONS = 4

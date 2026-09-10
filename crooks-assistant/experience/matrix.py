@@ -77,6 +77,36 @@ COVERAGE: dict[str, tuple[str, ...]] = {
     "compose.field": ("compose_dictated",),
     "compose.stage": ("compose_stage",),
     "order_edit.stage": ("order_add_item_picker",),
+    # The commerce families (brief sections 11 to 14). The three creations are reached by
+    # touch and by the model; only the order names a spoken family, because "create an order
+    # for X" is the one sentence of the four whose whole request the Mac can resolve by
+    # reading — a code's value and a credit's amount are things the owner must be able to see
+    # and correct before anything is prepared, which is what the workspace is for.
+    "abandoned_checkouts": ("abandoned_checkouts", "abandoned_window"),
+    "discount_code": ("discount_new_code", "discount_code_taken"),
+    "discount.open": ("discount_new_code", "discount_code_taken"),
+    "discount.field": ("discount_new_code", "discount_code_taken"),
+    "discount.stage": ("discount_new_code",),
+    "order_new": ("order_new", "order_new_ambiguous"),
+    "order.open": ("order_new", "order_new_ambiguous"),
+    "order.field": ("order_new", "order_new_ambiguous"),
+    "order.additem": ("order_new",),
+    "order.stage": ("order_new",),
+    "credit.field": ("store_credit_give",),
+    "credit.stage": ("store_credit_give",),
+    # `order_new_line`, `order.choose`, `order.customer`, `order.removeitem`,
+    # `discount.choose`, `discount.discard`, `order.discard` and `credit.discard` have no
+    # scenario of their own: each is asserted in tests/ (test_order_create.py,
+    # test_discounts.py, test_store_credit.py), where a refused option and a discarded form
+    # can be read without a transcript. Shown as uncovered, which is honest.
+    "order_new_line": (),
+    "discount.choose": (),
+    "discount.discard": (),
+    "order.choose": (),
+    "order.customer": (),
+    "order.removeitem": (),
+    "order.discard": (),
+    "credit.discard": (),
 }
 
 # Operations a live read-only run must not exercise, whatever their scenario does. Nothing is

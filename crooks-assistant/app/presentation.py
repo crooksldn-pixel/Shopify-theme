@@ -57,9 +57,20 @@ UI_TYPES = frozenset({
     # from that copy when a gesture asks for them. Built by the family, not from a tool
     # result: nothing has been read and nothing has been staged when it is drawn.
     "email_compose",
+    # something being BUILT, before anything is proposed (app/families/_workspace.py): the
+    # discount code of §12, the order of §11, the store credit of §13. The same card for
+    # all three — fields, a small closed choice or two, the facts the Mac read, and the
+    # button that would prepare it — and the same rule as the composer above: a keystroke
+    # posts the field's NAME and the characters, the Mac validates them into its own copy,
+    # and the execution arguments are built from that copy when a gesture asks for them.
+    "workspace",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
+# The read tools that put a workspace on the owner's screen (app/families/_workspace.py).
+# Each returns the Mac's own card under `_surfaces`, and `_from_result` below takes it as it
+# is rather than re-shaping state that never came from the shop.
+WORKSPACE_TOOLS = frozenset({"shopify_discount_open", "shopify_order_open", "shopify_store_credit"})
 
 # Bounds. The tablet is 8 inches wide; more than this is a spreadsheet, not an answer.
 MAX_ORDERS = 10
@@ -198,6 +209,14 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
         # `present()` filters against UI_TYPES again on the way out.
         return [item for item in (result.get("_surfaces") or [])
                 if isinstance(item, dict) and item.get("type") == "email_compose" and isinstance(item.get("data"), dict)]
+    if name in WORKSPACE_TOOLS:
+        # The workspace's card, for exactly the same reason: it is built by the family that
+        # owns the context (app/families/_workspace.py `surface`), which copies it key by key
+        # and bounds every string as this file does, because it is the Mac's own state and
+        # not a tool result to be re-shaped here. Only well-formed items of the one type are
+        # taken, and `present()` filters against UI_TYPES again on the way out.
+        return [item for item in (result.get("_surfaces") or [])
+                if isinstance(item, dict) and item.get("type") == "workspace" and isinstance(item.get("data"), dict)]
     if name in ANALYTIC_TOOLS:
         from app.analytics.present import build, working_set_items
 
