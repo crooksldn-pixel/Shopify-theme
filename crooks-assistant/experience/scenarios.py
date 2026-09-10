@@ -79,6 +79,21 @@ def check(what: str, ok: Any, detail: str = "") -> Check:
     return Check(what, bool(ok), detail)
 
 
+# Scenarios that mean anything against a REAL shop. The others name a fixture record — order
+# 1938, Mia Jones — and asserting those against the owner's own store would fail for the
+# right reason and tell nobody anything. What a live run is for is the shapes: that a real
+# order still produces an order surface with items and a rail, that a real inbox still
+# correlates, that the cards fit real data.
+LIVE_SCENARIOS: frozenset[str] = frozenset({
+    "capabilities", "today_orders", "needs_reply", "next_previous", "back", "tabs",
+})
+
+
+def grounded(h: Harness) -> bool:
+    """Whether the golden world's own values may be asserted. False against a real shop."""
+    return not getattr(h, "live", False)
+
+
 # --------------------------------------------------------------------------- shared assertions
 
 
@@ -187,14 +202,22 @@ async def today_orders(h: Harness) -> Result:
     r.captures.append(c)
     r.checks += a_surface(c, "order_list", what="shows the order list")
     r.checks.append(deterministic(c))
-    expected = world.today()
     card = c.data("order_list")
     rows = card.get("orders") or card.get("rows") or []
-    r.checks.append(check("lists today's orders", len(rows) == len(expected),
-                          f"{len(rows)} rows, expected {len(expected)} ({[o.name for o in expected]})"))
     r.checks.append(check("opens a set to walk", bool(c.set_id), f"set_id={c.set_id!r}"))
-    r.checks.append(check("the spoken answer counts rather than recites",
-                          len(c.answer) < 200 and str(len(expected)) in c.answer, c.answer[:80]))
+    r.checks.append(check("the spoken answer is short rather than a recital",
+                          len(c.answer) < 200, f"{len(c.answer)} chars"))
+    if grounded(h):
+        expected = world.today()
+        r.checks.append(check("lists today's orders", len(rows) == len(expected),
+                              f"{len(rows)} rows, expected {len(expected)} ({[o.name for o in expected]})"))
+        r.checks.append(check("counts them in the spoken answer", str(len(expected)) in c.answer,
+                              c.answer[:80]))
+    else:
+        # A real shop may genuinely have had no orders today. What is being checked live is
+        # that the surface and the set exist, not how many rows are in them.
+        r.checks.append(check("the rows are shaped like orders",
+                              all(isinstance(x, dict) for x in rows), f"{len(rows)} rows"))
     return r
 
 
@@ -464,8 +487,14 @@ BY_NAME = dict(SCENARIOS)
 
 async def run_all(h: Harness, only: str = "") -> list[Result]:
     """Every scenario, or one by name. A scenario that raises is a FAIL with its reason, never
-    an exception that stops the rest of the run from being reported."""
+    an exception that stops the rest of the run from being reported.
+
+    A live run is narrowed to LIVE_SCENARIOS: the rest name a fixture record and would fail
+    against the owner's own shop for a reason that says nothing about the code.
+    """
     chosen = [(n, fn) for n, fn in SCENARIOS if not only or n == only]
+    if getattr(h, "live", False):
+        chosen = [(n, fn) for n, fn in chosen if n in LIVE_SCENARIOS]
     out: list[Result] = []
     for name, fn in chosen:
         try:

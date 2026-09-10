@@ -75,6 +75,24 @@ class ReadOnlyGmail(GmailClient):
         raise LiveWriteAttempted("a live read-only run tried to write the Gmail credential")
 
 
+def credentials_available() -> tuple[bool, str]:
+    """Whether this machine has what a live run needs.
+
+    Checked before the run rather than discovered during it: without a Shopify credential
+    every scenario fails for the same reason, and eleven red lines that all mean "there is no
+    shop here" tell the reader less than one line saying so.
+    """
+    from app.secrets import keychain
+
+    try:
+        shopify = keychain.present("shopify_client_id") or keychain.present("shopify_static_token")
+    except Exception as exc:  # noqa: BLE001 — no keyring backend at all
+        return False, f"the Keychain is not available to this process ({type(exc).__name__})"
+    if not shopify:
+        return False, "no Shopify credential in the Keychain (make secrets)"
+    return True, ""
+
+
 def arm_read_only(runtime: Any) -> tuple[ReadOnlyShopify, ReadOnlyGmail]:
     """Latch the process, then hand the runtime clients that cannot write either.
 

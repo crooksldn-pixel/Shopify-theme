@@ -40,7 +40,15 @@ async def run(args: argparse.Namespace) -> int:
     mode = "live read-only" if args.live else "fixture"
     print(f"{BOLD}CROOKS OS · experience{RESET}  {DIM}{mode}{RESET}")
     if args.live:
+        from experience.live import credentials_available
+
+        ready, why = credentials_available()
+        if not ready:
+            print(f"{AMBER}Live mode needs the real credentials on this machine: {why}.{RESET}")
+            print(f"{DIM}Run `make experience` for the fixture world, which needs nothing.{RESET}")
+            return 2
         print(f"{AMBER}LIVE READ-ONLY TEST MODE — real reads, no change can be executed.{RESET}")
+        print(f"{DIM}A narrowed set of scenarios runs: the rest name a fixture record.{RESET}")
 
     shots: list[Path] = []
     async with harness(live=args.live) as h:
