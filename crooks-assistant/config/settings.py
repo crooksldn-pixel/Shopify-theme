@@ -158,6 +158,19 @@ class Settings(BaseSettings):
     # every look at the same order. Bounded; never a customer's data.
     media_cache_dir: Path = REPO_ROOT / ".cache" / "media"
 
+    # --- the production experience recorder (app/observability/recorder.py) ---
+    # An hour of real use, written down. Off, and normal production is normal production:
+    # nothing about a turn changes when this is on except that its events are also minimised
+    # and appended to a file in logs/experience-recordings/. It is not fixture mode and it is
+    # not a test session; it can never authorise a change.
+    record_experience: bool = False
+    # The second opt-in. Off, a recording holds the SHAPE of what was said — how many
+    # characters, how many words, which order numbers, which catalogue words matched — and the
+    # normalised intent, which is what makes an interaction understandable. On, it holds the
+    # sentence too, still scrubbed of addresses, postcodes, telephone numbers and long digit
+    # runs. For an afternoon spent diagnosing a mis-hearing, deliberately, never by default.
+    record_transcripts: bool = False
+
     # --- dev toggles ---
     # Every recording is a recording of the office. Kept on disk only when asked for
     # (CROOKS_SAVE_CAPTURES=true), for diagnosing a mis-hearing; never by default.

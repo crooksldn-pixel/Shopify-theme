@@ -53,8 +53,8 @@ class TestSession:
         )
 
 
-def session_dir(log_dir: Path) -> Path:
-    return Path(log_dir) / DIR_NAME
+def session_dir(log_dir: Path, dir_name: str = DIR_NAME) -> Path:
+    return Path(log_dir) / dir_name
 
 
 def new_session_id(name: str, now: float) -> str:
@@ -89,8 +89,11 @@ class TestSessions:
 
     __test__ = False   # not a pytest class, whatever its name says
 
-    def __init__(self, log_dir: Path, *, clock=time.time) -> None:
-        self.root = session_dir(log_dir)
+    def __init__(self, log_dir: Path, *, clock=time.time, dir_name: str = DIR_NAME) -> None:
+        # `dir_name`, because a production recording is NOT a test session and must not share
+        # a directory with one: `make test-session-report` finds the last test session by
+        # reading this folder, and a recording landing in it would be reported as one.
+        self.root = session_dir(log_dir, dir_name)
         self.clock = clock
         self._cached: TestSession | None = None
         self._checked_at = -1.0
@@ -174,5 +177,5 @@ class TestSessions:
         exact = self.root / (ref if ref.endswith(".jsonl") else f"{ref}.jsonl")
         if exact.exists():
             return exact
-        matches = sorted(p for p in self.root.glob("ts-*.jsonl") if p.name.startswith(ref))
+        matches = sorted(p for p in self.root.glob("*.jsonl") if p.name.startswith(ref))
         return matches[-1] if matches else None

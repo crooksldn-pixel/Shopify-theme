@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals bench-intelligence bench-lanes commands commands-remove update watch
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -52,6 +52,14 @@ help:
 	@echo "  make test-session-stop                        end it"
 	@echo "  make test-session-report [SESSION=ts-…]       write reports/<session>.md from logs/test-sessions/<session>.jsonl"
 	@echo "  make test-session-proposals [SESSION=ts-…]    write reports/<session>-proposals.md: improvement candidates, cited by turn, never applied"
+	@echo ""
+	@echo "Real use, written down and minimised (NOT a test session; needs CROOKS_RECORD_EXPERIENCE=true):"
+	@echo "  make record-start [NAME='thursday pm']        begin a recording; prints its id"
+	@echo "  make record-status                            what is recording, events so far"
+	@echo "  make record-stop                              end it"
+	@echo "  make record-list [RECORDING=rec-…]            the interactions in a recording, one line each"
+	@echo "  make record-save-test [RECORDING=… TURN=…]    save one interaction as a fixture and a manifest"
+	@echo ""
 	@echo "  make bench-intelligence                       time the read layer, the working sets and batch staging against a fake store"
 	@echo "  make bench-lanes                              time the fast lane against the 9 September session's own figures"
 	@echo "  make watch [SESSION=ts-…]                     follow what it is doing, live, one line per thing"
@@ -131,6 +139,21 @@ test-session-report:
 
 test-session-proposals:
 	$(PY) scripts/test_session.py proposals $(SESSION)
+
+record-start:
+	$(PY) scripts/record.py start --name "$(if $(NAME),$(NAME),recording)"
+
+record-status:
+	$(PY) scripts/record.py status
+
+record-stop:
+	$(PY) scripts/record.py stop
+
+record-list:
+	$(PY) scripts/record.py list $(RECORDING)
+
+record-save-test:
+	$(PY) scripts/record.py save-test $(RECORDING) $(if $(TURN),--turn $(TURN),)
 
 commands:
 	@$(PY) scripts/install_commands.py
