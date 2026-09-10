@@ -447,3 +447,100 @@ async def test_a_record_reached_by_tapping_is_still_held_a_moment_later(stage):
     assert reopened.raw.get("ok") is True, reopened.raw
     assert reopened.surfaces, "the record the owner just tapped onto drew nothing"
     assert not reopened.reads, f"it was read again instead of replayed: {reopened.reads}"
+
+
+async def test_a_recipe_that_offers_nothing_does_not_wait_for_the_write_preflight(stage):
+    """The rail is worked out beside the read, not in front of it.
+
+    Giving read turns their action rail was the point of this pass — an order looked up quickly
+    and offering nothing to do with it was the reported failure. But it was done with an
+    `asyncio.gather` of the answer and the preflight, under a comment claiming the preflight is
+    cached and so costs nothing. Both halves were wrong: before it, a read turn never called
+    `writes_context` at all, and the scope caches behind it last ten minutes — so every expiry,
+    every restart and every cold tablet paid `WRITE_STATUS_TIMEOUT_S` on the fastest turn in
+    the system. "What can you do now?" went from 24 ms to 1508 ms.
+
+    A recipe that draws from state the Mac already holds — capability, navigation, the end of a
+    list — reads nothing and offers nothing, and must pay nothing.
+    """
+    import asyncio
+
+    real = stage.runtime.write_status
+
+    async def slow(operation=None):
+        await asyncio.sleep(3.0)
+        return await real(operation)
+
+    from app.routes import actions as actions_route
+
+    stage.runtime.write_status = slow
+    try:
+        await stage.say("show me order 1938", session_id="pre")
+        for words in ("what can you do now?", "go back"):
+            # `_preflight_soon` goes quiet for a while after one timeout, so without this the
+            # warm-up above would trip the breaker and every later turn would return instantly
+            # whether or not it waited — a test that cannot fail.
+            actions_route._preflight_timed_out_at = 0.0
+            answered = await stage.say(words, session_id="pre")
+            assert answered.total_ms < 1000, (
+                f"{words!r} waited {answered.total_ms:.0f}ms on a preflight it has no rail for"
+            )
+    finally:
+        stage.runtime.write_status = real
+        actions_route._preflight_timed_out_at = 0.0
+
+
+async def test_asking_again_about_the_record_you_are_on_does_not_add_a_stop(stage):
+    """Back has to move the screen, or it reads as a Back that failed.
+
+    Every read calls `branch.visit`, and it appended unconditionally, so three questions about
+    one order left three identical stops. Back then landed on the same record, on the same tab,
+    and said the same sentence — I diffed two consecutive Backs and the whole `ui` payload was
+    byte-identical. A button that visibly does nothing is worse than one that says it cannot.
+    """
+    session = "stops"
+    for words in ("show me order 1938", "where is order 1938", "what is the address on 1938"):
+        await stage.say(words, session_id=session)
+    await stage.say("show me order 1936", session_id=session)
+
+    trail = [(e.ref, e.tab) for e in stage.branch(session).nav]
+    assert len(trail) == len(set(trail)), f"the same stop twice in a row: {trail}"
+
+    seen = []
+    for _ in range(3):
+        answered = await stage.say("go back", session_id=session)
+        seen.append((answered.answer, (answered.entity or {}).get("ref"),
+                     stage.branch(session).tab))
+    moves = [s for s in seen if "as far back" not in s[0]]
+    assert len(moves) == len(set(moves)), f"two Backs landed on the same screen: {moves}"
+
+
+async def test_a_question_that_names_its_own_subject_is_not_swallowed_by_a_tapped_control(stage):
+    """A bound control captures dictation, not every sentence for two minutes.
+
+    `_NEVER_A_CONTINUATION` exempted only the families that command the assistant directly, so
+    tapping Add a note and then asking "how many orders today" handed the model that question
+    with "[This continues order.add_note on #1938. Apply it to that record and to nothing
+    else.]" stapled on — and dropped the turn off the fast lane on the way. "Show me order
+    1912" was glued to #1938 the same way.
+
+    The line is whether the router can already act on the sentence: one that names an order, a
+    period or a list is its own instruction; dictation names none of those and is still caught.
+    """
+    async def bound(words, session):
+        await stage.say("show me order 1938", session_id=session)
+        await stage.touch("voice.bind", session_id=session, family="order.add_note")
+        before = len(stage.provider.calls)
+        answered = await stage.say(words, session_id=session)
+        asked = " ".join(str(getattr(c, "prompt", c)) for c in stage.provider.calls[before:])
+        return answered, "This continues order.add_note" in asked
+
+    for words in ("how many orders today", "show me order 1912", "what's in the inbox"):
+        answered, glued = await bound(words, f"glue-{abs(hash(words)) % 1000}")
+        assert not glued, f"{words!r} was applied to the note the owner had tapped"
+        assert answered.lane == "FAST", f"{words!r} left the fast lane at {answered.lane}"
+
+    # And the words the control was actually waiting for are still caught.
+    for words in ("make it shorter and more apologetic", "he wants it by friday"):
+        _, glued = await bound(words, f"dict-{abs(hash(words)) % 1000}")
+        assert glued, f"{words!r} was not taken as the note it was dictating"

@@ -231,15 +231,31 @@ async def turn(
     # aside says this on its own chip rather than taking his attention (brief section 17).
     branch.working(_working_words(lane, intent))
     if lane == "FAST" and recipe is not None:
-        # The rail is worked out beside the read, not after it. A fast turn used to answer
-        # with `writes` still None — that variable is set further down, on the path the fast
-        # lane returns before reaching — so present() built the card with no actions on it and
-        # an order looked up quickly offered nothing to do with the order. The preflight is
-        # cached, so asking for it here costs the turn nothing it was not already paying.
-        fast, fast_writes = await asyncio.gather(
-            _fast(runtime, live, branch, intent, recipe, text),
-            writes_context(request) if request is not None else _none(),
+        # The rail is worked out beside the read, not after it. A fast turn used to answer with
+        # `writes` still None — that variable is set further down, on the path the fast lane
+        # returns before reaching — so present() built the card with no actions on it and an
+        # order looked up quickly offered nothing to do with the order.
+        #
+        # Beside, though, and not in front. This was an `asyncio.gather` of the two, with a
+        # comment claiming the preflight is cached and so costs nothing — which was wrong on
+        # both halves. Before that change a read turn never called `writes_context` at all
+        # (`_answer` asks for it only when something was proposed), and the scope caches behind
+        # it last ten minutes, so every expiry, every restart and every cold tablet paid
+        # `WRITE_STATUS_TIMEOUT_S` on the fastest turn in the system: measured, "what can you
+        # do now?" went from 24 ms to 1508 ms with a slow scope check. So the preflight starts
+        # here and is only waited for by an answer that has a card to hang a rail on. A recipe
+        # that draws from its own state — capability, navigation, the end of a list — reads
+        # nothing and offers nothing, and now pays nothing.
+        preflight = (
+            asyncio.create_task(writes_context(request)) if request is not None else None
         )
+        fast = await _fast(runtime, live, branch, intent, recipe, text)
+        fast_writes = None
+        if preflight is not None:
+            if fast is not None and fast.calls:
+                fast_writes = await preflight
+            else:
+                preflight.cancel()
         if fast is not None:
             return await _answer(
                 runtime, session_id, fast.answer, request=request, timings=timings, started=started,
@@ -496,9 +512,31 @@ def _working_words(lane: str, intent) -> str:
 # continuation must not swallow one: tapping Note and then saying "go back" abandons the note,
 # it does not write "go back" into it. Deciding this from the family rather than from a list of
 # phrases means it holds for however those things are said.
+# Sentences that are instructions to the assistant, whatever control was tapped a moment ago.
+# Two kinds. These are the ones that command it directly: "go back", "next", "what can you do".
 _NEVER_A_CONTINUATION = frozenset({
     "navigation_back", "navigation_home", "working_set_next", "working_set_previous",
     "capability_summary", "capability_delta", "order_reopen",
+})
+# And these are the ones that NAME THEIR OWN SUBJECT, which the glue would then overrule. Tap
+# Add a note on #1938, then ask "how many orders today", and the model was handed
+#
+#     how many orders today
+#     [This continues order.add_note on the order the owner is looking at (#1938) … Apply it
+#      to that record and to nothing else.]
+#
+# — a sales question turned into an instruction about one order's note, and the turn dropped
+# off the fast lane on the way. "Show me order 1782" was glued to #1938 the same way.
+#
+# Dictated note and rewrite text is not in either set, because it does not resolve to a
+# confident family: "he wants it by Friday" names no order, no period and no list, so it is
+# still taken as the words the tapped control was waiting for. That is the whole distinction —
+# a sentence the router can already act on is not dictation.
+_CARRIES_ITS_OWN_SUBJECT = frozenset({
+    "order_lookup", "order_list_period", "order_status_lookup", "order_address_lookup",
+    "customer_history_lookup", "customer_purchase_lookup", "sales_breakdown_period",
+    "best_sellers_period", "stock_cover_analysis", "delayed_orders", "inbox_state",
+    "needs_reply",
 })
 
 
@@ -511,9 +549,10 @@ def _is_a_command(text: str, branch: Any) -> bool:
     from app.fastpath import resolve
 
     try:
-        return resolve(text, branch=branch).family in _NEVER_A_CONTINUATION
+        family = resolve(text, branch=branch).family
     except Exception:  # noqa: BLE001 — a router that cannot decide is not a reason to fail a turn
         return False
+    return family in _NEVER_A_CONTINUATION or family in _CARRIES_ITS_OWN_SUBJECT
 
 
 def _with_continuation(text: str, continuation: dict) -> str:

@@ -164,7 +164,22 @@ class Branch:
     # ------------------------------------------------------------- navigation
 
     def visit(self, kind: str, ref: str, label: str, *, tab: str = "", set_id: str = "") -> NavEntry:
-        """Go somewhere. Truncates any forward history, as a browser does."""
+        """Go somewhere. Truncates any forward history, as a browser does.
+
+        Asking about the record you are already on is not going anywhere, so it does not push a
+        stop. Every read calls this (`app/fastpath/library.py:_remember`), so three questions
+        about one order used to leave three identical entries on the trail — and Back then
+        landed on the same record, on the same tab, and said the same sentence, which is a
+        button that visibly does nothing. The owner has no way to tell that from a Back that
+        failed.
+        """
+        current = self.nav[self.nav_index] if 0 <= self.nav_index < len(self.nav) else None
+        if current is not None and current.kind == kind and current.ref == str(ref) and current.tab == tab:
+            current.set_id = set_id or self.set_id
+            self.entity = {"kind": kind, "ref": str(ref), "label": str(label)[:80]}
+            self.scroll = 0
+            self.remember_entity(kind, ref, label)
+            return current
         if self.nav_index >= 0:
             del self.nav[self.nav_index + 1 :]
         entry = NavEntry(entry_id=f"nav_{os.urandom(4).hex()}", kind=kind, ref=str(ref), label=str(label)[:80], tab=tab, set_id=set_id or self.set_id)
