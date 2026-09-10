@@ -20,9 +20,12 @@ from app.observability.timeline import read_events
 
 # The classes a failed or partial turn is filed under, in the order they are tested.
 CLASSES = (
-    "STT_ERROR", "TIMEOUT", "PERMISSION_ERROR", "MISSING_CAPABILITY", "FALSE_UNSUPPORTED", "TOOL_ERROR", "VERIFICATION_ERROR",
+    # GESTURE_COLLISION is tested BEFORE STT_ERROR and displaces it: a second finger on the
+    # orb ends the recording, and the recogniser being handed no speech is the consequence,
+    # not the fault. Six turns of the live session were filed as the recogniser's.
+    "GESTURE_COLLISION", "STT_ERROR", "TIMEOUT", "PERMISSION_ERROR", "MISSING_CAPABILITY", "FALSE_UNSUPPORTED", "TOOL_ERROR", "VERIFICATION_ERROR",
     # What the request was FOR, held against what the turn did (app/observability/contract.py).
-    "FALSE_SUCCESS", "UNFULFILLED_ACTION", "ACTION_MISMATCH", "UI_INTENT_UNFULFILLED",
+    "FALSE_SUCCESS", "UNFULFILLED_ACTION", "ACTION_MISMATCH", "UI_INTENT_UNFULFILLED", "UI_RELATION_MISSING",
     "DATA_FIELD_UNAVAILABLE", "INTENT_DIVERGENCE", "PARTIAL_COVERAGE",
     "TOOL_SELECTION_ERROR", "UI_RENDER_ERROR", "UI_NAVIGATION_PROBLEM", "CONTEXT_INCOMPLETE", "INTENT_ERROR", "UNKNOWN",
 )
@@ -30,11 +33,14 @@ SEVERITY = {
     "FALSE_SUCCESS": 6, "ACTION_MISMATCH": 6,
     "VERIFICATION_ERROR": 5, "UNFULFILLED_ACTION": 5,
     "TOOL_ERROR": 4, "TIMEOUT": 4, "PERMISSION_ERROR": 4, "UI_RENDER_ERROR": 4, "FALSE_UNSUPPORTED": 4,
+    "GESTURE_COLLISION": 4, "UI_RELATION_MISSING": 4,
     "UI_INTENT_UNFULFILLED": 3, "DATA_FIELD_UNAVAILABLE": 3, "INTENT_DIVERGENCE": 3, "PARTIAL_COVERAGE": 2,
     "STT_ERROR": 3, "MISSING_CAPABILITY": 3, "UNKNOWN": 3,
     "TOOL_SELECTION_ERROR": 2, "CONTEXT_INCOMPLETE": 2, "INTENT_ERROR": 2, "UI_NAVIGATION_PROBLEM": 2,
 }
 COMPONENT = {
+    "GESTURE_COLLISION": "the tablet's touch handling (web/app.js): a second finger ended the recording before the recogniser saw any speech",
+    "UI_RELATION_MISSING": "the surface (app/presentation.py, web/ui.js): the relation was in the data and not on the card",
     "STT_ERROR": "speech (Scribe / whisper.cpp, app/speech)", "TIMEOUT": "the turn's budget (provider or tool timeouts)",
     "PERMISSION_ERROR": "the write boundary (CROOKS_WRITES_ENABLED, allow-list, scopes, Tailscale identity)",
     "MISSING_CAPABILITY": "the tool registry (app/tools)", "TOOL_ERROR": "the Shopify / Gmail clients (app/clients, app/tools)",
@@ -83,7 +89,26 @@ CAPABILITY_WORDS = {
     "archive": "gmail_thread_archive",
 }
 ABANDON_S = 3.0        # a screen left this soon after it was rendered was not what was wanted
-SLOW_MS = {"stt": 3000.0, "claude": 8000.0, "total": 12000.0, "tts_first_byte": 2000.0, "context": 4000.0}
+SLOW_MS = {"stt": 3000.0, "claude": 8000.0, "total": 12000.0, "tts_first_byte": 2000.0, "context": 4000.0,
+           # Section 25's two numbers, kept apart: waiting for a sentence about facts already
+           # read is a different fault from the reads themselves being slow, and a report that
+           # cannot tell them apart sends the engineer to the wrong file.
+           "prose_wait": 6000.0, "facts": 4000.0}
+# How long before a failed recording a touch on the orb still explains it. A second finger
+# lands, the recorder stops, `turn_started` follows: the gesture is on the timeline BEFORE the
+# turn it ruined, and often under the previous turn's id, so this is matched by clock and not
+# by correlation id.
+GESTURE_WINDOW_S = 6.0
+# Card types that are an email surface. An email surface drawn with no order on it, in a turn
+# whose own data held one, is the P0 the live session's report called "correlation missing:
+# never" — the correlation existed and the screen did not carry it.
+EMAIL_CARDS = frozenset({"email", "email_list", "email_thread", "thread", "email_draft", "email_queue"})
+# What a card says about the relations it drew: `relations` on a render's card is the set of
+# `data-kind` values of the tappable link targets inside it (web/telemetry.js). An email card
+# whose relations do not include "order" did not show the order, whatever the tools returned.
+RELATION_ORDER = "order"
+# How alike two consecutive requests must be to count as the same one said again.
+REPHRASE_RATIO = 0.62
 
 
 # ----------------------------------------------------------------------- the model
@@ -226,12 +251,21 @@ class Turn:
     claims: list[dict[str, Any]] = field(default_factory=list)
     batches: list[dict[str, Any]] = field(default_factory=list)
     submitted: dict[str, Any] | None = None   # the tablet's turn_submitted, paired by order
+    # The Mac's own controls: a semantic command the tablet posted (`command`), a change a
+    # command prepared (`command_stage`), a row action, and the branch moves. Twenty-seven of
+    # these went unread in the live session, so a report that was about a tablet said nothing
+    # about what was tapped on it.
+    commands: list[dict[str, Any]] = field(default_factory=list)
+    branch_events: list[dict[str, Any]] = field(default_factory=list)
     # What the request was for (app/observability/contract.py), set by the classifier.
     contract: str = "READ_INTENT"
     classes: list[str] = field(default_factory=list)
     signals: list[str] = field(default_factory=list)
     outcome: str = "successful"
     cluster: str = "other"
+    # The request as the ROUTER read it (app/observability/semantics.py). Set by the
+    # classifier; `None` on a turn with nothing said.
+    verdict: Any = None
 
     # ---- what was said
     @property
@@ -306,6 +340,14 @@ class Turn:
         if part == "round_trip":
             responses = [e.get("ms") for e in self.tablet_events("turn_response") if isinstance(e.get("ms"), (int, float))]
             return float(responses[0]) if responses else None
+        if part in ("facts", "workspace", "prose_wait"):
+            # From the turn's own `turn_performance`, not derived here: `facts_ms` is when the
+            # Mac HELD the data, `workspace_ms` when the cards existed, `prose_wait_ms` what
+            # was waited after the facts were in hand (app/routes/turn.py::_performance). With
+            # the three on the timeline, "the model was slow" and "the reads were slow" are two
+            # rows in the report rather than one guess.
+            value = (self.performance or {}).get(f"{part}_ms" if part != "prose_wait" else "prose_wait_ms")
+            return float(value) if isinstance(value, (int, float)) else None
         return None
 
 
@@ -317,6 +359,13 @@ class Reconstruction:
     proposals: dict[str, ProposalRecord]
     orphans: list[dict[str, Any]]           # tablet and Mac events outside any turn
     unknown_kinds: Counter = field(default_factory=Counter)
+    # Commands, row actions and branch moves that belong to no turn — a tap is not a turn, and
+    # most of them happen between two. Kept so section 14 can count them.
+    controls: list[dict[str, Any]] = field(default_factory=list)
+    # The moments a second finger landed while the orb was recording, from the tablet's own
+    # `hold` events and the branch forks they caused. Used to tell a gesture collision from a
+    # failure of the recogniser.
+    collisions: list[dict[str, Any]] = field(default_factory=list)
 
     def turn(self, turn_id: str) -> Turn | None:
         return next((t for t in self.turns if t.turn_id == turn_id), None)
@@ -336,6 +385,7 @@ def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
     tools: dict[str, ToolRecord] = {}
     orphans: list[dict[str, Any]] = []
     unknown: Counter = Counter()
+    controls: list[dict[str, Any]] = []
     pending_submits: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
     def turn_for(event: dict[str, Any]) -> Turn | None:
@@ -463,6 +513,16 @@ def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
                 turn.rejected.append(event)
             else:
                 orphans.append(event)
+        elif kind in ("command", "command_stage", "row_action"):
+            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            if turn is not None:
+                turn.commands.append(event)
+            controls.append(event)
+        elif kind.startswith("branch_"):
+            turn = turn_for(event) or _turn_in_flight(turns, order, event)
+            if turn is not None:
+                turn.branch_events.append(event)
+            controls.append(event)
         elif kind == "unsupported_claim":
             turn = turn_for(event)
             if turn is not None:
@@ -519,12 +579,14 @@ def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
         if p.turn_id and p.turn_id in turns and p not in turns[p.turn_id].proposals:
             turns[p.turn_id].proposals.append(p)
     result = [turns[t] for t in order]
+    collisions = _collisions(events)
     for turn in result:
         turn.tools.sort(key=lambda t: t.requested_at or t.finished_at)
-        _classify(turn)
+        _classify(turn, collisions=collisions)
         turn.cluster = _cluster(turn)
     _mark_repeats(result)
-    return Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans, unknown_kinds=unknown)
+    return Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans,
+                          unknown_kinds=unknown, controls=controls, collisions=collisions)
 
 
 def _turn_in_flight(turns: dict[str, Turn], order: list[str], event: dict[str, Any]) -> Turn | None:
@@ -550,12 +612,30 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
     though it had. Words and counts only.
     """
     from app.observability import contract as contract_mod
+    from app.observability import semantics
 
     classes: list[str] = []
     signals: list[str] = []
     question, answer = turn.question, turn.answer
     ui_asked = "UI_INTENT" in ()  # placeholder kept out of the way; the regex does the work
+    # Whether a change was asked for is the ROUTER's answer, taken off the turn's own `lane`
+    # event, and not a second reading of the words by this file. The contract module still
+    # decides between the other five shapes — UI, navigation, workflow, meta, read — because
+    # those are about what the sentence points AT and the router says nothing about them.
+    verdict = semantics.read_request(question, lane=turn.lane)
+    turn.verdict = verdict
     kind = contract_mod.contract_of(question, ui_asked=ui_asked)
+    if kind == contract_mod.WRITE_INTENT and not verdict.mutation:
+        # §27D. A noun or a state is not a requested mutation: "what is the refund status",
+        # "which customers need replying to", "find an order that has not been fulfilled".
+        # Downgraded, and the disagreement is on the record rather than silent.
+        kind = contract_mod.READ_INTENT
+        signals.append(verdict.disagreement or "read as a question, not an instruction")
+    elif kind != contract_mod.WRITE_INTENT and verdict.mutation and verdict.mutation_source == "router" and kind == contract_mod.READ_INTENT:
+        # The router saw a change and the contract module's own regexes did not. The router
+        # is the one that decided the lane, so it is the one that decides the contract.
+        kind = contract_mod.WRITE_INTENT
+        signals.append("the router read this as a change" + (f" ({verdict.reason})" if verdict.reason else ""))
     turn.contract = kind
     staged = [p for p in turn.proposals if p.proposal_id]
     settled = [p for p in staged if p.status in ("VERIFIED", "EXECUTED")]
@@ -573,6 +653,10 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
     if kind == contract_mod.UI_INTENT and contract_mod.declines(answer) and not turn.ui:
         classes.append("UI_INTENT_UNFULFILLED")
         signals.append("asked for something on the screen; the answer declined and no card carried it")
+    relation = _relation_gap(turn)
+    if relation:
+        classes.append("UI_RELATION_MISSING")
+        signals.append(relation)
     field = _missing_field(turn)
     if field:
         classes.append("DATA_FIELD_UNAVAILABLE")
@@ -641,7 +725,102 @@ def _divergence(turn: Turn) -> str:
     return f"declined {phrase!r}, which the request did not ask for"
 
 
-def _classify(turn: Turn) -> None:
+def _collisions(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The moments a second finger landed on the orb, or a gesture forked the conversation.
+
+    §27A. Six turns of the live session were filed under STT_ERROR. What happened was that two
+    fingers went down on the orb, the recorder stopped, and the recogniser was handed silence —
+    a multitouch, not a mis-hearing, and a fix in `web/app.js` rather than in the keyterms. The
+    tablet reports the touch itself (`hold` with `phase: "multitouch"`, and the finger count),
+    and a split posts `navigate {nav: "split"}` and forks a branch on the Mac. Any of those
+    within `GESTURE_WINDOW_S` of a recording that produced nothing is what produced nothing.
+    """
+    out: list[dict[str, Any]] = []
+    for event in events:
+        kind = str(event.get("kind") or "")
+        ts = float(event.get("ts") or 0.0)
+        if kind == "tablet_hold" and str(event.get("phase") or "") == "multitouch":
+            fingers = event.get("fingers") if isinstance(event.get("fingers"), int) else event.get("count")
+            out.append({"ts": ts, "what": "multitouch", "detail": f"{fingers or 2} fingers on the {event.get('target') or 'orb'}"})
+        elif kind == "tablet_navigate" and str(event.get("nav") or "") in ("split", "merge"):
+            out.append({"ts": ts, "what": str(event["nav"]), "detail": f"{event['nav']} by {event.get('name') or 'gesture'}"})
+        elif kind == "branch_forked":
+            out.append({"ts": ts, "what": "fork", "detail": f"branch {event.get('branch_id') or '?'} forked"})
+    return out
+
+
+def _gesture_collision(turn: Turn, collisions: list[dict[str, Any]]) -> str:
+    """The gesture that explains this turn's empty recording, if one does."""
+    if not collisions:
+        return ""
+    start = turn.started_at or 0.0
+    end = turn.finished_at or start
+    near = [c for c in collisions if start - GESTURE_WINDOW_S <= c["ts"] <= max(end, start) + 0.5]
+    if not near:
+        return ""
+    return "; ".join(sorted({str(c["detail"]) for c in near}))
+
+
+def _empty_speech(turn: Turn) -> bool:
+    """Whether the recogniser was handed something it could make no words out of. The three
+    shapes the route writes: `ok: false` from the recogniser, an `empty` transcript, and audio
+    the route refused for its size."""
+    stt = turn.stt or {}
+    return bool(stt and stt.get("ok") is False) or turn.error_kind in ("speech", "empty", "audio_too_large")
+
+
+def _relation_gap(turn: Turn) -> str:
+    """An email surface drawn without the order it is about, in a turn whose own data held one.
+
+    §27B. The live session's report said "Email correlation missing: never", which was true of
+    the BACKEND and false of the screen: the thread card showed the words and hid the order.
+    Backend data existing is not a visible relationship existing, so this is read off the
+    render — the card's own `relations`, which are the `data-kind` values of the tappable links
+    inside it — and never off what a tool returned.
+    """
+    cards = [c for r in turn.tablet_events("render") for c in (r.get("cards") or []) if isinstance(c, dict)]
+    email_cards = [c for c in cards if str(c.get("type") or "") in EMAIL_CARDS]
+    if not email_cards:
+        return ""
+    if any(RELATION_ORDER in [str(x) for x in (c.get("relations") or [])] for c in email_cards):
+        return ""
+    # An order card drawn beside the email one carries the relation by being there.
+    if any(str(c.get("type") or "") == "order" for c in cards):
+        return ""
+    held = _orders_in_hand(turn)
+    if not held:
+        return ""
+    kinds = ", ".join(sorted({str(c.get("type")) for c in email_cards}))
+    return f"the {kinds} surface drew no order, and the turn held {len(held)}: " + ", ".join(sorted(held)[:3])
+
+
+def _orders_in_hand(turn: Turn) -> set[str]:
+    """The orders this turn's own data named: what the tools returned, what the screen was
+    already on, and what the context hydration was about. Ids only."""
+    held: set[str] = set()
+    for record in turn.tools:
+        shape = record.result if isinstance(record.result, dict) else {}
+        orders = shape.get("orders")
+        if isinstance(orders, dict):
+            held.update(str(x) for x in (orders.get("ids") or []))
+        if shape.get("order_id"):
+            held.add(str(shape["order_id"]))
+        linked = shape.get("linked_order")
+        if isinstance(linked, dict) and linked.get("order_id"):
+            held.add(str(linked["order_id"]))
+    for entity in turn.ui_entities:
+        if str(entity.get("type") or "") == "order" and entity.get("ref"):
+            held.add(str(entity["ref"]))
+    focus = turn.focus or {}
+    if str(focus.get("type") or focus.get("kind") or "") == "order" and focus.get("ref"):
+        held.add(str(focus["ref"]))
+    for hydration in turn.hydrations:
+        if hydration.get("order_id"):
+            held.add(str(hydration["order_id"]))
+    return held
+
+
+def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None) -> None:
     classes: list[str] = []
     signals: list[str] = []
     stt = turn.stt or {}
@@ -654,9 +833,14 @@ def _classify(turn: Turn) -> None:
     missing = [t for t in tools if t.missing_capability]
     tablet_failed = turn.tablet_events("turn_failed")
 
-    if stt and stt.get("ok") is False or error_kind in ("speech", "empty", "audio_too_large"):
-        classes.append("STT_ERROR")
-        signals.append(f"speech: {stt.get('reason') or error_kind}")
+    if _empty_speech(turn):
+        gesture = _gesture_collision(turn, collisions or [])
+        if gesture:
+            classes.append("GESTURE_COLLISION")
+            signals.append(f"the recording was ended by a gesture, not mis-heard: {gesture}")
+        else:
+            classes.append("STT_ERROR")
+            signals.append(f"speech: {stt.get('reason') or error_kind}")
     if error_kind == "timeout" or any(e.get("aborted") for e in tablet_failed) or any(re.search(r"time[d ]?out|timeout", t.error, re.I) for t in failed_tools):
         classes.append("TIMEOUT")
         signals.append("a timeout: " + (error_kind or next((t.tool for t in failed_tools if re.search(r"time[d ]?out|timeout", t.error, re.I)), "the tablet gave up")))
@@ -716,6 +900,21 @@ def _classify(turn: Turn) -> None:
         if name not in classes:
             classes.append(name)
             signals.append(signal)
+    # §27C. A change the owner ASKED FOR out loud that nothing on this Mac claims. The tool
+    # registry can only report a capability the model reached for; a request the model declined
+    # in words, or answered as though it had done, reaches no tool at all — which is why "create
+    # an order", "a discount code" and "store credit" were reported as "Potential new actions:
+    # none". The capability table (app/capabilities/families.py) is what decides: no family is a
+    # capability that does not exist; a family that is not READY is a grant or a provider, and
+    # its state names which. That difference is what keeps a fix from being reported as still
+    # open, and an open one as fixed.
+    spoken = _spoken_capability(turn)
+    if spoken and spoken["state"] == semantics_no_family() and "MISSING_CAPABILITY" not in classes:
+        classes.append("MISSING_CAPABILITY")
+        signals.append(spoken["signal"])
+    elif spoken and spoken["state"] == "MISSING_SCOPE" and "PERMISSION_ERROR" not in classes:
+        classes.append("PERMISSION_ERROR")
+        signals.append(spoken["signal"])
     if (error_kind or tablet_failed) and not classes:
         classes.append("UNKNOWN")
         signals.append(f"error_kind={error_kind or 'tablet turn_failed'}")
@@ -730,6 +929,37 @@ def _classify(turn: Turn) -> None:
         turn.outcome = "failed"
     if classes in (["MISSING_CAPABILITY"], ["FALSE_UNSUPPORTED"]) and not ok_tools:
         turn.outcome = "failed"
+
+
+def semantics_no_family() -> str:
+    from app.observability import semantics
+
+    return semantics.NO_FAMILY
+
+
+def _spoken_capability(turn: Turn, states: dict[str, dict[str, Any]] | None = None) -> dict[str, Any] | None:
+    """The change this turn's words asked for, and what this Mac can do about it.
+
+    None when no change was asked for, or when the change's family is READY — a READY family
+    that failed for some other reason is that other reason's business, and reporting it here
+    would be reporting a built capability as missing.
+    """
+    from app.observability import semantics
+
+    verdict = turn.verdict
+    if verdict is None or not verdict.mutation or verdict.change is None:
+        return None
+    change = verdict.change
+    state = semantics.capability_state(change, states)
+    if state["state"] == "READY":
+        return None
+    if state["state"] == semantics.NO_FAMILY:
+        stated = f"; stated as a limitation ({change.limitation})" if change.limitation else ""
+        return {"change": change.key, "what": change.what, "state": state["state"], "scope": "", "family": "",
+                "signal": f"asked out loud to {change.what}; no capability family claims it{stated}"}
+    scope = f" ({state['scope']})" if state["scope"] else ""
+    return {"change": change.key, "what": change.what, "state": state["state"], "scope": state["scope"], "family": state["family"],
+            "signal": f"asked out loud to {change.what}; {state['label']} is {state['state']}{scope}"}
 
 
 def _false_claim(turn: Turn) -> dict[str, Any] | None:
@@ -896,7 +1126,125 @@ def registered_tools() -> list[str]:
         return []
 
 
-def intelligence(rec: Reconstruction, registered: list[str]) -> dict[str, Any]:
+def _no_family() -> str:
+    from app.observability import semantics
+
+    return semantics.NO_FAMILY
+
+
+def _uncovered_families(reached: list[str]) -> list[str]:
+    """Of the intent families this session actually reached, the ones no golden scenario
+    exercises. Read from `experience/matrix.py`, which derives it from the registries rather
+    than from a list kept by hand — so a family added in this pass is on it the same day.
+    Empty when the matrix cannot be built (a report written without the repository beside it)."""
+    try:
+        from experience import matrix
+
+        gaps = set(matrix.uncovered())
+    except Exception:  # noqa: BLE001 — the report still reads without the scenario list
+        return []
+    return sorted(name for name in reached if name in gaps)
+
+
+def _branch_failures(rec: Reconstruction) -> list[tuple[str, str, str]]:
+    """Where the two halves of the orb cost the owner something.
+
+    A focus that changed who was listening and nothing on screen; a half put aside whose
+    answer never appeared; a branch command the Mac refused. Each row cites what it read.
+    """
+    out: list[tuple[str, str, str]] = []
+    renders = sorted(
+        [(float(e.get("ts") or 0.0), e) for t in rec.turns for e in t.tablet_events("render")]
+        + [(float(e.get("ts") or 0.0), e) for e in rec.orphans if e.get("kind") == "tablet_render"],
+        key=lambda pair: pair[0],
+    )
+    for event in rec.controls:
+        kind = str(event.get("kind") or "")
+        ts = float(event.get("ts") or 0.0)
+        branch = str(event.get("branch_id") or "")
+        if kind == "branch_focused":
+            after = [e for at, e in renders if ts <= at <= ts + 5.0]
+            if not after:
+                out.append((branch or "—", "focus changed with nothing redrawn",
+                            "who was listening moved and no card was drawn within five seconds"))
+        elif kind == "branch_backgrounded":
+            ready = [e for e in rec.events if str(e.get("kind") or "") in ("tablet_branch", "branch_focused")
+                     and float(e.get("ts") or 0.0) > ts and str(e.get("branch_id") or e.get("id") or "") == branch]
+            if not ready:
+                out.append((branch or "—", "a half put aside was never returned to",
+                            "backgrounded, and nothing afterwards names it again"))
+        elif kind == "command" and event.get("ok") is False:
+            out.append((branch or "—", f"the command {event.get('command')} was refused",
+                        str(event.get("code") or "no code")))
+    for event in rec.controls:
+        if str(event.get("kind") or "") == "branch_cancelled" and event.get("revoked"):
+            out.append((str(event.get("branch_id") or "—"), "a half was cancelled with cards waiting",
+                        f"{event['revoked']} proposal(s) withdrawn"))
+    return out
+
+
+def _corrections(turns: list[Turn]) -> list[tuple[str, str, str]]:
+    """The same thing said again. A pair of consecutive turns whose requests are mostly the
+    same words is the owner correcting himself or the Mac; six of them in an hour is a shape,
+    not an accident."""
+    out: list[tuple[str, str, str]] = []
+    previous: dict[str, Turn] = {}
+    for turn in turns:
+        before = previous.get(turn.session_id)
+        previous[turn.session_id] = turn
+        said = (turn.question or turn.raw_text or "").strip().lower()
+        if before is None or not said:
+            continue
+        was = (before.question or before.raw_text or "").strip().lower()
+        if not was or was == said:
+            ratio = 1.0 if was == said and was else 0.0
+        else:
+            ratio = difflib.SequenceMatcher(None, was, said).ratio()
+        if ratio >= REPHRASE_RATIO:
+            out.append((turn.turn_id, f"said again after {before.turn_id} ({ratio:.0%} the same words)",
+                        turn.question or turn.raw_text))
+    return out
+
+
+def _precision_input(turns: list[Turn]) -> list[tuple[str, str, str]]:
+    """Where a value had to be got exactly right and a voice could not do it: a field typed
+    into the composer, a recording the tablet threw away as too short, a transcript the
+    normaliser had to correct before it was usable."""
+    out: list[tuple[str, str, str]] = []
+    for turn in turns:
+        for event in turn.tablet_events("compose_field"):
+            out.append((turn.turn_id, f"a value was typed into the composer ({event.get('name') or event.get('label') or 'a field'})",
+                        f"{event.get('chars') or '?'} character(s)"))
+        for event in turn.tablet_events("recording_too_short"):
+            out.append((turn.turn_id, "the recording was too short to use", f"{event.get('ms') or '?'} ms"))
+        stt = turn.stt or {}
+        raw, text = str(stt.get("raw_text") or ""), str(stt.get("text") or "")
+        if raw and text and raw != text:
+            out.append((turn.turn_id, "the normaliser had to correct the transcript before it was usable",
+                        f"{len(raw)} → {len(text)} characters"))
+        for event in turn.rejected:
+            if event.get("unknown"):
+                out.append((turn.turn_id, "a query named a dimension the language does not have",
+                            ", ".join(str(x) for x in event["unknown"])))
+    return out
+
+
+def _cross_source_workflows(turns: list[Turn]) -> list[tuple[str, int, list[str]]]:
+    """Reads that crossed Shopify and Gmail in one turn, by the sequence of tools. Counted so
+    a shape the owner keeps asking for can become one recipe instead of four calls."""
+    shapes: Counter = Counter()
+    where: dict[tuple[str, ...], list[str]] = defaultdict(list)
+    for turn in turns:
+        names = tuple(x.tool for x in turn.tools if x.outcome in ("ok", "staged"))
+        services = {x.service for x in turn.tools if x.outcome in ("ok", "staged")}
+        crossed = any(e.get("kind") == "cross_source" for e in turn.sets)
+        if crossed or ({"shopify", "gmail"} <= services and len(names) >= 2):
+            shapes[names] += 1
+            where[names].append(turn.turn_id)
+    return [(" → ".join(names) or "(a cross-source read)", n, where[names][:5]) for names, n in shapes.most_common(10)]
+
+
+def intelligence(rec: Reconstruction, registered: list[str], *, capability_states: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     """Section 13's evidence, by rule, each row citing its turn: false unsupported claims,
     composable requests that failed, the multi-tool workflows and follow-up shapes the
     session repeated, and the query dimensions, actions, bulk actions and card types asked
@@ -972,12 +1320,57 @@ def intelligence(rec: Reconstruction, registered: list[str]) -> dict[str, Any]:
     sets_made = [e for t in turns for e in t.sets if e.get("kind") == "working_set"]
     cross = [e for t in turns for e in t.sets if e.get("kind") == "cross_source"]
     batches = {str(e.get("batch_id")): e for t in turns for e in t.batches if e.get("event") == "DONE"}
+    # §27C and the detections §27 asks for, each from the turn's own record.
+    spoken: dict[str, dict[str, Any]] = {}
+    for t in turns:
+        found = _spoken_capability(t, capability_states)
+        if found is None:
+            continue
+        entry = spoken.setdefault(found["change"], {"what": found["what"], "state": found["state"], "scope": found["scope"],
+                                                    "family": found["family"], "n": 0, "turns": []})
+        entry["n"] += 1
+        entry["turns"].append(t.turn_id)
+    new_actions: list[tuple[str, int, list[str], str]] = []
+    for key, entry in sorted(spoken.items(), key=lambda kv: -kv[1]["n"]):
+        if entry["state"] != _no_family():
+            continue
+        # A change nothing claims AND no intent family takes: a family to add, not a scope
+        # to grant. `verdict.unplaced` is the router's own answer to "is there a family".
+        unplaced = [t.turn_id for t in turns if t.verdict is not None and t.verdict.change is not None
+                    and t.verdict.change.key == key and t.verdict.unplaced]
+        new_actions.append((key, entry["n"], entry["turns"][:5], f"{entry['what']}; no intent family took {len(unplaced)} of {entry['n']} request(s)"))
+    read_gaps: dict[str, dict[str, Any]] = {}
+    for t in turns:
+        v = t.verdict
+        if v is None or v.mutation or not v.unplaced or not (t.question or "").strip():
+            continue
+        shape = f"{t.cluster}: " + " ".join((t.question or "").lower().split()[:4])
+        entry = read_gaps.setdefault(shape, {"n": 0, "turns": [], "reason": v.reason or "no family matched"})
+        entry["n"] += 1
+        entry["turns"].append(t.turn_id)
+    relations = [(t.turn_id, sig) for t in turns for sig in t.signals if "surface drew no order" in sig]
+    branch_rows = _branch_failures(rec)
+    corrections = _corrections(turns)
+    precision = _precision_input(turns)
+    cross_rows = _cross_source_workflows(turns)
+    reached = sorted({str((t.lane or {}).get("family") or "") for t in turns if (t.lane or {}).get("family")})
+    uncovered = _uncovered_families(reached)
     return {
         "false_unsupported": false_rows,
         "composable_failed": failed_rows,
         "workflows": [(names, n, workflow_turns[names][:5]) for names, n in workflows.most_common(10)],
         "dimensions": [(name, n, dimension_turns[name][:5]) for name, n in dimensions.most_common(10)],
         "new_actions": [(name, n, action_turns[name][:5]) for name, n in actions.most_common(10)],
+        "spoken_capabilities": [(key, e["n"], e["turns"][:5], e["state"], e["scope"], e["what"]) for key, e in sorted(spoken.items(), key=lambda kv: -kv[1]["n"])],
+        "new_action_families": new_actions,
+        "new_read_families": [(shape, e["n"], e["turns"][:5], e["reason"]) for shape, e in sorted(read_gaps.items(), key=lambda kv: -kv[1]["n"])],
+        "relation_gaps": relations,
+        "branch_failures": branch_rows,
+        "corrections": corrections,
+        "precision_input": precision,
+        "cross_source_workflows": cross_rows,
+        "families_reached": reached,
+        "families_uncovered": uncovered,
         "bulk": [(op, e["n"], e["turns"][:5], e["supported"] and e["served"] > 0) for op, e in sorted(bulk.items(), key=lambda kv: -kv[1]["n"])],
         "follow_ups": [(shape, n, follow_up_turns[shape][:6]) for shape, n in follow_ups.most_common()],
         "ui_types": [(kind, n, ui_turns[kind][:5]) for kind, n in ui_types.most_common(10)],
@@ -986,7 +1379,12 @@ def intelligence(rec: Reconstruction, registered: list[str]) -> dict[str, Any]:
     }
 
 
-def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) -> str:
+def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
+           capability_states: dict[str, dict[str, Any]] | None = None) -> str:
+    """The Markdown. `capability_states` is `app.capabilities.families.states(runtime)` when
+    the caller has a runtime: with it, a change asked for is held against the store's own
+    scopes rather than against the family's declared state, so the report can say MISSING_SCOPE
+    and name the scope. Without one the declared state is used and the report says so."""
     registered = tools_registered if tools_registered is not None else registered_tools()
     turns = rec.turns
     session = rec.session
@@ -1019,12 +1417,25 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     add("## 2. Performance")
     add("")
     rows = []
-    parts = [("audio", "Audio length"), ("stt", "Speech to text"), ("claude", "Claude"), ("shopify", "Shopify (per turn, summed)"), ("gmail", "Gmail (per turn, summed)"), ("context", "Context hydration"), ("tts_first_byte", "TTS to first byte"), ("total", "Total turn (Mac)"), ("round_trip", "Total turn (tablet round trip)")]
+    parts = [("audio", "Audio length"), ("stt", "Speech to text"), ("claude", "Claude"), ("shopify", "Shopify (per turn, summed)"), ("gmail", "Gmail (per turn, summed)"), ("context", "Context hydration"),
+             # The three that separate a slow model from slow reads (app/routes/turn.py).
+             ("facts", "Facts in hand"), ("workspace", "Cards existed"), ("prose_wait", "Waited after the facts"),
+             ("tts_first_byte", "TTS to first byte"), ("total", "Total turn (Mac)"), ("round_trip", "Total turn (tablet round trip)")]
     for key, label in parts:
         values = [v for v in (t.latency(key) for t in turns) if v is not None]
         avg, med, p95 = _stats(values)
         rows.append([label, len(values), avg, med, p95])
     lines.extend(_table(["Stage", "Samples", "Average", "Median", "P95"], rows))
+    facts = [v for v in (t.latency("facts") for t in turns) if v is not None]
+    waited = [v for v in (t.latency("prose_wait") for t in turns) if v is not None]
+    if facts or waited:
+        add("**Reads against prose.** `Facts in hand` is when the Mac held the data the cards are drawn from; "
+            "`Waited after the facts` is what the owner waited for a sentence about data already read. "
+            f"Summed across the session: {sum(facts):,.0f} ms reading, {sum(waited):,.0f} ms waiting — "
+            + ("the waiting dominates, and the fix is in the prompt and the lane, not in the reads."
+               if sum(waited) > sum(facts) else "the reads dominate, and the fix is in the read layer, not in the prompt.")
+            )
+        add("")
     slowest = sorted((t for t in turns if t.latency("total") is not None), key=lambda t: -(t.latency("total") or 0))[:10]
     add("The ten slowest turns:")
     add("")
@@ -1065,7 +1476,11 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     # 5 ------------------------------------------------------------------------------
     add("## 5. Failures")
     add("")
-    add("Classes, in the order tested: " + ", ".join(CLASSES) + ". A turn may carry more than one. STT_ERROR: the recogniser returned no usable text. TIMEOUT: the turn, a tool or the tablet gave up. PERMISSION_ERROR: a tap refused by the write boundary. MISSING_CAPABILITY: a tool asked for that is not registered, or an answer that says it cannot with no tool having succeeded. TOOL_ERROR: a tool raised or returned an error. VERIFICATION_ERROR: a change sent but not proven. TOOL_SELECTION_ERROR: repeated calls with unissued ids, a rule refusal, or the same call twice. UI_RENDER_ERROR: a tablet exception, a card it could not draw, a failed image. UI_NAVIGATION_PROBLEM: the screen left within three seconds, or a touch on something dead. CONTEXT_INCOMPLETE: part of the order never arrived. INTENT_ERROR: a clarifying question though the request named its entity. UNKNOWN: an error nothing above explains.")
+    add("Classes, in the order tested: " + ", ".join(CLASSES) + ". A turn may carry more than one. "
+        "GESTURE_COLLISION: the recording produced nothing and a second finger, a split or a fork is on the timeline within "
+        f"{GESTURE_WINDOW_S:.0f} s of it — the touch handling ended the recording, and the recogniser never had any speech to lose. "
+        "UI_RELATION_MISSING: an email surface was drawn with no order on it in a turn whose own data held one; the relation existed and the screen did not carry it. "
+        "STT_ERROR: the recogniser returned no usable text, with no gesture to explain it. TIMEOUT: the turn, a tool or the tablet gave up. PERMISSION_ERROR: a tap refused by the write boundary. MISSING_CAPABILITY: a tool asked for that is not registered, or an answer that says it cannot with no tool having succeeded. TOOL_ERROR: a tool raised or returned an error. VERIFICATION_ERROR: a change sent but not proven. TOOL_SELECTION_ERROR: repeated calls with unissued ids, a rule refusal, or the same call twice. UI_RENDER_ERROR: a tablet exception, a card it could not draw, a failed image. UI_NAVIGATION_PROBLEM: the screen left within three seconds, or a touch on something dead. CONTEXT_INCOMPLETE: part of the order never arrived. INTENT_ERROR: a clarifying question though the request named its entity. UNKNOWN: an error nothing above explains.")
     add("")
     failed = [t for t in turns if t.outcome != "successful"]
     rows = []
@@ -1209,7 +1624,12 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     duplicates = [(t.turn_id, _duplicate_calls(t.tools)) for t in turns if _duplicate_calls(t.tools)]
     add(f"- Claude asked for what the Mac had already read: {', '.join(already) or 'never'}.")
     add(f"- Customer history missing from an order's context: {', '.join(history_missing) or 'never'}.")
-    add(f"- Email correlation missing: {', '.join(email_missing) or 'never'}.")
+    add(f"- Email correlation missing FROM THE DATA (the hydration could not read it): {', '.join(email_missing) or 'never'}.")
+    # The other half of the same question, and the one the live session's report got wrong:
+    # the data had the correlation and the screen did not show it.
+    relation_gaps = [t.turn_id for t in turns if "UI_RELATION_MISSING" in t.classes]
+    add(f"- Email correlation missing FROM THE SURFACE (the card drew no order though the turn held one): {', '.join(relation_gaps) or 'never'}.")
+    add("  Read from the card's own `relations` — the tappable link targets inside it — and never from what a tool returned: backend data existing is not a visible relationship existing.")
     add(f"- Order context still incomplete when the answer left, and not collected later: {', '.join(incomplete) or 'never'}.")
     add(f"- Duplicate tool calls: {duplicates or 'none'}.")
     hydrations = [h for t in turns for h in t.hydrations]
@@ -1260,7 +1680,7 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     # 12 -----------------------------------------------------------------------------
     add("## 12. Top improvement opportunities")
     add("")
-    opportunities = _opportunities(rec, turns, registered)
+    opportunities = _opportunities(rec, turns, registered, capability_states)
     if not opportunities:
         add("_Nothing in this session's evidence calls for a change._")
     for i, o in enumerate(opportunities, 1):
@@ -1272,7 +1692,7 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     add("")
     add("What the session asked of the read layer, the working sets and the batch tools, and what it asked for that does not exist yet. Every row names its turns; the rules are word matches (app/observability/claims.py) and counts, never a judgement.")
     add("")
-    intel = intelligence(rec, registered)
+    intel = intelligence(rec, registered, capability_states=capability_states)
     add("### False unsupported claims")
     add("")
     add("The assistant said it could not, and the tools registered on this Mac compose exactly that.")
@@ -1295,7 +1715,48 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     lines.extend(_table(["Dimension", "Times", "Turns"], [[name, n, ", ".join(ids)] for name, n, ids in intel["dimensions"]]))
     add("### Potential new actions")
     add("")
-    lines.extend(_table(["Capability asked for", "Times", "Turns"], [[name, n, ", ".join(ids)] for name, n, ids in intel["new_actions"]]))
+    add("Two tables. The first is what a TOOL asked for and did not find — a capability the model reached for. "
+        "The second is what the OWNER asked for out loud, which reaches no tool at all when the assistant declines it in words, "
+        "and is why an hour that asked three times for changes this Mac cannot make reported \"none\" here.")
+    add("")
+    lines.extend(_table(["Capability a tool asked for", "Times", "Turns"], [[name, n, ", ".join(ids)] for name, n, ids in intel["new_actions"]]))
+    add("Asked for in words, held against the capability table (`app/capabilities/families.py`). "
+        + ("The store's own scopes were read for this report." if capability_states else "No runtime was available, so each family's DECLARED state is shown; a family with a probe is settled against the store, not here.")
+        )
+    add("")
+    lines.extend(_table(["Change asked for", "Times", "Turns", "Capability state", "Scope named"], [
+        [what, n, ", ".join(ids), state, scope or "—"] for _key, n, ids, state, scope, what in intel["spoken_capabilities"]
+    ]))
+    add("### Possible new action families")
+    add("")
+    add("A change nothing on this Mac claims AND no intent family takes: a family to add (`app/families/`), not a scope to grant.")
+    add("")
+    lines.extend(_table(["Change", "Times", "Turns", "What the router did with it"], [[name, n, ", ".join(ids), why] for name, n, ids, why in intel["new_action_families"]]))
+    add("### Possible new read families")
+    add("")
+    add("A question the router placed in no family, so the model took it. Grouped by what was asked; the reason is the router's own.")
+    add("")
+    lines.extend(_table(["Request shape", "Times", "Turns", "Why no family"], [[shape, n, ", ".join(ids), why] for shape, n, ids, why in intel["new_read_families"]]))
+    add("### UI component gaps")
+    add("")
+    lines.extend(_table(["Gap", "Turn"], [["an email surface drew no order though the turn held one", tid] for tid, _sig in intel["relation_gaps"]]))
+    add("### Branch (split orb) UX failures")
+    add("")
+    lines.extend(_table(["Branch", "What happened", "What was read"], [[b, what, detail] for b, what, detail in intel["branch_failures"]]))
+    add("### Precision input needed")
+    add("")
+    lines.extend(_table(["Turn", "What needed to be exact", "Detail"], [[tid, what, detail] for tid, what, detail in intel["precision_input"]]))
+    add("### Repeated corrections")
+    add("")
+    lines.extend(_table(["Turn", "Pattern", "Request"], [[tid, what, said] for tid, what, said in intel["corrections"]]))
+    add("### Repeated cross-source workflows")
+    add("")
+    lines.extend(_table(["Workflow", "Times", "Turns"], [[shape, n, ", ".join(ids)] for shape, n, ids in intel["cross_source_workflows"]]))
+    if intel["families_reached"]:
+        add(f"Intent families this session reached: {', '.join(intel['families_reached'])}. "
+            + (f"**Reached and covered by no golden scenario:** {', '.join(intel['families_uncovered'])}." if intel["families_uncovered"] else "Every one of them is covered by a golden scenario.")
+            )
+        add("")
     add("### Bulk workflows requested")
     add("")
     lines.extend(_table(["Change, in bulk", "Times", "Turns", "A batch exists and was staged"], [[op, n, ", ".join(ids), "yes" if served else "no"] for op, n, ids, served in intel["bulk"]]))
@@ -1308,8 +1769,35 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None) ->
     sets_info = intel["sets"]
     add(f"Working sets: {sets_info['made']} made ({sets_info['derived']} derived), by step {sets_info['by_step'] or '—'}; cross-source reads: {sets_info['cross_source']}. Batches run: {intel['batches']['done']}; members counted {intel['batches']['counts']}.")
     add("")
+    # 14 -----------------------------------------------------------------------------
+    add("## 14. Touch, commands and branches")
+    add("")
+    add("What was TAPPED, from the Mac's own `command` events and the branch moves beside them. "
+        "The live session wrote twenty-seven of these and the report read none of them, so an hour spent on a tablet said nothing about the tablet's own controls.")
+    add("")
+    commands = [e for e in rec.controls if str(e.get("kind") or "") == "command"]
+    by_command: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for event in commands:
+        by_command[str(event.get("command") or "?")].append(event)
+    rows = []
+    for name in sorted(by_command):
+        group = by_command[name]
+        refused = [e for e in group if e.get("ok") is False]
+        ms = [float(e["ms"]) for e in group if isinstance(e.get("ms"), (int, float))]
+        rows.append([name, len(group), len(group) - len(refused), _fmt_ms(statistics.fmean(ms)) if ms else "—",
+                     ", ".join(sorted({str(e.get("code") or "?") for e in refused})) or "—"])
+    lines.extend(_table(["Command", "Posted", "Accepted", "Avg latency", "Refusal codes"], rows))
+    staged = [e for e in rec.controls if str(e.get("kind") or "") == "command_stage"]
+    rows_actions = [e for e in rec.controls if str(e.get("kind") or "") == "row_action"]
+    branch_moves = Counter(str(e.get("kind") or "") for e in rec.controls if str(e.get("kind") or "").startswith("branch_"))
+    add(f"- Changes prepared by a tap (`command_stage`): {len(staged)} ({sum(1 for e in staged if e.get('ok') is False)} refused). Row actions: {len(rows_actions)}.")
+    add(f"- Branch moves: {dict(branch_moves) or 'none'}. Gesture collisions on the orb: {len(rec.collisions)}"
+        + (f" — {'; '.join(sorted({str(c['detail']) for c in rec.collisions}))}." if rec.collisions else "."))
+    tapped = sum(1 for t in turns if t.commands)
+    add(f"- Turns with a tap of their own: {tapped} of {len(turns)}. Commands outside any turn: {len([e for e in commands if not any(e in t.commands for t in turns)])}.")
+    add("")
     add("---")
-    add(f"Timeline: `logs/test-sessions/{session.get('test_session_id')}.jsonl` · {len(rec.events)} events · {len(rec.orphans)} outside any turn.")
+    add(f"Timeline: `logs/test-sessions/{session.get('test_session_id')}.jsonl` · {len(rec.events)} events · {len(rec.orphans)} outside any turn · {len(rec.controls)} command / branch event(s).")
     return "\n".join(lines) + "\n"
 
 
@@ -1320,7 +1808,8 @@ def _fmt_s(seconds: float | None) -> str:
     return f"{int(seconds // 60)} min {int(seconds % 60)} s" if seconds >= 60 else f"{seconds:.0f} s"
 
 
-def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]) -> list[dict[str, Any]]:
+def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str],
+                   capability_states: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     by_class: dict[str, list[Turn]] = defaultdict(list)
     for t in turns:
@@ -1340,6 +1829,8 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
         "CONTEXT_INCOMPLETE": "extend the hydration budget for the part that never arrived, or make the tablet's collection retry longer.",
         "INTENT_ERROR": "hand the model the entity in focus more plainly (the prefetch line, the context stack) for follow-up questions.",
         "UNKNOWN": "read the turn's events; the error kind has no rule here yet.",
+        "GESTURE_COLLISION": "the tablet's touch handling ended the recording. Cover it with a two-finger gesture in the tablet gate and assert ZERO turns posted; nothing here is speech's to fix.",
+        "UI_RELATION_MISSING": "the relation was in the turn's data and not on the card. Carry it on the surface (a linked-order strip the tablet can tap), not in the prose.",
         "FALSE_SUCCESS": "the worst class there is: a change reported as made that nothing staged. Read the turn, then either build the named mutation or add the limitation to app/observability/contract.py so the assistant says what it cannot do.",
         "UNFULFILLED_ACTION": "a change was asked for and nothing happened, in either direction. Decide whether the write tool is missing or the request was misread, and make the answer say which.",
         "ACTION_MISMATCH": "a different change was staged from the one asked for; tighten the tool description or the entity resolution for that phrasing.",
@@ -1380,7 +1871,37 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
     for name, n in Counter(x.missing_capability for t in turns for x in t.tools if x.missing_capability).items():
         out.append({"problem": f"Requested capability not built: {name}", "frequency": f"requested {n} time(s)", "severity": 3, "examples": [t.turn_id for t in turns if any(x.missing_capability == name for x in t.tools)][:3],
                     "component": "the tool registry (app/tools)", "task": f"build `{name}` on the action engine, or teach the assistant the nearest existing capability ({_closest_capability(name, registered)}).", "weight": 3 * n})
-    intel = intelligence(rec, registered)
+    intel = intelligence(rec, registered, capability_states=capability_states)
+    for key, n, ids, state, scope, what in intel["spoken_capabilities"]:
+        if state == _no_family():
+            out.append({"problem": f"Asked for out loud and not built: {what}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
+                        "component": "the capability families (app/capabilities/families.py, app/families/)",
+                        "task": f"decide whether `{key}` becomes a family, or whether the assistant should say plainly what it can do instead.", "weight": 3 * n})
+        else:
+            out.append({"problem": f"Asked for out loud and {state}: {what}", "frequency": f"{n} time(s)", "severity": 4, "examples": ids[:3],
+                        "component": "the write boundary and the store's scopes",
+                        "task": f"the capability exists; grant {scope or 'the scope it names'} (or connect the provider) rather than building it again.", "weight": 4 * n})
+    for shape, n, ids, why in intel["new_read_families"]:
+        if n >= 2:
+            out.append({"problem": f"A read the router places in no family, asked {n} times: {shape}", "frequency": f"{n} time(s)", "severity": 2, "examples": ids[:3],
+                        "component": "the intent families and the fast lane (app/families/, app/fastpath)",
+                        "task": f"a family and a recipe would answer this without the model ({why}).", "weight": 2 * n})
+    if intel["branch_failures"]:
+        out.append({"problem": "The split orb cost the owner something", "frequency": f"{len(intel['branch_failures'])} occurrence(s)", "severity": 3,
+                    "examples": sorted({b for b, _w, _d in intel["branch_failures"]})[:3], "component": "the branches (app/routes/branches.py, web/app.js)",
+                    "task": "read the rows in section 13: a focus that redraws nothing, or a half put aside and never returned to, is a control the glass does not have.", "weight": 3 * len(intel["branch_failures"])})
+    if len(intel["corrections"]) >= 2:
+        out.append({"problem": "The same request said again", "frequency": f"{len(intel['corrections'])} pair(s) of turns", "severity": 2,
+                    "examples": [tid for tid, _w, _s in intel["corrections"]][:3], "component": "speech, the normaliser and the answer's own wording",
+                    "task": "read each pair: the owner repeated himself because the first answer missed, or because the transcript did.", "weight": 2 * len(intel["corrections"])})
+    if len(intel["precision_input"]) >= 2:
+        out.append({"problem": "A value had to be exact and a voice could not make it so", "frequency": f"{len(intel['precision_input'])} occurrence(s)", "severity": 2,
+                    "examples": [tid for tid, _w, _d in intel["precision_input"]][:3], "component": "the precision-input path (the composer's fields, app/routes/command.py)",
+                    "task": "give the field a keyboard on the card rather than another attempt at saying it.", "weight": 2 * len(intel["precision_input"])})
+    for shape, n, ids in intel["cross_source_workflows"]:
+        if n >= 2:
+            out.append({"problem": f"A cross-source read repeated: {shape}", "frequency": f"{n} time(s)", "severity": 2, "examples": ids[:3],
+                        "component": "the read layer and the fast lane's recipes", "task": "one recipe would do this in one pass with the ids issued once.", "weight": 2 * n})
     for name, n, ids in intel["dimensions"]:
         out.append({"problem": f"Query dimension asked for and unknown: {name}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
                     "component": "the query language (app/analytics/query.py)", "task": f"decide whether `{name}` is a filter, a group or a metric, and add it with a bound; or teach the prompt the nearest existing one.", "weight": 3 * n})
@@ -1399,16 +1920,18 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
 # ---------------------------------------------------------------------- entry points
 
 
-def build_report(path: Path, *, tools_registered: list[str] | None = None) -> tuple[Reconstruction, str]:
+def build_report(path: Path, *, tools_registered: list[str] | None = None,
+                 capability_states: dict[str, dict[str, Any]] | None = None) -> tuple[Reconstruction, str]:
     events = read_events(Path(path))
     rec = reconstruct(events)
     if not rec.session.get("test_session_id"):
         rec.session["test_session_id"] = Path(path).stem
-    return rec, render(rec, tools_registered=tools_registered)
+    return rec, render(rec, tools_registered=tools_registered, capability_states=capability_states)
 
 
-def write_report(path: Path, out_dir: Path, *, tools_registered: list[str] | None = None) -> Path:
-    rec, markdown = build_report(Path(path), tools_registered=tools_registered)
+def write_report(path: Path, out_dir: Path, *, tools_registered: list[str] | None = None,
+                 capability_states: dict[str, dict[str, Any]] | None = None) -> Path:
+    rec, markdown = build_report(Path(path), tools_registered=tools_registered, capability_states=capability_states)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{rec.session.get('test_session_id') or Path(path).stem}.md"
