@@ -301,10 +301,21 @@ branch physically and accepts it:
    the build id moved, every check is green, and the capability families read as expected.
 5. **Verify on the tablet:** open CROOKS OS, confirm the dock lands, and read the settings
    sheet's "What I can do".
-6. **If it does not come up:** `make restart` once. If it is still unhealthy, the SHA to go
-   back to is the one step 1 printed as the current build before the update;
-   `git checkout <that sha> && make restart` returns to it. Nothing in this pass moves a
-   branch destructively, and the update never discards uncommitted work.
+6. **Before the first app-driven update, once:** `make commands` (this is what installs the
+   `crooks-control` wrapper), then **`crooks-control mark-good`**. That records the build
+   that is running and working as the one to come back to. Nothing has ever recorded one, so
+   until you do, there is no rollback target and the Control app's Roll back stays hidden.
+7. **If it does not come up:** `make restart` once. If it is still unhealthy,
+   `crooks-control rollback --yes` returns to the last recorded good build — it refuses a
+   dirty tree, refuses without the explicit `--yes`, and refuses a commit that is not already
+   in the checkout. Failing that, by hand: the SHA to go back to is the one step 2 printed as
+   the current build, and `git checkout <that sha> && make restart` returns to it. Nothing in
+   this pass moves a branch destructively, and the update never discards uncommitted work.
+8. **The Control app instead of any of the above:** once built (§14), the menu bar carries
+   Update, Check for update, Restart, Run tests, Start/Stop recording, Generate report, Open
+   logs and Roll back, each running the same command this list names. It is a renderer, not a
+   second implementation — a test asserts no Swift file contains a git, launchctl, pytest or
+   network call of its own.
 
 Scopes: any family whose state reads MISSING_SCOPE needs its scope granted in the Shopify
 admin before it will work. The families table names the scope; §6 above lists the new ones.
@@ -661,3 +672,100 @@ to, so it is granted in the Shopify admin and the token re-issued. Until it is, 
 so in the settings sheet, its tools are withheld from the model, and *"add a black hoodie to
 this order"* is answered with the reason rather than attempted — which is the behaviour the
 brief asks for: **do not claim the feature is ready when permission is absent.**
+
+---
+
+## 14. CROOKS Control — the Mac without Terminal (§28)
+
+The brief's own words: *"The owner does not want to operate CROOKS OS from Terminal… This app
+does not need extravagant visuals. It needs to remove Terminal from normal ownership."*
+
+**It is built in two halves, deliberately, because this machine is Linux.** There is no
+`swift`, no Xcode and no macOS here, so anything written in Swift could not be compiled, let
+alone run. Rather than hand over a thousand lines of unverifiable UI, every decision the app
+makes is in a Python command that IS tested here, and the Swift layer only draws its JSON.
+
+### The tested half — `scripts/control.py`
+
+| Command | What it answers |
+| --- | --- |
+| `crooks-control status` | The four-colour roll-up and fourteen rows, no network fetch. What the menu bar polls |
+| `crooks-control plan` | Current and candidate SHA, fast-forward or not, dirty or not, deps or not |
+| `crooks-control apply --yes` | The update, plus the three stages `crooks-update` has not got: verify the tablet route, mark successful, decide a rollback if it failed |
+| `crooks-control rollback --yes` | Back to the last recorded good build |
+| `crooks-control mark-good` | Record the running, healthy build as the one to return to |
+| `crooks-control actions` | The thirteen buttons, each with its exact argv — so the app hard-codes no command |
+| `crooks-control contract` | Every field every document returns, which a test holds the app's decoder against |
+
+**The colours are earned, not asserted.** RED when nothing is answering or speech, Claude or
+Shopify is down; BLUE while a test session is recording; AMBER read-only or degraded or no
+tablet route; GREEN everything answering, changes ready, tablet routed. Each of the four is
+driven from the right input by its own test, and one test asserts all four are reachable and
+that there is no fifth.
+
+**AMBER is the Mac's normal state today**, and that is the point: writes are off by default,
+so every write family reads READ_ONLY and the menu bar says *CROOKS — Read only*. The owner
+can see at a glance that the tablet cannot change anything.
+
+**Mutation readiness is read from the capability table** (§2.3) off `/health`, not from a
+second notion of whether writes are on — so it says MISSING_SCOPE and names the scope, the
+same words the settings sheet uses.
+
+### Two bugs found in `scripts/update.py` while extending it
+
+- `git()` stripped its whole output, so an unstaged change on the **first** line of
+  `git status --porcelain` arrived without its leading space and the path parser ate the first
+  character. A hand-edited `.env` became `env`, which is not in `NEVER_TOUCH` — so the update
+  **stopped when it should have proceeded**. Status letters are read positionally now, with
+  ten parametrised cases and an end-to-end test.
+- The `--quiet` flag was a module global that leaked between runs and silenced three unrelated
+  tests. Restored in a `finally`, with a regression test.
+
+### Verified here, independently of the agent's own tests
+
+- **Nothing in CROOKS OS can invoke the updater.** Grepping `app/`, `config/`, `web/` and
+  `experience/` for `scripts.update`, `crooks-update`, `scripts.control` and `crooks-control`
+  returns nothing. It runs when George types it, and not otherwise.
+- **A real-shaped credential in the environment does not reach the output.** Run with
+  `CROOKS_SHOPIFY_TOKEN=shpat_…` set, `crooks-control status` contains zero occurrences of it.
+- **The click is a rule of the command, not just the UI.** `rollback` without `--yes` returns
+  `ok: false, next: blocked` and moves nothing.
+- `crooks-control status` runs on this machine and correctly reports **RED — CROOKS
+  Offline**, because no backend is running here.
+
+### What is NOT verified, and must be read as such
+
+**No Swift was compiled.** `Package.swift` and roughly 900 lines across four `.swift` files
+have never been type-checked, built or seen on a screen. Expect the first build on the Mac to
+surface compile errors, and read them as compile errors rather than design faults. The known
+risks, named by the engineer who wrote them: `MenuBarExtra`'s label may render only part of an
+`HStack`; the `@MainActor`/`Sendable` hops compile in Swift 5 mode but will warn or error under
+Swift 6; `.onChange(of:)` uses the macOS 13 single-parameter form, deprecated on 14+.
+
+Also unexercised here: `build.sh` (it parses, but has never assembled a `.app`), `launchctl`
+(stubbed in every test — so the Restart button and the update's restart stage are unverified on
+a real Mac), Tailscale (no CLI here, so the tablet-route check is stub-tested only), a real
+`/health` document, and a real update end to end.
+
+`logs/last_known_good.json` is **new in this build**, written 0600 in a 0700 directory, and
+only by `apply` after `/health` read back healthy or by `mark-good`. It is deliberately never
+written when the backend is not answering, when an essential check is down, or from a detached
+HEAD — a "known good" that was never good is worse than none, because it is what a rollback
+would choose.
+
+### What the owner runs, once, on the Mac
+
+```
+cd ~/crooks-assistant/crooks-assistant
+make update CHECK=1          # read what is coming; changes nothing
+make update                  # fast-forward, deps, restart, verify /health
+make commands                # installs the crooks-control wrapper
+crooks-control mark-good     # record this build as the one to fall back to
+xcode-select --install       # once per Mac, if `swift` is missing
+make control-app             # builds and installs "CROOKS Control.app"
+open "/Applications/CROOKS Control.app"
+```
+
+The menu bar should then read **CROOKS — Read only**, which is correct while
+`CROOKS_WRITES_ENABLED` is false. If it cannot find the project, click *Project folder…* and
+choose the directory holding `scripts/control.py`.

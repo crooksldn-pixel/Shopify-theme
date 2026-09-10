@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch control control-app
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -70,6 +70,11 @@ help:
 	@echo "  crooks-status        one screen: build, voice, Claude, Shopify, Gmail, orders, the tablet's address"
 	@echo "  crooks-watch         the live trace"
 	@echo "  make commands-remove take them off again"
+	@echo ""
+	@echo "CROOKS Control — the menu bar instead of Terminal (macOS 13 or later):"
+	@echo "  make control-app     build the app and put it in /Applications; then open it"
+	@echo "  make control         what the app shows, as JSON  (WHAT=status|plan|apply|rollback|mark-good|actions|contract)"
+	@echo "  crooks-control       the same command, on the PATH after make commands"
 
 doctor:
 	@$(PY) scripts/doctor.py 2>/dev/null || python3 scripts/doctor.py
@@ -162,7 +167,13 @@ commands-remove:
 	@$(PY) scripts/install_commands.py --remove
 
 update:
-	@$(PY) scripts/update.py $(if $(CHECK),--check,)
+	@$(PY) scripts/update.py $(if $(CHECK),--check,) $(if $(TEST),--test,) $(if $(JSON),--json,)
+
+control:
+	@$(PY) scripts/control.py $(if $(WHAT),$(WHAT),status) $(if $(YES),--yes,)
+
+control-app:
+	@sh mac/CrooksControl/build.sh --install
 
 watch:
 	@$(PY) scripts/watch.py $(SESSION)
