@@ -356,3 +356,30 @@ async def test_the_session_records_which_half_a_turn_was_addressed_to(stage):
     assert live.acting_branch != live.focused_branch, (
         "this test is only meaningful while the two differ"
     )
+
+
+async def test_a_named_person_is_not_answered_from_whoever_the_open_order_belongs_to(stage):
+    """"What's Millie's address" with Mia's order open must not read Mia's address.
+
+    The same shape as the bare-number case: a question that NAMES someone is about that
+    person, whatever is on screen, and the address and status recipes fell through to the open
+    record — right shape of answer, wrong customer, spoken aloud and remembered as PII.
+    `possessive_name` already existed as a signal; these two families simply did not block on
+    it. Words like "the customer's" and "today's" are possessive without naming anyone, so
+    they stay on the fast lane.
+    """
+    opened = await stage.say("show me order 1938", session_id="named")   # Mia Jones
+    assert opened.data("order").get("order_number") == "#1938"
+
+    for words in ("what's millie's address", "where is millie's order"):
+        answered = await stage.say(words, session_id="named")
+        assert answered.recipe_id not in ("order_address_lookup", "order_status_lookup"), (
+            f"{words!r} took {answered.recipe_id!r} and answered about the open order"
+        )
+        assert "Mia Jones" not in answered.answer, answered.answer
+
+    # A possessive that names nobody still means the record on screen.
+    for words in ("what's the address", "what's the customer's address"):
+        about_it = await stage.say(words, session_id="named")
+        assert about_it.recipe_id == "order_address_lookup", f"{words!r} → {about_it.recipe_id!r}"
+        assert "Mia Jones" in about_it.answer
