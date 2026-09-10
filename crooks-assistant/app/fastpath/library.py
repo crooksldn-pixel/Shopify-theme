@@ -264,30 +264,61 @@ register(Recipe(
 # ------------------------------------------------------------------ navigation
 
 
-def _nav_plan(ctx: Ctx) -> ReadPlan | None:     # noqa: ARG001
-    return None
+def _nav_plan(ctx: Ctx) -> ReadPlan | None:
+    """Read the record the trail just landed on, when the Mac no longer holds it.
 
-
-def _command(ctx: Ctx, name: str) -> FastAnswer:
-    """A spoken instruction that is a semantic command, handed to the one implementation of it.
-
-    Back, Forward and Home are the same operations a tap performs, and there is now one of
-    each rather than two. `app/commands.py` is where they live; this is the spoken door into
-    them, and it contains no navigation logic of its own.
+    The runner has already moved the trail (app/fastpath/runner.py:_advance), so `ctx.moved`
+    says where. Memory usually has it — going back to something just looked at is not a new
+    question — and then this reads nothing at all. When memory has dropped it, the alternative
+    is announcing a move and leaving the screen where it was.
     """
-    from app import commands
+    from app.commands import _SET_KIND, MEMBER_READ, replay
+    from app.commands import Ctx as CommandCtx
 
-    outcome = commands.run(name, commands.Ctx(ctx.runtime, ctx.session, ctx.branch))
-    return FastAnswer(answer=outcome.answer, calls=list(outcome.calls),
-                      surfaces=list(outcome.surfaces), trace={"command": name, **outcome.changed})
+    moved = getattr(ctx, "moved", None) or {}
+    kind, ref = str(moved.get("kind") or ""), str(moved.get("ref") or "")
+    if not moved.get("landed") or not ref:
+        return None
+    if replay(CommandCtx(ctx.runtime, ctx.session, ctx.branch), kind, ref):
+        return None                      # held: nothing to read
+    tool, argument, _ = MEMBER_READ.get(_SET_KIND.get(kind, ""), ("", "", ""))
+    if not tool:
+        return None
+    return ReadPlan([Read("landed", tool, {argument: ref},
+                          source="gmail" if tool.startswith("gmail_") else "shopify")],
+                    label=f"navigation:{moved.get('direction') or 'back'}")
 
 
-def _nav_back(ctx: Ctx, result: ReadResult) -> FastAnswer:      # noqa: ARG001
-    return _command(ctx, "navigation.back")
+def _navigated(ctx: Ctx, result: ReadResult, *, words) -> FastAnswer:
+    """The sentence and the card for a trail move the runner already made.
+
+    The move is `app/commands.py:move_nav` — the same function a tap reaches, so there is one
+    implementation of Back. What is left here is drawing what it landed on: from memory when
+    the Mac holds it, from the read the plan made when it does not.
+    """
+    from app.commands import Ctx as CommandCtx
+    from app.commands import replay
+
+    moved = getattr(ctx, "moved", None) or {}
+    if not moved.get("landed"):
+        return FastAnswer(answer=words(None), trace={"nav": moved.get("direction"), "landed": False})
+    kind, ref, label = str(moved.get("kind") or ""), str(moved.get("ref") or ""), str(moved.get("label") or "")
+    calls = list(result.calls) or replay(CommandCtx(ctx.runtime, ctx.session, ctx.branch), kind, ref)
+    if moved.get("tab"):
+        ctx.branch.mark(tab=str(moved["tab"]))
+    return FastAnswer(answer=words(label), calls=calls, partial=result.partial,
+                      trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
+                             "drawn": bool(calls), "read": bool(result.calls)})
 
 
-def _nav_home(ctx: Ctx, result: ReadResult) -> FastAnswer:      # noqa: ARG001
-    return _command(ctx, "navigation.home")
+def _nav_back(ctx: Ctx, result: ReadResult) -> FastAnswer:
+    return _navigated(ctx, result, words=lambda label: (
+        f"Back to {label}." if label else "That is as far back as this conversation goes."))
+
+
+def _nav_home(ctx: Ctx, result: ReadResult) -> FastAnswer:
+    return _navigated(ctx, result, words=lambda label: (
+        f"Back to the start: {label}." if label else "There is nothing to go back to yet."))
 
 
 def _replay(ctx: Ctx, entry) -> list[Any]:

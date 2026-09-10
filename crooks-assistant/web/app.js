@@ -48,6 +48,7 @@ const el = {
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
   heard: $('heard'), answer: $('answer'), errline: $('errline'), toast: $('toast'), timings: $('timings'),
   context: $('context'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
+  nextBtn: $('next-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
   recent: $('recent'), recentLabel: $('recent-label'), branchBar: $('branch-bar'), orbZone: $('orb-zone'),
@@ -1014,14 +1015,79 @@ function showHistory(index) {
   scrollMax = 0;
   el.deck.dataset.depth = String(Math.min(2, index));
   el.backBtn.hidden = index === 0;
+  // Next belongs to the list, not to the history: it is offered whenever the Mac says a set
+  // is open and the cursor is not already at its end.
+  if (el.nextBtn) {
+    const workflow = branchState && branchState.workflow;
+    el.nextBtn.hidden = !workflow || Boolean(workflow.at_end);
+  }
   renderStackChips();
   setMode('context');
 }
 
-function goBack() {
+// Back is the Mac's to decide, not this page's.
+//
+// This used to walk a local array of already-rendered nodes and tell nobody. Saying "go back"
+// moved the branch's own stack on the Mac; tapping Back moved this one. The two positions
+// diverged the moment either was used, and never came back together — so "next" after a
+// tapped Back walked from somewhere the owner was not looking at.
+//
+// So the tap asks the Mac, and the Mac answers with the record it landed on. The local
+// history stays as a render cache and a fallback: if the request fails — the Mac asleep, the
+// tailnet dropped — the screen still goes back, because a Back button that does nothing when
+// the network hiccups is worse than one that is occasionally out of step.
+async function goBack() {
   T.record('navigate', { nav: 'back', from: historyIndex, to: historyIndex > 0 ? historyIndex - 1 : -1 });
+  const landed = await semanticCommand('navigation.back');
+  if (landed && landed.ok && Array.isArray(landed.ui) && landed.ui.length) {
+    const rendered = window.CrooksUI.render(landed.ui, renderOpts());
+    if (rendered.nodes.length) {
+      pushContext(rendered.nodes, landed.ui, landed.answer || '');
+      return;
+    }
+  }
+  if (landed && landed.ok && landed.answer && !(landed.ui || []).length) {
+    // The Mac says there is nothing further back. Say so rather than silently doing nothing.
+    el.answer.textContent = landed.answer;
+  }
   if (historyIndex > 0) showHistory(historyIndex - 1);
   else goHome();
+}
+
+// The next member of the open list. The same command the word "next" reaches, so the cursor
+// is one cursor: tapping and saying it alternate correctly rather than each keeping a count.
+async function goNext() {
+  const moved = await semanticCommand('workflow.next');
+  if (!moved) return;
+  if (moved.ok && Array.isArray(moved.ui) && moved.ui.length) {
+    const rendered = window.CrooksUI.render(moved.ui, renderOpts());
+    if (rendered.nodes.length) {
+      pushContext(rendered.nodes, moved.ui, moved.answer || '');
+      T.record('navigate', { nav: 'next', cursor: (moved.changed || {}).cursor, total: (moved.changed || {}).total });
+      return;
+    }
+  }
+  // At the end of the list, or nothing to draw: say what happened rather than going quiet.
+  if (moved.answer) el.answer.textContent = moved.answer;
+}
+
+// One semantic command, posted the way the tablet posts everything else: which command, and
+// which record. Never what the command should do — the Mac decides that (app/commands.py).
+async function semanticCommand(name, extra) {
+  const form = new FormData();
+  form.set('session_id', sessionId);
+  form.set('command', name);
+  if (branchState && branchState.branch_id) form.set('branch_id', branchState.branch_id);
+  for (const key of Object.keys(extra || {})) {
+    if (extra[key] !== undefined && extra[key] !== null) form.set(key, String(extra[key]));
+  }
+  try {
+    const response = await fetch('/command', { method: 'POST', body: form, cache: 'no-store' });
+    if (!response.ok && response.status >= 500) return null;
+    return await response.json();
+  } catch {
+    return null;   // offline: the caller falls back to what it can do locally
+  }
 }
 
 function goHome() {
@@ -1944,6 +2010,7 @@ el.talk.addEventListener('keyup', (event) => {
 
 el.homeBtn.addEventListener('click', goHome);
 el.backBtn.addEventListener('click', goBack);
+if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);
 el.recent.addEventListener('click', () => { T.record('navigate', { nav: 'recent', to: history.length - 1 }); if (history.length) showHistory(history.length - 1); });
 el.attention.addEventListener('click', () => {
   T.record('navigate', { nav: 'attention_open', count: attentionItems.length });

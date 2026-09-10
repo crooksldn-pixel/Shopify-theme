@@ -88,3 +88,37 @@ async def test_the_fixture_world_refuses_every_write(stage):
         await stage.store.mutate("order_cancel", {})
     with pytest.raises(GmailWrite):
         stage.gmail.service().users().messages().send(userId="me", body={}).execute()
+
+
+async def test_back_draws_the_record_even_when_memory_has_dropped_it(stage):
+    """Going back must never announce a move and leave the screen where it was.
+
+    Memory usually holds the record — returning to something just looked at is not a new
+    question — so the cheap path is a replay. When the tier has dropped it, the trail move
+    still happened and the record still has to be drawn, so it is read. This empties the
+    entity tier between the two lookups to force that path.
+    """
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    await stage.say("show me order 1938", session_id="cold")
+    await stage.say("show me order 1936", session_id="cold")
+
+    forgotten = memory().invalidate(tier=ENTITY)
+    assert forgotten, "nothing was in the entity tier to forget; the test proves nothing"
+
+    back = await stage.touch("navigation.back", session_id="cold")
+    assert back.raw.get("ok") is True, back.raw
+    # The point of the test: the tier really was cold, so this had to READ rather than replay.
+    # Without this the test would pass on the replay path and prove nothing.
+    changed = back.raw.get("changed") or {}
+    assert changed.get("replayed") is False, f"memory still held it; the cold path was not taken: {changed}"
+    assert changed.get("needs_read"), f"the cold path did not ask for a read: {changed}"
+    assert not back.prose_only, (
+        f"back announced a move and drew nothing: {back.answer!r}"
+    )
+    assert back.surface("order") is not None, f"surfaces={back.surface_types}"
+    assert back.data("order").get("order_number") == "#1938", back.data("order")
+    assert (back.entity or {}).get("ref") == "gid://shopify/Order/1938", back.entity
+    # Where the read came from — the store, or a warm read-layer cache — is not this test's
+    # business. That a card appeared after memory had dropped the record is.

@@ -108,9 +108,18 @@ def test_the_only_write_path_is_a_proposal_id():
         # /cancel abandons a question in flight; it is the only "cancel" here and changes nothing.
         for verb in ("/send", "/fulfil", "/refund", "/cancel-order", "/cancel_order", "mutation"):
             assert verb not in source, f"{name} mentions {verb}"
+    # /command is a read: it moves the branch's own position and redraws what the Mac already
+    # holds. What makes it safe to be on this list is that the tablet posts a NAME and a
+    # REFERENCE and nothing else — the write boundary's rule applied to the read side, so a
+    # tap can never carry the arguments of the thing it triggers.
+    posted = function_body(APP_JS, "async function semanticCommand(name, extra)")
+    assert "form.set('command', name)" in posted, "semanticCommand is where /command posts are built"
+    for field in ("note", "body", "amount", "reason", "address", "subject", "tags"):
+        assert f"'{field}'" not in posted, f"the tablet posts {field!r} with a command"
+
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
         base = endpoint.split("?")[0].rstrip("/")
-        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/") or endpoint.startswith("/branches/"), endpoint
+        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel", "/command"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/") or endpoint.startswith("/branches/"), endpoint
     # The context read carries the session and an order id and nothing else, and is a GET.
     body = function_body(APP_JS, "function collectPending(node, attempt = 0)")
     assert "method:" not in body and "session_id=" in body and "body:" not in body

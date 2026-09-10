@@ -150,33 +150,78 @@ def replay(ctx: Ctx, kind: str, ref: str) -> list[Any]:
     return [ToolCall(name=tool, args={f"{kind}_id": ref}, ok=True, result=held.value)]
 
 
-def _land(ctx: Ctx, entry: Any, *, words: str) -> Outcome:
-    calls = replay(ctx, entry.kind, entry.ref)
-    if entry.tab:
-        ctx.branch.mark(tab=entry.tab)
-    return Outcome(
-        answer=words,
-        calls=calls,
-        changed={"entity": {"kind": entry.kind, "ref": entry.ref, "label": entry.label},
-                 "tab": entry.tab, "replayed": bool(calls)},
-    )
+def _landed(ctx: Ctx, moved: dict[str, Any], *, words: str) -> Outcome:
+    """Draw the record the trail landed on, from memory if it is held.
+
+    When it is not, `needs_read` names it and the caller reads it — the route awaits, and the
+    fast lane plans for it. Announcing a move and leaving the screen where it was is the
+    failure this whole pass is about, and a dropped cache entry is no excuse for it.
+    """
+    kind, ref = str(moved.get("kind") or ""), str(moved.get("ref") or "")
+    calls = replay(ctx, kind, ref)
+    if moved.get("tab"):
+        ctx.branch.mark(tab=str(moved["tab"]))
+    changed: dict[str, Any] = {
+        **moved,
+        "entity": {"kind": kind, "ref": ref, "label": str(moved.get("label") or "")},
+        "replayed": bool(calls),
+    }
+    if not calls and kind in REPLAY_TOOL:
+        changed["needs_read"] = {"kind": kind, "ref": ref, "set_kind": _SET_KIND.get(kind, "")}
+    return Outcome(answer=words, calls=calls, changed=changed)
+
+
+# The working-set word for each entity kind, so a needs_read from a navigation move and one
+# from a cursor move are read the same way.
+_SET_KIND = {"order": "orders", "customer": "customers", "email_thread": "emails"}
 
 
 # --------------------------------------------------------------------------- navigation
 
 
-def _back(ctx: Ctx) -> Outcome:
-    entry = ctx.branch.back()
+# Which way each navigation command moves the branch's trail.
+NAV_MOVES = {"navigation.back": "back", "navigation.forward": "forward", "navigation.home": "home"}
+
+
+def move_nav(branch: Any, direction: str) -> dict[str, Any]:
+    """Move the trail and say where it landed. Reads nothing.
+
+    Separated from the drawing for the same reason the cursor move is: the fast lane needs to
+    know WHERE it will land before it can plan a read for it, and the read has to happen
+    before the render. Both ends call this, so there is one implementation of the move.
+    """
+    entry = None
+    if direction == "back":
+        entry = branch.back()
+    elif direction == "forward":
+        entry = branch.forward()
+    elif direction == "home" and branch.nav:
+        while branch.nav_index > 0 and branch.back() is not None:
+            pass
+        branch.nav_index = 0
+        entry = branch.nav[0]
+        branch.entity = {"kind": entry.kind, "ref": entry.ref, "label": entry.label}
     if entry is None:
-        return Outcome(answer="That is as far back as this conversation goes.", changed={"landed": False})
-    return _land(ctx, entry, words=f"Back to {entry.label}.")
+        return {"landed": False, "direction": direction}
+    return {"landed": True, "direction": direction, "kind": entry.kind, "ref": entry.ref,
+            "label": entry.label, "tab": entry.tab}
+
+
+def _navigate(ctx: Ctx, direction: str, *, nowhere: str, words) -> Outcome:
+    moved = move_nav(ctx.branch, direction)
+    if not moved.get("landed"):
+        return Outcome(answer=nowhere, changed=moved)
+    return _landed(ctx, moved, words=words(moved["label"]))
+
+
+def _back(ctx: Ctx) -> Outcome:
+    return _navigate(ctx, "back", nowhere="That is as far back as this conversation goes.",
+                     words=lambda label: f"Back to {label}.")
 
 
 def _forward(ctx: Ctx) -> Outcome:
-    entry = ctx.branch.forward()
-    if entry is None:
-        return Outcome(answer="There is nothing forward of here.", changed={"landed": False})
-    return _land(ctx, entry, words=f"Forward to {entry.label}.")
+    return _navigate(ctx, "forward", nowhere="There is nothing forward of here.",
+                     words=lambda label: f"Forward to {label}.")
 
 
 def _home(ctx: Ctx) -> Outcome:
@@ -186,16 +231,8 @@ def _home(ctx: Ctx) -> Outcome:
     rather than announcing a move and leaving the screen where it was — which is what it did
     when it set nav_index by hand.
     """
-    if not ctx.branch.nav:
-        return Outcome(answer="There is nothing to go back to yet.", changed={"landed": False})
-    while ctx.branch.nav_index > 0:
-        entry = ctx.branch.back()
-        if entry is None:
-            break
-    entry = ctx.branch.nav[0]
-    ctx.branch.nav_index = 0
-    ctx.branch.entity = {"kind": entry.kind, "ref": entry.ref, "label": entry.label}
-    return _land(ctx, entry, words=f"Back to the start: {entry.label}.")
+    return _navigate(ctx, "home", nowhere="There is nothing to go back to yet.",
+                     words=lambda label: f"Back to the start: {label}.")
 
 
 register(Command("navigation.back", "The record before this one", _back))

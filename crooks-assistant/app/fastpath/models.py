@@ -18,6 +18,9 @@ class Ctx:
     text: str
     memory: Any = None
     calls: list[Any] = field(default_factory=list)
+    # What a navigation move produced, when the runner made one before the plan ran. The plan
+    # reads it to know which record it is about to land on.
+    moved: dict[str, Any] = field(default_factory=dict)
 
     @property
     def order_number(self) -> str:

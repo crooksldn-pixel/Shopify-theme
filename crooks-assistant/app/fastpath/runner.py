@@ -113,8 +113,16 @@ def _advance(recipe: recipe_mod.Recipe, ctx: Ctx) -> None:
     the word "next" and the button called Next were two implementations of one idea and were
     free to disagree about where a list ends.
     """
-    from app.commands import move_cursor
+    from app.commands import NAV_MOVES, move_cursor, move_nav
 
+    # A navigation recipe moves the trail here, before its plan runs, so the plan knows which
+    # record it will land on and can read it when memory does not hold it. Without this the
+    # move happened during the render, by which time it was too late to read anything and a
+    # dropped cache entry meant announcing a move and drawing nothing.
+    direction = NAV_MOVES.get(f"navigation.{recipe.recipe_id.removeprefix('navigation_')}")
+    if direction is not None:
+        ctx.moved = move_nav(ctx.branch, direction)
+        return
     if ctx.branch.workflow is None:
         return
     if recipe.recipe_id == "working_set_next":

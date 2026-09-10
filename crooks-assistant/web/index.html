@@ -70,6 +70,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Assistant</span>
         </button>
         <button id="back-btn" class="chip" type="button" hidden>Back</button>
+        <!-- Shown only while a list is open. "Next" was sayable and not tappable, which made
+             the one operation two: the word moved the Mac's cursor and nothing on the tablet
+             could. Both now post workflow.next. -->
+        <button id="next-btn" class="chip" type="button" hidden>Next</button>
         <div id="stack" class="stack" aria-label="Active context"></div>
       </nav>
       <div id="deck" class="deck" data-depth="0">
