@@ -209,26 +209,78 @@ loudly**. A browser check that cannot run has proved nothing.
 
 ## 8. Benchmarks
 
-Fixture run, first useful UI (the moment something worth looking at was on screen — not the
-whole turn):
+**Card** is the backend's own measure of its own work: routing, reading, shaping, presenting,
+up to an answer with something to look at. **Round trip** adds the transport — ASGI here, Wi-Fi
+on the workbench.
 
-| | |
-|---|---|
-| order lookup | 9 ms |
-| the repeat | 5 ms |
-| today's orders | 8 ms |
-| capability surface | 26 ms |
-| full address | 4 ms |
-| customer history | 5 ms |
-| needs reply | 8 ms |
-| Back / Next / tab (touch) | 2–5 ms |
+| | card | round trip |
+|---|---|---|
+| order lookup | 7 ms | 10 ms |
+| the repeat | 3 ms | 6 ms |
+| today's orders | 4 ms | 7 ms |
+| capability surface | 5 ms | 22 ms |
+| full address | 2 ms | 4 ms |
+| customer history | 3 ms | 5 ms |
+| needs reply | 6 ms | 9 ms |
+| spoken next | 3 ms | 6 ms |
+| Back / Next / tab (touch) | 1 ms | 2–4 ms |
+| enrichment (second request) | — | 4 ms |
 
-**Read these honestly.** They are against an in-memory fixture shop, so they measure the Mac's
-own work — routing, reading the cache, shaping, presenting — and not the network. Production
-adds Shopify and Gmail round trips. What they do establish is that nothing in the new
-presentation path is slow, and that navigation is free.
+**Read these honestly**, in three ways.
+
+They are against an in-memory fixture shop, so they measure the Mac and not the network.
+Production adds Shopify and Gmail round trips.
+
+Nothing here includes speech: no run calls `/speak`.
+
+And the two columns are two numbers, which they were not until the adversarial review found
+that `first_ui_ms` was being assigned the same variable as `total_ms` — one measurement printed
+twice under a heading claiming they were different things. The card column now comes from
+`timings_ms.total` on a turn and `served_ms` on a tap; the check in `scenarios.py` fails if
+they ever collapse back into one.
 
 Every one of those turns made **zero model calls**.
+
+---
+
+## 8a. The adversarial review, and what it found
+
+Eight hunt lenses were run over this tree — prose-and-buttons, duplicate logic between voice
+and touch, state leakage, wrong answers, read-only holes, stale-and-cached, test integrity —
+and their findings were reproduced against running code before anything was changed. Twenty
+reproduced. All twenty are fixed, each with a test that fails when its fix is reverted.
+
+The ones worth knowing about, because they say what this codebase gets wrong when it goes
+wrong:
+
+**A shared cache is not a shared permission.** `commands.replay` handed back any record the
+process held, keyed on kind and ref, with no check that the asking conversation had ever been
+shown it — while `/context/order/{id}`, serving the same data, refuses exactly that. Refs are
+guessable. It checks `session.issued_ids` now, the rule every tool call already goes through.
+
+**A list, and a change, belong to one half of the orb.** Working sets carried no branch, so the
+newest set on the conversation answered for both halves — including in the sentence that tells
+the model what "these" and "all of them" mean, which reaches the write path. And
+`ActionEngine.stage` stamped the FOCUSED branch while every reader assumes the ASKING one,
+which inverted four documented properties at once, among them "a background branch never
+commits a change".
+
+**Tests that could not fail.** "Nothing was changed in the shop" read an attribute the fixture
+store does not have, so it was `not []` — true, forever. The fake inbox could not parse the
+correlation query the application actually builds, so "which customers need replying to?"
+answered "Nobody is waiting" in a world with three people waiting, with the scenario green.
+The prose regression test treated falling off the fast lane as an exemption rather than the
+regression it is.
+
+**Cards that said more than was behind them.** The capability card's chips and its whole
+"Since the last build" section were filtered to nothing by a helper that drops non-objects, so
+they never rendered at all; its per-change states read an attribute nothing ever set, so every
+change was badged "unknown"; and its row budget was eaten by reads, so "the shop" showed nine
+readings and one change while the subtitle said fourteen changes existed.
+
+One change entered the tree from a review agent and reached a commit unmentioned — the
+`possessive_name` blocks in `app/fastpath/intent.py`. It is described in `aea8f30`, which
+records how it got there, why it is right, and adds the test it was missing.
 
 ---
 
@@ -250,9 +302,29 @@ Every one of those turns made **zero model calls**.
   says nothing about the code. `LIVE_SCENARIOS` in `experience/scenarios.py` is the subset,
   and their grounding assertions are dropped in live mode: what is checked there is the
   shapes. Without credentials it says so in one line and exits 2.
-- **`/branches/{id}/back` and `/forward` still exist** alongside `POST /command`. The tablet no
-  longer calls them. They are harmless but they are a second door to the same move; closing
-  them is a small tidy-up for Phase 2 or later.
+- **`/branches/{id}/back` and `/forward` still exist** alongside `POST /command`, and the
+  tablet no longer calls them. They are no longer a second implementation — they move through
+  `commands.move_nav`, the same arithmetic as the word and the button — but they are still a
+  second door, and they do not draw. Closing them is a tidy-up for later.
+- **A replayed card does not say it is replayed.** `app/surfaces.py` declares `Freshness` and
+  says "a card that is showing a cached read must say so, because the owner is about to make a
+  decision on it" — and `present()` never sets it, so a record read 170 seconds ago looks
+  exactly like one read this instant. The risk is bounded: the action engine rereads
+  authoritative state before any change, so a stale card cannot cause a wrong write. But the
+  claim in that docstring is not yet true, and plumbing `Freshness` through `present()` is
+  presentation work sized for Phase 2.
+- **A read-only latched process still reports its changes as ready.** `readonly.active()` is
+  checked at the two clients, in `ActionEngine.commit` and in `BatchEngine.commit`, but not in
+  `runtime.write_status()` or `capabilities()`. So during a live read-only run /health says
+  writes are ready and the order card carries its full rail — for a process in which no change
+  can execute by construction. The refusal is real; it just arrives at the gesture rather than
+  on the card.
+- **The capability card's per-change states are cold until something asks.** `capabilities()`
+  now keeps what it works out, but it is deliberately not warmed at boot: the lifespan runs
+  before the clients can be swapped, so a boot-time scope read goes to whatever `build()` made
+  — which is how the order cache used to hang the harness on the network, and it hung it again
+  when tried. Until the first /health poll or the first write preflight, changes read
+  "unknown", which is honest but not useful.
 - **`pytest tests/test_browser.py` prints `RuntimeError: Event loop is closed` to stderr.**
   It is pytest-asyncio closing the loop while uvicorn's transports finish. The test passes;
   the traceback is noise.
@@ -298,23 +370,25 @@ would have to fail AND the engine would have to fail before anything could be se
 
 Branch: `claude/crooks-assistant-build-lgxlau`.
 
-Final code commit: **`f517877`** (`f517877194a2059c41de1b4750c80a20547221b0`). This document is the commit after it, so
-`git log -1` on the branch shows one further commit whose only content is this line — the SHA
-of the last commit that changed behaviour is the one above.
+Final code commit: **`efd63fc`**. This document is the commit after it, so `git log -1`
+on the branch shows one further commit whose only content is these docs — the SHA of the last
+commit that changed behaviour is the one above.
 
 Suite at handoff:
 
 | | |
 |---|---|
-| pytest, offline | **1383 passed, 2 deselected** (1342 baseline + 41) |
+| pytest, offline | **1401 passed, 2 deselected** (1342 baseline + 59) |
 | ruff | clean across `app config scripts tests experience` |
-| Node | 78 pass, 0 fail; every page script parses |
-| golden scenarios | 15/15, 92 checks |
-| browser checks | 19/19 at 800x1280 and at 400px |
+| Node | 80 pass, 0 fail; every page script parses |
+| golden scenarios | 15/15, 97 checks |
+| browser checks | 25/25 at 800x1280 and at 400px |
 | screenshots | 4, in `reports/experience/<run>/screenshots/` |
 
-The only change anywhere near `app/actions/` is a six-line refusal in `ActionEngine.commit`
-when the read-only latch is down — additive, and before anything is claimed. The 25 action
-invariants are untouched.
+Changes anywhere near `app/actions/` are three, all additive and all refusals or scoping:
+a refusal in `ActionEngine.commit` when the read-only latch is down; the same refusal in
+`BatchEngine.commit`, before the batch is claimed; and `stage()` reading `acting_branch`
+instead of `focused_branch`, so a change belongs to the half that asked for it. The 25 action
+invariants are untouched — the third of those is what makes two of them true that were not.
 
 **No deployment occurred.**

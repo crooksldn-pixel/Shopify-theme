@@ -167,10 +167,19 @@ Read caches are shared because they are immutable. Nothing else is.
 - A spoken "yes" authorising anything.
 - A card claiming something was done that was not verified by reading it back.
 - An action offered that the store has not granted — it is shown disabled, with the reason.
+- An action offered to someone who could not apply it if they tapped it.
 - The screen showing a value no tool returned.
 - A question about a record answered with a paragraph and an empty screen.
+- A record shown to a conversation that was never shown it. Read caches are shared because
+  the data is immutable; permission is not, and a cached record is reachable only by the
+  conversation it was issued to.
+- One half of the orb answering with the other half's list — by cursor, or by what "these"
+  is taken to mean.
+- A question that names a person or an order number answered from whichever record happens
+  to be open. If the words name something that is not on screen, the fast lane stands down
+  rather than answering the wrong one quickly.
 
 ---
 
-*Baseline recorded at `f517877` on `claude/crooks-assistant-build-lgxlau` for Phase 1.
+*Baseline recorded at `efd63fc` on `claude/crooks-assistant-build-lgxlau` for Phase 1.
 See `PHASE_1_HANDOFF.md` for the architecture, the scenarios and how to run them.*
