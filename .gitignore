@@ -3,3 +3,8 @@ node_modules/
 .env
 .DS_Store
 *.log
+
+# Claude Code's own scaffolding: the agent worktrees it creates while working are checkouts of
+# THIS repository living inside it. Committing them would put a second copy of the tree into
+# the branch; they are removed when the work that made them is done.
+.claude/
