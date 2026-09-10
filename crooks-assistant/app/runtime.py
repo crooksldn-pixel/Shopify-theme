@@ -501,6 +501,19 @@ def build(settings: Settings | None = None) -> Runtime:
     tests = TestSessions(settings.log_dir)
     timeline = install_timeline(Timeline(tests))
     ledger_module.observe(observe_hooks.ledger_observer)
+    # The production experience recorder (brief section 26), if it has been asked for. It hangs
+    # off the timeline as a second sink, so recording costs the turn's path nothing and adds no
+    # line to it; and it writes to its own directory, so `make test-session-report` can never
+    # take a recording for a test session. Off, this is one boolean.
+    if settings.record_experience:
+        from app.observability import recorder as recorder_module
+
+        recordings = recorder_module.Recordings(settings.log_dir)
+        timeline.mirror = recorder_module.install(
+            recorder_module.Recorder(recordings, keep_transcripts=settings.record_transcripts)
+        )
+        log.info("experience recording is ON (transcripts %s); logs/%s/",
+                 "kept" if settings.record_transcripts else "as shape only", recorder_module.DIR_NAME)
 
     # The manifest, and the fast lane's recipes, before the first question. Importing the
     # library is what registers the recipes; asserting they are read-only is what keeps them

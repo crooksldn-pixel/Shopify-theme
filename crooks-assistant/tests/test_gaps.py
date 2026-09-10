@@ -253,7 +253,7 @@ def test_a_change_reported_as_made_with_nothing_staged_is_a_false_success(questi
 
     turn = Turn(turn_id="t1")
     turn.finished = {"question": question, "answer": answer}
-    classes, _ = _contract_classes(turn)
+    classes, _signals, _notes = _contract_classes(turn)
     assert (expected in classes) if expected else ("FALSE_SUCCESS" not in classes)
 
 
@@ -262,8 +262,13 @@ def test_a_change_asked_for_that_nothing_did_and_nothing_refused_is_unfulfilled(
 
     turn = Turn(turn_id="t1")
     turn.finished = {"question": "cancel order 1938", "answer": "Right you are."}
-    classes, signals = _contract_classes(turn)
+    # Three returns, not two: `notes` are the signals that belong to the turn rather than to a
+    # class — the reading of the request, and any disagreement with the router — and they are
+    # kept apart because the caller pairs classes with signals index for index.
+    classes, signals, notes = _contract_classes(turn)
     assert "UNFULFILLED_ACTION" in classes and "nothing was staged" in " ".join(signals)
+    assert len(classes) == len(signals), "one signal per class, and the notes separately"
+    assert not [n for n in notes if "noun" in n], "cancel is an instruction, not a noun"
 
 
 # ---- I. "what more can you do now?" ----------------------------------------

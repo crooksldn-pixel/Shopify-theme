@@ -41,6 +41,10 @@ ALLOWED_FIELDS = frozenset({
     "history", "mode", "skipped", "errors", "scroll", "height", "width", "aborted", "offline", "seq", "answer_chars",
     "audio_ms", "turns", "error_kind", "detail", "chars", "before", "after", "reachable", "elapsed_ms", "index",
     "fixture", "kept", "cancelled",
+    # How many fingers were on the orb. A count, like every other field here, and the one
+    # that lets the report tell a gesture that ended a recording from a recogniser that could
+    # make nothing of it — six turns of the live session were filed as the recogniser's.
+    "fingers", "relations", "fields", "cursor", "total", "entity_kind",
 })
 
 

@@ -74,6 +74,12 @@ class Timeline:
     def __init__(self, sessions: TestSessions, *, clock=time.time) -> None:
         self.sessions = sessions
         self.clock = clock
+        # A second sink, given every event before this one decides whether it has anywhere to
+        # put it. The production experience recorder is installed here (app/observability/
+        # recorder.py) so that recording needs nothing from the turn's path: everything the
+        # test session already writes reaches the recorder too, minimised on the way in. A
+        # mirror never has a mirror of its own.
+        self.mirror: Timeline | None = None
         self._queue: queue.SimpleQueue = queue.SimpleQueue()
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
@@ -84,12 +90,31 @@ class Timeline:
     # ----------------------------------------------------------------- state
 
     @property
-    def active(self) -> TestSession | None:
+    def own(self) -> TestSession | None:
+        """The TEST session this timeline writes, and only that."""
         return self.sessions.active()
 
     @property
+    def active(self) -> TestSession | None:
+        """Whether anything is being written down — this timeline's own test session, or the
+        mirror's recording.
+
+        Callers ask this to decide whether to compose an event at all: `/turn`, the ledger
+        observer and the read scheduler all guard their emissions with it, so that a process
+        with nothing recording does no work per turn beyond one cached boolean. If it answered
+        only for the test session, a production recording would receive nothing from any of
+        those guarded call sites — which is most of the interesting ones. So it answers for
+        either, and `emit` looks up `own` when it comes to deciding where a line goes.
+        """
+        session = self.sessions.active()
+        if session is not None:
+            return session
+        mirror = self.mirror
+        return mirror.active if mirror is not None else None
+
+    @property
     def active_id(self) -> str | None:
-        session = self.active
+        session = self.own
         return session.test_session_id if session is not None else None
 
     def start(self, name: str) -> TestSession:
@@ -99,7 +124,7 @@ class Timeline:
         return session
 
     def stop(self) -> TestSession | None:
-        current = self.active
+        current = self.own
         if current is None:
             return None
         self.emit("session_stopped", name=current.name, duration_s=round(self.clock() - current.started_at, 3))
@@ -111,8 +136,15 @@ class Timeline:
     def emit(self, kind: str, *, source: str = "mac", ts: float | None = None, **fields: Any) -> dict[str, Any] | None:
         """One event, if a session is active. Returns what was queued (for tests), else None.
         Never raises: an event that cannot be written is a dropped event, counted."""
+        mirror = self.mirror
+        if mirror is not None:
+            # First, and whatever this timeline does with it: a production recording runs when
+            # no test session does, which is the whole point of it.
+            mirror.emit(kind, source=source, ts=ts, **fields)
         try:
-            session = self.active
+            # This timeline's OWN session: `active` is true while a recording runs, and a
+            # recording's line is the mirror's to write, not this one's.
+            session = self.own
             if session is None:
                 return None
             now = self.clock()
@@ -201,7 +233,7 @@ class Timeline:
         """
         # The session this is about: the one running, or — just after `stop`, which is when
         # the count is most often asked for — the one that has just ended.
-        session = self.active or self.sessions.last()
+        session = self.own or self.sessions.last()
         on_disk = count_events(self.sessions.timeline_path(session)) if session is not None else 0
         queued = self._queue.qsize()
         return {
@@ -221,12 +253,22 @@ class NullTimeline(Timeline):
         self._seq = 0
         self._written = 0
         self._dropped = 0
+        self.mirror: Timeline | None = None
+
+    @property
+    def own(self) -> TestSession | None:
+        return None
 
     @property
     def active(self) -> TestSession | None:
-        return None
+        mirror = self.mirror
+        return mirror.active if mirror is not None else None
 
-    def emit(self, kind: str, **fields: Any) -> dict[str, Any] | None:  # noqa: ARG002
+    def emit(self, kind: str, **fields: Any) -> dict[str, Any] | None:
+        # Silent for itself, and still a carrier: a process with no log directory may still
+        # have been told to record.
+        if self.mirror is not None:
+            self.mirror.emit(kind, **fields)
         return None
 
     def flush(self, timeout_s: float = 0.0) -> bool:  # noqa: ARG002

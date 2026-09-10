@@ -11,6 +11,7 @@ bench/audio/*
 # Python
 __pycache__/
 *.py[cod]
+.venv
 .venv/
 venv/
 .pytest_cache/

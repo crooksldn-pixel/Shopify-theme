@@ -129,6 +129,21 @@
     }
     const sections = q('.sec');
     if (sections.length) out.sections = sections.map((s) => String(s.getAttribute('aria-label') || '').slice(0, 40)).filter(Boolean);
+    // What this card says another record IS. The renderer marks every tappable link target
+    // with data-kind (an order strip on a thread, a customer chip, a prior order), so the
+    // KINDS it drew are readable without reading a word of it. The report needs this to tell
+    // a relation that exists in the data from one that exists on the screen: a thread card
+    // whose relations do not include 'order' did not show the order, whatever the tools
+    // returned. Kinds only — never the reference, which is a record's id, and never the text.
+    const relations = q('[data-kind]');
+    if (relations.length) {
+      const kinds = [];
+      relations.forEach((r) => {
+        const kind = String((r.dataset && r.dataset.kind) || '').slice(0, 24);
+        if (kind && kinds.indexOf(kind) === -1) kinds.push(kind);
+      });
+      if (kinds.length) out.relations = kinds.sort();
+    }
     const chips = q('.rail-chip');
     if (chips.length) {
       out.actions = chips.map((c) => {
