@@ -446,3 +446,30 @@ def test_a_recording_too_short_to_send_is_seen_and_felt():
     """The sub-line is hidden beside the cards, which is exactly when this happens most."""
     assert "el.errline.textContent = TOO_SHORT;" in APP_JS
     assert "const TOO_SHORT = 'That was too short — hold while you speak.';" in APP_JS
+
+
+# ------------------------------------------------------- what the assistant can do, on screen
+
+
+def test_the_settings_sheet_reports_every_capability_state_from_the_mac():
+    """Brief section 29: the tablet uses the family states to enable, disable, hide or EXPLAIN
+    — without guessing. The owner could not tell "I can't do that" from "the shop has not
+    granted that permission", and the second is the one he can fix.
+    """
+    assert 'id="families"' in INDEX, "the settings sheet has nowhere to report them"
+    # Read from the health payload, not decided here.
+    assert "renderFamilies(data.families)" in function_body(APP_JS, "async function pollHealth(fresh = false)")
+    words = function_body(APP_JS, "const FAMILY_WORDS = {")
+    for state in ("READY", "READ_ONLY", "MISSING_SCOPE", "NOT_SUPPORTED_BY_STORE",
+                  "DISCONNECTED", "NOT_IMPLEMENTED", "TEMPORARILY_UNAVAILABLE"):
+        assert state in words, f"{state} would be printed to the owner as a machine word"
+    row = function_body(APP_JS, "function familyRow(family)")
+    # The reason is shown when there is something to explain, and the scope named when the
+    # Mac's sentence does not already carry it: that scope is the one thing the owner has to
+    # go and grant in Shopify.
+    assert "state !== 'READY'" in row and "family.scope" in row
+    listing = function_body(APP_JS, "function renderFamilies(families)")
+    assert "!f.hide" in listing, "a family the Mac says to hide would still be listed"
+    assert "(a.state === 'READY') - (b.state === 'READY')" in listing, "the unavailable ones are the ones worth reading first"
+    # Offline, the section says so rather than keeping the last good list on screen.
+    assert "the Mac cannot be reached" in function_body(APP_JS, "async function pollHealth(fresh = false)")

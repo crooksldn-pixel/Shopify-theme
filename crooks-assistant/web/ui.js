@@ -1716,6 +1716,38 @@
     }
   }
 
+  // A supporting card, folded away behind its own title (brief section 22). The Mac decides
+  // which cards are secondary — the second ranking of a turn, the second list — because it
+  // is the one that knows what the answer was about; the tablet decides how that looks. The
+  // card itself is untouched and complete: this is disclosure, not truncation, and the header
+  // says what is inside so nothing is hidden from the reader.
+  function folded(node, label) {
+    const wrap = h('article', { class: 'card card-folded', data: { type: 'folded', of: node.dataset ? node.dataset.type || '' : '' } });
+    const btn = h('button', { class: 'fold-head', type: 'button', 'aria-expanded': 'false' }, [
+      h('span', { class: 'fold-label', text: label || 'More' }),
+      h('span', { class: 'fold-mark', text: '+', 'aria-hidden': 'true' }),
+    ]);
+    const body = h('div', { class: 'fold-body', hidden: true }, [node]);
+    btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      body.hidden = open;
+      btn.querySelector('.fold-mark').textContent = open ? '+' : '−';
+    });
+    append(wrap, [btn, body]);
+    return wrap;
+  }
+
+  // What a folded card says on its header: its own title where it has one, else its kind.
+  const FOLD_WORDS = {
+    ranking: 'Another ranking', order_list: 'Another list of orders', email_list: 'More email',
+    table: 'Another table', metric_group: 'More numbers', comparison: 'Another comparison', trend: 'Another trend',
+  };
+  function foldLabel(item) {
+    const title = item.data && typeof item.data.title === 'string' ? text(item.data.title) : '';
+    return title || FOLD_WORDS[item.type] || 'More';
+  }
+
   function render(items, opts) {
     const out = { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
     if (!Array.isArray(items)) return out;
@@ -1723,8 +1755,9 @@
       if (!isValid(item)) { out.skipped.push(item && typeof item.type === 'string' ? item.type : 'invalid'); continue; }
       if (item.type === 'context_stack') { out.stack = list(item.data.entries, 6); continue; }
       if (item.type === 'error') out.errors.push(item.data);
-      const node = renderItem(item, opts);
+      let node = renderItem(item, opts);
       if (!node) { out.skipped.push(item.type); continue; }
+      if (item.data && item.data.secondary === true) node = folded(node, foldLabel(item));
       out.nodes.push(node);
       if (CONTEXT_TYPES.indexOf(item.type) !== -1) out.hasContext = true;
     }

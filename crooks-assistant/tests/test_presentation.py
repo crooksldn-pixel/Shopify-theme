@@ -379,3 +379,66 @@ def test_the_order_card_carries_the_rail_only_from_the_macs_capabilities():
     assert without[0]["data"]["actions"] == []
     summary = present([ok("shopify_find_order", {"orders": [ORDER]})], writes={"allowed": True, "capabilities": caps})
     assert "actions" not in summary[0]["data"], "a summary card has no rail; the order is not known well enough"
+
+
+# ------------------------------------------------------------------ one screen, not three
+
+
+def test_a_turn_publishes_one_cursor_and_one_headline_per_kind():
+    """Brief section 22, measured at 601 x 889: the dock's Orders landing reads two lists and
+    drew two "these" cards; Products stacked two full rankings at 1,498 px on an 889 px
+    screen. One working set survives a turn, and the second card of a kind is marked for the
+    tablet to fold — nothing is removed, and the first of each kind is untouched.
+    """
+    from app.presentation import _merge, compact
+
+    items = [
+        {"type": "order_list", "data": {"title": "To go out", "orders": []}},
+        {"type": "working_set", "data": {"set_id": "ws_1", "count": 3}},
+        {"type": "order_list", "data": {"title": "Today", "orders": []}},
+        {"type": "working_set", "data": {"set_id": "ws_2", "count": 2}},
+    ]
+    out = compact(items)
+    assert [i["type"] for i in out] == ["order_list", "working_set", "order_list"]
+    assert out[0]["data"].get("secondary") is None, "the answer's headline is not folded"
+    assert out[2]["data"]["secondary"] is True
+    assert out[1]["data"]["set_id"] == "ws_1", "the surviving cursor is the first, which the branch adopted"
+
+    # Two rankings: the second is evidence.
+    ranks = compact([
+        {"type": "ranking", "data": {"title": "Best sellers", "rows": [1]}},
+        {"type": "ranking", "data": {"title": "Running out", "rows": [2]}},
+    ])
+    assert [i["data"].get("secondary") for i in ranks] == [None, True]
+    assert ranks[1]["data"]["rows"] == [2], "folded, not truncated: the rows are all still there"
+
+    # Two DIFFERENT kinds are both headlines — the Sales landing's numbers and its ranking.
+    mixed = compact([
+        {"type": "metric_group", "data": {"title": "This week"}},
+        {"type": "ranking", "data": {"title": "Selling"}},
+    ])
+    assert [i["data"].get("secondary") for i in mixed] == [None, None]
+
+    # Two orders are two records, both wanted open; a repeat of the SAME one still folds into
+    # the detail card, as it always did — that rule stayed in _merge, inside present().
+    orders = _merge([
+        {"type": "order", "data": {"order_id": "a", "order_number": "#1", "detail": False}},
+        {"type": "order", "data": {"order_id": "b", "order_number": "#2", "detail": True}},
+        {"type": "order", "data": {"order_id": "a", "order_number": "#1", "detail": True}},
+    ])
+    assert len(orders) == 2 and all(o["data"].get("secondary") is None for o in orders)
+    assert orders[0]["data"]["detail"] is True
+    assert all(o["data"].get("secondary") is None for o in compact(orders)), "an order card is never folded"
+
+
+def test_a_recipes_own_card_is_compacted_with_the_tool_cards_not_apart_from_them():
+    """The Inbox landing's queue card is the recipe's and its recent-threads card is the
+    search read's, so the two only meet after present() has run. Compacting inside present()
+    left them both open: 952 px on an 889 px screen, measured at 601 x 889."""
+    from app.presentation import compact
+
+    queue = {"type": "email_list", "surface": "work_queue", "data": {"title": "Waiting on a reply", "threads": []}}
+    recent = {"type": "email_list", "data": {"title": "Inbox", "threads": []}}
+    out = compact([queue, recent])
+    assert out[0]["data"].get("secondary") is None and out[1]["data"]["secondary"] is True
+    assert out[0]["surface"] == "work_queue", "the queue the question asked for stays the headline"

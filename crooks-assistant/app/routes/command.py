@@ -26,7 +26,7 @@ from fastapi.responses import JSONResponse
 
 from app import commands
 from app.observability import timeline
-from app.presentation import present
+from app.presentation import compact, present
 from app.routes.actions import session_matches, writes_context
 
 router = APIRouter(tags=["command"])
@@ -136,6 +136,9 @@ async def command(
     ui = present(calls, session=session, writes=await _writes(request))
     if outcome.surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in outcome.surfaces] + ui
+    # The same compaction a spoken turn gets: a tap on Inbox draws the queue and the recent
+    # threads, and two email lists do not fit an eight-inch screen (brief section 22).
+    ui = compact(ui)
     if any(item.get("type") != "context_stack" for item in ui):
         # What this half now shows, kept on the Mac: a tap that drew cards is as much this
         # half's workspace as a sentence that did, and `branch.show` redraws it after a

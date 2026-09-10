@@ -297,6 +297,19 @@ body[data-mode="context"] .errline{display:none}
   overflow:hidden;
   flex:none;   /* the deck scrolls; a tall card is never shrunk to fit and clipped */
 }
+/* A supporting card, folded (brief section 22). The Products landing stacked two full
+   rankings — 1,498 px on an 889 px screen; folded, the headline and the actions are on one
+   screen and the second ranking is one tap away. No padding of its own: the card inside
+   keeps its own, and a card inside a card with two paddings reads as a mistake. */
+.card-folded{padding:0;background:var(--bg-1);box-shadow:none}
+.fold-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  min-height:48px;padding:0 16px;background:none;border:0;color:var(--ink-2);
+  font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer;
+}
+.fold-head:active{background:var(--glass-control-active)}
+.fold-mark{color:var(--ink-3);font-size:16px;line-height:1}
+.card-folded .fold-body > .card{border:0;box-shadow:none;background:none;animation:none}
 .card::before{ /* soft edge light, top-left: the atmosphere's warm glow, caught by the glass */
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:radial-gradient(60% 40% at 12% 0%,rgba(255,240,220,.08),transparent 70%);
@@ -593,6 +606,17 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
 .hname{color:var(--ink);font-weight:600}
 .hrow[data-ok="false"] .hname{color:var(--bad)}
 .hdetail{color:var(--ink-3);word-break:break-word;font-size:12px;line-height:1.45}
+/* The capability families (brief section 29). Same rows as the health list, with a state word
+   instead of a dot: READY is quiet, an unavailable one says which kind of unavailable it is,
+   because "I can't do that" without a reason is what sent the owner to Terminal. */
+.frow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.frow:first-child{border-top:0}
+.fname{color:var(--ink);font-weight:600}
+.fstate{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.frow[data-ready="true"] .fstate{color:var(--ok)}
+.frow[data-ready="false"] .fstate{color:var(--warn)}
+.frow[data-state="TEMPORARILY_UNAVAILABLE"] .fstate{color:var(--bad)}
+.fdetail{grid-column:1 / -1;color:var(--ink-3);word-break:break-word;font-size:12px;line-height:1.45}
 .dev{border:1px dashed rgba(220,178,102,.4);border-radius:var(--r-2);padding:12px 14px;margin-top:20px}
 .dev h3{margin-top:0;color:var(--warn)}
 .dev-grid{display:flex;flex-wrap:wrap;gap:8px}

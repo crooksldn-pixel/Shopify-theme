@@ -1071,6 +1071,13 @@ _OUTCOME_WORDS: dict[str, tuple[str, str]] = {
 # --------------------------------------------------------------------------- merging, memory
 
 
+# The card kinds a turn may draw more than one of. The second and later are the answer's
+# supporting evidence, not its headline, and are marked so the tablet can collapse them
+# (brief section 22: reorganise, do not remove). An `order` is not here — two orders in one
+# turn are two records, both wanted open; `_merge` already folds a repeat of the SAME one.
+SECONDARY_KINDS = frozenset({"ranking", "order_list", "email_list", "table", "metric_group", "comparison", "trend"})
+
+
 def _merge(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One card per entity. A find followed by a detail lookup of the same order in one turn
     yields the detail card only; the summary is a strict subset of it."""
@@ -1085,6 +1092,44 @@ def _merge(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     out[index] = item
                 continue
             seen_orders[ref] = len(out)
+        out.append(item)
+    return out
+
+
+def compact(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One cursor per turn, and one headline per kind (brief section 22).
+
+    Applied to the WHOLE screen, after a recipe's own surfaces have been put in front of the
+    cards the tools produced — which is why it is not part of `_merge`. `_merge` runs inside
+    `present()` and can only see the tool cards, so the Inbox landing, whose queue card is the
+    recipe's and whose recent-threads card is the search read's, stacked two email lists:
+    952 px on an 889 px screen, measured.
+
+    Two rules, both measured at 601 x 889 (the tablet's own viewport):
+
+    * One `working_set` card. Two cards each saying "these" are two claims to the same word —
+      the same reason `working_set_items` refuses to draw a card per derived set — and the
+      dock's Orders landing, which reads two lists, drew two of them (1,112 px → 671 px).
+    * The second and later card of one analytic kind is marked `secondary`, and the tablet
+      draws it folded behind its own title (web/ui.js:folded). The Products landing stacked
+      two full rankings, 1,498 px; folded, the headline and the actions are on one screen and
+      the second ranking is one tap away (→ 736 px). Nothing is removed: the folded card is
+      the whole card.
+    """
+    out: list[dict[str, Any]] = []
+    seen_kinds: set[str] = set()
+    have_set = False
+    for item in items:
+        kind = str(item.get("type") or "")
+        data = item.get("data")
+        if kind == "working_set":
+            if have_set:
+                continue
+            have_set = True
+        elif kind in SECONDARY_KINDS and isinstance(data, dict):
+            if kind in seen_kinds:
+                item = {**item, "data": {**data, "secondary": True}}
+            seen_kinds.add(kind)
         out.append(item)
     return out
 

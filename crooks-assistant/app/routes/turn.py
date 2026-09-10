@@ -21,7 +21,7 @@ from app.actions.grammar import AFFIRMATION_BLOCKED, affirmation_for, words_for
 from app.actions.grammar import FIXED_LINES as GRAMMAR_FIXED_LINES
 from app.logging.turnlog import redact
 from app.observability import timeline
-from app.presentation import present
+from app.presentation import compact, present
 from app.providers.base import ToolCall
 from app.routes.actions import session_matches, writes_context
 from app.speech.decode import DecodeError, decode
@@ -1101,6 +1101,10 @@ async def _answer(
     # the context stack and behind nothing: it IS the answer to the question that was asked.
     if surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in surfaces] + ui
+    # One cursor, one headline per kind, the rest folded (brief section 22). Here rather than
+    # inside present(): a recipe's own cards are in front of the tool cards by now, and it is
+    # the two together that have to fit an eight-inch screen.
+    ui = compact(ui)
     # When the Mac had cards to show, as a fact and not an inference (brief section 25 asks
     # for time-to-first-useful-workspace measured APART from the whole turn). Taken here,
     # after present(), because this is the moment the workspace exists.

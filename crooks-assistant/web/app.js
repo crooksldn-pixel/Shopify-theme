@@ -64,7 +64,7 @@ const el = {
   voiceStatus: $('voice-status'), voiceName: $('voice-name'),
   voiceSelect: $('voice-select'), voiceNote: $('voice-note'), preview: $('preview-voice'),
   micTest: $('mic-test'), speakToggle: $('speak-toggle'), streamToggle: $('stream-toggle'), timingToggle: $('timing-toggle'),
-  health: $('health-detail'), resetSession: $('reset-session'),
+  health: $('health-detail'), families: $('families'), resetSession: $('reset-session'),
   dev: $('dev'), devGrid: $('dev-grid'), devText: $('dev-text'),
 };
 
@@ -710,6 +710,7 @@ async function pollHealth(fresh = false) {
     const writesState = data.writes && data.writes.state;
     setService('changes', writesState === 'ready' ? true : writesState === 'disabled' ? 'off' : writesState ? false : null);
     renderHealthRows(checks);
+    renderFamilies(data.families);
     const voice = data.voice || {};
     if (voice.voice) {
       el.voiceName.textContent = voice.enabled
@@ -724,6 +725,7 @@ async function pollHealth(fresh = false) {
     setService('shopify', null); setService('gmail', null); setService('voice', null); setService('changes', null);
     clear(el.health);
     el.health.appendChild(healthRow(false, 'the Mac', 'Cannot reach the assistant. Is the Mac awake and is it running (make up)?'));
+    if (el.families) { clear(el.families); el.families.appendChild(familyRow({ label: 'Everything', state: 'TEMPORARILY_UNAVAILABLE', detail: 'the Mac cannot be reached' })); }
     el.voiceStatus.textContent = 'Unknown';
     el.voiceStatus.className = 'badge quiet';
     wentOffline();
@@ -747,6 +749,52 @@ function healthRow(ok, name, detail) {
   row.appendChild(dot); row.appendChild(label); row.appendChild(text);
   return row;
 }
+// What the assistant can do, by family, with the reason when it cannot (brief section 29).
+// The states come from the Mac (app/capabilities/families.py) and are shown as they are: the
+// tablet never decides that store credit is unavailable, it reports that the Mac said so.
+// The same table decides which tools the model is offered at all, so this section explains
+// what the owner will and will not be able to ask for — before he asks.
+const FAMILY_WORDS = {
+  READY: 'Ready', READ_ONLY: 'Read only', MISSING_SCOPE: 'Needs permission',
+  NOT_SUPPORTED_BY_STORE: 'Not on this store', DISCONNECTED: 'Not connected',
+  NOT_IMPLEMENTED: 'Not built yet', TEMPORARILY_UNAVAILABLE: 'Not answering',
+};
+function familyRow(family) {
+  const state = String(family.state || 'NOT_IMPLEMENTED');
+  const row = document.createElement('div');
+  row.className = 'frow';
+  row.setAttribute('role', 'listitem');
+  row.dataset.state = state;
+  row.dataset.ready = state === 'READY' ? 'true' : 'false';
+  const name = document.createElement('span'); name.className = 'fname'; name.textContent = family.label || family.key || '';
+  const word = document.createElement('span'); word.className = 'fstate'; word.textContent = FAMILY_WORDS[state] || state;
+  row.appendChild(name); row.appendChild(word);
+  // The reason, in the Mac's words. A missing scope names the scope, which is what the owner
+  // has to grant in Shopify — the one thing he cannot work out from the tablet.
+  const detail = String(family.detail || '');
+  if (detail && state !== 'READY') {
+    const line = document.createElement('span'); line.className = 'fdetail';
+    line.textContent = family.scope && detail.indexOf(family.scope) === -1 ? `${detail} (${family.scope})` : detail;
+    row.appendChild(line);
+  }
+  return row;
+}
+function renderFamilies(families) {
+  if (!el.families) return;
+  clear(el.families);
+  const rows = Object.keys(families || {}).map((key) => ({ key, ...(families[key] || {}) }))
+    // A family the Mac says to hide is hidden; the rest are grouped by area so the list reads
+    // like the shop rather than like a registry, unavailable ones first — those are the ones
+    // worth reading.
+    .filter((f) => !f.hide && f.key !== '_error')
+    .sort((a, b) => (a.state === 'READY') - (b.state === 'READY') || String(a.area).localeCompare(String(b.area)) || String(a.label).localeCompare(String(b.label)));
+  if (!rows.length) {
+    el.families.appendChild(familyRow({ label: 'Capabilities', state: 'TEMPORARILY_UNAVAILABLE', detail: 'the Mac did not list them this time' }));
+    return;
+  }
+  for (const family of rows) el.families.appendChild(familyRow(family));
+}
+
 function renderHealthRows(checks) {
   clear(el.health);
   const order = ['claude', 'speech', 'tts', 'shopify', 'gmail', 'writes', 'scribe', 'whisper', 'knowledge_base', 'terminology'];
