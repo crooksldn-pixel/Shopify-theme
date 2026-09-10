@@ -90,12 +90,31 @@ class Timeline:
     # ----------------------------------------------------------------- state
 
     @property
-    def active(self) -> TestSession | None:
+    def own(self) -> TestSession | None:
+        """The TEST session this timeline writes, and only that."""
         return self.sessions.active()
 
     @property
+    def active(self) -> TestSession | None:
+        """Whether anything is being written down — this timeline's own test session, or the
+        mirror's recording.
+
+        Callers ask this to decide whether to compose an event at all: `/turn`, the ledger
+        observer and the read scheduler all guard their emissions with it, so that a process
+        with nothing recording does no work per turn beyond one cached boolean. If it answered
+        only for the test session, a production recording would receive nothing from any of
+        those guarded call sites — which is most of the interesting ones. So it answers for
+        either, and `emit` looks up `own` when it comes to deciding where a line goes.
+        """
+        session = self.sessions.active()
+        if session is not None:
+            return session
+        mirror = self.mirror
+        return mirror.active if mirror is not None else None
+
+    @property
     def active_id(self) -> str | None:
-        session = self.active
+        session = self.own
         return session.test_session_id if session is not None else None
 
     def start(self, name: str) -> TestSession:
@@ -105,7 +124,7 @@ class Timeline:
         return session
 
     def stop(self) -> TestSession | None:
-        current = self.active
+        current = self.own
         if current is None:
             return None
         self.emit("session_stopped", name=current.name, duration_s=round(self.clock() - current.started_at, 3))
@@ -123,7 +142,9 @@ class Timeline:
             # no test session does, which is the whole point of it.
             mirror.emit(kind, source=source, ts=ts, **fields)
         try:
-            session = self.active
+            # This timeline's OWN session: `active` is true while a recording runs, and a
+            # recording's line is the mirror's to write, not this one's.
+            session = self.own
             if session is None:
                 return None
             now = self.clock()
@@ -212,7 +233,7 @@ class Timeline:
         """
         # The session this is about: the one running, or — just after `stop`, which is when
         # the count is most often asked for — the one that has just ended.
-        session = self.active or self.sessions.last()
+        session = self.own or self.sessions.last()
         on_disk = count_events(self.sessions.timeline_path(session)) if session is not None else 0
         queued = self._queue.qsize()
         return {
@@ -235,8 +256,13 @@ class NullTimeline(Timeline):
         self.mirror: Timeline | None = None
 
     @property
-    def active(self) -> TestSession | None:
+    def own(self) -> TestSession | None:
         return None
+
+    @property
+    def active(self) -> TestSession | None:
+        mirror = self.mirror
+        return mirror.active if mirror is not None else None
 
     def emit(self, kind: str, **fields: Any) -> dict[str, Any] | None:
         # Silent for itself, and still a carrier: a process with no log directory may still

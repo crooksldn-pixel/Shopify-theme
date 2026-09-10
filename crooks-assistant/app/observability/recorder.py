@@ -207,7 +207,7 @@ class Recorder(Timeline):
         self.mirror = None      # a mirror never has a mirror
 
     def emit(self, kind: str, *, source: str = "mac", ts: float | None = None, **fields: Any) -> dict[str, Any] | None:
-        if self.active is None:
+        if self.own is None:
             return None
         shape = transcript_shape(fields)
         if self.keep_transcripts:
