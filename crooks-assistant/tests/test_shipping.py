@@ -138,7 +138,12 @@ async def test_the_capability_row_says_disconnected_and_why():
     assert row["tools"] == [] and row["operations"] == []
     # The model is told not to attempt it, in one line, with the reason.
     lines = families.words({"shipping_provider": row})
-    assert lines and "DISCONNECTED" in lines[0] and "Do not attempt it" in lines[0]
+    # The instruction is at the head of the block (app/routes/turn.py FAMILY_LINE_PREFIX),
+    # said once rather than on each line; the reason is clipped to a clause for the prompt and
+    # kept whole for the owner's card.
+    assert lines and "DISCONNECTED" in lines[0] and "Shipping labels" in lines[0]
+    assert TOKEN_ENV in lines[0], lines[0]
+    assert "Do not attempt" not in lines[0], lines[0]
 
 
 async def test_the_row_follows_the_provider_rather_than_a_declaration():

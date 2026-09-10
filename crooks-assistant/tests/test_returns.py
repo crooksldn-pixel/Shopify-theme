@@ -166,7 +166,11 @@ async def test_the_four_rows_say_not_implemented_and_name_the_scope_to_grant():
         assert row["scope"] == capability.scopes[0]
         assert row["tools"] == [] and row["operations"] == []
         line = families.words({key: row})[0]
-        assert capability.scopes[0] in line and "Do not attempt it" in line
+        # The instruction lives once at the head of the block (app/routes/turn.py
+        # FAMILY_LINE_PREFIX), not on every line: with seven unavailable families it was
+        # 287 characters a turn of the same sentence.
+        assert capability.scopes[0] in line and "NOT_IMPLEMENTED" in line
+        assert "Do not attempt" not in line, line
 
 
 async def test_the_rows_carry_the_mutation_and_the_verification_for_whoever_builds_it():
