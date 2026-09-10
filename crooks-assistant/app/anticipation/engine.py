@@ -23,8 +23,9 @@ Every hard rule of §18 is mechanical here rather than advisory:
   prediction whose answer is already fresh in the tiered cache is skipped; what does run goes
   into that same cache, so the requested read that follows finds it there instead of asking
   Shopify a second time.
-* **Bounded.** `MAX_ANTICIPATED` reads in flight per conversation, of which at most
-  `MAX_SPECULATIVE` are P2. Both numbers are measured rather than chosen — see the constants.
+* **Bounded.** Per conversation: `MAX_PER_SOURCE` reads of any one source, `MAX_ANTICIPATED`
+  that spend a source's rate at all, and of those at most `MAX_SPECULATIVE` of the P2 kind.
+  The numbers are measured rather than chosen — see the constants, and bench/anticipation.py.
 * **Isolated.** Everything is keyed by scope (login and conversation). One owner's speculation
   is never cancelled by, counted against, or served to another's.
 
