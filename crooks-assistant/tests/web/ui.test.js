@@ -886,6 +886,27 @@ test('a customer with nothing behind a tab is not given a tab bar', () => {
   assert.deepEqual(full.querySelectorAll('.tab').map((t) => t.textContent), ['Overview', 'Orders', 'Email']);
 });
 
+/* ------------------------------------------------ what never arrived, said so */
+
+test('an order whose inbox never arrived says so, on the panel and on the tab', () => {
+  const node = UI.renderItem({ type: 'order', data: {
+    order_number: '#1938', customer_name: 'Mia Jones', detail: true, items: [{ title: 'Convict Hoodie', quantity: 1 }],
+    pending: ['email', 'history'],
+  } }, {});
+  assert.ok(node.dataset.pending.indexOf('email') !== -1, 'the card starts out waiting');
+  const settled = UI.settleOrder(node);
+  assert.deepEqual(settled.sort(), ['email', 'history']);
+  assert.equal(node.dataset.pending, '', 'it is not waiting any more');
+  const email = node.querySelector('.sec-email');
+  assert.ok(email && /could not be read/.test(email.textContent), 'the region says the read failed');
+  assert.ok(/check the inbox for #1938/.test(email.textContent), 'and says what to say to try again');
+  assert.ok(!/Checking the inbox/.test(node.textContent), 'nothing pretends to still be working');
+  const marked = node.querySelectorAll('[data-unread="1"]');
+  assert.equal(marked.length, 2, 'both tabs carry the mark');
+  assert.ok(marked.every((t) => t.getAttribute('role') === 'tab' && t.querySelector('.tab-mark')), 'on the tab, visibly');
+  assert.deepEqual(UI.settleOrder(node), [], 'settling twice changes nothing');
+});
+
 /* -------------------------------------------------------- a button beside a row */
 
 test('an email row carries the buttons the Mac listed, and posts only which and which', () => {

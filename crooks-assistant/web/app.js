@@ -983,13 +983,20 @@ function snapshotSoon(extra) {
 const CONTEXT_WAITS_MS = [300, 2500, 6000];
 function collectPending(node, attempt = 0) {
   if (!node || !node.dataset || node.dataset.type !== 'order' || !node.dataset.pending || !node.dataset.ref) return;
-  if (attempt >= CONTEXT_WAITS_MS.length || !window.CrooksUI || typeof window.CrooksUI.hydrateOrder !== 'function') return;
+  if (!window.CrooksUI || typeof window.CrooksUI.hydrateOrder !== 'function') return;
   const orderId = node.dataset.ref;
+  // When the asking ends without an answer, the card says so. It used to stop asking and
+  // leave "Checking the inbox…" standing — a failure drawn as work in progress, forever.
+  const settle = (why) => {
+    const regions = typeof window.CrooksUI.settleOrder === 'function' ? window.CrooksUI.settleOrder(node) : [];
+    if (regions.length) T.record('context_unread', { order_id: orderId, detail: regions.join(' '), name: why });
+  };
+  if (attempt >= CONTEXT_WAITS_MS.length) { settle('gave_up'); return; }
   setTimeout(async () => {
     if (!node.dataset.pending || !node.isConnected && !history.some((entry) => entry.nodes.indexOf(node) !== -1)) return;
     try {
       const response = await fetch(`/context/order/${encodeURIComponent(orderId)}?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
-      if (!response.ok) { T.record('context_failed', { order_id: orderId, status: response.status, index: attempt }); return; }   // not this session's order any more, or the Mac cannot say: leave the card honest
+      if (!response.ok) { T.record('context_failed', { order_id: orderId, status: response.status, index: attempt }); settle('refused'); return; }   // not this session's order any more, or the Mac cannot say
       const ext = await response.json();
       const still = window.CrooksUI.hydrateOrder(node, ext);
       T.record(still.length ? 'context_pending' : 'context_landed', { order_id: orderId, context_request_id: ext && ext.context_request_id, index: attempt, detail: still.length ? still.join(' ') : undefined });

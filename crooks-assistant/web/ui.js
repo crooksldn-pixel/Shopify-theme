@@ -542,6 +542,43 @@
     return pending;
   }
 
+  // What never arrived, said so. The tablet asks for the rest of an order three times and
+  // then stops asking — and the panel it stopped asking for kept reading "Checking the
+  // inbox…", byte for byte, 34.8 seconds later. Held in one hand, the card read as complete
+  // and calm while the one thing that made the order urgent — a customer waiting on a reply —
+  // had silently gone from the screen. A read that failed is drawn as a read that failed:
+  // the region says so in words, with what to say to try again, and the tab it lives behind
+  // carries a mark, so a closed tab is not an all-clear.
+  function settleOrder(node, opts) {
+    if (!node || !node.dataset) return [];
+    const pending = text(node.dataset.pending).split(' ').filter(Boolean);
+    if (!pending.length) return [];
+    const number = text(opts && opts.number) || text((node.querySelector('.card-title') || {}).textContent).replace(/^#/, '');
+    const words = {
+      email: `The inbox could not be read this time. Say “check the inbox for ${number ? '#' + number : 'this order'}” to try again.`,
+      history: 'Their history could not be read this time. Say “what else has this customer ordered?” to try again.',
+    };
+    const tabsFor = { email: 'email', history: 'customer' };
+    for (const kind of pending) {
+      const sec = node.querySelector(`.sec-${kind}`);
+      if (sec) {
+        const keep = sec.querySelector('.sec-kicker');
+        while (sec.firstChild) sec.removeChild(sec.firstChild);
+        if (keep) sec.appendChild(keep);
+        sec.appendChild(h('p', { class: 'card-note unread-line', text: words[kind] || 'This could not be read this time.' }));
+      }
+      const tab = node.querySelectorAll('[role="tab"]').find
+        ? node.querySelectorAll('[role="tab"]').find((t) => (t.textContent || '').toLowerCase().indexOf(tabsFor[kind] || kind) !== -1)
+        : Array.prototype.find.call(node.querySelectorAll('[role="tab"]'), (t) => (t.textContent || '').toLowerCase().indexOf(tabsFor[kind] || kind) !== -1);
+      if (tab && !tab.querySelector('.tab-mark')) {
+        tab.setAttribute('data-unread', '1');
+        tab.appendChild(h('span', { class: 'tab-mark', text: '?', title: 'not read' }));
+      }
+    }
+    node.dataset.pending = '';
+    return pending;
+  }
+
   // The attention card sits right after the order it reads; a later reading replaces it.
   function placeAttention(orderNode, orderId, items) {
     const parent = orderNode.parentNode;
@@ -1606,5 +1643,5 @@
     }, [h('span', { class: 'chip-kind', text: text(e.kind) }), h('span', { class: 'chip-label', text: text(e.label) })]));
   }
 
-  return { render, renderItem, renderStack, hydrateOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h };
+  return { render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h };
 });
