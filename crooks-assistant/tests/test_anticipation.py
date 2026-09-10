@@ -103,6 +103,18 @@ async def test_opening_an_order_starts_the_background_reads_and_one_guess(antici
     await asyncio.sleep(0.1)
 
 
+async def test_bounded_to_nothing_the_layer_reads_nothing_at_all(session, dispatched, learner):
+    """The off switch. Bounding the source-spending reads to nothing while the Mac's own
+    internal reads carried on would be a layer that says it is off and is not — and the bench
+    half that measures "without anticipation" would be measuring with some of it."""
+    off = engine_mod.Anticipator(learner=learner, prefetcher=Prefetcher(), memory=Memory(),
+                                 max_anticipated=0, max_speculative=0)
+    decision = await off.on_signal(order_signal(), session=session)
+    assert decision.started == []
+    assert set(decision.skipped.values()) == {"anticipation is switched off"}
+    assert dispatched == []
+
+
 async def test_the_thread_a_reply_would_need_is_read_on_a_hunch(anticipator, session, dispatched):
     """The "likely action prerequisite" of §18: writing a reply needs the thread read, and so
     does the tablet's own drilldown into it. Speculative, because most orders with an email on

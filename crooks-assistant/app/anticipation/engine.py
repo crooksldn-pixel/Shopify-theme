@@ -286,6 +286,12 @@ class Anticipator:
 
     def _refuse(self, prediction: Prediction, signal: Signal) -> str:
         """Why this prediction must not run, in the owner's words, or empty."""
+        if self.max_anticipated <= 0:
+            # The off switch, and it has to be one thing: bounding the source-spending reads
+            # to nothing while the Mac's own internal reads carried on would be a layer that
+            # says it is off and is not. A bench half that measures "without anticipation"
+            # measures without any of it.
+            return "anticipation is switched off"
         if prediction.internal:
             from app.anticipation import internal
 
