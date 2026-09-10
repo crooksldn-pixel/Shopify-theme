@@ -34,10 +34,17 @@ from typing import Any
 # the other direction is the fast lane trying to serve a change, which it cannot do.
 MUTATION_STRONG = frozenset({
     "cancel", "cancelled", "refund", "refunded", "delete", "archive", "unarchive", "fulfil",
-    "fulfill", "fulfilled", "dispatch", "restock", "untag", "revoke", "amend", "replace",
+    "fulfill", "dispatch", "restock", "untag", "revoke", "amend", "replace",
     "resend", "forward", "edit", "editing",
 })
 MUTATION_SOFT = frozenset({
+    # "fulfilled" was STRONG, and so "find an order that hasn't been fulfilled" — asked in
+    # those words on the tablet — was read as an instruction to ship something and left the
+    # fast lane before any family could see it. As a past participle it describes a state;
+    # "fulfil" and "fulfill", the imperatives, are still STRONG. SOFT means it counts as a
+    # change only when the sentence is not opened as a question, which is exactly the
+    # distinction between "mark it fulfilled" and "has it been fulfilled".
+    "fulfilled",
     "add", "adding", "remove", "removing", "send", "sending", "sent", "reply", "replying",
     "draft", "drafting", "write", "writing", "email", "emailing", "note", "tag", "tagging",
     "mark", "marking", "set", "setting", "put", "make", "create", "creating", "change",
@@ -140,6 +147,15 @@ _EMAIL = frozenset({"email", "emails", "emailed", "inbox", "mail", "mailed", "me
 # request to reply: it asks about a state of the inbox.
 _WAITING = frozenset({"waiting", "unanswered", "unreplied", "outstanding", "owed", "chase", "chasing", "needs", "need", "back", "ignored", "hanging"})
 _DELAY = frozenset({"late", "delayed", "overdue", "waiting", "stuck", "unfulfilled", "unshipped", "slow"})
+# The orders that have not gone out, named as a STATE: "unfulfilled", "undelivered",
+# "unshipped" — and "waiting longest", which names the same set by its worst member. The words
+# of lateness ("late", "overdue") are deliberately absent: those belong to delayed_orders,
+# which answers a narrower question (unfulfilled past five days), and a signal that took its
+# sentences would take its family with them.
+_UNFULFILLED = frozenset({"unfulfilled", "undelivered", "unshipped", "undispatched", "unposted", "unsent", "outstanding"})
+# Where it is going. "Undelivered" is in _UNFULFILLED and NOT here on purpose: the destination
+# and the delivery are different questions, and only one of them can be answered.
+_INTERNATIONAL = frozenset({"international", "overseas", "abroad", "export", "exports", "foreign", "worldwide", "eu", "europe"})
 _ORDER = frozenset({"order", "orders", "invoice", "purchase"})
 _CUSTOMER = frozenset({"customer", "customers", "buyer", "buyers", "client", "clients", "people", "person", "someone"})
 _STATUS = frozenset({"status", "where", "shipped", "dispatched", "tracking", "delivered", "arrived", "fulfilled"})
@@ -176,6 +192,8 @@ class Signals:
     delayed: bool = False
     order: bool = False
     customer: bool = False
+    unfulfilled: bool = False       # named as a state: "unfulfilled", "undelivered", "waiting longest"
+    international: bool = False     # named a destination outside the shop's country
     status: bool = False
     address: bool = False
     listing: bool = False
@@ -237,6 +255,10 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         delayed=bool(have & _DELAY),
         order=bool(have & _ORDER),
         customer=bool(have & _CUSTOMER),
+        # "Orders waiting longest" carries no state word at all, and it is the same request:
+        # the superlative on a word of delay is the set of things still to go out.
+        unfulfilled=bool(have & _UNFULFILLED) or ("longest" in have and bool(have & _DELAY)),
+        international=bool(have & _INTERNATIONAL),
         status=bool(have & _STATUS),
         address=bool(have & _ADDRESS),
         bought=bool(have & _BOUGHT),
@@ -392,6 +414,8 @@ _LOOKUP = {
     "delayed": lambda s: s.delayed,
     "order": lambda s: s.order,
     "customer": lambda s: s.customer,
+    "unfulfilled": lambda s: s.unfulfilled,
+    "international": lambda s: s.international,
     "status": lambda s: s.status,
     "address": lambda s: s.address,
     "bought": lambda s: s.bought,
