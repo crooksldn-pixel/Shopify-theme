@@ -234,6 +234,10 @@ def reply_state(messages: list[dict[str, Any]], *, customer_email: str, now: flo
     party copied into the thread would therefore read as us. It would take a reply we did not
     send to be reported as ours, which is the safe direction: it can only make the queue say
     someone is NOT waiting, never invent a customer who is.)
+
+    `now` comes back with the stamps so that every "5h ago" in this turn — the card's, the
+    sentence's and the prompt's — is measured from one instant. Two clocks in one answer is how
+    a card says 4h and the voice says 5h.
     """
     theirs = str(customer_email or "").strip().lower()
     inbound: list[float] = []
@@ -554,7 +558,8 @@ def _render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         if candidates:
             # They HAVE written — about something else, or from an address that is not theirs.
             # Saying only "no email" here would be true of the order and wrong about the person.
-            words += f" {who} has written, but not about this order: {provenance[0]}."
+            why = provenance[0] if provenance else "nothing ties what they wrote to this order"
+            words += f" {who} has written, but not about this order: {why}."
         return FastAnswer(
             answer=words, calls=list(result.calls), drawn=[c for c in (detail_call,) if c is not None],
             trace={"threads_considered": len(candidates), "confidence": confidence, "drafted": False},
