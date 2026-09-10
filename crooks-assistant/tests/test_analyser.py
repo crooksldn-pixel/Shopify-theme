@@ -225,6 +225,44 @@ def september(tmp_path: Path) -> Path:
     _finished(tape, turn, answer="Right.", question=said)
 
     tape.gap()
+    # The rest of what §27 asks to be detected, each from something the timeline holds.
+    #
+    # A read the router placed in no family, asked twice: a possible new READ family, which is
+    # a recipe and not a write.
+    for n in range(2):
+        said = "how many customers do we have today"
+        turn = _turn(tape, f"turn_customers_{n}", said=said, input_="text")
+        _lane(tape, turn, lane="NORMAL", family=None, reason="no family matched", question=True, period=True)
+        _finished(tape, turn, answer="Three customers ordered today.", question=said)
+        tape.gap(20.0)
+
+    # A value that had to be exact, typed into the composer because saying it did not work.
+    turn = _turn(tape, "turn_dictated", said="write to the supplier about the reprint", input_="text")
+    _lane(tape, turn, lane="FAST", family="email_compose_any", mutation=True, email=True)
+    tape.add("tablet_compose_field", source="tablet", session_id="s1", turn_id=turn, name="to", chars=27,
+             t=int(tape.now * 1000))
+    tape.add("tablet_recording_too_short", source="tablet", session_id="s1", turn_id=turn, ms=280,
+             t=int(tape.now * 1000))
+    _finished(tape, turn, answer="The composer is open.", question="write to the supplier about the reprint",
+              ui=["email_compose"])
+    tape.gap()
+
+    # The same cross-source read twice: Shopify and Gmail in one turn, which one recipe would do
+    # in one pass with the ids issued once.
+    for n in range(2):
+        said = "has this customer emailed about their order"
+        turn = _turn(tape, f"turn_crossed_{n}", said=said, input_="text")
+        _lane(tape, turn, lane="NORMAL", family=None, reason="no family matched", email=True, question=True, order=True)
+        _tool(tape, turn, "shopify_find_order", result={"orders": {"count": 1, "ids": [ORDER]}})
+        _tool(tape, turn, "gmail_search", result={"threads": {"count": 1, "ids": [THREAD]}})
+        tape.add("cross_source", session_id="s1", turn_id=turn, set_id=f"ws_{n}", customers=1,
+                 counts={"threads": 1}, ms=290.0)
+        _finished(tape, turn, answer="Yes, once, three days ago.", question=said,
+                  ui=["email_list"], ui_entities=[{"type": "order", "ref": ORDER}])
+        _render(tape, turn, [{"i": 0, "type": "email_list", "sections": ["Threads"], "relations": ["order"]}])
+        tape.gap(20.0)
+
+    tape.gap()
     # E — the taps. Twenty-seven `command` events, the changes two of them prepared, a row
     # action, and the branch moves of a split conversation.
     names = ["open.entity", "surface.tab", "workflow.next", "navigation.back", "open.area", "voice.bind"]
@@ -447,6 +485,34 @@ def test_the_report_names_the_branch_the_precision_input_and_the_repeats(tmp_pat
     for heading in ("### Possible new read families", "### UI component gaps", "### Branch (split orb) UX failures",
                     "### Precision input needed", "### Repeated corrections", "### Repeated cross-source workflows"):
         assert heading in markdown, heading
+
+
+def test_each_detection_becomes_a_candidate_a_person_can_pick_up(tmp_path):
+    """The report is read by `app/observability/proposals.py`, which turns each row into an
+    IMPROVEMENT CANDIDATE with the turns it came from. A detection that reaches the report and
+    not the candidates is a detection nobody acts on."""
+    from app.observability.proposals import write_proposals
+
+    path = september(tmp_path)
+    rec, _ = build_report(path, tools_registered=TOOLS)
+    intel = intelligence(rec, TOOLS)
+    assert [n for _shape, n, _ids, _why in intel["new_read_families"] if n >= 2], intel["new_read_families"]
+    assert any("typed into the composer" in what for _t, what, _d in intel["precision_input"])
+    assert any("too short" in what for _t, what, _d in intel["precision_input"])
+    assert [n for _shape, n, _ids in intel["cross_source_workflows"] if n >= 2], intel["cross_source_workflows"]
+
+    text = write_proposals(path, tmp_path / "reports").read_text(encoding="utf-8")
+    for kind in ("NEW_CAPABILITY_FAMILY", "NEW_READ_FAMILY", "BRANCH_UX", "PRECISION_INPUT",
+                 "CORRECTION", "CROSS_SOURCE_RECIPE"):
+        assert kind in text, kind
+    assert "create a discount code" in text and "put store credit on a customer" in text
+    assert "add, remove or swap a line on an order" not in text, "a family that exists is not a family to build"
+
+    states = {"order_edit": {"key": "order_edit", "label": "Order item editing", "state": "MISSING_SCOPE",
+                             "detail": "not granted", "scope": "write_order_edits"}}
+    with_states = write_proposals(path, tmp_path / "reports2", capability_states=states).read_text(encoding="utf-8")
+    assert "CAPABILITY_STATE" in with_states and "Grant write_order_edits" in with_states
+    assert "nothing is built here; a grant is the owner's to make." in with_states
 
 
 def test_the_two_lane_numbers_are_reported_apart(tmp_path):

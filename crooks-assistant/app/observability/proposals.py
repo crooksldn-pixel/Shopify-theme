@@ -30,11 +30,17 @@ INVARIANTS = (
 )
 
 
-def candidates(rec: Reconstruction, *, registered: list[str] | None = None) -> list[dict[str, Any]]:
-    """The candidates, most evidence first. Each cites turn ids; none is applied."""
+def candidates(rec: Reconstruction, *, registered: list[str] | None = None,
+               capability_states: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """The candidates, most evidence first. Each cites turn ids; none is applied.
+
+    `capability_states` is the live capability table when the caller has a runtime. It decides
+    whether a change asked for out loud is a family to build or a scope to grant — which is the
+    difference between an engineering task and a two-minute job in the Dev Dashboard.
+    """
     registered = registered if registered is not None else registered_tools()
     turns = rec.turns
-    intel = intelligence(rec, registered)
+    intel = intelligence(rec, registered, capability_states=capability_states)
     out: list[dict[str, Any]] = []
 
     def add(kind: str, title: str, evidence: list[str], component: str, change: str, tests: str, risk: str, weight: int) -> None:
@@ -64,6 +70,61 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None) -> l
             f"Build `{name}` as a write tool: a fresh read, a fingerprint, one reviewed mutation, a proving re-read, a card, a ledger line; or have the assistant name the nearest existing change.",
             "the write walkthrough (stage, commit once, stale, unverified, undo) for the new tool.",
             "a new write ships behind the same switches and gestures; never GREEN.", 3 * n)
+    for key, n, ids, state, scope, what in intel["spoken_capabilities"]:
+        # Asked for OUT LOUD, which is different from asked for by a tool: a change the
+        # assistant declines in words reaches no tool at all, and the September report's
+        # "Potential new actions: none" is what that difference looked like. The capability
+        # table decides which candidate this is.
+        if state == "NO_FAMILY":
+            add("NEW_CAPABILITY_FAMILY", f"A change asked for out loud that nothing claims: {what}", ids,
+                "a new capability family (app/families/<name>.py) and its state in app/capabilities/families.py",
+                f"Decide whether `{key}` becomes a family — its tools, its commands, its recipes, its intent family, its "
+                "capability state, all in one file — or whether the assistant should say plainly what it can do instead.",
+                "the family's own scenario pack, and a capability-state test that the family reports what it really is.",
+                "a new write ships behind the same switches and gestures; a family that is not READY offers no write tool at all.", 3 * n)
+        else:
+            add("CAPABILITY_STATE", f"A change asked for out loud that this Mac has and cannot run: {what} ({state})", ids,
+                "the store's own grants, and the family's capability state (app/capabilities/families.py)",
+                f"The capability exists. Grant {scope or 'the scope the family names'} on the Dev Dashboard and approve it in the "
+                "store admin (or connect the provider), rather than building it a second time.",
+                "the family's probe test: with the scope missing the state is MISSING_SCOPE and names the scope; with it granted, READY.",
+                "nothing is built here; a grant is the owner's to make.", 4 * n)
+    for shape, n, ids, why in intel["new_read_families"]:
+        if n >= 2:
+            add("NEW_READ_FAMILY", f"A read the router places in no family, asked {n} times: {shape}", ids,
+                "the intent families and the fast lane (app/families/, app/fastpath/recipes.py)",
+                f"A family and a read-only recipe would answer this without the model ({why}). Name the signals it needs; a family "
+                "brings its own signal through `intent.signal` rather than editing the shared table.",
+                "the family's scenario, asserting the lane is FAST and the model was not called.",
+                "a recipe names read tools only; the read scheduler refuses a plan with a write in it.", 2 * n)
+    for branch, what, detail in intel["branch_failures"]:
+        add("BRANCH_UX", f"The split orb cost the owner something: {what}", [branch],
+            "the branches (app/routes/branches.py) and the tablet's two halves (web/app.js)",
+            f"Read what was recorded ({detail}). A focus that redraws nothing, or a half put aside and never returned to, is a "
+            "control the glass does not have yet.",
+            "a browser check that switching halves changes the visible cards, and that a finished aside is retrievable.",
+            "a background half still cannot commit; nothing here touches the mutation boundary.", 3)
+    for turn_id, what, detail in intel["precision_input"]:
+        add("PRECISION_INPUT", f"A value had to be exact and a voice could not make it so: {what}", [turn_id],
+            "the precision-input path (the composer's fields, app/routes/command.py)",
+            f"Give the field a keyboard on the card rather than another attempt at saying it ({detail}).",
+            "a command test that the posted field reaches the Mac bounded, and a renderer test for the field itself.",
+            "a posted field is a value the Mac validates; the tablet still sends names and references only.", 2)
+    for turn_id, what, said in intel["corrections"]:
+        add("CORRECTION", f"The same request said again: {what}", [turn_id],
+            "speech (app/speech), the normaliser, and the answer's own wording",
+            f"Read the pair: the owner repeated himself because the first answer missed the question, or because the transcript did "
+            f"({said[:80]}).",
+            "a bench case for the transcript, or a scenario for the answer, whichever the pair shows.",
+            "no new tool.", 2)
+    for shape, n, ids in intel["cross_source_workflows"]:
+        if n >= 2:
+            add("CROSS_SOURCE_RECIPE", f"A cross-source read repeated {n} times: {shape}", ids,
+                "the read layer and the fast lane's recipes (app/families/, app/reads/)",
+                "One recipe would do this in one pass, with the ids issued once, instead of the model discovering the same sequence "
+                "each time.",
+                "the recipe's scenario, asserting one pass and both sets of ids issued.",
+                "reads compose; a recipe names read tools only.", 2 * n)
     for op, n, ids, supported in intel["bulk"]:
         if not supported:
             add("NEW_BULK_ACTION", f"A change asked for in bulk with no batch yet: {op}", ids,
@@ -93,7 +154,7 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None) -> l
             "no model-generated markup; a new type is a new renderer with its own bounds.", 2 * n)
     for row in _recipe_candidates(turns):
         add(*row)
-    for o in _opportunities(rec, turns, registered):
+    for o in _opportunities(rec, turns, registered, capability_states):
         # The report's own ranked list, carried over as summaries beside the specific rows above.
         add("REPORT", o["problem"], list(o["examples"]), o["component"], o["task"],
             "the tests the component already has, extended with this session's example.", "as the component's invariants say.", int(o["weight"]))
@@ -240,19 +301,21 @@ def render(rec: Reconstruction, cands: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build(path: Path, *, registered: list[str] | None = None) -> tuple[Reconstruction, list[dict[str, Any]], str]:
+def build(path: Path, *, registered: list[str] | None = None,
+          capability_states: dict[str, Any] | None = None) -> tuple[Reconstruction, list[dict[str, Any]], str]:
     from app.observability.report import reconstruct
 
     events = read_events(Path(path))
-    rec = reconstruct(events)
+    rec = reconstruct(events, capability_states=capability_states)
     if not rec.session.get("test_session_id"):
         rec.session["test_session_id"] = Path(path).stem
-    cands = candidates(rec, registered=registered)
+    cands = candidates(rec, registered=registered, capability_states=capability_states)
     return rec, cands, render(rec, cands)
 
 
-def write_proposals(path: Path, out_dir: Path, *, registered: list[str] | None = None) -> Path:
-    rec, _cands, markdown = build(Path(path), registered=registered)
+def write_proposals(path: Path, out_dir: Path, *, registered: list[str] | None = None,
+                    capability_states: dict[str, Any] | None = None) -> Path:
+    rec, _cands, markdown = build(Path(path), registered=registered, capability_states=capability_states)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{rec.session.get('test_session_id') or Path(path).stem}-proposals.md"

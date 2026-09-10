@@ -1,9 +1,26 @@
 """The report: an hour with the tablet, read back from the timeline.
 
 `reconstruct` turns the JSONL into turns, tool calls and proposals joined by their ids;
-`render` writes the twelve sections as Markdown. Everything in it is counted or matched —
+`render` writes the fourteen sections as Markdown. Everything in it is counted or matched —
 nothing is scored by a model. The rules that classify a failure are the ones written here,
-and the report names them, so a reader can disagree with a line and see why it was drawn."""
+and the report names them, so a reader can disagree with a line and see why it was drawn.
+
+Two things it does not do, learned from the report of the September live hour, which was
+useful and wrong in five places:
+
+It does not read the owner's words with rules of its own. Whether a change was asked for is
+the ROUTER's answer, taken off the turn's `lane` event, because the router is what decided the
+lane and a second reading that disagrees with it is a second bug
+(`app/observability/semantics.py`). And what to DO about a change asked for is the capability
+table's answer (`app/capabilities/families.py`): no family is a family to build, a family that
+is not READY is a scope to grant, and a READY one declined anyway is the assistant being wrong
+about itself. Reporting all three as one class is how a capability that has since been built
+gets reported as still open.
+
+It does not read a relationship off what a tool returned. Backend data existing is not a
+visible relationship existing, so a relation is read off the card's own `relations` — the
+tappable link targets inside it, which `web/telemetry.js` reports — and section 9 asks the
+two questions separately."""
 
 from __future__ import annotations
 
@@ -984,6 +1001,14 @@ def _spoken_capability(turn: Turn, states: dict[str, dict[str, Any]] | None = No
     change = verdict.change
     state = semantics.capability_state(change, states)
     if state["state"] == "READY":
+        # A family that stages ONE change being READY says nothing about the same change asked
+        # for over a set. "Refund all of them" is not a refund the Mac can compose, and reading
+        # the single family's READY as an answer to it would report an honest decline as the
+        # assistant being wrong about itself. The bulk question has its own table and its own
+        # rule (app/observability/claims.py, and section 13's bulk rows).
+        wholesale = claims.bulk_request(turn.question)
+        if wholesale is not None and not wholesale.get("supported"):
+            return None
         return {"change": change.key, "what": change.what, "state": "READY", "scope": state["scope"], "family": state["family"],
                 "signal": f"asked out loud to {change.what}; {state['label']} is READY on this Mac"}
     if state["state"] == semantics.NO_FAMILY:

@@ -9,7 +9,11 @@ improvement starts.
 
 ```
   1. observe      make test-session-start / stop      logs/test-sessions/<id>.jsonl
-  2. read back    make test-session-report            reports/<id>.md   (13 sections, counted, never scored)
+     or, in production, an explicitly enabled recording:
+                  make record-start / record-stop      logs/experience-recordings/<id>.jsonl
+                  make record-list                    the interactions in it, one line each
+                  make record-save-test               one of them as a fixture and a manifest
+  2. read back    make test-session-report            reports/<id>.md   (14 sections, counted, never scored)
   3. candidates   make test-session-proposals         reports/<id>-proposals.md  (IMPROVEMENT CANDIDATES, each with its turn ids)
   4. propose      the owner picks candidates to pursue and hands them to an engineering agent
   5. build        the engineering agent works on a DEVELOPMENT branch, never on the branch the Mac runs
@@ -18,6 +22,15 @@ improvement starts.
   8. summarise    a plain summary: what changed, which turn ids it answers, what was not done, what to watch
   9. approve      the owner reads the summary and merges; the Mac is updated by the owner, deliberately
 ```
+
+A test session and a production recording are two different things and are kept apart on
+purpose. A test session is a session somebody started to test with, and its timeline holds what
+the owner said and what was answered. A recording is the shop open and the owner working: it is
+off unless `CROOKS_RECORD_EXPERIENCE` says otherwise, it writes to its own directory, it holds
+ids, counts, tool names and milliseconds — the sentence is a shape unless
+`CROOKS_RECORD_TRANSCRIPTS` is on as well — and it can never authorise a change. Recording is
+observability, not fixture mode: a turn with a recording running is the same turn, which
+`experience/scenario_packs/recording.py` asserts by asking the same sentence twice.
 
 Steps 1–3 are deterministic scripts a person runs on the Mac (`make` targets); nothing
 starts them by itself. Steps 4–9 involve a person at every gate that matters: choosing what
@@ -70,7 +83,9 @@ counts.
 | Step | Code |
 | --- | --- |
 | the timeline | `app/observability/timeline.py`, `app/observability/hooks.py`, `web/telemetry.js` |
+| the production recorder | `app/observability/recorder.py` (`make record-*`) — a second sink on the timeline, minimised, off by default |
 | the report | `app/observability/report.py` (`make test-session-report`) |
+| what a request asked for | `app/observability/semantics.py` — the router's own verdict, and the capability family that would serve the change |
 | the claims rule | `app/observability/claims.py` — what the Mac composes, by the words of a question |
 | the candidates | `app/observability/proposals.py` (`make test-session-proposals`) |
 | the invariants a change must keep | `app/tools/gate.py`, `app/actions/engine.py`, `app/actions/batch.py`, `app/presentation.py` |
