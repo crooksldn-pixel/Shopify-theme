@@ -1191,3 +1191,160 @@ async def shopify_order_tags_add(order_id: str, tags: list) -> Prepared:
         entity_label=str(node.get("name") or ""),
         summary={"tags": new, "read_back": "tags " + ", ".join(new), "payload_len": sum(len(t) for t in new)},
     )
+
+
+# --------------------------------------------------- order editing: finding the variant
+#
+# Words to a variant id, for app/families/order_edit.py. "A black medium Convict hoodie" is
+# three facts about one thing, and the write that follows needs the ONE id they name. This
+# read resolves them and issues the ids; it decides nothing and changes nothing.
+#
+# `confident` is the whole point of the shape. Exactly one variant matching every word the
+# owner gave is a thing the Mac may offer to add on one tap; two are a question, and a
+# question is a picker, not a guess. With no words at all it is the catalogue's first few
+# variants — the browse case the tablet uses, where nothing is confident and every row is a
+# tap. A wrong garment added to a paid order costs a return and a refund, so the bar for
+# "confident" is exact, not fuzzy.
+
+MAX_VARIANT_CANDIDATES = 8
+
+
+def _variant_options(node: dict[str, Any]) -> list[str]:
+    """The variant's options as words — ["Black", "M"] — from Shopify's own selectedOptions."""
+    out = []
+    for option in node.get("selectedOptions") or []:
+        if isinstance(option, dict) and str(option.get("value") or "").strip():
+            out.append(str(option["value"]).strip())
+    if not out and str(node.get("title") or "").strip():
+        # A single-option product answers with the title ("Black / One size").
+        out = [part.strip() for part in str(node["title"]).split("/") if part.strip()]
+    return out[:4]
+
+
+def _variant_words(product_title: str, node: dict[str, Any]) -> set[str]:
+    """Everything a person could call this variant, lowercased: the product's words, its
+    options, and the size aliases of each option ("medium" finds "M")."""
+    words = {w for w in re.split(r"[^a-z0-9]+", f"{product_title} {node.get('title') or ''}".lower()) if w}
+    for value in _variant_options(node):
+        words.add(value.lower())
+        words |= {w for w in re.split(r"[^a-z0-9]+", value.lower()) if w}
+        words |= _size_aliases(value)
+    return words
+
+
+VARIANT_SEARCH_QUERY = """
+query CrooksVariantSearch($q: String!, $n: Int!) {
+  products(first: $n, query: $q) {
+    pageInfo { hasNextPage }
+    edges { node {
+      id
+      title
+      status
+      variants(first: 50) { edges { node {
+        id
+        title
+        sku
+        price
+        availableForSale
+        inventoryQuantity
+        selectedOptions { name value }
+      } } }
+    } }
+  }
+}
+"""
+
+
+@tool(
+    name="shopify_variant_search",
+    description=(
+        "The variants matching words, with their ids, options and price. Use before adding an "
+        "item to an order. `confident` is true when exactly one matches every word given."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "product": {"type": "string", "maxLength": 60, "description": "e.g. 'Convict hoodie'."},
+            "colour": {"type": "string", "maxLength": 30, "description": "e.g. 'black'."},
+            "size": {"type": "string", "maxLength": 20, "description": "'M' or 'medium'."},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 8},
+        },
+        "required": [],
+    },
+    tier=Tier.GREEN,
+)
+async def shopify_variant_search(product: str = "", colour: str = "", size: str = "", limit: int = 8) -> dict:
+    """Words to candidate variants. Read-only; every id it returns is issued to the session
+    by the dispatcher, which is what later permits the write to act on one."""
+    client = _c()
+    limit = max(1, min(int(limit or MAX_VARIANT_CANDIDATES), MAX_VARIANT_CANDIDATES))
+    asked = [str(v or "").strip() for v in (product, colour, size)]
+    # What a candidate has to have matched: the colour and the size as single words (with
+    # their aliases), the product as each of its words. An empty field asks for nothing.
+    wanted: list[set[str]] = []
+    for index, value in enumerate(asked):
+        if not value:
+            continue
+        if index == 0:
+            wanted += [{w} for w in re.split(r"[^a-z0-9]+", value.lower()) if w]
+        else:
+            wanted.append({value.lower()} | _size_aliases(value))
+    payload = await client.graphql(VARIANT_SEARCH_QUERY, {"q": _product_query(product), "n": MAX_PRODUCTS})
+    products = (payload.get("data") or {}).get("products") or {}
+    candidates: list[dict[str, Any]] = []
+    for edge in products.get("edges") or []:
+        node = (edge or {}).get("node") or {}
+        if str(node.get("status") or "ACTIVE").upper() != "ACTIVE":
+            continue   # a draft or archived product is not something to add to a paid order
+        title = str(node.get("title") or "")
+        for variant_edge in (node.get("variants") or {}).get("edges") or []:
+            variant = (variant_edge or {}).get("node") or {}
+            if not variant.get("id"):
+                continue
+            words = _variant_words(title, variant)
+            if any(not (group & words) for group in wanted):
+                continue
+            options = _variant_options(variant)
+            price = _decimal_text(variant.get("price"))
+            candidates.append({
+                "variant_id": str(variant["id"]),
+                "product_id": str(node.get("id") or ""),
+                "title": title,
+                "options": options,
+                "variant": str(variant.get("title") or " / ".join(options)),
+                "sku": str(variant.get("sku") or ""),
+                "price": price,
+                "price_display": _display_price(price),
+                "available": _int_or_none(variant.get("inventoryQuantity")),
+                "for_sale": bool(variant.get("availableForSale")),
+            })
+    result: dict[str, Any] = {
+        "asked": {"product": asked[0], "colour": asked[1], "size": asked[2]},
+        "candidates": candidates[:limit],
+        "count": len(candidates),
+        # One match for every word given, and words were given: the Mac may offer to add it
+        # without asking which. No words means browsing, and browsing is never confident.
+        "confident": bool(wanted) and len(candidates) == 1,
+    }
+    if not candidates:
+        result["note"] = "No variant matches those words." if wanted else "The catalogue returned no variants."
+    elif len(candidates) > limit:
+        result["truncated"] = True
+        result["note"] = f"{len(candidates)} variants match; the first {limit} are here. Say the colour and size."
+    return result
+
+
+def _decimal_text(value: object) -> str:
+    """Shopify's price as a plain decimal string, or "" — never a float in the card's data."""
+    try:
+        return f"{float(str(value)):.2f}"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _display_price(amount: str) -> str:
+    return f"£{amount}" if amount else "—"
+
+
+def _int_or_none(value: object) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None

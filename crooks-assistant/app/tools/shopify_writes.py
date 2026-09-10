@@ -1822,3 +1822,341 @@ async def shopify_fulfillment_tracking_set(order_id: str, tracking_number: str, 
             "ledger": {"carrier": carrier_name[:24], "notify": notify},
         },
     )
+
+
+# --------------------------------------------------------------- adding a line to an order
+#
+# "Add a black hoodie to this order" was refused all through Phase 2 because line-item
+# changes were unsupported. They are supported here, and the reason this is safe to offer at
+# all is the shape of Shopify's own API for it: an order edit is a THREE-step mutation and
+# only the last step touches the order.
+#
+#   orderEditBegin        opens a CalculatedOrder — a scratch copy Shopify prices for us
+#   orderEditAddVariant   puts the variant on THAT, and answers with the new arithmetic
+#   orderEditCommit       applies it to the real order
+#
+# So PREPARE runs the first two. Nothing the customer or the shop can see has moved when the
+# card goes up, and every number on it — the line's unit price, the new total, what the
+# customer will owe — is Shopify's own calculation of the edit, not ours and never the
+# model's. The commit is the one mutation the gesture authorises.
+#
+# RED and irreversible: there is no orderEditRemoveVariant undo that puts a paid order back
+# as it was, and the money owed follows the customer. The gesture is a hold.
+
+MAX_ADD_QUANTITY = 20
+MAX_EDIT_STAFF_NOTE = 200
+
+ORDER_EDIT_STATE_QUERY = """
+query CrooksOrderEditState($id: ID!) {
+  order(id: $id) {
+    id
+    name
+    cancelledAt
+    closedAt
+    displayFinancialStatus
+    displayFulfillmentStatus
+    currentTotalPriceSet { shopMoney { amount currencyCode } }
+    totalOutstandingSet { shopMoney { amount currencyCode } }
+    customer { displayName }
+    lineItems(first: 50) { edges { node { id quantity currentQuantity variant { id } } } }
+  }
+}
+"""
+
+VARIANT_FOR_EDIT_QUERY = """
+query CrooksVariantForOrderEdit($id: ID!) {
+  productVariant(id: $id) {
+    id
+    title
+    sku
+    price
+    availableForSale
+    inventoryQuantity
+    selectedOptions { name value }
+    product { id title status }
+  }
+}
+"""
+
+
+async def _read_order_edit_state(client: ShopifyClient, order_id: str) -> dict[str, Any]:
+    payload = await client.graphql(ORDER_EDIT_STATE_QUERY, {"id": order_id})
+    node = (payload.get("data") or {}).get("order")
+    if not isinstance(node, dict) or node.get("id") != order_id:
+        raise ToolError(f"No order with id {order_id}.")
+    return node
+
+
+def _order_lines(node: dict[str, Any]) -> list[dict[str, Any]]:
+    """The order's live lines: id, how many of them there still are, and which variant.
+    `currentQuantity` is what is on the order NOW — a refunded or removed line reads 0 —
+    and that is what a line count on this card has to mean."""
+    out = []
+    for edge in ((node.get("lineItems") or {}).get("edges") or []):
+        line = (edge or {}).get("node") or {}
+        if not line.get("id"):
+            continue
+        quantity = line.get("currentQuantity")
+        if quantity is None:
+            quantity = line.get("quantity")
+        out.append({
+            "id": str(line["id"]),
+            "quantity": int(quantity or 0),
+            "variant_id": str(((line.get("variant") or {}).get("id")) or ""),
+        })
+    return [line for line in out if line["quantity"] > 0]
+
+
+def order_edit_fingerprint(node: dict[str, Any], variant_id: str) -> dict[str, Any]:
+    """What the order must still look like for this addition to be the one that was prepared.
+
+    The line count and the total, as the brief asks — plus how many of THIS variant the order
+    already carries, and whether it is cancelled or archived. The extra three are not padding:
+    `allowDuplicates: false` means Shopify may fold the addition into an existing line, so the
+    line count alone cannot prove the change landed; and an order cancelled between the card
+    and the tap need not have moved its total at all, so without the flag a cancelled order
+    would pass the precondition and be edited.
+    """
+    lines = _order_lines(node)
+    total = _amount(node.get("currentTotalPriceSet"))
+    return {
+        "lines": len(lines),
+        "total": f"{total:.2f}" if total is not None else "",
+        "variant_qty": sum(line["quantity"] for line in lines if line["variant_id"] == str(variant_id)),
+        "cancelled": bool(node.get("cancelledAt")),
+        "closed": bool(node.get("closedAt")),
+    }
+
+
+async def _observe_order_add_item(execution: dict) -> Observed:
+    node = await _read_order_edit_state(_c(), str(execution["order_id"]))
+    return Observed(fingerprint=order_edit_fingerprint(node, str(execution["variant_id"])), entity=None)
+
+
+async def _entity_after_order_add_item(execution: dict) -> dict:
+    return await hydrator().order(str(execution["order_id"]), budget_s=0.0, fresh=True)
+
+
+async def _execute_order_add_item(execution: dict) -> dict:
+    """The commit, and only the commit. The CalculatedOrder was built and priced at staging
+    time; this applies it. `notifyCustomer` is false always — an email about money now owed
+    is the owner's to write, not a side effect of a tap — and the staff note is built here
+    from what was stored, so nothing new is decided at execution time."""
+    client = _c()
+    order_id = str(execution["order_id"])
+    note = f"Added {int(execution['quantity'])} x {execution['line_item_title']} (CROOKS assistant)"
+    payload = await client.mutate(
+        "order_edit_commit",
+        {"id": str(execution["calculated_order_id"]), "notifyCustomer": False, "staffNote": note[:MAX_EDIT_STAFF_NOTE]},
+    )
+    hydrator().forget(order_id)
+    order = ((payload.get("data") or {}).get("orderEditCommit") or {}).get("order") or {}
+    if order.get("id") != order_id:
+        raise ShopifyError("Shopify did not confirm which order it edited.")
+    return {"order_id": str(order["id"])}
+
+
+def _verify_order_add_item(before: dict, observed: dict, execution: dict) -> tuple[bool, str]:
+    """Proof, by re-reading the order: it carries at least this many more of the variant, and
+    the total is the one Shopify calculated for the edit.
+
+    "A line for that variant with a quantity of at least what was asked for" would pass on an
+    order that ALREADY had one and to which nothing was added — which is the commonest case
+    here. So the test is against the quantity the order carried when the change was prepared.
+    """
+    try:
+        added = int(execution.get("quantity") or 0)
+        moved = int(observed.get("variant_qty") or 0) - int(before.get("variant_qty") or 0)
+    except (TypeError, ValueError):
+        return False, ""
+    if moved < added:
+        return False, ""
+    total = str(observed.get("total") or "")
+    if total != str(execution.get("new_total") or ""):
+        # The line is on the order; the total is not the one that was priced (another edit
+        # landed, a discount recalculated). Proven applied, and the card says to look.
+        return True, "the order's total is not the figure on the card; check the order."
+    return True, ""
+
+
+def _present_order_add_item(proposal) -> dict:
+    s = proposal.summary
+    currency = str(s.get("currency") or "GBP")
+    facts = [
+        {"label": "Customer", "value": str(s.get("customer") or "")},
+        {"label": "Adding", "value": str(s.get("line") or "")},
+        {"label": "Unit price", "value": str(s.get("unit_price_display") or "")},
+        {"label": "Adds", "value": f"{_display(float(s.get('subtotal_delta') or 0), currency)} to the order", "tone": "warn"},
+        {"label": "New total", "value": _display(float(s.get("amount") or 0), currency)},
+        {"label": "Customer owes", "value": f"{_display(float(s.get('amount_outstanding') or 0), currency)} after this", "tone": "bad" if float(s.get("amount_outstanding") or 0) > 0 else ""},
+        {"label": "Customer emailed", "value": "no — tell them yourself"},
+    ]
+    if s.get("stock_note"):
+        facts.append({"label": "Stock", "value": str(s.get("stock_note")), "tone": "warn"})
+    return {
+        "title": "Add to the order",
+        "summary": "",
+        "detail": "Applies the edit Shopify has already priced. It cannot be undone from here.",
+        "facts": facts,
+        "done_title": "Item added",
+    }
+
+
+@tool(
+    name="shopify_order_add_item",
+    description=(
+        "Prepare to add one product variant to an existing order, priced by Shopify. The "
+        "customer is not emailed."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "From a search."},
+            "variant_id": {"type": "string", "description": "From shopify_variant_search."},
+            "quantity": {"type": "integer", "minimum": 1, "maximum": MAX_ADD_QUANTITY},
+        },
+        "required": ["order_id", "variant_id"],
+    },
+    tier=Tier.RED,
+    issued_id_args=("order_id", "variant_id"),
+    write=WriteSpec(
+        operation="order_edit_add_line",
+        entity_kind="order",
+        entity_arg="order_id",
+        mutation="order_edit_commit",
+        observe=_observe_order_add_item,
+        execute=_execute_order_add_item,
+        present=_present_order_add_item,
+        entity=_entity_after_order_add_item,
+        verify=_verify_order_add_item,
+        op_class="irreversible",
+        reversible=False,
+        spoken_success="Added to order {label}. The total is now {amount}.",
+        spoken_failure="I couldn't confirm the item was added. Check the order before asking again.",
+        spoken_stale="The order changed since this was prepared. Nothing was added.",
+    ),
+)
+async def shopify_order_add_item(order_id: str, variant_id: str, quantity: int = 1) -> Prepared:
+    """Prepare, never commit: read the order and the variant, open a CalculatedOrder, put the
+    variant on it, and keep Shopify's arithmetic for the card.
+
+    The two mutations this sends — `order_edit_begin` and `order_edit_add_variant` — change
+    NOTHING on the order. They build and price the scratch copy that `order_edit_commit`
+    later applies, which is how the financial consequence is known before the owner's
+    gesture rather than after it.
+    """
+    client = _c()
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        raise ToolError("The quantity must be a whole number.") from None
+    if not 1 <= quantity <= MAX_ADD_QUANTITY:
+        raise ToolError(f"The quantity must be between 1 and {MAX_ADD_QUANTITY}.")
+
+    node = await _read_order_edit_state(client, str(order_id))
+    label = str(node.get("name") or "")
+    if node.get("cancelledAt"):
+        raise ToolError(f"Order {label} is cancelled; nothing can be added to it.")
+    if node.get("closedAt"):
+        raise ToolError(f"Order {label} is archived; reopen it in Admin before adding to it.")
+
+    variant = ((await client.graphql(VARIANT_FOR_EDIT_QUERY, {"id": str(variant_id)})).get("data") or {}).get("productVariant")
+    if not isinstance(variant, dict) or variant.get("id") != str(variant_id):
+        raise ToolError(f"No product variant with id {variant_id}.")
+    product = variant.get("product") or {}
+    if str(product.get("status") or "ACTIVE").upper() != "ACTIVE" or not variant.get("availableForSale"):
+        raise ToolError(
+            f"{str(product.get('title') or 'That item')} {str(variant.get('title') or '')}".strip()
+            + " is not for sale, so it cannot be added to an order."
+        )
+    options = [str((o or {}).get("value") or "") for o in (variant.get("selectedOptions") or []) if (o or {}).get("value")]
+    variant_words = " / ".join(options) or str(variant.get("title") or "")
+    line_title = str(product.get("title") or variant.get("title") or "item")
+    available = variant.get("inventoryQuantity")
+    stock_note = ""
+    if isinstance(available, int) and not isinstance(available, bool) and available < quantity:
+        # Not a refusal: Shopify's own oversell policy decides whether the sale may happen,
+        # and a shop that makes its own garments often adds a line it is about to cut.
+        stock_note = f"{available} in stock, {quantity} being added"
+
+    # From here on nothing is arithmetic of ours. Shopify opens the scratch order and prices
+    # the addition on it; both mutations leave the real order exactly as it is.
+    begun = await client.mutate("order_edit_begin", {"id": str(order_id)})
+    calculated = ((begun.get("data") or {}).get("orderEditBegin") or {}).get("calculatedOrder") or {}
+    calculated_order_id = str(calculated.get("id") or "")
+    if not calculated_order_id:
+        raise ShopifyError("Shopify did not open an order edit for that order.")
+    added = await client.mutate(
+        "order_edit_add_variant",
+        {"id": calculated_order_id, "variantId": str(variant_id), "quantity": quantity, "allowDuplicates": False},
+    )
+    body = ((added.get("data") or {}).get("orderEditAddVariant") or {})
+    calculated_line = body.get("calculatedLineItem") or {}
+    edited = body.get("calculatedOrder") or {}
+    unit_price = _amount(calculated_line.get("originalUnitPriceSet"))
+    currency = _currency(calculated_line.get("originalUnitPriceSet") or node.get("currentTotalPriceSet"))
+    new_total = _amount(edited.get("totalPriceSet"))
+    outstanding = _amount(edited.get("totalOutstandingSet"))
+    if new_total is None or unit_price is None:
+        raise ShopifyError("Shopify did not price the edit; nothing was changed.")
+    # The line count the edited order will show, from Shopify's own calculated lines rather
+    # than from "one more than before": with `allowDuplicates: false` an addition of
+    # something the order already has folds into that line and the count does not move.
+    calculated_lines = [
+        e for e in ((edited.get("lineItems") or {}).get("edges") or [])
+        if isinstance(e, dict) and int(((e.get("node") or {}).get("quantity")) or 0) > 0
+    ]
+    before = order_edit_fingerprint(node, str(variant_id))
+    subtotal_delta = round(unit_price * quantity, 2)
+    customer = str((node.get("customer") or {}).get("displayName") or "")
+    digits = label.rsplit("-", 1)[-1].lstrip("#")
+    line = f"{quantity} x {line_title}{f' ({variant_words})' if variant_words else ''}"
+    read_back = (
+        f"add {line} to order {digits}{f' for {customer}' if customer else ''}, "
+        f"{_display(subtotal_delta, currency)} more, taking the order to {_display(new_total, currency)}"
+    )
+    return Prepared(
+        execution={
+            "calculated_order_id": calculated_order_id,
+            "order_id": str(order_id),
+            "variant_id": str(variant_id),
+            "quantity": quantity,
+            "line_item_title": line_title,
+            "unit_price": f"{unit_price:.2f}",
+            "subtotal_delta": f"{subtotal_delta:.2f}",
+            "new_total": f"{new_total:.2f}",
+            "amount_outstanding": f"{outstanding:.2f}" if outstanding is not None else "",
+        },
+        before=before,
+        # The fingerprint the order must show once the edit is applied: Shopify's line count
+        # and total, and this variant's quantity moved by what is being added. `verify` is
+        # what actually proves it (the count cannot, see above); this is what the ledger and
+        # the default equality path read.
+        expected_after={
+            "lines": len(calculated_lines) or before["lines"] + 1,
+            "total": f"{new_total:.2f}",
+            "variant_qty": before["variant_qty"] + quantity,
+            "cancelled": False,
+            "closed": False,
+        },
+        entity_ref=str(order_id),
+        entity_label=label,
+        summary={
+            "customer": customer,
+            "line": line,
+            "variant": variant_words,
+            "product": line_title,
+            "quantity": quantity,
+            "unit_price": f"{unit_price:.2f}",
+            "unit_price_display": _display(unit_price, currency),
+            "subtotal_delta": f"{subtotal_delta:.2f}",
+            # `amount` is what the spoken success line reads out (engine._spoken_amount).
+            "amount": f"{new_total:.2f}",
+            "amount_outstanding": f"{outstanding:.2f}" if outstanding is not None else "0.00",
+            "currency": currency,
+            "stock_note": stock_note,
+            "read_back": read_back,
+            "spoken_to": _display(new_total, currency),
+            "ledger": {"quantity": quantity, "adds": f"{subtotal_delta:.2f}", "currency": currency[:24]},
+        },
+    )
