@@ -721,17 +721,25 @@ def _context_lines(session, text: str, runtime=None) -> list[str]:
 
 
 def _family_lines(runtime) -> list[str]:
-    """The capability families that are NOT ready, with the reason, so the model stops trying
-    them and says why — and the ready ones by name, so it reaches for them. Read from the
-    table the last capability check left on the runtime; nothing is probed on the turn."""
+    """The capability families the model CANNOT use, with the reason, so it stops trying them
+    and says why.
+
+    Only those: the families it can use are the tools it is offered, and
+    `runtime.withheld_by_family` has already taken the others away, so listing fifteen READY
+    families on every prompt would be five hundred characters a turn spent saying nothing
+    (brief section 25). Read from the table the last capability check left on the runtime;
+    nothing is probed on the turn.
+    """
     from app.capabilities import families as families_mod
 
     table = getattr(runtime, "family_states_table", None) if runtime is not None else None
     if not table:
-        table = {f.key: {"label": f.label, "state": f.state, "detail": f.detail} for f in families_mod.all_families()}
-    if not table:
+        table = {f.key: {"label": f.label, "state": f.state, "detail": f.detail, "scope": (f.scopes[0] if f.scopes else "")}
+                 for f in families_mod.all_families()}
+    lines = families_mod.words(table) if table else []
+    if not lines:
         return []
-    return ["[Capability families on this Mac:\n" + "\n".join(families_mod.words(table)) + "]"]
+    return ["[What this Mac cannot do right now:\n" + "\n".join(lines) + "]"]
 
 
 # "Draft", "prepare", "write me" ask for something to read first. "Send", "email them",

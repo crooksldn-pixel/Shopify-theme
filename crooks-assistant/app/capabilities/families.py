@@ -117,16 +117,29 @@ async def states(runtime: Any, *, operations: dict[str, dict[str, Any]] | None =
     return out
 
 
-def words(states_table: dict[str, dict[str, Any]]) -> list[str]:
-    """The families as lines for the model: what it can and cannot do, and why, so it stops
-    trying the ones it cannot. One line each; the detail is the reason, never a stack trace."""
+def words(states_table: dict[str, dict[str, Any]], *, only_unavailable: bool = True) -> list[str]:
+    """The families as lines for the model.
+
+    Only the ones it cannot use, by default, and that is deliberate: what saves the fifteen
+    seconds the live test lost is knowing that store credit is not on this store, not being
+    told fifteen times a turn that reading orders is READY. The ready ones are the tools it
+    is offered — `runtime.withheld_by_family` takes away the rest, so the tool list already
+    says what is available, and repeating it on every prompt is model context spent to say
+    nothing (brief section 25).
+
+    `only_unavailable=False` gives every family, for the capability surfaces the owner reads.
+    """
     lines = []
     for key in sorted(states_table):
         row = states_table[key]
         state = row["state"]
         if state == "READY":
-            lines.append(f"- {row['label']}: READY.")
-        else:
-            why = row.get("detail") or state.replace("_", " ").lower()
-            lines.append(f"- {row['label']}: {state} — {why}. Do not attempt it; say so if asked.")
+            if not only_unavailable:
+                lines.append(f"- {row['label']}: READY.")
+            continue
+        why = row.get("detail") or state.replace("_", " ").lower()
+        scope = str(row.get("scope") or "")
+        if scope and scope not in why:
+            why = f"{why} ({scope})"
+        lines.append(f"- {row['label']}: {state} — {why}. Do not attempt it; say so if asked.")
     return lines

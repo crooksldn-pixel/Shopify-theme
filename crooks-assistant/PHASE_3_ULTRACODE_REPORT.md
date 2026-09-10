@@ -173,6 +173,152 @@ session of 9 September 2026):
 through the order cache, which the Mac warms at start-up, so this is what the second tap of the
 day costs. The first tap pays the cache warm.
 
+### 2.4 The capability manifest, made user-useful (§29)
+
+Fifteen families are registered for what already worked — reading orders, customers, products
+and email, the analytics, and the ten write operations (cancel, refund, fulfil, tracking,
+address, notes, tags, stock, drafts, sends, archive). A manifest that lists only the new
+things is not a manifest, and `/health families` returned nothing before this.
+
+Their states are **derived, not declared**: `families.states()` reads the per-operation table
+`runtime.capabilities()` already builds, so a family says READ_ONLY when changes are switched
+off and MISSING_SCOPE when Shopify has not granted the scope, without `app/families/core.py`
+knowing anything about either. Two tests hold the seam: every registered write operation and
+every model-facing read tool must be named by some family, so a capability cannot be added
+without appearing in the manifest.
+
+What the model is told changed with it. The line used to list every family; with fifteen
+registered that is **420 characters of prompt on every turn** to say that reading orders
+works. It now carries only what the Mac **cannot** do:
+
+| | Lines | Characters per turn |
+| --- | --- | --- |
+| Every family (the old shape) | 15 | 420 |
+| Only the unavailable ones, all ready | 0 | **0** |
+| Only the unavailable ones, one blocked | 1 | 117 |
+
+The ready families are the tools the model is offered — `withheld_by_family` takes the rest
+away — so the tool list already says what is available. The owner's surfaces still ask for
+the whole list (`words(table, only_unavailable=False)`), and the settings sheet shows it.
+
+### 2.5 A family brings its own word to the router (§17)
+
+The brief's section 17 names the requests that should avoid the model. Run against the router,
+three of its own examples resolved to no family at all — not because the fast lane could not
+answer them, but because the router had no word for *shipping*, *latest* or *half*, and its
+signal vocabulary was a fixed dataclass every family would have had to edit at once.
+
+`app.fastpath.intent.signal(name, predicate)` is now a seam: a family registers its own word
+and `score` looks it up like any other. A core signal can never be shadowed. Three families
+use it (`app/families/navigation_extras.py`): the tab move goes through the same
+`surface.tab` command the tap reaches, the latest order names which order it turned out to
+be, and the switch moves the focus and draws what that half was looking at.
+
+The routing table now, with an order open and a set being walked:
+
+| Said | Lane | Family |
+| --- | --- | --- |
+| order 1938 | FAST | order_lookup |
+| show me today's orders | FAST | order_list_period |
+| read me the full address | FAST | order_address_lookup |
+| where is order 1938 | FAST | order_status_lookup |
+| show me the shipping / the items / the customer | **FAST** | order_tab_show |
+| show me the latest order · the most recent order | **FAST** | order_latest |
+| switch to the other half · the other half | **FAST** | branch_switch |
+| next · go back | FAST | working_set_next · navigation_back |
+| open orders · open the inbox · open sales · show me stock | FAST | the four landings |
+| what can you do? | FAST | capability_summary |
+| what else has this customer ordered? | FAST | customer_history_lookup |
+| what sold best this month · which orders are late | FAST | best_sellers_period · delayed_orders |
+
+Two collisions were found by the tests and fixed, both of which had made a previously fast
+sentence slow: "address" as a shipping-tab word stole the sentence that reads the address
+out, and "last" as a latest word stole the cursor's "the last one". One the router was right
+about: with an order open, a bare "show me the email" is genuinely ambiguous between this
+order's Email tab and the inbox (0.96 against 0.90, inside the margin), so the inbox keeps
+the bare word and the tab is reached by a sentence that says which order.
+
+---
+
+## 5. Blocked by credentials or configuration
+
+This machine has no Keychain, no Shopify token, no Gmail credential and no Claude
+subscription for the assistant's own provider, and by the brief's own rule no automated run
+may make a real Shopify or Gmail write. So four things could not be proved here, and each has
+an exact command to run on the Mac instead.
+
+| What | Why it could not run here | Run this on the Mac |
+| --- | --- | --- |
+| Live read-only scenarios against the real store | No token; the harness refuses to read a real shop unless the read-only guard is armed, which needs the credential | `make experience-live` |
+| Whether Shopify has granted the new scopes | `access_scopes()` needs the token; the probes are written and tested against a fake | `crooks-status`, then the settings sheet's "What I can do" |
+| Any real mutation | Forbidden by the brief, and the fixture Shopify raises on every mutation so a test can only ever exercise prepare, observe, present and verify | The owner's own gesture on the tablet, once he has read the card |
+| The model's own behaviour on the new prompts | No subscription here; the fixture harness stubs the provider | Ask the questions on the tablet and read `make watch` |
+
+Nothing in this pass depends on a credential to be *correct* — every write's prepare,
+precondition, verification and refusal path is exercised against the fixture, and the fixture
+refuses every mutation, which is what makes those tests able to fail.
+
+## 6. Deployment steps — for later, not now
+
+**None of this has been run.** The running build is untouched. When the owner has tested the
+branch physically and accepts it:
+
+1. **On the Mac, in the project:** `git fetch origin` then
+   `git log --oneline HEAD..origin/claude/crooks-assistant-build-lgxlau` to read what is
+   coming.
+2. **Check before applying:** `make update CHECK=1` (or `python3 scripts/control.py update
+   --check --json`). It reports the current and candidate SHA, whether it is a fast-forward,
+   whether the tree is dirty and whether dependencies changed. A dirty tree or a diverged
+   branch **stops** the update; it never discards local work.
+3. **Apply:** `make update`. That fast-forwards, installs dependencies if they changed,
+   restarts through the existing launchd agents, and verifies `/health`.
+4. **Verify on the Mac:** `crooks-status` — or the Control app's status view — and check that
+   the build id moved, every check is green, and the capability families read as expected.
+5. **Verify on the tablet:** open CROOKS OS, confirm the dock lands, and read the settings
+   sheet's "What I can do".
+6. **If it does not come up:** `make restart` once. If it is still unhealthy, the last known
+   good SHA is in `logs/last_known_good.json`; `git checkout <that sha> && make restart`
+   returns to it. Nothing in this pass moves a branch destructively.
+
+Scopes: any family whose state reads MISSING_SCOPE needs its scope granted in the Shopify
+admin before it will work. The families table names the scope; §6 above lists the new ones.
+
+---
+
+## 7. Does any of this weaken the mutation security model?
+
+**No, and two of the changes strengthen it.** Taken one at a time against the twenty-four
+invariants:
+
+- **Concurrency (§3F).** Two halves think at once; nothing about writes changed. A proposal is
+  still staged by the Mac from arguments the Mac built, still bound to session, epoch, turn and
+  branch, still committed at most once by the action engine, still verified by an authoritative
+  re-read. A background half still cannot commit. What changed is that the branch a proposal
+  belongs to now travels on the task the tool call runs in rather than in one field the two
+  halves shared — **without** that, two halves staging at once would have mis-stamped each
+  other's proposals, which is a security bug this pass removes rather than adds.
+- **The dock's landings (§4).** Four recipes that read. `assert_read_only` holds for them, and
+  the command that opens one carries an area name from a fixed table of four.
+- **Every posted field reaching a command (§7).** Bounded at 24 fields and 8,000 characters,
+  and a command is a read or a move by construction. This is the precision-input path and it
+  keeps the rule exactly: the tablet posts identity and typed text to a Mac command that
+  validates it into a Mac-held context; staging then builds execution from that context. The
+  tablet still cannot post an execution argument.
+- **Withholding tools by family state (§29).** Strictly subtractive: it can only take a tool
+  away from the model, never offer one. A test holds that no family which already worked
+  withholds anything.
+- **The compaction (§22) and the fold.** Presentation only; the folded card is the whole card
+  and the actions on it are the same server-decided actions.
+- **The signal seam (§17).** Routing only, and a core signal cannot be shadowed. A recipe
+  reached this way is read-only like every other.
+
+One thing to watch, recorded as a weakness rather than dismissed: the per-half turn state made
+`_Conversation` the holder of what used to be provider fields, and the PreToolUse hook now
+finds its session through that holder. If a future change gave a client to two conversations,
+the hook would gate against the wrong session. `_Holder` is deliberately one slot, filled when
+a conversation adopts a client and emptied when it lets it go, and `test_a_hook_event_with_no_turn_behind_it_touches_nothing`
+holds the empty case — but this is the place to be careful.
+
 ---
 
 _This report is being written as the pass completes. Sections still to come: the remaining
