@@ -447,6 +447,15 @@ Taken by the tablet gate against the fixture world, at the Samsung's own viewpor
 | `tab-05-reloaded.png` | after a reload: the workspace comes back |
 | `tab-06-armed-reply.png` | the armed pill on the card — "Replying to Mia", unclipped, 44 px Cancel |
 
+And seven at 800 × 1280, the size the interaction language was designed against, so a change
+that reads well on one and badly on the other is visible: `01-home`, `02-order-detail`,
+`03-order-list`, `04-capabilities`, `05-list-walk`, `06-armed`, `07-email-thread`.
+
+**All thirteen were retaken against the merged build**, not the build they were first shot
+from — four merges landed between, and the Orders landing genuinely differs now that the
+golden world holds an order that has been waiting fourteen days. A screenshot of a build
+nobody is shipping is worse than none.
+
 The header in these reads "cannot hear you" because this machine has no whisper server and no
 ElevenLabs key; that is the environment, not the build.
 
@@ -769,3 +778,107 @@ open "/Applications/CROOKS Control.app"
 The menu bar should then read **CROOKS — Read only**, which is correct while
 `CROOKS_WRITES_ENABLED` is false. If it cannot find the project, click *Project folder…* and
 choose the directory holding `scripts/control.py`.
+
+---
+
+## 15. The brief's closing questions, answered directly
+
+### 15.1 Which Phase 2 live failures are now impossible by regression test, and which remain possible?
+
+**Impossible** — each held by a test that fails if the behaviour returns:
+
+| The live failure | What makes it impossible |
+| --- | --- |
+| Two fingers on the orb produced a blank speech turn, six times | `scripts/browser/tablet.js` — a CDP two-finger spread asserts **zero** `/turn` posts and no hearing error |
+| Split depended on a secret gesture | The same gate asserts a visible `Split` control reaching the same backend command |
+| Tapping the other half changed who was listening, not what was on screen | `tests/test_split_workspaces.py` + a browser check that switching halves changes the visible cards |
+| A half finished a slow turn with nothing on the tablet | `branch.ready(...)`, asserted in `tests/test_split_workspaces.py` |
+| The dock was decorative unless already in an interaction | Four landing scenarios, each tapped from an idle tablet, no model |
+| `commerce_query` failed three times with "sort by :" | The six reconstructed live attempts, each parsing or carrying a `schema_help` whose offered example is itself parsed |
+| An email thread showed no linked order | `tests/test_graph.py` + the graph pack, and the thread says *why* it belongs |
+| An automated carrier report was offered as a customer awaiting reply | The noise filter, now actually bound to our own address in production |
+| The armed state was clipped 788 px below the finger | The tablet gate asserts it unclipped, on the card, with a 44 px Cancel |
+| A failed customer read was drawn as "no customer" | `tests/web/ui.test.js` + `tests/test_context.py` |
+| Six gesture collisions classified as `STT_ERROR` | `tests/test_analyser.py::test_a_a_gesture_that_ended_the_recording_is_not_a_failure_of_speech` |
+| "Potential new actions: none" while three were asked for aloud | Two analyser tests, driven from the capability table |
+| "Refund status" read as a requested mutation | `tests/test_analyser.py::test_d_a_noun_or_a_state_is_not_a_requested_mutation` |
+| 27 command events unread by the report | `tests/test_analyser.py::test_e_the_report_reads_the_command_and_navigation_events` |
+| The 35-second compound turn | One turn now (§11.5), asserted by `compound()` in three scenarios |
+
+**Still possible, and honestly so:**
+
+1. **A slow model turn.** Anticipation removes *reads* from the critical path; `prose_wait_ms`
+   was unchanged in the bench, and §25 names prose as the number to attack. A NORMAL-lane
+   question still waits on Claude. What changed is how many questions reach that lane.
+2. **A mis-heard address that looks plausible.** The composer marks a dictated value
+   `uncertain` and refuses to stage it, so it cannot be sent unseen — but only the owner can
+   tell a wrong-but-valid address from a right one.
+3. **Anything requiring a scope the store has not granted.** Order editing needs
+   `write_order_edits` and will say so rather than work.
+4. **A tablet-side failure no browser can reproduce** — a real thumb, a real microphone, real
+   Tailscale. §8 lists what to test on the glass, in order.
+
+### 15.2 Which capability requests still cannot be performed, and why?
+
+| Asked for | State | Why |
+| --- | --- | --- |
+| Add an item to an order | **Built, needs a scope** | `write_order_edits` is not granted. The family says so and withholds its tool from the model |
+| Create a discount code | **Built** | Reachable by voice (§11.3 fix) and by the model; needs `write_discounts` + `read_discounts` |
+| Create an order | **Built** | Voice-initiated as §11 asks; needs `write_draft_orders` + `read_draft_orders` |
+| Store credit | **Built, conditional** | Needs the grant AND the store to have store credit — a per-store Shopify setting. The probe now asks a real question rather than reporting READY-unproven |
+| Abandoned **checkouts** | **Built** | Reads, ranks by occurrence, windows by date. No new scope |
+| Abandoned **carts** | **Impossible** | Shopify's Admin API has no cart resource. Said in the tool description, the result, both cards, every spoken line and the family's `what`, from one constant so the five cannot drift |
+| Delivery status ("has it arrived?") | **Impossible today** | No carrier is integrated. DISCONNECTED, and the model is told not to attempt it |
+| Shipping labels / tracking from a provider | **Adapter only** | Easyship is not integrated and there is no credential. Fixture implementation, DISCONNECTED state, and a test that nothing can report "checked Easyship" unless it did |
+| Returns, exchanges, replacements, resends | **Contracts only** | Four scopes ungranted and the mutations deliberately unwritten. A test fails if any such mutation is ever registered |
+| Store credit **removal** | **Not built** | `storeCreditAccountDebit` is not a reviewed mutation, so a credit cannot be taken back from here. The card says so |
+| Editing or deactivating an existing discount | **Not built** | The card says so |
+| A new customer during order creation | **Not built** | An unknown or ambiguous name is refused with "make the customer in Admin first" |
+| "Send it instead" spoken | **Touch path only** | The fast lane cannot stage, by construction. Spoken, it draws the composer with **Send** on it; the gesture stages |
+| A tablet button for "New order" / "New discount code" | **Not built** | Both are reachable by voice and by the model; there is no tap route yet |
+
+### 15.3 Which need new Shopify permissions?
+
+Six scopes are named by this build and **not granted**. `SHOPIFY_SCOPES.md` carries the table;
+in priority order:
+
+| Scope | Unlocks | Without it |
+| --- | --- | --- |
+| `write_order_edits` | Adding an item to an order | MISSING_SCOPE, named, tool withheld |
+| `write_discounts` + `read_discounts` | Discount codes. Both: a family that cannot say whether a code is taken is not ready | MISSING_SCOPE, and the collision read still works on `read_discounts` alone |
+| `write_draft_orders` + `read_draft_orders` | Order creation. Both: a change that cannot be verified is not offered | MISSING_SCOPE, nothing drafted |
+| `write_store_credit_account_transactions` + `read_store_credit_accounts` | Store credit | MISSING_SCOPE, or NOT_SUPPORTED_BY_STORE if the grants are there and the store is not |
+| `write_returns`, `read_returns`, `write_merchant_managed_fulfillment_orders` | Returns and resends — **not needed yet**, since the mutations are deliberately unwritten | NOT_IMPLEMENTED, scope named |
+
+Not a scope: `CROOKS_EASYSHIP_TOKEN`, and an Easyship HTTP client that this build does not
+contain.
+
+### 15.4 Does any feature weaken the mutation security model?
+
+**No, and three of the changes strengthen it.** Four new write operations were added
+(`order_edit_add_line`, `discount_code_create`, `draft_order_complete`,
+`store_credit_credit`), all through the action engine that already existed — the model or a
+touch command proposes, the Mac stores the exact immutable arguments, the tablet posts
+identity only, the precondition is re-read immediately before the write, success means
+VERIFIED by authoritative re-read, and an unknown write fails closed.
+
+The three that strengthen it:
+
+1. **Per-branch proposal attribution.** `session.acting_branch` was one field for both halves.
+   With two halves thinking at once the engine could have stamped the left half's proposal
+   with the right half's id. The branch now travels on the task the tool call runs in.
+2. **The gate's id rule made the arbitrary recipient safe for free.** A write needs at least
+   one issued id and an email address can never be one, so `to` is admitted only beside a
+   `compose_id` the Mac minted — an arbitrary address can only be staged from a composer whose
+   card the owner has already read.
+3. **Tools are withheld by capability state.** A family that is DISCONNECTED,
+   NOT_IMPLEMENTED or NOT_SUPPORTED_BY_STORE has *no tools offered to the model*, and
+   MISSING_SCOPE or READ_ONLY withholds the write tools. The model cannot attempt what the
+   store would refuse.
+
+One thing to watch, stated as a risk rather than a defect: the composer is the first card with
+**editable fields**. A keystroke posts a field *name* and a value into the Mac's own copy, and
+the execution arguments are still built from that copy on the Mac when a gesture asks for
+them — so the tablet is not the data authority. But it is the largest surface the tablet has
+ever had for putting text into something that will later be staged, and it deserves the
+Samsung test in §8 before it is trusted with a real recipient.
