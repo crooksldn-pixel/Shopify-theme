@@ -147,7 +147,7 @@ async def test_a_missing_scope_blocks_every_commit_and_shows_in_health(client):
     # write_store_credit_account_transactions are its discount, order-creation and
     # store-credit families) — which is the point of the line, and is why it is asserted in
     # full rather than by a substring.
-    assert health["writes"] == {"state": "blocked", "detail": "blocked — Shopify write_discounts, write_inventory, write_merchant_managed_fulfillment_orders, write_order_edits, write_orders scope missing"}
+    assert health["writes"] == {"state": "blocked", "detail": "blocked — Shopify write_discounts, write_draft_orders, write_inventory, write_merchant_managed_fulfillment_orders, write_order_edits, write_orders, write_store_credit_account_transactions scope missing"}
     assert health["checks"]["writes"]["ok"] is False
 
 

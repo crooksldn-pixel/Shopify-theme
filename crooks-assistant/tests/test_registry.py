@@ -192,8 +192,8 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # ceiling is the WORST case — `runtime.withheld_by_family()` takes a family's tools away
     # when the store or the connection cannot serve it, so a Mac missing a scope pays less.
     #
-    # 29_300 covers the two commerce-write families (brief sections 12 and 14), measured
-    # tool by tool with the script in this test's own terms:
+    # 31_200 covers the four commerce families (brief sections 11, 12, 13 and 14), measured
+    # tool by tool in this test's own terms:
     #
     #   discount codes (app/families/discounts.py)          1,412
     #       shopify_discount_open      841   the workspace: a code, a percentage OR an
@@ -203,6 +203,12 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     #                                        wrong is a fifteen-hundred-per-cent discount.
     #       shopify_discount_create    319   one argument: the workspace id.
     #       shopify_discount_check     252   is this code taken?
+    #   making an order (app/families/order_create.py)        957
+    #       shopify_order_open         625   the customer, and optionally a first item.
+    #       shopify_order_create       332   one argument: the workspace id.
+    #   store credit (app/families/store_credit.py)           909
+    #       shopify_store_credit_open  582   the customer, the amount, the currency.
+    #       shopify_store_credit_add   327   one argument: the workspace id.
     #   abandoned checkouts (app/families/abandoned.py)       469
     #       shopify_abandoned_checkouts      the window and a limit. Its description spends
     #                                        its bytes on what the data is NOT — carts are
@@ -211,11 +217,17 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     #                                        the model answering the wrong question
     #                                        confidently, which is what section 14 is about.
     #
-    # 1,881 together, on 27,357 measured after the Phase 3 merge. Each creation family costs
-    # ONE big schema (the workspace, where the model's parse goes) and one tiny one (the
-    # write, which takes a single id): everything the change is actually sent with is built
-    # on the Mac from the Mac's own copy, so it costs the model nothing to read.
-    assert total <= 29_300, f"the tool block is {total} bytes"
+    # 3,747 together, on 27,357 measured after the Phase 3 merge: 31,104.
+    #
+    # The shape of that cost is the point. Each of the three CREATION families pays for ONE
+    # sizeable schema — the workspace, which is where the owner's spoken request lands — and
+    # one tiny one, because the write tool takes a single workspace id and nothing else.
+    # Every value the mutation is actually sent with (the fraction Shopify wants, the
+    # instants a window becomes, the variant ids, the prices, the payment state) is built on
+    # the Mac from the Mac's own copy of the workspace, so it costs the model nothing to read
+    # and nothing to get wrong. A creation family whose write tool listed its own arguments
+    # would have cost several times this and moved the write boundary as well.
+    assert total <= 31_200, f"the tool block is {total} bytes"
     batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
     # 2,300 covers the fifth batch tool — the same campaign as batch_email_drafts, sent
     # rather than saved — which shares its schema object and adds two lines of description.
