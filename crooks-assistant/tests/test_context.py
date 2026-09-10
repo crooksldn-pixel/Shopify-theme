@@ -354,7 +354,7 @@ def test_an_image_from_anywhere_but_shopifys_cdn_is_no_image():
 
 def test_the_extension_is_shaped_like_the_card():
     ext = present_extension({"order_id": ORDER, "pending": ["email"], "history": shape_customer_history(CUSTOMER_NODE), "email": None, "junk": 1})
-    assert set(ext) == {"order_id", "pending", "history", "email"} and ext["history"]["orders"] == 3
+    assert set(ext) == {"order_id", "pending", "history", "email", "failed"} and ext["history"]["orders"] == 3
 
 
 # --------------------------------------------------------------------------- the routes

@@ -138,6 +138,13 @@ async def _health(runtime) -> dict:
     # Every change the Mac knows how to make, and whether it could make it now. Off is the
     # intended state and not a fault; a scope the store has not granted is named here.
     capabilities = await runtime.capabilities()
+    # The capability families (order editing, discount codes, store credit, abandoned
+    # checkouts, shipping providers …) with the state a person can act on: READY,
+    # MISSING_SCOPE (and which), NOT_SUPPORTED_BY_STORE, DISCONNECTED, NOT_IMPLEMENTED.
+    try:
+        families = await runtime.family_states()
+    except Exception as exc:  # noqa: BLE001 — a probe must not take /health down
+        families = {"_error": {"state": "TEMPORARILY_UNAVAILABLE", "detail": type(exc).__name__}}
 
     return {
         # Degraded, not down: Shopify being unreachable should not make the page say the
@@ -187,6 +194,7 @@ async def _health(runtime) -> dict:
         },
         "writes": {"state": writes.state, "detail": writes.detail},
         "capabilities": capabilities,
+        "families": families,
         # What this build can do, from the generated manifest (app/capabilities): counts for
         # crooks-status, and the fingerprint so a build can be told apart from its neighbour.
         "manifest": (

@@ -907,6 +907,28 @@ test('an order whose inbox never arrived says so, on the panel and on the tab', 
   assert.deepEqual(UI.settleOrder(node), [], 'settling twice changes nothing');
 });
 
+test('a failed customer read is not "no customer"', () => {
+  const none = UI.renderItem({ type: 'order', data: { detail: true, order_number: '#1930', items: [], pending: [], history: null } });
+  assert.ok(textOf(none.querySelector('.sec-history')).includes('No customer is attached'));
+  const failed = UI.renderItem({ type: 'order', data: { detail: true, order_number: '#1930', customer_name: 'Mia Jones', items: [], pending: [], history: { available: false, reason: 'read_failed' } } });
+  const words = textOf(failed.querySelector('.sec-history'));
+  assert.ok(words.includes('couldn’t load the customer') && !words.includes('No customer'), words);
+  assert.ok(words.includes('try again'), 'and says what to say');
+  const later = UI.renderItem({ type: 'order', data: { detail: true, order_number: '#1930', items: [], pending: ['history', 'email'] } });
+  UI.hydrateOrder(later, { pending: [], failed: ['history'], history: { available: false, reason: 'read_failed' }, email: { available: true, threads: [] } });
+  assert.ok(textOf(later.querySelector('.sec-history')).includes('couldn’t load'));
+  assert.equal(later.querySelectorAll('[data-unread="1"]').length, 1, 'the Customer tab is marked, the Email tab is not');
+  assert.ok(textOf(later.querySelector('[data-unread="1"]')).toLowerCase().includes('customer'));
+});
+
+test('an inbox that could not be checked is not "no email"', () => {
+  const off = UI.renderItem({ type: 'order', data: { detail: true, items: [], pending: [], email: { available: false, reason: 'Gmail is not configured' } } });
+  assert.ok(textOf(off.querySelector('.sec-email')).includes('not configured'));
+  const failed = UI.renderItem({ type: 'order', data: { detail: true, items: [], pending: [], email: { available: false, reason: 'unavailable' } } });
+  const words = textOf(failed.querySelector('.sec-email'));
+  assert.ok(words.includes('couldn’t check the inbox') && !words.includes('No recent email'), words);
+});
+
 /* -------------------------------------------------------- a button beside a row */
 
 test('an email row carries the buttons the Mac listed, and posts only which and which', () => {

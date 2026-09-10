@@ -260,7 +260,7 @@ class Branch:
     VOICE_CONTEXT_TTL_S = 120.0
 
     def bind_voice(self, family: str, *, kind: str = "", ref: str = "", label: str = "",
-                   prompt: str = "", clock=time.time) -> dict[str, Any]:
+                   prompt: str = "", phrase: str = "", clock=time.time) -> dict[str, Any]:
         """Arm this branch for a spoken continuation of a tapped control.
 
         `prompt` is what the screen should say it is waiting for — "Add a note". It is stored
@@ -268,7 +268,7 @@ class Branch:
         reply, including one that follows a reload, without importing the command table.
         """
         self.voice_context = {
-            "family": family, "kind": kind, "ref": ref, "label": label, "prompt": prompt,
+            "family": family, "kind": kind, "ref": ref, "label": label, "prompt": prompt, "phrase": phrase,
             "branch_id": self.branch_id, "at": clock(),
             "expires_at": clock() + self.VOICE_CONTEXT_TTL_S,
         }
@@ -345,7 +345,7 @@ class Branch:
             # it is listening for, and the band was previously drawn from the tap alone — so a
             # binding made by voice, or one surviving a reload, left the screen silent about it.
             "listening_for": ({"family": self.voice_context["family"], "label": self.voice_context.get("label", ""),
-                               "prompt": self.voice_context.get("prompt", ""),
+                               "prompt": self.voice_context.get("prompt", ""), "phrase": self.voice_context.get("phrase", ""),
                                "expires_at": self.voice_context.get("expires_at")}
                               if self.voice_target() else None),
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,

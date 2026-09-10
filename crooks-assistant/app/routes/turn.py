@@ -297,7 +297,7 @@ async def turn(
     set_line = working_sets.prompt_line(live, branch=branch)
     if set_line:
         prompt_text = f"{prompt_text}\n\n{set_line}"
-    for extra in _context_lines(live, text):
+    for extra in _context_lines(live, text, runtime=runtime):
         prompt_text = f"{prompt_text}\n\n{extra}"
     where = _branch_line(branch)
     if where:
@@ -609,7 +609,7 @@ AFFIRMATION_ANSWER = words_for("tap_commit")["affirmation"]
 AFFIRMATION_BLOCKED_ANSWER = AFFIRMATION_BLOCKED
 FIXED_LINES = GRAMMAR_FIXED_LINES
 
-def _context_lines(session, text: str) -> list[str]:
+def _context_lines(session, text: str, runtime=None) -> list[str]:
     """What the Mac knows that the model would otherwise guess at, one line each: the last
     gesture's counted outcome (once), the last query's shape (for a follow-up), and which
     composable capability the question's words name (so it is reached for, not declined)."""
@@ -645,7 +645,22 @@ def _context_lines(session, text: str) -> list[str]:
         if usable:
             lines.append("[This asks for " + "; ".join(f"{c.what} ({', '.join(c.tools)})" for c in usable[:3]) + " — the Mac composes it; call the tool rather than saying it cannot be done.]")
             session.hinted = True
+    lines.extend(_family_lines(runtime))
     return lines
+
+
+def _family_lines(runtime) -> list[str]:
+    """The capability families that are NOT ready, with the reason, so the model stops trying
+    them and says why — and the ready ones by name, so it reaches for them. Read from the
+    table the last capability check left on the runtime; nothing is probed on the turn."""
+    from app.capabilities import families as families_mod
+
+    table = getattr(runtime, "family_states_table", None) if runtime is not None else None
+    if not table:
+        table = {f.key: {"label": f.label, "state": f.state, "detail": f.detail} for f in families_mod.all_families()}
+    if not table:
+        return []
+    return ["[Capability families on this Mac:\n" + "\n".join(families_mod.words(table)) + "]"]
 
 
 # "Draft", "prepare", "write me" ask for something to read first. "Send", "email them",

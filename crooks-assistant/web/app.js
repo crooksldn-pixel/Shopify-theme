@@ -1657,22 +1657,41 @@ function noteBranch(branch) {
 // binding made by voice, and after the Mac lets one expire.
 function drawArmed(listening) {
   const on = Boolean(listening && listening.family);
-  if (el.armed) {
-    el.armed.hidden = !on;
-    if (on && el.armedWhat) {
-      const what = String(listening.prompt || 'Listening');
-      const where = String(listening.label || '').trim();
-      el.armedWhat.textContent = where ? `${what} · ${where}` : what;
-    }
-  }
+  // What the next sentence will do, and to whom: "Replying to Damon". The Mac's phrase, never
+  // the thread's subject — which is what clipped on the bench in a band that could not wrap.
+  const words = on ? String(listening.phrase || listening.prompt || 'Listening') : '';
   document.body.dataset.listeningFor = on ? String(listening.family) : '';
-  // And the chip itself, which never changed by a single pixel: same class, same background,
-  // same border, no aria-pressed. The one the finger touched is the one that should look
-  // touched.
+  // The chip itself, which never changed by a single pixel: same class, same background, same
+  // border, no aria-pressed. The one the finger touched is the one that should look touched.
+  let armedChip = null;
   for (const chip of document.querySelectorAll('#cards .rail-chip[data-family]')) {
     const armed = on && chip.dataset.family === String(listening.family);
     chip.dataset.primed = armed ? '1' : '';
     chip.setAttribute('aria-pressed', armed ? 'true' : 'false');
+    if (armed && !armedChip) armedChip = chip;
+  }
+  // The pill sits ON the control that was armed — directly under its rail, inside the card —
+  // so it is attached to the thing it is about, covers nothing, and wraps rather than clips
+  // at 601px. When the armed control is not on this screen (a binding made by voice, or on
+  // another card), the band above the deck stands in.
+  for (const stale of document.querySelectorAll('#cards .armed-inline')) stale.remove();
+  const rail = armedChip ? armedChip.closest('.rail') : null;
+  if (on && rail && rail.parentNode) {
+    const pill = document.createElement('div');
+    pill.className = 'armed armed-inline';
+    pill.setAttribute('role', 'status');
+    const dot = document.createElement('span'); dot.className = 'armed-dot'; dot.setAttribute('aria-hidden', 'true');
+    const what = document.createElement('span'); what.className = 'armed-what'; what.textContent = words;
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'armed-cancel'; cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => { if (el.armedCancel) el.armedCancel.click(); });
+    pill.appendChild(dot); pill.appendChild(what); pill.appendChild(cancel);
+    rail.insertAdjacentElement('afterend', pill);
+    if (el.armed) el.armed.hidden = true;
+    return;
+  }
+  if (el.armed) {
+    el.armed.hidden = !on;
+    if (on && el.armedWhat) el.armedWhat.textContent = words;
   }
 }
 

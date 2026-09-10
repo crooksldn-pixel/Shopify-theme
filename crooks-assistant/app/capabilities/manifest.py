@@ -88,10 +88,23 @@ def build(*, build_id: str = "", writes_enabled: bool = True) -> dict[str, Any]:
         ],
         "risk_types": ["reversible", "irreversible", "money"],
         "gestures": ["tap_commit", "swipe_commit", "hold_to_arm", "hold_drag_target"],
+        # The capability families and their static state. The live state — scope granted,
+        # store supports it, provider connected — is /health's; this says what is BUILT.
+        "families": [
+            {"key": f.key, "label": f.label, "area": f.area, "what": f.what, "state": f.state,
+             "operations": list(f.operations), "tools": list(f.tools), "scopes": list(f.scopes)}
+            for f in _families()
+        ],
     }
     manifest["fingerprint"] = fingerprint(manifest)
     manifest["counts"] = {"reads": len(manifest["reads"]), "writes": len(manifest["writes"]), "batches": len(manifest["batches"])}
     return manifest
+
+
+def _families() -> list[Any]:
+    from app.capabilities import families
+
+    return families.all_families()
 
 
 def fingerprint(manifest: dict[str, Any]) -> str:
@@ -104,6 +117,7 @@ def fingerprint(manifest: dict[str, Any]) -> str:
         "query": {k: v for k, v in sorted((manifest.get("query_dimensions") or {}).items())},
         "ui": sorted(manifest.get("ui_components", [])),
         "entities": sorted(manifest.get("entity_types", [])),
+        "families": sorted((f["key"], f.get("state")) for f in manifest.get("families", [])),
     }
     blob = json.dumps(shape, sort_keys=True, default=str, ensure_ascii=False)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]

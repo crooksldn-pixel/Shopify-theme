@@ -416,9 +416,15 @@ def _address(a: Any) -> dict[str, Any] | None:
 
 
 def _history(h: Any) -> dict[str, Any] | None:
-    """The customer's history beside their order: the five questions the owner asks."""
+    """The customer's history beside their order: the five questions the owner asks.
+
+    None means the order has no customer. A dict with `available: False` means the customer
+    exists and the read FAILED — kept distinct all the way to the glass, because "no customer
+    on this order" and "I couldn't load the customer" are different facts about the world."""
     if not isinstance(h, dict):
         return None
+    if h.get("available") is False:
+        return {"available": False, "reason": _text(h.get("reason"), 30) or "read_failed", "customer_id": _text(h.get("customer_id"))}
     last = h.get("last_order") if isinstance(h.get("last_order"), dict) else None
     return {
         "customer_id": _text(h.get("customer_id")),
@@ -489,11 +495,18 @@ def _media_path(value: Any) -> str:
 def present_extension(ext: dict[str, Any]) -> dict[str, Any]:
     """What GET /context/order returns: the parts of the order card that arrived after the
     turn, bounded the same way as the card itself."""
+    history, email = _history(ext.get("history")), _related_email(ext.get("email"))
+    # Which regions the Mac tried and could not read — as distinct from still reading (pending)
+    # and from read-and-empty. The tablet settles a region on its own clock when the asking
+    # ends; this lets it settle the moment the Mac knows.
+    failed = [name for name, part in (("history", history), ("email", email))
+              if isinstance(part, dict) and part.get("available") is False and str(part.get("reason") or "") in ("read_failed", "unavailable")]
     return {
         "order_id": _text(ext.get("order_id")),
         "pending": [_text(p, 20) for p in (ext.get("pending") or [])[:4] if isinstance(p, str)],
-        "history": _history(ext.get("history")),
-        "email": _related_email(ext.get("email")),
+        "failed": failed,
+        "history": history,
+        "email": email,
         **({"attention": _attention_items(ext)} if isinstance(ext.get("attention"), list) else {}),
     }
 

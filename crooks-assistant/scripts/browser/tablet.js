@@ -207,6 +207,41 @@ async function main() {
   await sleep(2500);
   check('a one-finger hold is still a question', posts.includes('/turn'), `posted: ${posts.join(', ') || 'nothing'}`);
 
+  // ---- 7. tap Reply on a thread: the armed state is on the control, unclipped, cancellable
+  await say('which customers need replying to?');
+  await page.evaluate(() => { const row = document.querySelector('#cards .row.tappable[data-kind="email_thread"]'); if (row) row.click(); });
+  await sleep(1500);
+  await page.evaluate(() => { const c = document.querySelector('#cards .rail-chip[data-family="email.reply"]'); if (c) c.click(); });
+  await sleep(1400);
+  const armed = await page.evaluate(() => {
+    const pill = document.querySelector('#cards .armed-inline');
+    const band = document.querySelector('#armed');
+    const chip = document.querySelector('#cards .rail-chip[data-family="email.reply"]');
+    if (!pill) return { pill: false, band: band && !band.hidden ? band.textContent.trim() : '' };
+    const what = pill.querySelector('.armed-what');
+    const cancel = pill.querySelector('.armed-cancel');
+    const pr = pill.getBoundingClientRect(); const wr = what.getBoundingClientRect(); const cr = cancel.getBoundingClientRect();
+    const cardR = pill.closest('.card').getBoundingClientRect();
+    return {
+      pill: true, text: what.textContent.trim(),
+      clipped: what.scrollHeight > what.clientHeight + 2 || what.scrollWidth > what.clientWidth + 2,
+      insideCard: pr.left >= cardR.left - 1 && pr.right <= cardR.right + 1,
+      onScreen: pr.left >= 0 && pr.right <= innerWidth && pr.bottom <= innerHeight,
+      afterRail: Boolean(pill.previousElementSibling && pill.previousElementSibling.classList.contains('rail')),
+      cancelH: Math.round(cr.height), height: Math.round(pr.height), lines: Math.round(wr.height / 17),
+      chipLit: chip ? chip.getAttribute('aria-pressed') === 'true' : false,
+    };
+  });
+  check('tapping Reply arms the control itself, in words about the person', armed.pill && /^Replying to \w+/.test(armed.text) && armed.chipLit, JSON.stringify(armed));
+  check('the armed state is attached to the rail, inside the card, on screen, unclipped',
+    armed.pill && armed.afterRail && armed.insideCard && armed.onScreen && !armed.clipped && armed.height <= 64, JSON.stringify(armed));
+  check('and Cancel is a finger-sized control', armed.pill && armed.cancelH >= 44, `cancel=${armed.cancelH}px`);
+  await shot('06-armed-reply');
+  await page.evaluate(() => { const c = document.querySelector('#cards .armed-inline .armed-cancel'); if (c) c.click(); });
+  await sleep(900);
+  const gone = await page.evaluate(() => ({ pill: Boolean(document.querySelector('#cards .armed-inline')), band: Boolean(document.querySelector('#armed') && !document.querySelector('#armed').hidden), listening: document.body.dataset.listeningFor || '' }));
+  check('Cancel lets it go', !gone.pill && !gone.band && gone.listening === '', JSON.stringify(gone));
+
   check('no script error during the whole run', errors.length === 0, errors.slice(0, 3).join(' | '));
   await browser.close();
   const ok = checks.every((c) => c.ok);

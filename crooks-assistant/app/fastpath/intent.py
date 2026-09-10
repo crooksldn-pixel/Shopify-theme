@@ -350,6 +350,24 @@ FAMILIES: tuple[Family, ...] = (
     Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number", "possessive_name", "deixis", "address"), base=0.7, floor=0.74, max_words=12),
 )
 
+# Families a Phase 3 capability module adds from its own file (app/families/*), so two
+# families never edit this tuple's same line. Read wherever FAMILIES is read.
+EXTRA_FAMILIES: list[Family] = []
+
+
+def extend(families: list[Family] | tuple[Family, ...]) -> None:
+    known = {f.name for f in FAMILIES} | {f.name for f in EXTRA_FAMILIES}
+    for family in families:
+        if family.name in known:
+            raise ValueError(f"intent family {family.name!r} is already registered")
+        EXTRA_FAMILIES.append(family)
+        known.add(family.name)
+
+
+def all_families() -> tuple[Family, ...]:
+    return FAMILIES + tuple(EXTRA_FAMILIES)
+
+
 # Signal names as the families spell them, mapped to how they are read off Signals.
 _LOOKUP = {
     "mutation": lambda s: s.mutation,
@@ -436,7 +454,7 @@ def resolve(text: str, *, branch: Any = None) -> Intent:
     sig = signals_for(text, branch=branch)
     if sig.mutation:
         return Intent(family="", confidence=0.0, signals=sig, reason="asks for a change")
-    scored = sorted(((score(f, sig), f) for f in FAMILIES), key=lambda pair: (-pair[0], pair[1].name))
+    scored = sorted(((score(f, sig), f) for f in all_families()), key=lambda pair: (-pair[0], pair[1].name))
     best_value, best = scored[0]
     second_value, second = (scored[1] if len(scored) > 1 else (0.0, None))
     if best_value <= 0:
@@ -450,7 +468,7 @@ def resolve(text: str, *, branch: Any = None) -> Intent:
 
 
 def family(name: str) -> Family | None:
-    for candidate in FAMILIES:
+    for candidate in all_families():
         if candidate.name == name:
             return candidate
     return None

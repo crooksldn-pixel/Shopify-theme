@@ -359,7 +359,9 @@ async function main() {
     await page.touchscreen.tap(chipBefore.x, chipBefore.y);
     await sleep(1300);
     const armed = await page.evaluate(() => {
-      const band = document.querySelector('#armed');
+      // The armed state sits on the control itself when that control is on screen (Phase 3),
+      // and in the band above the deck otherwise. Either is "beside the card, not under the dock".
+      const band = document.querySelector('#cards .armed-inline') || document.querySelector('#armed');
       const c = document.querySelector('#cards .rail-chip[data-family="order.add_note"]');
       const s2 = c ? getComputedStyle(c) : null;
       return {
@@ -384,7 +386,7 @@ async function main() {
     check('tapping it tells the Mac what the next sentence is about',
       Boolean(branch && branch.family === 'order.add_note'), JSON.stringify(branch));
     check('and the screen says so, beside the card rather than under the dock',
-      armed.shown && /Add a note/.test(armed.text) && /1938/.test(armed.text)
+      armed.shown && /Adding a note/.test(armed.text) && /1938/.test(armed.text)
       && Math.abs(armed.top - armed.chipTop) < 500,
       `shown=${armed.shown} "${armed.text}" band@${armed.top} chip@${armed.chipTop}`);
     check('and the chip the finger touched looks touched',
@@ -398,7 +400,7 @@ async function main() {
     });
     await sleep(400);
     const held = await page.evaluate(() => {
-      const band = document.querySelector('#armed');
+      const band = document.querySelector('#cards .armed-inline') || document.querySelector('#armed');
       return { shown: Boolean(band && !band.hidden), text: band && !band.hidden ? (band.textContent || '').replace(/\s+/g, ' ').trim() : '' };
     });
     await page.evaluate(() => {
@@ -406,7 +408,7 @@ async function main() {
       if (t) t.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
     });
     await sleep(500);
-    check('it is still there while the thumb is down to speak', held.shown && /Add a note/.test(held.text),
+    check('it is still there while the thumb is down to speak', held.shown && /Adding a note/.test(held.text),
       `shown=${held.shown} "${held.text}"`);
     await shot('06-armed');
 
@@ -414,7 +416,7 @@ async function main() {
     await page.evaluate(() => { const b = document.querySelector('#armed-cancel'); if (b) b.click(); });
     await sleep(1000);
     const after = await page.evaluate(async () => {
-      const band = document.querySelector('#armed');
+      const band = document.querySelector('#cards .armed-inline') || document.querySelector('#armed');
       const id = localStorage.getItem('crooks.session') || '';
       const r = await fetch(`/branches?session_id=${encodeURIComponent(id)}`, { cache: 'no-store' });
       const d = await r.json();

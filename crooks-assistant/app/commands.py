@@ -523,6 +523,54 @@ SPOKEN_CONTROLS: dict[str, tuple[str, str]] = {
     "set.filter": ("set", "Narrow these"),
 }
 
+# What the screen says while it listens: what the NEXT SENTENCE will do, and to whom. Short,
+# because it sits on an 8-inch screen beside the control that was tapped; never the thread's
+# subject line, which is what clipped on the bench ("Reply to this · Order #1938 — can I add
+# to it?" in a band that could not wrap).
+_PHRASES: dict[str, str] = {
+    "email.reply": "Replying to {who}",
+    "email.rewrite": "Rewriting the draft",
+    "order.add_note": "Adding a note to {label}",
+    "order.change_address": "Changing the address on {label}",
+    "customer.ask": "Asking about {who}",
+    "set.filter": "Narrowing these",
+}
+
+
+def _first_name(text: str) -> str:
+    word = str(text or "").strip().split(",")[0].strip().split(" ")[0].strip(" <>\"'")
+    return word if word and "@" not in word else ""
+
+
+def _who_for(kind: str, ref: str, label: str) -> str:
+    """Who the sentence is for, in one word, from what the Mac already holds."""
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    held = memory().get(ENTITY, f"{kind}:{ref}", allow_stale=True)
+    value = held.value if held is not None and isinstance(getattr(held, "value", None), dict) else {}
+    if kind == "email_thread":
+        messages = [m for m in (value.get("messages") or []) if isinstance(m, dict)]
+        for m in reversed(messages):
+            if not m.get("outbound") and m.get("from"):
+                return _first_name(str(m["from"]))
+        if messages and messages[-1].get("from"):
+            return _first_name(str(messages[-1]["from"]))
+        return ""
+    if kind == "customer":
+        return _first_name(str(value.get("name") or label or ""))
+    if kind == "order":
+        return _first_name(str(value.get("customer_name") or ""))
+    return ""
+
+
+def listening_phrase(family: str, *, kind: str, ref: str, label: str) -> str:
+    template = _PHRASES.get(family, "Listening")
+    who = _who_for(kind, ref, label) if "{who}" in template else ""
+    if "{who}" in template and not who:
+        return template.replace(" {who}", " this email" if kind == "email_thread" else " them")
+    return template.format(who=who, label=(label if str(label).startswith("#") else (f"#{label}" if str(label).isdigit() else label or "this")))
+
 
 def _bind_voice(ctx: Ctx) -> Outcome:
     """A control was tapped that expects words. Bind what they will apply to, and listen.
@@ -540,10 +588,11 @@ def _bind_voice(ctx: Ctx) -> Outcome:
     ref = ctx.arg("ref") or str(entity.get("ref") or "")
     if wants_kind != "set" and (kind != wants_kind or not ref):
         return Outcome.refused("no_target", f"There is no {wants_kind.replace('_', ' ')} open to do that to.")
-    bound = ctx.branch.bind_voice(family, kind=kind, ref=ref,
-                                  label=ctx.arg("label") or str(entity.get("label") or ""), prompt=label)
+    entity_label = ctx.arg("label") or str(entity.get("label") or "")
+    phrase = listening_phrase(family, kind=kind, ref=ref, label=entity_label)
+    bound = ctx.branch.bind_voice(family, kind=kind, ref=ref, label=entity_label, prompt=label, phrase=phrase)
     return Outcome(answer="", changed={"listening_for": {"family": family, "label": bound.get("label", ""),
-                                                         "prompt": label}, "expires_at": bound.get("expires_at")})
+                                                         "prompt": label, "phrase": phrase}, "expires_at": bound.get("expires_at")})
 
 
 def _release_voice(ctx: Ctx) -> Outcome:

@@ -65,6 +65,9 @@ class Runtime:
     # answering "what can you do?", where a change blocked for want of a scope then looked
     # exactly like one that is ready.
     capability_states: dict[str, dict[str, str]] = field(default_factory=dict)
+    # The capability FAMILIES' states (app/capabilities/families.py), kept beside the operations
+    # by family_states() so a turn can tell the model without probing anything.
+    family_states_table: dict[str, dict[str, Any]] = field(default_factory=dict)
     # The tiered read cache (app/memory). Never consulted by a write.
     memory: Any = None
     started_at: float = field(default_factory=time.time)
@@ -313,6 +316,20 @@ class Runtime:
         # this, so the answer is kept where the capability card looks for it. Set before the
         # return rather than at the call sites so a half answer is still an answer.
         self.capability_states = out
+
+        return out
+
+    async def family_states(self) -> dict[str, dict[str, Any]]:
+        """Every capability FAMILY and its state (app/capabilities/families.py) — the answer to
+        "can this Mac create a discount code?", which has more shapes than the per-operation
+        table: written but the scope is missing, not offered by the store, no provider
+        connected, not built yet. Derived from the operation table where a family has
+        operations and from its own probe where it has one. Cached with the operations."""
+        from app.capabilities import families
+
+        operations = self.capability_states or await self.capabilities()
+        out = await families.states(self, operations=operations)
+        self.family_states_table = out
         return out
 
 
@@ -388,6 +405,9 @@ def build(settings: Settings | None = None) -> Runtime:
     gmail = GmailClient()
 
     # Register the tool modules. Importing them is what runs the @tool decorators.
+    # The Phase 3 capability families, one module each (app/families/*): their tools, commands,
+    # recipes, intent families and capability states register on import, after the core tools.
+    from app.families import load_all as load_families
     from app.tools import (  # noqa: F401
         analytics_tools,
         batch_tools,
@@ -397,6 +417,8 @@ def build(settings: Settings | None = None) -> Runtime:
         shopify_tools,
         shopify_writes,
     )
+
+    load_families()
 
     shopify_tools.bind(shopify)
     from app.analytics.cache import OrderCache

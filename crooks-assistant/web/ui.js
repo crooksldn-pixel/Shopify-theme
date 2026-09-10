@@ -349,7 +349,11 @@
 
   // ---- the customer's history, beside their order or on their own card.
   function historyBlock(hist) {
-    if (!hist || typeof hist !== 'object') return [h('p', { class: 'card-note', text: 'No customer on this order.' })];
+    // Not found, and could not be read, are different facts and get different sentences. The
+    // Phase 2 live test found a failed read printed as "No customer on this order." under a
+    // header naming the customer — infrastructure turned into business truth.
+    if (!hist || typeof hist !== 'object') return [h('p', { class: 'card-note', text: 'No customer is attached to this order.' })];
+    if (hist.available === false) return [h('p', { class: 'card-note unread-line', text: 'I couldn’t load the customer this time. Say “what else has this customer ordered?” to try again.' })];
     const orders = num(hist.orders);
     const stats = h('div', { class: 'stats three' }, [
       h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: orders === 1 ? 'Order' : 'Orders' })]),
@@ -384,7 +388,13 @@
   // ---- email that is about this order, with how sure that is on every line.
   function relatedEmailBlock(email) {
     if (!email || typeof email !== 'object') return [h('p', { class: 'card-note', text: 'Email not checked.' })];
-    if (email.available === false) return [h('p', { class: 'card-note', text: `Email not checked${email.reason ? ' · ' + text(email.reason) : ''}` })];
+    if (email.available === false) {
+      // Not configured is a setting; unavailable is a read that failed. Only one of them is
+      // worth trying again, and only one of them must not be read as "no email".
+      const reason = text(email.reason);
+      if (/unavailable|read_failed|timeout/i.test(reason)) return [h('p', { class: 'card-note unread-line', text: 'I couldn’t check the inbox this time. Say “check the inbox for this order” to try again.' })];
+      return [h('p', { class: 'card-note', text: `Email not checked${reason ? ' · ' + reason : ''}` })];
+    }
     const threads = list(email.threads, 3);
     if (!threads.length) return [h('p', { class: 'card-note', text: 'No recent email from them about this.' })];
     return [h('ul', { class: 'rows mail' }, threads.map((t) => {
@@ -538,8 +548,23 @@
     }
     if (pending.indexOf('email') === -1 && Object.prototype.hasOwnProperty.call(ext, 'email')) fill('email', relatedEmailBlock(ext.email));
     if (Array.isArray(ext.attention)) placeAttention(node, ext.order_id, ext.attention);
+    // A region the Mac tried and could not read: its tab says so, the way it does when the
+    // tablet stops asking (settleOrder), so a closed tab is never an all-clear.
+    for (const kind of (Array.isArray(ext.failed) ? ext.failed : [])) markTabUnread(node, kind);
     node.dataset.pending = pending.join(' ');
     return pending;
+  }
+
+  const TAB_OF_REGION = { email: 'email', history: 'customer' };
+  function markTabUnread(node, kind) {
+    const want = TAB_OF_REGION[kind] || kind;
+    const tabs = node.querySelectorAll('[role="tab"]');
+    const tab = tabs.find ? tabs.find((t) => (t.textContent || '').toLowerCase().indexOf(want) !== -1)
+      : Array.prototype.find.call(tabs, (t) => (t.textContent || '').toLowerCase().indexOf(want) !== -1);
+    if (tab && !tab.querySelector('.tab-mark')) {
+      tab.setAttribute('data-unread', '1');
+      tab.appendChild(h('span', { class: 'tab-mark', text: '?', title: 'not read' }));
+    }
   }
 
   // What never arrived, said so. The tablet asks for the rest of an order three times and
@@ -558,7 +583,6 @@
       email: `The inbox could not be read this time. Say “check the inbox for ${number ? '#' + number : 'this order'}” to try again.`,
       history: 'Their history could not be read this time. Say “what else has this customer ordered?” to try again.',
     };
-    const tabsFor = { email: 'email', history: 'customer' };
     for (const kind of pending) {
       const sec = node.querySelector(`.sec-${kind}`);
       if (sec) {
@@ -567,13 +591,7 @@
         if (keep) sec.appendChild(keep);
         sec.appendChild(h('p', { class: 'card-note unread-line', text: words[kind] || 'This could not be read this time.' }));
       }
-      const tab = node.querySelectorAll('[role="tab"]').find
-        ? node.querySelectorAll('[role="tab"]').find((t) => (t.textContent || '').toLowerCase().indexOf(tabsFor[kind] || kind) !== -1)
-        : Array.prototype.find.call(node.querySelectorAll('[role="tab"]'), (t) => (t.textContent || '').toLowerCase().indexOf(tabsFor[kind] || kind) !== -1);
-      if (tab && !tab.querySelector('.tab-mark')) {
-        tab.setAttribute('data-unread', '1');
-        tab.appendChild(h('span', { class: 'tab-mark', text: '?', title: 'not read' }));
-      }
+      markTabUnread(node, kind);
     }
     node.dataset.pending = '';
     return pending;

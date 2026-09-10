@@ -674,11 +674,18 @@ class Hydrator:
         digits = order_digits(core.get("order_number"))
 
         async def history() -> None:
+            # Three different truths, kept apart: the order has no customer (None); the customer
+            # was read (a dict); the read FAILED (a dict that says so). The Phase 2 live test
+            # found a failed read printed as "No customer on this order." under a header naming
+            # the customer — infrastructure turned into business fact.
+            if not customer_id:
+                job.parts["history"] = None
+                return
             try:
-                job.parts["history"] = await self._history(customer_id, current_order_id=core.get("order_id")) if customer_id else None
+                job.parts["history"] = await self._history(customer_id, current_order_id=core.get("order_id"))
             except Exception as exc:  # noqa: BLE001 — the order stands without its history
                 log.warning("customer history unavailable for %s: %s", job.order_id, type(exc).__name__)
-                job.parts["history"] = None
+                job.parts["history"] = {"available": False, "reason": "read_failed", "detail": type(exc).__name__, "customer_id": customer_id}
 
         async def email() -> None:
             try:
