@@ -1019,3 +1019,20 @@ def test_opening_crooks_os_prefers_the_tablet_address_and_falls_back_to_this_mac
     monkeypatch.setattr(control, "tablet_route", lambda p: (None, "not serving"))
     local = next(a for a in control.actions_document()["actions"] if a["id"] == "open")
     assert local["url"] == "http://127.0.0.1:8000/"
+
+
+def test_a_git_error_quoting_a_token_is_masked_in_the_json_too(here, monkeypatch, capsys):
+    """The other door: `crooks-update --json`, typed. A remote URL with a credential in it is
+    exactly what a failed fetch quotes back, so that document goes through the same redactor
+    the app's documents do."""
+    monkeypatch.setenv("GIT_ACCESS_TOKEN", "ghp_" + "b7" * 12)
+
+    def fetch(branch):
+        raise update.Stopped("fatal: could not read from https://x:ghp_b7b7b7b7b7b7b7b7b7b7b7b7@github.com/o/r.git")
+
+    monkeypatch.setattr(update, "stage_fetch", fetch)
+    assert update.main(["--json"]) == 1
+    out = capsys.readouterr().out
+    assert "ghp_" not in out and control.MASK in out
+    document = json.loads(out)
+    assert document["stop"]["stage"] == "fetch" and "could not read from" in document["stop"]["reason"]

@@ -390,7 +390,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     code, doc = run(check=args.check, branch=args.branch, test=args.test, quiet=args.json)
     if args.json:
-        print(json.dumps(doc, indent=2))
+        # A stopped git command quotes what it was doing, and a remote URL can carry a token
+        # in it. The document goes out through the same redactor the app's documents do —
+        # imported here rather than at the top, because control.py reads this module.
+        from scripts.control import redact
+
+        print(json.dumps(redact(doc), indent=2))
     return code
 
 
