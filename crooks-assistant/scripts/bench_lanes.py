@@ -74,8 +74,10 @@ async def main(argv: list[str] | None = None) -> int:
     from app.analytics.cache import OrderCache
     from app.capabilities.delta import record_build
     from app.capabilities.manifest import build as build_manifest
+    from app.families import landings
     from app.fastpath import RECIPES, choose_lane, recipe_for, resolve, run
     from app.fastpath import library as _recipes  # noqa: F401 — importing it is what registers them
+    from app.fastpath.intent import Intent, signals_for
     from app.fastpath.models import Ctx
     from app.memory import Memory
     from app.memory import install as install_memory
@@ -214,6 +216,25 @@ async def main(argv: list[str] | None = None) -> int:
     record("sales_breakdown_period", "How were sales last week", lane, ms, calls)
     lane, ms, calls, _ = await turn("which customers are waiting on a reply", repeat=1)
     record("needs_reply", "Which customers are waiting on a reply", lane, ms, calls)
+
+    # 3b. the dock's landings (brief section 4). Not in the September baseline: they were a
+    # sentence through the whole turn pipeline then, and the point of Phase 3 is that they are
+    # a place with a fixed shape. What is timed is the whole landing — three reads for Sales,
+    # two each for Orders and Products — because that is what a thumb on the dock pays for.
+    for area, asked in (("orders", "Tap Orders"), ("sales", "Tap Sales"), ("products", "Tap Products")):
+        recipe_id = landings.AREAS[area]
+        recipe = RECIPES[recipe_id]
+        intent = Intent(family=recipe.intent_family, confidence=1.0, signals=signals_for("", branch=branch), reason="a tap")
+        outcome: dict[str, str] = {}
+
+        async def once(recipe=recipe, intent=intent, outcome=outcome):
+            session.plan = None
+            answer = await run(recipe, Ctx(runtime=Runtime, session=session, branch=branch, intent=intent, text="", memory=memory))
+            outcome["defer"] = answer.defer
+            outcome["answer"] = answer.answer
+
+        ms = await _timed(once, repeat=1)
+        record(recipe_id, asked, "NORMAL" if outcome.get("defer") else "FAST", ms, 0)
 
     # 4. moving through a set, member by member — the thirty-second turn. The set is made
     # explicitly here, of orders the order double actually holds: what is being timed is the
