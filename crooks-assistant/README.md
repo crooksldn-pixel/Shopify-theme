@@ -25,6 +25,22 @@ make up          # everything the tablet needs, in this window; prints the addre
 Or `make install` once, and the Mac starts it at login with no window at all (`make status`
 tells you how it is doing).
 
+### Or no Terminal at all: CROOKS Control
+
+```bash
+make control-app     # builds the menu-bar app and puts it in /Applications (macOS 13 or later)
+```
+
+The menu bar then reads `CROOKS — Online` in one of four colours — green live, blue
+recording, amber read-only or degraded, red something to look at — and under it are the rows
+(`crooks-status`, in a list) and the buttons: open CROOKS OS, restart, check for update,
+update, run tests, run UI tests, start and stop a recording, generate and open a report, open
+the logs, open the folder. The update shows both build ids and waits for a click, and only
+offers itself when it would be a fast-forward onto a clean tree.
+
+Record the build that is working before the first update, so the app has somewhere to go back
+to: `crooks-control mark-good`. See `mac/CrooksControl/README.md`.
+
 ### Three words, from anywhere
 
 Run `make commands` once and these work from any folder, in any Terminal:
@@ -33,6 +49,7 @@ Run `make commands` once and these work from any folder, in any Terminal:
 crooks-status    # one screen: build, voice, Claude, Shopify, Gmail, orders, the tablet's address
 crooks-update    # pull, install what changed, restart, verify — and stop rather than lose work
 crooks-watch     # what it is doing right now, one line per thing
+crooks-control   # the same answers as JSON, which is what the Mac app reads
 ```
 
 `crooks-update` fast-forwards only. It will not merge, rebase, reset or force anything; if the
@@ -63,7 +80,8 @@ one line. You never run a Python file directly; `make` does it. `make help` prin
 | Everything at once | `make check` | Doctor, Shopify, Gmail in one go |
 | Ask questions | `make chat` | Typed, so it does not use the tablet or much allowance |
 | Day 1 test | `make acceptance SPOKEN=1` | From the tablet, at your working distance |
-| Three words on the PATH | `make commands` | `crooks-status`, `crooks-update`, `crooks-watch` from any folder |
+| Three words on the PATH | `make commands` | `crooks-status`, `crooks-update`, `crooks-watch`, `crooks-control` from any folder |
+| The menu bar instead | `make control-app` | Builds CROOKS Control into /Applications; then `crooks-control mark-good` once |
 | Prove it here | `make accept` | Lint, Node, the offline suite, a server of its own, latency medians, page sizes, and the page in a real Chromium (when Playwright is installed). No store, no inbox, no credit |
 
 The console work (Tailscale, Shopify Dev Dashboard, Google Cloud) is the only part that is

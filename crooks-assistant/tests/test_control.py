@@ -18,6 +18,9 @@ import pytest
 
 from scripts import control, update
 
+# The checkout these tests are part of, whatever directory pytest was started from.
+PROJECT = Path(__file__).resolve().parent.parent
+
 # --------------------------------------------------------------------------- a real repo
 
 
@@ -841,7 +844,7 @@ def test_nothing_in_crooks_os_calls_the_updater_or_the_control_command():
     hits = sp.run(["grep", "-rn", "--include=*.py", "--include=*.js", "--include=*.html",
                    "-e", "scripts.update", "-e", "scripts/update.py", "-e", "crooks-update",
                    "-e", "scripts.control", "-e", "crooks-control", "app", "config", "web", "experience"],
-                  cwd=Path.cwd(), capture_output=True, text=True).stdout.strip()
+                  cwd=PROJECT, capture_output=True, text=True).stdout.strip()
     assert hits == "", f"something inside CROOKS OS reaches the updater:\n{hits}"
 
 
@@ -850,14 +853,14 @@ def test_only_the_control_command_writes_the_known_good_build():
 
     hits = sp.run(["grep", "-rln", "--include=*.py", "--include=*.swift", "--include=*.md",
                     "last_known_good", "app", "config", "web", "scripts", "tests", "experience", "mac"],
-                  cwd=Path.cwd(), capture_output=True, text=True).stdout.split()
+                  cwd=PROJECT, capture_output=True, text=True).stdout.split()
     assert sorted(hits) == ["scripts/control.py", "tests/test_control.py"], hits
 
 
 # --------------------------------------------------------- the Swift side, as text only
 
 
-SWIFT_DIR = Path("mac/CrooksControl")
+SWIFT_DIR = PROJECT / "mac" / "CrooksControl"
 
 
 def swift_sources() -> str:

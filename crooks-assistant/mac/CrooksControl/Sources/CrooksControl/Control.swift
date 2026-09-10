@@ -69,9 +69,9 @@ struct Control {
     }
 
     func status() async throws -> StatusDocument {
-        let document: StatusDocument = try await document(["status"])
-        guard document.contract == Contract.expected else { throw ControlError.badContract(document.contract) }
-        return document
+        let answer: StatusDocument = try await document(["status"])
+        guard answer.contract == Contract.expected else { throw ControlError.badContract(answer.contract) }
+        return answer
     }
 
     func actions() async throws -> ActionsDocument {
@@ -162,18 +162,23 @@ final class CommandLog: ObservableObject {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
+        // Both handlers are called on a background thread, so each one hops to the main actor
+        // before it touches anything published.
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
             guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
-            Task { @MainActor [weak self] in
-                self?.append(text)
+            guard let self else { return }
+            Task { @MainActor in
+                self.append(text)
             }
         }
-        process.terminationHandler = { [weak self] finishedProcess in
-            Task { @MainActor [weak self] in
-                self?.running = false
-                self?.finished = finishedProcess.terminationStatus
-                pipe.fileHandleForReading.readabilityHandler = nil
+        process.terminationHandler = { [weak self] ended in
+            let code = ended.terminationStatus
+            pipe.fileHandleForReading.readabilityHandler = nil
+            guard let self else { return }
+            Task { @MainActor in
+                self.running = false
+                self.finished = code
             }
         }
         do {
