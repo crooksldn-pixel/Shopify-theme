@@ -246,9 +246,11 @@ Every one of those turns made **zero model calls**.
 ## 8a. The adversarial review, and what it found
 
 Eight hunt lenses were run over this tree — prose-and-buttons, duplicate logic between voice
-and touch, state leakage, wrong answers, read-only holes, stale-and-cached, test integrity —
-and their findings were reproduced against running code before anything was changed. Twenty
-reproduced. All twenty are fixed, each with a test that fails when its fix is reverted.
+and touch, state leakage, wrong answers, read-only holes, stale-and-cached, enrichment and
+blocking, test integrity — and every finding was reproduced against running code before
+anything was changed. Sixty-four agents, a verify stage of independent skeptics per finding.
+Twenty-three reproduced. All twenty-three are fixed, each with a test that fails when its fix
+is reverted.
 
 The ones worth knowing about, because they say what this codebase gets wrong when it goes
 wrong:
@@ -278,6 +280,14 @@ they never rendered at all; its per-change states read an attribute nothing ever
 change was badged "unknown"; and its row budget was eaten by reads, so "the shop" showed nine
 readings and one change while the subtitle said fourteen changes existed.
 
+**A fast lane that waited on a preflight it does not use.** Mine. Giving read turns their
+action rail was the point of this pass, and I did it with an `asyncio.gather` of the answer and
+`writes_context`, under a comment saying the preflight is cached and costs nothing. Before that
+change a read turn never called it at all, and the scope caches last ten minutes — so "what can
+you do now?" went from 24 ms to 1508 ms with a cold scope check, on a recipe that reads nothing
+and has no rail to show. The preflight now starts before the read and is awaited only by an
+answer with a card to hang a rail on.
+
 One change entered the tree from a review agent and reached a commit unmentioned — the
 `possessive_name` blocks in `app/fastpath/intent.py`. It is described in `aea8f30`, which
 records how it got there, why it is right, and adds the test it was missing.
@@ -306,6 +316,14 @@ records how it got there, why it is right, and adds the test it was missing.
   tablet no longer calls them. They are no longer a second implementation — they move through
   `commands.move_nav`, the same arithmetic as the word and the button — but they are still a
   second door, and they do not draw. Closing them is a tidy-up for later.
+- **An order card waits for the write preflight when the scope cache is cold.** The rail has to
+  be right — a card that guesses what can be applied is the failure this pass exists to remove
+  — so a card that carries one waits for `writes_context`. The preflight starts before the
+  read, so in production it overlaps a Shopify round trip and usually costs nothing; on a cold
+  cache (every ten minutes, and after any restart) it can add up to `WRITE_STATUS_TIMEOUT_S`.
+  Recipes with no rail — capability, navigation, the ends of a list — pay nothing. If Phase 2
+  wants the card sooner, the shape is a best-effort rail that arrives with enrichment rather
+  than a shorter bound, because a rail that timed out and showed nothing is the original bug.
 - **A replayed card does not say it is replayed.** `app/surfaces.py` declares `Freshness` and
   says "a card that is showing a cached read must say so, because the owner is about to make a
   decision on it" — and `present()` never sets it, so a record read 170 seconds ago looks
@@ -370,7 +388,7 @@ would have to fail AND the engine would have to fail before anything could be se
 
 Branch: `claude/crooks-assistant-build-lgxlau`.
 
-Final code commit: **`efd63fc`**. This document is the commit after it, so `git log -1`
+Final code commit: **`db39513`**. This document is the commit after it, so `git log -1`
 on the branch shows one further commit whose only content is these docs — the SHA of the last
 commit that changed behaviour is the one above.
 
@@ -378,7 +396,7 @@ Suite at handoff:
 
 | | |
 |---|---|
-| pytest, offline | **1401 passed, 2 deselected** (1342 baseline + 59) |
+| pytest, offline | **1404 passed, 2 deselected** (1342 baseline + 62) |
 | ruff | clean across `app config scripts tests experience` |
 | Node | 80 pass, 0 fail; every page script parses |
 | golden scenarios | 15/15, 97 checks |

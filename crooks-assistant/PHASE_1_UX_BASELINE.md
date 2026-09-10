@@ -181,5 +181,5 @@ Read caches are shared because they are immutable. Nothing else is.
 
 ---
 
-*Baseline recorded at `efd63fc` on `claude/crooks-assistant-build-lgxlau` for Phase 1.
+*Baseline recorded at `db39513` on `claude/crooks-assistant-build-lgxlau` for Phase 1.
 See `PHASE_1_HANDOFF.md` for the architecture, the scenarios and how to run them.*
