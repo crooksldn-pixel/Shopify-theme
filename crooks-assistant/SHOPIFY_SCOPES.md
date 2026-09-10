@@ -21,6 +21,9 @@ read_assigned_fulfillment_orders
 read_merchant_managed_fulfillment_orders
 read_third_party_fulfillment_orders
 read_marketplace_fulfillment_orders
+read_discounts
+read_draft_orders
+read_store_credit_accounts
 ```
 
 - `read_all_orders` is deliberately absent. Without it Shopify exposes only the last sixty
@@ -30,6 +33,14 @@ read_marketplace_fulfillment_orders
   change (read best-effort: a store without them still changes the address, and says the
   destination was not checked).
 - `read_locations` serves the single-location check before a restock or a stock change.
+- `read_discounts` serves the collision read: before a discount code is created the shop is
+  asked whether that code already exists, and the card says so rather than letting Shopify
+  refuse the creation after the owner has authorised it.
+- `read_draft_orders` serves the draft an order is made from — the reviewable intermediate —
+  and the re-read that proves the order was created.
+- `read_store_credit_accounts` serves the balance a customer's account holds now, which is
+  both what the card shows before the credit and what proves it afterwards. Abandoned
+  checkouts need no scope of their own: `abandonedCheckouts` is served by `read_orders`.
 
 ## Writes, one scope per change
 
@@ -43,6 +54,28 @@ read_marketplace_fulfillment_orders
 | Fulfil | `fulfillmentCreate` | `write_merchant_managed_fulfillment_orders` |
 | Stock | `inventorySetQuantities` (compare-and-swap) | `write_inventory` |
 | Add an item to an order | `orderEditCommit` (after `orderEditBegin` + `orderEditAddVariant`) | `write_order_edits` |
+| Create a discount code | `discountCodeBasicCreate` | `write_discounts` |
+| Create an order | `draftOrderComplete` (after `draftOrderCreate`) | `write_draft_orders` |
+| Credit a customer's store credit | `storeCreditAccountCredit` | `write_store_credit_account_transactions` |
+
+`write_discounts` is the whole of the discount family: without it the family reports
+MISSING_SCOPE and names itself (`app/families/discounts.py`), the write tool is not offered
+to Claude at all, and the collision read — which needs only `read_discounts` — still works,
+so the assistant can still say whether a code is taken.
+
+`write_draft_orders` covers both of the order-creation mutations, and this is the point of
+using them: `draftOrderCreate` makes a draft, which is a real object priced by Shopify that
+nobody is charged for, and `draftOrderComplete` turns that draft into the order. The draft is
+made while the card is being built, so the money on the card is Shopify's arithmetic; the
+gesture authorises the completion alone. A store that grants `read_draft_orders` but not
+`write_draft_orders` gets MISSING_SCOPE with the scope named, and nothing is drafted.
+
+`write_store_credit_account_transactions` is Shopify's own name for the store-credit grant,
+and it is not enough on its own: the store must also have store credit available to it. The
+family probes for both (`app/families/store_credit.py`) — the scope, and whether the shop
+actually answers with a store credit account for a customer — and reports
+NOT_SUPPORTED_BY_STORE when the API is there and the store is not, MISSING_SCOPE when the
+store is there and the grant is not. It never claims ready on the strength of one of them.
 
 `write_order_edits` covers all three of the order-edit mutations, and only the third changes
 anything: the first two build and price a CalculatedOrder — a scratch copy of the order —
