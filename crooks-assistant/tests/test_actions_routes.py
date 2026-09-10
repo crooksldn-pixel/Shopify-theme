@@ -141,7 +141,11 @@ async def test_a_missing_scope_blocks_every_commit_and_shows_in_health(client):
     assert response.status_code == 403 and response.json()["code"] == "scope_missing"
     assert client.store.mutations == []
     health = (await client.get("/health?fresh=1")).json()
-    assert health["writes"] == {"state": "blocked", "detail": "blocked — Shopify write_inventory, write_merchant_managed_fulfillment_orders, write_orders scope missing"}
+    # Every write scope the build knows about, named, so the owner can see what to grant. A
+    # family added later adds its scope to this line (write_order_edits is Phase 3's order
+    # item editing) — which is the point of the line, and is why it is asserted in full
+    # rather than by a substring.
+    assert health["writes"] == {"state": "blocked", "detail": "blocked — Shopify write_inventory, write_merchant_managed_fulfillment_orders, write_order_edits, write_orders scope missing"}
     assert health["checks"]["writes"]["ok"] is False
 
 
