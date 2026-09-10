@@ -374,9 +374,15 @@ class Reconstruction:
 # ------------------------------------------------------------------ reconstruction
 
 
-def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
+def reconstruct(events: list[dict[str, Any]], *, capability_states: dict[str, dict[str, Any]] | None = None) -> Reconstruction:
     """Turns, tool calls and proposals from the timeline, joined by their ids. Deterministic:
-    the same file gives the same structure."""
+    the same file gives the same structure.
+
+    `capability_states` is `app.capabilities.families.states(runtime)` when the caller has a
+    runtime. It decides one thing: whether a change the owner asked for out loud is a family
+    that does not exist, a scope that has not been granted, or a capability that is READY and
+    was declined anyway. Without it the families' declared states are used.
+    """
     events = sorted(events, key=lambda e: (float(e.get("ts") or 0.0), int(e.get("seq") or 0)))
     session: dict[str, Any] = {"test_session_id": "", "name": "", "started_at": None, "stopped_at": None, "duration_s": None}
     turns: dict[str, Turn] = {}
@@ -582,7 +588,7 @@ def reconstruct(events: list[dict[str, Any]]) -> Reconstruction:
     collisions = _collisions(events)
     for turn in result:
         turn.tools.sort(key=lambda t: t.requested_at or t.finished_at)
-        _classify(turn, collisions=collisions)
+        _classify(turn, collisions=collisions, capability_states=capability_states)
         turn.cluster = _cluster(turn)
     _mark_repeats(result)
     return Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans,
@@ -604,7 +610,7 @@ def _turn_in_flight(turns: dict[str, Turn], order: list[str], event: dict[str, A
 # -------------------------------------------------------------------- classification
 
 
-def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
+def _contract_classes(turn: Turn) -> tuple[list[str], list[str], list[str]]:
     """The request contract, held against what the turn actually did.
 
     This is the section of the report that would have caught the September turn which asked
@@ -616,13 +622,17 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
 
     classes: list[str] = []
     signals: list[str] = []
+    # Signals that belong to the TURN rather than to a class: the reading of the request, and
+    # any disagreement with the router. Kept apart because `classes` and `signals` are paired
+    # index for index by the caller, and a note with no class would shift every pair after it.
+    notes: list[str] = []
     question, answer = turn.question, turn.answer
     ui_asked = "UI_INTENT" in ()  # placeholder kept out of the way; the regex does the work
     # Whether a change was asked for is the ROUTER's answer, taken off the turn's own `lane`
     # event, and not a second reading of the words by this file. The contract module still
     # decides between the other five shapes — UI, navigation, workflow, meta, read — because
     # those are about what the sentence points AT and the router says nothing about them.
-    verdict = semantics.read_request(question, lane=turn.lane)
+    verdict = turn.verdict if turn.verdict is not None else semantics.read_request(question, lane=turn.lane)
     turn.verdict = verdict
     kind = contract_mod.contract_of(question, ui_asked=ui_asked)
     if kind == contract_mod.WRITE_INTENT and not verdict.mutation:
@@ -630,12 +640,12 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
         # "which customers need replying to", "find an order that has not been fulfilled".
         # Downgraded, and the disagreement is on the record rather than silent.
         kind = contract_mod.READ_INTENT
-        signals.append(verdict.disagreement or "read as a question, not an instruction")
+        notes.append(verdict.disagreement or "read as a question, not an instruction")
     elif kind != contract_mod.WRITE_INTENT and verdict.mutation and verdict.mutation_source == "router" and kind == contract_mod.READ_INTENT:
         # The router saw a change and the contract module's own regexes did not. The router
         # is the one that decided the lane, so it is the one that decides the contract.
         kind = contract_mod.WRITE_INTENT
-        signals.append("the router read this as a change" + (f" ({verdict.reason})" if verdict.reason else ""))
+        notes.append("the router read this as a change" + (f" ({verdict.reason})" if verdict.reason else ""))
     turn.contract = kind
     staged = [p for p in turn.proposals if p.proposal_id]
     settled = [p for p in staged if p.status in ("VERIFIED", "EXECUTED")]
@@ -649,7 +659,7 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
             signals.append("a change was asked for; nothing was staged and nothing was refused in words")
         limitation = contract_mod.limitation_for(question)
         if limitation is not None and contract_mod.reports_success(answer):
-            signals.append(f"the request runs into a known limitation ({limitation['name']}) and was answered as done")
+            notes.append(f"the request runs into a known limitation ({limitation['name']}) and was answered as done")
     if kind == contract_mod.UI_INTENT and contract_mod.declines(answer) and not turn.ui:
         classes.append("UI_INTENT_UNFULFILLED")
         signals.append("asked for something on the screen; the answer declined and no card carried it")
@@ -669,7 +679,7 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str]]:
     if divergence:
         classes.append("INTENT_DIVERGENCE")
         signals.append(divergence)
-    return classes, signals
+    return classes, signals, notes
 
 
 # Fields an answer may say it has no access to, and the tool that returns them. Each pair is
@@ -820,9 +830,18 @@ def _orders_in_hand(turn: Turn) -> set[str]:
     return held
 
 
-def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None) -> None:
+def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None,
+              capability_states: dict[str, dict[str, Any]] | None = None) -> None:
+    from app.observability import semantics
+
     classes: list[str] = []
     signals: list[str] = []
+    notes: list[str] = []
+    # The request as the router read it, and the change it named, before anything else: what
+    # this Mac can do about that change decides whether an answer of "I cannot" is a capability
+    # missing or a capability declined.
+    turn.verdict = semantics.read_request(turn.question, lane=turn.lane)
+    spoken = _spoken_capability(turn, capability_states)
     stt = turn.stt or {}
     error_kind = turn.error_kind
     tools = turn.tools
@@ -853,8 +872,21 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None) -> 
         classes.append("FALSE_UNSUPPORTED")
         signals.append("declined, though the Mac composes this: " + ", ".join(false_claim["capabilities"]) + " via " + ", ".join(false_claim["composable_via"]))
     elif missing or (not ok_tools and CANNOT_RE.search(turn.answer)):
-        classes.append("MISSING_CAPABILITY")
-        signals.append("asked for: " + (", ".join(sorted({t.missing_capability for t in missing})) or "something the assistant said it cannot do"))
+        # Nothing succeeded and the answer said it cannot. WHICH kind of "cannot" it was is the
+        # capability table's answer, not this file's: a family that does not exist is missing, a
+        # family whose scope is not granted is a grant, and a READY family declined anyway is
+        # the assistant being wrong about itself. Filing all three as MISSING_CAPABILITY is how
+        # a change that has since been BUILT gets reported as still open.
+        if spoken is None or missing or spoken["state"] == semantics.NO_FAMILY:
+            classes.append("MISSING_CAPABILITY")
+            signals.append(spoken["signal"] if spoken is not None and not missing
+                           else "asked for: " + (", ".join(sorted({t.missing_capability for t in missing})) or "something the assistant said it cannot do"))
+        elif spoken["state"] == "READY":
+            classes.append("FALSE_UNSUPPORTED")
+            signals.append(spoken["signal"])
+        else:
+            classes.append("PERMISSION_ERROR")
+            signals.append(spoken["signal"])
     if failed_tools:
         classes.append("TOOL_ERROR")
         signals.append("; ".join(f"{t.tool}: {t.error[:80]}" for t in failed_tools[:3]))
@@ -895,11 +927,12 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None) -> 
     if CLARIFY_RE.search(turn.answer) and not ok_tools and (stt.get("order_numbers") or turn.focus):
         classes.append("INTENT_ERROR")
         signals.append("asked which, though the request named one (" + (", ".join(str(n) for n in stt.get("order_numbers") or []) or "the entity in focus") + ")")
-    contract_classes, contract_signals = _contract_classes(turn)
-    for name, signal in zip(contract_classes, contract_signals, strict=False):
+    contract_classes, contract_signals, contract_notes = _contract_classes(turn)
+    for name, signal in zip(contract_classes, contract_signals, strict=True):
         if name not in classes:
             classes.append(name)
             signals.append(signal)
+    notes.extend(contract_notes)
     # §27C. A change the owner ASKED FOR out loud that nothing on this Mac claims. The tool
     # registry can only report a capability the model reached for; a request the model declined
     # in words, or answered as though it had done, reaches no tool at all — which is why "create
@@ -908,18 +941,23 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None) -> 
     # capability that does not exist; a family that is not READY is a grant or a provider, and
     # its state names which. That difference is what keeps a fix from being reported as still
     # open, and an open one as fixed.
-    spoken = _spoken_capability(turn)
-    if spoken and spoken["state"] == semantics_no_family() and "MISSING_CAPABILITY" not in classes:
-        classes.append("MISSING_CAPABILITY")
-        signals.append(spoken["signal"])
-    elif spoken and spoken["state"] == "MISSING_SCOPE" and "PERMISSION_ERROR" not in classes:
-        classes.append("PERMISSION_ERROR")
-        signals.append(spoken["signal"])
+    if spoken is not None and spoken["state"] == semantics.NO_FAMILY:
+        if "MISSING_CAPABILITY" not in classes:
+            classes.append("MISSING_CAPABILITY")
+            signals.append(spoken["signal"])
+        elif spoken["signal"] not in signals:
+            notes.append(spoken["signal"])
+    elif spoken is not None and spoken["state"] not in ("READY", semantics.NO_FAMILY):
+        if "PERMISSION_ERROR" not in classes:
+            classes.append("PERMISSION_ERROR")
+            signals.append(spoken["signal"])
+        else:
+            notes.append(spoken["signal"])
     if (error_kind or tablet_failed) and not classes:
         classes.append("UNKNOWN")
         signals.append(f"error_kind={error_kind or 'tablet turn_failed'}")
     turn.classes = classes
-    turn.signals = signals
+    turn.signals = signals + notes
     cards = [u for u in turn.ui if u not in ("error", "context_stack", "assistant")]
     if not classes:
         turn.outcome = "successful"
@@ -929,12 +967,6 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None) -> 
         turn.outcome = "failed"
     if classes in (["MISSING_CAPABILITY"], ["FALSE_UNSUPPORTED"]) and not ok_tools:
         turn.outcome = "failed"
-
-
-def semantics_no_family() -> str:
-    from app.observability import semantics
-
-    return semantics.NO_FAMILY
 
 
 def _spoken_capability(turn: Turn, states: dict[str, dict[str, Any]] | None = None) -> dict[str, Any] | None:
@@ -952,7 +984,8 @@ def _spoken_capability(turn: Turn, states: dict[str, dict[str, Any]] | None = No
     change = verdict.change
     state = semantics.capability_state(change, states)
     if state["state"] == "READY":
-        return None
+        return {"change": change.key, "what": change.what, "state": "READY", "scope": state["scope"], "family": state["family"],
+                "signal": f"asked out loud to {change.what}; {state['label']} is READY on this Mac"}
     if state["state"] == semantics.NO_FAMILY:
         stated = f"; stated as a limitation ({change.limitation})" if change.limitation else ""
         return {"change": change.key, "what": change.what, "state": state["state"], "scope": "", "family": "",
@@ -1326,6 +1359,8 @@ def intelligence(rec: Reconstruction, registered: list[str], *, capability_state
         found = _spoken_capability(t, capability_states)
         if found is None:
             continue
+        if found["state"] == "READY":
+            continue      # a capability that is here and works is neither a build nor a grant
         entry = spoken.setdefault(found["change"], {"what": found["what"], "state": found["state"], "scope": found["scope"],
                                                     "family": found["family"], "n": 0, "turns": []})
         entry["n"] += 1
@@ -1791,7 +1826,8 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
     rows_actions = [e for e in rec.controls if str(e.get("kind") or "") == "row_action"]
     branch_moves = Counter(str(e.get("kind") or "") for e in rec.controls if str(e.get("kind") or "").startswith("branch_"))
     add(f"- Changes prepared by a tap (`command_stage`): {len(staged)} ({sum(1 for e in staged if e.get('ok') is False)} refused). Row actions: {len(rows_actions)}.")
-    add(f"- Branch moves: {dict(branch_moves) or 'none'}. Gesture collisions on the orb: {len(rec.collisions)}"
+    by_collision = Counter(str(c["what"]) for c in rec.collisions)
+    add(f"- Branch moves: {dict(branch_moves) or 'none'}. Gestures that could end a recording: {dict(by_collision) or 'none'}"
         + (f" — {'; '.join(sorted({str(c['detail']) for c in rec.collisions}))}." if rec.collisions else "."))
     tapped = sum(1 for t in turns if t.commands)
     add(f"- Turns with a tap of their own: {tapped} of {len(turns)}. Commands outside any turn: {len([e for e in commands if not any(e in t.commands for t in turns)])}.")
@@ -1848,7 +1884,9 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
         slow = [t for t in turns if (t.latency(key) or 0) > bound]
         if slow:
             out.append({"problem": f"Slow {key.replace('_', ' ')} (over {bound:,.0f} ms)", "frequency": f"{len(slow)} of {len(turns)} turns", "severity": 2,
-                        "examples": [t.turn_id for t in sorted(slow, key=lambda t: -(t.latency(key) or 0))[:3]], "component": {"stt": "speech", "claude": "the model / prompt size", "total": "the whole turn", "tts_first_byte": "ElevenLabs / prefetch", "context": "context hydration"}[key],
+                        "examples": [t.turn_id for t in sorted(slow, key=lambda t: -(t.latency(key) or 0))[:3]], "component": {"stt": "speech", "claude": "the model / prompt size", "total": "the whole turn", "tts_first_byte": "ElevenLabs / prefetch", "context": "context hydration",
+                                      "prose_wait": "the prompt and the lane: this is time spent after the facts were in hand",
+                                      "facts": "the read layer: the data itself was slow to arrive"}[key],
                         "task": "look at the slowest examples' step timings and cut the step that dominates.", "weight": 2 * len(slow)})
     images = [e for t in turns for e in t.tablet_events("image_failed")]
     if images:
@@ -1923,7 +1961,7 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
 def build_report(path: Path, *, tools_registered: list[str] | None = None,
                  capability_states: dict[str, dict[str, Any]] | None = None) -> tuple[Reconstruction, str]:
     events = read_events(Path(path))
-    rec = reconstruct(events)
+    rec = reconstruct(events, capability_states=capability_states)
     if not rec.session.get("test_session_id"):
         rec.session["test_session_id"] = Path(path).stem
     return rec, render(rec, tools_registered=tools_registered, capability_states=capability_states)

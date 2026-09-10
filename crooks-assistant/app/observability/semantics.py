@@ -46,11 +46,22 @@ STATE_NOUNS = frozenset({
 })
 # A determiner in front of a mutation word makes it the head of a noun phrase: "the reply",
 # "any refund", "his draft". On its own that is not enough — "give them the refund" is an
-# instruction — so it counts only in a sentence that is opened as a question.
+# instruction — so it counts only in a sentence that is opened as an actual QUESTION.
+#
+# "Opened as a question" here is NARROWER than the router's `_OPENERS`, and deliberately: the
+# router counts "show", "list", "give", "find" among the words that open a question, because
+# "show me the sales" is a read and being cautious there costs one model call. Here the cost of
+# being wrong runs the other way — a change wrongly read as a question is an unfulfilled action
+# that goes unreported — so the fetching verbs are taken back out. The set is the router's own,
+# minus a named few, so it can never contain a word the router does not.
 DETERMINERS = frozenset({
     "the", "a", "an", "any", "that", "this", "these", "those", "his", "her", "their",
     "my", "our", "its", "some", "no", "which", "what", "whats", "another", "each",
 })
+# Words the router counts as opening a question that are really instructions to fetch. A
+# sentence that begins with one of them is not interrogative enough for a determiner alone to
+# make a mutation word into a noun.
+FETCHING = frozenset({"show", "list", "tell", "give", "find", "check", "read", "look"})
 _WORD = re.compile(r"[a-z0-9£$%'#]+")
 _POSSESSIVE = re.compile(r"'s$")
 
@@ -187,13 +198,14 @@ def nominal_only(text: str) -> str:
     """
     from app.fastpath.intent import _OPENERS, MUTATION
 
+    asking = _OPENERS - FETCHING
     words = _tokens(text)
     if not words:
         return ""
     found = [(i, w) for i, w in enumerate(words) if w in MUTATION]
     if not found:
         return ""
-    asked = words[0] in _OPENERS
+    asked = words[0] in asking
     phrases: list[str] = []
     for i, word in found:
         after = words[i + 1] if i + 1 < len(words) else ""
