@@ -231,6 +231,13 @@ body[data-mode="context"] .errline{display:none}
 .chip .chip-kind{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
 .chip .chip-label{max-width:180px;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;font-size:13px}
 .chip-home{color:var(--ink)}
+.branch-rail{display:contents}
+.branch-rail:empty,.branch-rail[hidden]{display:none}
+.chip-split{color:var(--ink-2)}
+.chip-split::before{content:"";width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;
+  background:linear-gradient(90deg,currentColor 50%,transparent 50%);opacity:.8}
+.chip-branch-act{color:var(--ink-3)}
+.branch-split{padding:8px 16px}
 .chip-home svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* What the next sentence will be applied to. Above the deck, at the deck's own type scale,
@@ -428,10 +435,17 @@ body[data-mode="context"] .errline{display:none}
 .stack::-webkit-scrollbar{display:none}
 
 /* ------------------------------------------------------------------ bottom */
+/* The footer paints above the dock (same layer, later in the document), and on the orb
+   screen it carries bottom padding that sits exactly over the dock's icons — so a tap on
+   Orders from the idle screen landed on FOOTER.bottom and did nothing, which is what the
+   owner reported: "why can't I click orders unless you're already thinking". The footer
+   itself takes no touches; only its buttons and the status line do. */
 .bottom{
   position:relative;z-index:var(--z-chrome);display:flex;flex-direction:column;gap:10px;
   padding:0 18px 18px;transition:opacity var(--t-2),transform var(--t-3) var(--ease-inout);
+  pointer-events:none;
 }
+.bottom > *{pointer-events:auto}
 body[data-mode="context"] .bottom{opacity:0;pointer-events:none;transform:translateY(12px);height:0;padding:0;overflow:hidden}
 .attention{
   display:flex;align-items:center;gap:12px;min-height:var(--tap-lg);padding:0 18px;width:100%;
@@ -501,7 +515,7 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
    8-inch portrait screen 12% of its width for good, so the same object is laid along the
    bottom, where the hand is. */
 .dock{
-  position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--z-talk) + 1);
+  position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--z-chrome) + 1);
   display:flex;align-items:center;justify-content:center;gap:10px;
   height:var(--dock);padding:0 14px env(safe-area-inset-bottom);pointer-events:none;
 }
@@ -911,7 +925,12 @@ html[data-lite] .orb-zone{transition:none}
 
 
 /* The toast. Fixed above every screen, out of the way of the orb, gone in four seconds. */
-.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);transform:translateX(-50%);
+/* A line that says something and goes. It must never take a touch: it used to sit at the
+   very bottom, exactly over the hold pill, and intercepted the fingers for the four seconds
+   it was up — a pinch made just after "Divided" landed on the toast and was cancelled. It
+   sits above the dock band now, and lets every touch through. */
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + var(--dock) + 8px);transform:translateX(-50%);
+  pointer-events:none;
   max-width:min(92vw,560px);margin:0;padding:10px 16px;border-radius:14px;
   background:var(--glass-surface-strong);color:var(--ink);border:1px solid var(--border-rest);
   font-size:14px;line-height:1.35;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:60}

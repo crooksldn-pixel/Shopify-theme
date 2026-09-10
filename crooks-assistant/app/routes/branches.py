@@ -48,10 +48,10 @@ def _session(request: Request, session_id: str):
     session_id = (session_id or "").strip()
     if not session_id:
         return None, _refuse(400, "wrong_session", "The session is missing.")
-    try:
-        session = runtime.sessions.get(session_id)
-    except KeyError:
-        return None, _refuse(409, "no_session", "That conversation has gone; ask again.")
+    # Created on demand, as /turn creates it: the first thing an idle tablet does may be to
+    # divide the orb, before any question has made the conversation exist on the Mac. A
+    # refusal here ("that conversation has gone") was the split's first failure on the bench.
+    session = runtime.sessions.get_or_create(session_id)
     if not session_matches(session, request):
         return None, _refuse(403, "wrong_session", "That conversation belongs to another login.")
     return session, None

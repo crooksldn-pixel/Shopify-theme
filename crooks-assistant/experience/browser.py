@@ -27,6 +27,10 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "browser" / "experience.js"
+# The physical tablet's own viewport, 601 x 889 at DPR 1.33: the checks the Phase 2 live test
+# found on the device and the 800 x 1280 gate could not see. Run after the gate, folded into
+# the same result, so one green means both sizes.
+TABLET_SCRIPT = ROOT / "scripts" / "browser" / "tablet.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -167,21 +171,33 @@ async def run_checks() -> dict[str, Any]:
     port = _free_port()
     server, task, _store = await serve_fixture_world(port)
     try:
-        result = await asyncio.to_thread(
-            subprocess.run,
-            ["node", str(SCRIPT), f"http://127.0.0.1:{port}", ""],
-            cwd=ROOT, capture_output=True, text=True, timeout=300,
-            env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
-        )
+        results = []
+        for script in (SCRIPT, TABLET_SCRIPT):
+            if not script.exists():
+                continue
+            results.append(await asyncio.to_thread(
+                subprocess.run,
+                ["node", str(script), f"http://127.0.0.1:{port}", ""],
+                cwd=ROOT, capture_output=True, text=True, timeout=300,
+                env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
+            ))
     finally:
         await _stop(server, task)
-    for line in reversed((result.stdout or "").strip().splitlines()):
-        try:
-            return {"skipped": False, **json.loads(line)}
-        except ValueError:
-            continue
-    return {"skipped": False, "ok": False, "checks": [
-        {"name": "browser run", "ok": False, "detail": (result.stdout + result.stderr)[-400:]}]}
+    merged: dict[str, Any] = {"skipped": False, "ok": True, "checks": [], "shots": []}
+    for result in results:
+        payload = None
+        for line in reversed((result.stdout or "").strip().splitlines()):
+            try:
+                payload = json.loads(line)
+                break
+            except ValueError:
+                continue
+        if payload is None:
+            payload = {"ok": False, "checks": [{"name": "browser run", "ok": False, "detail": (result.stdout + result.stderr)[-400:]}]}
+        merged["ok"] = bool(merged["ok"] and payload.get("ok"))
+        merged["checks"].extend(payload.get("checks") or [])
+        merged["shots"].extend(payload.get("shots") or [])
+    return merged
 
 
 async def _stop(server: Any, task: asyncio.Task) -> None:

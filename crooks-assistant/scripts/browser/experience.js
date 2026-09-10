@@ -257,6 +257,9 @@ async function main() {
   // when a move FAILED, so three successful steps left one stale sentence over three
   // different orders. All three are properties of the page's own controls, so this section
   // touches the page's own controls and nothing else.
+  // A fresh conversation: the page restores a session's workspace on load now, and this
+  // section's premise is a list with nothing behind it.
+  await page.evaluate(() => { try { localStorage.removeItem('crooks.session'); localStorage.removeItem('crooks.turns'); } catch { /* private mode */ } });
   await page.goto(`${BASE}?dev=1`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(700);
   await page.evaluate(() => { for (const b of document.querySelectorAll('.dev-banner')) b.remove(); });

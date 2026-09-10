@@ -53,7 +53,7 @@ const el = {
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
   heard: $('heard'), answer: $('answer'), errline: $('errline'), toast: $('toast'), timings: $('timings'),
   context: $('context'), nav: $('context-nav'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
-  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'),
+  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'), branchRail: $('branch-rail'),
   nextBtn: $('next-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
@@ -225,6 +225,7 @@ function setMode(mode) {
   if (el.body.dataset.mode === mode) return;
   el.body.dataset.mode = mode;
   if (mode === 'orb') lightDock([]);
+  drawBranchBar();
   el.talk.setAttribute('aria-label', mode === 'orb' ? 'Hold to speak' : 'Hold to speak (dock)');
   // Beside the cards the orb is shown at under a third of its size; it draws at that size
   // rather than painting twelve times the pixels it shows.
@@ -941,6 +942,37 @@ const history = [];
 const MAX_HISTORY = 6;
 let historyIndex = -1;
 let currentStack = [];
+
+// One deck per half. The variables above are the FOCUSED half's; the others' are kept here
+// and swapped in when the owner taps a half. The Phase 2 live test found that tapping the
+// other half changed who was listening and nothing visible — the previous half's cards
+// stayed on screen while the owner talked to a half that was looking at something else.
+const decks = new Map();      // branch_id -> { history, index, stack, set, answer, heard }
+let deckBranch = '';          // which half the variables above belong to
+
+function stashDeck() {
+  if (!deckBranch) return;
+  decks.set(deckBranch, {
+    history: history.slice(), index: historyIndex, stack: currentStack, set: currentSet,
+    answer: el.answer.textContent, heard: el.heard.textContent,
+  });
+}
+
+// Bring a half's deck in. True when it had cards to show.
+function restoreDeck(branchId) {
+  const saved = decks.get(branchId);
+  history.length = 0; historyIndex = -1; currentStack = []; currentSet = null;
+  deckBranch = branchId;
+  if (!saved || !saved.history.length) { clear(el.cards); renderStackChips(); return false; }
+  for (const entry of saved.history) history.push(entry);
+  historyIndex = Math.min(saved.index, history.length - 1);
+  currentStack = saved.stack || [];
+  currentSet = saved.set || null;
+  el.answer.textContent = saved.answer || '';
+  el.heard.textContent = saved.heard || '';
+  showHistory(historyIndex);
+  return true;
+}
 let attentionItems = [];
 
 function entitiesOf(items) {
@@ -1013,7 +1045,7 @@ function armDeckExpiry() {
   clearTimeout(deckExpiryTimer);
   deckExpiryTimer = setTimeout(() => {
     if (busy || recording || speakingVia || liveActionSurface()) { armDeckExpiry(); return; }
-    history.length = 0; historyIndex = -1; currentStack = []; currentSet = null;
+    history.length = 0; historyIndex = -1; currentStack = []; currentSet = null; decks.clear();
     clear(el.cards); renderStackChips(); renderRecent();
     el.heard.textContent = ''; el.answer.textContent = '';
     setMode('orb');
@@ -1406,6 +1438,12 @@ function applyBranches(shape) {
   focusedBranch = String(shape.focused || '');
   const one = branches.find((b) => b.branch_id === focusedBranch);
   if (one) branchState = one;
+  // The deck follows the focus. A half that has gone (merged, closed) takes its deck with it.
+  for (const id of Array.from(decks.keys())) if (!branches.some((b) => b.branch_id === id)) decks.delete(id);
+  if (focusedBranch && deckBranch !== focusedBranch) {
+    if (deckBranch && branches.some((b) => b.branch_id === deckBranch)) stashDeck();
+    restoreDeck(focusedBranch);
+  }
   drawBranchBar();
   const split = branches.length > 1 ? 1 : 0;
   const which = branches.length > 1 && branches[1] && branches[1].branch_id === focusedBranch ? 1 : 0;
@@ -1413,11 +1451,27 @@ function applyBranches(shape) {
   T.record('branches', { count: branches.length, id: focusedBranch });
 }
 
+// The halves, named, and the way in. Drawn into the orb caption on the orb screen and into
+// the context rail beside Next when cards are up — the same chips, wherever the thumb is.
+// With one half there is one chip, Split: the feature must not depend on a secret gesture.
 function drawBranchBar() {
-  if (!el.branchBar) return;
-  clear(el.branchBar);
-  if (branches.length < 2) { el.branchBar.hidden = true; return; }
-  el.branchBar.hidden = false;
+  const host = el.body.dataset.mode === 'context' && el.branchRail ? el.branchRail : el.branchBar;
+  if (!host) return;
+  for (const other of [el.branchBar, el.branchRail]) if (other && other !== host) { clear(other); other.hidden = true; }
+  clear(host);
+  host.hidden = false;
+  const inRail = host === el.branchRail;
+  if (branches.length < 2) {
+    const split = document.createElement('button');
+    split.type = 'button';
+    split.className = inRail ? 'chip chip-split' : 'branch-act branch-split';
+    split.dataset.action = 'split';
+    split.textContent = 'Split';
+    split.setAttribute('aria-label', 'Divide the orb into two halves');
+    split.addEventListener('click', () => splitOrb('button'));
+    host.appendChild(split);
+    return;
+  }
   branches.forEach((b, i) => {
     const task = b.task && typeof b.task === 'object' ? String(b.task.state || '').toLowerCase() : '';
     const word = TASK_WORDS[task] || (b.status === 'BACKGROUND' ? 'aside' : '');
@@ -1434,20 +1488,76 @@ function drawBranchBar() {
       state.textContent = word;
       chip.appendChild(state);
     }
-    chip.addEventListener('click', () => branchCommand(b.branch_id, 'focus'));
-    el.branchBar.appendChild(chip);
+    chip.dataset.branch = b.branch_id;
+    chip.addEventListener('click', () => focusBranch(b.branch_id));
+    host.appendChild(chip);
   });
-  for (const [label, verb] of [['Aside', 'background'], ['Merge', 'merge'], ['Close', 'cancel']]) {
+  for (const [label, verb] of [['Merge', 'merge'], ['Close', 'cancel']]) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'branch-act';
+    button.className = inRail ? 'chip chip-branch-act' : 'branch-act';
+    button.dataset.action = verb;
     button.textContent = label;
-    // Aside and Close act on the half that is NOT being talked to, which is what the words
-    // mean when you are looking at one of them; Merge folds the other back into this one.
-    const target = () => (verb === 'background' ? focusedBranch : (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id);
+    // Merge folds the other half back into this one; Close lets the other half go.
+    const target = () => (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
     button.addEventListener('click', () => branchCommand(target(), verb));
-    el.branchBar.appendChild(button);
+    host.appendChild(button);
   }
+}
+
+// Tapping a half is switching workspaces (§3D of the Phase 3 brief). Focusing it on the Mac
+// is half of that; the other half is drawing what THAT branch is looking at, which the Mac
+// holds per branch and hands back through `branch.show`.
+async function focusBranch(branchId) {
+  if (!branchId || branchId === focusedBranch) return;
+  const data = await branchCommand(branchId, 'focus');   // applyBranches swaps the decks
+  if (!data) return;
+  haptic(HAPTIC.start);
+  if (historyIndex >= 0) return;                          // its cards were still on this tablet
+  const drawn = await showBranchWorkspace(branchId);      // else the Mac's copy of its screen
+  if (!drawn) {
+    // A fresh half with nothing on it yet. Say so; do not leave the other half's cards up.
+    clear(el.cards); renderStackChips();
+    el.answer.textContent = '';
+    el.heard.textContent = '';
+    setMode('orb');
+    toast('This half has nothing yet. Ask it something.');
+  }
+}
+
+// What a branch is looking at, drawn. Filled in with the per-branch decks below.
+async function showBranchWorkspace(branchId) {
+  const shown = await semanticCommand('branch.show', { branch_id: branchId });
+  if (shown && shown.ok && Array.isArray(shown.ui) && shown.ui.length) {
+    const rendered = window.CrooksUI.render(shown.ui, renderOpts());
+    if (rendered.nodes.length) {
+      pushContext(rendered.nodes, shown.ui, shown.answer || '');
+      el.answer.textContent = shown.answer || '';
+      el.heard.textContent = shown.changed && shown.changed.question ? `“${shown.changed.question}”` : '';
+      // A card waiting for a gesture is drawn as the Mac last presented it; whether it still
+      // waits is the Mac's to say. Never trusted from a copy.
+      if (liveProposalIds().length) reconcileActions('workspace restored');
+      return true;
+    }
+  }
+  return false;
+}
+
+// After a reload the Mac still holds the conversation: which halves there are, which one is
+// focused, and what each was looking at. The deck used to come back empty — a screen that
+// forgot everything the Mac remembered. Asked of the Mac, never read from browser storage.
+async function restoreWorkspace() {
+  if (!sessionId) return;
+  try {
+    const response = await fetch(`/branches?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    applyBranches(data);
+    const focused = branches.find((b) => b.branch_id === focusedBranch);
+    if (!focused || !focused.has_workspace) return;
+    const drawn = await showBranchWorkspace(focusedBranch);
+    T.record('navigate', { nav: 'restore', name: drawn ? 'drawn' : 'nothing', id: focusedBranch });
+  } catch { /* offline: the idle screen is the honest one */ }
 }
 
 // Every branch verb is one POST and one answer the page redraws itself from. The tablet
@@ -1461,7 +1571,7 @@ async function branchCommand(branchId, verb) {
     const response = await fetch(path, { method: 'POST', body: form, cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
     T.record('branch_command', { action: verb, status: response.status, id: branchId || undefined });
-    if (!response.ok) { toast(String(data.detail || 'That is not possible just now.')); return; }
+    if (!response.ok) { toast(String(data.detail || 'That is not possible just now.')); return null; }
     applyBranches(data);
     if (verb === 'merge' && data.merged) {
       const waiting = Array.isArray(data.merged.still_waiting) ? data.merged.still_waiting.length : 0;
@@ -1473,8 +1583,10 @@ async function branchCommand(branchId, verb) {
     if (verb === 'cancel' && Array.isArray(data.revoked) && data.revoked.length) {
       settleProposals(data.revoked, 'revoked', 'Withdrawn');
     }
+    return data;
   } catch {
     toast('The Mac did not answer.');
+    return null;
   }
 }
 
@@ -1482,33 +1594,26 @@ async function branchCommand(branchId, verb) {
 // they merge it. A tap on a half while it is divided is how the owner chooses which one he
 // is talking to. Everything a gesture does, the chips below do too — an eight-inch tablet on
 // a workbench should never have exactly one way to do a thing.
-const SPLIT_TRAVEL = 90;      // px of separation before a pull counts as a pull
-let pinchFrom = 0;
-let pinchDone = false;
-
-function pinchDistance(event) {
-  const points = event && event.touches ? event.touches : null;
-  if (!points || points.length < 2) return 0;
-  return Math.hypot(points[0].clientX - points[1].clientX, points[0].clientY - points[1].clientY);
+// The spread and the pinch themselves are measured on the hold surfaces (onHoldMove), where
+// the fingers actually are. They used to be touch listeners on the orb zone, which the talk
+// overlay covers in orb mode — so in the one mode the owner would try the gesture, it fired
+// nothing. The Split chip and the gesture post the same command.
+async function splitOrb(how) {
+  if (branches.length > 1) return;
+  T.record('navigate', { nav: 'split', name: how });
+  const data = await branchCommand('', 'fork');
+  if (data) { haptic(HAPTIC.done); toast('Divided. Tap a half to talk to it; the other keeps working.'); }
+}
+async function mergeOrb(how) {
+  const other = (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
+  if (!other) return;
+  T.record('navigate', { nav: 'merge', name: how });
+  await branchCommand(other, 'merge');
 }
 
 function wireOrbGestures() {
   const zone = el.orbZone;
   if (!zone || !zone.addEventListener) return;
-  zone.addEventListener('touchstart', (event) => {
-    if (event.touches && event.touches.length === 2) { pinchFrom = pinchDistance(event); pinchDone = false; }
-  }, { passive: true });
-  zone.addEventListener('touchmove', (event) => {
-    if (pinchDone || !pinchFrom || !event.touches || event.touches.length !== 2) return;
-    const travel = pinchDistance(event) - pinchFrom;
-    if (travel > SPLIT_TRAVEL && branches.length < 2) { pinchDone = true; branchCommand('', 'fork'); }
-    else if (travel < -SPLIT_TRAVEL && branches.length > 1) {
-      pinchDone = true;
-      const other = (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
-      branchCommand(other, 'merge');
-    }
-  }, { passive: true });
-  zone.addEventListener('touchend', () => { pinchFrom = 0; }, { passive: true });
   zone.addEventListener('click', (event) => {
     if (branches.length < 2) return;
     const box = zone.getBoundingClientRect ? zone.getBoundingClientRect() : null;
@@ -1530,6 +1635,7 @@ function noteBranch(branch) {
   // opens a different list both keep it honest.
   noteWorkingSet(branch.workflow);
   focusedBranch = branch.branch_id;
+  if (!deckBranch) deckBranch = branch.branch_id;
   branches = branches.map((b) => (b.branch_id === branch.branch_id ? branch : b));
   if (!branches.some((b) => b.branch_id === branch.branch_id)) branches = [branch];
   drawBranchBar();
@@ -2128,9 +2234,48 @@ function sendAudio(blob) {
 
 // The hold. Attached to the talk region (the whole stage in orb mode, the dock in context
 // mode) and to the orb itself, so the small orb still answers to a thumb when cards are up.
+// Two fingers on the hold surface are a gesture, never a sentence.
+//
+// This is the Phase 2 live-tablet failure: the first finger's pointerdown began a recording,
+// the second finger's pointerdown reached the SAME handler (the talk overlay covers the whole
+// stage, so it is the element under both fingers), and whichever finger lifted first stopped
+// the recording and sent whatever the room had said — six blank turns, each answered "I could
+// not hear that clearly". The two-finger handler, meanwhile, listened for touch events on the
+// orb zone, which the overlay is a sibling of and not a child, so it never fired at all: the
+// gesture could not divide the orb and could only ever be a hold.
+//
+// Arbitration, not delay: the first finger starts recording exactly as before — an ordinary
+// press costs nothing. The moment a second finger lands, the recording is discarded (no
+// /turn, no error, no "closer to the microphone"), and from then on the pair is measured for
+// a spread (divide) or a pinch (merge) until both lift.
+const touch = { points: new Map(), holdId: null, multi: false, from: 0, fired: false };
+const SPLIT_TRAVEL = 70;   // CSS px of change in separation; about 9mm on the Tab A at its DPR
+
+function spreadNow() {
+  const pts = Array.from(touch.points.values());
+  if (pts.length < 2) return 0;
+  return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+}
+
 function onHoldStart(event) {
   if (event.button !== undefined && event.button !== 0) return;
   event.preventDefault();
+  touch.points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (touch.holdId !== null && event.pointerId !== touch.holdId) {
+    if (!touch.multi) {
+      touch.multi = true;
+      touch.from = spreadNow();
+      touch.fired = false;
+      if (recording || pendingStart) stopRecording(true);
+      if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }
+      setState('READY');
+      haptic(HAPTIC.start);
+      T.record('hold', { phase: 'multitouch', fingers: touch.points.size, target: event.currentTarget === el.orbFrame ? 'orb' : 'dock' });
+    }
+    return;
+  }
+  touch.holdId = event.pointerId;
+  touch.multi = false;
   // Capture the pointer so pointerup reaches this element even if the thumb drifts off it —
   // otherwise a slightly sliding thumb means the recording never stops.
   try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
@@ -2178,15 +2323,34 @@ function cancelTurnAndListen() {
   setTimeout(() => { if (holding && !busy && !recording) { setState('LISTENING'); startRecording(); } }, 60);
 }
 
+// The fingers moving: only a pair is measured, and only once per pair.
+function onHoldMove(event) {
+  if (!touch.points.has(event.pointerId)) return;
+  touch.points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (!touch.multi || touch.fired || touch.points.size < 2) return;
+  const travel = spreadNow() - touch.from;
+  if (travel > SPLIT_TRAVEL && branches.length < 2) { touch.fired = true; splitOrb('gesture'); }
+  else if (travel < -SPLIT_TRAVEL && branches.length > 1) { touch.fired = true; mergeOrb('gesture'); }
+}
+
 function onHoldEnd(event) {
   event.preventDefault();
-  holding = false;
+  touch.points.delete(event.pointerId);
   try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
+  if (touch.multi) {
+    // Discarded when the second finger arrived; nothing is sent whichever finger lifts first.
+    if (touch.points.size === 0) { touch.multi = false; touch.holdId = null; touch.from = 0; touch.fired = false; holding = false; }
+    return;
+  }
+  if (touch.holdId !== null && event.pointerId !== touch.holdId) return;
+  touch.holdId = null;
+  holding = false;
   if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }   // a tap, not a hold
   stopRecording(event.type === 'pointercancel');
 }
 for (const target of [el.talk, el.orbFrame]) {
   target.addEventListener('pointerdown', onHoldStart);
+  target.addEventListener('pointermove', onHoldMove);
   target.addEventListener('pointerup', onHoldEnd);
   target.addEventListener('pointercancel', onHoldEnd);
   target.addEventListener('contextmenu', (event) => event.preventDefault());
@@ -2605,3 +2769,10 @@ checkReachable();
 acquireWakeLock();
 setMode('orb');
 setState('READY');
+
+// ------------------------------------------------------------------ boot
+// After every declaration above. The Split control is on the idle screen from the first
+// frame — one chip while there is one half — and a reload asks the Mac for the screen it
+// still holds rather than starting from nothing.
+drawBranchBar();
+restoreWorkspace();

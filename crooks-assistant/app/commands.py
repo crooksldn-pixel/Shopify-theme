@@ -460,6 +460,55 @@ register(Command("customer.open_orders", "What this customer has ordered",
                  needs_entity=("customer",)))
 
 
+# --------------------------------------------------------------------------- the halves
+
+
+def _branch_show(ctx: Ctx) -> Outcome:
+    """What a half is looking at, drawn again.
+
+    Tapping a half is switching workspaces: the Mac focuses it AND the tablet draws that
+    half's screen. The screen is what the half last presented (`Branch.last_ui`) — the cards
+    it answered with, the sentence, the question — so a half that finished while the owner
+    was talking to the other one shows its answer the moment it is tapped, and a reloaded
+    tablet gets its place back. Nothing is read and nothing is staged: this is presentation
+    the Mac already made, handed over again.
+    """
+    wanted = ctx.arg("branch_id") or ctx.branch.branch_id
+    branch = ctx.session.branches.get(wanted) if isinstance(getattr(ctx.session, "branches", None), dict) else None
+    if branch is None:
+        return Outcome.refused("unknown_branch", "There is no such half in this conversation.")
+    if branch.status in ("MERGED", "CANCELLED"):
+        return Outcome.refused("branch_closed", f"That half is {branch.status.lower()}.")
+    ui = list(branch.last_ui)
+    if not ui and branch.entity:
+        # Nothing presented yet but a record is open (a fresh fork starts where its parent
+        # was): rebuild it from memory, exactly as open.entity would.
+        calls = replay(ctx, str(branch.entity.get("kind") or ""), str(branch.entity.get("ref") or ""))
+        if calls:
+            return Outcome(answer=branch.last_answer or f"{branch.entity.get('label') or 'this'}.", calls=calls,
+                           changed={"branch_id": branch.branch_id, "question": branch.last_question, "replayed": True})
+    if not ui and not branch.last_answer:
+        return Outcome(answer="", changed={"branch_id": branch.branch_id, "empty": True})
+    return Outcome(answer=branch.last_answer, surfaces=[_AsUi(u) for u in ui],
+                   changed={"branch_id": branch.branch_id, "question": branch.last_question,
+                            "task": dict(branch.task) if branch.task else None})
+
+
+class _AsUi:
+    """A presented card handed back as it was. `present()` is not run again on it."""
+
+    __slots__ = ("item",)
+
+    def __init__(self, item: dict[str, Any]) -> None:
+        self.item = item
+
+    def as_ui(self) -> dict[str, Any]:
+        return dict(self.item)
+
+
+register(Command("branch.show", "What that half is looking at", _branch_show, voice=False))
+
+
 # --------------------------------------------------------------------------- touch, then voice
 
 # The controls that expect words rather than a decision. Tapping one of these does not do

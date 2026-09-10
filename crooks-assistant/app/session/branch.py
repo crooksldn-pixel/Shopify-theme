@@ -145,6 +145,28 @@ class Branch:
     # because nothing here can compute one honestly.
     task: dict[str, Any] | None = None
 
+    # What this half last put on the screen: the cards as presented (bounded), the sentence,
+    # and the question they answered. Held so that tapping a half SHOWS that half — the Phase
+    # 2 live test found that tapping the other half changed who was listening and nothing
+    # visible — and so that a reload, or a half put aside that has since finished, can be drawn
+    # from the Mac's copy rather than from a browser cache. Presentation data only: it has
+    # already been sent to the tablet once, and it stages nothing.
+    last_ui: list[dict[str, Any]] = field(default_factory=list)
+    last_answer: str = ""
+    last_question: str = ""
+    last_at: float = 0.0
+
+    def shown(self, ui: list[dict[str, Any]], answer: str, question: str, *, clock=time.time) -> None:
+        """The screen this half now has. Cards only (never the context stack, which the
+        tablet keeps for itself), at most six, and never an error card standing in for a
+        record the branch still holds."""
+        kept = [u for u in (ui or []) if isinstance(u, dict) and u.get("type") not in ("context_stack",)]
+        if kept or not self.last_ui:
+            self.last_ui = kept[:6]
+        self.last_answer = str(answer or "")[:400]
+        self.last_question = str(question or "")[:200]
+        self.last_at = clock()
+
     # ------------------------------------------------------------------ work
 
     def working(self, what: str, *, clock=time.time) -> None:
@@ -329,6 +351,10 @@ class Branch:
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
             "task": dict(self.task) if self.task else None,
+            # Whether there is a screen to show for this half, and what it answered. The cards
+            # themselves come through `branch.show`, on request, not with every reply.
+            "has_workspace": bool(self.last_ui or self.last_answer),
+            "last_question": self.last_question, "last_at": self.last_at or None,
         }
 
 

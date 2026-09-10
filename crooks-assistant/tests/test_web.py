@@ -119,7 +119,8 @@ def test_the_only_write_path_is_a_proposal_id():
 
     for endpoint in re.findall(r"fetch\(\s*[`'\"]([^`'\"]+)", APP_JS):
         base = endpoint.split("?")[0].rstrip("/")
-        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel", "/command"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/") or endpoint.startswith("/branches/"), endpoint
+        # /branches (a GET, the halves as the Mac holds them) is what a reload asks for.
+        assert base in {"/speak", "/health", "/ping", "/turn", "/audio-test", "/reset", "/cancel", "/command", "/branches"} or endpoint.startswith("/state/") or endpoint.startswith("/actions/") or endpoint.startswith("/batches/") or endpoint.startswith("/context/order/") or endpoint.startswith("/branches/"), endpoint
     # The context read carries the session and an order id and nothing else, and is a GET.
     body = function_body(APP_JS, "function collectPending(node, attempt = 0)")
     assert "method:" not in body and "session_id=" in body and "body:" not in body

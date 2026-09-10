@@ -992,13 +992,19 @@ async def _answer(
         branch = session.branch()
     if branch is not None:
         # The answer is here. A half the owner is looking at simply goes quiet; one he has
-        # put aside says "ready" on its chip and pulses once, and does not take his attention.
+        # put aside — or simply tapped away from while it was working — says "ready" on its
+        # chip and pulses once, and does not take his attention. The live test found a half
+        # that finished a ten-second turn with zero change on the tablet and an answer that
+        # could never be read: it was not BACKGROUND, only not looked at, so it went idle.
+        elsewhere = bool(session is not None and getattr(session, "focused_branch", "") and session.focused_branch != branch.branch_id)
         if error_kind:
             branch.failed("that did not work")
-        elif branch.status == "BACKGROUND":
+        elif branch.status == "BACKGROUND" or elsewhere:
             branch.ready("there is an answer")
         else:
             branch.idle()
+        # What this half now shows, kept on the Mac so tapping it later draws it (branch.show).
+        branch.shown(ui, answer, question)
     for call in calls or []:
         if branch is not None and getattr(call, "ok", False):
             branch.remember_result(call.name, summary=_call_summary(call), ref=_call_ref(call), ms=float(getattr(call, "duration_ms", 0.0) or 0.0))
