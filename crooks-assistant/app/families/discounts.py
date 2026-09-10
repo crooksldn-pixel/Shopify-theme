@@ -243,9 +243,12 @@ def _clean_number(raw: str) -> tuple[str, str, str]:
 
 
 def _clean_currency(raw: str) -> tuple[str, str, str]:
-    value = re.sub(r"[^A-Z]", "", str(raw or "").upper())[:3]
+    """Three letters, and the length is checked BEFORE anything is truncated: "pounds"
+    truncated to three characters is "POU", which is not a currency and would have gone to
+    Shopify looking exactly like one."""
+    value = re.sub(r"[^A-Z]", "", str(raw or "").upper())
     if len(value) != 3:
-        return value, "invalid", "Three letters — GBP, USD, EUR."
+        return value[:3], "invalid", "Three letters — GBP, USD, EUR."
     return value, "ok", ""
 
 

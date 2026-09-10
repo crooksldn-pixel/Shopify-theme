@@ -207,7 +207,7 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     #       shopify_order_open         625   the customer, and optionally a first item.
     #       shopify_order_create       332   one argument: the workspace id.
     #   store credit (app/families/store_credit.py)           909
-    #       shopify_store_credit_open  582   the customer, the amount, the currency.
+    #       shopify_store_credit  582   the customer, the amount, the currency.
     #       shopify_store_credit_add   327   one argument: the workspace id.
     #   abandoned checkouts (app/families/abandoned.py)       469
     #       shopify_abandoned_checkouts      the window and a limit. Its description spends

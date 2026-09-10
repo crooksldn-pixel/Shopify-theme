@@ -53,7 +53,7 @@ log = logging.getLogger("crooks.families.store_credit")
 
 KIND = "store_credit"
 WORKSPACE_PREFIX = "crd"
-OPEN_TOOL = "shopify_store_credit_open"
+OPEN_TOOL = "shopify_store_credit"
 WRITE_TOOL = "shopify_store_credit_add"
 OPERATION = "store_credit_credit"
 SCOPE = "write_store_credit_account_transactions"
@@ -166,9 +166,12 @@ def _clean_money(raw: str) -> tuple[str, str, str]:
 
 
 def _clean_currency(raw: str) -> tuple[str, str, str]:
-    value = re.sub(r"[^A-Z]", "", str(raw or "").upper())[:3]
+    """Three letters, and the length is checked BEFORE anything is truncated: "pounds"
+    truncated to three characters is "POU", which is not a currency and would have gone to
+    Shopify looking exactly like one."""
+    value = re.sub(r"[^A-Z]", "", str(raw or "").upper())
     if len(value) != 3:
-        return value, "invalid", "Three letters — GBP, USD, EUR."
+        return value[:3], "invalid", "Three letters — GBP, USD, EUR."
     return value, "ok", ""
 
 
@@ -326,7 +329,7 @@ def _session_and_branch() -> tuple[Any, Any]:
     tier=Tier.AMBER,
     issued_id_args=("customer_id",),
 )
-async def shopify_store_credit_open(
+async def shopify_store_credit(
     customer_id: str, amount: float | None = None, currency: str = "GBP", reason: str = "",
 ) -> dict[str, Any]:
     """The workspace, opened from what the owner said. A READ tool: the balance is read and
@@ -445,10 +448,10 @@ def _present(proposal) -> dict:
 
 @tool(
     name=WRITE_TOOL,
-    description="Prepare the store credit the owner has on screen. Needs the workspace_id from shopify_store_credit_open.",
+    description="Prepare the store credit the owner has on screen. Needs the workspace_id from shopify_store_credit.",
     input_schema={
         "type": "object",
-        "properties": {"workspace_id": {"type": "string", "description": "From shopify_store_credit_open."}},
+        "properties": {"workspace_id": {"type": "string", "description": "From shopify_store_credit."}},
         "required": ["workspace_id"],
     },
     tier=Tier.RED,
@@ -469,7 +472,11 @@ def _present(proposal) -> dict:
         # fingerprint for the proof and moves legitimately on a first credit, so holding the
         # change to it would make every first credit stale.
         precondition_keys=("balance", "currency"),
-        spoken_success="{label} now has {to} in store credit.",
+        # `{label}` deliberately unused: the entity here is a PERSON, and `entity_label`
+        # reaches the ledger (app/actions/ledger.py) where a customer's name may not go —
+        # the same reason `gmail_send_new` labels its entity "customer" and not an address.
+        # The name is on the card, where the owner is reading it.
+        spoken_success="Their store credit is {to} now.",
         spoken_failure="I couldn't confirm the credit. Check the customer's account before asking again.",
         spoken_stale="Their balance moved since this was prepared, so I haven't credited anything.",
     ),
@@ -514,7 +521,9 @@ async def shopify_store_credit_add(workspace_id: str) -> Prepared:
         before=before,
         expected_after={"balance": f"{after:.2f}", "currency": currency, "accounts": max(1, len(state["accounts"]))},
         entity_ref=str(state["customer_id"]),
-        entity_label=str(state["name"] or "the customer"),
+        # Never the name. `entity_label` goes into the ledger, and the ledger carries
+        # identities, counts and controlled words — a customer's name is none of those.
+        entity_label="customer",
         summary={
             "customer": str(state["name"] or ""),
             "balance": f"{balance:.2f}",
@@ -579,7 +588,7 @@ def _discard(ctx: CommandCtx) -> Outcome:
 
 # Touch only. There is no `credit.open`: opening this workspace needs a READ of the balance,
 # and a command is synchronous by design (app/commands.py) — so the way in is the model
-# calling `shopify_store_credit_open` for a customer this conversation has looked up, and the
+# calling `shopify_store_credit` for a customer this conversation has looked up, and the
 # three commands here are what a finger does to the card that comes back.
 register_command(Command("credit.field", "Type into the store credit being decided", _field, voice=False))
 register_command(Command("credit.stage", "Prepare the store credit for authorising", _stage, voice=False))
@@ -619,7 +628,7 @@ async def _probe(runtime: Any) -> dict[str, Any]:
     probe = getattr(runtime, "store_credit_sample", "") or ""
     if not probe:
         # Nothing to ask about yet. The grants are there and the feature is unproven, which
-        # is honest: the first `shopify_store_credit_open` finds out, and says so.
+        # is honest: the first `shopify_store_credit` finds out, and says so.
         return {"state": "READY",
                 "detail": "ready — the grants are in place; whether the store has store credit is proven on first use",
                 "scope": SCOPE}

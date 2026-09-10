@@ -744,10 +744,21 @@ async def shopify_order_create(workspace_id: str) -> Prepared:
     # either, so the candidates are read again and a second match refuses the preparation.
     again = await _candidates(client, ws.value(workspace, "customer"))
     if len(again) > 1 and not any(c["customer_id"] == chosen.get("customer_id") for c in again):
+        # The name means several people now and none of them is the one on the card. Rare,
+        # and cheap insurance: the alternative is an order for whoever the workspace happened
+        # to resolve when it was opened.
         workspace["facts"]["candidates"] = again
         workspace["facts"].pop("customer", None)
         raise ToolError(f"{len(again)} customers now match that name; nothing was created. Choose one.")
-    await _choose_customer(workspace, str(chosen["customer_id"]))
+    try:
+        await _choose_customer(workspace, str(chosen["customer_id"]))
+    except ToolError:
+        # Read by id and gone: merged, deleted, or a request for erasure carried out. The
+        # order must not be made for an id the shop no longer has.
+        workspace["facts"].pop("customer", None)
+        raise ToolError(
+            f"{chosen.get('name') or 'That customer'} is not in the shop any more; nothing was created."
+        ) from None
     chosen = _chosen_customer(workspace) or {}
 
     # Every line, priced by Shopify and checked for sale. A variant withdrawn since it was

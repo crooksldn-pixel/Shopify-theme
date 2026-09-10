@@ -70,7 +70,7 @@ ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_q
 # The read tools that put a workspace on the owner's screen (app/families/_workspace.py).
 # Each returns the Mac's own card under `_surfaces`, and `_from_result` below takes it as it
 # is rather than re-shaping state that never came from the shop.
-WORKSPACE_TOOLS = frozenset({"shopify_discount_open", "shopify_order_open", "shopify_store_credit_open"})
+WORKSPACE_TOOLS = frozenset({"shopify_discount_open", "shopify_order_open", "shopify_store_credit"})
 
 # Bounds. The tablet is 8 inches wide; more than this is a spreadsheet, not an answer.
 MAX_ORDERS = 10
