@@ -138,6 +138,16 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
             cwd=ROOT, capture_output=True, text=True, timeout=300,
             env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
         )
+        # And the same again at the tablet's own size. The pictures that matter for an
+        # eight-inch screen are the ones taken on an eight-inch screen: the Phase 2 live test
+        # found clipping and a swallowed dock that the 800 x 1280 shots could not show.
+        if TABLET_SCRIPT.exists():
+            await asyncio.to_thread(
+                subprocess.run,
+                ["node", str(TABLET_SCRIPT), f"http://127.0.0.1:{port}", str(out)],
+                cwd=ROOT, capture_output=True, text=True, timeout=300,
+                env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
+            )
     finally:
         await _stop(server, task)
 
