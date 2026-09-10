@@ -230,3 +230,52 @@ async def test_a_number_that_is_not_the_open_order_is_never_answered_from_the_op
         about_it = await stage.say(words, session_id="digits")
         assert about_it.recipe_id == "order_status_lookup", f"{words!r} took {about_it.recipe_id!r}"
         assert "1938" in about_it.answer, about_it.answer
+
+
+@pytest.mark.parametrize(("setup", "question", "must_not_take"), [
+    # "How many" is a quantity word, so it carries the sales reading — but the noun decides
+    # what is being counted, and a count of customers answered with a revenue figure is a
+    # confident answer to a question nobody asked.
+    ((), "how many customers do we have today", "sales_breakdown_period"),
+    # "Back" is a direction, not a repetition. While it counted as one, a stock question
+    # re-rendered whatever order happened to be open.
+    (("show me order 1938",), "is the black tee back in stock", "order_reopen"),
+    # "Number" is not an address word. It made this a request for the postal address, which
+    # was then read out and remembered as PII.
+    (("show me order 1938",), "what's the order number", "order_address_lookup"),
+    # A question about one person's address is not a summary of the whole week's inbox.
+    (("show me order 1938",), "what's her email address", "inbox_state"),
+])
+async def test_a_deterministic_recipe_never_takes_a_question_it_would_answer_wrongly(
+    setup, question, must_not_take, stage,
+):
+    """The fast lane's job is to be right, not to be busy.
+
+    Every case here was routed to a recipe that produced a confident, well-shaped answer to a
+    different question. Deferring costs a model call; answering the wrong question costs the
+    owner's trust in every answer that came before it.
+    """
+    session = f"mis-{abs(hash(question)) % 10000}"
+    for words in setup:
+        await stage.say(words, session_id=session)
+    answered = await stage.say(question, session_id=session)
+    assert answered.recipe_id != must_not_take, (
+        f"{question!r} took {must_not_take!r} and answered {answered.answer!r}"
+    )
+
+
+async def test_the_inbox_answers_for_the_period_it_was_asked_about(stage):
+    """The family boosts on a period, so the period reaches the recipe — and it used to be
+    read for the routing and then dropped: the plan always asked Gmail for seven days and the
+    sentence always said "this week". "Show me today's emails" was answered with the week's,
+    named as though it were the day's.
+    """
+    day = await stage.say("show me today's emails", session_id="win")
+    week = await stage.say("what's in the inbox", session_id="win2")
+    assert day.recipe_id == week.recipe_id == "inbox_state"
+    assert "today" in day.answer and "this week" not in day.answer, day.answer
+    assert "this week" in week.answer, week.answer
+    # And the window is real, not just a word in the sentence: the fixture inbox honours
+    # Gmail's newer_than, so a shorter window genuinely returns fewer threads.
+    assert day.data("email_list") or day.answer
+    assert int(day.answer.split()[0]) < int(week.answer.split()[0]), (day.answer, week.answer)

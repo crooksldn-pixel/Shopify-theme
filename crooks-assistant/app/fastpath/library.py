@@ -924,21 +924,45 @@ register(Recipe(
 # ------------------------------------------------------------------ the inbox
 
 
+# How far back to look, and what to call it. The family boosts on a period, so a period
+# reaches this recipe — and it was read for the routing and then thrown away: the plan always
+# asked for seven days and the sentence always said "this week", so "show me today's emails"
+# was answered with the week's. A window the owner did not ask for, named as though he had.
+_INBOX_WINDOW: dict[str, tuple[int, str]] = {
+    "today": (1, "today"),
+    "yesterday": (2, "since yesterday"),
+    "this_week": (7, "this week"),
+    "last_7_days": (7, "in the last seven days"),
+    "this_month": (30, "this month"),
+    "last_30_days": (30, "in the last thirty days"),
+    "last_90_days": (90, "in the last ninety days"),
+}
+_INBOX_DEFAULT = (7, "this week")
+
+
+def _inbox_window(ctx: Ctx) -> tuple[int, str]:
+    named = period_from(ctx.intent.signals.words)
+    return _INBOX_WINDOW.get(named or "", _INBOX_DEFAULT)
+
+
 def _inbox_plan(ctx: Ctx) -> ReadPlan | None:
-    return ReadPlan([Read("inbox", "gmail_search", {"query": "", "days": 7, "limit": 12}, source="gmail", cost=2.0)], label="inbox_state")
+    days, _ = _inbox_window(ctx)
+    return ReadPlan([Read("inbox", "gmail_search", {"query": "", "days": days, "limit": 12}, source="gmail", cost=2.0)], label="inbox_state")
 
 
 def _inbox_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     body = result.values.get("inbox")
+    days, when = _inbox_window(ctx)
     if not isinstance(body, dict):
         return FastAnswer(answer="", defer="the inbox did not answer")
     threads = [t for t in (body.get("threads") or []) if isinstance(t, dict)]
     real = [t for t in threads if not t.get("likely_bulk")]
     if not real:
-        return FastAnswer(answer="Nothing from a person in the inbox this week.", calls=list(result.calls), trace={"threads": 0})
+        return FastAnswer(answer=f"Nothing from a person in the inbox {when}.", calls=list(result.calls),
+                          trace={"threads": 0, "days": days})
     newest = real[0]
-    return FastAnswer(answer=f"{len(real)} threads from people this week; the newest is {newest.get('from') or 'someone'} about {newest.get('subject') or 'no subject'}.",
-                      calls=list(result.calls), partial=result.partial, trace={"threads": len(real)})
+    return FastAnswer(answer=f"{len(real)} threads from people {when}; the newest is {newest.get('from') or 'someone'} about {newest.get('subject') or 'no subject'}.",
+                      calls=list(result.calls), partial=result.partial, trace={"threads": len(real), "days": days})
 
 
 def _needs_reply_plan(ctx: Ctx) -> ReadPlan | None:

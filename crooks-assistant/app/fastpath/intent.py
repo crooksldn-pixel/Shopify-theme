@@ -122,7 +122,11 @@ _METRIC = frozenset({
 _LISTING = frozenset({"show", "list", "see", "display", "view", "pull", "bring", "open", "give"})
 # Asking for the same thing again. The order is already the branch's entity; this is a
 # re-render, not a new lookup.
-_AGAIN = frozenset({"again", "re-open", "reopen", "back"})
+# "Back" is deliberately absent: it is a direction, not a repetition. While it was here,
+# "is the black tee back in stock" scored as "show that order again" and answered a stock
+# question with the order card that happened to be open — and "go back" never needed it,
+# because that is navigation_back's word.
+_AGAIN = frozenset({"again", "re-open", "reopen", "once more", "one more time"})
 # Asking for an order of merit rather than a total: a different question and a different card.
 _RANKING = frozenset({"best", "bestseller", "bestsellers", "top", "worst", "most", "least", "highest", "lowest", "popular", "biggest"})
 _STOCK = frozenset({"stock", "inventory", "left", "remaining", "sizes"})
@@ -138,7 +142,10 @@ _DELAY = frozenset({"late", "delayed", "overdue", "waiting", "stuck", "unfulfill
 _ORDER = frozenset({"order", "orders", "invoice", "purchase"})
 _CUSTOMER = frozenset({"customer", "customers", "buyer", "buyers", "client", "clients", "people", "person", "someone"})
 _STATUS = frozenset({"status", "where", "shipped", "dispatched", "tracking", "delivered", "arrived", "fulfilled"})
-_ADDRESS = frozenset({"address", "street", "addresses", "postcode", "house", "number", "door", "line"})
+# "Number" is deliberately absent. It made "what's the order number" a request for the postal
+# address, answered confidently and read aloud. "House number" and "door number" still reach
+# this through "house" and "door", which mean nothing else.
+_ADDRESS = frozenset({"address", "street", "addresses", "postcode", "house", "door", "line"})
 # "Before" is deliberately absent: "has she bought before" already carries "bought", and
 # "the one before" is a direction. A word that means two things belongs to the reading that
 # needs it, not to both.
@@ -311,7 +318,8 @@ FAMILIES: tuple[Family, ...] = (
     # re-render of what is open, not a fresh lookup. Requires an entity: with nothing open
     # there is nothing to show again, and guessing would re-open the wrong record.
     Family("order_reopen", needs=("again", "has_entity"), boosts=("listing", "order", "question"),
-           blocks=("mutation", "metric", "email", "ranking", "period", "direction_back"),
+           blocks=("mutation", "metric", "email", "ranking", "period", "direction_back",
+                   "stock", "running_out", "status", "address"),
            entities=("order",), base=0.76, max_words=8),
     # "What else has this customer ordered?" — the person is whoever the open record belongs
     # to, so no name has to be resolved.
@@ -328,11 +336,17 @@ FAMILIES: tuple[Family, ...] = (
     Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email"), entities=("order",), base=0.72, max_words=14),
     Family("customer_purchase_lookup", needs=("known_name", "bought"), boosts=("customer", "question"), blocks=("mutation",), entities=("customer",), base=0.72, max_words=14),
     Family("best_sellers_period", needs=("ranking",), boosts=("period", "question", "metric"), blocks=("mutation", "email", "stock", "running_out", "order_number", "customer"), base=0.65, floor=0.72, max_words=14),
-    Family("sales_breakdown_period", needs=("metric", "period"), boosts=("question",), blocks=("mutation", "email", "stock", "running_out", "order_number", "ranking"), base=0.66, floor=0.72, max_words=16),
+    # Blocks "customer" because "how many" is in _METRIC: without it "how many customers do we
+    # have today" scored as the sales card and was answered "Today: £162.00, 3 orders" — a
+    # confident figure that is not what was asked for. The model can count customers.
+    Family("sales_breakdown_period", needs=("metric", "period"), boosts=("question",), blocks=("mutation", "email", "stock", "running_out", "order_number", "ranking", "customer"), base=0.66, floor=0.72, max_words=16),
     Family("delayed_orders", needs=("delayed", "order"), boosts=("question", "period"), blocks=("mutation", "order_number"), base=0.72, max_words=14),
     Family("stock_cover_analysis", needs=("running_out",), boosts=("question", "period", "metric", "stock"), blocks=("mutation", "email", "order_number"), base=0.7, floor=0.72, max_words=12),
     Family("needs_reply", needs=("email", "waiting"), boosts=("customer", "question"), blocks=("mutation", "metric", "order_number", "ranking"), base=0.7, floor=0.74, max_words=14),
-    Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number", "possessive_name"), base=0.7, floor=0.74, max_words=12),
+    # "The inbox, in one line." Blocked by anything that narrows it to a person or a field:
+    # "what's her email address" is about one customer's address and was being answered with a
+    # summary of the whole week's threads.
+    Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number", "possessive_name", "deixis", "address"), base=0.7, floor=0.74, max_words=12),
 )
 
 # Signal names as the families spell them, mapped to how they are read off Signals.

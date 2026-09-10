@@ -92,7 +92,23 @@ def _thread_matches(thread, query: str) -> bool:
             if term.split(":", 1)[1] not in text:
                 return False
             continue
-        if term.startswith("newer_than:") or term.startswith("older_than:") or term.startswith("after:") or term.startswith("before:"):
+        if term.startswith("newer_than:") or term.startswith("older_than:"):
+            # Honoured, not skipped. A fake inbox that ignores the window makes every
+            # question about a period pass whatever window the code asked for, so a recipe
+            # that reads "today" and then fetches a week looks correct here and is wrong on
+            # the real mailbox. Gmail's form is a count and a unit: 1d, 2w, 3m, 1y.
+            match = re.fullmatch(r"(newer_than|older_than):(\d+)([dwmy])", term)
+            if match is None:
+                continue
+            scale = {"d": 1, "w": 7, "m": 30, "y": 365}[match.group(3)]
+            window = int(match.group(2)) * scale
+            newest = min((m.days_ago for m in thread.messages), default=0.0)
+            if match.group(1) == "newer_than" and newest > window:
+                return False
+            if match.group(1) == "older_than" and newest <= window:
+                return False
+            continue
+        if term.startswith("after:") or term.startswith("before:"):
             continue
         if term.startswith("subject:"):
             if term.split(":", 1)[1] not in text:
