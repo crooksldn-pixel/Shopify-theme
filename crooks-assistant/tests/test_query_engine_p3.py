@@ -361,7 +361,6 @@ def test_the_mac_says_out_loud_that_delivery_is_not_connected():
     """The systemic half of the local refusal: the model is told once, at the start of the
     turn, rather than discovering it a refused query at a time."""
     from app.capabilities import families as capability_families
-
     from app.families import load_all
 
     load_all()
@@ -423,13 +422,12 @@ def test_a_change_is_still_a_change_and_a_state_is_not():
 
 
 async def test_the_recipe_answers_from_the_cache_oldest_first_with_a_set_to_walk(bound):
+    from app.families import load_all
     from app.fastpath import runner
     from app.fastpath.intent import resolve
     from app.fastpath.models import Ctx
     from app.fastpath.recipes import recipe_for
     from app.session.branch import Branch
-
-    from app.families import load_all
 
     load_all()
     session = Session(session_id="fast1")
@@ -451,13 +449,12 @@ async def test_the_recipe_answers_from_the_cache_oldest_first_with_a_set_to_walk
 
 
 async def test_the_international_recipe_narrows_to_what_is_going_abroad(bound):
+    from app.families import load_all
     from app.fastpath import runner
     from app.fastpath.intent import resolve
     from app.fastpath.models import Ctx
     from app.fastpath.recipes import recipe_for
     from app.session.branch import Branch
-
-    from app.families import load_all
 
     load_all()
     session = Session(session_id="fast2")
@@ -475,9 +472,8 @@ async def test_the_international_recipe_narrows_to_what_is_going_abroad(bound):
 
 
 def test_the_recipes_read_only_and_never_call_a_model():
-    from app.fastpath.recipes import RECIPES, assert_read_only
-
     from app.families import load_all
+    from app.fastpath.recipes import RECIPES, assert_read_only
 
     load_all()
     mine = {k: v for k, v in RECIPES.items() if k in ("unfulfilled_orders", "international_waiting_orders")}
