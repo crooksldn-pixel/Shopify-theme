@@ -65,10 +65,24 @@ touch could not reach it.
 
 ### `app/routes/command.py` — `POST /command`
 The tablet posts *which* command and *which* record. It cannot post what the command should do.
-That is the write boundary's rule applied to the read side. The response is the same shape
-`/turn` returns, so the tablet renders a tap and a sentence with the same code.
+That is the write boundary's rule applied to the read side, and `tests/test_web.py` now fails
+if a note, body, amount, reason, address, subject or tag is ever posted with a command. The
+response is the same shape `/turn` returns, so the tablet renders a tap and a sentence with
+the same code.
 
 `GET /commands` lists what may be posted, derived from the registry.
+
+**The tablet actually uses it.** `web/app.js::goBack` posted nothing before — it walked a local
+array of rendered nodes, so the tapped position and the Mac's position diverged the moment
+either was used. It now posts `navigation.back` and draws what the Mac says it landed on,
+falling back to the local history only when the request fails (a Back button that does nothing
+when the tailnet hiccups is worse than one occasionally out of step). There is a **Next chip**
+beside Back, shown while a list is open and not at its end, posting `workflow.next`.
+
+Back also no longer degrades to prose when the entity tier has dropped the record: the trail
+move happens in the runner *before* the plan, exactly as the cursor move does, so the plan
+knows what it landed on and reads it. `tests/test_experience.py` empties the tier and proves
+a card still appears.
 
 ### `app/readonly.py` — the read-only latch
 Makes a process incapable of changing anything. Checked at three chokepoints, which are a
@@ -231,6 +245,14 @@ Every one of those turns made **zero model calls**.
   to propose, and the harness's provider does not. Their *safety* is covered
   (`unsupported_edit` proves no false success, the fixtures refuse every write), their
   behaviour is not.
+- **`make experience-live` runs a narrowed set.** The other scenarios name a fixture record —
+  order 1938, Mia Jones — so against the owner's own shop they would fail for a reason that
+  says nothing about the code. `LIVE_SCENARIOS` in `experience/scenarios.py` is the subset,
+  and their grounding assertions are dropped in live mode: what is checked there is the
+  shapes. Without credentials it says so in one line and exits 2.
+- **`/branches/{id}/back` and `/forward` still exist** alongside `POST /command`. The tablet no
+  longer calls them. They are harmless but they are a second door to the same move; closing
+  them is a small tidy-up for Phase 2 or later.
 - **`pytest tests/test_browser.py` prints `RuntimeError: Event loop is closed` to stderr.**
   It is pytest-asyncio closing the loop while uvicorn's transports finish. The test passes;
   the traceback is noise.
