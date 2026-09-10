@@ -87,6 +87,9 @@ log = logging.getLogger("crooks.anticipation")
 MAX_ANTICIPATED = 4
 MAX_PER_SOURCE = 2
 MAX_SPECULATIVE = 2
+# The sources whose rate speculation spends, and therefore the ones the bounds above count.
+# "mac" is not one of them: an internal read asks something inside this process.
+SPENDING_SOURCES = ("shopify", "gmail")
 # What one signal may start, however many rules fire. A signal that wants eight reads is a rule
 # problem, not a budget to spend.
 MAX_PER_SIGNAL = 6
@@ -135,17 +138,6 @@ class Decision:
     suggestions: list[dict[str, Any]] = field(default_factory=list)
     learned: str = ""                                   # the transition recorded, if any
     cancelled: int = 0
-
-    def public(self) -> dict[str, Any]:
-        return {
-            "state": self.state,
-            "started": [{"key": p.key, "tier": p.tier, "why": p.why, "level": p.level,
-                         "confidence": round(p.confidence, 3)} for p in self.started],
-            "skipped": dict(self.skipped),
-            "suggestions": list(self.suggestions),
-            "learned": self.learned or None,
-            "cancelled": self.cancelled,
-        }
 
 
 class Anticipator:
@@ -305,12 +297,12 @@ class Anticipator:
             if self.memory.get(tier, key) is not None:
                 return "already held, and fresh"
         prefetcher = self.prefetcher
-        if prediction.source != "mac":
+        if prediction.source in SPENDING_SOURCES:
             # Only source-spending reads count against these two. The Mac's own internal reads
             # spend nothing and are bounded by the prefetcher's own per-scope wall.
             spending = sum(
                 prefetcher.in_flight_for(signal.scope, source=source)
-                for source in ("shopify", "gmail")
+                for source in SPENDING_SOURCES
             )
             if spending >= self.max_anticipated:
                 return "this conversation already has as much in flight as it may"
