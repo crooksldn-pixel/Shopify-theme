@@ -309,7 +309,7 @@ def test_a_decline_after_the_tool_ran_is_not_a_false_claim():
 
 
 def test_the_context_lines_tell_the_model_what_the_mac_knows():
-    from app.routes.turn import _context_lines
+    from app.routes.turn import FAMILY_LINE_PREFIX, _context_lines
     from app.session.models import Session
 
     s = Session(session_id="x")
@@ -321,10 +321,11 @@ def test_the_context_lines_tell_the_model_what_the_mac_knows():
     assert lines[2].startswith("[This asks for") and "commerce_aggregate" in lines[2] and s.hinted
     s.last_query = None
     # Nothing of the CONVERSATION is left to say. What may still be there is the capability
-    # family block, which is a fact about the Mac rather than about this session and is added
-    # for every question (app/routes/turn.py `_family_lines`); a family registered by a Phase
-    # 3 module makes it appear, and it must not be mistaken for state that failed to clear.
-    rest = [line for line in _context_lines(s, "hello") if not line.startswith("[Capability families")]
+    # family block: a fact about the Mac rather than about this session, added to every
+    # question so the model stops attempting what this build cannot do
+    # (app/routes/turn.py `_family_lines`). It must not be mistaken for state that failed to
+    # clear, and it is only there at all when some family is unavailable.
+    rest = [line for line in _context_lines(s, "hello") if not line.startswith(FAMILY_LINE_PREFIX)]
     assert rest == [] and not s.hinted
 
 

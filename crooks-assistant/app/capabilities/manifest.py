@@ -74,6 +74,12 @@ def build(*, build_id: str = "", writes_enabled: bool = True) -> dict[str, Any]:
             "group_by": list(query.GROUPS),
             "metrics": list(query.METRICS),
             "filters": sorted(query.FILTERS),
+            # The other names that resolve to those filters, and the keys a listing can be
+            # sorted by. Both are part of what the language ACCEPTS, so both belong in the
+            # account it gives of itself: a name nothing publishes is a name that gets
+            # guessed, and a guessed name costs a turn.
+            "filter_aliases": sorted(query.ALIASES),
+            "sort_keys": sorted(set(query.LISTING_SORT_KEYS) | set(query.SORT_WORDS)),
             "views": list(query.VIEWS),
             "periods": list(periods.NAMED) + ["{days: N}", "{start, end}"],
             "compare": True,

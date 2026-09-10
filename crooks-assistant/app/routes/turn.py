@@ -438,6 +438,11 @@ def _written(text: str, names: set[str]) -> str:
     return redact_text(str(text or ""), names) if text else ""
 
 
+# The opening of the standing capability line. Named, not quoted twice: a test that needs to
+# separate "what the Mac cannot do" from "what this conversation knows" filters on this.
+FAMILY_LINE_PREFIX = "[What this Mac cannot do right now:\n"
+
+
 def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict, ui: list | None = None) -> dict:
     """The turn's own measurements. No content, no arguments, no personal data: counts,
     milliseconds and names of tools."""
@@ -795,7 +800,7 @@ def _family_lines(runtime) -> list[str]:
     lines = families_mod.words(table) if table else []
     if not lines:
         return []
-    return ["[What this Mac cannot do right now:\n" + "\n".join(lines) + "]"]
+    return [FAMILY_LINE_PREFIX + "\n".join(lines) + "]"]
 
 
 # "Draft", "prepare", "write me" ask for something to read first. "Send", "email them",

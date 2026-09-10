@@ -6,6 +6,7 @@ language can express. All of them read; none of them can change anything."""
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -17,17 +18,21 @@ from app.analytics import sets as working_sets
 from app.analytics.cache import OrderCache
 from app.analytics.periods import MAX_DAYS, NAMED, Period
 from app.analytics.query import (
+    ALIASES,
     ENTITIES,
     FILTERS,
     GROUPS,
+    LISTING_SORT_KEYS,
     MAX_COST,
     MAX_LIMIT,
     METRICS,
+    TRACKING_UNAVAILABLE,
     TURN_COST,
     VIEWS,
     Query,
     QueryError,
     parse,
+    shop_country_from,
 )
 from app.observability import timeline
 from app.tools.context import current_session
@@ -58,6 +63,43 @@ async def _now_and_zone() -> tuple[datetime, Any]:
     client = cache()._client()
     zone = await client.timezone()
     return datetime.now(zone), zone
+
+
+async def _shop_country() -> str:
+    """Where the shop ships from, for the "international" filter.
+
+    No extra read: `timezone()` above has already made the client hold the shop, so this is a
+    dictionary lookup with a settings override behind it. A shop that cannot be read at all
+    falls back to the setting rather than failing the query — an unreadable shop is not a
+    reason to refuse to list orders.
+    """
+    from config.settings import get_settings
+
+    override = str(getattr(get_settings(), "shop_country_code", "") or "")
+    try:
+        shop = await cache()._client().shop()
+    except Exception:  # noqa: BLE001 — the shop is a detail of one filter, not of the query
+        shop = None
+    return shop_country_from(shop if isinstance(shop, dict) else None, override)
+
+
+def _error_words(exc: QueryError) -> str:
+    """The refusal, with the schema that would have worked, short enough to be read.
+
+    The tablet's planner met "sort by : not one of the metrics or groups asked for" three
+    times in a row and each time invented another shape, because nothing in the refusal said
+    what a right one looked like. This is the whole fix from the model's side: the accepted
+    keys and one spec it can copy, in one line, under 500 characters with the prefix.
+    """
+    help_ = getattr(exc, "schema_help", None) or {}
+    if not help_:
+        return ""
+    keys = [str(k) for k in (help_.get("accepted_sort_keys") or [])[:8]]
+    example = json.dumps(help_.get("example") or {}, separators=(",", ":"))[:220]
+    # The keys only when the refusal has not already named them — a sort refusal has, a bad
+    # filter has not, and repeating them costs a third of the budget the whole error has.
+    named = "" if keys and all(key in str(exc) for key in keys) else f" Sort keys: {', '.join(keys)}."
+    return f"{named} Retry ONCE with this shape: {example}"
 
 
 def sets_for(session: Any) -> dict[str, frozenset[str]]:
@@ -149,6 +191,10 @@ def _describe(query: Query) -> str:
         words.append(f"older than {f['older_than_days']} days")
     if f.get("country_code"):
         words.append(f"from {f['country_code']}")
+    if f.get("international") is True:
+        words.append("going abroad")
+    elif f.get("international") is False:
+        words.append("staying in the country")
     if f.get("min_spent"):
         words.append(f"over {f['min_spent']:.0f} spent")
     if f.get("min_orders"):
@@ -158,8 +204,9 @@ def _describe(query: Query) -> str:
 
 async def _run(spec: dict[str, Any], *, default_entity: str, tool: str = "commerce_aggregate") -> dict[str, Any]:
     now, zone = await _now_and_zone()
+    country = await _shop_country()
     try:
-        query = parse(spec, now=now, tz=zone, default_entity=default_entity)
+        query = parse(spec, now=now, tz=zone, default_entity=default_entity, shop_country=country)
     except QueryError as exc:
         # What was asked for and does not exist in the language (a filter, a group, a metric)
         # is a dimension the report counts as worth adding — never something to bend to.
@@ -168,7 +215,7 @@ async def _run(spec: dict[str, Any], *, default_entity: str, tool: str = "commer
             "query_rejected", session_id=getattr(session, "session_id", None), turn_id=(getattr(session, "turn_id", "") or None) if session is not None else None,
             tool=tool, entity=str(spec.get("entity") or default_entity)[:40], unknown=[str(u)[:40] for u in exc.unknown][:8] or None, reason=str(exc)[:200],
         )
-        raise ToolError(f"Query not understood: {exc}") from exc
+        raise ToolError(f"Query not understood: {exc}{_error_words(exc)}") from exc
     _sets_in(query)
     session = current_session()
     if session is not None:
@@ -181,7 +228,7 @@ async def _run(spec: dict[str, Any], *, default_entity: str, tool: str = "commer
     view = await cache().view(Period(window, query.period.end, query.period.label, query.period.kind), timeout_s=READ_TIMEOUT_S)
     stock: dict[str, dict[str, Any]] = {}
     if query.needs_stock:
-        selected = engine.select(view.rows, query.period, query.filters, now=now.timestamp(), sets=sets_for(current_session()))
+        selected = engine.select(view.rows, query.period, query.filters, now=now.timestamp(), sets=sets_for(current_session()), shop_country=country)
         wanted = {i["variant_id"] for o in selected for i in engine.matching_items(o, query.filters) if i.get("variant_id")}
         stock = await cache().stock(sorted(wanted)[:400], timeout_s=READ_TIMEOUT_S)
     result = engine.aggregate(query, view.rows, now=now.timestamp(), tz=zone, stock=stock, sets=sets_for(current_session()))
@@ -202,7 +249,22 @@ async def _run(spec: dict[str, Any], *, default_entity: str, tool: str = "commer
 # --------------------------------------------------------------------------- the tools
 
 _PERIOD_DESC = "today, yesterday, this_week, last_week, this_month, last_month, last_7_days, last_30_days, last_90_days, since_launch, {\"days\": N} or {\"start\",\"end\"}. Default last_30_days."
-_FILTERS_DESC = "Common: product (words, e.g. 'pink joggers'), size, colour, fulfillment (unfulfilled|partial|fulfilled), payment, country_code, tags, min_total, older_than_days, customer_id, in_set; customers: min_orders, min_spent, repeat, no_later_order. commerce_capabilities lists all."
+_FILTERS_LIST = (
+    "fulfillment (unfulfilled|partial|fulfilled), payment (paid|unpaid|pending|refunded), "
+    "international (true = outside the shop's country), country_code, city, older_than_days "
+    "(= age_days), has_tracking, min_total, tags, product ('pink joggers'), customer_id, in_set; "
+    "customers: min_orders, min_spent, repeat, no_later_order. No delivered/undelivered filter: "
+    "no carrier is connected."
+)
+_FILTERS_GROUPED = (
+    "product ('pink joggers'), variant, sku, size, colour, product_type, fulfillment, payment, "
+    "international, country_code, older_than_days, tags, min_units, in_set. "
+    "commerce_capabilities lists every filter and its aliases."
+)
+_SORT_DESC = (
+    "created_at, total, age_days, or \"oldest\"/\"newest\"/\"waiting longest\"/\"highest value\"; "
+    "\"total desc\", {metric, direction}, or a list. Default newest first."
+)
 _VIEW_DESC = "auto (default), ranking, table, comparison, matrix, metrics, trend or list."
 
 
@@ -218,10 +280,10 @@ _VIEW_DESC = "auto (default), ranking, table, comparison, matrix, metrics, trend
         "properties": {
             "entity": {"type": "string", "description": "order_line_items (default; what sold), orders, customers, products or variants."},
             "period": {"description": _PERIOD_DESC},
-            "filters": {"type": "object", "description": _FILTERS_DESC},
+            "filters": {"type": "object", "description": _FILTERS_GROUPED},
             "group_by": {"type": "array", "items": {"type": "string"}, "description": "Up to two of product, product_type, variant, size, colour, day, week, month, customer, country, fulfillment, payment."},
             "metrics": {"type": "array", "items": {"type": "string"}, "description": "units, revenue, orders, customers, aov, refunded, unfulfilled_value, share; variants/products: stock, velocity, days_cover; customers: lifetime_orders, lifetime_spent."},
-            "sort": {"type": "array", "items": {"type": "object"}, "description": "[{\"metric\": \"units\", \"direction\": \"desc\"}]; default the first metric, descending."},
+            "sort": {"description": "{metric, direction} or \"units desc\": a metric or group asked for. Default the first, descending."},
             "limit": {"type": "integer", "description": f"1-{MAX_LIMIT}, default 10."},
             "compare": {"type": "boolean", "description": "Also the period before, with the change."},
             "view": {"type": "string", "description": _VIEW_DESC},
@@ -247,8 +309,8 @@ async def commerce_aggregate(entity: str = "order_line_items", period: Any = Non
         "properties": {
             "entity": {"type": "string", "description": "orders (default) or customers."},
             "period": {"description": _PERIOD_DESC},
-            "filters": {"type": "object", "description": _FILTERS_DESC},
-            "sort": {"type": "array", "items": {"type": "object"}, "description": "Orders: created_at, total or age_days; customers: a metric. Default newest first."},
+            "filters": {"type": "object", "description": _FILTERS_LIST},
+            "sort": {"description": _SORT_DESC},
             "limit": {"type": "integer", "description": f"Rows shown (1-{MAX_LIMIT}). Unset, the set holds every match; set, just these rows."},
             "metrics": {"type": "array", "items": {"type": "string"}, "description": "Customers only: orders, revenue, lifetime_orders, lifetime_spent."},
             "title": {"type": "string", "description": "A short name for the set, in the owner's words."},
@@ -664,7 +726,15 @@ def catalogue() -> dict[str, Any]:
         "entities": list(ENTITIES),
         "periods": list(NAMED) + ["{\"days\": N}", "{\"days\": N, \"days_ago\": M}", "{\"start\": \"YYYY-MM-DD\", \"end\": \"YYYY-MM-DD\"}"],
         "timezone": "Europe/London", "max_days": MAX_DAYS,
-        "filters": {name: {"type": kind.split(":", 1)[0], "values": kind.split(":", 1)[1].split(",") if ":" in kind else None, "entities": list(entities)} for name, (kind, entities) in FILTERS.items()},
+        "filters": {name: {"type": kind.split(":", 1)[0], "values": kind.split(":", 1)[1].split(",") if ":" in kind else None, "entities": list(entities), "aliases": list(aliases)} for name, (kind, entities, aliases) in FILTERS.items()},
+        # Every other name that resolves to one of the filters above, so the model reads the
+        # whole vocabulary rather than guessing at half of it.
+        "filter_aliases": dict(sorted(ALIASES.items())),
+        "sort_keys": {"orders": list(LISTING_SORT_KEYS) + ["oldest", "newest", "waiting_longest", "highest_value", "lowest_value"],
+                      "grouped": "any metric or group_by asked for"},
+        # What this Mac cannot answer, said once, here, so it is not discovered a query at a
+        # time. `commerce_capabilities` is the answer to "can you?", and this is part of it.
+        "not_available": {"delivery_status": TRACKING_UNAVAILABLE},
         "group_by": list(GROUPS), "metrics": list(METRICS), "views": list(VIEWS),
         "bounds": {"limit": MAX_LIMIT, "group_by": 2, "cost_per_query": MAX_COST, "cost_per_turn": TURN_COST},
         "examples": [
@@ -673,6 +743,8 @@ def catalogue() -> dict[str, Any]:
             {"ask": "compare this week with last week", "call": {"tool": "commerce_aggregate", "entity": "orders", "period": "this_week", "metrics": ["orders", "revenue", "aov"], "compare": True, "view": "comparison"}},
             {"ask": "what needs restocking", "call": {"tool": "inventory_query", "period": "last_7_days"}},
             {"ask": "unfulfilled orders older than five days", "call": {"tool": "commerce_query", "entity": "orders", "period": "last_90_days", "filters": {"fulfillment": "unfulfilled", "older_than_days": 5}}},
+            {"ask": "international orders waiting too long", "call": {"tool": "commerce_query", "entity": "orders", "period": "last_90_days", "filters": {"fulfillment": "unfulfilled", "international": True}, "sort": "oldest"}},
+            {"ask": "are any orders undelivered", "call": {"tool": "commerce_query", "entity": "orders", "filters": {"fulfillment": "unfulfilled"}, "sort": "oldest"}, "note": TRACKING_UNAVAILABLE},
             {"ask": "customers who spent over £250", "call": {"tool": "commerce_aggregate", "entity": "customers", "period": "last_90_days", "filters": {"min_spent": 250}, "metrics": ["lifetime_spent", "lifetime_orders"]}},
             {"ask": "revenue tied up in unfulfilled orders", "call": {"tool": "commerce_aggregate", "entity": "orders", "period": "last_90_days", "filters": {"fulfillment": "unfulfilled"}, "metrics": ["orders", "unfulfilled_value"], "view": "metrics"}},
         ],

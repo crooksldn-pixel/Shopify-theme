@@ -136,6 +136,11 @@ class Settings(BaseSettings):
     # How many days of orders the Mac reads into memory at boot, so the first question about
     # sales or stock is answered from memory. 0 leaves the cache cold until asked.
     analytics_warm_days: int = 90
+    # Where the shop ships FROM, as a two-letter country code. It is the other half of the
+    # "international" filter — an order is international when its shipping country is not this
+    # one. Read from the shop itself when the shop reports one; this is the override, and the
+    # default is the country CROOKS is in.
+    shop_country_code: str = "GB"
 
     # --- behaviour ---
     tool_timeout_s: float = 8.0

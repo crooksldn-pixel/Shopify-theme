@@ -132,9 +132,10 @@ async def test_audio_test_reports_decode_failure(client):
 async def test_text_is_capped(client):
     body = (await client.post("/turn", json={"text": "x" * 10_000, "session_id": "cap"})).json()
     assert body["error_kind"] is None
-    # 2000 chars of question, between the clock line the Mac puts above every question and
-    # the context lines it puts below one (the capability families, the last change, the
-    # last read-layer query — app/routes/turn.py `_context_lines`).
+    # 2000 chars of question, between the clock line the Mac puts above every question and the
+    # context blocks it puts below one — a set, a capability family's state, the last change,
+    # the last read-layer query (app/routes/turn.py `_context_lines`). Each is bracketed, so
+    # the question is still exactly what was said however many of them there are that turn.
     session_id, sent = app.state.runtime.provider.turns[-1]
     clock, rest = sent.split("\n", 1)
     question = rest.split("\n\n[", 1)[0]
@@ -149,8 +150,8 @@ async def test_turn_goes_through_the_provider_once(client):
     (session_id, sent), = app.state.runtime.provider.turns
     assert session_id == "once"
     # The question reaches the model once, under the shop's clock — never as bare text. What
-    # follows it is the Mac's own context lines, which are bracketed and separated by a blank
-    # line, so the question itself is still exactly what was said.
+    # follows it, after a blank line, is whatever context the Mac has to add this turn: its
+    # own lines, each bracketed, so the question itself is still exactly what was said.
     clock, rest = sent.split("\n", 1)
     question = rest.split("\n\n[", 1)[0]
     assert question == "hello" and clock.startswith("[Now: ") and clock.endswith("Europe/London]")

@@ -539,3 +539,35 @@ class World:
 
 
 world = World(orders=ORDERS, people=PEOPLE, threads=THREADS, products=PRODUCTS)
+
+
+# ------------------------------------------------------- appended: the order going abroad
+#
+# APPENDED, not inserted: every table above keeps the order and the numbering it had, because
+# other tests index these fixtures by position and by number. The new records are added to the
+# same objects `world` already holds, so the world sees them without a line above changing.
+#
+# Why it exists: "find a real international order that has been waiting too long and hasn't
+# been fulfilled" was asked on the tablet, and the golden world had nothing but GB addresses —
+# so the question could only ever be answered "there are none", which is not the answer the
+# query engine's family is for. This is one order, going to Dublin, unfulfilled, older than
+# ten days: the oldest thing waiting to go out in the whole world.
+
+# Where the shop itself is. The "international" filter is "not this country" — see
+# app/analytics/query.py:shop_country_from — and the fixture shop reports it, so the fixture
+# exercises the shop-query path rather than the constant behind it.
+SHOP_COUNTRY = "GB"
+
+FIONN = Person("gid://shopify/Customer/7005", "Fionn Doherty", "fionn.doherty@example.com", 260, 1, "78.00")
+PEOPLE[FIONN.customer_id] = FIONN
+
+_DUBLIN = {"name": "Fionn Doherty", "firstName": "Fionn", "lastName": "Doherty", "address1": "18 Camden Street Lower",
+           "address2": "", "city": "Dublin", "provinceCode": "", "zip": "D02 XE01", "country": "Ireland",
+           "countryCodeV2": "IE", "phone": "", "company": ""}
+
+INTERNATIONAL_ORDER = OrderSpec(1927, FIONN, 14, 11, "78.00", "UNFULFILLED", "PAID",
+                                [("gid://shopify/ProductVariant/9102", 1), ("gid://shopify/ProductVariant/9301", 1)],
+                                _DUBLIN)
+ORDERS.append(INTERNATIONAL_ORDER)
+BY_ID[INTERNATIONAL_ORDER.order_id] = INTERNATIONAL_ORDER
+BY_NAME[INTERNATIONAL_ORDER.name] = INTERNATIONAL_ORDER
