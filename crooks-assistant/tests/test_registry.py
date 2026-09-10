@@ -206,9 +206,14 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     #   making an order (app/families/order_create.py)        957
     #       shopify_order_open         625   the customer, and optionally a first item.
     #       shopify_order_create       332   one argument: the workspace id.
-    #   store credit (app/families/store_credit.py)           909
-    #       shopify_store_credit  582   the customer, the amount, the currency.
-    #       shopify_store_credit_add   327   one argument: the workspace id.
+    #   store credit (app/families/store_credit.py)           894
+    #       shopify_store_credit       577   the customer, the amount, the currency. Named
+    #                                        without the "_open" the other two workspaces
+    #                                        have, on purpose: the gate refuses any tool
+    #                                        whose NAME reads as a mutation unless it carries
+    #                                        a reviewed write definition, and "credit_open"
+    #                                        contains "edit_".
+    #       shopify_store_credit_add   317   one argument: the workspace id.
     #   abandoned checkouts (app/families/abandoned.py)       469
     #       shopify_abandoned_checkouts      the window and a limit. Its description spends
     #                                        its bytes on what the data is NOT — carts are
@@ -217,7 +222,9 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     #                                        the model answering the wrong question
     #                                        confidently, which is what section 14 is about.
     #
-    # 3,747 together, on 27,357 measured after the Phase 3 merge: 31,104.
+    # 3,732 together, on 27,357 measured after the Phase 3 merge: 31,089, and the ceiling is
+    # 31,200 rather than a round number above it because a hundred bytes of headroom is a
+    # tool description somebody has to justify.
     #
     # The shape of that cost is the point. Each of the three CREATION families pays for ONE
     # sizeable schema — the workspace, which is where the owner's spoken request lands — and
