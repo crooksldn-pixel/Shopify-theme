@@ -28,10 +28,19 @@ from app.commands import Command, Outcome
 from app.commands import Ctx as CommandCtx
 from app.commands import register as register_command
 from app.fastpath import library
-from app.fastpath.intent import Family, extend
+from app.fastpath.intent import Family, extend, signal
 from app.fastpath.models import Ctx, FastAnswer
 from app.fastpath.recipes import CACHE_ANALYTICS, CACHE_EMAIL, Recipe, register
 from app.reads.scheduler import Read, ReadPlan, ReadResult
+
+# The Products landing's own word. The router knows "stock" and "running out" but not
+# "products", so "open products" — one of the four things the dock offers — reached the model
+# while the other three did not. A family brings its own word (app/fastpath/intent.signal).
+PRODUCT_WORDS = frozenset({"products", "product", "inventory", "merchandise", "range"})
+_SAYS_PRODUCTS = signal(
+    "says_products_area",
+    lambda s: s.stock or bool(set(s.words) & PRODUCT_WORDS),
+)
 
 AREAS: dict[str, str] = {
     "orders": "landing_orders",
@@ -233,7 +242,7 @@ extend([
     Family("landing_orders", needs=("listing", "order"), blocks=_QUIET + ("metric", "email", "stock"), base=0.82, floor=0.72, max_words=4),
     Family("landing_inbox", needs=("listing", "email"), blocks=_QUIET + ("metric", "order", "stock"), base=0.84, floor=0.72, max_words=4),
     Family("landing_sales", needs=("listing", "metric"), blocks=_QUIET + ("order", "email", "stock"), base=0.82, floor=0.72, max_words=4),
-    Family("landing_products", needs=("listing", "stock"), blocks=_QUIET + ("metric", "order", "email"), base=0.82, floor=0.72, max_words=4),
+    Family("landing_products", needs=("listing", _SAYS_PRODUCTS), blocks=_QUIET + ("metric", "order", "email"), base=0.82, floor=0.72, max_words=4),
 ])
 
 

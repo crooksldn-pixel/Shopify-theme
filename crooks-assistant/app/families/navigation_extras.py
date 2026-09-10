@@ -40,7 +40,10 @@ TAB_WORDS: dict[str, str] = {
     # This family only moves the screen, and taking that sentence from it made a fast answer
     # ambiguous and sent it to the model — measured, and the reason the blocks below name it.
     "shipping": "shipping", "delivery": "shipping", "postage": "shipping",
-    "items": "items", "item": "items", "lines": "items", "products": "items", "contents": "items",
+    # Not "products": with an order open, "open products" is the dock's Products landing, and
+    # putting the word here sent it to the order's Items tab instead — measured. The tab is
+    # reached by items, lines or contents.
+    "items": "items", "item": "items", "lines": "items", "contents": "items",
     "customer": "customer", "buyer": "customer",
     # Not a bare "email" either: with an order open, "show me the email" is genuinely
     # ambiguous between this order's Email tab and the inbox, and the router said so —

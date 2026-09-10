@@ -82,6 +82,15 @@ def test_the_sentences_the_brief_names_take_the_fast_lane(text, family, branch):
         ("which orders are late", "delayed_orders"),
         ("open orders", "landing_orders"),
         ("open the inbox", "landing_inbox"),
+        # "Products" was a shipping-tab word ("show me the products" meaning the order's
+        # items), which sent one of the dock's own four areas to the order's Items tab. The
+        # tab is reached by items, lines or contents; the landing owns the product words.
+        ("open products", "landing_products"),
+        ("show me products", "landing_products"),
+        ("open inventory", "landing_products"),
+        ("show me the items", "order_tab_show"),
+        ("show me the contents", "order_tab_show"),
+        ("what is running out", "stock_cover_analysis"),
         # With an order open, a bare "show me the email" is genuinely ambiguous between this
         # order's Email tab and the inbox — the router measured 0.96 against 0.90, inside the
         # margin, so nothing routed at all. The inbox owns the bare word; the tab is reached
