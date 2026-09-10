@@ -248,3 +248,199 @@ def test_graph_never_reads_a_source():
     for forbidden in ("graphql", "service()", "httpx", "gmail_tools", "shopify_tools", "await "):
         assert forbidden not in source, forbidden
     assert time.time  # the clock is injectable, and the default is the wall clock
+
+
+# --------------------------------------------------- needs reply: across threads, without noise
+
+
+def _inbox(threads_by_sender: dict[str, list[dict]], states: dict[str, dict], *, own: str = ""):
+    """Bind a fake read side for `_customer_threads`: the listing per sender and the per-thread
+    reply state, exactly the two things the production code asks for."""
+    from app.tools import analytics_tools
+
+    async def threads_for(**kwargs):
+        return {"available": True, "threads": list(threads_by_sender.get(kwargs.get("sender", ""), []))}
+
+    async def reply_state(thread_id: str):
+        return states.get(thread_id)
+
+    analytics_tools.bind_email(threads_for, None, reply_state, own_address=own or None)
+    return analytics_tools
+
+
+def _summary(thread_id: str, sender: str, subject: str, *, bulk: bool = False, authenticated: bool = True) -> dict:
+    return {"thread_id": thread_id, "from_email": sender, "subject": subject, "snippet": "", "likely_bulk": bulk, "authenticated": authenticated}
+
+
+def _state(thread_id: str, *, inbound: int | None, outbound: int | None) -> dict:
+    return {"thread_id": thread_id, "latest_inbound_at": inbound, "latest_outbound_at": outbound}
+
+
+@pytest.fixture()
+def unbound():
+    from app.tools import analytics_tools
+
+    yield
+    analytics_tools.bind_email(None, None)
+
+
+async def test_a_reply_in_a_second_later_thread_answers_the_first(unbound):
+    """Mia wrote in thread A on Monday; we answered in thread B on Tuesday. She is not waiting."""
+    tools = _inbox(
+        {MIA: [_summary("aa70d3f83dbef06e", MIA, "Order 1938 — can I add to it?"), _summary("bb70d3f83dbef06f", MIA, "Re: your cap")]},
+        {"aa70d3f83dbef06e": _state("aa70d3f83dbef06e", inbound=1_000, outbound=None), "bb70d3f83dbef06f": _state("bb70d3f83dbef06f", inbound=None, outbound=2_000)},
+    )
+    out = await tools._customer_threads(MIA, ["1938"], 30, clock=clock)
+    assert out["needs_reply"] is False and out["latest_direction"] == "outbound"
+    assert out["provenance"]["threads_checked"] == 2 and out["provenance"]["thread_ids"] == ["aa70d3f83dbef06e", "bb70d3f83dbef06f"]
+    assert out["provenance"]["related_orders"] == ["1938"] and out["confidence"] == "confident"
+
+
+async def test_a_reply_older_than_the_latest_inbound_leaves_them_waiting(unbound):
+    tools = _inbox(
+        {MIA: [_summary("aa70d3f83dbef06e", MIA, "Order 1938"), _summary("bb70d3f83dbef06f", MIA, "Another thing")]},
+        {"aa70d3f83dbef06e": _state("aa70d3f83dbef06e", inbound=3_000, outbound=None), "bb70d3f83dbef06f": _state("bb70d3f83dbef06f", inbound=1_000, outbound=2_000)},
+    )
+    out = await tools._customer_threads(MIA, ["1938"], 30, clock=clock)
+    assert out["needs_reply"] is True and out["latest_direction"] == "inbound"
+    assert out["provenance"]["latest_inbound_at"] == 3_000 and out["provenance"]["latest_outbound_at"] == 2_000
+
+
+async def test_marketing_and_abandoned_cart_threads_never_count_as_the_customer_writing(unbound):
+    """Only the automated threads mention the number; the customer never wrote. Not waiting,
+    and — the part the September queue got wrong — not "emailed us" either."""
+    tools = _inbox(
+        {MIA: [
+            _summary("c000000000000001", "no-reply@shop.example", "Abandoned checkout: order 1938", bulk=True),
+            _summary("c000000000000002", "notifications@carrier.example", "Shipment 1938 update"),
+            _summary("c000000000000003", "checkout@shop.example", "You left something in your cart"),
+        ]},
+        {"c000000000000001": _state("c000000000000001", inbound=5_000, outbound=None),
+         "c000000000000002": _state("c000000000000002", inbound=5_000, outbound=None),
+         "c000000000000003": _state("c000000000000003", inbound=5_000, outbound=None)},
+    )
+    out = await tools._customer_threads(MIA, ["1938"], 30, clock=clock)
+    assert out["count"] == 0 and out["needs_reply"] is False and out["latest_direction"] == "none"
+    assert out["confidence"] == "none" and out["provenance"]["threads_checked"] == 0
+    assert out["provenance"]["ignored"] == 3 and out["provenance"]["ignored_why"] == ["automated", "bulk"]
+
+
+async def test_our_own_address_is_outbound_not_a_customer_writing_in(unbound):
+    """We emailed Mia first, naming her order; she has not answered. Nobody is waiting on US."""
+    tools = _inbox(
+        {MIA: [_summary("d000000000000001", "orders@crooksldn.example", "Your order 1938")]},
+        {"d000000000000001": _state("d000000000000001", inbound=None, outbound=7_000)},
+        own="orders@crooksldn.example",
+    )
+    out = await tools._customer_threads(MIA, ["1938"], 30, clock=clock)
+    assert out["count"] == 0 and out["needs_reply"] is False
+    assert out["provenance"]["ignored_why"] == ["ours"]
+
+
+async def test_a_thread_from_another_address_that_names_their_order_is_possible_not_confident(unbound):
+    tools = _inbox(
+        {MIA: [_summary("e000000000000001", "mia.at.work@corp.example", "About 1938", authenticated=True)]},
+        {"e000000000000001": _state("e000000000000001", inbound=1_000, outbound=None)},
+    )
+    out = await tools._customer_threads(MIA, ["1938"], 30, clock=clock)
+    assert out["needs_reply"] is True, "still offered — a customer writing from a second address is real"
+    assert out["confidence"] == "possible" and out["related_orders"] == ["1938"]
+    # Her own address, unauthenticated and naming no order, is possible too: a From header is a claim.
+    tools = _inbox({MIA: [_summary("e000000000000002", MIA, "Hello", authenticated=False)]},
+                   {"e000000000000002": _state("e000000000000002", inbound=1_000, outbound=None)})
+    assert (await tools._customer_threads(MIA, ["1938"], 30, clock=lambda: NOW + 1))["confidence"] == "possible"
+
+
+async def test_email_query_rows_carry_the_provenance(unbound, monkeypatch):
+    """The row the queue is built from says how it was decided, not only what it decided."""
+    from datetime import UTC, datetime
+    from zoneinfo import ZoneInfo
+
+    from app.analytics import sets as working_sets
+    from app.analytics.cache import CacheView
+    from app.tools import analytics_tools
+    from app.tools.dispatch import dispatch
+
+    tools = _inbox({MIA: [_summary("aa70d3f83dbef06e", MIA, "Order 1938 — can I add to it?")]},
+                   {"aa70d3f83dbef06e": _state("aa70d3f83dbef06e", inbound=1_000, outbound=None)})
+
+    class _Cache:
+        clock = staticmethod(clock)
+
+        async def view(self, period, *, timeout_s=0.0):
+            return CacheView(rows=[{"order_id": "gid://shopify/Order/1938", "order_number": "#1938", "ts": NOW, "customer": {"customer_id": "gid://shopify/Customer/7001", "name": "Mia Jones", "email": MIA}}],
+                             complete=True, covered_days=90, synced_at=NOW, syncing=False)
+
+        def _client(self):
+            class _C:
+                async def timezone(self):
+                    return ZoneInfo("Europe/London")
+            return _C()
+
+    async def _now():
+        return datetime.fromtimestamp(NOW, tz=UTC), UTC
+
+    monkeypatch.setattr(analytics_tools, "_cache", _Cache())
+    monkeypatch.setattr(analytics_tools, "_now_and_zone", _now)
+
+    session = Session(session_id="s-prov")
+    ws = working_sets.create(session, kind="customers", members=["gid://shopify/Customer/7001"], label="Recent customers")
+    calls: list = []
+    await dispatch("email_query", {"set_id": ws.set_id, "days": 30}, session=session, timeout_s=5, calls=calls)
+    (row,) = calls[-1].result["rows"]
+    assert row["needs_reply"] is True and row["related_orders"] == ["1938"] and row["confidence"] == "confident"
+    assert row["provenance"]["thread_ids"] == ["aa70d3f83dbef06e"] and row["provenance"]["latest_direction"] == "inbound"
+    assert tools is analytics_tools
+
+
+# ------------------------------------------------------------- the queue, and asking again
+
+
+def _needs_reply(session: Session, rows: list[dict]):
+    from app.fastpath.library import _needs_reply_render
+    from app.fastpath.models import Ctx
+    from app.reads.scheduler import ReadResult
+    from app.session.branch import Branch
+
+    ctx = Ctx(runtime=None, session=session, branch=Branch(branch_id="b", session_id=session.session_id), intent=None, text="who needs replying to")
+    result = ReadResult(values={"mail": {"rows": rows, "counts": {"contacted": len(rows), "not_contacted": 24, "unchecked": 0}}})
+    return _needs_reply_render(ctx, result)
+
+
+MIA_ROW = {"customer_id": "gid://shopify/Customer/7001", "customer_name": "Mia Jones", "customer_email": MIA, "orders": ["#1938", "#1912"],
+           "emailed": True, "threads": 1, "replied": False, "last_subject": "Order 1938 — can I add to it?", "last_thread_id": "aa70d3f83dbef06e",
+           "checked": True, "thread_count": 1, "latest_inbound_at": 1_000, "latest_outbound_at": None, "latest_direction": "inbound",
+           "has_reply_after_latest_inbound": False, "needs_reply": True, "related_orders": ["1938"], "confidence": "confident"}
+PRIYA_ROW = {**MIA_ROW, "customer_id": "gid://shopify/Customer/7004", "customer_name": "Priya Raman", "last_thread_id": "c28cf65d31fe6cbb",
+             "orders": ["#1940"], "related_orders": [], "confidence": "possible"}
+
+
+def test_the_scope_is_said_once_and_the_repeat_is_short():
+    from app.fastpath import library
+
+    session = Session(session_id="s-again")
+    first = _needs_reply(session, [MIA_ROW])
+    assert first.answer == "1 of 1 customers checked are waiting on a reply: Mia Jones."
+    assert session.last_needs_reply_at > 0
+    again = _needs_reply(session, [MIA_ROW])
+    assert again.answer == "Still just Mia."
+    assert again.surfaces, "the queue is still drawn; only the sentence is shorter"
+    several = _needs_reply(session, [MIA_ROW, PRIYA_ROW])
+    assert several.answer == "Still Mia and Priya."
+    # Past the window it is a fresh question again, scope and all.
+    session.last_needs_reply_at -= library.NEEDS_REPLY_REPEAT_S + 1
+    assert _needs_reply(session, [MIA_ROW]).answer.startswith("1 of 1 customers checked")
+    # And nobody, asked again, is "still nobody" rather than the count read twice.
+    _needs_reply(session, [])
+    assert _needs_reply(session, []).answer == "Still nobody."
+
+
+def test_the_queue_rows_carry_the_related_orders_and_the_confidence():
+    from app.fastpath.library import _waiting_surface
+
+    surface = _waiting_surface([MIA_ROW, PRIYA_ROW])
+    mia, priya = surface.data["threads"]
+    assert mia["related_orders"] == ["1938"] and mia["confidence"] == "confident"
+    assert mia["snippet"] == "#1938 · confident", "the thread's own order, not the customer's whole history"
+    assert priya["related_orders"] == [] and priya["confidence"] == "possible"
+    assert priya["snippet"] == "#1940 · possible", "no number in the thread: the recent orders stand in, and the row says it is only possible"

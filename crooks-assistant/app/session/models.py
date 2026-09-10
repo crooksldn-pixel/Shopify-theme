@@ -119,6 +119,10 @@ class Session:
     # it a change proposed by one half was stamped with the other, and a "yes" spoken to the
     # wrong half applied it.
     acting_branch: str = ""
+    # When "who needs replying to" was last answered in this conversation, on the Mac's clock.
+    # The same question again within a few minutes gets the short form ("Still just Mia.")
+    # rather than the scope sentence read out a second time. Presentation state only.
+    last_needs_reply_at: float = 0.0
 
     def set_state(self, state: str, detail: str = "") -> None:
         self.state = state
