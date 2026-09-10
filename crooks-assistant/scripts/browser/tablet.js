@@ -90,7 +90,7 @@ async function main() {
   await page.touchscreen.tap(orders.x, orders.y);
   await sleep(1600);
   const afterDock = await screen();
-  check('tapping Orders from idle lands on the order list', afterDock.card === 'order_list' && posts.includes('/turn'), JSON.stringify({ card: afterDock.card, posts }));
+  check('tapping Orders from idle lands on the order list by the landing command, not a sentence', afterDock.card === 'order_list' && posts.includes('/command') && !posts.includes('/turn'), JSON.stringify({ card: afterDock.card, posts }));
   await shot('02-dock-orders');
 
   // ---- 2. two fingers on the orb: a division, never a sentence

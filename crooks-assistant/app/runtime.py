@@ -332,6 +332,33 @@ class Runtime:
         self.family_states_table = out
         return out
 
+    def withheld_by_family(self) -> set[str]:
+        """The tools the model should not be offered because their capability family cannot
+        work on this Mac right now (brief section 29): every tool of a family the store does
+        not support, has no provider for, or that is not built; the WRITE tools of a family
+        whose scope is missing or that is read-only, whose reads still work. Read from the
+        table the last probe left; an unprobed family keeps its static state. The point is
+        the live test's fifteen seconds of Claude trying an operation the store could only
+        refuse — a tool that is not offered is not tried."""
+        from app.capabilities import families
+        from app.tools import registry
+
+        table = self.family_states_table or {}
+        out: set[str] = set()
+        for family in families.all_families():
+            state = str((table.get(family.key) or {}).get("state") or family.state)
+            if state in ("NOT_SUPPORTED_BY_STORE", "DISCONNECTED", "NOT_IMPLEMENTED"):
+                out.update(family.tools)
+            elif state in ("MISSING_SCOPE", "READ_ONLY"):
+                for name in family.tools:
+                    try:
+                        spec = registry.get(name)
+                    except KeyError:
+                        continue
+                    if spec.write is not None or spec.batch is not None:
+                        out.add(name)
+        return out
+
 
 @dataclass(frozen=True)
 class WriteStatus:
@@ -436,6 +463,9 @@ def build(settings: Settings | None = None) -> Runtime:
         tool_timeout_s=settings.tool_timeout_s,
         cli_path=settings.claude_cli_path,
         writes_enabled=settings.writes_enabled,
+        # Late-bound: the runtime is built a few lines down, and the table it reads is
+        # filled by the first /health or capability probe after that.
+        withheld_by_family=lambda: runtime.withheld_by_family(),
     )
     # The action engine is installed process-wide: the dispatcher stages into it from inside a
     # Claude turn, and the tablet's tap reaches it through the runtime. One index for both.

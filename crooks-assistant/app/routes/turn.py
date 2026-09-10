@@ -210,6 +210,14 @@ async def turn(
     revoked = runtime.actions.revoke_pending(live, "new instruction", branch_id=branch.branch_id) + runtime.batches.revoke_pending(live, "new instruction")
     epoch = runtime.actions.advance_epoch(live, "new instruction", branch_id=branch.branch_id)
     runtime.batches.advance_epoch(live)
+    # This half's own position, beside the session's. The epoch moves for either half's
+    # instruction — a proposal is bound to the conversation's position — but a turn that is
+    # still thinking on the OTHER half has not been replaced by this one, and must neither
+    # have its tool calls refused nor its answer treated as abandoned. The sequence is what
+    # tells the two apart (app/session/branch.py, app/providers/max_agent_sdk.py).
+    branch.instruction_seq += 1
+    branch.abandoned = False
+    seq = branch.instruction_seq
 
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
     # in front of it. This question is answered with the catalogue as it stands.
@@ -263,7 +271,7 @@ async def turn(
                 # What is worth looking at, which is not always everything that was read. The
                 # reads themselves still reach the log and the timeline, on the line below.
                 calls=fast.calls if fast.drawn is None else fast.drawn,
-                epoch=epoch, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
+                epoch=epoch, seq=seq, revoked=revoked, tool_calls=_fast_tool_calls(fast.calls),
                 lane=lane, recipe_id=recipe.recipe_id, branch=branch, partial=fast.partial,
                 surfaces=fast.surfaces, writes=fast_writes,
             )
@@ -313,7 +321,7 @@ async def turn(
     # `timings`, which is milliseconds and is published as such.
     measures = {"model_input_chars": len(prompt_text), "tool_schema_bytes": _tool_schema_bytes(runtime)}
     t0 = time.perf_counter()
-    result = await runtime.provider.turn(session_id, prompt_text)
+    result = await _provider_turn(runtime, session_id, prompt_text, branch)
     timings["agent"] = (time.perf_counter() - t0) * 1000
     for step, ms in getattr(result, "steps", None) or []:
         timings[f"step:{step}"] = ms
@@ -364,6 +372,7 @@ async def turn(
         speak=speak,
         lost_thread=lost_thread,
         epoch=epoch,
+        seq=seq,
         revoked=revoked,
         writes=writes,
         branch=branch,
@@ -405,7 +414,7 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "branch_id": getattr(branch, "branch_id", None),
         "parent_branch_id": (getattr(branch, "parent_id", "") or None),
         "backgrounded": getattr(branch, "status", "") == "BACKGROUND",
-        "cancelled": bool(getattr(session, "abandoned", False)),
+        "cancelled": bool(getattr(session, "abandoned", False) or getattr(branch, "abandoned", False)),
         "partial": bool(partial),
         "tool_calls": len(calls or []),
         "source_ms": sources,
@@ -443,7 +452,7 @@ def _call_ref(call) -> str:
     return ""
 
 
-_SCHEMA_BYTES: dict[bool, int] = {}
+_SCHEMA_BYTES: dict[tuple, int] = {}
 
 
 def _tool_schema_bytes(runtime) -> int:
@@ -452,17 +461,22 @@ def _tool_schema_bytes(runtime) -> int:
     import json
 
     writes = bool(getattr(runtime.settings, "writes_enabled", False))
-    if writes not in _SCHEMA_BYTES:
+    # A family the store cannot use is not offered either (runtime.withheld_by_family), and
+    # that set moves with the store's state — so it is part of the key, not a surprise.
+    by_family = getattr(runtime, "withheld_by_family", None)
+    family = frozenset(by_family() if callable(by_family) else ())
+    key = (writes, family)
+    if key not in _SCHEMA_BYTES:
         from app.providers.max_agent_sdk import withheld_tools
         from app.tools import registry
 
         specs = registry.all_specs()
-        withheld = withheld_tools(specs, writes_enabled=writes)
-        _SCHEMA_BYTES[writes] = sum(
+        withheld = withheld_tools(specs, writes_enabled=writes) | set(family)
+        _SCHEMA_BYTES[key] = sum(
             len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema}))
             for s in specs if s.name not in withheld
         )
-    return _SCHEMA_BYTES[writes]
+    return _SCHEMA_BYTES[key]
 
 
 def _route(text: str, branch):
@@ -915,6 +929,33 @@ async def _ensure_provider_started(runtime) -> None:
         log.warning("provider start retry failed: %s", exc)
 
 
+def _moved_on(session, branch, *, epoch: int | None, seq: int | None) -> bool:
+    """Whether the owner has replaced the question this answer is for.
+
+    Judged per half when the turn knows its half: a /cancel aimed at it, or a later
+    instruction to it. The session's epoch moves for the OTHER half's instruction too, so
+    with two halves thinking at once the epoch alone would call every slower answer
+    abandoned — unspoken, its proposals withdrawn — because the owner asked the other half
+    something meanwhile. A turn with no half (a test double, an early error) keeps the
+    session-wide rule.
+    """
+    if bool(getattr(session, "abandoned", False)):
+        return True
+    if branch is not None and seq is not None:
+        return bool(getattr(branch, "abandoned", False)) or int(getattr(branch, "instruction_seq", 0) or 0) != int(seq)
+    return epoch is not None and session.epoch != epoch
+
+
+async def _provider_turn(runtime, session_id: str, prompt_text: str, branch):
+    """The model turn, on this half's own conversation when the provider keeps one per half.
+    A provider without the method — a test double — gets the plain turn."""
+    on_branch = getattr(runtime.provider, "turn_on_branch", None)
+    branch_id = str(getattr(branch, "branch_id", "") or "")
+    if on_branch is not None and branch_id:
+        return await on_branch(session_id, prompt_text, branch_id=branch_id)
+    return await runtime.provider.turn(session_id, prompt_text)
+
+
 async def _answer(
     runtime,
     session_id: str,
@@ -939,6 +980,7 @@ async def _answer(
     partial: bool = False,
     measures: dict | None = None,
     surfaces: list | None = None,
+    seq: int | None = None,
 ) -> dict:
     tool_calls = tool_calls or []
     turns = 0
@@ -952,7 +994,7 @@ async def _answer(
         pass
     # Abandoned: the owner cancelled, or asked something else while this was being answered.
     # The session's position has moved past this turn's; nobody is waiting for its voice.
-    abandoned = bool(session is not None and (session.abandoned or (epoch is not None and session.epoch != epoch)))
+    abandoned = bool(session is not None and _moved_on(session, branch, epoch=epoch, seq=seq))
     proposed = [c.proposal_id for c in (calls or []) if getattr(c, "proposal_id", None)]
     if abandoned and proposed:
         # Claude was still running when the owner moved on, and staged a change into the
@@ -1127,13 +1169,18 @@ async def state(request: Request, session_id: str) -> dict:
 
 
 @router.post("/cancel")
-async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
+async def cancel(request: Request, session_id: str = Form(default=""), branch_id: str = Form(default="")) -> dict:
     """The owner has moved on: he is holding the orb again while the last question is still
     being thought about. Interrupt Claude, and stop synthesising any answer nobody will hear.
-    Nothing applied is undone; whatever the abandoned turn had proposed is withdrawn, unsent."""
+    Nothing applied is undone; whatever the abandoned turn had proposed is withdrawn, unsent.
+
+    With a `branch_id`, one half of a divided orb: that half's turn is interrupted and its
+    waiting cards withdrawn, and the other half — which may be thinking about something else
+    entirely — is not touched. Without one, the whole session, as before."""
     runtime = request.app.state.runtime
     interrupted = False
     revoked: list[str] = []
+    branch_id = str(branch_id or "")[:32]
     if session_id:
         # Marked whether or not the turn has reached Claude yet — a hold during transcription
         # counts — and even before the session's first turn has created it. Anything the
@@ -1141,13 +1188,35 @@ async def cancel(request: Request, session_id: str = Form(default="")) -> dict:
         live = runtime.sessions.get_or_create(session_id)
         if not session_matches(live, request):
             return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
-        live.abandoned = True
-        # Named, so the tablet settles exactly the cards this withdrew rather than guessing.
-        revoked = runtime.actions.revoke_pending(live, "turn abandoned", undos=True) + runtime.batches.revoke_pending(live, "turn abandoned", undos=True)
-        runtime.actions.advance_epoch(live, "turn abandoned")
-        interrupted = await runtime.provider.interrupt(session_id)
+        half = live.branches.get(branch_id) if branch_id else None
+        if half is not None:
+            half.abandoned = True
+            revoked = runtime.actions.revoke_pending(live, "turn abandoned", undos=True, branch_id=half.branch_id) + runtime.batches.revoke_pending(live, "turn abandoned", undos=True)
+            runtime.actions.advance_epoch(live, "turn abandoned", branch_id=half.branch_id)
+            interrupted = await _interrupt(runtime, session_id, half.branch_id)
+        else:
+            live.abandoned = True
+            # Named, so the tablet settles exactly the cards this withdrew rather than guessing.
+            revoked = runtime.actions.revoke_pending(live, "turn abandoned", undos=True) + runtime.batches.revoke_pending(live, "turn abandoned", undos=True)
+            runtime.actions.advance_epoch(live, "turn abandoned")
+            interrupted = await _interrupt(runtime, session_id, "")
     stopped = runtime.voice.cancel_prefetches()
     return {"cancelled": True, "interrupted": interrupted, "prefetches_stopped": stopped, "revoked": revoked}
+
+
+async def _interrupt(runtime, session_id: str, branch_id: str) -> bool:
+    """The provider's interrupt, by half when it can tell halves apart. A test double whose
+    interrupt takes only the session gets only the session."""
+    import inspect
+
+    interrupt = runtime.provider.interrupt
+    try:
+        takes_branch = "branch_id" in inspect.signature(interrupt).parameters
+    except (TypeError, ValueError):
+        takes_branch = False
+    if branch_id and takes_branch:
+        return bool(await interrupt(session_id, branch_id=branch_id))
+    return bool(await interrupt(session_id))
 
 
 @router.post("/audio-test")

@@ -315,7 +315,11 @@ def test_both_playback_paths_guard_against_a_silent_context():
 def test_a_turn_in_flight_can_be_abandoned_by_holding():
     assert "const controller = new AbortController();" in function_body(APP_JS, "async function submit(body, isAudio)")
     cancel = function_body(APP_JS, "function cancelTurnAndListen()")
-    assert "turnAbort.abort()" in cancel and "cancelTurn(form," in cancel and "startRecording()" in cancel
+    # The cancel names the half it is abandoning: with the orb divided the other half may be
+    # mid-thought about something else, and its turn must survive this one being dropped
+    # (app/routes/turn.py:/cancel, app/providers/max_agent_sdk.py:interrupt).
+    assert "turnAbort.abort()" in cancel and "cancelTurn(cancelForm(focusedBranch)," in cancel and "startRecording()" in cancel
+    assert "form.append('branch_id', branchId)" in function_body(APP_JS, "function cancelForm(branchId)")
     assert "fetch('/cancel'" in function_body(APP_JS, "function cancelTurn(form, whyItIsSafeToIgnore)")
     hold = function_body(APP_JS, "function onHoldStart(event)")
     assert "cancelHoldTimer = setTimeout(cancelTurnAndListen, CANCEL_HOLD_MS)" in hold
@@ -427,7 +431,7 @@ def test_letting_go_of_a_question_settles_the_cards_the_mac_withdrew():
     body = function_body(APP_JS, "function cancelTurn(form, whyItIsSafeToIgnore)")
     assert "fetch('/cancel'" in body
     assert "settleProposals(data.revoked, 'revoked', 'Withdrawn')" in body
-    assert "cancelTurn(form," in function_body(APP_JS, "async function submit(body, isAudio)")
+    assert "cancelTurn(cancelForm(askedBranch)," in function_body(APP_JS, "async function submit(body, isAudio)")
 
 
 def test_the_tablet_never_erases_what_it_has_already_proved():

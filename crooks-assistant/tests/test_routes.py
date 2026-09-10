@@ -875,3 +875,70 @@ async def test_the_microphone_diagnostic_keeps_nothing_unless_captures_are_on(cl
     body = (await client.post("/audio-test", files=files)).json()
     assert body["ok"] is True and body["saved_to"] is None
     assert body["wav_base64"], "it still plays back what it heard"
+
+
+# ------------------------------------------------------------- a cancel names its own half
+#
+# The provider side of concurrent halves is tests/test_branch_concurrency.py; these two are
+# here because they need this module's app fixture and voice stub.
+
+
+async def test_a_cancel_on_one_half_leaves_the_other_halfs_answer_spoken(client):
+    """The owner holds the orb on the right half while the left half is still thinking. The
+    cancel the tablet posts names the right half; the left half's answer, when it lands, is
+    voiced and keeps its cards. A cancel naming the left half abandons it, as before."""
+    calls = stub_voice(app)
+    runtime = app.state.runtime
+    live = runtime.sessions.get_or_create("halves")
+    left = live.branch().branch_id
+    forked = (await client.post("/branches/fork", data={"session_id": "halves"})).json()
+    right = forked["branch_id"]
+    gate = asyncio.Event()
+
+    async def slow_turn(session_id, text):
+        await gate.wait()
+        return TurnResult(text="The left half's answer.", session_id=session_id)
+
+    runtime.provider.turn = slow_turn
+    turn = asyncio.create_task(client.post("/turn", json={"text": "left question", "session_id": "halves", "speak": True, "branch_id": left}))
+    await asyncio.sleep(0.05)
+    cancelled = (await client.post("/cancel", data={"session_id": "halves", "branch_id": right})).json()
+    assert cancelled["cancelled"] is True and cancelled["revoked"] == []
+    assert live.branches[right].abandoned is True and live.branches[left].abandoned is False
+    assert live.abandoned is False
+    gate.set()
+    body = (await turn).json()
+    assert body["answer"] == "The left half's answer."
+    await asyncio.sleep(0)
+    assert len(calls) == 1                      # spoken: nobody cancelled THIS half
+
+    # Now the left half itself.
+    gate.clear()
+    turn = asyncio.create_task(client.post("/turn", json={"text": "left again", "session_id": "halves", "speak": True, "branch_id": left}))
+    await asyncio.sleep(0.05)
+    assert (await client.post("/cancel", data={"session_id": "halves", "branch_id": left})).json()["cancelled"] is True
+    gate.set()
+    body = (await turn).json()
+    assert body["answer"] == "The left half's answer."
+    await asyncio.sleep(0)
+    assert len(calls) == 1                      # not spoken: this half was cancelled
+
+
+async def test_a_cancel_without_a_half_still_abandons_the_session(client):
+    calls = stub_voice(app)
+    runtime = app.state.runtime
+    gate = asyncio.Event()
+
+    async def slow_turn(session_id, text):
+        runtime.sessions.get_or_create(session_id)
+        await gate.wait()
+        return TurnResult(text="Too late.", session_id=session_id)
+
+    runtime.provider.turn = slow_turn
+    turn = asyncio.create_task(client.post("/turn", json={"text": "long one", "session_id": "whole", "speak": True}))
+    await asyncio.sleep(0.05)
+    assert (await client.post("/cancel", data={"session_id": "whole"})).json()["cancelled"] is True
+    gate.set()
+    assert (await turn).json()["answer"] == "Too late."
+    await asyncio.sleep(0)
+    assert calls == []

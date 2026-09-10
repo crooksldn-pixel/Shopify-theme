@@ -21,12 +21,14 @@ import re
 import shutil
 import subprocess
 import time
+from dataclasses import dataclass, field
 
 from app.providers.base import ClaudeProvider, ToolCall, TurnResult
 from app.secrets import keychain
 from app.secrets.keychain import SecretMissing
 from app.session.models import Session
 from app.tools import registry
+from app.tools.context import CURRENT_BRANCH
 from app.tools.dispatch import dispatch, make_pretooluse_hook
 from app.tools.gate import Tier
 
@@ -34,6 +36,90 @@ log = logging.getLogger("crooks.claude")
 
 # How long /cancel waits for the CLI to acknowledge an interrupt before giving up on it.
 INTERRUPT_TIMEOUT_S = 5.0
+# How many model turns may run at once. Two: one per half of a divided orb. The tablet is
+# single-user, so a third would only ever be a queued repeat; and each turn is a `claude`
+# subprocess doing real work, on a Mac that is also transcribing and speaking.
+MAX_CONCURRENT_TURNS = 2
+
+
+def conversation_key(session_id: str, branch_id: str = "") -> str:
+    """One Claude conversation per half of the orb. A session that has never been divided
+    keeps its plain session id, so nothing that only knows the session changes."""
+    return f"{session_id}/{branch_id}" if branch_id else str(session_id)
+
+
+@dataclass
+class _Conversation:
+    """One `claude` subprocess and the turn, if any, running on it.
+
+    Everything that used to be a field on the provider — the session the turn is for, the
+    tool calls it made, the steps it timed, the position it answers — lives here, because two
+    halves of the orb now think at the same time and a field on the provider would be shared
+    between them: a tool call from the left half filed against the right, a "moved on" check
+    that read the wrong question's position, an interrupt that stopped the other one.
+    """
+
+    key: str
+    session_id: str
+    branch_id: str
+    client: object
+    holder: _Holder
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    last_used: float = field(default_factory=time.time)
+    running: bool = False
+    # The turn in flight.
+    session: Session | None = None
+    calls: list[ToolCall] = field(default_factory=list)
+    states: list[str] = field(default_factory=list)
+    steps: list[tuple[str, float]] = field(default_factory=list)
+    turn_started: float = 0.0
+    turn_epoch: int | None = None
+    # The branch's instruction sequence when this turn began (app/session/branch.py). A new
+    # instruction to THIS half moves it; one to the other half does not — which is the whole
+    # difference between a divided orb and a queue.
+    turn_seq: int | None = None
+
+    def begin(self, session: Session | None) -> None:
+        self.session = session
+        self.calls = []
+        self.states = []
+        self.steps = []
+        self.turn_started = time.perf_counter()
+        self.turn_epoch = session.epoch if session is not None else None
+        branch = self.branch()
+        self.turn_seq = int(getattr(branch, "instruction_seq", 0) or 0) if branch is not None else None
+        self.running = True
+
+    def branch(self):
+        if self.session is None or not self.branch_id:
+            return None
+        return (getattr(self.session, "branches", None) or {}).get(self.branch_id)
+
+    def moved_on(self) -> bool:
+        """Whether the owner has replaced the question this turn is answering."""
+        if self.session is None:
+            return False
+        branch = self.branch()
+        if branch is not None and self.turn_seq is not None:
+            return int(getattr(branch, "instruction_seq", 0) or 0) != self.turn_seq or bool(getattr(branch, "abandoned", False))
+        return self.turn_epoch is not None and self.session.epoch != self.turn_epoch
+
+    def step(self, name: str) -> None:
+        if self.turn_started:
+            self.steps.append((name, round((time.perf_counter() - self.turn_started) * 1000, 1)))
+
+
+@dataclass
+class _Holder:
+    """What a client's tool server and hook look through to find their conversation. A client
+    is connected before it has one — the pre-warmed spare — so the binding is a slot, filled
+    when a conversation adopts the client and emptied when it lets it go."""
+
+    conversation: _Conversation | None = None
+
+    def current_session(self) -> Session | None:
+        conv = self.conversation
+        return conv.session if conv is not None and conv.running else None
 
 
 # Every route by which the claude CLI could bill somewhere other than the subscription: a raw
@@ -89,11 +175,18 @@ class MaxAgentSDKProvider(ClaudeProvider):
         turn_timeout_s: float = 120.0,
         client_idle_timeout_s: float = 1800.0,
         writes_enabled: bool = False,
+        max_concurrent_turns: int = MAX_CONCURRENT_TURNS,
+        withheld_by_family=None,
     ) -> None:
         self._system_prompt = system_prompt
         # Off: the write tools are not offered to the model at all, and are disallowed at the
         # SDK layer as well, so the assistant is the read-only one it always was.
         self._writes_enabled = writes_enabled
+        # The tools of a capability family the store cannot use right now — a scope not
+        # granted, a feature the store does not have, a provider not connected — named by
+        # the runtime from the family table (app/capabilities/families.py). A callable, read
+        # when a client connects: the model is not offered a tool that can only refuse.
+        self._withheld_by_family = withheld_by_family
         self._model = model
         self._session_lookup = session_lookup
         self._tool_timeout_s = tool_timeout_s
@@ -101,27 +194,24 @@ class MaxAgentSDKProvider(ClaudeProvider):
         self._max_turns = max_turns
         self._turn_timeout_s = turn_timeout_s
         self._client_idle_timeout_s = client_idle_timeout_s
-        self._clients: dict[str, object] = {}
-        self._client_last_used: dict[str, float] = {}
+        # One `claude` subprocess per conversation, and one conversation per half of the orb
+        # (conversation_key). Each carries its own turn state — see _Conversation for why.
+        self._conversations: dict[str, _Conversation] = {}
         # One client connected ahead of the next new conversation. Spawning the `claude`
         # subprocess and its MCP handshake is one to three seconds; paying it on the first
         # question of the day, or after "new conversation", is the pause that reads as slow.
         self._spare: object | None = None
+        self._spare_holder: _Holder | None = None
         self._spare_task: asyncio.Task | None = None
-        self._current: Session | None = None
-        self._calls: list[ToolCall] = []
-        self._states: list[str] = []
-        # Where the time of the current turn went: ("model", ms) as each model step lands,
-        # ("tool:<name>", ms) as each tool call returns. The measurement every later change needs.
-        self._steps: list[tuple[str, float]] = []
-        self._turn_started = 0.0
         self._sweep_task: asyncio.Task | None = None
-        self._turn_epoch: int | None = None
         self._started = False
         self._auth_mode = "token"  # "token" (a stored setup-token) or "cli" (the CLI's own login)
-        # One turn at a time. The tablet is single-user, and two overlapping turns would
-        # share _current, _calls and the hook — a race that would misattribute tool calls.
-        self._turn_lock = asyncio.Lock()
+        # Turns on ONE conversation run one at a time (its lock); turns on different halves
+        # run together, up to this many. The mutation boundary is untouched by any of it: a
+        # proposal is staged and committed by the action engine, which serialises on its own
+        # terms and never lets a background half commit (app/actions/engine.py).
+        self._max_concurrent_turns = max(1, int(max_concurrent_turns))
+        self._slots = asyncio.Semaphore(self._max_concurrent_turns)
 
     # ------------------------------------------------------------ lifecycle
 
@@ -160,8 +250,8 @@ class MaxAgentSDKProvider(ClaudeProvider):
 
     async def stop(self) -> None:
         self._started = False   # first, so reset_session does not pre-warm a replacement
-        for session_id in list(self._clients):
-            await self.reset_session(session_id)
+        for key in list(self._conversations):
+            await self._drop_conversation(key)
         await self._drop_spare()
 
     # ------------------------------------------------------------ pre-warming
@@ -181,8 +271,9 @@ class MaxAgentSDKProvider(ClaudeProvider):
     async def _prewarm(self) -> None:
         from claude_agent_sdk import ClaudeSDKClient
 
+        holder = _Holder()
         try:
-            client = ClaudeSDKClient(options=self._options())
+            client = ClaudeSDKClient(options=self._options(holder))
             await client.connect()
             await self._verify_auth_source(client)
         except BillingGuardError:
@@ -194,7 +285,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
             log.warning("could not pre-warm a Claude client: %s", exc)
             return
         if self._started and self._spare is None:
-            self._spare = client
+            self._spare, self._spare_holder = client, holder
         else:
             await _disconnect_quietly(client)
 
@@ -202,7 +293,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
         task, self._spare_task = self._spare_task, None
         if task is not None and not task.done():
             task.cancel()
-        spare, self._spare = self._spare, None
+        spare, self._spare, self._spare_holder = self._spare, None, None
         if spare is not None:
             await _disconnect_quietly(spare)
 
@@ -213,16 +304,31 @@ class MaxAgentSDKProvider(ClaudeProvider):
 
     # -------------------------------------------------------------- options
 
-    def _options(self):
+    def _withheld(self) -> set[str]:
+        """Every tool the model is not offered, by the fixed rule and by the store's state."""
+        withheld = withheld_tools(registry.all_specs(), writes_enabled=self._writes_enabled)
+        if self._withheld_by_family is not None:
+            try:
+                withheld |= {str(n) for n in (self._withheld_by_family() or ())}
+            except Exception as exc:  # noqa: BLE001 — a family probe must never stop a client connecting
+                log.warning("family withholding unavailable: %s", exc)
+        return withheld
+
+    def _options(self, holder: _Holder | None = None):
         from claude_agent_sdk import ClaudeAgentOptions, HookMatcher
 
-        server = registry.build_mcp_server(self._dispatch)
+        holder = holder or _Holder()
+        # The tool server and the hook are built per client and look through the holder for
+        # the conversation the client belongs to. Bound to the provider instead, every client's
+        # tools would report to whichever turn happened to be "current" — wrong the moment two
+        # halves of the orb are thinking at once.
+        server = registry.build_mcp_server(lambda name, args: self._dispatch(name, args, holder=holder))
         prefix = f"mcp__{registry.MCP_SERVER_NAME}__"
         # Refused twice: disallowed at the SDK layer, and denied by the hook if anything ever
         # reaches it. Belt and braces, because one barrier is one failure away. A RED read
         # never runs; a write is offered only when writes are on, and even then it is only
         # ever staged (app/tools/dispatch.py), never executed by the model's call.
-        withheld = withheld_tools(registry.all_specs(), writes_enabled=self._writes_enabled)
+        withheld = self._withheld()
         tool_names = [prefix + n for n in registry.names() if n not in withheld]
         disallowed = [prefix + n for n in sorted(withheld)]
 
@@ -239,7 +345,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
             permission_mode="dontAsk",
             # Auto-approved tools never reach can_use_tool. The hook fires regardless, which is
             # why the gate lives here and not there.
-            hooks={"PreToolUse": [HookMatcher(hooks=[self._hook])]},
+            hooks={"PreToolUse": [HookMatcher(hooks=[self._hook_for(holder)])]},
             # Do not inherit CLAUDE.md, settings, skills or plugins from this machine.
             setting_sources=[],
             max_turns=self._max_turns,
@@ -251,20 +357,25 @@ class MaxAgentSDKProvider(ClaudeProvider):
             ),
         )
 
-    @property
-    def _hook(self):
-        return make_pretooluse_hook(lambda: self._current, on_event=self._on_tool_event)
+    def _hook_for(self, holder: _Holder):
+        return make_pretooluse_hook(
+            holder.current_session,
+            on_event=lambda name, tier, disposition="EXECUTE_NOW": self._on_tool_event(name, tier, disposition, holder=holder),
+        )
 
-    def _on_tool_event(self, name: str, tier: str, disposition: str = "EXECUTE_NOW") -> None:
-        self._states.append(name)
-        session = self._current
+    def _on_tool_event(self, name: str, tier: str, disposition: str = "EXECUTE_NOW", *, holder: _Holder | None = None) -> None:
+        conv = holder.conversation if holder is not None else None
+        session = conv.session if conv is not None and conv.running else None
+        if conv is not None:
+            conv.states.append(name)
         denied = disposition == "DENY"
         if denied:
             # A hook-denied call never reaches dispatch, so record it here or the turn log
             # would show a refusal the model reported but no tool call behind it.
             reason = session.refusals[-1].reason if session and session.refusals else "refused"
             call = ToolCall(name=name, args={}, ok=False, error=reason)
-            self._calls.append(call)
+            if conv is not None:
+                conv.calls.append(call)
             self._trace_refusal(session, call, reason)
         if session is None:
             return
@@ -294,53 +405,77 @@ class MaxAgentSDKProvider(ClaudeProvider):
             outcome="refused", error=str(reason)[:400], ms=0.0, missing_capability=(call.name if "not a registered tool" in reason else None),
         )
 
-    async def _dispatch(self, tool_name: str, args: dict) -> str:
-        session = self._current
-        if session is None:
+    async def _dispatch(self, tool_name: str, args: dict, *, holder: _Holder | None = None) -> str:
+        conv = holder.conversation if holder is not None else None
+        session = conv.session if conv is not None and conv.running else None
+        if session is None or conv is None:
             return "ERROR: no active session for this tool call."
-        if self._turn_epoch is not None and session.epoch != self._turn_epoch:
-            log.info("tool call %s refused: the owner moved on (epoch %s → %s)", tool_name, self._turn_epoch, session.epoch)
+        if conv.moved_on():
+            log.info("tool call %s refused: the owner moved on (%s)", tool_name, conv.key)
             return "REFUSED: the owner has moved on to another question. Do not act on this one; answer briefly."
+        # Which half this call acts for, on the task the call runs in. The session's own
+        # `acting_branch` is one field for both halves and is overwritten by whichever spoke
+        # last; with two turns in flight the engine would stamp the left half's proposal with
+        # the right half's id. The context variable is per task, so it cannot be.
+        token = CURRENT_BRANCH.set(conv.branch_id)
         try:
             return await dispatch(
                 tool_name,
                 args,
                 session=session,
                 timeout_s=self._tool_timeout_s,
-                calls=self._calls,
+                calls=conv.calls,
             )
         finally:
-            self._step(f"tool:{tool_name}")
+            CURRENT_BRANCH.reset(token)
+            conv.step(f"tool:{tool_name}")
 
     # ------------------------------------------------------------------ run
 
-    async def _client_for(self, session_id: str):
+    async def _conversation_for(self, session_id: str, branch_id: str = "") -> _Conversation:
         from claude_agent_sdk import ClaudeSDKClient
 
         await self._sweep_idle_clients()
-        client = self._clients.get(session_id)
-        if client is None:
+        key = conversation_key(session_id, branch_id)
+        conv = self._conversations.get(key)
+        if conv is None:
             # Held open across turns. Recreating it per request costs seconds of subprocess
             # spin-up and throws away the conversation, which is what makes "and how much did
             # that come to?" work.
             if self._spare is not None:
-                client, self._spare = self._spare, None   # connected and verified already
-                log.info("new conversation took the pre-warmed client")
+                client, holder = self._spare, self._spare_holder or _Holder()   # connected and verified already
+                self._spare, self._spare_holder = None, None
+                log.info("new conversation %s took the pre-warmed client", key)
             else:
-                client = ClaudeSDKClient(options=self._options())
+                holder = _Holder()
+                client = ClaudeSDKClient(options=self._options(holder))
                 await client.connect()
                 await self._verify_auth_source(client)
-            self._clients[session_id] = client
+            conv = _Conversation(key=key, session_id=str(session_id), branch_id=str(branch_id or ""), client=client, holder=holder)
+            holder.conversation = conv
+            self._conversations[key] = conv
             self._prewarm_soon()   # and the one after this gets the same head start
-        self._client_last_used[session_id] = time.time()
-        return client
+        conv.last_used = time.time()
+        return conv
+
+    async def _client_for(self, session_id: str, branch_id: str = ""):
+        """The client behind a conversation. Kept for the tests and the one caller that only
+        wants the subprocess."""
+        return (await self._conversation_for(session_id, branch_id)).client
 
     async def _sweep_idle_clients(self) -> None:
         """Each client is a `claude` subprocess. Sessions expire; their subprocesses must too."""
         now = time.time()
-        for session_id, last in list(self._client_last_used.items()):
-            if now - last > self._client_idle_timeout_s:
-                await self.reset_session(session_id)
+        for key, conv in list(self._conversations.items()):
+            if not conv.running and now - conv.last_used > self._client_idle_timeout_s:
+                await self._drop_conversation(key)
+
+    async def _drop_conversation(self, key: str) -> None:
+        conv = self._conversations.pop(key, None)
+        if conv is None:
+            return
+        conv.holder.conversation = None
+        await _disconnect_quietly(conv.client)
 
     async def _verify_auth_source(self, client) -> None:
         """Ask the running CLI how it authenticated. Belt and braces over the env check: if it
@@ -367,37 +502,51 @@ class MaxAgentSDKProvider(ClaudeProvider):
             )
 
     async def turn(self, session_id: str, text: str) -> TurnResult:
+        return await self.turn_on_branch(session_id, text)
 
+    async def turn_on_branch(self, session_id: str, text: str, *, branch_id: str = "") -> TurnResult:
+        """One turn, on the conversation that belongs to this half of the orb.
+
+        Two halves think at the same time: each has its own `claude` subprocess, its own lock,
+        and its own turn state (_Conversation). What serialises is a turn on the SAME half —
+        the second waits for the first, as it always did — and the number of subprocesses
+        thinking at once (MAX_CONCURRENT_TURNS). The live test's long turn — thirty-five
+        seconds of Claude on one half — no longer holds the other half's two-second question
+        behind it.
+        """
         if not self._started:
             return TurnResult(
                 text="The assistant is still starting up.",
                 session_id=session_id,
                 error_kind="not_started",
             )
+        try:
+            conv = await self._conversation_for(session_id, branch_id)
+        except Exception as exc:  # noqa: BLE001 — the connect itself can fail (no CLI, billing guard)
+            kind, spoken = classify_claude_error(exc)
+            log.warning("turn could not connect (%s): %s", kind, exc)
+            return TurnResult(text=spoken, session_id=session_id, error_kind=kind)
+        async with conv.lock:
+            async with self._slots:
+                return await self._turn_locked(conv, text)
 
-        async with self._turn_lock:
-            return await self._turn_locked(session_id, text)
-
-    async def _turn_locked(self, session_id: str, text: str) -> TurnResult:
+    async def _turn_locked(self, conv: _Conversation, text: str) -> TurnResult:
         from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 
+        session_id = conv.session_id
         session = self._session_lookup(session_id) if self._session_lookup else None
-        self._current = session
-        self._calls = []
-        self._states = []
-        self._steps = []
-        started = time.perf_counter()
-        self._turn_started = started
-        # The conversation position this turn answers. A /cancel or a later question moves the
-        # session past it; a tool call arriving after that acts for nobody and is refused.
-        self._turn_epoch = session.epoch if session is not None else None
+        # The conversation position this turn answers. A /cancel or a later question to this
+        # half moves it past this turn; a tool call arriving after that acts for nobody and
+        # is refused (_Conversation.moved_on).
+        conv.begin(session)
+        started = conv.turn_started
         if session is not None:
             session.set_state("THINKING")
             session.turns += 1
 
         result_message = None
         try:
-            client = await self._client_for(session_id)
+            client = conv.client
 
             async def run() -> tuple[str, object]:
                 await client.query(text)
@@ -405,7 +554,7 @@ class MaxAgentSDKProvider(ClaudeProvider):
                 last = None
                 async for message in client.receive_response():
                     if isinstance(message, AssistantMessage):
-                        self._step("model")
+                        conv.step("model")
                         for block in message.content:
                             if isinstance(block, TextBlock):
                                 parts.append(block.text)
@@ -418,25 +567,28 @@ class MaxAgentSDKProvider(ClaudeProvider):
             answer, result_message = await asyncio.wait_for(run(), timeout=self._turn_timeout_s)
         except TimeoutError:
             log.warning("turn timed out after %.0fs; dropping the client", self._turn_timeout_s)
-            await self.reset_session(session_id)
+            await self._drop_conversation(conv.key)
+            self._prewarm_soon()
             if session is not None:
                 session.set_state("ERROR", "timeout")
             return TurnResult(
                 text="That took too long and I have given up on it. Ask me again.",
-                tool_calls=self._calls, session_id=session_id, error_kind="timeout",
+                tool_calls=conv.calls, session_id=session_id, error_kind="timeout",
             )
         except Exception as exc:  # noqa: BLE001
             kind, spoken = classify_claude_error(exc)
             log.warning("turn failed (%s): %s", kind, exc)
             # A broken client cannot be reused; drop it so the next turn reconnects.
-            await self.reset_session(session_id)
+            await self._drop_conversation(conv.key)
+            self._prewarm_soon()
             if session is not None:
                 session.set_state("ERROR", kind)
             return TurnResult(
-                text=spoken, tool_calls=self._calls, session_id=session_id, error_kind=kind
+                text=spoken, tool_calls=conv.calls, session_id=session_id, error_kind=kind
             )
         finally:
-            self._current = None
+            conv.running = False
+            conv.session = None
 
         # The SDK reports many failures as a ResultMessage rather than an exception — a usage
         # limit, max_turns, an API error. Read it, or a silent failure becomes a blank answer.
@@ -447,11 +599,12 @@ class MaxAgentSDKProvider(ClaudeProvider):
                 spoken = usage_limit_line(_result_text(result_message))
             log.warning("turn ended with %s: %s", kind, _result_text(result_message)[:300])
             if kind in {"usage_limit", "auth", "api_error"}:
-                await self.reset_session(session_id)
+                await self._drop_conversation(conv.key)
+                self._prewarm_soon()
             if session is not None:
                 session.set_state("ERROR", kind)
             return TurnResult(
-                text=answer or spoken, tool_calls=self._calls, session_id=session_id,
+                text=answer or spoken, tool_calls=conv.calls, session_id=session_id,
                 error_kind=kind, stopped_early=kind == "max_turns",
             )
 
@@ -462,53 +615,59 @@ class MaxAgentSDKProvider(ClaudeProvider):
             session.set_state("READY")
         # The conversation was used to the end of this turn: its subprocess and its session
         # expire from the same moment, so "that order" cannot be forgotten silently.
-        self._client_last_used[session_id] = time.time()
+        conv.last_used = time.time()
         log.info(
-            "turn ok in %.0f ms, %d tool call(s): %s",
+            "turn ok in %.0f ms on %s, %d tool call(s): %s",
             (time.perf_counter() - started) * 1000,
-            len(self._calls),
-            " ".join(f"{name}@{ms:.0f}" for name, ms in self._steps) or "-",
+            conv.key,
+            len(conv.calls),
+            " ".join(f"{name}@{ms:.0f}" for name, ms in conv.steps) or "-",
         )
-        return TurnResult(text=answer, tool_calls=self._calls, session_id=session_id, steps=list(self._steps))
-
-    def _step(self, name: str) -> None:
-        if self._turn_started:
-            self._steps.append((name, round((time.perf_counter() - self._turn_started) * 1000, 1)))
+        return TurnResult(text=answer, tool_calls=conv.calls, session_id=session_id, steps=list(conv.steps))
 
     async def set_system_prompt(self, prompt: str) -> None:
         """A new knowledge base means a new system prompt, and the SDK fixes the prompt when a
         client connects — so every open client is dropped. The next turn reconnects with the
         new prompt; the conversation history is lost, which is the honest trade."""
         self._system_prompt = prompt
-        for session_id in list(self._clients):
-            await self.reset_session(session_id)
+        for key in list(self._conversations):
+            await self._drop_conversation(key)
         await self._drop_spare()   # it was connected with the old prompt
         self._prewarm_soon()
 
-    async def interrupt(self, session_id: str) -> bool:
-        """Ask the CLI to stop the turn it is running for this session. The turn then ends
-        with whatever text it had, and the lock is released for the question that replaced
-        it. True when there was a client to interrupt."""
-        client = self._clients.get(session_id)
-        if client is None or self._current is None or self._current.session_id != session_id:
-            return False
-        try:
-            # The SDK's control request would wait a minute on a wedged CLI; the owner's next
-            # question is already being asked, and the turn lock is what it waits for.
-            await asyncio.wait_for(client.interrupt(), timeout=INTERRUPT_TIMEOUT_S)
-        except TimeoutError:
-            log.warning("interrupt for %s got no answer in %.0fs", session_id, INTERRUPT_TIMEOUT_S)
-            return False
-        except Exception as exc:  # noqa: BLE001 — a turn that already ended is not a failure
-            log.info("interrupt for %s did nothing: %s", session_id, exc)
-            return False
-        return True
+    def _running(self, session_id: str, branch_id: str = "") -> list[_Conversation]:
+        """The conversations of this session with a turn in flight — one half's when a
+        branch is named, every half's when not."""
+        return [
+            conv for conv in self._conversations.values()
+            if conv.running and conv.session_id == str(session_id) and (not branch_id or conv.branch_id == str(branch_id))
+        ]
+
+    async def interrupt(self, session_id: str, *, branch_id: str = "") -> bool:
+        """Ask the CLI to stop the turn it is running for this session — for this half of it
+        when a branch is named, so a cancel on the left never stops the right. The turn then
+        ends with whatever text it had, and its lock is released for the question that
+        replaced it. True when there was a turn to interrupt."""
+        stopped = False
+        for conv in self._running(session_id, branch_id):
+            try:
+                # The SDK's control request would wait a minute on a wedged CLI; the owner's
+                # next question is already being asked, and the turn lock is what it waits for.
+                await asyncio.wait_for(conv.client.interrupt(), timeout=INTERRUPT_TIMEOUT_S)
+            except TimeoutError:
+                log.warning("interrupt for %s got no answer in %.0fs", conv.key, INTERRUPT_TIMEOUT_S)
+                continue
+            except Exception as exc:  # noqa: BLE001 — a turn that already ended is not a failure
+                log.info("interrupt for %s did nothing: %s", conv.key, exc)
+                continue
+            stopped = True
+        return stopped
 
     async def reset_session(self, session_id: str) -> None:
-        client = self._clients.pop(session_id, None)
-        self._client_last_used.pop(session_id, None)
-        if client is not None:
-            await _disconnect_quietly(client)
+        """Drop every conversation this session holds — each half's."""
+        for key, conv in list(self._conversations.items()):
+            if conv.session_id == str(session_id):
+                await self._drop_conversation(key)
         self._prewarm_soon()   # "new conversation" is about to want one
 
     async def health(self) -> tuple[bool, str]:

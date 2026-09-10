@@ -61,6 +61,12 @@ class ClaudeProvider(ABC):
     async def turn(self, session_id: str, text: str) -> TurnResult:
         """Run one user turn to completion and return the assistant's answer."""
 
+    async def turn_on_branch(self, session_id: str, text: str, *, branch_id: str = "") -> TurnResult:
+        """The same turn, addressed to one half of a divided orb. A provider that keeps one
+        conversation per half (the SDK provider) runs the halves concurrently; this default
+        is the plain single-conversation turn, which is what a test double wants."""
+        return await self.turn(session_id, text)
+
     @abstractmethod
     async def health(self) -> tuple[bool, str]:
         """Return (ok, human-readable detail) for the /health endpoint."""
@@ -72,6 +78,7 @@ class ClaudeProvider(ABC):
     async def set_system_prompt(self, prompt: str) -> None:  # noqa: B027 — optional hook
         """Replace the system prompt for all FUTURE conversations. Default: no-op."""
 
-    async def interrupt(self, session_id: str) -> bool:
-        """Stop the turn in progress for this session, if one is. Default: nothing to stop."""
+    async def interrupt(self, session_id: str, *, branch_id: str = "") -> bool:
+        """Stop the turn in progress for this session — for one half of it when a branch is
+        named, if the provider tells halves apart. Default: nothing to stop."""
         return False
