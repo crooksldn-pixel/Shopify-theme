@@ -125,10 +125,13 @@ def _advance(recipe: recipe_mod.Recipe, ctx: Ctx) -> None:
         return
     if ctx.branch.workflow is None:
         return
+    # The result is kept, not discarded: it says whether the cursor actually moved. Thrown
+    # away, the ends of a list stopped existing on this path — the plan re-read the clamped
+    # last member and the render announced it again as though "next" had done something.
     if recipe.recipe_id == "working_set_next":
-        move_cursor(ctx.session, ctx.branch, forward=True)
+        ctx.moved = move_cursor(ctx.session, ctx.branch, forward=True)
     elif recipe.recipe_id == "working_set_previous":
-        move_cursor(ctx.session, ctx.branch, forward=False)
+        ctx.moved = move_cursor(ctx.session, ctx.branch, forward=False)
 
 
 def _keep(recipe: recipe_mod.Recipe, ctx: Ctx, result: ReadResult) -> None:

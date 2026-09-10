@@ -32,4 +32,8 @@ reports/experience/
 node_modules/
 package-lock.json
 # Scratch probes. Review agents sometimes write these into tests/; they are not tests.
-tests/test_zz_*.py
+# Scratch probes a review agent writes into tests/ while hunting. They are not the
+# suite and must never be committed with it: a run that counts them reports a test
+# total nobody can reproduce. Both spellings, because both have happened.
+tests/test_zz*.py
+tests/test_probe*.py

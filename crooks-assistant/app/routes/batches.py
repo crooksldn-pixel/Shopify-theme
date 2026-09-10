@@ -14,6 +14,7 @@ import time
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse
 
+from app import readonly
 from app.actions import grammar
 from app.observability import timeline
 from app.presentation import present_batch, present_batch_state
@@ -104,6 +105,12 @@ async def commit(request: Request, batch_id: str, session_id: str = Form(default
     if result.batch is None:
         timeline.emit("batch_commit_refused", session_id=session_id, batch_id=batch_id, code=result.code, detail="no such batch", ms=_elapsed(started))
         return _refuse(404 if result.code == "unknown" else 403, result.code, "No such batch for this session.")
+    if result.code == "read_only":
+        # A backend latched read-only for an acceptance run. Nothing was claimed, so the batch
+        # is still PENDING and can be committed for real on a backend that may write.
+        log.warning("batch commit refused: read_only — %s", readonly.reason())
+        timeline.emit("batch_commit_refused", session_id=session_id, batch_id=batch_id, turn_id=result.batch.turn_id or None, code="read_only", ms=_elapsed(started))
+        return _refuse(403, "read_only", "This backend is in read-only test mode and cannot apply changes.")
     if result.code == "not_armed":
         timeline.emit("batch_commit_refused", session_id=session_id, batch_id=batch_id, turn_id=result.batch.turn_id or None, code="not_armed", nonce_present=bool(nonce), ms=_elapsed(started))
         return _refuse(409, "not_armed", "Hold the card first.")

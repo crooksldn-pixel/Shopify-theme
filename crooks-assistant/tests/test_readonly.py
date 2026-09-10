@@ -80,3 +80,45 @@ def test_the_live_clients_have_no_working_mutation():
         with pytest.raises((LiveWriteAttempted, readonly.WriteRefused)):
             call()
     assert ReadOnlyShopify.mutate is not ShopifyClient.mutate
+
+
+# ------------------------------------------------------- what a live run actually binds
+
+
+def test_arming_a_live_run_rebinds_the_write_modules_not_just_the_read_ones(monkeypatch):
+    """The third layer has to be where the writes execute.
+
+    `app/runtime.py` binds Gmail twice — once for `gmail_tools` (reads) and once for
+    `gmail_writes` (drafts, sends, archives), each module holding its own client. Arming a live
+    run rebound the read module only, so every Gmail execute path kept the writable client. The
+    latch still refused those writes inside the client, so nothing escaped; but `guarantees()`
+    printed "the clients bound to the runtime have no working mutate/send" into the live report,
+    and for Gmail writes that was not true.
+    """
+    from app.tools import gmail_tools, gmail_writes, shopify_tools
+    from experience.live import ReadOnlyGmail, ReadOnlyShopify, arm_read_only
+
+    monkeypatch.setattr(readonly, "_engaged", False)
+    monkeypatch.setattr(readonly, "_reason", "")
+
+    class Runtime:
+        settings = type("S", (), {"shopify_shop_domain": "fake.myshopify.com",
+                                  "shopify_api_version": "2025-07", "shopify_auth_mode": "static"})()
+        shopify = gmail = customer_lookup = None
+
+    arm_read_only(Runtime())
+    assert isinstance(shopify_tools._c(), ReadOnlyShopify)
+    assert isinstance(gmail_tools._client, ReadOnlyGmail)
+    # The one this test exists for: the module that executes drafts, sends and archives.
+    assert isinstance(gmail_writes._g(), ReadOnlyGmail)
+
+
+def test_the_guarantees_the_live_report_prints_name_every_chokepoint():
+    """The report must not claim a layer that is not there, and must not hide the one write a
+    live run does perform (refreshing its own expired Gmail token)."""
+    from experience.live import guarantees
+
+    printed = " ".join(guarantees()).lower()
+    for chokepoint in ("shopifyclient.mutate", "gmailclient", "actionengine.commit", "batchengine.commit"):
+        assert chokepoint.split(".")[0] in printed
+    assert "token" in printed, "the credential refresh is a write and has to be declared"

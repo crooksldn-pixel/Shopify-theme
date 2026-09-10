@@ -347,49 +347,60 @@ register(Recipe(recipe_id="navigation_home", intent_family="navigation_home", ui
 # -------------------------------------------------------------- working sets
 
 def _member_plan(ctx: Ctx) -> ReadPlan | None:
-    """The read for wherever the cursor now points. One read, of one member."""
-    workflow = ctx.branch.workflow
-    if workflow is None:
-        return None
-    from app.analytics import sets as working_sets
+    """The read for wherever the cursor now landed. One read, of one member.
 
-    ws = working_sets.get(ctx.session, workflow.set_id)
-    if ws is None or not ws.members:
+    The runner has already moved the cursor (`app/fastpath/runner.py:_advance`, which calls the
+    same `move_cursor` a tap reaches), so `ctx.moved` says which member this is — and says when
+    the move was refused. That refusal is the point: this used to clamp the cursor into range
+    with `min(max(...))`, which turned "next" at the end of a list into another read of the
+    last member, announced as though it had moved. At the ends there is nothing to read.
+    """
+    from app.commands import MEMBER_READ
+
+    moved = getattr(ctx, "moved", None) or {}
+    if not moved.get("moved"):
         return None
-    ref = ws.members[min(max(workflow.cursor, 0), len(ws.members) - 1)]
-    tool, arg = {"orders": ("shopify_order_detail", "order_id"), "customers": ("shopify_customer_history", "customer_id"),
-                 "emails": ("gmail_read_thread", "thread_id")}.get(ws.kind, ("", ""))
+    tool, arg, _ = MEMBER_READ.get(str(moved.get("set_kind") or ""), ("", "", ""))
     if not tool:
         return None
-    return ReadPlan([Read("member", tool, {arg: ref}, source="gmail" if tool.startswith("gmail_") else "shopify")], label=f"workflow:{ws.kind}")
+    return ReadPlan([Read("member", tool, {arg: str(moved["ref"])},
+                          source="gmail" if tool.startswith("gmail_") else "shopify")],
+                    label=f"workflow:{moved.get('set_kind')}")
 
 
 def _member_answer(ctx: Ctx, result: ReadResult) -> FastAnswer:
-    from app.analytics import sets as working_sets
+    """What the cursor landed on — or that it did not move.
+
+    The end-of-list sentences are `app/commands.BOUND_WORDS`, the same ones a tapped Next
+    speaks, so the two ways of saying "next" agree about where a list ends.
+    """
+    from app.commands import BOUND_WORDS
 
     workflow = ctx.branch.workflow
-    ws = working_sets.get(ctx.session, workflow.set_id) if workflow else None
-    if workflow is None or ws is None or not ws.members:
+    moved = getattr(ctx, "moved", None) or {}
+    if not moved.get("moved"):
+        code = str(moved.get("code") or "")
+        if code in BOUND_WORDS:
+            return FastAnswer(answer=BOUND_WORDS[code],
+                              trace={"cursor": moved.get("cursor"), "bound": code, "moved": False})
         return FastAnswer(answer="", defer="the set this was working through has gone")
-    ref = ws.members[min(max(workflow.cursor, 0), len(ws.members) - 1)]
-    label = ws.labels.get(ref) or ref
-    if ref not in workflow.visited:
-        workflow.visited.append(ref)
-    where = f"{workflow.position} of {workflow.total}"
+    ref, label = str(moved["ref"]), str(moved.get("label") or moved["ref"])
+    set_kind, kind = str(moved.get("set_kind") or ""), str(moved.get("kind") or "order")
+    where = f"{workflow.position} of {workflow.total}" if workflow else ""
     body = result.values.get("member")
     if isinstance(body, dict):
-        kind = {"orders": "order", "customers": "customer", "emails": "email_thread"}.get(ws.kind, "order")
         _remember(ctx, kind, ref, label)
-        if ws.kind == "orders":
+        if set_kind == "orders":
             head = _order_line(body)
-        elif ws.kind == "customers":
+        elif set_kind == "customers":
             head = _customer_line(body, label)
         else:
             head = f"{body.get('subject') or label}."
         return FastAnswer(answer=f"{head} {where}.", calls=list(result.calls), partial=result.partial,
-                          trace={"set_id": ws.set_id, "cursor": workflow.cursor, "ref": ref})
+                          trace={"set_id": moved.get("set_id"), "cursor": moved.get("cursor"), "ref": ref})
     return FastAnswer(answer=f"{label}. {where}. I could not read the rest of it just now.",
-                      partial=True, trace={"set_id": ws.set_id, "cursor": workflow.cursor, "ref": ref, "read": "failed"})
+                      partial=True,
+                      trace={"set_id": moved.get("set_id"), "cursor": moved.get("cursor"), "ref": ref, "read": "failed"})
 
 
 def _next(ctx: Ctx, result: ReadResult) -> FastAnswer:
@@ -427,7 +438,7 @@ def _order_plan(ctx: Ctx) -> ReadPlan | None:
             Read("find", "shopify_find_order", {"query": number}, source="shopify", cost=30.0),
             Read("detail", "shopify_order_detail", _detail_args, source="shopify", after=("find",), cost=90.0),
         ], label="order_lookup")
-    if known:
+    if known and not _names_another_order(ctx, known):
         return ReadPlan([Read("detail", "shopify_order_detail", {"order_id": known}, source="shopify", cost=90.0)], label="order_lookup")
     return None
 
@@ -576,24 +587,36 @@ register(Recipe(
 _DIGITS = re.compile(r"\b(\d{3,6})\b")
 
 
+def _names_another_order(ctx: Ctx, known: str) -> bool:
+    """Whether the sentence names a number that is not the order currently open.
+
+    This is the guard that stands between "tell me about it" and "tell me about 1936" when
+    1938 is on screen. `spoken_order_numbers` deliberately will not extract a bare number — a
+    bare 2025 is a year, "over 500" is money — so a sentence with a bare number in it reaches
+    the recipes with no order number at all, and every recipe that falls back to the open
+    record then answers confidently about the wrong order: the right shape of answer, the
+    wrong customer's address, spoken aloud and remembered as PII.
+
+    So: digits in the sentence that match neither the open order's label nor its ref mean this
+    question is not about what is on screen. Defer, and let a lane that can look 1936 up do it.
+    """
+    said = {m for m in _DIGITS.findall(ctx.text or "")}
+    if not said:
+        return False
+    entity = getattr(ctx.branch, "entity", None) or {}
+    mine = set(_DIGITS.findall(str(entity.get("label") or ""))) | set(_DIGITS.findall(known))
+    return not (said & mine)
+
+
 def _reopen_plan(ctx: Ctx) -> ReadPlan | None:
     """Show the open order again — but only if it IS the order being asked about.
 
-    "Show it again" means the record on screen. "Show me 1912 again" names a different one,
-    and `spoken_order_numbers` will not extract a bare number (a bare 2025 is a year, not an
-    order), so without this check the branch's entity was used instead and the wrong order was
-    re-opened confidently, on the fast lane. A named number that does not match what is open
+    "Show it again" means the record on screen. "Show me 1912 again" names a different one and
     is not a re-render, so this defers and the turn goes to a path that can look 1912 up.
     """
     known = ctx.entity("order")
-    if not known:
+    if not known or _names_another_order(ctx, known):
         return None
-    said = {m for m in _DIGITS.findall(ctx.text or "")}
-    if said:
-        entity = getattr(ctx.branch, "entity", None) or {}
-        mine = set(_DIGITS.findall(str(entity.get("label") or ""))) | set(_DIGITS.findall(known))
-        if not (said & mine):
-            return None
     return ReadPlan([Read("detail", "shopify_order_detail", {"order_id": known},
                           source="shopify", cost=90.0)], label="order_reopen")
 

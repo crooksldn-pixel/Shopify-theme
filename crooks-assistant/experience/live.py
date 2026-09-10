@@ -21,6 +21,12 @@ What this mode may do: read orders, read customers, read products and stock, rea
 correlate them, build surfaces, and stage a proposal so the card can be looked at. What it
 must never do is execute one — and staging is not executing: a proposal is an object on the
 Mac until a gesture commits it, and commit is latched.
+
+One write remains, and it is named here rather than left for someone to find: if the stored
+Gmail access token has expired, `app/clients/gmail.py:load_credentials` refreshes it and persists
+the new one through `store_token_json`. That is the credential this run reads WITH, not the
+owner's data, and refusing it would only mean the run could not read at all — but it is a change
+to the machine, so `guarantees()` says so and the live report prints it.
 """
 
 from __future__ import annotations
@@ -71,9 +77,6 @@ class ReadOnlyGmail(GmailClient):
     def modify_thread(self, thread_id: str, *, add: list[str], remove: list[str]) -> None:
         raise LiveWriteAttempted("a live read-only run tried to relabel a Gmail thread")
 
-    def store_token(self, payload: str) -> str:
-        raise LiveWriteAttempted("a live read-only run tried to write the Gmail credential")
-
 
 def credentials_available() -> tuple[bool, str]:
     """Whether this machine has what a live run needs.
@@ -100,7 +103,7 @@ def arm_read_only(runtime: Any) -> tuple[ReadOnlyShopify, ReadOnlyGmail]:
     first, so that even the construction of these clients happens in a process that has already
     lost the ability to change anything.
     """
-    from app.tools import gmail_tools, shopify_tools
+    from app.tools import gmail_tools, gmail_writes, shopify_tools
 
     readonly.engage(REASON)
     if not readonly.active():   # pragma: no cover — belt and braces on a safety device
@@ -116,6 +119,14 @@ def arm_read_only(runtime: Any) -> tuple[ReadOnlyShopify, ReadOnlyGmail]:
     runtime.gmail = gmail
     shopify_tools.bind(store)
     gmail_tools.bind(gmail, getattr(runtime, "customer_lookup", None))
+    # The Gmail WRITE module keeps its own client — `app/runtime.py` binds it separately from
+    # the read module — so binding gmail_tools alone left every execute path (draft, send,
+    # archive) holding the writable client. The latch still refused those writes inside the
+    # client, so nothing escaped; but the third layer this file is built around was absent for
+    # Gmail, and `guarantees()` said otherwise. Shopify needs no equivalent: app/tools
+    # /shopify_writes reaches the store through shopify_tools._c(), rebound above.
+    gmail_writes.bind(gmail, customer=getattr(runtime, "customer_lookup", None),
+                      policy=lambda: runtime.settings)
     log.warning(
         "%s — reading %s and the shop's inbox. No change can be executed by this process.",
         readonly.banner(), settings.shopify_shop_domain,
@@ -131,5 +142,7 @@ def guarantees() -> list[str]:
         "ShopifyClient.mutate refuses: every reviewed Shopify mutation",
         "GmailClient send/draft/modify refuse: every Gmail change",
         "ActionEngine.commit refuses before claiming a proposal",
-        "the clients bound to the runtime have no working mutate/send at all",
+        "BatchEngine.commit refuses before claiming a batch",
+        "the clients bound to the runtime — reads AND writes — have no working mutate/send",
+        "the one write this mode performs: refreshing its own expired Gmail access token",
     ]

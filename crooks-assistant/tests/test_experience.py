@@ -149,3 +149,84 @@ async def test_again_never_reopens_a_different_order(stage):
         assert other.data("order").get("order_number") != "#1938", (
             f"{words!r} showed the wrong order"
         )
+
+
+async def test_the_end_of_a_list_is_the_same_place_said_and_tapped(stage):
+    """The word "next" and the button called Next must stop in the same place.
+
+    `move_cursor` is one implementation and it refuses to move past the last member. The fast
+    lane called it for its side effect and threw the answer away, then clamped the cursor back
+    into range — so a tapped Next said "that is the last one" while a spoken "next" read the
+    last order again and announced it as "3 of 3", for as many times as it was asked. The owner
+    walking a queue then has no way to tell the last one from the end of the list, and each
+    re-read costs a Shopify call for a move that did not happen.
+    """
+    await stage.say("show me today's orders", session_id="ends")
+    walked = []
+    for _ in range(3):
+        walked.append(await stage.say("next", session_id="ends"))
+    assert [c.data("order").get("order_number") for c in walked] == ["#1940", "#1938", "#1939"], \
+        [c.answer for c in walked]
+
+    said = await stage.say("next", session_id="ends")
+    tapped = await stage.touch("workflow.next", session_id="ends")
+    assert said.answer == tapped.answer == "That is the last one."
+    assert said.prose_only and not said.reads, "a refused move reads nothing and draws nothing new"
+
+    # And the same at the other end, where the cursor starts before the first member.
+    await stage.say("show me today's orders", session_id="starts")
+    said_back = await stage.say("previous", session_id="starts")
+    tapped_back = await stage.touch("workflow.previous", session_id="starts")
+    assert said_back.answer == tapped_back.answer == "That is the first one."
+
+
+async def test_a_record_is_only_replayed_to_the_conversation_it_was_shown_to(stage):
+    """The entity cache is shared between conversations; permission is not.
+
+    Read data is immutable, so one process-wide cache is right. But `open.entity` took a kind
+    and a ref straight off the wire and handed back whatever the cache held, with no check that
+    THIS conversation had ever been shown it — while `/context/order/{id}`, which serves the
+    same data, refuses exactly that. Refs are guessable (`gid://shopify/Order/<n>`), so a
+    session that had been shown nothing could read another's customer, email and address. The
+    rule is `session.issued_ids`, which is what every tool call is already checked against.
+    """
+    shown = await stage.say("show me order 1938", session_id="ownerA")
+    assert shown.data("order").get("order_number") == "#1938"
+
+    await stage.say("hello", session_id="strangerB")
+    for kind, ref in (("order", "gid://shopify/Order/1938"), ("customer", "gid://shopify/Customer/7001")):
+        leaked = await stage.touch("open.entity", session_id="strangerB", kind=kind, ref=ref)
+        assert leaked.raw.get("ok") is False, f"{kind} {ref} was handed to a session never shown it"
+        assert leaked.raw.get("code") == "not_held"
+        assert not leaked.surfaces, leaked.surface_types
+
+    # The owner's own session, which WAS shown it, still replays instantly.
+    mine = await stage.touch("open.entity", session_id="ownerA",
+                            kind="order", ref="gid://shopify/Order/1938")
+    assert mine.raw.get("ok") is True and mine.data("order").get("order_number") == "#1938"
+    assert not mine.reads, "a record already held is replayed, not re-read"
+
+
+async def test_a_number_that_is_not_the_open_order_is_never_answered_from_the_open_order(stage):
+    """"Where is 1940" with 1938 on screen must not answer about 1938.
+
+    A bare number is deliberately not extracted as an order number, so these recipes reached
+    their `if known:` fallback and read the record that happened to be open — returning the
+    right shape of answer about the wrong order, confidently, on the fast lane, and speaking
+    another customer's postal address aloud. `order_reopen` was given this guard; the two
+    recipes sharing `_order_plan` were not.
+    """
+    opened = await stage.say("what is order 1938", session_id="digits")
+    assert opened.data("order").get("order_number") == "#1938"
+
+    for words in ("what is the address on 1936", "where is 1940", "what's the status of 1939"):
+        answered = await stage.say(words, session_id="digits")
+        assert "1938" not in answered.answer, f"{words!r} answered about 1938: {answered.answer!r}"
+        assert answered.recipe_id not in ("order_status_lookup", "order_address_lookup"), \
+            f"{words!r} took {answered.recipe_id!r} and read the open order"
+
+    # A question with no number in it still means the record on screen.
+    for words in ("what is the status", "where is it"):
+        about_it = await stage.say(words, session_id="digits")
+        assert about_it.recipe_id == "order_status_lookup", f"{words!r} took {about_it.recipe_id!r}"
+        assert "1938" in about_it.answer, about_it.answer

@@ -29,6 +29,7 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
 
+from app import readonly
 from app.actions import engine as engine_module
 from app.actions.engine import ARM_SLACK_MS, WAIT_FOR_OUTCOME_S, ActionEngine
 from app.actions.grammar import ARMED_FOR_S, dwell_ms, gesture_for
@@ -534,6 +535,14 @@ class BatchEngine:
             return BatchResult(None, "unknown", "")
         if batch.session_id != session_id:
             return BatchResult(None, "wrong_session", "")
+        if readonly.active():
+            # The same refusal `ActionEngine.commit` gives, and for the same reason — but it
+            # has to be HERE, before the claim. Without it the batch claimed itself, put every
+            # child through an engine that refused each one, filed those refusals as
+            # "not attempted", finished DONE and spoke "Tagged 0 of the 3 orders." The owner
+            # was told a batch had run, and the batch was terminal and could never be
+            # committed again. Nothing is claimed here, so the card stays PENDING.
+            return BatchResult(batch, "read_only", "")
         if batch.status is BatchStatus.PENDING and not self._armed(batch, nonce):
             return BatchResult(batch, "not_armed", "")
         if batch.status is BatchStatus.EXECUTING:

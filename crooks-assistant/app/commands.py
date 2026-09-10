@@ -26,11 +26,14 @@ Three properties hold for everything in this file, and the tests hold them:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.surfaces import ENTITY_KINDS
+
+log = logging.getLogger("crooks.commands")
 
 # Which tool re-reads a record of each kind, for rebuilding a card from what the Mac still
 # holds rather than asking the shop again. A kind absent from here cannot be replayed and the
@@ -136,18 +139,36 @@ def replay(ctx: Ctx, kind: str, ref: str) -> list[Any]:
     This is what makes Back and Next feel instant and what makes them free: the read happened
     when the record was first opened, and going back to it is not a new question. Nothing is
     drawn that memory cannot supply — a stale entry produces no card rather than a wrong one.
+
+    "Already holds" is not enough on its own, though, and this is the one rule of this file.
+    The entity cache is process-global and shared by every conversation, because read data is
+    immutable and caching it twice would be waste. Permission is not: a record is replayable to
+    a conversation only if THAT conversation was shown it, which is what `session.issued_ids`
+    records and what every tool call is checked against in `app/tools/gate.py`. Reading the
+    cache is a way to reach a record without a tool call, so it is checked here too — the same
+    rule `app/routes/context.py:41` keeps for the same data, and without it a ref is a guess
+    away (`gid://shopify/Order/<n>`) from another conversation's customer, address and items.
     """
     from app.memory import ENTITY
     from app.memory import current as memory
     from app.providers.base import ToolCall
+    from app.tools.gate import id_kind_ok
 
     tool = REPLAY_TOOL.get(kind, "")
     if not tool or not ref:
         return []
+    argument = f"{kind}_id" if kind != "email_thread" else "thread_id"
+    issued = getattr(ctx.session, "issued_ids", None) or frozenset()
+    if ref not in issued or not id_kind_ok(argument, ref):
+        # Not a record this conversation was shown, or an id of another kind wearing this
+        # one's name. The caller turns this into "ask for it and I will read it again", which
+        # goes through the gate and either reads it properly or refuses.
+        log.warning("replay refused: %s %s was not issued to this conversation", kind, ref)
+        return []
     held = memory().get(ENTITY, f"{kind}:{ref}", allow_stale=True)
     if held is None:
         return []
-    return [ToolCall(name=tool, args={f"{kind}_id": ref}, ok=True, result=held.value)]
+    return [ToolCall(name=tool, args={argument: ref}, ok=True, result=held.value)]
 
 
 def _landed(ctx: Ctx, moved: dict[str, Any], *, words: str) -> Outcome:
@@ -293,6 +314,12 @@ def move_cursor(session: Any, branch: Any, *, forward: bool) -> dict[str, Any]:
             "kind": kind, "set_kind": ws.kind, "set_id": ws.set_id}
 
 
+# What the end of a list sounds like. Here rather than at either call site because the fast
+# lane says these words too: while `_step_cursor` owned them, a tapped Next stopped at the end
+# and a spoken "next" re-read the last member, which is the same word meaning two things.
+BOUND_WORDS = {"at_end": "That is the last one.", "at_start": "That is the first one."}
+
+
 def _step_cursor(ctx: Ctx, *, forward: bool) -> Outcome:
     """Move the cursor and show what it now points at.
 
@@ -303,10 +330,8 @@ def _step_cursor(ctx: Ctx, *, forward: bool) -> Outcome:
     moved = move_cursor(ctx.session, ctx.branch, forward=forward)
     if not moved.get("moved"):
         code = str(moved.get("code") or "")
-        if code == "at_end":
-            return Outcome(answer="That is the last one.", changed=moved)
-        if code == "at_start":
-            return Outcome(answer="That is the first one.", changed=moved)
+        if code in BOUND_WORDS:
+            return Outcome(answer=BOUND_WORDS[code], changed=moved)
         return Outcome.refused(code or "no_set", "There is no list open to move through.")
     kind, ref, label = str(moved["kind"]), str(moved["ref"]), str(moved["label"])
     ctx.branch.visit(kind, ref, label, set_id=str(moved.get("set_id") or ""))

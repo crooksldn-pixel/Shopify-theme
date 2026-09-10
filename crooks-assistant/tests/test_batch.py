@@ -11,6 +11,7 @@ import time
 import httpx
 import pytest
 
+from app import readonly
 from app.actions import batch as batch_module
 from app.actions import engine as engine_module
 from app.actions.batch import (
@@ -553,3 +554,27 @@ async def test_the_routes_take_a_batch_id_and_a_session_and_nothing_else(client)
     assert revoked == [pending_id]
     after = await client.get(f"/batches/{pending_id}", params={"session_id": "s2"}, headers=PROXIED)
     assert after.json()["status"] == "revoked" and after.json()["ui"][0]["type"] == "error"
+
+
+async def test_a_latched_backend_refuses_a_batch_before_claiming_it(engine, batches, session, monkeypatch):
+    """Read-only has to be checked before the claim, not per child.
+
+    Without the check the batch claimed itself, ran every child through an engine that refused
+    each one, filed those refusals as "not attempted", finished DONE and spoke "Tagged 0 of the
+    3 orders." So the owner was told a batch had run when none had, and the batch was terminal:
+    the same gesture on a backend that may write could never commit it. Nothing may be claimed.
+    """
+    store = store_of(3)
+    ws = orders_set(session, store)
+    _, batch, _ = await stage(session, "batch_order_tags_add", set_id=ws.set_id, tags=["delayed"])
+    assert batch is not None
+
+    monkeypatch.setattr(readonly, "_engaged", True)
+    monkeypatch.setattr(readonly, "_reason", "a test")
+    result = await gesture(batches, batch)
+
+    assert result.code == "read_only"
+    assert result.spoken == "", "a refused batch says nothing about having run"
+    assert batch.status is BatchStatus.PENDING, "the card is untouched and still committable"
+    assert not batch.terminal
+    assert store.mutations == [], "no Shopify change was sent"
