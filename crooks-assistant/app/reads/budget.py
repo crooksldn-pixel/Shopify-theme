@@ -360,10 +360,15 @@ def yield_to(lane: str, *, scope: str = "", branch_id: str = "") -> int:
 
 # ------------------------------------------------------------------ the provider throttles
 
-# What one source will carry at once, matching app/reads/scheduler.py:SOURCE_LIMITS — which
-# is where the numbers are argued for. This table is the GLOBAL one: the scheduler's
-# semaphore is built per plan, which is exactly why speculation in its own plan could hold a
-# source's rate while the owner's plan held its own four slots and both went to Shopify.
+# How much of each source there is. Shopify's Admin API is a leaky bucket refilling at 50
+# points a second; Gmail's per-user quota is generous but its per-thread fetches are not free.
+# Four and three are what the tablet's screens need — the argument is in
+# app/reads/scheduler.py, whose per-plan semaphore reads this same table, and in
+# bench/anticipation.py, which measures against it.
+#
+# It lives here rather than there because this is where it has to mean something ACROSS
+# plans: a semaphore built per plan cannot see that speculation is holding four Shopify slots
+# while the owner's plan holds four more and both are spending one bucket.
 SOURCE_SLOTS: dict[str, int] = {"shopify": 4, "gmail": 3, "mac": 8}
 DEFAULT_SLOTS = 3
 # What this throttle adds, and what it deliberately does not.
@@ -482,6 +487,17 @@ def install_throttle(new: Throttle) -> Throttle:
 
 
 # ------------------------------------------------------------------ per conversation
+
+
+def scope_of(session: Any) -> str:
+    """The conversation a piece of reading belongs to: a login and a session id.
+
+    The isolation key everything here is keyed by, and the one the anticipation layer's own
+    scopes use (app/anticipation/engine.py::scope_of delegates to this). It lives here
+    because three modules need it and none of them should import another to get it.
+    """
+    login = str(getattr(session, "login", "") or "") or "owner"
+    return f"{login}|{getattr(session, 'session_id', '') or ''}"
 
 
 def ledger_for(session: Any) -> Ledger:

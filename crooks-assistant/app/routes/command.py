@@ -286,7 +286,7 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
                     slots={str(k)[:40]: v for k, v in (outcome.changed.get("slots") or {}).items()})
     branch.working("opening " + str(outcome.changed.get("area") or recipe.ui))
     try:
-        with budget.using(budget.NAVIGATION, lane_key, scope=_scope_of(session)):
+        with budget.using(budget.NAVIGATION, lane_key, scope=budget.scope_of(session)):
             answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent,
                                                         text=str(outcome.changed.get("said") or ""), memory=memory()))
     finally:
@@ -305,14 +305,6 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     changed = {**outcome.changed, "lane": "FAST", "recipe_id": recipe_id, "partial": bool(answer.partial),
                "reads": list((answer.trace or {}).get("reads") or []), "ms": (answer.trace or {}).get("ms")}
     return command_mod.Outcome(answer=answer.answer, calls=calls, surfaces=list(answer.surfaces), changed=changed)
-
-
-def _scope_of(session) -> str:
-    """The conversation, in the shape the anticipation layer's scopes use, so a tap stands
-    down the guesses made for THIS conversation and no other."""
-    from app.reads.scheduler import _scope_of as scope_of
-
-    return scope_of(session)
 
 
 async def _read_member(runtime, session, needs: dict) -> list:
@@ -334,7 +326,7 @@ async def _read_member(runtime, session, needs: dict) -> list:
     plan = ReadPlan([Read("member", tool, {argument: ref},
                           source="gmail" if tool.startswith("gmail_") else "shopify")],
                     label="command:member", lane=budget.NAVIGATION, key=timeline.new_id("tap"),
-                    scope=_scope_of(session))
+                    scope=budget.scope_of(session))
     try:
         result = await run_plan(plan, session=session, timeout_s=6.0,
                                 turn_id=getattr(session, "turn_id", ""))

@@ -538,9 +538,13 @@ class Anticipator:
 
 
 def scope_of(session: Any) -> str:
-    """The isolation key of a session object, in the same shape `Signal.scope` uses."""
-    login = str(getattr(session, "login", "") or "") or "owner"
-    return f"{login}|{getattr(session, 'session_id', '') or ''}"
+    """The isolation key of a session object, in the same shape `Signal.scope` uses.
+
+    One definition, in app/reads/budget.py, because the read layer keys its budgets and its
+    stand-downs by the same thing and two copies of an isolation key is how one conversation
+    comes to be served another's.
+    """
+    return budget.scope_of(session)
 
 
 _current: Anticipator | None = None

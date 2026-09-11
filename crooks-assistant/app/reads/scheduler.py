@@ -54,8 +54,12 @@ log = logging.getLogger("crooks.reads")
 # How many reads of one source may be in flight at once. Shopify's Admin API is a leaky
 # bucket refilling at 50 points a second; Gmail's per-user quota is generous but its
 # per-thread fetches are not free. Four and three are what the tablet's screens need.
-SOURCE_LIMITS: dict[str, int] = {"shopify": 4, "gmail": 3, "mac": 8}
-DEFAULT_LIMIT = 3
+# One table, read from two places. The semaphore below is PER PLAN and the throttle in
+# app/reads/budget.py is global, and the two disagreeing about how much of a source there is
+# would be a bug nobody would look for — so the numbers live once, beside the throttle that
+# needs them to mean something across plans.
+SOURCE_LIMITS: dict[str, int] = budget.SOURCE_SLOTS
+DEFAULT_LIMIT = budget.DEFAULT_SLOTS
 
 # What one plan may spend at a source, in that source's own units. Shopify counts calculated
 # query cost; Gmail counts requests. Both are ceilings, not targets.
@@ -189,14 +193,6 @@ def _layers(plan: ReadPlan) -> list[list[Read]]:
     return waves
 
 
-def _scope_of(session: Any) -> str:
-    """The conversation a plan belongs to, in the shape the anticipation layer's scopes use
-    (app/anticipation/engine.py::scope_of). Written here so this module does not import that
-    one on a read's critical path."""
-    login = str(getattr(session, "login", "") or "") or "owner"
-    return f"{login}|{getattr(session, 'session_id', '') or ''}"
-
-
 def _lane_of(plan: ReadPlan, session: Any, turn_id: str) -> tuple[str, str]:
     """(lane, unit of work) for this plan.
 
@@ -215,7 +211,7 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
     """Run the graph, in the plan's lane. Never raises for a read that failed: a failure is a
     name in `errors`."""
     assert_reads_only(plan)
-    scope = plan.scope or _scope_of(session)
+    scope = plan.scope or budget.scope_of(session)
     lane, key = _lane_of(plan, session, turn_id)
     throttle = budget.throttle()
     if lane in budget.OWNER_LANES:
@@ -335,7 +331,7 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
     if timeline.current().active is not None:
         timeline.emit(
             "read_plan", session_id=getattr(session, "session_id", None), turn_id=turn_id or getattr(session, "turn_id", "") or None,
-            label=plan.label or None, origin=plan.origin, why=plan.why or None,
+            label=plan.label or None, origin=plan.origin, why=plan.why or None, lane=lane,
             groups=result.groups, fanout=max((len(g) for g in result.groups), default=0),
             critical_path_ms=result.critical_path_ms, serial_ms=result.serial_ms, saved_ms=round(result.saved_ms, 1),
             spent=result.spent, ms=result.ms, skipped=result.skipped or None, errors=list(result.errors) or None,
