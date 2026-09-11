@@ -51,7 +51,9 @@ async function main() {
     // the URL rather than on the word, so a real 503 from anywhere else still counts.
     const from = (m.location && m.location() && m.location().url) || '';
     if (from.includes('/speak')) return;
-    errors.push(`console: ${m.text()}`);
+    // With the resource that failed. "Failed to load resource: 400" names nothing, and a
+    // browser run that cannot say WHAT failed costs an hour to read.
+    errors.push(`console: ${m.text()}${from ? ` <- ${from}` : ''}`);
   });
   // No voice under test: a 503 is what the tablet already handles when ElevenLabs is absent.
   await page.route('**/speak', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{"ok":false,"kind":"no_key","reason":"no voice under test"}' }));
@@ -127,10 +129,13 @@ async function main() {
     const el = document.querySelector('.card, [data-kind="order"]');
     if (!el) return null;
     const tabs = Array.from(el.querySelectorAll('[role="tab"], .tab')).map((t) => (t.textContent || '').trim());
+    // Only what is ON the card. The rail discloses its secondary chips behind a "2 more"
+    // button (web/ui.js) and keeps them at zero height until it is opened; measuring those
+    // as controls the finger can miss is measuring something nobody can touch.
     const buttons = Array.from(el.querySelectorAll('button')).map((b) => {
       const r = b.getBoundingClientRect();
       return { text: (b.textContent || '').trim().slice(0, 24), w: Math.round(r.width), h: Math.round(r.height) };
-    });
+    }).filter((b) => b.w > 0 && b.h > 0);
     return { tabs, buttons, width: Math.round(el.getBoundingClientRect().width) };
   });
   check('the order card rendered', card !== null, JSON.stringify(card).slice(0, 160));
@@ -346,6 +351,11 @@ async function main() {
   // 788px below the finger — which is overwritten by "Release to send" the moment the thumb
   // goes down to speak.
   await say('show me order 1938');
+  // Note is a secondary chip now (app/actions/available.py): five renders and nought taps in
+  // the live session, so what the order needs leads and the fallbacks are one tap behind a
+  // disclosure. That tap is part of the path, so this makes it.
+  await page.evaluate(() => { const more = document.querySelector('#cards .rail-more'); if (more) more.click(); });
+  await sleep(300);
   const chipBefore = await page.evaluate(() => {
     const c = document.querySelector('#cards .rail-chip[data-family="order.add_note"]');
     if (!c) return null;
@@ -443,11 +453,14 @@ async function main() {
     };
   });
   check('tapping a waiting thread opens it', thread.type === 'email_thread', `type=${thread.type}`);
-  check('and the thread has a rail: Reply arms the microphone, Archive prepares the change',
-    thread.chips.some((c) => c.label === 'Reply' && c.family === 'email.reply' && !c.off)
+  check('and the thread has a rail: Reply opens the reply, Archive prepares the change',
+    thread.chips.some((c) => c.label === 'Reply' && c.mode === 'open' && c.family === 'email.reply' && !c.off)
     && thread.chips.some((c) => c.label === 'Archive' && c.mode === 'stage' && c.ref && !c.off),
     JSON.stringify(thread.chips));
-  check('its chips are big enough for a finger', thread.chips.length > 0 && thread.chips.every((c) => c.h >= 44),
+  // The chips on the card. The ones behind the disclosure are at zero height until it is
+  // opened, which is the point of a disclosure and not a control too small to hit.
+  check('its chips are big enough for a finger',
+    thread.chips.filter((c) => c.h > 0).length > 0 && thread.chips.filter((c) => c.h > 0).every((c) => c.h >= 44),
     thread.chips.map((c) => `${c.label}:${c.h}px`).join(' '));
   await shot('07-email-thread');
 

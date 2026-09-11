@@ -240,18 +240,26 @@ def available_email_actions(thread: dict[str, Any], capabilities: dict[str, dict
             family="email.reply", mode="open", command="compose.reply",
             args=f"thread_id={thread_id}",
         ))
-    public = [a.public() for a in weigh(out)]
+    public = [a.public() for a in out]
     # The row actions come already gated (actions_for checks the write tool is registered and
     # changes are on); they are appended as they are, so Archive on the rail is the same
-    # action as Archive beside a row, resolved by the same table. Their weight is decided
-    # here, by position, like everything else on a rail.
+    # action as Archive beside a row, resolved by the same table.
     for a in row_actions or []:
         if isinstance(a, dict) and a.get("id"):
-            entry = dict(a)
-            entry.setdefault("command", "")
-            entry.setdefault("args", "")
-            entry["priority"] = "primary" if len(public) < MAX_PRIMARY else "secondary"
-            public.append(entry)
+            public.append({"command": "", "args": "", **dict(a)})
+    # Reply and Archive are the two things a thread is for, so they are the two at full
+    # weight; everything after them is disclosed.
+    public = [{**a, "priority": "primary" if i < MAX_PRIMARY else "secondary"} for i, a in enumerate(public)]
+    if out:
+        # And the other way in, behind the disclosure: arm the microphone for this thread
+        # without opening a keyboard first. §20's two halves as two controls — voice is
+        # intent, touch is precision — with the precision one leading, because that is the
+        # one the live session had no way to reach at all.
+        dictate = AvailableAction(
+            "dictate", "Dictate", "gmail_draft_reply", "amber", True, "", "Reply to this email",
+            family="email.reply", mode="ask", priority="secondary",
+        )
+        public.append(dictate.public())
     return public[:6]
 
 

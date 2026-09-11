@@ -33,7 +33,9 @@ async function main() {
     if (m.type() !== 'error') return;
     const from = (m.location && m.location() && m.location().url) || '';
     if (from.includes('/speak')) return;
-    errors.push(`console: ${m.text()}`);
+    // With the resource that failed. "Failed to load resource: 400" names nothing, and a
+    // browser run that cannot say WHAT failed costs an hour to read.
+    errors.push(`console: ${m.text()}${from ? ` <- ${from}` : ''}`);
   });
   const posts = [];
   page.on('request', (r) => { if (r.method() === 'POST') posts.push(r.url().replace(BASE, '')); });
@@ -207,16 +209,25 @@ async function main() {
   await sleep(2500);
   check('a one-finger hold is still a question', posts.includes('/turn'), `posted: ${posts.join(', ') || 'nothing'}`);
 
-  // ---- 7. tap Reply on a thread: the armed state is on the control, unclipped, cancellable
+  // ---- 7. arm a spoken reply on a thread: the armed state is on the control, unclipped,
+  // cancellable.
+  //
+  // The chip that arms it is Dictate, not Reply. Reply was rendered on twenty-four email cards
+  // in the live session and tapped on none, because arming the microphone was all it did — it
+  // now opens a reply with the words in a field (app/families/compose.py), and the microphone
+  // is the chip beside it, behind the rail's disclosure. Same family, same binding, same band;
+  // this opens the disclosure and takes the control that arms.
   await say('which customers need replying to?');
   await page.evaluate(() => { const row = document.querySelector('#cards .row.tappable[data-kind="email_thread"]'); if (row) row.click(); });
   await sleep(1500);
-  await page.evaluate(() => { const c = document.querySelector('#cards .rail-chip[data-family="email.reply"]'); if (c) c.click(); });
+  await page.evaluate(() => { const more = document.querySelector('#cards .rail-more'); if (more) more.click(); });
+  await sleep(300);
+  await page.evaluate(() => { const c = document.querySelector('#cards .rail-chip[data-mode="ask"][data-family="email.reply"]'); if (c) c.click(); });
   await sleep(1400);
   const armed = await page.evaluate(() => {
     const pill = document.querySelector('#cards .armed-inline');
     const band = document.querySelector('#armed');
-    const chip = document.querySelector('#cards .rail-chip[data-family="email.reply"]');
+    const chip = document.querySelector('#cards .rail-chip[data-mode="ask"][data-family="email.reply"]');
     if (!pill) return { pill: false, band: band && !band.hidden ? band.textContent.trim() : '' };
     const what = pill.querySelector('.armed-what');
     const cancel = pill.querySelector('.armed-cancel');
@@ -232,7 +243,7 @@ async function main() {
       chipLit: chip ? chip.getAttribute('aria-pressed') === 'true' : false,
     };
   });
-  check('tapping Reply arms the control itself, in words about the person', armed.pill && /^Replying to \w+/.test(armed.text) && armed.chipLit, JSON.stringify(armed));
+  check('tapping Dictate arms the control itself, in words about the person', armed.pill && /^Replying to \w+/.test(armed.text) && armed.chipLit, JSON.stringify(armed));
   check('the armed state is attached to the rail, inside the card, on screen, unclipped',
     armed.pill && armed.afterRail && armed.insideCard && armed.onScreen && !armed.clipped && armed.height <= 64, JSON.stringify(armed));
   check('and Cancel is a finger-sized control', armed.pill && armed.cancelH >= 44, `cancel=${armed.cancelH}px`);

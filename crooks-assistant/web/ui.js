@@ -36,7 +36,17 @@
         else if (key === 'on' && typeof value === 'object') {
           for (const type in value) el.addEventListener(type, value[type]);
         } else if (key === 'data' && typeof value === 'object') {
-          for (const d in value) el.dataset[d] = String(value[d]);
+          // Absent, not "null". Every other attribute here is dropped when its value is null
+          // or undefined; `data` stringified it, so `{ ref: staged ? text(ref) : null }` wrote
+          // `data-ref="null"` onto every chip that was not staged. That is not cosmetic: the
+          // page has one delegated handler for `[data-command]`, so the instant a rail chip
+          // carried `data-command="null"` every chip on every card posted the command "null"
+          // to the Mac and got a 400 — an entire class of control quietly broken by a
+          // ternary. A key with nothing behind it is simply not set.
+          for (const d in value) {
+            if (value[d] === null || value[d] === undefined) continue;
+            el.dataset[d] = String(value[d]);
+          }
         } else el.setAttribute(key, String(value));
       }
     }
@@ -1395,8 +1405,16 @@
     const ref = gone || back;
     if (!ref) return 0;
     let touched = 0;
+    // `querySelectorAll` never matches the root, and the page hands this single CARDS as well
+    // as decks — the copy of the queue on the back stack is one detached node, and it is the
+    // one the owner returns to.
+    const within = (sel) => {
+      const found = Array.prototype.slice.call(root.querySelectorAll(sel));
+      if (root.classList && root.classList.contains(sel.replace('.', ''))) found.unshift(root);
+      return found;
+    };
     // The thread's own card, if it is open: it says what it now is, in a word.
-    for (const open of root.querySelectorAll('.card-email_thread')) {
+    for (const open of within('.card-email_thread')) {
       if (text(open.dataset.ref) !== ref && text(open.dataset.thread) !== ref) continue;
       touched += 1;
       const head = open.querySelector('.card-head');
@@ -1412,7 +1430,7 @@
     }
     // And the queue it was in. An archived thread is not a row with a line through it: it has
     // left, and the card says how many left so the count on screen is not a lie.
-    for (const queue of root.querySelectorAll('.card-email_list')) {
+    for (const queue of within('.card-email_list')) {
       const rows = queue.querySelector('.rows');
       if (!rows) continue;
       if (gone) {
@@ -1437,6 +1455,12 @@
     // new card is appended, because what it changes is the cards that are already there.
     const where = doc() && doc().body ? doc().body : null;
     if (where) settleThread(where, d);
+    // And the screens the owner will come BACK to. The page keeps its own copies of those as
+    // detached nodes, which nothing in the document can reach, so it settles them itself —
+    // otherwise Back from a proven archive lands on a queue that still lists the thread.
+    if (typeof opts.onThreadMoved === 'function' && (d.archived || d.restored)) {
+      try { opts.onThreadMoved(d); } catch (error) { /* the proof is drawn either way */ }
+    }
     const node = card('success', [
       h('div', { class: 'card-head' }, [h('div', { class: 'mark ok' }, CHECK()), h('div', {}, [kicker('Done'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
       // What the Mac's proof could not yet see: said on the card as well as out loud.
@@ -2349,6 +2373,7 @@
 
   function render(items, opts) {
     const out = { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
+    const moved = [];
     if (!Array.isArray(items)) return out;
     for (const item of items.slice(0, 16)) {   // more than the vocabulary is long is a bug upstream
       if (!isValid(item)) { out.skipped.push(item && typeof item.type === 'string' ? item.type : 'invalid'); continue; }
@@ -2359,7 +2384,13 @@
       if (item.data && item.data.secondary === true) node = folded(node, foldLabel(item));
       out.nodes.push(node);
       if (CONTEXT_TYPES.indexOf(item.type) !== -1) out.hasContext = true;
+      // A proven archive comes with the thread it archived, so the owner lands back on the
+      // conversation rather than on a receipt (app/presentation.py:_thread_card). The success
+      // card is drawn FIRST, so at the moment it settles the deck that thread does not exist
+      // yet — it is settled here instead, once every card in this answer has been built.
+      if (item.type === 'success' && (item.data.archived || item.data.restored)) moved.push(item.data);
     }
+    for (const fact of moved) for (const node of out.nodes) settleThread(node, fact);
     return out;
   }
 

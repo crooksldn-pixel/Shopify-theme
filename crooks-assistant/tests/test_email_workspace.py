@@ -366,6 +366,35 @@ def test_a_proven_undo_of_an_archive_puts_the_thread_back_in_the_queue():
     assert "archived" not in success["data"]
 
 
+def test_a_proven_email_change_brings_the_thread_back_with_it(session):
+    """§19: "see VERIFIED → return to the thread". A receipt is not where the owner was going."""
+    from app.presentation import present_proposal_state
+
+    _hold_thread(session)
+    for operation in ("gmail_thread_archive", "gmail_draft_reply", "gmail_send_reply"):
+        items = present_proposal_state(_proposal(operation=operation, entity_kind="email", entity_ref=THREAD_ID))
+        types = [i["type"] for i in items]
+        assert "email_thread" in types, f"{operation}: {types}"
+        thread = next(i for i in items if i["type"] == "email_thread")
+        assert thread["data"]["thread_id"] == THREAD_ID
+        assert types.index("success") < types.index("email_thread"), "the proof comes first"
+
+
+def test_a_change_about_no_thread_draws_no_thread():
+    from app.presentation import present_proposal_state
+
+    note = _proposal(operation="order_note_append", entity_kind="order", entity_ref="gid://shopify/Order/1")
+    assert "email_thread" not in [i["type"] for i in present_proposal_state(note)]
+
+
+def test_a_thread_the_mac_has_dropped_draws_one_card_fewer_and_never_a_wrong_one(session):
+    from app.presentation import present_proposal_state
+
+    items = present_proposal_state(_proposal(operation="gmail_thread_archive", entity_kind="thread",
+                                             entity_ref="cccccccccccccccc"))
+    assert [i["type"] for i in items] == ["success"]
+
+
 def test_nothing_else_claims_a_thread_left_the_inbox():
     from app.presentation import present_proposal_state
 

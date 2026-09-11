@@ -1468,7 +1468,24 @@ function renderOpts() {
     onTab: noteTab,
     // A button beside a row. The tablet posts which action and which row and nothing else.
     onRowAction: rowAction,
+    // A proven archive moved a thread out of the inbox. `renderSuccess` settles the deck that
+    // is on screen; this settles the screens the owner will come BACK to, which the page
+    // holds as detached nodes and nothing in the document can reach.
+    onThreadMoved: threadMoved,
   };
+}
+
+// One proven change to where a thread LIVES, applied to every screen this page is holding.
+// The Mac names the thread on the success card (app/presentation.py:_inbox_change) and
+// web/ui.js:settleThread does the marking; all this adds is the back stack, because the queue
+// the owner archived from is usually one Back away and would otherwise still list it.
+function threadMoved(moved) {
+  if (!window.CrooksUI || typeof window.CrooksUI.settleThread !== 'function') return;
+  for (const entry of history) {
+    for (const node of (entry && entry.nodes) || []) {
+      if (node && node.nodeType === 1) window.CrooksUI.settleThread(node, moved);
+    }
+  }
 }
 
 // ------------------------------------------------------- where the branch is
@@ -2936,9 +2953,21 @@ function composeCardFor(node) {
   return node && node.closest ? node.closest('.card') : null;
 }
 
-// A re-render of one card, in place. `pushContext` is wrong here — a corrected address is not
-// a new screen, and pushing one would put the composer on the back stack once per keystroke.
-function replaceCard(oldNode, items) {
+// A re-render of one card, in place, from the ITEMS the Mac answered with. `pushContext` is
+// wrong here — a corrected address is not a new screen, and pushing one would put the composer
+// on the back stack once per keystroke.
+//
+// NAMED FOR THE COMPOSER, and that name is load-bearing. This was `replaceCard`, which is also
+// the name of the action engine's own card swap 800 lines above it (`replaceCard(oldNode,
+// newNodes)`, which takes NODES). Two top-level function declarations with one name is not two
+// functions: the later one wins for every call site in the file, including
+// `settleAction`'s. So every committed change handed its rendered NODES to this, which passed
+// them to `CrooksUI.render` as if they were payload items, got nothing back, and returned
+// null — leaving the card that had just been applied saying "Applying…" for ever, with the
+// change proven on the Mac. That is the visible half of D-1, and the browser run that drives a
+// commit with a finger (scripts/browser/email.js) is what found it: no ASGI test can see a
+// function name collide.
+function replaceComposeCard(oldNode, items) {
   if (!oldNode || !oldNode.parentNode || !window.CrooksUI) return null;
   const rendered = window.CrooksUI.render(items, renderOpts());
   const fresh = rendered.nodes[0];
@@ -2971,7 +3000,7 @@ async function composeFieldChanged(control) {
   if (!answered) return;                                   // offline: the field keeps what was typed
   if (!answered.ok) { toast(String(answered.detail || 'That could not be applied.')); return; }
   if (!Array.isArray(answered.ui) || !answered.ui.length || !card) return;
-  const fresh = replaceCard(card, answered.ui);
+  const fresh = replaceComposeCard(card, answered.ui);
   if (!fresh) return;
   T.record('compose_field', { name, status: String((answered.changed || {}).status || '') });
   // The owner is still typing into this field. Put the focus and the caret back, or the

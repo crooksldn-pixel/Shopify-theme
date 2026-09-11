@@ -355,13 +355,16 @@ def test_the_email_thread_carries_a_rail_of_its_own():
     card = present([ok("gmail_read_thread", thread)], writes={"allowed": True, "capabilities": caps})[0]
     assert card["type"] == "email_thread"
     actions = card["data"]["actions"]
-    assert [(a["id"], a["mode"]) for a in actions] == [("reply", "open"), ("email_archive", "stage")]
+    # Reply opens the reply and Archive prepares the change — the two at full weight — and
+    # Dictate arms the microphone for the same thread from behind the rail's disclosure.
+    assert [(a["id"], a["mode"]) for a in actions] == [("reply", "open"), ("email_archive", "stage"), ("dictate", "ask")]
+    assert [a["priority"] for a in actions] == ["primary", "primary", "secondary"]
     assert actions[0]["family"] == "email.reply" and actions[0]["instruction"] == "Reply to this email"
     assert actions[0]["command"] == "compose.reply" and actions[0]["args"] == "thread_id=aa70d3f83dbef06e"
     assert actions[1]["detail"], "a staged chip says what it does, under a confirm"
     # No draft capability: no Reply. Archive is gated by rows.actions_for on the write tool.
     only_archive = present([ok("gmail_read_thread", thread)], writes={"allowed": True, "capabilities": {}})[0]
-    assert [a["id"] for a in only_archive["data"]["actions"]] == ["email_archive"]
+    assert [a["id"] for a in only_archive["data"]["actions"]] == ["email_archive"], "no draft capability, no reply and no dictate"
     # Changes off: nothing on the rail, exactly as on the order card.
     assert present([ok("gmail_read_thread", thread)])[0]["data"]["actions"] == []
 

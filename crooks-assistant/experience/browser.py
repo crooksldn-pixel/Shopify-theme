@@ -31,6 +31,11 @@ SCRIPT = ROOT / "scripts" / "browser" / "experience.js"
 # found on the device and the 800 x 1280 gate could not see. Run after the gate, folded into
 # the same result, so one green means both sizes.
 TABLET_SCRIPT = ROOT / "scripts" / "browser" / "tablet.js"
+# The email workspace, driven with a finger: the Reply path end to end, every enabled rail
+# chip actually pressed, a precision field typed into through a redraw, and the archive
+# proven out of the queue (§19, §20, §22). Its own file and its own run, because it walks one
+# long path rather than sampling many screens, and a failure in it has to name the step.
+EMAIL_SCRIPT = ROOT / "scripts" / "browser" / "email.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -173,8 +178,13 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
     return sorted(out.glob("*.png"))
 
 
-async def run_checks() -> dict[str, Any]:
-    """The browser checks on their own, for a test to assert on."""
+async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, Any]:
+    """The browser checks on their own, for a test to assert on.
+
+    `scripts` names which runs to make; the default is the two that have always been here. A
+    caller that wants one leg of the experience — the email workspace, say — asks for that
+    file alone rather than paying for the whole sweep to assert on one path.
+    """
     ok, why = available()
     if not ok:
         return {"skipped": True, "why": why, "checks": []}
@@ -182,7 +192,7 @@ async def run_checks() -> dict[str, Any]:
     server, task, _store = await serve_fixture_world(port)
     try:
         results = []
-        for script in (SCRIPT, TABLET_SCRIPT):
+        for script in (scripts if scripts is not None else (SCRIPT, TABLET_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(
