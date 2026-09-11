@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.observability import claims
+from app.observability import claims, visible
 from app.observability.timeline import read_events
 
 # The classes a failed or partial turn is filed under, in the order they are tested.
@@ -45,6 +45,9 @@ CLASSES = (
     "FALSE_SUCCESS", "UNFULFILLED_ACTION", "ACTION_MISMATCH", "UI_INTENT_UNFULFILLED", "UI_RELATION_MISSING",
     "DATA_FIELD_UNAVAILABLE", "INTENT_DIVERGENCE", "PARTIAL_COVERAGE",
     "TOOL_SELECTION_ERROR", "UI_RENDER_ERROR", "UI_NAVIGATION_PROBLEM", "CONTEXT_INCOMPLETE", "INTENT_ERROR", "UNKNOWN",
+    # What the OWNER could see (app/observability/visible.py). Tested last and reported first:
+    # these are the classes that make a turn the backend called successful a failure.
+    *visible.CLASSES,
 )
 SEVERITY = {
     "FALSE_SUCCESS": 6, "ACTION_MISMATCH": 6,
@@ -54,6 +57,7 @@ SEVERITY = {
     "UI_INTENT_UNFULFILLED": 3, "DATA_FIELD_UNAVAILABLE": 3, "INTENT_DIVERGENCE": 3, "PARTIAL_COVERAGE": 2,
     "STT_ERROR": 3, "MISSING_CAPABILITY": 3, "UNKNOWN": 3,
     "TOOL_SELECTION_ERROR": 2, "CONTEXT_INCOMPLETE": 2, "INTENT_ERROR": 2, "UI_NAVIGATION_PROBLEM": 2,
+    **visible.SEVERITY,
 }
 COMPONENT = {
     "GESTURE_COLLISION": "the tablet's touch handling (web/app.js): a second finger ended the recording before the recogniser saw any speech",
@@ -73,6 +77,7 @@ COMPONENT = {
     "UI_RENDER_ERROR": "the tablet renderer (web/ui.js, app/presentation.py)", "UI_NAVIGATION_PROBLEM": "the tablet's screens (web/app.js)",
     "CONTEXT_INCOMPLETE": "context hydration (app/context/order.py, /context route)", "INTENT_ERROR": "the model's reading of the request (system prompt, normaliser)",
     "UNKNOWN": "unclassified — read the turn's events",
+    **visible.COMPONENT,
 }
 PERMISSION_CODES = frozenset({
     "writes_disabled", "allow_list_missing", "scope_missing", "gmail_scope_missing", "not_authorised", "not_authorised_local", "identity_unverified", "wrong_session",
@@ -283,6 +288,16 @@ class Turn:
     # The request as the ROUTER read it (app/observability/semantics.py). Set by the
     # classifier; `None` on a turn with nothing said.
     verdict: Any = None
+    # The two outcomes (§17, app/observability/visible.py). `outcome` above is the report's
+    # old single verdict and stays what it was; these are what the SERVER did and what the
+    # OWNER could see, and `experience` is the verdict the two produce together. A turn is not
+    # successful because the backend verified.
+    backend: str = ""
+    visible: str = ""
+    experience: str = ""
+    predictions: list[dict[str, Any]] = field(default_factory=list)
+    anticipations: list[dict[str, Any]] = field(default_factory=list)
+    feedback: list[dict[str, Any]] = field(default_factory=list)
 
     # ---- what was said
     @property
@@ -383,6 +398,9 @@ class Reconstruction:
     # `hold` events and the branch forks they caused. Used to tell a gesture collision from a
     # failure of the recogniser.
     collisions: list[dict[str, Any]] = field(default_factory=list)
+    # What the owner could SEE (app/observability/visible.py): the findings, the two outcomes
+    # per turn, and what he said about the product while he was testing it.
+    experience: Any = None
 
     def turn(self, turn_id: str) -> Turn | None:
         return next((t for t in self.turns if t.turn_id == turn_id), None)
@@ -549,6 +567,23 @@ def reconstruct(events: list[dict[str, Any]], *, capability_states: dict[str, di
             if turn is not None:
                 turn.branch_events.append(event)
             controls.append(event)
+        elif kind in ("prediction", "anticipation"):
+            # What the Mac guessed the owner would want next, and what it started reading
+            # before he asked. Read here so an hour that anticipated 9 times and was starved 3
+            # times can be reported as one sentence rather than as "event kinds this report
+            # does not read".
+            turn = turn_for(event) or _turn_during(turns, order, event)
+            if turn is not None:
+                (turn.predictions if kind == "prediction" else turn.anticipations).append(event)
+            controls.append(event)
+        elif kind == "owner_feedback":
+            # What the owner said about the product while he was testing it (§16). Filed
+            # against its turn so the report can print it beside what was on screen.
+            turn = turn_for(event) or _turn_during(turns, order, event)
+            if turn is not None:
+                turn.feedback.append(event)
+            else:
+                orphans.append(event)
         elif kind == "unsupported_claim":
             turn = turn_for(event)
             if turn is not None:
@@ -611,8 +646,14 @@ def reconstruct(events: list[dict[str, Any]], *, capability_states: dict[str, di
         _classify(turn, collisions=collisions, capability_states=capability_states)
         turn.cluster = _cluster(turn)
     _mark_repeats(result)
-    return Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans,
-                          unknown_kinds=unknown, controls=controls, collisions=collisions)
+    rec = Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans,
+                         unknown_kinds=unknown, controls=controls, collisions=collisions)
+    # The second reading: what the owner could SEE. It runs over the whole reconstruction
+    # because most of what it reads spans turns — six reconciles across six turns, a burst of
+    # Home in twenty seconds, a half focused and never redrawn — and it puts its classes on
+    # the turns themselves, so every section that reads `turn.classes` reads these too.
+    rec.experience = visible.apply(rec)
+    return rec
 
 
 def _turn_during(turns: dict[str, Turn], order: list[str], event: dict[str, Any]) -> Turn | None:
@@ -1486,7 +1527,19 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
     counts = Counter(t.outcome for t in turns)
     add(f"- Started {_clock(session.get('started_at'))}, stopped {_clock(session.get('stopped_at'))}; duration {(_fmt_s(duration))}.")
     add(f"- Interactions: **{len(turns)}** turns across {len({t.session_id for t in turns})} conversation(s); {sum(len(t.tools) for t in turns)} tool calls; {len(rec.proposals)} proposals.")
-    add(f"- Successful **{counts.get('successful', 0)}** · partial **{counts.get('partial', 0)}** · failed **{counts.get('failed', 0)}**.")
+    add(f"- Successful **{counts.get('successful', 0)}** · partial **{counts.get('partial', 0)}** · failed **{counts.get('failed', 0)}** — "
+        "by what the BACKEND did, which is the number the September report gave and the one that was wrong.")
+    experience = rec.experience
+    if experience is not None:
+        lived = Counter(t.experience for t in turns)
+        add(f"- **As the owner lived it: successful {lived.get('SUCCESSFUL', 0)} · partial {lived.get('PARTIAL', 0)} · "
+            f"failed {lived.get('FAILED', 0)}.** A turn is not successful because the change verified; "
+            "section 16 gives both outcomes per turn.")
+        if experience.ignored_feedback:
+            add(f"- **{len(experience.ignored_feedback)} defect(s) the owner reported out loud that nothing recorded** "
+                "— section 15.")
+        elif experience.feedback:
+            add(f"- {len(experience.feedback)} defect(s) the owner reported out loud, recorded — section 15.")
     add(f"- By input: {dict(Counter(t.input or 'unknown' for t in turns))}. Events: {len(rec.events)} ({sum(1 for e in rec.events if e.get('source') == 'tablet')} from the tablet).")
     if rec.unknown_kinds:
         add(f"- Event kinds this report does not read: {dict(rec.unknown_kinds)}.")
@@ -1563,11 +1616,17 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
         "UI_RELATION_MISSING: an email surface was drawn with no order on it in a turn whose own data held one; the relation existed and the screen did not carry it. "
         "STT_ERROR: the recogniser returned no usable text, with no gesture to explain it. TIMEOUT: the turn, a tool or the tablet gave up. PERMISSION_ERROR: a tap refused by the write boundary. MISSING_CAPABILITY: a tool asked for that is not registered, or an answer that says it cannot with no tool having succeeded. TOOL_ERROR: a tool raised or returned an error. VERIFICATION_ERROR: a change sent but not proven. TOOL_SELECTION_ERROR: repeated calls with unissued ids, a rule refusal, or the same call twice. UI_RENDER_ERROR: a tablet exception, a card it could not draw, a failed image. UI_NAVIGATION_PROBLEM: the screen left within three seconds, or a touch on something dead. CONTEXT_INCOMPLETE: part of the order never arrived. INTENT_ERROR: a clarifying question though the request named its entity. UNKNOWN: an error nothing above explains.")
     add("")
-    failed = [t for t in turns if t.outcome != "successful"]
+    add("The last fifteen are what the OWNER could see rather than what the server did "
+        "(`app/observability/visible.py`), and they are why this report's numbers differ from the "
+        "September one's. " + " ".join(f"{name}: {visible.TASKS[name].split('.')[0]}." for name in visible.CLASSES))
+    add("")
+    # Every turn the owner did not get what he wanted — which is not the same set as the turns
+    # the backend failed, and that difference is the whole of §17.
+    failed = [t for t in turns if t.outcome != "successful" or t.experience != "SUCCESSFUL"]
     rows = []
     for t in failed:
-        rows.append([t.turn_id, t.raw_text, t.question if t.question != t.raw_text else "(same)", t.answer, ", ".join(f"{x.tool}:{x.outcome or '?'}" for x in t.tools) or "—", "; ".join(t.signals), ", ".join(c.get("type", "") for c in ((t.render or {}).get("cards") or [])) or ", ".join(t.ui) or "—", ", ".join(t.classes)])
-    lines.extend(_table(["Turn", "Owner said", "Normalised", "Assistant answered", "Tools attempted", "Technical reason", "UI displayed", "Class"], rows))
+        rows.append([t.turn_id, t.raw_text, t.question if t.question != t.raw_text else "(same)", t.answer, ", ".join(f"{x.tool}:{x.outcome or '?'}" for x in t.tools) or "—", "; ".join(t.signals), ", ".join(c.get("type", "") for c in ((t.render or {}).get("cards") or [])) or ", ".join(t.ui) or "—", ", ".join(t.classes), f"{t.backend} / {t.visible} / {t.experience}"])
+    lines.extend(_table(["Turn", "Owner said", "Normalised", "Assistant answered", "Tools attempted", "Technical reason", "UI displayed", "Class", "backend / visible / experience"], rows))
     add("By class: " + (", ".join(f"{k} × {v}" for k, v in Counter(c for t in failed for c in t.classes).most_common()) or "none") + ".")
     add("")
 
@@ -1878,9 +1937,132 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
     tapped = sum(1 for t in turns if t.commands)
     add(f"- Turns with a tap of their own: {tapped} of {len(turns)}. Commands outside any turn: {len([e for e in commands if not any(e in t.commands for t in turns)])}.")
     add("")
+    predictions = [e for t in turns for e in t.predictions] + [e for e in rec.controls if str(e.get("kind") or "") == "prediction"]
+    anticipations = [e for t in turns for e in t.anticipations] + [e for e in rec.controls if str(e.get("kind") or "") == "anticipation"]
+    if predictions or anticipations:
+        levels = Counter(str(e.get("level") or e.get("tier") or "") for e in predictions)
+        states = Counter(str(e.get("state") or e.get("event") or "") for e in anticipations)
+        add(f"- What the Mac guessed would be wanted next: {len(set(id(e) for e in predictions))} prediction(s) "
+            f"by level {dict(levels) or '—'}; {len(set(id(e) for e in anticipations))} anticipation record(s) "
+            f"by state {dict(states) or '—'}.")
+        starved = [t.turn_id for t in turns if "FOREGROUND_STARVED" in t.classes]
+        if starved:
+            add(f"  **Anticipation was added to make the product feel faster and it refused work instead:** "
+                f"the owner's own read was starved in {', '.join(starved)} (section 16).")
+        add("")
+
+    # 15 -----------------------------------------------------------------------------
+    add("## 15. OWNER-REPORTED DEFECTS")
+    add("")
+    add("What the owner said about the product, in his own words, while he was using it. "
+        "Verbatim, because a defect paraphrased is a defect argued about; and first in this half of "
+        "the report, because a tester narrating what is broken is the most valuable thing in an hour. "
+        "He should not have to say any of it twice.")
+    add("")
+    lines.extend(_owner_defects(rec))
+
+    # 16 -----------------------------------------------------------------------------
+    add("## 16. Two outcomes per turn")
+    add("")
+    add("`backend` is what the server did. `visible` is what the owner could see. `experience` is the "
+        "verdict the two produce together, and their DISAGREEMENT is the defect: a send that Gmail "
+        "confirmed while the card still said “Applying…” is a failed turn, whatever the action engine "
+        "proved. The September report had only the first column, and that is how an hour the owner "
+        "spent reporting four defects was scored eleven successful of fourteen.")
+    add("")
+    lines.extend(_two_outcomes(rec))
     add("---")
     add(f"Timeline: `logs/test-sessions/{session.get('test_session_id')}.jsonl` · {len(rec.events)} events · {len(rec.orphans)} outside any turn · {len(rec.controls)} command / branch event(s).")
     return "\n".join(lines) + "\n"
+
+
+def _owner_defects(rec: Reconstruction) -> list[str]:
+    """Section 15: the owner's own words, and what was on screen when he said them.
+
+    Two tables, because the difference matters. The first is what the session RECORDED — an
+    `owner_feedback` event, which is what §16 of the brief added. The second is what he said
+    that nothing recorded, which is what the live hour did twice: he asked for a defect to be
+    logged, was told there was no tool for it, and the report that came out did not mention it.
+    """
+    experience = rec.experience
+    if experience is None:
+        return ["_none_", ""]
+    out: list[str] = []
+    if experience.feedback:
+        out.append(f"**{len(experience.feedback)} recorded during the session.**")
+        out.append("")
+        for event in experience.feedback:
+            when = _clock(event.get("ts"))
+            where = ", ".join(str(x) for x in (event.get("screen") or [])) or "no card"
+            refs = ", ".join(f"{e.get('kind')} {e.get('ref')}" for e in (event.get("entities") or [])
+                             if isinstance(e, dict)) or "nothing open"
+            nearby = ", ".join(f"{row.get('kind')} {row.get('id') or ''}".strip()
+                               for row in (event.get("nearby") or [])[:4]) or "nothing"
+            out.append(f"- **{when}** · {event.get('shape') or 'feedback'} · half {event.get('branch_id') or '—'} "
+                       f"· on screen: {where} · holding: {refs}")
+            out.append(f"  > {' '.join(str(event.get('text') or '').split())}")
+            out.append(f"  Nearby: {nearby}. Turn `{event.get('turn_id') or '—'}`.")
+        out.append("")
+    if experience.ignored_feedback:
+        out.append(f"**{len(experience.ignored_feedback)} the owner reported and NOTHING recorded.** "
+                   "Read back from what he said, because no `owner_feedback` event exists for these turns: "
+                   "either the session was not in test mode, or the sentence never reached the family that "
+                   "takes it. Each one is still a defect he reported, and it is printed here so the hour is "
+                   "not lost.")
+        out.append("")
+        for row in experience.ignored_feedback:
+            out.append(f"- **{_clock(row.get('at'))}** · {row.get('shape')} · turn `{row.get('turn_id')}` "
+                       f"· on screen: {', '.join(row.get('screen') or []) or 'no card'}")
+            out.append(f"  > {' '.join(str(row.get('text') or '').split())}")
+            out.append(f"  The assistant answered: “{_cell(row.get('answer'), 160)}”")
+        out.append("")
+    if not experience.feedback and not experience.ignored_feedback:
+        out.append("_The owner said nothing about the product itself during this session._")
+        out.append("")
+    return out
+
+
+def _two_outcomes(rec: Reconstruction) -> list[str]:
+    """Section 16: the line §17 asks for, one per turn, and what was read to draw it."""
+    experience = rec.experience
+    if experience is None:
+        return ["_none_", ""]
+    out: list[str] = ["```"]
+    for row in experience.rows:
+        out.append(f"{row.turn_id}  {row.line()}")
+    out.append("```")
+    out.append("")
+    disagree = [r for r in experience.rows if r.backend in ("VERIFIED", "READ_OK", "ANSWERED")
+                and r.experience == "FAILED"]
+    if disagree:
+        out.append(f"**{len(disagree)} turn(s) where the server did its part and the owner still could not.** "
+                   "Every one of those was counted as a success by the September rule.")
+        out.append("")
+    counts = experience.counts
+    if counts:
+        out.append("What the owner could see, by class. Each row is a count over ids, and the rule that drew it "
+                   "is named in `app/observability/visible.py`.")
+        out.append("")
+        out.extend(_table(["What the owner saw", "Times", "Severity", "Turns", "Likely component"], [
+            [name, n, SEVERITY[name],
+             ", ".join(dict.fromkeys(f.turn_id for f in experience.of(name)))[:120],
+             COMPONENT[name]]
+            for name, n in sorted(counts.items(), key=lambda kv: (-SEVERITY[kv[0]], -kv[1], kv[0]))
+        ]))
+        out.append("The evidence, finding by finding:")
+        out.append("")
+        out.extend(_table(["What the owner saw", "Turn", "About", "What was read"], [
+            [f.name, f.turn_id, f.subject or "—", f.signal] for f in experience.findings
+        ]))
+    else:
+        out.append("_Nothing the owner could see went wrong in this session._")
+        out.append("")
+    if experience.errors:
+        out.append(f"**Rules that could not read this timeline: {', '.join(experience.errors)}.** "
+                   "A detection that silently stops detecting is how an hour comes to be scored wrongly, "
+                   "so it is reported rather than swallowed.")
+        out.append("")
+    return out
 
 
 def _fmt_s(seconds: float | None) -> str:
@@ -1920,6 +2102,8 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
         "DATA_FIELD_UNAVAILABLE": "the answer said a field is not available and a registered tool returns it: name the tool in the prompt, or in the tool's own description.",
         "INTENT_DIVERGENCE": "the answer addressed a mechanism the request never named. Read the pair; the misunderstanding is usually one word.",
         "PARTIAL_COVERAGE": "a read covered part of what was asked and the answer did not say so. Make the coverage line part of the answer, not the result.",
+        # What the owner could SEE, and what to do about each (app/observability/visible.py).
+        **visible.TASKS,
     }
     for cls, group in by_class.items():
         out.append({
