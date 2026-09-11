@@ -2249,7 +2249,7 @@
   const FIELD_DRAFT_TTL_MS = 15000;
   const DRAFTS = new Map();
   const nowMs = () => (typeof Date !== 'undefined' && Date.now ? Date.now() : 0);
-  const draftKey = (composeId, name) => `${composeId} ${name}`;
+  const draftKey = (composeId, name) => `${composeId}\u0000${name}`;   // the escape, not the byte: a literal NUL makes grep call this file binary
   // Which field the thumb is in, so a redraw puts the caret back where it was rather than at
   // the end of what was typed.
   let focusedField = '';

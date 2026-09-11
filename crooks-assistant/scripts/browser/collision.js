@@ -235,6 +235,7 @@ async function one(browser, vp) {
   };
 
   // ---- the fixtures, one at a time
+  const fake = [];
   for (const item of CASES) {
     const drawn = await page.evaluate((items) => window.__collideDraw(items), item.ui);
     if (!drawn.nodes) { check(`${vp.name} · ${item.id} renders`, false, `nodes=${drawn.nodes} skipped=${(drawn.skipped || []).join(',')}`); continue; }
@@ -247,8 +248,21 @@ async function one(browser, vp) {
     });
     await page.waitForTimeout(140);
     await measure(item.id);
+    fake.push(...await fakeControls(page, item.id));
   }
   await shot(page, `collide-${vp.width}-cards`);
+
+  // §6: if something looks clickable, one of these must be true. A. it works completely.
+  // B. it is visibly disabled with a useful reason. C. it is changed so it no longer looks
+  // clickable. There is no D — and "there is no D" is a claim about EVERY control, which no
+  // per-case test can make. This is the sweep: every fixture, both viewports, every element
+  // a thumb would read as a control.
+  //
+  // It would have caught the one this pass found by accident: `h()` stringified a null
+  // dataset value, so `data-command` became the four characters "null" and every rail chip
+  // on every card posted a command by that name and took a 400. The chips looked perfect.
+  check(`${vp.name} · every control either works, or says why it cannot`, fake.length === 0,
+    fake.slice(0, 6).map((f) => `${f.where}: ${f.sel} — ${f.why}`).join(' | '));
 
   // ---- and the number a future session will record.
   //
@@ -348,6 +362,58 @@ async function one(browser, vp) {
   check(`${vp.name} · the notification path is the one the page owns`, noted === 'notify', `via ${noted}`);
   check(`${vp.name} · no script error while measuring`, errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
+}
+
+/* Every element in the deck a thumb would read as a control, judged against §6.
+ *
+ * A control is FINE when it is disabled and says so (aria-disabled or :disabled, with words
+ * in it or beside it), or when it is enabled and carries something to act on — a command the
+ * Mac named, a reference to open, a role the page wires by class. It is FAKE when it is
+ * enabled and carries nothing, or when what it carries is empty or the literal string
+ * "null"/"undefined", which is what a stringified absent value looks like by the time it
+ * reaches the DOM.
+ */
+async function fakeControls(page, where) {
+  return page.evaluate((at) => {
+    const WIRED = ['data-command', 'data-ref', 'data-area', 'data-proposal', 'data-tab',
+                   'data-compose', 'data-field', 'data-action', 'data-branch', 'data-nav'];
+    // A control wired by an addEventListener carries nothing a page script can see — there is
+    // no way to ask the DOM what listeners a node has. So the contract is a CONVENTION: a
+    // control the renderer wires itself declares one of these classes. That makes this check
+    // an allowlist rather than a proof, and the allowlist is the point — a new control that
+    // is neither on it nor carrying data fails here until somebody says which it is.
+    const CLASS_WIRED = /\b(disc-head|fold-head|link-btn|rail-chip|row|tab|dock-btn|chip-step|action-surface|note-close|step-btn|msg|filter-chip)\b/;
+    const bad = [];
+    const nodes = document.querySelectorAll('#cards button, #cards [role="button"], #cards [role="tab"], #cards a[href], #cards .tappable, #cards [data-command]');
+    for (const el of nodes) {
+      const box = el.getBoundingClientRect();
+      if (box.width < 2 || box.height < 2) continue;          // not on the screen at all
+      const sel = el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).split(' ')[0] : '');
+      const off = el.disabled === true || el.getAttribute('aria-disabled') === 'true';
+      if (off) {
+        // B: visibly disabled, and the reason is words the owner can read — on it, or on the
+        // thing it sits in. A disabled control that says nothing is worse than no control.
+        const words = (el.textContent || '') + ' ' + (el.getAttribute('title') || '') + ' '
+          + (el.getAttribute('aria-label') || '') + ' ' + ((el.parentNode && el.parentNode.textContent) || '');
+        if (words.trim().length < 2) bad.push({ where: at, sel, why: 'disabled and says nothing' });
+        continue;
+      }
+      // A: enabled, so it must carry something to act on.
+      let carries = CLASS_WIRED.test(String(el.className || '')) || el.tagName === 'A';
+      for (const name of WIRED) {
+        if (!el.hasAttribute(name)) continue;
+        const value = String(el.getAttribute(name) || '').trim();
+        if (!value || value === 'null' || value === 'undefined') {
+          bad.push({ where: at, sel, why: `${name}="${value}"` });
+          carries = true;      // it is reported already; do not report it twice as bare
+          break;
+        }
+        carries = true;
+      }
+      if (!carries) bad.push({ where: at, sel, why: 'enabled and carries nothing to act on' });
+    }
+    return bad;
+  }, where);
 }
 
 async function shot(page, name) {
