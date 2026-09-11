@@ -79,26 +79,35 @@ def test_a_long_lived_key_never_contaminates_the_next_one():
     assert not ledger.check(budget.NAVIGATION, "tap_sales", cost=6), "a tap inherited a turn's spend"
 
 
-def test_the_lower_lanes_can_never_take_the_last_slot_of_a_source():
-    """Speculation and background are capped below a source's concurrency, so an owner read
-    always finds a slot. Measured against the scheduler's own limits."""
+def test_the_owners_read_is_never_refused_a_slot():
+    """Fill a source with speculation and then ask for it in each of the owner's three lanes.
+
+    The guarantee is stated as "never refused" rather than "a slot is reserved", because that
+    is what the code does and it is the stronger of the two: his reads are what the source is
+    for, and the pacing of them is the scheduler's per-plan semaphore.
+    """
     throttle = budget.Throttle()
-    for lane in (budget.BACKGROUND, budget.SPECULATION):
-        for source in ("shopify", "gmail"):
-            assert throttle.slots(source, lane) < throttle.slots(source, budget.FOREGROUND)
     held = []
     while throttle.admit("shopify", budget.SPECULATION):
         held.append(throttle.take("shopify", budget.SPECULATION))
-    assert held, "speculation could not take a single slot"
-    assert throttle.admit("shopify", budget.FOREGROUND), "the owner's read was locked out"
+    assert len(held) == budget.SOURCE_SLOTS["shopify"], "the source's global limit did not bind"
+    assert not throttle.admit("shopify", budget.SPECULATION)
+    assert not throttle.admit("shopify", budget.BACKGROUND), "a background job took a full source"
+    for lane in (budget.FOREGROUND, budget.NAVIGATION, budget.PRECONDITION):
+        assert throttle.admit("shopify", lane), f"{lane} was locked out by speculation"
+    for one in held:
+        throttle.give_back(one)
+    assert throttle.in_flight("shopify") == 0
 
 
 def test_starting_owner_work_stands_the_lower_lanes_down():
-    stood_down: list[tuple[str, str]] = []
-    token = budget.on_yield(lambda scope, lane: stood_down.append((scope, lane)) or 1)
+    stood_down: list[budget.Standdown] = []
+    token = budget.on_yield(lambda ask: stood_down.append(ask) or 1)
     try:
-        assert budget.yield_to(budget.FOREGROUND, scope="owner|s1") == 2
-        assert [lane for _, lane in stood_down] == [budget.BACKGROUND, budget.SPECULATION]
+        assert budget.yield_to(budget.FOREGROUND, scope="owner|s1", branch_id="br_1") == 2
+        assert [ask.lane for ask in stood_down] == [budget.BACKGROUND, budget.SPECULATION]
+        assert {ask.scope for ask in stood_down} == {"owner|s1"}
+        assert {ask.branch_id for ask in stood_down} == {"br_1"}, "a stand-down lost which half asked"
         stood_down.clear()
         # Speculation asking to run stands nothing down: there is nothing below it.
         assert budget.yield_to(budget.SPECULATION, scope="owner|s1") == 0
@@ -134,7 +143,7 @@ async def test_speculation_at_its_cap_does_not_refuse_the_owners_dock_command(st
 
 
 async def test_a_read_heavy_turn_does_not_refuse_the_tap_that_follows_it(stage):
-    """"Opening Sales after exploring orders must get Sales.""""
+    """Opening Sales after exploring orders must get Sales."""
     from app.tools.dispatch import dispatch
 
     session = stage.runtime.sessions.get_or_create("s1")
@@ -190,7 +199,7 @@ async def test_the_owner_asking_stands_the_speculative_lane_down(stage):
     and it is the budget layer that decides which lanes are below the one asking."""
     session = stage.runtime.sessions.get_or_create("s1")
     stood: list[str] = []
-    token = budget.on_yield(lambda scope, lane: stood.append(lane) or 0)
+    token = budget.on_yield(lambda ask: stood.append(ask.lane) or 0)
     try:
         await run_plan(
             ReadPlan([Read("mine", "commerce_query", {"entity": "orders", "period": "today", "limit": 5},
@@ -204,9 +213,8 @@ async def test_the_owner_asking_stands_the_speculative_lane_down(stage):
 
 async def test_reads_stay_reads_whatever_lane_they_are_in():
     """The non-negotiable, restated where the lanes are chosen: no lane can name a write."""
-    from app.reads.scheduler import WriteInPlan, assert_reads_only
-
     import app.tools.shopify_writes  # noqa: F401
+    from app.reads.scheduler import WriteInPlan, assert_reads_only
 
     for lane in budget.LANES:
         plan = ReadPlan([Read("x", "shopify_order_note_append", {})], lane=lane)

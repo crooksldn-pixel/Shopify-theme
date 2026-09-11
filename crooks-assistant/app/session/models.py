@@ -83,8 +83,13 @@ class Session:
     # every proposal made while it runs is written against it. Empty between turns.
     turn_id: str = ""
     # The turn's reading plan (app/analytics/plan.py): how many queries it has run, at what
-    # cost, and their answers, so the same query is not run twice.
+    # cost, and their answers, so the same query is not run twice. A view of `read_budgets`
+    # below; set to None to clear the budgets, which is what the benches do between rows.
     plan: Any = None
+    # This conversation's read budgets, one per lane (app/reads/budget.py). Five bounds
+    # rather than one, because a guess must not be able to spend the owner's and a tap must
+    # not inherit a turn's — which is D-4.
+    read_budgets: Any = None
     # The working sets this conversation holds (app/analytics/sets.py): what "these" means.
     sets: dict[str, Any] = field(default_factory=dict)
     # Bulk changes proposed this session (app/actions/batch.py), by batch id. Their

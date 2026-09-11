@@ -307,14 +307,20 @@ async def test_a_turns_queries_are_bounded_and_the_same_one_is_not_run_twice(sto
     second = await dispatch("commerce_aggregate", dict(args), session=session, timeout_s=5, calls=calls)
     assert second.startswith("(the same query already ran this turn") and second.endswith(first) and store.pages == pages
     assert calls[-1].result == {"reused": True} and session.plan.calls == 1
-    monkeypatch.setattr(plan, "MAX_CALLS", 2)
+    # The bound itself lives with the lanes now (app/reads/budget.py): `plan.MAX_CALLS` is a
+    # mirror of the foreground lane's, so a test that narrows the bound narrows the lane.
+    from app.reads import budget as read_budget
+
+    monkeypatch.setitem(read_budget.BUDGETS, read_budget.FOREGROUND,
+                        read_budget.Budget(calls=2, cost=plan.TURN_COST, elapsed_s=plan.MAX_ELAPSED_S))
     await dispatch("commerce_aggregate", {"period": "last_7_days", "group_by": ["size"], "metrics": ["units"]}, session=session, timeout_s=5, calls=calls)
     refused = await dispatch("commerce_aggregate", {"period": "last_7_days", "group_by": ["colour"], "metrics": ["units"]}, session=session, timeout_s=5, calls=calls)
     assert refused.startswith("REFUSED: this turn has already run 2 queries") and calls[-1].ok is False
     session.turn_id = "turn_next"
     fresh = await dispatch("commerce_aggregate", {"period": "last_7_days", "group_by": ["colour"], "metrics": ["units"]}, session=session, timeout_s=5, calls=calls)
     assert not fresh.startswith("REFUSED"), "a new turn starts a new plan"
-    monkeypatch.setattr(plan, "TURN_COST", 3)
+    monkeypatch.setitem(read_budget.BUDGETS, read_budget.FOREGROUND,
+                        read_budget.Budget(calls=8, cost=3, elapsed_s=plan.MAX_ELAPSED_S))
     session.turn_id = "turn_costly"
     costly = await dispatch("commerce_aggregate", {"period": "last_90_days", "group_by": ["product"], "metrics": ["units"]}, session=session, timeout_s=5, calls=calls)
     assert "query budget is spent" in costly and calls[-1].ok is False

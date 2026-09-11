@@ -599,6 +599,19 @@ def _route(text: str, branch):
     return lane, why, intent, recipe
 
 
+# The other thing a request asked for, said in a clause. Explicit requested work outranks
+# contextual status (§14, D-14) — but the status half was ASKED, and the live session's answer
+# to "are you okay now?" was the capability delta INSTEAD of the emails. Answering the work
+# and saying nothing about the health would be the same mistake with the halves swapped.
+#
+# Fixed sentences, and true by construction: the Mac is answering, so it is running. Nothing
+# here claims anything the turn has not already proved.
+_SECONDARY_WORDS = {
+    "capability_delta": "I'm back up and running.",
+    "capability_summary": "I'm back up and running.",
+}
+
+
 async def _fast(runtime, session, branch, intent, recipe, text: str):
     """Run a recipe. Returns its answer, or None when it deferred and Claude should answer."""
     from app.fastpath import run as run_recipe
@@ -613,6 +626,9 @@ async def _fast(runtime, session, branch, intent, recipe, text: str):
         # The turn is about to be answered properly; it was never a second turn.
         session.turns -= 1
         return None
+    aside = _SECONDARY_WORDS.get(str(getattr(intent, "secondary", "") or ""))
+    if aside and answer.answer:
+        answer.answer = f"{aside} {answer.answer.lstrip()}"
     return answer
 
 

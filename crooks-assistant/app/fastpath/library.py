@@ -15,6 +15,7 @@ import re
 import time
 from typing import Any
 
+from app.fastpath import correction
 from app.fastpath.models import Ctx, FastAnswer
 from app.fastpath.recipes import (
     CACHE_ANALYTICS,
@@ -44,14 +45,29 @@ _PERIODS: tuple[tuple[tuple[str, ...], str], ...] = (
 _DAY_WINDOWS = {"7": "last_7_days", "seven": "last_7_days", "30": "last_30_days", "thirty": "last_30_days", "90": "last_90_days", "ninety": "last_90_days"}
 
 
+# The periods this extractor may return: the ones `_PERIODS` and `_DAY_WINDOWS` name, which
+# are the ones app/analytics/periods.py resolves. A correction to anything else — "tomorrow"
+# — is a real correction about a period the read layer has no answer for, and declining is
+# the honest end of it.
+_RESOLVABLE = frozenset({name for _, name in _PERIODS} | set(_DAY_WINDOWS.values()))
+
+
 def period_from(words: tuple[str, ...]) -> str | None:
     """The named period the request asks for, or None when it names none — or names two.
 
     "This week against last week" is two periods and a comparison, and which one is the
     subject is a judgement rather than a lookup. A deterministic parser that guesses there
     would answer the wrong question quickly, so it declines and Claude takes the turn.
+
+    Two periods are NOT always two questions, though. "Today's, uh, yesterday's orders" names
+    two and asks about one, and declining there sent the turn to a caller whose fallback was
+    "today" — so the owner was answered for the word he had just taken back (D-8). A spoken
+    correction is resolved first, and only an unresolved pair declines.
     """
     have = set(words)
+    fixed = correction.corrected(words, correction.PERIOD)
+    if fixed:
+        return fixed if fixed in _RESOLVABLE else None
     if {"this", "last"} <= have or {"today", "yesterday"} <= have:
         return None
     if "days" in have or "day" in have:

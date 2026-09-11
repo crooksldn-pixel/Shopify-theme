@@ -174,6 +174,27 @@ def _no_network(request, monkeypatch):
     monkeypatch.setattr(socket, "create_connection", guarded_create)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_read_layer():
+    """One test's reads are not another's.
+
+    The read layer keeps two process-wide things: what has just been read, so two callers
+    asking for one entity make one request (app/reads/dedupe.py), and how much of each source
+    is in flight (app/reads/budget.py). Both are right in a running Mac, where there is one
+    shop and one inbox — and both are wrong across a suite, where each test binds its own
+    fixture world and a twelve-second reuse window is longer than the whole run. Reset for the
+    same reason .env, the Keychain and the network are taken away: the suite's result must be
+    a fact about the code.
+    """
+    from app.reads import budget, dedupe
+
+    dedupe.current().reset()
+    budget.throttle().reset()
+    yield
+    dedupe.current().reset()
+    budget.throttle().reset()
+
+
 needs_shopify = pytest.mark.skipif(
     not shopify_configured(), reason="no Shopify credentials in the Keychain (M6 not done)"
 )

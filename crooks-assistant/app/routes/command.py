@@ -31,6 +31,7 @@ from fastapi.responses import JSONResponse
 from app import commands
 from app.observability import timeline
 from app.presentation import compact, present
+from app.reads import budget
 from app.routes.actions import session_matches, writes_context
 
 router = APIRouter(tags=["command"])
@@ -267,6 +268,14 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     recipe = RECIPES.get(recipe_id)
     if recipe is None:
         return command_mod.Outcome.refused("unknown_recipe", f"There is no recipe called {recipe_id!r}.")
+    # A tap is the owner NAVIGATING, and it gets its own budget (app/reads/budget.py). This
+    # is D-4's second half: at 00:25:48 `open.area` came back `landing_unavailable` because
+    # the turn two questions earlier had spent the one budget there was, and a landing that
+    # exists was reported as a landing that could not be drawn. The key is this tap, so
+    # opening Sales after exploring orders gets Sales.
+    lane_key = timeline.new_id("tap")
+    ledger = budget.ledger_for(session)
+    refused_before = ledger.spend(budget.NAVIGATION, lane_key).refusals
     # A tap can be about something as well as somewhere. A landing is not — Orders is Orders —
     # but a picker is about a product, and the words that narrow it come from the control that
     # was tapped. They travel where a sentence's own parameters travel, `intent.slots`, so a
@@ -277,16 +286,33 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
                     slots={str(k)[:40]: v for k, v in (outcome.changed.get("slots") or {}).items()})
     branch.working("opening " + str(outcome.changed.get("area") or recipe.ui))
     try:
-        answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent,
-                                                   text=str(outcome.changed.get("said") or ""), memory=memory()))
+        with budget.using(budget.NAVIGATION, lane_key, scope=_scope_of(session)):
+            answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent,
+                                                        text=str(outcome.changed.get("said") or ""), memory=memory()))
     finally:
         branch.idle()
     if answer.deferred:
+        if ledger.spend(budget.NAVIGATION, lane_key).refusals > refused_before:
+            # A landing that exists and was not read is not a landing that is unavailable.
+            # Saying so was how the owner was told the screen did not exist when the truth
+            # was that this tap had run out of reading.
+            return command_mod.Outcome.refused(
+                "read_budget_spent",
+                "That screen needed more reading than one tap is allowed. Ask again in a moment.",
+            )
         return command_mod.Outcome.refused("landing_unavailable", f"That could not be drawn just now ({answer.defer}).")
     calls = list(answer.calls if answer.drawn is None else answer.drawn)
     changed = {**outcome.changed, "lane": "FAST", "recipe_id": recipe_id, "partial": bool(answer.partial),
                "reads": list((answer.trace or {}).get("reads") or []), "ms": (answer.trace or {}).get("ms")}
     return command_mod.Outcome(answer=answer.answer, calls=calls, surfaces=list(answer.surfaces), changed=changed)
+
+
+def _scope_of(session) -> str:
+    """The conversation, in the shape the anticipation layer's scopes use, so a tap stands
+    down the guesses made for THIS conversation and no other."""
+    from app.reads.scheduler import _scope_of as scope_of
+
+    return scope_of(session)
 
 
 async def _read_member(runtime, session, needs: dict) -> list:
@@ -303,9 +329,12 @@ async def _read_member(runtime, session, needs: dict) -> list:
     ref = str(needs.get("ref") or "")
     if not tool or not ref:
         return []
+    # The cursor landed somewhere the Mac does not hold: this is the owner's NAVIGATION being
+    # hydrated, which is lane 2 and has its own budget. It was sharing the turn's.
     plan = ReadPlan([Read("member", tool, {argument: ref},
                           source="gmail" if tool.startswith("gmail_") else "shopify")],
-                    label="command:member")
+                    label="command:member", lane=budget.NAVIGATION, key=timeline.new_id("tap"),
+                    scope=_scope_of(session))
     try:
         result = await run_plan(plan, session=session, timeout_s=6.0,
                                 turn_id=getattr(session, "turn_id", ""))

@@ -30,6 +30,13 @@ async def stage():
 
 @pytest.fixture()
 def fresh():
+    # The registry is what says whether a tool is a read, and it is populated by importing
+    # the tool modules. A unit test that skipped this would be asserting against an empty
+    # registry, which is exactly the state in which everything looks like a write.
+    import app.tools.analytics_tools  # noqa: F401
+    import app.tools.gmail_tools  # noqa: F401
+    import app.tools.shopify_tools  # noqa: F401
+
     d = dedupe.install(dedupe.Dedupe())
     yield d
     dedupe.install(dedupe.Dedupe())
@@ -194,19 +201,27 @@ async def test_nothing_here_can_hold_a_write(fresh):
 
 
 async def test_one_order_asked_for_twice_is_one_shopify_request(stage):
-    """Through `dispatch`, which is the only path from the model or a recipe to a tool."""
+    """Through `dispatch`, which is the only path from the model or a recipe to a tool.
+
+    The operation counted is the order lookup itself. `shopify_find_order` also starts the
+    order's enrichment in the background (app/context/order.py::find_by_number), and counting
+    every operation the fixture shop sees would be counting a race rather than the claim.
+    """
     from app.tools.dispatch import dispatch
 
     session = stage.runtime.sessions.get_or_create("s1")
     session.turn_id = "turn_dedupe"
+    dedupe.current().reset()
     stage.store.forget_scenario()
+
     both = await asyncio.gather(*(
         dispatch("shopify_find_order", {"query": "1938"}, session=session, timeout_s=8.0)
         for _ in range(2)
     ))
-    asked = [op for op, _ in stage.store.queries if "rder" in op]
-    assert len(asked) == 1, f"two presentation paths made {len(asked)} requests: {asked}"
+    lookups = [op for op, _ in stage.store.queries if op == "CrooksOrderByName"]
+    assert len(lookups) == 1, f"two presentation paths made {len(lookups)} lookups"
     assert both[0] and both[1] and "1938" in both[0]
+    assert dedupe.current().stats()["provider_calls_saved"] >= 1
 
 
 async def test_the_turn_that_read_twice_now_reads_once(stage):

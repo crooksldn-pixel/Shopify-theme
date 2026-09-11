@@ -16,6 +16,13 @@ import pytest
 from app.fastpath.correction import corrected, corrections
 from app.fastpath.intent import _tokens
 from app.fastpath.library import period_from
+from experience.harness import harness
+
+
+@pytest.fixture()
+async def stage():
+    async with harness() as h:
+        yield h
 
 # (said, family, what should win)
 CORRECTED = [
@@ -81,3 +88,41 @@ def test_the_period_extractor_takes_the_correction():
     # And still declines where two periods were both meant.
     assert period_from(_tokens("compare this week with last week")) is None
     assert period_from(_tokens("today and yesterday")) is None
+
+
+def test_a_corrected_order_number_narrows_to_one_record():
+    from app.fastpath.intent import resolve
+
+    intent = resolve("show me order 1936, I mean 1938")
+    assert intent.signals.order_numbers == ("1938",)
+    assert intent.slots["corrected"] == {"order_number": "1938"}
+
+
+def test_a_corrected_size_reaches_the_slot_the_picker_reads():
+    from app.fastpath.intent import _slots, signals_for
+
+    sig = signals_for("add a medium, no, a large")
+    assert sig.correction("size") == "large"
+    assert _slots(sig)["size"] == "large"
+    assert _slots(sig)["corrected"] == {"size": "large"}
+
+
+async def test_the_turn_itself_is_answered_for_yesterday(stage):
+    """turn_69abe877ef14 and turn_6089e7517986, through the whole application.
+
+    The owner asked with a stumble and was told "No orders today"; he asked again without one
+    and was told about yesterday. The assertion is that parity: the same question, said the
+    two ways, is one answer.
+    """
+    stumbled = await stage.say("can you pull up today's, uh, yesterday's orders, please?")
+    plain = await stage.say("Pull up yesterday's orders, please")
+    assert stumbled.lane == plain.lane == "FAST"
+    assert stumbled.recipe_id == plain.recipe_id == "order_list_period"
+    assert stumbled.answer == plain.answer, "the stumble was answered as a different question"
+    assert "yesterday" in stumbled.answer.lower(), stumbled.answer
+    assert "today" not in stumbled.answer.lower(), stumbled.answer
+
+
+async def test_the_order_the_owner_corrected_to_is_the_one_looked_up(stage):
+    capture = await stage.say("show me order 1936, I mean 1938")
+    assert str((capture.entity or {}).get("label", "")).lstrip("#").startswith("1938"), capture.entity
