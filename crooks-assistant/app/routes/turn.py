@@ -473,6 +473,8 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
     from app.memory import current as memory
     from app.memory.coalesce import current as coalescer
     from app.memory.prefetch import current as prefetcher
+    from app.reads import budget as read_budget
+    from app.reads.dedupe import current as dedupe
 
     sources: dict[str, float] = {}
     for call in calls or []:
@@ -535,6 +537,13 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "cache": memory().counts(),
         "coalesced": coalescer().counts(),
         "prefetch": prefetcher().counts(),
+        # What asking once instead of twice actually saved, in the three units the brief asks
+        # for: requests avoided, milliseconds saved and provider calls saved. Measured from
+        # the duration the avoided read took, not estimated (app/reads/dedupe.py).
+        "deduped": dedupe().stats(),
+        # And what each lane spent, so a refusal can be read back to the lane that caused it
+        # rather than to "the turn" (app/reads/budget.py).
+        "read_budgets": read_budget.report(session),
     }
 
 
@@ -632,6 +641,19 @@ def _route(text: str, branch):
     return lane, why, intent, recipe
 
 
+# The other thing a request asked for, said in a clause. Explicit requested work outranks
+# contextual status (§14, D-14) — but the status half was ASKED, and the live session's answer
+# to "are you okay now?" was the capability delta INSTEAD of the emails. Answering the work
+# and saying nothing about the health would be the same mistake with the halves swapped.
+#
+# Fixed sentences, and true by construction: the Mac is answering, so it is running. Nothing
+# here claims anything the turn has not already proved.
+_SECONDARY_WORDS = {
+    "capability_delta": "I'm back up and running.",
+    "capability_summary": "I'm back up and running.",
+}
+
+
 async def _fast(runtime, session, branch, intent, recipe, text: str):
     """Run a recipe. Returns its answer, or None when it deferred and Claude should answer."""
     from app.fastpath import run as run_recipe
@@ -646,6 +668,9 @@ async def _fast(runtime, session, branch, intent, recipe, text: str):
         # The turn is about to be answered properly; it was never a second turn.
         session.turns -= 1
         return None
+    aside = _SECONDARY_WORDS.get(str(getattr(intent, "secondary", "") or ""))
+    if aside and answer.answer:
+        answer.answer = f"{aside} {answer.answer.lstrip()}"
     return answer
 
 
@@ -1020,11 +1045,22 @@ async def _prefetch_order(runtime, session, text: str, calls: list, timings: dic
 
 
 def _hydrate_soon(order_id: str) -> asyncio.Task | None:
-    """Start the order's full read in the background. Never awaited by the turn itself."""
+    """Start the order's full read in the background. Never awaited by the turn itself.
+
+    Lane 4 — "an active branch's requested background job". The owner asked for this order,
+    so it outranks a guess; he is not waiting on this read, so it yields to his next question
+    (app/reads/budget.py). A task copies the context at creation, which is why entering the
+    lane here is enough for everything the read reaches.
+    """
+    from app.reads import budget
     from app.tools.shopify_tools import hydrator
 
+    async def read() -> Any:
+        with budget.using(budget.BACKGROUND, f"hydrate:{order_id}", yielding=False):
+            return await hydrator().order(order_id)
+
     try:
-        return asyncio.get_running_loop().create_task(hydrator().order(order_id))
+        return asyncio.get_running_loop().create_task(read())
     except Exception as exc:  # noqa: BLE001 — Shopify not bound; the model looks it up itself
         log.debug("no background hydration: %s", exc)
         return None

@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
+
+from app.fastpath import correction
 
 # ------------------------------------------------------------------ signals
 
@@ -279,19 +281,33 @@ class Signals:
     send_instead: bool = False
     has_compose: bool = False
     rewrite: bool = False
+    # What the owner took back mid-sentence (app/fastpath/correction.py): "today's, uh,
+    # yesterday's orders" names two periods and asks about one. Held as structure so every
+    # family reads one answer rather than each re-parsing the words.
+    corrections: tuple[Any, ...] = ()
 
     # Never written to the timeline, whatever it holds. `known_name` is a customer's name as
     # the owner said it; the observability rule is that telemetry carries ids, counts and
     # controlled words, and this is none of those. The router still uses it; the record says
     # only that a name was recognised. `address_words` is an email address, which is the same
     # kind of thing: `has_address` says one was found and the span never leaves the Mac.
-    PRIVATE = ("words", "known_name", "address_words")
+    # `corrections` carries the values themselves, so the record says which FAMILIES were
+    # corrected and not to what.
+    PRIVATE = ("words", "known_name", "address_words", "corrections")
 
     def as_dict(self) -> dict[str, Any]:
         out = {k: v for k, v in ((f, getattr(self, f)) for f in self.__slots__) if v and k not in self.PRIVATE}
         if self.known_name:
             out["known_name"] = True
+        if self.corrections:
+            out["corrected"] = [c.family for c in self.corrections]
         return out
+
+    def correction(self, family: str) -> str:
+        for found in self.corrections:
+            if found.family == family:
+                return found.value
+        return ""
 
 
 # Pointing at what is already on screen. "She" and "he" belong here for the same reason "her"
@@ -342,6 +358,11 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
         rewrite=bool(have & _REWRITE),
     )
     sig.has_address = bool(sig.address_words)
+    # What was taken back mid-sentence, before any family reads the values (D-8). An order
+    # number the owner corrected is NOT a second order: "1956, I mean 1957" named one record,
+    # and leaving both in `order_numbers` made every family that needs exactly one defer.
+    sig.corrections = tuple(correction.corrections(words))
+    sig.order_numbers = _corrected_orders(sig)
     # A direction is a direction only when the request names NOTHING ELSE. "Next" is a
     # direction; "next week's sales" is a question about sales, "what's the last order" is a
     # question about an order, and "has she bought before" is a question about a customer.
@@ -371,6 +392,30 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
     return sig
 
 
+def _corrected_orders(sig: Signals) -> tuple[str, ...]:
+    """The order numbers the request named, with a correction applied.
+
+    "Order 1936, I mean 1938" names ONE record. `spoken_order_numbers` extracts only 1936 —
+    the second number has no "order" in front of it — so the correction replaces the number
+    it superseded rather than being required to appear in the list itself.
+
+    A bare year is still refused. `spoken_order_numbers` will not read "2025" as an order
+    without "order number" or a hash in front of it, and a correction must not be the way
+    round that: the corrected value is accepted only when it is outside the year range, or
+    when the extractor already found it.
+    """
+    numbers = tuple(sig.order_numbers)
+    fixed = sig.correction(correction.ORDER_NUMBER)
+    if not fixed:
+        return numbers
+    if fixed in numbers:
+        return (fixed,)
+    if 2000 <= int(fixed) <= 2099:
+        return numbers
+    superseded = next((c.superseded for c in sig.corrections if c.family == correction.ORDER_NUMBER), "")
+    return (fixed,) if superseded in numbers else numbers
+
+
 def _known_name(text: str, branch: Any) -> str:
     """A name this branch has already resolved to a record, if the request says it. Longest
     match wins, so "Millie Rogers" beats "Millie"."""
@@ -383,6 +428,22 @@ def _known_name(text: str, branch: Any) -> str:
 
 
 # ------------------------------------------------------------------ families
+
+
+# What a family is FOR, which is what settles a request that asks for two things at once
+# (§14, D-14). Turn 1 of the live session asked "are you okay now?" and "pull up the today's
+# emails" and got the capability delta and no emails. The order is not a preference:
+#
+#     WORK        explicit requested work — a read of the shop or the inbox, a move
+#     STATUS      contextual status — how the assistant itself is
+#     CAPABILITY  an explanation of what it can do
+#
+# Work outranks status outranks capability, always. A status answer may be given; it may not
+# take the turn.
+WORK = "work"
+STATUS = "status"
+CAPABILITY = "capability"
+KIND_RANK: dict[str, int] = {WORK: 0, STATUS: 1, CAPABILITY: 2}
 
 
 @dataclass(frozen=True, slots=True)
@@ -423,6 +484,9 @@ class Family:
     # bring boots" is not two questions — so the composer opts out of the penalty rather than
     # the scorer growing a special case for long sentences generally.
     many_clauses: bool = False
+    # WORK, STATUS or CAPABILITY. Defaults to WORK, which every family that reads the shop or
+    # the inbox is, so a family added later is ranked as work unless it says otherwise.
+    kind: str = WORK
 
 
 FAMILIES: tuple[Family, ...] = (
@@ -430,8 +494,8 @@ FAMILIES: tuple[Family, ...] = (
     Family("working_set_previous", needs=("direction_previous",), boosts=("has_workflow", "has_set"), blocks=("mutation",), entities=("workflow",), base=0.8, max_words=6),
     Family("navigation_back", needs=("direction_back",), blocks=("mutation",), base=0.85, max_words=5),
     Family("navigation_home", needs=("direction_home",), blocks=("mutation",), base=0.8, max_words=4),
-    Family("capability_delta", needs=("meta_self", "meta_more"), blocks=("mutation",), base=0.75, max_words=16),
-    Family("capability_summary", needs=("meta_self", "question"), blocks=("mutation", "meta_more"), base=0.7, max_words=12),
+    Family("capability_delta", needs=("meta_self", "meta_more"), blocks=("mutation",), base=0.75, max_words=16, kind=CAPABILITY),
+    Family("capability_summary", needs=("meta_self", "question"), blocks=("mutation", "meta_more"), base=0.7, max_words=12, kind=CAPABILITY),
     Family("order_lookup", needs=("order_number",), boosts=("order", "question"), blocks=("mutation", "metric", "email", "status", "address"), entities=("order",), base=0.8, max_words=12),
     # "Show me today's orders" — a list, not a total. It needs an explicit ask to be shown,
     # so "how many orders today" stays a number and this stays a list.
@@ -470,7 +534,10 @@ FAMILIES: tuple[Family, ...] = (
     # "The inbox, in one line." Blocked by anything that narrows it to a person or a field:
     # "what's her email address" is about one customer's address and was being answered with a
     # summary of the whole week's threads.
-    Family("inbox_state", needs=("email", "question"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number", "possessive_name", "deixis", "address"), base=0.7, floor=0.74, max_words=12),
+    # `asked`, not `question`: "can you pull up the today's emails" is a request even though
+    # it opens with an auxiliary and carries none of the question words. It was scoring zero,
+    # so the emails half of turn 1 could not win however the turn was split (D-14).
+    Family("inbox_state", needs=("email", "asked"), boosts=("period",), blocks=("mutation", "metric", "customer", "waiting", "ranking", "order_number", "possessive_name", "deixis", "address"), base=0.7, floor=0.74, max_words=12),
 )
 
 # Families a Phase 3 capability module adds from its own file (app/families/*), so two
@@ -509,6 +576,10 @@ _LOOKUP = {
     "running_out": lambda s: s.running_out,
     "email": lambda s: s.email,
     "listing": lambda s: s.listing,
+    # Asked for, one way or the other: a question word, a question mark, or an instruction to
+    # be shown something. "Show me the emails" and "can you pull up the emails" are one
+    # request, and only the first of them carries a question word.
+    "asked": lambda s: s.question or s.listing,
     "again": lambda s: s.again,
     "possessive_name": lambda s: s.possessive_name,
     "waiting": lambda s: s.waiting,
@@ -541,6 +612,11 @@ class Intent:
     slots: dict[str, Any] = field(default_factory=dict)
     runner_up: str = ""
     reason: str = ""
+    # The other thing the request asked for, when it asked for two (§14). The turn is
+    # answered as `family`; `secondary` is what the answer should also acknowledge, in a
+    # clause. "Are you okay now? Can you pull up the today's emails" is the emails, with the
+    # health question kept here rather than thrown away.
+    secondary: str = ""
 
     @property
     def certain(self) -> bool:
@@ -549,6 +625,7 @@ class Intent:
     def public(self) -> dict[str, Any]:
         return {"family": self.family or None, "confidence": round(self.confidence, 3),
                 "runner_up": self.runner_up or None, "reason": self.reason or None,
+                "secondary": self.secondary or None,
                 "signals": self.signals.as_dict()}
 
 
@@ -608,8 +685,60 @@ def score(family: Family, sig: Signals) -> float:
 _CORE_SIGNALS = frozenset(_LOOKUP)
 
 
+# Where one request ends and the next begins. SENTENCES only — a full stop, a question mark
+# or an exclamation — and deliberately NOT "and" or "then". "Look up today's orders and
+# today's emails and see if anything correlates" is ONE request for a synthesis, and
+# splitting it here would answer a third of it and call that a win (D-5 is a different
+# defect with a different fix). Two sentences, though, are two things said.
+_SENTENCE = re.compile(r"[.!?]+")
+
+
+def sentences(text: str) -> list[str]:
+    """The request as the separate things it said. One sentence in, one sentence out."""
+    return [part for part in (p.strip() for p in _SENTENCE.split(text or "")) if _tokens(part.lower())]
+
+
+def kind_of(family_name: str) -> str:
+    found = family(family_name) if family_name else None
+    return found.kind if found is not None else WORK
+
+
+def _rank(intent: Intent) -> int:
+    return KIND_RANK.get(kind_of(intent.family), 0)
+
+
 def resolve(text: str, *, branch: Any = None) -> Intent:
-    """The request as an intent. `family` empty means "this is the model's"."""
+    """The request as an intent, with the priority order applied when it asked for two things.
+
+    `family` empty means "this is the model's". `secondary` names the other thing the request
+    asked for, when explicit work had to outrank it.
+    """
+    whole = _resolve_one(text, branch=branch)
+    if whole.certain and _rank(whole) == KIND_RANK[WORK]:
+        # The request as a whole asked for work. There is nothing to arbitrate, and the whole
+        # sentence's slots are better than any one clause's.
+        return whole
+    said = sentences(text)
+    if len(said) < 2:
+        return whole
+    apart = [_resolve_one(part, branch=branch) for part in said]
+    work = [i for i in apart if i.certain and _rank(i) == KIND_RANK[WORK]]
+    if not work:
+        return whole
+    # The highest-confidence piece of actual work wins the turn; the best-ranked of what is
+    # left is acknowledged rather than dropped.
+    best = max(work, key=lambda i: i.confidence)
+    rest = [i for i in apart if i.certain and i is not best] + ([whole] if whole.certain else [])
+    secondary = next((i.family for i in sorted(rest, key=_rank) if _rank(i) > KIND_RANK[WORK]), "")
+    return replace(
+        best, secondary=secondary,
+        reason=f"the request also asked something {kind_of(secondary)}; the work outranks it" if secondary
+        else "the request said more than one thing; the work outranks the rest",
+    )
+
+
+def _resolve_one(text: str, *, branch: Any = None) -> Intent:
+    """One request, scored against the families. The whole of the router before §14."""
     sig = signals_for(text, branch=branch)
     candidates = all_families()
     if sig.mutation:
@@ -631,7 +760,25 @@ def resolve(text: str, *, branch: Any = None) -> Intent:
     if second is not None and second_value > 0 and best_value - second_value < MARGIN:
         return Intent(family="", confidence=round(best_value, 3), signals=sig, runner_up=second.name, reason=f"too close to {second.name}")
     return Intent(family=best.name, confidence=round(best_value, 3), signals=sig, runner_up=(second.name if second_value > 0 and second else ""),
-                  slots={"order_numbers": list(sig.order_numbers), "name": sig.known_name})
+                  slots=_slots(sig))
+
+
+def _slots(sig: Signals) -> dict[str, Any]:
+    """The parameters a recipe reads, from one place whether they were said or tapped.
+
+    `corrected` is every value the owner took back mid-sentence, by family, so a recipe reads
+    the resolved value rather than re-parsing the words with a second rule that could
+    disagree with the first. `size` is lifted out of it because the variant picker already
+    reads a `size` slot (app/families/order_edit.py) and "a medium, no, a large" should
+    narrow it.
+    """
+    fixed = {c.family: c.value for c in sig.corrections}
+    slots: dict[str, Any] = {"order_numbers": list(sig.order_numbers), "name": sig.known_name}
+    if fixed:
+        slots["corrected"] = fixed
+    if fixed.get(correction.SIZE):
+        slots["size"] = fixed[correction.SIZE]
+    return slots
 
 
 def family(name: str) -> Family | None:

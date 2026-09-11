@@ -16,10 +16,14 @@ Every hard rule of §18 is mechanical here rather than advisory:
   batch is None`) and then run through `run_plan`, which refuses a write tool before the plan
   starts. An internal prediction can only name something in the closed table in
   app/anticipation/internal.py. There is no third path, so there is no path to a mutation.
-* **The owner outranks it.** `owner_read()` is called by the read scheduler whenever a
-  REQUESTED plan runs, and stands the speculative lane down for the half of the workspace he
-  asked it of. A context change — a different record on that half — cancels that half's
-  speculation outright. The other half is untouched: he did not ask it anything.
+* **The owner outranks it.** This layer REGISTERS ITSELF as something that stands down
+  (`app/reads/budget.py::on_yield`), and the read scheduler stands the lower lanes down
+  whenever a plan in one of the owner's three lanes starts — his foreground read, his
+  navigation's hydration, a mutation's precondition. It is registered rather than called by
+  name so the scheduler knows nothing about anticipation, and so anything else that holds
+  work nobody is waiting on can stand down the same way. A context change — a different
+  record on that half — cancels that half's speculation outright. The other half is
+  untouched: he did not ask it anything.
 * **Deduped and coalesced.** A prediction whose key is already in flight is skipped; a
   prediction whose answer is already fresh in the tiered cache is skipped; what does run goes
   into that same cache, so the requested read that follows finds it there instead of asking
@@ -55,6 +59,7 @@ from app.anticipation.models import (
     Prediction,
     Signal,
 )
+from app.reads import budget
 
 log = logging.getLogger("crooks.anticipation")
 
@@ -426,28 +431,53 @@ class Anticipator:
     # ------------------------------------------------------------------ standing down
 
     def owner_read(self, session: Any) -> int:
-        """The owner asked for something: stand the speculative lane down for the half he
-        asked it of. P1 stays — it is the record he is looking at — and the other half of a
-        split workspace is untouched, because he did not ask it anything.
+        """The owner asked for something, said as a session rather than as a lane.
+
+        One line now: `stand_down` is the whole of it, and the read layer reaches that
+        directly through `app/reads/budget.py::yield_to`. Kept because "the owner read
+        something" is the sentence a caller has, and because a caller that has a session and
+        not a scope should not have to build one.
 
         `acting_branch` is which half this turn is addressed to, set once per turn beside the
         turn id; empty means one workspace, and then the whole conversation stands down.
         """
-        scope = scope_of(session)
-        branch_id = str(getattr(session, "acting_branch", "") or "")
-        stopped = self.prefetcher.cancel_scope(scope, lane=P2, branch_id=branch_id)
-        if stopped:
-            self.cancelled += stopped
-            for record in self._history:
-                if (record.scope == scope and record.outcome == "in_flight" and record.tier == P2
-                        and (not branch_id or record.branch_id == branch_id)):
-                    record.outcome = "cancelled"
-            from app.observability import timeline
+        return self.stand_down(budget.Standdown(
+            scope=scope_of(session), lane=budget.SPECULATION,
+            branch_id=str(getattr(session, "acting_branch", "") or ""),
+        ))
 
-            timeline.emit(
-                "anticipation_cancelled", session_id=getattr(session, "session_id", None),
-                cancelled=stopped, why="the owner asked for something",
-            )
+    def stand_down(self, ask: Any) -> int:
+        """The read layer is starting work the owner is waiting on: give up what is below it.
+
+        Registered with `app/reads/budget.py::on_yield`, so this is reached for each yielding
+        lane in turn. Only SPECULATION is ours: the P2 lane is a guess about the record the
+        owner has not looked at yet, and stopping it costs nothing anybody is waiting for.
+
+        The P1 lane is deliberately NOT stopped. It is the reads about the record on screen —
+        the thing he is about to ask about — and throwing them away on every question would
+        take the fast half of the product away to protect the fast half of the product. It
+        yields the SOURCE instead, which is what actually matters: both lanes run in the
+        SPECULATION lane of `run_plan`, where the throttle caps them below Shopify's and
+        Gmail's concurrency so his own read always finds a slot.
+        """
+        if getattr(ask, "lane", "") != budget.SPECULATION:
+            return 0
+        scope = str(getattr(ask, "scope", "") or "")
+        branch_id = str(getattr(ask, "branch_id", "") or "")
+        stopped = self.prefetcher.cancel_scope(scope, lane=P2, branch_id=branch_id)
+        if not stopped:
+            return 0
+        self.cancelled += stopped
+        for record in self._history:
+            if (record.scope == scope and record.outcome == "in_flight" and record.tier == P2
+                    and (not branch_id or record.branch_id == branch_id)):
+                record.outcome = "cancelled"
+        from app.observability import timeline
+
+        timeline.emit(
+            "anticipation_cancelled", session_id=None, cancelled=stopped,
+            why="the owner asked for something",
+        )
         return stopped
 
     def forget(self, scope: str) -> int:
@@ -508,25 +538,45 @@ class Anticipator:
 
 
 def scope_of(session: Any) -> str:
-    """The isolation key of a session object, in the same shape `Signal.scope` uses."""
-    login = str(getattr(session, "login", "") or "") or "owner"
-    return f"{login}|{getattr(session, 'session_id', '') or ''}"
+    """The isolation key of a session object, in the same shape `Signal.scope` uses.
+
+    One definition, in app/reads/budget.py, because the read layer keys its budgets and its
+    stand-downs by the same thing and two copies of an isolation key is how one conversation
+    comes to be served another's.
+    """
+    return budget.scope_of(session)
 
 
 _current: Anticipator | None = None
+
+
+# The registration token for the installed layer's stand-down, so installing another one
+# does not leave two layers listening and a cancellation counted twice.
+_YIELD_TOKEN: list[int] = []
 
 
 def current() -> Anticipator:
     global _current
     if _current is None:
         _current = Anticipator()
+        _register(_current)
     return _current
 
 
 def install(anticipator: Anticipator | None) -> Anticipator:
     global _current
     _current = anticipator
-    return current()
+    layer = current()
+    _register(layer)
+    return layer
+
+
+def _register(layer: Anticipator) -> None:
+    """Tell the read layer that this is something that stands down. Once: the token from the
+    last registration is withdrawn first."""
+    while _YIELD_TOKEN:
+        budget.off_yield(_YIELD_TOKEN.pop())
+    _YIELD_TOKEN.append(budget.on_yield(layer.stand_down))
 
 
 def owner_read(session: Any) -> int:

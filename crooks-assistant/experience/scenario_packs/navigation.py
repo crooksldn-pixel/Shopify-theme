@@ -149,6 +149,15 @@ async def next_walks_the_set(h: Harness) -> Result:
     listing = await h.say("show me today's orders", scenario="nav_next:list", session_id=session)
     r.captures.append(listing)
     total = len(_rows(listing))
+    # The scenario walks a list, so it needs one. An empty listing here used to reach `seen[-2]`
+    # below and raise IndexError, which reports as a crash in whatever ran the scenario rather
+    # than as the thing that is actually wrong. It is a failed CHECK now, and it names what it
+    # got: the last time this happened the list was empty because another test had left a
+    # frozen clock in the process and "today" was a day the fixture world has no orders on.
+    r.checks.append(check("today's orders is a list with something in it to walk",
+                          total >= 2, f"rows={total} answer={listing.answer!r}"))
+    if total < 2:
+        return
     seen = []
     for step in range(1, min(total, 3) + 1):
         moved = await h.touch("workflow.next", session_id=session, scenario=f"nav_next:{step}")

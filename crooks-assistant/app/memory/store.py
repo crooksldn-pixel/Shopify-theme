@@ -234,4 +234,14 @@ def invalidate_for_write(entity_kind: str, ref: str, *, memory: Memory | None = 
     dropped += store.invalidate(tier=ANALYTICS)
     if entity_kind in ("email", "thread", "customer", "order"):
         dropped += store.invalidate(tier=EMAIL)
+    # And the read layer's own "the same thing, asked twice" table (app/reads/dedupe.py),
+    # which holds an answer for a few seconds and is not one of the tiers above. Left out, a
+    # card drawn moments after a proven change would be drawn from before it. Wrapped because
+    # a process without the read layer installed must not fail a write's invalidation.
+    try:
+        from app.reads import dedupe
+
+        dropped += dedupe.current().invalidate(str(ref))
+    except Exception:  # noqa: BLE001 — a change is proven whether or not a cache can be told
+        pass
     return dropped

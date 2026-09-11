@@ -1,0 +1,206 @@
+# Tool matrix
+
+Every registered tool and every routable intent family, audited against §32 of the
+Phase 4 brief. **Generated** by `experience/tool_matrix.py` — regenerate with
+`make tool-matrix`; `tests/test_tool_matrix.py` fails if this file and the registries
+disagree.
+
+Every column is read from the thing that decides it. **DIRECTLY TESTED** means a test
+or a golden scenario NAMES the tool, and the file that does is cited; a tool whose
+unit tests pass but which nothing calls by name is reported as untested. Nothing here
+runs a tool, and nothing here can reach a mutation: the audit is a read of registries
+and of source text, so it is safe against a shop it may not touch.
+
+48 tools — 25 reads, 18 writes, 5 bulk — and 40 intent families.
+
+## Tools
+
+| Tool | Tier | Registered | Routable | Directly tested | Auth scope | Read/write | Staging | Verification | Visible UI | Error UI | Golden scenario |
+|---|---|:-:|:-:|:-:|---|---|---|---|---|---|:-:|
+| `batch_email_archive` | AMBER | yes | — | yes | — | batch | one proposal per member, through gmail_thread_archive | each member proven by gmail_thread_archive | the change's own card | — | — |
+| `batch_email_drafts` | AMBER | yes | — | yes | — | batch | one proposal per member, through gmail_draft_new | each member proven by gmail_draft_new | the change's own card | — | — |
+| `batch_email_send` | RED | yes | — | yes | — | batch | one proposal per member, through gmail_send_new | each member proven by gmail_send_new | the change's own card | — | — |
+| `batch_order_tags_add` | AMBER | yes | — | yes | — | batch | one proposal per member, through shopify_order_tags_add | each member proven by shopify_order_tags_add | the change's own card | — | — |
+| `batch_order_tags_remove` | AMBER | yes | — | yes | — | batch | one proposal per member, through shopify_order_tags_remove | each member proven by shopify_order_tags_remove | the change's own card | — | — |
+| `commerce_aggregate` | GREEN | yes | yes | yes | none needed | read | — | — | the read layer's cards | — | yes |
+| `commerce_capabilities` | GREEN | yes | yes | yes | none needed | read | — | — | — | — | — |
+| `commerce_query` | AMBER | yes | yes | yes | none needed | read | — | — | the read layer's cards | — | yes |
+| `email_query` | AMBER | yes | yes | yes | none needed | read | — | — | the read layer's cards | — | yes |
+| `gmail_compose_fill` | GREEN | yes | yes | yes | https://www.googleapis.com/auth/gmail.compose | read | — | — | presentation.py | gmail | — |
+| `gmail_compose_open` | GREEN | yes | yes | yes | https://www.googleapis.com/auth/gmail.compose | read | — | — | presentation.py | gmail | — |
+| `gmail_draft_new` | AMBER | yes | yes | yes | https://www.googleapis.com/auth/gmail.compose | write | prepared from a fresh read, held as gmail_draft_new, tap_commit | a predicate over the re-read, after settling | the change's own card | gmail | yes |
+| `gmail_draft_reply` | AMBER | yes | yes | yes | gmail.compose | write | prepared from a fresh read, held as gmail_draft_reply, tap_commit | a predicate over the re-read, after settling | the change's own card | gmail | yes |
+| `gmail_find_in_email` | AMBER | yes | yes | yes | none needed | read | — | — | — | gmail | — |
+| `gmail_read_thread` | AMBER | yes | yes | yes | none needed | read | — | — | presentation.py | gmail | yes |
+| `gmail_search` | GREEN | yes | yes | yes | none needed | read | — | — | presentation.py | gmail | yes |
+| `gmail_send_new` | RED | yes | yes | yes | https://www.googleapis.com/auth/gmail.compose | write | prepared from a fresh read, held as gmail_send_new, tap_commit | a predicate over the re-read, after settling | the change's own card | gmail | — |
+| `gmail_send_reply` | RED | yes | yes | yes | gmail.compose | write | prepared from a fresh read, held as gmail_send_reply, tap_commit | a predicate over the re-read, after settling | the change's own card | gmail | — |
+| `gmail_thread_archive` | AMBER | yes | yes | yes | gmail.modify | write | prepared from a fresh read, held as gmail_thread_archive, tap_commit | the re-read must equal what was expected | the change's own card | gmail | — |
+| `inventory_query` | GREEN | yes | yes | yes | none needed | read | — | — | the read layer's cards | — | yes |
+| `shopify_abandoned_checkouts` | AMBER | yes | yes | yes | read_orders | read | — | — | — | shopify | yes |
+| `shopify_customer_history` | AMBER | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | yes |
+| `shopify_discount_check` | GREEN | yes | yes | yes | write_discounts | read | — | — | — | shopify | yes |
+| `shopify_discount_create` | RED | yes | yes | yes | write_discounts | write | prepared from a fresh read, held as discount_code_create, tap_commit | a predicate over the re-read | the change's own card | shopify | yes |
+| `shopify_discount_open` | GREEN | yes | yes | yes | write_discounts | read | — | — | a workspace | shopify | — |
+| `shopify_find_customer` | AMBER | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | yes |
+| `shopify_find_order` | GREEN | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | yes |
+| `shopify_fulfillment_tracking_set` | RED | yes | yes | yes | write_orders | write | prepared from a fresh read, held as fulfillment_tracking_set, tap_commit | a predicate over the re-read | the change's own card | shopify | — |
+| `shopify_inventory` | GREEN | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | — |
+| `shopify_inventory_adjust` | RED | yes | yes | yes | write_inventory | write | prepared from a fresh read, held as inventory_set, tap_commit | a predicate over the re-read | the change's own card | shopify | — |
+| `shopify_list_orders` | GREEN | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | — |
+| `shopify_order_add_item` | RED | yes | yes | yes | write_order_edits | write | prepared from a fresh read, held as order_edit_add_line, tap_commit | a predicate over the re-read | the change's own card | shopify | yes |
+| `shopify_order_address` | AMBER | yes | yes | yes | none needed | read | — | — | — | shopify | — |
+| `shopify_order_cancel` | RED | yes | yes | yes | write_orders | write | prepared from a fresh read, held as order_cancel, tap_commit | a predicate over the re-read, after settling | the change's own card | shopify | — |
+| `shopify_order_create` | RED | yes | yes | yes | write_draft_orders | write | prepared from a fresh read, held as draft_order_complete, tap_commit | a predicate over the re-read | the change's own card | shopify | yes |
+| `shopify_order_detail` | AMBER | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | yes |
+| `shopify_order_fulfil` | RED | yes | yes | yes | write_orders | write | prepared from a fresh read, held as fulfillment_create, tap_commit | a predicate over the re-read | the change's own card | shopify | — |
+| `shopify_order_note_append` | AMBER | yes | yes | yes | write_orders | write | prepared from a fresh read, held as order_note_append, tap_commit | the re-read must equal what was expected | the change's own card | shopify | yes |
+| `shopify_order_open` | AMBER | yes | yes | yes | write_draft_orders | read | — | — | a workspace | shopify | — |
+| `shopify_order_shipping_address_set` | RED | yes | yes | yes | write_orders | write | prepared from a fresh read, held as order_shipping_address_set, tap_commit | a predicate over the re-read | the change's own card | shopify | — |
+| `shopify_order_tags_add` | AMBER | yes | yes | yes | write_orders | write | prepared from a fresh read, held as order_tags_add, tap_commit | the re-read must equal what was expected | the change's own card | shopify | — |
+| `shopify_order_tags_remove` | AMBER | yes | yes | yes | write_orders | write | prepared from a fresh read, held as order_tags_remove, tap_commit | the re-read must equal what was expected | the change's own card | shopify | — |
+| `shopify_product_info` | GREEN | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | — |
+| `shopify_refund_create` | RED | yes | yes | yes | write_orders | write | prepared from a fresh read, held as refund_create, tap_commit | a predicate over the re-read | the change's own card | shopify | — |
+| `shopify_sales_summary` | GREEN | yes | yes | yes | none needed | read | — | — | presentation.py | shopify | — |
+| `shopify_store_credit` | AMBER | yes | yes | yes | write_store_credit_account_transactions | read | — | — | a workspace | shopify | — |
+| `shopify_store_credit_add` | RED | yes | yes | yes | write_store_credit_account_transactions | write | prepared from a fresh read, held as store_credit_credit, tap_commit | a predicate over the re-read | the change's own card | shopify | yes |
+| `shopify_variant_search` | GREEN | yes | yes | yes | write_order_edits | read | — | — | presentation.py | shopify | yes |
+
+### What cites each tool
+
+| Tool | Reached by | Named in tests | Named in scenarios |
+|---|---|---|---|
+| `batch_email_archive` | the model only | test_batch.py, test_claims.py | — |
+| `batch_email_drafts` | the model only | test_batch.py, test_claims.py, test_flows.py, test_registry.py | — |
+| `batch_email_send` | the model only | test_gaps.py, test_registry.py | — |
+| `batch_order_tags_add` | the model only | test_batch.py, test_claims.py, test_council_fixes.py, test_flows.py, test_memory.py, test_read_budget.py, test_reads.py | — |
+| `batch_order_tags_remove` | the model only | test_batch.py, test_claims.py | — |
+| `commerce_aggregate` | recipe:navigation_back, recipe:navigation_home, recipe:best_sellers_period, recipe:sales_breakdown_period, recipe:landing_sales, recipe:landing_products, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_council_fixes.py, test_experience_analyser.py, test_flows.py, test_progressive.py, test_read_budget.py, test_registry.py, test_working_sets.py | back, landing_products, landing_sales, nav_branch_isolation, nav_click_path, nav_home_landing |
+| `commerce_capabilities` | family:capability_reads | test_analytics_tools.py, test_registry.py | — |
+| `commerce_query` | recipe:navigation_back, recipe:navigation_home, recipe:order_list_period, recipe:delayed_orders, recipe:needs_reply, recipe:landing_orders, recipe:landing_inbox, recipe:order_latest, recipe:unfulfilled_orders, recipe:international_waiting_orders, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_claims.py, test_council_fixes.py, test_flows.py, test_navigation.py, test_query_engine_p3.py, test_read_budget.py, test_read_dedupe.py, test_recorder.py, test_registry.py, test_working_sets.py | back, landing_inbox, landing_orders, nav_branch_isolation, nav_click_path, nav_home_landing, needs_reply, next_previous, query_international_waiting, query_language.py, query_undelivered, spoken_latest, today_orders |
+| `email_query` | recipe:navigation_back, recipe:navigation_home, recipe:needs_reply, recipe:landing_inbox, family:email_reads | test_claims.py, test_council_fixes.py, test_flows.py, test_graph.py, test_working_sets.py | back, landing_inbox, nav_branch_isolation, nav_click_path, nav_home_landing, needs_reply |
+| `gmail_compose_fill` | family:email_compose | test_compose.py, test_gmail_tools.py, test_registry.py | — |
+| `gmail_compose_open` | family:email_compose | test_compose.py, test_gmail_tools.py, test_registry.py | — |
+| `gmail_draft_new` | command:a tapped control, family:email_compose | test_available.py, test_compose.py, test_fixture_wiring.py, test_gmail_tools.py, test_gmail_writes.py | compose.py |
+| `gmail_draft_reply` | command:a tapped control, family:email_drafts | test_action_state.py, test_actions_routes.py, test_analyser.py, test_compose.py, test_experience_analyser.py, test_gmail_tools.py, test_gmail_writes.py, test_graph.py, test_presentation.py, test_recorder.py, test_routes.py | graph.py |
+| `gmail_find_in_email` | family:email_reads | test_gaps.py, test_gmail_tools.py, test_registry.py | — |
+| `gmail_read_thread` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:order_email_reply, recipe:order_email_waiting, command:cursor:emails, family:email_reads | test_address.py, test_analyser.py, test_anticipation.py, test_branch_concurrency.py, test_gate.py, test_gmail_tools.py, test_graph.py, test_presentation.py, test_recorder.py, test_registry.py, test_watch_lines.py | back, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, nav_branch_isolation, nav_click_path, nav_next_position, next_previous |
+| `gmail_search` | recipe:navigation_back, recipe:navigation_home, recipe:inbox_state, recipe:landing_inbox, recipe:order_email_reply, recipe:order_email_waiting, family:email_reads | test_analyser.py, test_capabilities.py, test_gate.py, test_gmail_tools.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_split.py | back, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, landing_inbox, nav_branch_isolation, nav_click_path, nav_home_landing |
+| `gmail_send_new` | command:a tapped control, family:email_compose | test_compose.py, test_fixture_wiring.py, test_gaps.py, test_gmail_tools.py, test_gmail_writes.py, test_store_credit.py | — |
+| `gmail_send_reply` | command:a tapped control, family:email_sends | test_actions_routes.py, test_compose.py, test_experience_analyser.py, test_families.py, test_gmail_tools.py, test_gmail_writes.py, test_owner_feedback.py, test_watch_lines.py | — |
+| `gmail_thread_archive` | command:a tapped control, family:email_archive | test_action_state.py, test_council_fixes.py, test_experience_analyser.py, test_gaps.py, test_gmail_tools.py, test_gmail_writes.py, test_presentation.py | — |
+| `inventory_query` | recipe:navigation_back, recipe:navigation_home, recipe:stock_cover_analysis, recipe:landing_products, family:product_reads | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_flows.py, test_registry.py | back, landing_products, nav_branch_isolation, nav_click_path, nav_home_landing |
+| `shopify_abandoned_checkouts` | recipe:abandoned_checkouts, family:abandoned_checkouts | test_abandoned.py, test_registry.py | abandoned_checkouts, abandoned_window |
+| `shopify_customer_history` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:customer_history_lookup, recipe:customer_purchase_lookup, command:cursor:customers, family:customer_reads | test_anticipation.py, test_branches.py, test_context.py, test_observability.py, test_reads.py | back, customer_history, nav_branch_isolation, nav_click_path, nav_next_position, next_previous |
+| `shopify_discount_check` | recipe:discount_code, family:discount_create | test_registry.py | discount_code_taken, discount_new_code |
+| `shopify_discount_create` | command:a tapped control, family:discount_create | test_registry.py | discounts.py |
+| `shopify_discount_open` | family:discount_create | test_registry.py | — |
+| `shopify_find_customer` | recipe:customer_purchase_lookup, recipe:order_customer, family:customer_reads | test_gate.py, test_observability.py, test_order_create.py, test_presentation.py, test_progressive.py, test_reads.py, test_registry.py, test_shopify_tools.py | order_new, order_new_ambiguous |
+| `shopify_find_order` | recipe:order_lookup, recipe:order_status_lookup, recipe:order_address_lookup, family:order_reads | test_actions_routes.py, test_analyser.py, test_anticipation.py, test_context.py, test_fastpath.py, test_gate.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_shopify_tools.py, test_write_walkthrough.py | enrichment, full_address, graph.py, order_lookup |
+| `shopify_fulfillment_tracking_set` | family:order_fulfil | test_tracking.py | — |
+| `shopify_inventory` | family:product_reads | test_observability.py, test_presentation.py, test_progressive.py, test_registry.py, test_shopify_tools.py | — |
+| `shopify_inventory_adjust` | family:inventory_set | test_inventory.py | — |
+| `shopify_list_orders` | family:order_reads | test_gate.py, test_presentation.py, test_progressive.py, test_provider.py, test_registry.py, test_routes.py, test_session.py, test_shopify_tools.py | — |
+| `shopify_order_add_item` | command:a tapped control, family:order_edit | test_order_edit.py, test_registry.py | order_edit.py |
+| `shopify_order_address` | family:order_reads | test_gaps.py, test_operations.py, test_registry.py, test_watch_lines.py | — |
+| `shopify_order_cancel` | family:order_cancel | test_cancel.py, test_read_budget.py | — |
+| `shopify_order_create` | command:a tapped control, family:order_create | test_registry.py | commerce.py |
+| `shopify_order_detail` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:order_lookup, recipe:order_status_lookup, recipe:order_address_lookup, recipe:order_reopen, recipe:customer_history_lookup, recipe:order_tab_show, recipe:order_latest, recipe:order_email_reply, recipe:order_email_waiting, command:cursor:orders, family:order_reads | test_actions.py, test_analyser.py, test_anticipation.py, test_attention.py, test_branch_concurrency.py, test_context.py, test_fastpath.py, test_gate.py, test_graph.py, test_memory.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_shopify_tools.py | back, customer_history, enrichment, full_address, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, nav_branch_isolation, nav_click_path, nav_next_position, next_previous, order_lookup, repeat_order, spoken_latest, spoken_tab |
+| `shopify_order_fulfil` | family:order_fulfil | test_fulfil.py | — |
+| `shopify_order_note_append` | family:order_notes | test_actions.py, test_analyser.py, test_anticipation.py, test_branches.py, test_engine_hooks.py, test_fastpath.py, test_kb.py, test_memory.py, test_observability.py, test_presentation.py, test_provider.py, test_read_budget.py, test_read_dedupe.py, test_reads.py, test_write_walkthrough.py | scenarios.py |
+| `shopify_order_open` | family:order_create | test_registry.py | — |
+| `shopify_order_shipping_address_set` | family:order_address | test_address.py | — |
+| `shopify_order_tags_add` | family:order_notes | test_council_fixes.py, test_tags.py | — |
+| `shopify_order_tags_remove` | family:order_notes | test_tags_remove.py | — |
+| `shopify_product_info` | family:product_reads | test_observability.py, test_progressive.py, test_reads.py, test_registry.py, test_shopify_tools.py | — |
+| `shopify_refund_create` | family:order_refund | test_analyser.py, test_refund.py | — |
+| `shopify_sales_summary` | family:analytics | test_presentation.py, test_registry.py, test_shopify_tools.py | — |
+| `shopify_store_credit` | family:store_credit | test_registry.py | — |
+| `shopify_store_credit_add` | command:a tapped control, family:store_credit | test_registry.py | commerce.py |
+| `shopify_variant_search` | recipe:order_line, recipe:order_add_item, family:order_edit | test_order_edit.py, test_registry.py | order_add_item_ambiguous, order_add_item_cancelled, order_add_item_picker |
+
+## Intent families
+
+| Family | For | Recipe | Reads | Serves mutation words | Directly tested | Golden scenario |
+|---|---|---|---|:-:|:-:|:-:|
+| `working_set_next` | work | working_set_next | `shopify_order_detail`, `shopify_customer_history`, `gmail_read_thread` | — | yes | yes |
+| `working_set_previous` | work | working_set_previous | `shopify_order_detail`, `shopify_customer_history`, `gmail_read_thread` | — | yes | yes |
+| `navigation_back` | work | navigation_back | `shopify_order_detail`, `shopify_customer_history`, `gmail_read_thread`, `commerce_query`, `email_query`, `gmail_search`, `commerce_aggregate`, `inventory_query` | — | yes | yes |
+| `navigation_home` | work | navigation_home | `commerce_query`, `email_query`, `gmail_search`, `commerce_aggregate`, `inventory_query` | — | — | yes |
+| `capability_delta` | capability | capability_delta | — | — | yes | yes |
+| `capability_summary` | capability | capability_summary | — | — | yes | yes |
+| `order_lookup` | work | order_lookup | `shopify_find_order`, `shopify_order_detail` | — | yes | yes |
+| `order_list_period` | work | order_list_period | `commerce_query` | — | yes | yes |
+| `order_reopen` | work | order_reopen | `shopify_order_detail` | — | yes | yes |
+| `customer_history_lookup` | work | customer_history_lookup | `shopify_order_detail`, `shopify_customer_history` | — | yes | yes |
+| `order_status_lookup` | work | order_status_lookup | `shopify_find_order`, `shopify_order_detail` | — | yes | — |
+| `order_address_lookup` | work | order_address_lookup | `shopify_find_order`, `shopify_order_detail` | — | yes | yes |
+| `customer_purchase_lookup` | work | customer_purchase_lookup | `shopify_find_customer`, `shopify_customer_history` | — | — | — |
+| `best_sellers_period` | work | best_sellers_period | `commerce_aggregate` | — | yes | — |
+| `sales_breakdown_period` | work | sales_breakdown_period | `commerce_aggregate` | — | yes | — |
+| `delayed_orders` | work | delayed_orders | `commerce_query` | — | yes | yes |
+| `stock_cover_analysis` | work | stock_cover_analysis | `inventory_query` | — | yes | — |
+| `needs_reply` | work | needs_reply | `commerce_query`, `email_query` | — | yes | yes |
+| `inbox_state` | work | inbox_state | `gmail_search` | — | yes | — |
+| `abandoned_checkouts` | work | abandoned_checkouts | `shopify_abandoned_checkouts` | — | yes | yes |
+| `email_compose_any` | work | email_compose_any | — | yes | yes | yes |
+| `draft_send_instead` | work | draft_send_instead | — | yes | yes | yes |
+| `compose_rewrite` | work | compose_rewrite | — | yes | yes | — |
+| `discount_code` | work | discount_code | `shopify_discount_check` | yes | yes | yes |
+| `landing_orders` | work | landing_orders | `commerce_query` | — | yes | yes |
+| `landing_inbox` | work | landing_inbox | `commerce_query`, `email_query`, `gmail_search` | — | yes | yes |
+| `landing_sales` | work | landing_sales | `commerce_aggregate` | — | — | yes |
+| `landing_products` | work | landing_products | `commerce_aggregate`, `inventory_query` | — | yes | yes |
+| `order_tab_show` | work | order_tab_show | `shopify_order_detail` | — | yes | yes |
+| `order_latest` | work | order_latest | `commerce_query`, `shopify_order_detail` | — | yes | yes |
+| `branch_switch` | work | branch_switch | — | — | yes | yes |
+| `order_new` | work | order_customer | `shopify_find_customer` | yes | yes | yes |
+| `order_new_line` | work | order_line | `shopify_variant_search` | — | yes | — |
+| `order_add_item` | work | order_add_item | `shopify_variant_search` | — | yes | yes |
+| `order_email_draft` | work | order_email_reply | `shopify_order_detail`, `gmail_search`, `gmail_read_thread` | — | yes | yes |
+| `order_email_waiting` | work | order_email_waiting | `shopify_order_detail`, `gmail_search`, `gmail_read_thread` | — | yes | yes |
+| `owner_feedback` | work | owner_feedback | — | yes | yes | — |
+| `unfulfilled_orders` | work | unfulfilled_orders | `commerce_query` | — | yes | yes |
+| `international_orders` | work | international_waiting_orders | `commerce_query` | — | yes | yes |
+| `ui_semantics` | work | ui_semantics | — | yes | yes | — |
+
+## What this matrix cannot vouch for
+
+**no test names it (0)**
+
+none
+
+**no golden scenario names it (28)**
+
+`batch_email_archive`, `batch_email_drafts`, `batch_email_send`, `batch_order_tags_add`, `batch_order_tags_remove`, `commerce_capabilities`, `gmail_compose_fill`, `gmail_compose_open`, `gmail_find_in_email`, `gmail_send_new`, `gmail_send_reply`, `gmail_thread_archive`, `shopify_discount_open`, `shopify_fulfillment_tracking_set`, `shopify_inventory`, `shopify_inventory_adjust`, `shopify_list_orders`, `shopify_order_address`, `shopify_order_cancel`, `shopify_order_fulfil`, `shopify_order_open`, `shopify_order_shipping_address_set`, `shopify_order_tags_add`, `shopify_order_tags_remove`, `shopify_product_info`, `shopify_refund_create`, `shopify_sales_summary`, `shopify_store_credit`
+
+**nothing but the model reaches it (5)**
+
+`batch_email_archive`, `batch_email_drafts`, `batch_email_send`, `batch_order_tags_add`, `batch_order_tags_remove`
+
+**no card is drawn from it (5)**
+
+`commerce_capabilities`, `gmail_find_in_email`, `shopify_abandoned_checkouts`, `shopify_discount_check`, `shopify_order_address`
+
+**no named error card (10)**
+
+`batch_email_archive`, `batch_email_drafts`, `batch_email_send`, `batch_order_tags_add`, `batch_order_tags_remove`, `commerce_aggregate`, `commerce_capabilities`, `commerce_query`, `email_query`, `inventory_query`
+
+**intent families with no scenario (10)**
+
+`order_status_lookup`, `customer_purchase_lookup`, `best_sellers_period`, `sales_breakdown_period`, `stock_cover_analysis`, `inbox_state`, `compose_rewrite`, `order_new_line`, `owner_feedback`, `ui_semantics`
+
+## The rules the audit itself keeps
+
+- Reads never mutate: `app/reads/scheduler.py::assert_reads_only` refuses a plan
+  naming a write tool, in every lane, and `app/reads/dedupe.py` refuses to hold,
+  join or reuse one.
+- No arbitrary GraphQL from the model: the model reaches only the tools above, each
+  of which builds its own document.
+- Speculation may never write or commit: a prediction's tool is checked against the
+  registry (`write is None and batch is None`) and then run through the same plan
+  assertion.
+- Unknown writes fail closed: `app/tools/gate.py` denies an unregistered tool and
+  denies any mutation-shaped name without a complete `WriteSpec`.
+- Nothing in this audit executed a tool, so no fixture and no shop was changed to
+  produce it.

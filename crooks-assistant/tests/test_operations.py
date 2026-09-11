@@ -282,6 +282,26 @@ async def test_the_lane_bench_runs_offline_and_every_row_is_measured(capsys):
     assert "OVER" not in out, "a recipe missed its own latency target"
 
 
+async def test_the_lane_bench_puts_the_clock_back_when_it_is_done(capsys):
+    """It runs in THIS process, so what it patches is what every later test reads.
+
+    `london_now` freezes the clock the analytic tools read. The bench used to apply it with a
+    shim that had no undo — correct for a standalone process, silently wrong here: every
+    harness read of "today's orders" three files later came back empty, and the golden
+    navigation scenario walked a list of nothing. The bench restores what it replaced now, and
+    this asserts it rather than trusting it.
+    """
+    from app.tools import analytics_tools
+    from scripts import bench_lanes
+
+    before = analytics_tools.datetime
+    assert await bench_lanes.main(["--orders", "4", "--latency-ms", "0"]) == 0
+    capsys.readouterr()
+    assert analytics_tools.datetime is before, (
+        "the bench left its frozen clock behind; every later test's idea of today is now its own"
+    )
+
+
 def test_the_bench_quotes_the_session_it_says_it_quotes():
     """Every baseline figure in the bench is one the September report actually carries."""
     from scripts.bench_lanes import BASELINE

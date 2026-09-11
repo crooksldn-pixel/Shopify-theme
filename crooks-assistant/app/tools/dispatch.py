@@ -178,7 +178,7 @@ async def dispatch(
     # anything (app/progressive.py).
     progressive.starting(session, name)
     try:
-        payload = await registry.invoke(name, args, timeout_s=timeout_s)
+        payload = await _read_once(name, args, session=session, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
         # Client errors carry a message written to be read out ("Shopify is rate-limiting
         # us"). They must reach the model intact, not as "failed unexpectedly".
@@ -228,6 +228,30 @@ async def dispatch(
     return text
 
 
+async def _read_once(name: str, args: dict[str, Any], *, session: Session, timeout_s: float) -> Any:
+    """Run the tool — or, for a READ, join the request that is already making it (§12, D-13).
+
+    `turn_6089e7517986` asked Gmail the same search twice and read the same order twice, and
+    `turn_26db2bafe507` did the same with `commerce_query` and `gmail_search`. Two
+    presentation paths wanting one entity are one request; the dedupe layer keys on the tool,
+    the canonical arguments (a card's title is not one), the entity, the login and the
+    freshness the caller needs.
+
+    A write goes straight to the handler. Nothing here may hold, join or reuse one — two
+    commits of one change are two commits, and `app/reads/dedupe.py` refuses a write tool
+    outright rather than trusting this branch to be the only caller.
+    """
+    spec = registry.get(name)
+    if spec.write is not None or spec.batch is not None:
+        return await registry.invoke(name, args, timeout_s=timeout_s)
+    from app.reads import budget, dedupe
+
+    return await dedupe.current().read(
+        name, args, scope=dedupe.scope_of(session), lane=budget.lane_name(),
+        factory=lambda: registry.invoke(name, args, timeout_s=timeout_s),
+    )
+
+
 async def _stage(
     name: str, args: dict[str, Any], *, session: Session, timeout_s: float, calls: list[Any] | None, trace: _Trace | None = None,
 ) -> str:
@@ -240,7 +264,15 @@ async def _stage(
     spec = registry.get(name)
     started = time.perf_counter()
     try:
-        prepared = await registry.invoke(name, args, timeout_s=timeout_s)
+        # Preparing a change is a PRECONDITION read: the handler builds the exact execution
+        # arguments from a fresh read of the entity, and lane 3 is where the brief ranks that
+        # — above a background job, above speculation, and never served from anything held.
+        # `budget.must_be_fresh` is true in this lane, so app/reads/dedupe.py refuses to hand
+        # this a recent answer or to join it to a flight started for something else.
+        from app.reads import budget
+
+        with budget.using(budget.PRECONDITION, f"stage:{trace.tool_call_id}"):
+            prepared = await registry.invoke(name, args, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
         log.warning("tool=%s could not be prepared: %s", name, exc)
         if calls is not None:

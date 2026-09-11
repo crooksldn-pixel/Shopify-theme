@@ -26,6 +26,12 @@ What it guarantees:
   (`origin`, with `why`), which is what makes a predicted read distinguishable from a requested
   one everywhere downstream — the timeline event, the report, the memory entry it fills. A
   requested plan also stands the speculative lane down before it runs.
+* A LANE, and with it a PRIORITY (app/reads/budget.py). Five budgets rather than one, in the
+  order the owner's attention is in: his foreground read, his navigation's hydration, a
+  mutation's precondition, a background job, a guess. Entering one of the first three stands
+  the last two down, and the two lower lanes are capped below a source's concurrency so his
+  read always finds a slot. That is D-4: one shared budget, scoped to a turn that outlived
+  itself, refused the owner's own work because speculation had spent it.
 * NO WRITES. A read whose tool has a WriteSpec or a BatchSpec is refused before the plan runs.
   Two writes must never be in flight together, and the way to guarantee that is to have no
   path from here to one.
@@ -42,14 +48,19 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.observability import timeline
+from app.reads import budget
 
 log = logging.getLogger("crooks.reads")
 
 # How many reads of one source may be in flight at once. Shopify's Admin API is a leaky
 # bucket refilling at 50 points a second; Gmail's per-user quota is generous but its
 # per-thread fetches are not free. Four and three are what the tablet's screens need.
-SOURCE_LIMITS: dict[str, int] = {"shopify": 4, "gmail": 3, "mac": 8}
-DEFAULT_LIMIT = 3
+# One table, read from two places. The semaphore below is PER PLAN and the throttle in
+# app/reads/budget.py is global, and the two disagreeing about how much of a source there is
+# would be a bug nobody would look for — so the numbers live once, beside the throttle that
+# needs them to mean something across plans.
+SOURCE_LIMITS: dict[str, int] = budget.SOURCE_SLOTS
+DEFAULT_LIMIT = budget.DEFAULT_SLOTS
 
 # What one plan may spend at a source, in that source's own units. Shopify counts calculated
 # query cost; Gmail counts requests. Both are ceilings, not targets.
@@ -97,9 +108,35 @@ class ReadPlan:
     # stands the predicted lane down before it starts one.
     origin: str = "requested"
     why: str = ""
+    # Which of the five budgets this plan spends, and therefore what it outranks. Left unset
+    # it is read from the origin: a predicted plan is speculation and a requested one is the
+    # owner's foreground read, which is what every caller meant before lanes existed. A
+    # caller that knows better says so — a tap's hydration is NAVIGATION, a mutation's
+    # fingerprint read is PRECONDITION.
+    lane: str = ""
+    # Which unit of work the lane's budget is charged to — the turn, the tap, the proposal.
+    # Empty takes the lane the caller is already in, and then the turn: an unnamed unit of
+    # work sharing the turn's key is the behaviour this module had before lanes, which is
+    # never worse than it.
+    key: str = ""
+    # Which conversation this plan belongs to, for standing the lower lanes down. Filled from
+    # the session by `run_plan` when the caller does not say.
+    scope: str = ""
+    # Whether `lane` was asked for or read off the origin. A plan that did not ask takes the
+    # lane its caller is already in — a recipe run for a TAP reads in the navigation lane
+    # without every recipe in app/fastpath/library.py having to say so.
+    lane_explicit: bool = False
 
     def names(self) -> list[str]:
         return [r.name for r in self.reads]
+
+    def __post_init__(self) -> None:
+        if self.lane:
+            if self.lane not in budget.PRIORITY:
+                raise ValueError(f"{self.lane!r} is not one of {budget.LANES}")
+            self.lane_explicit = True
+        else:
+            self.lane = budget.SPECULATION if self.origin == "predicted" else budget.FOREGROUND
 
 
 @dataclass(slots=True)
@@ -157,27 +194,51 @@ def _layers(plan: ReadPlan) -> list[list[Read]]:
     return waves
 
 
-async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = None, turn_id: str = "") -> ReadResult:
-    """Run the graph. Never raises for a read that failed: a failure is a name in `errors`."""
-    assert_reads_only(plan)
-    if plan.origin != "predicted":
-        # The owner has asked for something. Whatever was being read on a hunch for this
-        # conversation stands down first: it holds a source's concurrency and none of it is
-        # being waited for. Never raises, and a process with no anticipation layer installed
-        # does nothing here.
-        try:
-            from app.anticipation import engine as anticipation
+def _lane_of(plan: ReadPlan, session: Any, turn_id: str) -> tuple[str, str]:
+    """(lane, unit of work) for this plan.
 
-            anticipation.owner_read(session)
+    An explicit lane wins. Otherwise the plan takes the lane its caller is already in, which
+    is how a recipe run for a tap reads in the navigation lane without every recipe having to
+    know it was tapped. Failing both, the origin decides: a guess is speculation and a
+    request is the owner's foreground read.
+    """
+    ambient_lane, ambient_key = budget.ambient_lane()
+    lane = plan.lane if plan.lane_explicit else (ambient_lane or plan.lane)
+    key = plan.key or (ambient_key if lane == ambient_lane else "") or turn_id or str(getattr(session, "turn_id", "") or "")
+    return lane, key
+
+
+async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = None, turn_id: str = "") -> ReadResult:
+    """Run the graph, in the plan's lane. Never raises for a read that failed: a failure is a
+    name in `errors`."""
+    assert_reads_only(plan)
+    scope = plan.scope or budget.scope_of(session)
+    lane, key = _lane_of(plan, session, turn_id)
+    throttle = budget.throttle()
+    if lane in budget.OWNER_LANES:
+        # The owner has asked for something. Everything below this lane stands down first:
+        # a guess and a background job hold a source's rate and nobody is waiting for either.
+        # `budget.yield_to` is what decides which lanes are below this one; the anticipation
+        # layer registers itself as one of the things that stands down (app/anticipation/
+        # engine.py), so this file knows nothing about it.
+        #
+        # It used to be `if plan.origin != "predicted"` and a direct call into the
+        # anticipation engine, which stood down the P2 lane and nothing else — so a background
+        # job kept its slot, and the layer had to be installed for a stand-down to happen at
+        # all.
+        try:
+            budget.yield_to(lane, scope=scope, branch_id=str(getattr(session, "acting_branch", "") or ""))
         except Exception as exc:  # noqa: BLE001 — a read is not failed by a cancellation
-            log.debug("could not stand down the speculative lane: %s", exc)
+            log.debug("could not stand the lower lanes down: %s", exc)
     from app.tools.dispatch import dispatch
 
     result = ReadResult()
     by_name = {r.name: r for r in plan.reads}
     started_all = time.perf_counter()
     limits = {source: asyncio.Semaphore(SOURCE_LIMITS.get(source, DEFAULT_LIMIT)) for source in {r.source for r in plan.reads}}
-    budget = {source: SOURCE_BUDGET.get(source, 100.0) for source in limits}
+    # Renamed from `budget`: the module of that name is now what says which lane this plan is
+    # in, and a local that shadowed it was a bug waiting for the first person to use both.
+    allowance = {source: SOURCE_BUDGET.get(source, 100.0) for source in limits}
     order = plan.names()
     calls_by_name: dict[str, Any] = {}
 
@@ -206,19 +267,28 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
             result.skipped[read.name] = "nothing to look up"
             return
         cost = float(read.cost if read.cost is not None else DEFAULT_COST.get(read.source, 1.0))
-        if budget.get(read.source, 0.0) < cost:
+        if allowance.get(read.source, 0.0) < cost:
             result.skipped[read.name] = f"the {read.source} budget for this answer is spent"
             result.partial = result.partial or not read.optional
             return
-        budget[read.source] -= cost
+        if not throttle.admit(read.source, lane):
+            # The global throttle, which the per-plan semaphore above cannot see: speculation
+            # in its own plan held its own four Shopify slots while the owner's plan held
+            # four more, and both went to the same leaky bucket. A lower lane that is at its
+            # share of a source waits for the next question rather than spending his rate.
+            result.skipped[read.name] = f"{read.source} is busy with work the owner is waiting on"
+            result.partial = result.partial or not read.optional
+            return
+        allowance[read.source] -= cost
         result.spent[read.source] = result.spent.get(read.source, 0.0) + cost
         own: list[Any] = []
         t0 = time.perf_counter()
-        async with limits[read.source]:
-            try:
-                await dispatch(read.tool, args, session=session, timeout_s=read.timeout_s, calls=own)
-            except Exception as exc:  # noqa: BLE001 — a failed read is a reported read
-                result.errors[read.name] = str(exc)[:200]
+        with throttle.holding(read.source, lane), budget.using(lane, key, scope=scope, yielding=False):
+            async with limits[read.source]:
+                try:
+                    await dispatch(read.tool, args, session=session, timeout_s=read.timeout_s, calls=own)
+                except Exception as exc:  # noqa: BLE001 — a failed read is a reported read
+                    result.errors[read.name] = str(exc)[:200]
         ms = (time.perf_counter() - t0) * 1000
         progress(read)
         result.ms[read.name] = round(ms, 1)
@@ -271,7 +341,7 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
     if timeline.current().active is not None:
         timeline.emit(
             "read_plan", session_id=getattr(session, "session_id", None), turn_id=turn_id or getattr(session, "turn_id", "") or None,
-            label=plan.label or None, origin=plan.origin, why=plan.why or None,
+            label=plan.label or None, origin=plan.origin, why=plan.why or None, lane=lane,
             groups=result.groups, fanout=max((len(g) for g in result.groups), default=0),
             critical_path_ms=result.critical_path_ms, serial_ms=result.serial_ms, saved_ms=round(result.saved_ms, 1),
             spent=result.spent, ms=result.ms, skipped=result.skipped or None, errors=list(result.errors) or None,

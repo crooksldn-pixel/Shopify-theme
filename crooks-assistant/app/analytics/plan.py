@@ -1,88 +1,115 @@
-"""The bounds on one turn's reading: how many analytic queries it may run, how much they may
-cost together, how long they may take, and that the same query is not run twice. A model
-that composes reads is welcome to; one that loops is stopped, and told why, before Shopify
-notices."""
+"""The bounds on one piece of work's reading: how many analytic queries it may run, how much
+they may cost together, how long they may take, and that the same query is not run twice. A
+model that composes reads is welcome to; one that loops is stopped, and told why, before
+Shopify notices.
+
+It used to be one bound per TURN, and that is D-4. The turn's budget was spent by whatever
+read next — the owner's question, a hydration, or a guess the anticipation layer had made —
+and the turn outlived itself, so the tap that came after a read-heavy turn inherited its
+spend and a dock landing was refused `landing_unavailable`. The bounds now belong to a LANE
+and a unit of work (app/reads/budget.py): a guess cannot spend the owner's, and a tap starts
+fresh.
+
+What is unchanged is the owner's own ceiling. FOREGROUND is eight calls, thirty points and
+forty-five seconds, which is exactly what this module enforced before, so nothing the owner
+asks for got narrower.
+"""
 
 from __future__ import annotations
 
 import hashlib
 import json
-import time
-from dataclasses import dataclass, field
 from typing import Any
 
 from app.analytics.query import TURN_COST
+from app.reads import budget
 
-MAX_CALLS = 8
-MAX_ELAPSED_S = 45.0
+# Kept as names because the report and the tests quote them; the numbers themselves live in
+# app/reads/budget.py:BUDGETS, which is the one place that decides.
+MAX_CALLS = budget.BUDGETS[budget.FOREGROUND].calls
+MAX_ELAPSED_S = budget.BUDGETS[budget.FOREGROUND].elapsed_s
 
+# What a unit of work's reading is, now that it belongs to a lane. Named here because this is
+# where callers have always looked for it.
+TurnPlan = budget.Spend
 
-@dataclass(slots=True)
-class TurnPlan:
-    turn_id: str
-    started: float = field(default_factory=time.monotonic)
-    calls: int = 0
-    cost: int = 0
-    seen: dict[str, str] = field(default_factory=dict)      # args fingerprint -> rendered result
-    steps: list[dict[str, Any]] = field(default_factory=list)
+_MISSING = object()
 
 
 def fingerprint(name: str, args: dict[str, Any]) -> str:
-    return hashlib.sha1(json.dumps({"tool": name, "args": args}, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    """One query's identity, through the read layer's canonical form.
 
-
-def plan_for(session: Any) -> TurnPlan:
-    """The plan for the session's current turn, started afresh when the turn changes."""
-    turn_id = str(getattr(session, "turn_id", "") or "")
-    plan = getattr(session, "plan", None)
-    if not isinstance(plan, TurnPlan) or plan.turn_id != turn_id:
-        plan = TurnPlan(turn_id=turn_id)
-        try:
-            session.plan = plan
-        except AttributeError:
-            pass
-    return plan
-
-
-def restart(session: Any) -> TurnPlan:
-    """Begin a fresh scope for reads that are not part of the turn before them.
-
-    A TAP is such a read. The plan is keyed on `session.turn_id`, and a tap does not start a
-    turn, so every tap after a spoken question inherited that question's bounds: the second
-    press of Back-to-the-assistant was handed "the same query already ran this turn" and drew
-    an empty landing, and a tap after a turn that had run eight queries was refused outright —
-    which is exactly the `landing_unavailable` in the live session's timeline at 00:25:48.
-
-    Nothing about the bounds themselves changes here; this says only that a new interaction
-    gets its own.
+    That form drops what changes how a result is DRAWN rather than what is READ — a card's
+    `title`, above all. `turn_26db2bafe507` and `turn_6089e7517986` each ran `commerce_query`
+    twice for two cards over the same rows, and an exact-argument fingerprint could not see
+    that they were one query (D-13). Answering the second from the first also leaves the
+    working set the first one published alone, which is what a second identical query would
+    have rebuilt.
     """
-    plan = TurnPlan(turn_id=str(getattr(session, "turn_id", "") or ""))
+    from app.reads import dedupe
+
+    return hashlib.sha1(
+        json.dumps({"tool": name, "args": dedupe.canonical(args)}, sort_keys=True, default=str).encode()
+    ).hexdigest()[:16]
+
+
+def lane_and_key(session: Any) -> tuple[str, str]:
+    """Which lane this read is in, and which unit of work its budget belongs to."""
+    lane, key = budget.current_lane()
+    return lane, key or budget.key_for(session, lane)
+
+
+def plan_for(session: Any) -> budget.Spend:
+    """This unit of work's reading, live.
+
+    Also honours the reset the benches and the tests have always used — `session.plan = None`
+    between rows — because a bound that a caller believes it has cleared and has not is a
+    bound that fails a bench for the wrong reason.
+    """
+    ledger = budget.ledger_for(session)
+    if getattr(session, "plan", _MISSING) is None:
+        ledger.reset()
+    lane, key = lane_and_key(session)
+    spend = ledger.spend(lane, key)
     try:
-        session.plan = plan
+        session.plan = spend
     except AttributeError:
         pass
-    return plan
+    return spend
+
+
+# There was a `restart(session)` here for a moment in Phase 4, to give a TAP its own scope —
+# the plan was keyed on session.turn_id and a tap starts no turn, so a tap after a spoken
+# question inherited that question's bounds AND its "the same query already ran" answers. The
+# lanes above do that job properly: `plan_for` resolves the unit of work from the lane the
+# caller entered, so a tap in the NAVIGATION lane with its own key is already a fresh scope,
+# for the bounds and for the reuse both. Two mechanisms for one rule is one too many.
 
 
 def check(session: Any, name: str, args: dict[str, Any], *, cost: int) -> tuple[str | None, str | None]:
-    """(refusal, cached) — a refusal when the turn's bounds are spent, the earlier answer when
-    this exact query already ran this turn, else (None, None)."""
-    plan = plan_for(session)
-    key = fingerprint(name, args)
-    if key in plan.seen:
-        return None, plan.seen[key]
-    if plan.calls >= MAX_CALLS:
-        return f"REFUSED: this turn has already run {plan.calls} queries; answer from what they returned, or ask the owner to narrow the question.", None
-    if plan.cost + cost > TURN_COST:
-        return f"REFUSED: this turn's query budget is spent ({plan.cost} of {TURN_COST} points used; this query costs {cost}). Answer from what has been read, or narrow the period.", None
-    if time.monotonic() - plan.started > MAX_ELAPSED_S:
-        return "REFUSED: this turn has been reading for too long; answer from what has been read.", None
-    return None, None
+    """(refusal, cached) — a refusal when this lane's bounds are spent, the earlier answer
+    when this exact query already ran for this unit of work, else (None, None).
+
+    A precondition or verification read never gets the earlier answer: `Ledger.reuse` refuses
+    it by lane, which is the same rule app/reads/dedupe.py keeps for every other read.
+    """
+    plan_for(session)                       # honour the reset, and settle the lane
+    lane, key = lane_and_key(session)
+    ledger = budget.ledger_for(session)
+    reused = ledger.reuse(lane, key, fingerprint(name, args))
+    if reused is not None:
+        return None, reused
+    return (ledger.check(lane, key, cost=int(cost)) or None), None
 
 
 def record(session: Any, name: str, args: dict[str, Any], *, cost: int, rendered: str, ms: float, cached: bool, **fields: Any) -> None:
-    plan = plan_for(session)
-    plan.calls += 1
-    plan.cost += cost
-    plan.seen[fingerprint(name, args)] = rendered
-    plan.steps.append({"tool": name, "cost": cost, "ms": round(ms, 1), "cached": cached, **fields})
+    plan_for(session)
+    lane, key = lane_and_key(session)
+    budget.ledger_for(session).record(
+        lane, key, cost=int(cost), fingerprint=fingerprint(name, args), rendered=rendered,
+        step={"tool": name, "cost": cost, "ms": round(ms, 1), "cached": cached, "lane": lane, **fields},
+    )
+
+
+__all__ = ["MAX_CALLS", "MAX_ELAPSED_S", "TURN_COST", "TurnPlan", "check", "fingerprint",
+           "lane_and_key", "plan_for", "record"]

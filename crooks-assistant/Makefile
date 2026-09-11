@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch control control-app
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix tool-matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch control control-app
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -41,6 +41,7 @@ help:
 	@echo "  make experience-live the same questions against the REAL shop and inbox, read-only"
 	@echo "  make experience-list what there is to run    (SCENARIO=back runs one)"
 	@echo "  make matrix          which operations are reachable by voice, by touch, and tested"
+	@echo "  make tool-matrix     every tool and intent family audited; writes docs/phase4/TOOL_MATRIX.md"
 	@echo "  make dev             the backend alone, with auto-reload, for working on the code"
 	@echo "  make whisper-server  speech recognition alone (prints build steps if not built yet)"
 	@echo "  make bench           choose the Whisper model from your tablet recordings"
@@ -201,6 +202,9 @@ experience-list:
 
 matrix:
 	@$(PY) -c "import sys; sys.path.insert(0,'.'); from experience.matrix import markdown; print(markdown())"
+
+tool-matrix:
+	@$(PY) -c "import sys; sys.path.insert(0,'.'); from experience import tool_matrix; print(tool_matrix.write())"
 
 secrets:
 	$(PY) scripts/set_secrets.py --all

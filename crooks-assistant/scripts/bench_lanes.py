@@ -33,6 +33,7 @@ import statistics
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -88,8 +89,17 @@ async def main(argv: list[str] | None = None) -> int:
     from tests.test_context import CUSTOMER, ORDER, inbox
     from tests.test_context import Store as OrderStore
 
+    # `london_now` freezes the clock the analytic tools read, and it is written for pytest's
+    # monkeypatch, which undoes what it sets. This bench is normally its own process, where
+    # that does not matter — but tests/test_operations.py runs `main()` IN PROCESS, and a
+    # frozen clock left behind made every later harness read of "today's orders" come back
+    # empty, three files further down the suite. It cost an afternoon to find twice. So this
+    # shim remembers what it replaced, and the bench puts it back before it returns.
+    undo: list[tuple[Any, str, Any]] = []
+
     class Patch:
         def setattr(self, obj, name, value):
+            undo.append((obj, name, getattr(obj, name)))
             setattr(obj, name, value)
 
     london_now(Patch())
@@ -267,6 +277,8 @@ async def main(argv: list[str] | None = None) -> int:
     for rid, stat in sorted(((rid, r.stats) for rid, r in RECIPES.items() if r.stats.runs)):
         print(f"  {rid:24} {stat.runs:2} run(s), {stat.hits} answered, {stat.deferred} deferred, median {stat.average_ms:,.0f} ms")
     print(f"\nCache: {memory.counts()}")
+    for obj, name, was in reversed(undo):
+        setattr(obj, name, was)
     return 0
 
 
