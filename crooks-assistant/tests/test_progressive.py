@@ -241,6 +241,24 @@ def test_the_patch_log_is_bounded_and_a_tablet_can_catch_up_from_a_cursor():
     assert late["patches"][0]["at_ms"] == 500.0
 
 
+def test_a_read_nobody_asked_for_puts_nothing_on_the_glass():
+    """D-4's lesson, applied here: anticipation may read, and it may not draw. A predicted
+    plan's results are staged nowhere — the owner is looking at something else, and a card
+    appearing under his hand for a question he did not ask is worse than a slow one."""
+    class FakeSession:
+        session_id = "s1"
+        focused_branch = ""
+
+    workspace = progressive.begin("s1")
+    with progressive.background():
+        progressive.starting(FakeSession(), "gmail_search")
+        progressive.observe(FakeSession(), "gmail_search", {"threads": [{"thread_id": "t1", "subject": "Hi"}], "count": 1})
+    assert workspace.patches == []
+    # And the same calls in the foreground do reach it.
+    progressive.observe(FakeSession(), "gmail_search", {"threads": [{"thread_id": "t1", "subject": "Hi"}], "count": 1})
+    assert [p.type for p in workspace.patches] == ["email_list"]
+
+
 def test_the_live_registry_is_bounded_and_per_half():
     for i in range(progressive.MAX_LIVE + 6):
         progressive.begin(f"s{i}")

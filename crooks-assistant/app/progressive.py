@@ -48,6 +48,8 @@ import logging
 import time
 from collections import OrderedDict
 from collections.abc import Callable
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -322,7 +324,27 @@ def reset() -> None:
     _LIVE.clear()
 
 
+# Whether the read running now is one the OWNER is waiting for. A speculative read
+# (app/anticipation, `origin="predicted"`) must never put a card on the glass: it was nobody's
+# question, and D-4 is what happens when anticipation is allowed to spend the foreground's
+# room. Set false around a predicted plan by app/reads/scheduler.py; everything else — the
+# model's tool calls, a recipe's reads, a tapped navigation — is the owner's.
+FOREGROUND: ContextVar[bool] = ContextVar("crooks_progressive_foreground", default=True)
+
+
+@contextmanager
+def background() -> Any:
+    """Run reads that nobody asked for. Their cards are not staged."""
+    token = FOREGROUND.set(False)
+    try:
+        yield
+    finally:
+        FOREGROUND.reset(token)
+
+
 def _workspace_for(session: Any, branch_id: str = "") -> Workspace | None:
+    if not FOREGROUND.get():
+        return None
     session_id = str(getattr(session, "session_id", "") or "")
     if not session_id:
         return None
