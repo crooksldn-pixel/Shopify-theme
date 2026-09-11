@@ -166,6 +166,42 @@
     return out;
   }
 
+  /* What is on top of what, at the moment of this render.
+   *
+   * The live session of 11 September recorded `clipped: 0` on every one of its renders while
+   * the owner was looking at overlapping text and controls, and said so out loud twice. That
+   * number was `scrollWidth > clientWidth` on a card — it can only see a box too small for
+   * its own contents, and never two boxes that are each the right size and in the same place.
+   * It was not wrong; it was answering a different question.
+   *
+   * So the snapshot now carries the answer to the question the owner was asking: real
+   * geometry, from web/collide.js, which reads every rectangle on screen with
+   * getBoundingClientRect() and counts the pairs that collide, by rule. `collisions.total` is
+   * the number a report can put beside a turn and mean it — and when it disagrees with what
+   * the owner saw, THAT is the defect, not his eyes.
+   *
+   * Counts and selectors only: a rule name, a tag, an id, the first class, four integers.
+   * Nothing a card said, here as everywhere else in this file.
+   */
+  function collisions() {
+    const api = root.CrooksCollide;
+    if (!api || typeof api.scan !== 'function') return null;
+    let scan = null;
+    try { scan = api.scan({}); } catch { return null; }
+    if (!scan) return null;
+    const counts = {};
+    for (const rule of Object.keys(scan.counts || {})) if (scan.counts[rule]) counts[rule] = scan.counts[rule];
+    return {
+      total: scan.total || 0,
+      by_rule: counts,
+      // One example per rule that fired, so a report can name the thing rather than the count.
+      worst: (scan.hits || []).slice(0, 6).map((h) => ({ rule: h.rule, a: h.a, b: h.b, w: h.w, h: h.h, note: h.note })),
+      // The same rectangles, asked the other question section 29 cares about.
+      small_targets: (scan.touch || []).slice(0, 6),
+      measured: scan.records || 0,
+    };
+  }
+
   function snapshot(cardsEl, extra) {
     const doc = root.document;
     const cards = cardsEl && cardsEl.children ? Array.from(cardsEl.children) : [];
@@ -179,7 +215,15 @@
         cards_visible: cardsEl ? cardsEl.clientHeight || 0 : 0,
       },
     }, extra || {});
-    out.overflow = { long_scroll: out.document.cards_height > out.document.cards_visible + 8, clipped: out.cards.filter((c) => c.clipped_x).length };
+    const hit = collisions();
+    // `clipped` stays, because it is a real (narrow) measurement and the report reads it.
+    // `collisions` is the one that answers the owner's question.
+    out.overflow = {
+      long_scroll: out.document.cards_height > out.document.cards_visible + 8,
+      clipped: out.cards.filter((c) => c.clipped_x).length,
+      collisions: hit ? hit.total : null,
+    };
+    if (hit) out.collisions = hit;
     return out;
   }
 
@@ -187,7 +231,7 @@
 
   function reset() { enabled = false; testSession = null; queue = []; if (timer) clearTimeout(timer); timer = null; seq = 0; context = { session_id: '', turn_id: '' }; sent = 0; dropped = 0; }
 
-  const api = { configure, setContext, record, flush, snapshot, cardState, pathOnly, status, reset, _setTransport(fn) { transport = fn; } };
+  const api = { configure, setContext, record, flush, snapshot, collisions, cardState, pathOnly, status, reset, _setTransport(fn) { transport = fn; } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.CrooksTelemetry = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -66,6 +66,14 @@ class Element extends Node {
     return node;
   }
   get firstChild() { return this.childNodes[0] || null; }
+  // web/notify.js puts a control-local message directly AFTER its control, which is
+  // `insertBefore(note, control.nextSibling)` — the ordinary DOM way, and a gap in this
+  // stand-in until a test asked where the message had landed.
+  get nextSibling() {
+    if (!this.parentNode) return null;
+    const kids = this.parentNode.childNodes;
+    return kids[kids.indexOf(this) + 1] || null;
+  }
   get children() { return this.childNodes.filter((n) => n.nodeType === 1); }
   get textContent() { return this.childNodes.map((n) => n.textContent).join(''); }
   set textContent(value) { this.childNodes = []; if (value !== '' && value !== null && value !== undefined) this.appendChild(new Text(value)); }

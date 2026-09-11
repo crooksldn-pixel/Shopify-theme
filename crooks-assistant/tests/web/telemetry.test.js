@@ -121,6 +121,61 @@ test('the screen is read as structure: card types, tabs, the rail, the surface, 
   assert.equal(recorded.cards[1].surface.kind, 'tap_commit');
 });
 
+/* The number the live session got wrong.
+ *
+ * `ts-20260911-001845`: every render recorded `clipped: 0` while the owner was looking at
+ * overlapping text and controls and said so out loud, twice. `clipped` is one subtraction on
+ * one card — it can only see a box too small for its own contents, never two boxes that are
+ * each the right size and in the same place. The snapshot now carries the second number as
+ * well, from web/collide.js, so a report can say what he was actually looking at.
+ */
+test('the snapshot carries real collision counts, by rule, and the selectors — never the words', () => {
+  T.reset();
+  T.configure({ test_session: 'ts-collide' });
+  const real = globalThis.CrooksCollide;
+  globalThis.CrooksCollide = {
+    scan: () => ({
+      total: 3,
+      counts: { control_over_control: 2, text_over_control: 0, notification_over_chrome: 1, folded_action: 0 },
+      hits: [
+        { rule: 'control_over_control', a: 'button.rail-chip', b: 'button.dock-btn', at: '33,800 120x44', w: 40, h: 12, note: '' },
+        { rule: 'notification_over_chrome', a: 'p#toast.toast', b: 'button.branch-chip', at: '40,745 520x44', w: 160, h: 19, note: '' },
+      ],
+      touch: [{ sel: 'button.row-btn', w: 61, h: 34 }],
+      records: 214,
+    }),
+  };
+  const cards = shim.document.createElement('div');
+  const snap = T.snapshot(cards, {});
+  assert.equal(snap.overflow.collisions, 3, 'the number a report can put beside a turn');
+  assert.equal(snap.collisions.total, 3);
+  assert.deepEqual(snap.collisions.by_rule, { control_over_control: 2, notification_over_chrome: 1 },
+    'only the rules that fired, so a clean screen is a small event');
+  assert.equal(snap.collisions.worst.length, 2);
+  assert.equal(snap.collisions.worst[0].rule, 'control_over_control');
+  assert.equal(snap.collisions.worst[0].b, 'button.dock-btn');
+  assert.deepEqual(snap.collisions.small_targets, [{ sel: 'button.row-btn', w: 61, h: 34 }]);
+  assert.equal(snap.collisions.measured, 214);
+  const recorded = T.record('render', snap);
+  assert.equal(recorded.collisions.total, 3, 'and it survives the event bound');
+  globalThis.CrooksCollide = real;
+});
+
+test('with no geometry module on the page the snapshot says nothing rather than nothing-is-wrong', () => {
+  T.reset();
+  T.configure({ test_session: 'ts-collide-2' });
+  const real = globalThis.CrooksCollide;
+  delete globalThis.CrooksCollide;
+  const snap = T.snapshot(shim.document.createElement('div'), {});
+  assert.equal(snap.overflow.collisions, null, 'null is "not measured", which is not zero');
+  assert.equal(snap.collisions, undefined);
+  // And a scanner that throws never reaches the caller: a measurement is never worth a render.
+  globalThis.CrooksCollide = { scan() { throw new Error('no layout'); } };
+  assert.doesNotThrow(() => T.snapshot(shim.document.createElement('div'), {}));
+  assert.equal(T.collisions(), null);
+  globalThis.CrooksCollide = real;
+});
+
 test('an image path is kept without its query, and a bad one is empty', () => {
   assert.equal(T.pathOnly('/media/product/abc.jpg?width=200&sig=secret'), '/media/product/abc.jpg');
   assert.equal(T.pathOnly('https://cdn.shopify.com/s/files/1/x.jpg?v=1'), '/s/files/1/x.jpg');

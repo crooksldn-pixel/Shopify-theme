@@ -50,6 +50,39 @@ def test_progressive_disclosure_under_node():
 
 
 @needs_node
+def test_the_collision_rules_under_node():
+    """The geometry that answers the question `clipped=0` could not (web/collide.js)."""
+    result = subprocess.run(
+        [NODE, "--test", str(ROOT / "tests" / "web" / "collide.test.js")],
+        capture_output=True, text=True, timeout=120, cwd=ROOT,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
+    assert "# fail 0" in result.stdout
+
+
+@needs_node
+def test_the_notification_architecture_under_node():
+    """Three classes, one home each, and no message over the furniture (web/notify.js)."""
+    result = subprocess.run(
+        [NODE, "--test", str(ROOT / "tests" / "web" / "notify.test.js")],
+        capture_output=True, text=True, timeout=120, cwd=ROOT,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
+    assert "# fail 0" in result.stdout
+
+
+@needs_node
+def test_the_telemetry_under_node():
+    """What a test session records of the screen, including the collision counts."""
+    result = subprocess.run(
+        [NODE, "--test", str(ROOT / "tests" / "web" / "telemetry.test.js")],
+        capture_output=True, text=True, timeout=120, cwd=ROOT,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
+    assert "# fail 0" in result.stdout
+
+
+@needs_node
 def test_the_service_worker_under_node():
     """The worker keeps the shell and nothing else — proved by running it, not by reading it."""
     result = subprocess.run(

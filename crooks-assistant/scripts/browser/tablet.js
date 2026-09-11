@@ -70,7 +70,13 @@ async function main() {
     card: ((document.querySelector('#cards .card') || {}).dataset || {}).type || '',
     ref: ((document.querySelector('#cards .card') || {}).dataset || {}).ref || '',
     answer: ((document.querySelector('#answer') || {}).textContent || '').trim(),
-    toast: ((document.querySelector('#toast') || {}).textContent || '').trim(),
+    // What the page is saying, from wherever it is saying it. The one floating bubble is gone:
+    // a message now belongs to a control, to the workspace, or — for the two states of the
+    // machine itself — to the region above the wordmark (web/notify.js). Read as one string,
+    // because what these checks care about is whether the words appeared at all.
+    toast: Array.from(document.querySelectorAll('#notes-global .note-words, #notes-orb .note-words, #notes-deck .note-words, #cards .note-control .note-words'))
+      .filter((n) => !n.closest('.note').hidden)
+      .map((n) => n.textContent.trim()).join(' · '),
     errorCard: Boolean(document.querySelector('#cards .card[data-type="error"]')),
     sub: ((document.querySelector('#state-sub') || {}).textContent || '').trim(),
   }));

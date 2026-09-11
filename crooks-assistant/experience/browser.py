@@ -40,6 +40,12 @@ ACTION_SCRIPT = ROOT / "scripts" / "browser" / "action_state.js"
 # the only check anywhere that caught the duplicate `replaceCard` (Phase 4, D-1's
 # neighbour): the verified card was simply never drawn. It runs with the rest now.
 ACCEPT_SCRIPT = ROOT / "scripts" / "browser" / "accept.js"
+# And the geometry, at both sizes. The live session of 11 September recorded `clipped=0` on
+# every render while the owner was looking at overlapping text and controls: the telemetry was
+# answering a narrower question than the one he was asking. This script asks his question —
+# every rectangle on screen, read with getBoundingClientRect, against nineteen stress fixtures
+# — so an overlap fails a gate here instead of being discovered in his hand.
+COLLISION_SCRIPT = ROOT / "scripts" / "browser" / "collision.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -150,11 +156,13 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # And the same again at the tablet's own size. The pictures that matter for an
         # eight-inch screen are the ones taken on an eight-inch screen: the Phase 2 live test
         # found clipping and a swallowed dock that the 800 x 1280 shots could not show.
-        if TABLET_SCRIPT.exists():
+        for extra in (TABLET_SCRIPT, COLLISION_SCRIPT):
+            if not extra.exists():
+                continue
             await asyncio.to_thread(
                 subprocess.run,
-                ["node", str(TABLET_SCRIPT), f"http://127.0.0.1:{port}", str(out)],
-                cwd=ROOT, capture_output=True, text=True, timeout=300,
+                ["node", str(extra), f"http://127.0.0.1:{port}", str(out)],
+                cwd=ROOT, capture_output=True, text=True, timeout=600,
                 env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
             )
     finally:
@@ -225,13 +233,13 @@ async def run_checks() -> dict[str, Any]:
     stop_session = _start_gate_session(scratch)
     try:
         results = []
-        for script in (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT):
+        for script in (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(
                 subprocess.run,
                 ["node", str(script), f"http://127.0.0.1:{port}", ""],
-                cwd=ROOT, capture_output=True, text=True, timeout=300,
+                cwd=ROOT, capture_output=True, text=True, timeout=600,
                 env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
             ))
     finally:

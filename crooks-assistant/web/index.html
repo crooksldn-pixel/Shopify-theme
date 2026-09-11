@@ -31,6 +31,12 @@
 
 <div class="app" id="app">
 
+  <!-- GLOBAL notifications, and only the two the machine itself can be in: the Mac cannot be
+       reached, and this build must be updated. In flow, above the wordmark, so it takes space
+       rather than covering the dock, the orb, the halves or the composer. Nothing else on this
+       tablet is allowed to appear over every screen. -->
+  <div id="notes-global" class="notes notes-global" role="status" aria-live="polite" aria-label="System messages" hidden></div>
+
   <header class="top">
     <span class="wordmark">CROOKS</span>
     <span id="conn" class="conn" data-state="connecting" role="status">
@@ -54,15 +60,13 @@
         <p id="answer" class="answer" aria-live="polite"></p>
         <p id="errline" class="errline"></p>
       </div>
+      <!-- WORKSPACE notifications while the orb is the screen — the draft that saved, the
+           half that divided. Under the caption and above the halves, in flow. -->
+      <div id="notes-orb" class="notes notes-workspace" role="status" aria-live="polite" hidden></div>
       <!-- The two halves, named, when there are two. The gestures are the quick way; this is
            the way that always works, and the way a half working in the background says so. -->
       <div id="branch-bar" class="branch-bar" hidden></div>
     </section>
-
-    <!-- A line that says something and goes. Above everything, over any screen, and never
-         a surface of its own: a recogniser that heard nothing must not cost the owner the
-         card he was reading. -->
-    <p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
 
     <section id="context" class="context" aria-label="Context">
       <nav id="context-nav" class="context-nav" aria-label="Context navigation">
@@ -89,6 +93,11 @@
         <span id="armed-what" class="armed-what"></span>
         <button id="armed-cancel" class="armed-cancel" type="button">Cancel</button>
       </div>
+      <!-- WORKSPACE notifications while cards are the screen. Above the deck and in flow,
+           which is the whole mechanism: the live session's "Merged. 2 changes still waiting
+           over there." floated over the half the owner was reading, and a message that takes
+           its own space cannot. -->
+      <div id="notes-deck" class="notes notes-workspace" role="status" aria-live="polite" hidden></div>
       <div id="deck" class="deck" data-depth="0">
         <div class="deck-ghost g2" aria-hidden="true"></div>
         <div class="deck-ghost g1" aria-hidden="true"></div>
@@ -197,7 +206,9 @@
 
 <script src="/static/orb.js"></script>
 <script src="/static/audio-viz.js"></script>
+<script src="/static/collide.js"></script>
 <script src="/static/telemetry.js"></script>
+<script src="/static/notify.js"></script>
 <script src="/static/action-state.js"></script>
 <script src="/static/ui.js"></script>
 <script src="/static/app.js"></script>
