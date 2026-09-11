@@ -735,24 +735,23 @@ def _focus_lost(rec: Any) -> list[Finding]:
                 ))
             typed = chars
         elif kind == "tablet_scroll" and int(event.get("depth") or 0) == 0:
-            deep = None
-            for earlier in reversed(ordered[:i]):
+            deep, at = None, i
+            for j in range(i - 1, -1, -1):
+                earlier = ordered[j]
                 earlier_kind = str(earlier.get("kind") or "")
-                if float(event.get("ts") or 0.0) - float(earlier.get("ts") or 0.0) > FOCUS_S:
+                if ts - float(earlier.get("ts") or 0.0) > FOCUS_S:
                     break
                 if earlier_kind in ("command", "tablet_navigate", "tablet_tab"):
-                    deep = None
-                    break
+                    break     # he moved: the top of a new screen is where he asked to be
                 if earlier_kind == "tablet_scroll" and int(earlier.get("depth") or 0) > 0:
-                    deep = earlier
+                    deep, at = earlier, j
                     break
             if deep is None:
                 continue
             if int(deep.get("height") or 0) != int(event.get("height") or 0):
                 continue      # a different document: the place could not be kept
-            between = [e for e in ordered[:i]
-                       if str(e.get("kind") or "") in ("tablet_render", "branch_focused")
-                       and float(deep.get("ts") or 0.0) <= float(e.get("ts") or 0.0) <= ts]
+            between = [e for e in ordered[at:i]
+                       if str(e.get("kind") or "") in ("tablet_render", "branch_focused")]
             if not between:
                 continue
             out.append(Finding(
