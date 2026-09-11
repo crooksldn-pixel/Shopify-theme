@@ -332,6 +332,65 @@ def test_a_back_on_one_half_leaves_the_other_half_exactly_where_it_was(world):
 # ------------------------------------------------------------------ no model, ever
 
 
+@pytest.fixture()
+async def stage():
+    from experience.harness import harness
+
+    async with harness() as h:
+        yield h
+
+
+async def test_the_whole_of_navigation_happens_without_the_model(stage):
+    """Brief §24, driven through the real routes and counted.
+
+    Back, Home, Next, a tab, a branch focus, opening a relation and opening a record the Mac
+    already holds are all answerable from state the Mac has. The count is taken across the
+    whole sequence rather than per call, because one model call anywhere in it is the second
+    the owner waits and the sentence he did not ask for.
+    """
+    session_id = "det"
+    before = len(stage.provider.calls)
+    listing = await stage.say("show me today's orders", session_id=session_id)
+    card = listing.data("order_list")
+    rows = [r for r in (card.get("orders") or card.get("rows") or []) if isinstance(r, dict)]
+    assert rows, f"the fixture world drew no rows: {listing.surface_types}"
+    ref = str(rows[0].get("order_id") or "")
+    spoken_reads = len(stage.provider.calls) - before
+
+    fork = await stage.client.post("/branches/fork", data={"session_id": session_id, "label": "right"},
+                                   headers={"Tailscale-User-Login": "owner@example.com",
+                                            "X-Forwarded-For": "100.64.0.9"})
+    other = str(((fork.json().get("branch") or {}).get("branch_id")) or fork.json().get("branch_id") or "")
+    at_start = len(stage.provider.calls)
+
+    steps = [
+        await stage.touch("open.entity", session_id=session_id, kind="order", ref=ref, label="a row"),
+        await stage.touch("surface.tab", session_id=session_id, surface="order", tab="customer"),
+        await stage.touch("surface.scroll", session_id=session_id, depth=120),
+        await stage.touch("navigation.back", session_id=session_id),
+        await stage.touch("workflow.next", session_id=session_id),
+        await stage.touch("workflow.previous", session_id=session_id),
+        await stage.touch("navigation.home", session_id=session_id),
+        await stage.touch("navigation.forward", session_id=session_id),
+        await stage.touch("branch.show", session_id=session_id, branch_id=other),
+        await stage.touch("open.entity", session_id=session_id, kind="order", ref=ref, label="again"),
+    ]
+    await stage.client.post(f"/branches/{other}/focus", data={"session_id": session_id},
+                            headers={"Tailscale-User-Login": "owner@example.com",
+                                     "X-Forwarded-For": "100.64.0.9"})
+
+    asked = len(stage.provider.calls) - at_start
+    assert asked == 0, (
+        f"navigation woke the model {asked} time(s): {stage.provider.calls[at_start:]}"
+    )
+    assert all(step.model_calls == 0 for step in steps), [s.model_calls for s in steps]
+    assert spoken_reads == 0, "even the listing that set this up should not have asked the model"
+    # And they were not refusals dressed up as silence: every one of them said something or
+    # drew something.
+    empty = [s.command for s in steps if s.raw.get("ok") is False and s.raw.get("code") not in ("at_end", "at_start")]
+    assert not empty or empty == ["navigation.forward"], f"refused: {empty}"
+
+
 def test_no_navigation_command_can_reach_the_model(world):
     """Brief §24: Back, Home, Next, a tab, a branch focus, opening a relation and opening a
     record the Mac already holds are answerable from state the Mac has. A language model on
