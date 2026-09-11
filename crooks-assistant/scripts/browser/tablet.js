@@ -176,8 +176,12 @@ async function main() {
   const backOnFirst = await screen();
   await tapChip(other);
   const backOnSecond = await screen();
-  check('the first half shows its list; the fresh half shows nothing of it',
-    onFirst.card === 'order_list' && onSecondEmpty.card === '' && onSecondEmpty.mode === 'orb',
+  // The fresh half shows its OWN screen and none of the first half's. It used to show
+  // nothing at all and say so in a line of toast; a half that holds nothing now draws what it
+  // holds and the ways out of it (`half_empty`), which is D-3's "a refusal the owner cannot
+  // act on is a dead control" applied to an empty half.
+  check('the first half shows its list; the fresh half shows its own nothing, with a way out',
+    onFirst.card === 'order_list' && onSecondEmpty.card === 'half_empty' && onSecondEmpty.mode === 'context',
     JSON.stringify({ first: onFirst.card, secondEmpty: onSecondEmpty.card, mode: onSecondEmpty.mode, toast: onSecondEmpty.toast }));
   check('each half keeps its own workspace across taps',
     onSecond.card === 'order' && backOnFirst.card === 'order_list' && backOnSecond.card === 'order' && /1938/.test(backOnSecond.ref),
