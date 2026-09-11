@@ -3005,6 +3005,31 @@ el.cards.addEventListener('change', (event) => {
 // (b) One delegated handler for every button that names a semantic command. Guarded because
 // another family adds the same one; whichever loads first owns it, and both draw the reply
 // the same way.
+// What a card wrote on its button, whichever way it wrote it.
+//
+// Two Phase 3 families each added a delegated handler for [data-command], each guarded by the
+// same flag, and they disagreed: one parsed `data-args` as a query string, the other as JSON.
+// The guard meant only the first ever ran — so the variant picker's Add button, which writes
+// JSON, posted one nonsense key and no order_id, no variant_id and no quantity. It was
+// enabled, it looked interactive, and it could not do its job.
+//
+// One handler now, and it reads both. JSON first because it is unambiguous: a query string
+// never starts with `{`, so there is no encoding a card can choose that this gets wrong.
+function commandArgs(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return {};
+  if (text.charAt(0) === '{') {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch { /* not JSON after all; fall through to the query string */ }
+    return {};
+  }
+  const args = {};
+  for (const [key, value] of new URLSearchParams(text)) args[key] = value;
+  return args;
+}
+
 if (!window.__crooksCommandDelegate) {
   window.__crooksCommandDelegate = true;
   el.cards.addEventListener('click', async (event) => {
@@ -3016,8 +3041,7 @@ if (!window.__crooksCommandDelegate) {
     // `data-args` is a query string the MAC put on the card. Only identities and small
     // values travel in it; the Mac decides what they mean, and a name it does not know is
     // refused there.
-    const args = {};
-    for (const [key, value] of new URLSearchParams(button.dataset.args || '')) args[key] = value;
+    const args = commandArgs(button.dataset.args);
     button.disabled = true;
     haptic(HAPTIC.start);
     unlockSpeech();
@@ -3071,67 +3095,5 @@ el.talk.addEventListener('pointerdown', () => {
 drawBranchBar();
 restoreWorkspace();
 
-/* ---------------------------------------------------------- a card's own command · begin
- *
- * One delegated handler for every button a card draws with `data-command`. The button says
- * WHICH command and carries its own `data-args` — ids and small values the Mac issued, never
- * an argument of a change (app/routes/command.py bounds what a command may be posted). This
- * posts them through `semanticCommand`, the same door Back, Next and the dock go through, and
- * draws whatever the Mac answers with.
- *
- * Delegated rather than wired per button because the deck is redrawn constantly: a listener
- * attached to a node that is about to be replaced is a button that stops working after the
- * first Back. Generic rather than per family for the same reason the command registry is
- * generic — the page must not know what any of these mean.
- *
- * The guard is because more than one family adds this block; the first one to run owns it.
- */
-if (!window.__crooksCommandDelegate) {
-  window.__crooksCommandDelegate = true;
-  if (el.cards) {
-    el.cards.addEventListener('click', async (event) => {
-      const button = event.target && event.target.closest ? event.target.closest('[data-command]') : null;
-      if (!button || button.disabled) return;
-      const name = String(button.dataset.command || '').trim();
-      if (!name) return;
-      if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
-      // Voice wins over a tap, here as at every other control on the glass.
-      if (actionBlocked()) { toast('Finish speaking first.'); return; }
-      let args = {};
-      try { args = JSON.parse(button.dataset.args || '{}'); } catch { args = {}; }
-      if (!args || typeof args !== 'object' || Array.isArray(args)) return;
-      const label = button.querySelector ? (button.querySelector('[class$="-label"]') || button) : button;
-      const was = label ? label.textContent : '';
-      button.disabled = true;
-      if (label && label !== button) label.textContent = 'Preparing…';
-      haptic(HAPTIC.start);
-      const reply = await semanticCommand(name, args);
-      T.record('card_command', {
-        name: name, outcome: reply ? (reply.ok ? 'ok' : String(reply.code || 'refused')) : 'offline',
-        proposal_id: reply && reply.changed ? reply.changed.proposal_id : undefined,
-        ms: reply ? reply.served_ms : undefined,
-      });
-      if (!reply || reply.ok !== true) {
-        // Refused, or the Mac is away. Say why and give the button back — a control that
-        // goes dead on a refusal is worse than one that says what happened.
-        toast(String((reply && (reply.detail || reply.answer)) || 'The Mac did not answer.'));
-        button.disabled = false;
-        if (label && label !== button) label.textContent = was;
-        return;
-      }
-      if (Array.isArray(reply.ui) && reply.ui.length) {
-        const rendered = window.CrooksUI.render(reply.ui, renderOpts());
-        if (rendered.nodes.length) {
-          pushContext(rendered.nodes, reply.ui, reply.answer || '');
-          el.heard.textContent = '';
-        }
-      }
-      if (reply.answer) {
-        el.answer.textContent = reply.answer;
-        speakAnswer(reply.answer);
-      }
-      if (label && label !== button) label.textContent = 'Waiting for you';
-    });
-  }
-}
-/* ------------------------------------------------------------ a card's own command · end */
+/* A card's own command is handled by the single delegate above (`commandArgs`). A second,
+   never-reachable copy of it lived here behind the same guard flag; it is gone. */

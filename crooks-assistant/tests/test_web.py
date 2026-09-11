@@ -473,3 +473,48 @@ def test_the_settings_sheet_reports_every_capability_state_from_the_mac():
     assert "(a.state === 'READY') - (b.state === 'READY')" in listing, "the unavailable ones are the ones worth reading first"
     # Offline, the section says so rather than keeping the last good list on screen.
     assert "the Mac cannot be reached" in function_body(APP_JS, "async function pollHealth(fresh = false)")
+
+
+def test_one_delegate_owns_a_card_button_and_it_can_read_what_the_card_wrote():
+    """A card's button must reach the Mac with the arguments the card put on it.
+
+    Two Phase 3 families each appended a delegated click handler for `[data-command]`, each
+    guarded by `window.__crooksCommandDelegate`. The guard did its job — the second never runs
+    — and that is the defect, because the two parse `data-args` DIFFERENTLY:
+
+        the live one   for (const [k, v] of new URLSearchParams(button.dataset.args || ''))
+        the dead one   JSON.parse(button.dataset.args || '{}')
+
+    and `web/ui.js` writes the variant picker's Add button with `JSON.stringify`. Parsing that
+    JSON as a query string yields ONE nonsense key and no `order_id`, no `variant_id`, no
+    `quantity`: the button is enabled, looks interactive, and cannot do its job. That is the
+    brief's fake UI exactly, and the existing test asserted only that the guard was present —
+    it tested the mechanism that caused the bug.
+
+    So: exactly one registration, and whatever encoding a card writes, the delegate reads.
+    """
+    registrations = APP_JS.count("window.__crooksCommandDelegate = true")
+    assert registrations == 1, (
+        f"{registrations} command delegates are registered; all but the first are dead code, "
+        "and a card whose arguments only the dead one could read has a button that does nothing"
+    )
+
+    # Every encoding a card actually writes.
+    writes_json = "dataset.args = JSON.stringify(" in UI_JS
+    writes_query = bool(re.search(r"dataset\.args\s*=\s*new URLSearchParams", UI_JS))
+    assert writes_json or writes_query, "no card writes data-args at all — the check would be vacuous"
+
+    # Follow the call rather than guessing at a slice: the delegate hands `data-args` to one
+    # named parser, and that parser is what has to read both encodings.
+    delegate = section(APP_JS, "window.__crooksCommandDelegate = true", "el.talk.addEventListener")
+    assert "commandArgs(button.dataset.args)" in delegate, (
+        "the delegate should read its arguments through one named parser, so this test can "
+        "check that parser rather than re-reading the handler's internals"
+    )
+    parser = function_body(APP_JS, "function commandArgs(raw)")
+    if writes_json:
+        assert "JSON.parse(" in parser, "a card writes JSON args and the parser does not read JSON"
+    if writes_query:
+        assert "URLSearchParams(" in parser, "a card writes query-string args and the parser does not read them"
+    # And it reads the OTHER encoding too, so neither card style can regress silently.
+    assert "JSON.parse(" in parser and "URLSearchParams(" in parser, parser[:200]
