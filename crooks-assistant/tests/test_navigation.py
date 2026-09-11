@@ -146,9 +146,10 @@ def test_the_brief_s_own_click_path(world):
     """
     session, branch = world
     ws = orders_list(session, branch)
+    run("surface.scroll", session, branch, depth=240)          # down the list, to CROOKS-1957
 
     run("open.entity", session, branch, kind="order", ref=ORDER_A, label="CROOKS-1957")
-    run("surface.scroll", session, branch, depth=240)
+    run("surface.scroll", session, branch, depth=90)
     run("surface.tab", session, branch, surface="order", tab="customer")
     run("open.entity", session, branch, kind="order", ref=ORDER_B, label="CROOKS-1912")
     assert branch.entity["ref"] == ORDER_B
@@ -158,6 +159,7 @@ def test_the_brief_s_own_click_path(world):
     assert branch.entity["ref"] == ORDER_A, "Back did not return to the order it came from"
     assert branch.tab == "customer", "Back returned to the record but not to the part of it"
     assert first.changed["workspace"]["tab"] == "customer", first.changed["workspace"]
+    assert first.changed["workspace"]["scroll"] == 90, first.changed["workspace"]
     assert first.calls, "Back announced a move and drew nothing"
 
     second = run("navigation.back", session, branch)
