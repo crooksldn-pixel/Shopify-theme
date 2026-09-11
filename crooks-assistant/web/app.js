@@ -1095,6 +1095,18 @@ function resetGlass() {
   glass.stale = false;
 }
 
+// A turn that never answered — the Mac asleep, the tailnet dropped, two minutes gone — leaves
+// its skeletons standing. The live session's "Checking the inbox…" was still on the glass 34.8
+// seconds after the asking had stopped, read as calm while a customer waited; a placeholder is
+// removed the moment nothing is coming to fill it. The error line says what happened.
+function settleGlass(why) {
+  const shells = el.cards.querySelectorAll('[data-shell]');
+  for (const node of shells) if (node.parentNode) node.parentNode.removeChild(node);
+  if (shells.length) T.record('workspace_settled', { count: shells.length, name: why || '' });
+  resetGlass();
+  if (!el.cards.children.length && el.body.dataset.mode === 'context') setMode('orb');
+}
+
 // Apply what the Mac has staged. Returns true when anything was drawn.
 function applyWorkspace(payload) {
   if (!payload || typeof payload !== 'object') return false;
@@ -2379,6 +2391,7 @@ async function submit(body, isAudio) {
     const response = await fetch('/turn', options);
     if (!response.ok) {
       T.record('turn_failed', { status: response.status, ms: Date.now() - startedAt });
+      settleGlass('turn_failed');
       if (!stillHere()) { decks.delete(askedBranch); toast('The other half hit a problem.'); return; }
       lastWasError = true;
       lastErrorTitle = response.status === 403 ? 'Not allowed' : 'The Mac hit a problem';
@@ -2435,11 +2448,14 @@ async function submit(body, isAudio) {
     reconcileActions('turn');
   } catch (error) {
     if (controller.signal.aborted && controller.cancelled) {
-      // The owner moved on: nothing to report, the next question is already being asked.
+      // The owner moved on: nothing to report, the next question is already being asked. Its
+      // skeletons go with it — a placeholder for a read nobody is waiting for any more.
+      settleGlass('cancelled');
       if (stillHere()) { el.heard.textContent = ''; el.answer.textContent = ''; setState('READY'); }
       return;
     }
     T.record('turn_failed', { status: 0, aborted: controller.signal.aborted, ms: Date.now() - startedAt });
+    settleGlass(controller.signal.aborted ? 'timed_out' : 'unreachable');
     if (!stillHere()) { decks.delete(askedBranch); toast('The other half hit a problem.'); return; }
     lastWasError = true;
     lastErrorTitle = controller.signal.aborted ? 'The Mac took too long' : 'The Mac did not answer';
