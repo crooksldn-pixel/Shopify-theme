@@ -128,7 +128,7 @@ def main() -> int:
     if NODE:
         bad = [p.name for p in (ROOT / "web").glob("*.js") if run([NODE, "--check", str(p)]).returncode != 0]
         report.add("node --check", not bad, ", ".join(bad) or f"{len(list((ROOT / 'web').glob('*.js')))} files parse")
-        for test in ("ui.test.js", "sw.test.js", "telemetry.test.js", "fold.test.js"):
+        for test in ("ui.test.js", "sw.test.js", "telemetry.test.js", "fold.test.js", "collide.test.js", "notify.test.js"):
             result = run([NODE, "--test", str(ROOT / "tests" / "web" / test)], timeout=300)
             passed = next((line for line in result.stdout.splitlines() if line.startswith("# pass")), "")
             report.add(f"node {test}", result.returncode == 0 and "# fail 0" in result.stdout, passed.replace("# ", "") or result.stderr[-300:])
@@ -180,7 +180,7 @@ def main() -> int:
 
         # ---- sizes: what the tablet downloads and what the model reads
         sizes = {}
-        for path in ("/", "/static/app.js", "/static/ui.js", "/static/telemetry.js", "/static/style.css", "/static/orb.js", "/static/audio-viz.js", "/sw.js"):
+        for path in ("/", "/static/app.js", "/static/ui.js", "/static/telemetry.js", "/static/collide.js", "/static/notify.js", "/static/style.css", "/static/orb.js", "/static/audio-viz.js", "/sw.js"):
             _, raw, _ = get(f"{base}{path}")
             _, packed, packed_headers = get(f"{base}{path}", gzip_ok=True)
             encoding = next((v for k, v in packed_headers.items() if k.lower() == "content-encoding"), "")
