@@ -595,6 +595,25 @@ def test_two_fingers_two_controls_and_a_place_lost(tmp_path):
     assert "returned to the top after" in signals and "no navigation between" in signals
 
 
+def test_what_the_owner_reported_becomes_the_heaviest_candidate(tmp_path):
+    """The report is read by `app/observability/proposals.py`, which turns each row into an
+    improvement candidate. A defect the owner narrated himself is the most valuable evidence in
+    a session, so it is first in that file — and in September it was not in it at all."""
+    from app.observability.proposals import write_proposals
+
+    text = write_proposals(two_defects_narrated_and_discarded(tmp_path), tmp_path / "reports").read_text(encoding="utf-8")
+    assert "OWNER_REPORTED" in text
+    assert "The owner reported this and NOTHING recorded it" in text
+    assert "please log that your split function is broken" in text
+    assert "ACTION_UI_STUCK" in write_proposals(
+        applying_stuck(tmp_path / "stuck"), tmp_path / "reports2").read_text(encoding="utf-8")
+
+    recorded = write_proposals(the_same_defects_recorded(tmp_path / "kept"),
+                               tmp_path / "reports3").read_text(encoding="utf-8")
+    assert "The owner reported this himself" in recorded
+    assert "He should not have to say it twice" in recorded
+
+
 # ----------------------------------------------------------------- every class has a fixture
 
 

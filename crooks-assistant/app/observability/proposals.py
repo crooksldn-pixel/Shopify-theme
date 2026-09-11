@@ -154,6 +154,33 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None,
             "no model-generated markup; a new type is a new renderer with its own bounds.", 2 * n)
     for row in _recipe_candidates(turns):
         add(*row)
+    # What the OWNER said was wrong, first, and heaviest. A tester narrating defects as they
+    # happen is the most valuable thing in an hour, and in September all of it was discarded:
+    # he was told twice there was no tool for it and the report did not mention any of it.
+    experience = getattr(rec, "experience", None)
+    for event in (experience.feedback if experience is not None else []):
+        words = " ".join(str(event.get("text") or "").split())
+        add("OWNER_REPORTED", f"The owner reported this himself: “{_cell(words, 90)}”",
+            [str(event.get("turn_id") or "—")],
+            f"on screen at the time: {', '.join(str(x) for x in (event.get('screen') or [])) or 'no card'}"
+            f"; half {event.get('branch_id') or '—'}",
+            "Read what he said and fix the thing he named. He should not have to say it twice, "
+            "and a session that records feedback and does not act on it is worse than one that "
+            "cannot record it.",
+            "the regression test for whatever he named; a fixture timeline of this turn if the "
+            "defect is in the analyser or the surface.",
+            "none: this is a bug report, not a change to the bounds.", 10)
+    for row in (experience.ignored_feedback if experience is not None else []):
+        words = " ".join(str(row.get("text") or "").split())
+        add("OWNER_REPORTED", f"The owner reported this and NOTHING recorded it: “{_cell(words, 90)}”",
+            [str(row.get("turn_id") or "—")],
+            "owner feedback (app/observability/feedback.py, app/families/owner_feedback.py)",
+            "Two things: fix what he named, and find out why the sentence reached no "
+            "`owner_feedback` event — either the session was not in test mode or the router did "
+            "not take it.",
+            "say the same sentence during an active test session and assert both the event and "
+            "the report's OWNER-REPORTED DEFECTS section.",
+            "none: recording what somebody said is not a change to the shop.", 12)
     for o in _opportunities(rec, turns, registered, capability_states):
         # The report's own ranked list, carried over as summaries beside the specific rows above.
         add("REPORT", o["problem"], list(o["examples"]), o["component"], o["task"],
