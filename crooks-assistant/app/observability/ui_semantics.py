@@ -427,26 +427,45 @@ class Answer:
                 "related": [e.key for e in self.related]}
 
 
-# A sentence has to be ABOUT the screen before the table is consulted at all: the word "back"
-# is in half the questions a shop owner asks, and "what is the status of the order I sent back"
-# is not a question about a button. One of these frames must be present.
-_ABOUT_THE_SCREEN = re.compile(
-    r"\b(?:button|buttons|control|controls|screen|tablet|card|cards|tab|tabs|orb|dock|gesture|"
-    r"composer|keyboard|half|halves|chip|chips|rail)\b"
-    r"|\bwhat does\b.{0,24}\b(?:do|mean)\b"
-    r"|\bwhat is\b.{0,24}\b(?:for|this)\b"
-    r"|\bhow (?:do|can) i\b"
-    r"|\bwhat(?:'s| is) (?:applying|armed|aside|merge|split)\b",
+# A sentence reaches the table only when it is BOTH of these, and the pair is the whole of the
+# bound. One half is a frame that asks to be told something; the other is a subject that is
+# part of the interface.
+#
+# Both halves are needed, and each without the other was measured to be wrong. The subject
+# alone takes "switch to the other half" — which MEANS the move, and must make it — and "has
+# the order come back yet". The frame alone takes "what is running out" and "how do I refund
+# this", which are the shop's questions and not the screen's. A control's name doubles as an
+# instruction in this product, deliberately, so the frame is what tells them apart.
+_EXPLAIN_FRAME = re.compile(
+    r"\bwhat (?:does|do|is|are|s)\b|\bwhat'?s\b"
+    r"|\bhow (?:do|can|would|should) i\b|\bhow does\b"
+    r"|\bwhy (?:does|is|do|are)\b"
+    r"|\bexplain\b|\btell me what\b|\bwhat happens (?:when|if)\b"
+    r"|\bwhat (?:am i|is that|is this) (?:looking at|for)\b",
+    re.I,
+)
+# The subjects that belong to the interface: the nouns a person points at, and the named
+# controls and states. Nothing about the shop is in this list.
+_UI_SUBJECT = re.compile(
+    r"\b(?:button|buttons|control|controls|screen|tablet|card|cards|tab|tabs|orb|dock|landing|"
+    r"gesture|compose|composer|keyboard|typing|type|half|halves|chip|chips|rail|"
+    r"split|merge|merging|aside|applying|armed|arming|undo|"
+    r"back|home|next|previous|forward)\b",
     re.I,
 )
 
 
 def looks_like_a_question_about_the_screen(text: str) -> bool:
-    """Whether this sentence is asking about the interface at all."""
+    """Whether this sentence asks to be TOLD something about part of the interface.
+
+    Both halves: a frame that asks, and a subject that is part of the screen. "What does the
+    split button do" is one; "split" on its own is an instruction, and "what did we sell" is
+    the shop's.
+    """
     said = " ".join(str(text or "").split())
     if not said:
         return False
-    return bool(_ABOUT_THE_SCREEN.search(said))
+    return bool(_EXPLAIN_FRAME.search(said) and _UI_SUBJECT.search(said))
 
 
 def lookup(text: str) -> Answer | None:
