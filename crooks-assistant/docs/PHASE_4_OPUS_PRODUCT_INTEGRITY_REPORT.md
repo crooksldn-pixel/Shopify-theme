@@ -4,10 +4,10 @@ A pass prompted by one hour on a physical Samsung Tab A, not by a feature list. 
 question was not "what else can it do" but "what did the owner actually see, and was it true".
 
 - **STARTING SHA** `53ff16a` (Phase 3 final)
-- **FINAL SHA** `0b67803`
+- **FINAL SHA** `749e1b3`
 - **BRANCH** `claude/crooks-assistant-build-lgxlau`, pushed
-- **COMMITS** 83
-- **FILES CHANGED** 107 (+20,497 / −844)
+- **COMMITS** 90 (89 at the moment this line was written, plus the commit that writes it)
+- **FILES CHANGED** 140 (+21,054 / −845), of which 31 are screenshots
 - **DEPLOYED** No. Production is untouched.
 
 ---
