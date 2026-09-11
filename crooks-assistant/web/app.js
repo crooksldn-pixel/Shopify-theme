@@ -2039,8 +2039,11 @@ function settleAction(node, payload, status) {
 }
 
 // The words for every outcome either side can produce live in web/action-state.js, beside the
-// state each of them means. This page and the renderer read the same table.
-const ACTION_LABELS = AS.LABELS;
+// state each of them means (AS.labelFor). This page kept a second copy of that table until
+// the two disagreed about what `executed` said.
+//
+// And these are the lines under a refusal: not what the surface says, but what the owner is
+// told to do about it, which is this page's business and nobody else's.
 const ACTION_REASONS = {
   refused: 'The service refused that. The card says why.',
   not_authorised: "This tablet's login is not on the Mac's allowed list (CROOKS_ALLOWED_LOGINS).",

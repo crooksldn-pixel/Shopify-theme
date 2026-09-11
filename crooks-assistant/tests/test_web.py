@@ -454,7 +454,8 @@ def test_the_action_states_are_named_in_one_place_and_both_files_read_it():
     # The page takes its vocabulary, its labels and its settling from there, and keeps no
     # second copy of any of them.
     assert "const AS = window.CrooksActionState;" in APP_JS
-    assert "const ACTION_LABELS = AS.LABELS;" in APP_JS
+    assert "AS.labelFor(code, 'Not applied')" in APP_JS, "the page keeps no second label table"
+    assert "ACTION_LABELS" not in APP_JS
     assert "const RECONCILE_SETTLED = AS.SETTLED;" in APP_JS
     assert "actionState()" in UI_JS, "the renderer reads the same machine"
     # And the page is served it before either of them.
