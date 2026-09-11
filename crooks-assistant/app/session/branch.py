@@ -642,8 +642,17 @@ class Branch:
             "building": ({"workspace_id": str(self.workspace.get("workspace_id") or ""),
                           "kind": str(self.workspace.get("kind") or "")}
                          if isinstance(self.workspace, dict) and self.workspace.get("workspace_id") else None),
+            # Whether there is anywhere to go, and where. `can_back` is the trail's own answer
+            # and the only one the Back chip may be drawn from: while the tablet decided for
+            # itself — a local render cache, or "the list cursor is not at the start" — Back
+            # meant two different things depending on which of them happened to be true.
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
+            # Which of the dock's places this half is in, and the one Home goes back to. The
+            # dock lights the first; the Assistant chip is the second, and neither is a guess
+            # the tablet has to make from the card types on screen.
+            "area": (self.here.area if self.here is not None else self.landing) or None,
+            "landing": self.home_area,
             "task": dict(self.task) if self.task else None,
             # Whether there is a screen to show for this half, and what it answered. The cards
             # themselves come through `branch.show`, on request, not with every reply.

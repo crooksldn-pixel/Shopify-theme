@@ -309,7 +309,7 @@ def _navigated(ctx: Ctx, result: ReadResult, *, words) -> FastAnswer:
     if entry is not None and entry.is_workspace:
         # A listing. It cannot be replayed from the entity cache, so its own cards come back;
         # with none kept, the spoken path says where it is rather than inventing a screen.
-        return FastAnswer(answer=words(label) if not entry.ui else (entry.answer or words(label)),
+        return FastAnswer(answer=words(label),
                           surfaces=[AsUi(u) for u in entry.ui],
                           trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
                                  "workspace": entry.kind, "drawn": bool(entry.ui)})
