@@ -2012,8 +2012,8 @@ function settleAction(node, payload, status) {
   if (rendered.nodes.length && !keepTheCard) {
     // The Apply affordance goes and the proof takes its place — carrying the entity as the
     // Mac has just re-read it, and the undo as a control of its own. The deck's history is
-    // patched in place (replaceCard), so where the owner is does not move.
-    replaceCard(node, rendered.nodes);
+    // patched in place (replaceCardNodes), so where the owner is does not move.
+    replaceCardNodes(node, rendered.nodes);
   } else {
     settleActionNode(node, code === 'verified' ? 'verified' : code, AS.labelFor(code, 'Not applied'));
   }
@@ -2171,7 +2171,12 @@ function settleProposals(ids, state, label) {
 
 // A settled action replaces its card, and a verified re-read of the entity replaces every
 // card that showed that entity, so the screen shows Shopify as it now is.
-function replaceCard(oldNode, newNodes) {
+//
+// Takes NODES that are already drawn. `redrawCard` below takes a ui list and draws it. They
+// were both called `replaceCard` until Phase 4: JavaScript hoists the second declaration over
+// the first, so every call here silently reached the other one and settleAction handed DOM
+// nodes to CrooksUI.render. The name says which one it is now.
+function replaceCardNodes(oldNode, newNodes) {
   const first = newNodes[0];
   const rest = newNodes.slice(1);
   for (const entry of history) {
@@ -2999,9 +3004,10 @@ function composeCardFor(node) {
   return node && node.closest ? node.closest('.card') : null;
 }
 
-// A re-render of one card, in place. `pushContext` is wrong here — a corrected address is not
-// a new screen, and pushing one would put the composer on the back stack once per keystroke.
-function replaceCard(oldNode, items) {
+// A re-render of one card, in place, from a ui list the Mac sent. `pushContext` is wrong here
+// — a corrected address is not a new screen, and pushing one would put the composer on the
+// back stack once per keystroke. For nodes already drawn, see `replaceCardNodes` above.
+function redrawCard(oldNode, items) {
   if (!oldNode || !oldNode.parentNode || !window.CrooksUI) return null;
   const rendered = window.CrooksUI.render(items, renderOpts());
   const fresh = rendered.nodes[0];
@@ -3034,7 +3040,7 @@ async function composeFieldChanged(control) {
   if (!answered) return;                                   // offline: the field keeps what was typed
   if (!answered.ok) { toast(String(answered.detail || 'That could not be applied.')); return; }
   if (!Array.isArray(answered.ui) || !answered.ui.length || !card) return;
-  const fresh = replaceCard(card, answered.ui);
+  const fresh = redrawCard(card, answered.ui);
   if (!fresh) return;
   T.record('compose_field', { name, status: String((answered.changed || {}).status || '') });
   // The owner is still typing into this field. Put the focus and the caret back, or the

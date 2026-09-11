@@ -22,6 +22,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,11 @@ TABLET_SCRIPT = ROOT / "scripts" / "browser" / "tablet.js"
 # And the action surface, driven to the state the owner physically watched get stuck: a
 # commit whose answer never came back, over a change the Mac had already proved (D-1).
 ACTION_SCRIPT = ROOT / "scripts" / "browser" / "action_state.js"
+# `make accept` has driven this one against a real server since Phase 1. It was never in
+# the gate the suite runs, so its 23 checks proved nothing between releases — and it was
+# the only check anywhere that caught the duplicate `replaceCard` (Phase 4, D-1's
+# neighbour): the verified card was simply never drawn. It runs with the rest now.
+ACCEPT_SCRIPT = ROOT / "scripts" / "browser" / "accept.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -176,6 +182,33 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
     return sorted(out.glob("*.png"))
 
 
+def _start_gate_session(scratch: str):
+    """Begin a test session for the browser run, writing nowhere near the owner's. Returns the
+    function that ends it; both are no-ops if the runtime is not up or already recording."""
+    from app.main import app
+    from app.observability.session import TestSessions
+
+    runtime = getattr(app.state, "runtime", None)
+    if runtime is None:
+        return lambda: None
+    previous = runtime.tests
+    runtime.tests = runtime.timeline.sessions = TestSessions(Path(scratch))
+    try:
+        runtime.timeline.start("browser gate")
+    except Exception:  # noqa: BLE001 — an already-running session is not this gate's business
+        runtime.tests = runtime.timeline.sessions = previous
+        return lambda: None
+
+    def stop() -> None:
+        try:
+            runtime.timeline.stop()
+        except Exception:  # noqa: BLE001
+            pass
+        runtime.tests = runtime.timeline.sessions = previous
+
+    return stop
+
+
 async def run_checks() -> dict[str, Any]:
     """The browser checks on their own, for a test to assert on."""
     ok, why = available()
@@ -183,9 +216,16 @@ async def run_checks() -> dict[str, Any]:
         return {"skipped": True, "why": why, "checks": []}
     port = _free_port()
     server, task, _store = await serve_fixture_world(port)
+    # accept.js asserts that the page posts what it drew into a test session, which is the
+    # only proof anywhere that the tablet's own telemetry is wired to the Mac at all. It needs
+    # a session to be running. One is started here, into a throwaway directory — a gate must
+    # never write into logs/test-sessions/, where `make test-session-report` looks for the
+    # owner's real ones.
+    scratch = tempfile.mkdtemp(prefix="crooks-browser-gate-")
+    stop_session = _start_gate_session(scratch)
     try:
         results = []
-        for script in (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT):
+        for script in (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(
@@ -195,6 +235,8 @@ async def run_checks() -> dict[str, Any]:
                 env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
             ))
     finally:
+        stop_session()
+        shutil.rmtree(scratch, ignore_errors=True)
         await _stop(server, task)
     merged: dict[str, Any] = {"skipped": False, "ok": True, "checks": [], "shots": []}
     for result in results:

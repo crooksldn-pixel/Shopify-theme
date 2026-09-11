@@ -11,7 +11,11 @@
  */
 'use strict';
 
-const { chromium } = require('playwright');
+// `playwright` on the Mac, which bundles its own Chromium; `playwright-core` in the checks
+// that run alongside the suite, which points at the one already on disk. Either resolves.
+const { chromium } = (() => {
+  try { return require('playwright'); } catch { return require('playwright-core'); }
+})();
 const fs = require('fs');
 const path = require('path');
 
@@ -38,7 +42,10 @@ const check = (name, ok, detail) => { checks.push({ name, ok: Boolean(ok), detai
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  const browser = await chromium.launch();
+  // A bundled Chromium needs no path. playwright-core has none of its own, so it is told
+  // where one is — the same file the other browser scripts use.
+  const onDisk = process.env.CROOKS_CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+  const browser = await chromium.launch(fs.existsSync(onDisk) ? { executablePath: onDisk } : {});
   const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   const errors = [];

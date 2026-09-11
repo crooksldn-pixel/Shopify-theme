@@ -506,12 +506,30 @@ def test_a_proved_change_replaces_its_own_affordance_and_retires_the_others():
     is patched where it stands so navigation does not move, and any other card still offering
     a change to the thing that has just moved says so."""
     body = function_body(APP_JS, "function settleAction(node, payload, status)")
-    assert "replaceCard(node, rendered.nodes);" in body, "the affordance is replaced, not appended"
+    assert "replaceCardNodes(node, rendered.nodes);" in body, "the affordance is replaced, not appended"
     assert "pushContext(" not in body, "a settled change never pushes a new screen"
     assert "retireStaleAffordances(ref," in body and "if (proven) {" in body
-    # The fresh entity is patched into every other card showing it, in place.
-    replace = function_body(APP_JS, "function replaceCard(oldNode, newNodes)")
+    # The fresh entity is patched into every other card showing it, in place. This assertion
+    # was written against `function replaceCard(oldNode, newNodes)` and passed for as long as
+    # that text existed in the file — while the browser, which hoists the LAST declaration of
+    # a name, ran a different function of the same name and never reached this one. The
+    # assertion is the same; it now names the function the call site above actually calls.
+    replace = function_body(APP_JS, "function replaceCardNodes(oldNode, newNodes)")
     assert "entry.nodes.splice(at, 1, ...newNodes)" in replace and "refreshEntityCards(node)" in replace
+
+
+def test_no_two_functions_in_the_page_share_a_name():
+    """D-1's neighbour, found in Phase 4. `function f(){}` twice in one script is not an error
+    in JavaScript: the second declaration is hoisted over the first and every call in the file
+    — including the ones written above it — reaches the second. web/app.js declared
+    `replaceCard` twice, one taking drawn NODES and one taking a ui list, so settleAction's
+    `replaceCard(node, rendered.nodes)` handed DOM nodes to CrooksUI.render and the proof of a
+    verified change was never drawn. A string test cannot see this by reading one body, so it
+    is asserted over the whole file, for every script the tablet loads."""
+    for path in sorted(p for p in WEB.iterdir() if p.suffix == ".js"):
+        names = re.findall(r"^function ([A-Za-z0-9_$]+)\(", path.read_text(encoding="utf-8"), re.M)
+        twice = sorted({n for n in names if names.count(n) > 1})
+        assert not twice, f"{path.name} declares {', '.join(twice)} more than once"
 
 
 def test_an_undo_offer_is_not_counted_as_a_change_still_waiting():
