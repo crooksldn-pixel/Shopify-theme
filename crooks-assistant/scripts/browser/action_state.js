@@ -109,8 +109,13 @@ async function main() {
   await page.evaluate(() => reconcileActions('test'));
   await sleep(500);
   const settled = await surface();
+  const done = await page.evaluate(() => lastReconcile);
   check('a verified proposal leaves "Applying…" behind — the defect the owner watched',
     settled.label !== 'Applying…' && settled.token !== 'committing', JSON.stringify(settled));
+  // And by the ordinary path. The watchdog would have corrected this surface too, and a
+  // correction path that has quietly stopped working must not be able to hide behind it.
+  check('the card was settled by the Mac\'s own answer, with nothing left for the watchdog',
+    Boolean(done) && done.corrected.indexOf(PROPOSAL) !== -1 && done.stuck.length === 0, JSON.stringify(done));
   check('and the card is in a terminal state, disabled, showing what happened',
     settled.terminal === true && settled.state === 'VERIFIED' && settled.disabled === 'true', JSON.stringify(settled));
   check('and it is no longer asked about: the six reconciles of a settled card stop',

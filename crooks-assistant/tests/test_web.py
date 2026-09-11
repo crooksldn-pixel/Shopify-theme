@@ -32,6 +32,13 @@ def function_body(source: str, signature: str) -> str:
     return body[: body.index("\n}")]
 
 
+def inner_body(source: str, signature: str) -> str:
+    """The text of one function inside a module wrapper, up to its closing brace at column 2
+    (web/action-state.js and web/ui.js are written inside one)."""
+    body = source[source.index(signature):]
+    return body[: body.index("\n  }") + 4]
+
+
 # --------------------------------------------------------------------------- the credential
 
 
@@ -433,6 +440,75 @@ def test_letting_go_of_a_question_settles_the_cards_the_mac_withdrew():
     assert "fetch('/cancel'" in body
     assert "settleProposals(data.revoked, 'revoked', 'Withdrawn')" in body
     assert "cancelTurn(cancelForm(askedBranch)," in function_body(APP_JS, "async function submit(body, isAudio)")
+
+
+def test_the_action_states_are_named_in_one_place_and_both_files_read_it():
+    """D-1: `committing` was a bare string in the renderer and the correction path settled two
+    other bare strings, so the one state that could be stuck was the one nothing touched. The
+    states are named once now, and the page and the renderer both read that file."""
+    machine = (WEB / "action-state.js").read_text(encoding="utf-8")
+    for state in ("READY", "STAGED", "ARMING", "ARMED", "EXECUTING", "VERIFYING", "VERIFIED", "FAILED", "EXPIRED", "UNDONE"):
+        assert f"'{state}'" in machine, state
+    assert "const TERMINAL = ['VERIFIED', 'FAILED', 'EXPIRED', 'UNDONE'];" in machine
+    assert "const IN_FLIGHT = ['EXECUTING', 'VERIFYING'];" in machine
+    # The page takes its vocabulary, its labels and its settling from there, and keeps no
+    # second copy of any of them.
+    assert "const AS = window.CrooksActionState;" in APP_JS
+    assert "const ACTION_LABELS = AS.LABELS;" in APP_JS
+    assert "const RECONCILE_SETTLED = AS.SETTLED;" in APP_JS
+    assert "actionState()" in UI_JS, "the renderer reads the same machine"
+    # And the page is served it before either of them.
+    assert INDEX.index("/static/action-state.js") < INDEX.index("/static/ui.js") < INDEX.index("/static/app.js")
+
+
+def test_a_card_settles_from_every_state_but_a_terminal_one():
+    """The old guard settled `arming` and `armed` only, and a committed card is in
+    `committing`: a send the Mac had proved said "Applying…" for the rest of the session."""
+    machine = (WEB / "action-state.js").read_text(encoding="utf-8")
+    settle = inner_body(machine, "  function settleCard(node, token, label)")
+    assert "if (isTerminal(tokenOf(node))) return false;" in settle
+    assert "'arming'" not in settle and "'armed'" not in settle, "no state is named in the guard"
+    assert "node.settle(token, label);" in settle
+    # And the page's own settleProposals is that function, over the cards it is holding.
+    body = function_body(APP_JS, "function settleProposals(ids, state, label)")
+    assert "AS.settleProposals(ids, state, label, visibleCards())" in body
+
+
+def test_a_surface_stuck_in_flight_is_corrected_and_recorded_as_a_defect():
+    """The watchdog. A surface still EXECUTING or VERIFYING after its proposal reached a
+    terminal state on the Mac is the September defect itself, so it is recorded as one rather
+    than quietly repaired — and a commit whose answer never comes back is chased."""
+    body = function_body(APP_JS, "async function reconcileActions(reason)")
+    assert "AS.reconcile(visibleCards(), states)" in body
+    assert "T.record('action_watchdog'" in body
+    assert "for (const surface of stuck)" in body
+    watch = function_body(APP_JS, "function watchCommit(node, tries)")
+    assert "AS.isInFlight(AS.tokenOf(node))" in watch and "reconcileActions('watchdog')" in watch
+    assert "watchCommit(node, WATCHDOG_TRIES);" in function_body(APP_JS, "async function commitAction(proposalId, node, nonce)")
+    # Nothing is ever re-sent by any of it: the Mac's record decides, and it is only asked.
+    assert "fetch(`/actions/${encodeURIComponent(proposalId)}/commit`" not in body
+
+
+def test_the_page_stops_asking_about_a_card_the_mac_has_finished_with():
+    """Six reconciles of two settled proposals, one round trip each, correcting nothing: the
+    live session's telemetry recorded the bug once a turn and nobody read it."""
+    body = function_body(APP_JS, "function liveProposalIds()")
+    assert "AS.liveProposalIds(visibleCards())" in body
+    machine = (WEB / "action-state.js").read_text(encoding="utf-8")
+    live = inner_body(machine, "  function liveProposalIds(nodes)")
+    assert "if (isTerminal(card.token)" in live
+
+
+def test_an_undo_offer_is_not_counted_as_a_change_still_waiting():
+    """D-2. The offer is a property of a change that is finished; the renderer marks it as
+    one, and an offer that lapses on the glass is let go on the Mac — never applied there."""
+    assert "node.dataset.undoOf = text(undo.undo_of || d.proposal_id);" in UI_JS
+    body = function_body(APP_JS, "function dismissUndo(proposalId)")
+    assert "/dismiss" in body and "method: 'POST'" in body
+    assert "onUndoExpire: dismissUndo," in function_body(APP_JS, "function renderOpts()")
+    machine = (WEB / "action-state.js").read_text(encoding="utf-8")
+    split = inner_body(machine, "  function waiting(states)")
+    assert "if (entry.undo_of) undoable.push(String(id)); else pending.push(String(id));" in split
 
 
 def test_the_tablet_never_erases_what_it_has_already_proved():

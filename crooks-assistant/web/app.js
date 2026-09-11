@@ -2127,6 +2127,11 @@ function liveProposalIds() {
 // and an outcome the owner has not been given is not shown as one.
 const RECONCILE_SETTLED = AS.SETTLED;
 let reconciling = false;
+// What the last reconciliation did: which cards the Mac's answer settled, and which were
+// still in flight after that and had to be corrected by force. `stuck` is meant to be empty
+// for ever; a browser check asserts that it is (scripts/browser/action_state.js), so that a
+// correction path which has quietly stopped working cannot hide behind the watchdog.
+let lastReconcile = null;
 
 async function reconcileActions(reason) {
   const ids = liveProposalIds();
@@ -2153,6 +2158,7 @@ async function reconcileActions(reason) {
     // proposal, and its silence is not evidence that a card is dead.
     const unknown = data && data.session_known ? (Array.isArray(data.unknown) ? data.unknown : []) : [];
     if (unknown.length) settleProposals(unknown, 'settled', 'No longer waiting');
+    lastReconcile = { reason, asked: ids, corrected, stuck, cancelled: unknown };
     if (corrected.length || unknown.length || stuck.length) {
       T.record('reconcile', { reason, count: ids.length, kept: corrected.length, cancelled: unknown.length, errors: stuck.length || undefined });
     }
