@@ -20,6 +20,41 @@ from typing import Any
 
 # Two branches at most. The orb divides once; it does not become a window manager.
 MAX_BRANCHES = 2
+# The five words a half's state can be, and the only five. ACTIVE means the owner can talk to
+# it and nothing is running; the other four are what it is doing. There is no percentage here
+# and there never will be: nothing on the Mac can compute one honestly, and a bar that guesses
+# is a lie drawn to two decimal places.
+BRANCH_STATES = ("ACTIVE", "WORKING", "WAITING", "READY", "FAILED")
+# What a half is showing, in one word, from the cards it presented. The tablet draws this as
+# that half's header. The Phase 3 live test recorded the owner tapping between two halves six
+# times in nine seconds looking for the difference, then saying "it just shows two of the same
+# thing" — because nothing on either screen said which half it was.
+AREA_OF_CARD = {
+    "order": "ORDER", "order_list": "ORDERS", "attention": "ORDERS",
+    "customer": "CUSTOMER", "customer_list": "CUSTOMERS",
+    "email_list": "INBOX", "email_queue": "INBOX", "work_queue": "INBOX",
+    "email_thread": "EMAIL", "email_draft": "DRAFT", "email_compose": "DRAFT", "reply_state": "EMAIL",
+    "sales_summary": "SALES", "metric_group": "SALES", "trend": "SALES", "comparison": "SALES",
+    "ranking": "PRODUCTS", "product": "PRODUCT", "variant_matrix": "PRODUCT", "variant_picker": "PRODUCT",
+    "inventory": "STOCK", "working_set": "LIST", "capability": "SYSTEM", "workspace": "BUILDING",
+    "batch_action": "BATCH", "batch_result": "BATCH",
+}
+# And the same from the record the half is on, which is the better evidence when the two
+# disagree: the entity is where the branch IS, the cards are what it last drew.
+AREA_OF_KIND = {
+    "order": "ORDER", "customer": "CUSTOMER", "email_thread": "EMAIL",
+    "product": "PRODUCT", "variant": "PRODUCT", "draft": "DRAFT", "set": "LIST",
+}
+
+
+def area_of(ui: list[dict[str, Any]] | None) -> str:
+    """The one-word area a screenful of cards is about. The first card that names one wins."""
+    for item in ui or []:
+        if isinstance(item, dict):
+            area = AREA_OF_CARD.get(str(item.get("type") or ""))
+            if area:
+                return area
+    return ""
 # Entities, results and actions kept per branch. A tablet screen shows a handful; the rest is
 # memory that would go stale before it was read.
 MAX_RECENT = 8
@@ -122,6 +157,17 @@ class Branch:
     # A /cancel aimed at this half. Read where the session-wide flag is read; set only by
     # a cancel that names the half, so a cancel on the left never silences the right.
     abandoned: bool = False
+    # Turns actually running on this half, counted up when one begins and down when it ends.
+    # `state()` reads it, and it is the whole of why WORKING is a fact rather than a leftover:
+    # a task dictionary saying WORKING is only a note somebody wrote, and a half whose turn
+    # died would have gone on saying "working" for as long as the conversation lasted.
+    in_flight: int = 0
+    # What this half received when the orb divided, kept so a refusal can say what it has to
+    # work with instead of leaving the owner with a dead control (see `holds`).
+    inherited: dict[str, Any] | None = None
+    # The one-word area this half last drew (AREA_OF_CARD). Presentation, and the header the
+    # tablet puts on this half so two halves are never indistinguishable.
+    area: str = ""
 
     # Where the branch is.
     entity: dict[str, str] | None = None          # {"kind","ref","label"}
@@ -186,6 +232,7 @@ class Branch:
         kept = [u for u in (ui or []) if isinstance(u, dict) and u.get("type") not in ("context_stack",)]
         if kept or not self.last_ui:
             self.last_ui = kept[:6]
+            self.area = area_of(kept) or self.area
         self.last_answer = str(answer or "")[:400]
         self.last_question = str(question or "")[:200]
         self.last_at = clock()
@@ -211,6 +258,67 @@ class Branch:
 
     def idle(self) -> None:
         self.task = None
+
+    def begin_turn(self, what: str, *, clock=time.time) -> None:
+        """A turn has started on this half. The counter is what makes WORKING true rather
+        than merely written down; `working()` on its own says nothing about whether anything
+        is still running."""
+        self.in_flight += 1
+        self.working(what, clock=clock)
+
+    def end_turn(self) -> None:
+        """It has stopped, however it stopped — answered, refused, timed out, abandoned."""
+        self.in_flight = max(0, self.in_flight - 1)
+
+    def state(self) -> str:
+        """This half, in one of five words (BRANCH_STATES).
+
+        READY and FAILED are outcomes and stand on their own. WORKING and WAITING are claims
+        about right now, so they are only said while a turn is actually in flight here: a task
+        left saying WORKING by a turn that died reads ACTIVE, which is what it is.
+        """
+        named = str((self.task or {}).get("state") or "")
+        if named in ("READY", "FAILED"):
+            return named
+        if self.in_flight <= 0:
+            return "ACTIVE"
+        return "WAITING" if named in ("WAITING", "QUEUED") else "WORKING"
+
+    def headline(self) -> dict[str, str]:
+        """What this half IS, in a line the tablet draws on it: "ORDER · #1957", "INBOX · READY".
+
+        Never two indistinguishable halves — this is the difference the owner could not find.
+        It is built here, on the Mac, from branch state, so both ends say the same thing and
+        the tablet invents none of it.
+        """
+        entity = self.entity or {}
+        area = AREA_OF_KIND.get(str(entity.get("kind") or ""), "") or self.area
+        state = self.state()
+        detail = str(entity.get("label") or "").strip()
+        if not detail and self.workflow is not None:
+            detail = str(self.workflow.label or "").strip()
+        if not area:
+            area = "WORKSPACE" if (self.last_ui or self.last_answer) else "EMPTY"
+        if not detail:
+            detail = "nothing yet" if area == "EMPTY" and state == "ACTIVE" else state
+        detail = detail[:40]
+        return {"area": area, "detail": detail, "state": state, "title": f"{area} · {detail}"}
+
+    def holds(self) -> dict[str, Any]:
+        """What this half has to work with, said plainly.
+
+        The forked half in the Phase 3 live session was refused `landing_unavailable` and then
+        `not_held`, and neither refusal told the owner what the half DID have or what to do
+        next. A refusal he cannot act on is a dead control, so every refusal that can reach a
+        divided orb carries this.
+        """
+        return {
+            "entity": dict(self.entity) if self.entity else None,
+            "set_id": self.set_id or "",
+            "recent": [dict(e) for e in self.recent_entities[:4]],
+            "from": self.parent_id or "",
+            "state": self.state(),
+        }
 
     # ------------------------------------------------------------- navigation
 
@@ -359,6 +467,12 @@ class Branch:
     def public(self) -> dict[str, Any]:
         return {
             "branch_id": self.branch_id, "parent_id": self.parent_id or None, "status": self.status,
+            # `status` is where the half lives (ACTIVE, BACKGROUND, MERGED, CANCELLED);
+            # `state` is what it is doing, in one of five words, and it is what the chip says.
+            "state": self.state(),
+            # The line drawn ON this half, so tapping between two halves can never again show
+            # the owner two screens he cannot tell apart.
+            "headline": self.headline(),
             "label": self.label, "entity": self.entity, "set_id": self.set_id or None,
             "workflow": self.workflow.public() if self.workflow else None,
             "tab": self.tab or None, "scroll": self.scroll, "expanded": list(self.expanded),
@@ -396,6 +510,49 @@ class Branch:
             "has_workspace": bool(self.last_ui or self.last_answer),
             "last_question": self.last_question, "last_at": self.last_at or None,
         }
+
+
+def fork_from(parent: Branch, *, label: str = "") -> Branch:
+    """The orb divides. One function, so what a half inherits is one contract with one test.
+
+    The child inherits what its parent HOLDS — the record it is on, the working set, the names
+    it has already resolved, the trail of what it has looked at — and NOTHING of what its
+    parent is SHOWING. That division is the whole of D-3. Cloning the parent's screen is what
+    produced two identical halves; withholding what the parent held is what made `open.area`
+    and `open.entity` refuse the clone with reasons its owner could not act on. So: context
+    yes, presentation no, and the child says plainly that it holds nothing yet.
+
+    Nothing that could be APPLIED crosses: no proposal, no composer, no half-written workspace,
+    no armed voice binding, no task. A change belongs to the half it was asked for in.
+    """
+    child = Branch(
+        branch_id=new_branch_id(), session_id=parent.session_id, parent_id=parent.branch_id,
+        label=str(label or "").strip()[:40] or "second",
+        entity=dict(parent.entity) if parent.entity else None,
+        set_id=parent.set_id, tab=parent.tab,
+    )
+    if parent.workflow is not None:
+        # The same set at the same place; advancing one cursor does not move the other.
+        from dataclasses import replace
+
+        child.workflow = replace(parent.workflow, workflow_id=f"{parent.workflow.workflow_id}b",
+                                 visited=list(parent.workflow.visited))
+    # What its parent had already worked out. These are resolutions and references, not
+    # permissions — the gate still reads `Session.issued_ids` — and they are exactly what the
+    # clone never received in the live session.
+    child.recent_entities = [dict(e) for e in parent.recent_entities[:MAX_RECENT]]
+    child.resolutions = {said: dict(value) for said, value in parent.resolutions.items()}
+    child.inherited = {
+        "from": parent.branch_id,
+        "entity": dict(parent.entity) if parent.entity else None,
+        "set_id": parent.set_id or "",
+        "area": parent.headline()["area"],
+    }
+    if parent.entity:
+        # Its own one-stop trail, so Back and Home have a floor of their own rather than
+        # walking a stack that belongs to the other half.
+        child.visit(parent.entity["kind"], parent.entity["ref"], parent.entity["label"], tab=parent.tab)
+    return child
 
 
 def _resolution_key(said: str) -> str:

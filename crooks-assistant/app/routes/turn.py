@@ -220,6 +220,10 @@ async def turn(
     # tells the two apart (app/session/branch.py, app/providers/max_agent_sdk.py).
     branch.instruction_seq += 1
     branch.abandoned = False
+    # A new instruction to THIS half replaces whatever it was doing, so nothing earlier is
+    # still in flight here. Said out loud because `in_flight` is what makes the chip's WORKING
+    # true, and a turn that died on its way out would otherwise leave that word standing.
+    branch.in_flight = 0
     seq = branch.instruction_seq
 
     # The hourly catalogue refresh is a Shopify round trip; it runs beside this turn, not
@@ -240,7 +244,9 @@ async def turn(
         )
     # What this half is doing, in the owner's words, while it does it. A half he has put
     # aside says this on its own chip rather than taking his attention (brief section 17).
-    branch.working(_working_words(lane, intent))
+    # `begin_turn` rather than `working`: the branch counts turns actually in flight, so
+    # WORKING on a chip is a fact and not a note left behind by a turn that died.
+    branch.begin_turn(_working_words(lane, intent))
     if lane == "FAST" and recipe is not None:
         # The rail is worked out beside the read, not after it. A fast turn used to answer with
         # `writes` still None — that variable is set further down, on the path the fast lane
@@ -1204,6 +1210,9 @@ async def _answer(
         # that finished a ten-second turn with zero change on the tablet and an answer that
         # could never be read: it was not BACKGROUND, only not looked at, so it went idle.
         elsewhere = bool(session is not None and getattr(session, "focused_branch", "") and session.focused_branch != branch.branch_id)
+        # The turn is over however it ended. Counted down first, so nothing below can leave a
+        # half saying it is working when it is not.
+        branch.end_turn()
         if error_kind:
             branch.failed("that did not work")
         elif branch.status == "BACKGROUND" or elsewhere:

@@ -69,8 +69,14 @@ class Outcome:
     changed: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def refused(cls, code: str, detail: str) -> Outcome:
-        return cls(ok=False, code=code, detail=detail, answer=detail)
+    def refused(cls, code: str, detail: str, *, changed: dict[str, Any] | None = None) -> Outcome:
+        """A refusal, and — where there is one — what the owner can do instead.
+
+        `changed` is how a refusal carries a way forward. The live session refused a forked
+        half twice in five seconds with sentences it could only read, and the owner concluded
+        the feature did not work. A refusal with nothing to tap is a dead control.
+        """
+        return cls(ok=False, code=code, detail=detail, answer=detail, changed=dict(changed or {}))
 
 
 @dataclass(frozen=True)
@@ -130,6 +136,40 @@ def run(name: str, ctx: Ctx) -> Outcome:
     if command.needs_workflow and getattr(ctx.branch, "workflow", None) is None:
         return Outcome.refused("no_set", "There is no list open to move through.")
     return command.run(ctx)
+
+
+# --------------------------------------------------------------------- a way forward
+
+# The four places the dock offers, in the words the dock uses. A refusal names them so that a
+# half holding nothing has somewhere to go from the refusal itself.
+DOCK_AREAS = (("orders", "Orders"), ("email", "Inbox"), ("sales", "Sales"), ("products", "Products"))
+MAX_OFFER = 5
+
+
+def _holds(branch: Any) -> dict[str, Any]:
+    """What the half has, if it is a half that can say. Guarded because commands are run
+    against stand-ins in a dozen tests and a refusal must never be the thing that raises."""
+    describe = getattr(branch, "holds", None)
+    return describe() if callable(describe) else {}
+
+
+def offer_for(branch: Any) -> list[dict[str, str]]:
+    """What a half can do from here, as commands the tablet can post unchanged.
+
+    Each entry is a registered command name and its identities — never an instruction about
+    what the command should do, which is the same rule the whole touch surface keeps. The
+    record the half already holds comes first, because on a forked half that is the thing its
+    owner was reaching for when he was told `not_held`.
+    """
+    out: list[dict[str, str]] = []
+    entity = getattr(branch, "entity", None) or {}
+    kind, ref = str(entity.get("kind") or ""), str(entity.get("ref") or "")
+    if kind and ref:
+        label = str(entity.get("label") or ref)
+        out.append({"command": "open.entity", "kind": kind, "ref": ref, "label": label, "words": f"Open {label}"})
+    for area, words in DOCK_AREAS:
+        out.append({"command": "open.area", "area": area, "words": words})
+    return out[:MAX_OFFER]
 
 
 # --------------------------------------------------------------------------- replay
@@ -388,11 +428,18 @@ def _open_entity(ctx: Ctx) -> Outcome:
     label = ctx.arg("label") or ref
     if not may_open(ctx, kind, ref):
         # Never shown to this conversation. Refused before anything is read, which is both the
-        # safe answer and the cheap one.
-        return Outcome.refused("not_held", "I no longer have that one to hand; ask for it and I will read it again.")
+        # safe answer and the cheap one — and with somewhere to go, because on a divided orb
+        # this refusal reached a half whose owner had no way to find out what it did have.
+        return Outcome.refused(
+            "not_held", "That one was not opened in this conversation. Open the list it is on and tap it there.",
+            changed={"offer": offer_for(ctx.branch), "holds": _holds(ctx.branch)},
+        )
     calls = replay(ctx, kind, ref)
     if not calls and kind not in REPLAY_TOOL:
-        return Outcome.refused("not_held", "I no longer have that one to hand; ask for it and I will read it again.")
+        return Outcome.refused(
+            "not_held", f"I cannot open a {kind} on its own. Open the list it is on and tap it there.",
+            changed={"offer": offer_for(ctx.branch), "holds": _holds(ctx.branch)},
+        )
     ctx.branch.visit(kind, ref, label)
     changed: dict[str, Any] = {
         "entity": {"kind": kind, "ref": ref, "label": label}, "replayed": bool(calls),
@@ -472,6 +519,16 @@ def _branch_show(ctx: Ctx) -> Outcome:
     was talking to the other one shows its answer the moment it is tapped, and a reloaded
     tablet gets its place back. Nothing is read and nothing is staged: this is presentation
     the Mac already made, handed over again.
+
+    A half that has never presented anything draws NOTHING, and this is the whole of D-3. It
+    used to rebuild its parent's record from memory, which is how a fork produced two screens
+    the owner could not tell apart — he tapped between them six times in nine seconds and then
+    said the feature did not work. What it returns instead is what this half holds and what can
+    be done with it, and the tablet draws that: a header, and controls.
+
+    The headline goes out on every answer, empty or not, because an identical pair of cards on
+    two halves is legitimate — two views of the same order — and the identity of the half must
+    be unmistakable even then.
     """
     wanted = ctx.arg("branch_id") or ctx.branch.branch_id
     branch = ctx.session.branches.get(wanted) if isinstance(getattr(ctx.session, "branches", None), dict) else None
@@ -479,19 +536,25 @@ def _branch_show(ctx: Ctx) -> Outcome:
         return Outcome.refused("unknown_branch", "There is no such half in this conversation.")
     if branch.status in ("MERGED", "CANCELLED"):
         return Outcome.refused("branch_closed", f"That half is {branch.status.lower()}.")
+    common = {"branch_id": branch.branch_id, "headline": branch.headline(),
+              "state": branch.state(), "status": branch.status,
+              "task": dict(branch.task) if branch.task else None}
     ui = list(branch.last_ui)
-    if not ui and branch.entity:
-        # Nothing presented yet but a record is open (a fresh fork starts where its parent
-        # was): rebuild it from memory, exactly as open.entity would.
-        calls = replay(ctx, str(branch.entity.get("kind") or ""), str(branch.entity.get("ref") or ""))
-        if calls:
-            return Outcome(answer=branch.last_answer or f"{branch.entity.get('label') or 'this'}.", calls=calls,
-                           changed={"branch_id": branch.branch_id, "question": branch.last_question, "replayed": True})
     if not ui and not branch.last_answer:
-        return Outcome(answer="", changed={"branch_id": branch.branch_id, "empty": True})
+        return Outcome(answer=_empty_words(branch),
+                       changed={**common, "empty": True, "holds": _holds(branch), "offer": offer_for(branch)})
     return Outcome(answer=branch.last_answer, surfaces=[_AsUi(u) for u in ui],
-                   changed={"branch_id": branch.branch_id, "question": branch.last_question,
-                            "task": dict(branch.task) if branch.task else None})
+                   changed={**common, "question": branch.last_question})
+
+
+def _empty_words(branch: Any) -> str:
+    """What a half with nothing on it says, and it says what it HAS — the sentence the forked
+    half never got to say in the live session, where it refused twice instead."""
+    entity = getattr(branch, "entity", None) or {}
+    label = str(entity.get("label") or "").strip()
+    if label:
+        return f"This half holds nothing on screen yet. It starts from {label}."
+    return "This half holds nothing yet. Open a place, or ask it something."
 
 
 class _AsUi:
