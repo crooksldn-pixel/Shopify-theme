@@ -61,13 +61,34 @@ def test_counting_a_file_that_is_not_there_is_zero_not_an_error(tmp_path):
 
 # ------------------------------------------------------------------- the watch
 
-def test_the_watch_prints_the_semantics_and_nothing_private():
+def test_the_watch_prints_what_the_owner_said_and_scrubs_what_is_somebody_else_s():
+    """§35 asks for `VOICE "reply to anna"`, and it is what makes a live watch legible: every
+    other line is an id, and without the sentence there is no telling which question they
+    belong to. It is the owner's own speech, on his own Mac, in a session he started.
+
+    What is taken out of it before it reaches the terminal is the shapes that are somebody's
+    data whoever said them — an email address, a street, a postcode, a telephone number, a
+    long run of digits — which is the same rule the production recorder keeps
+    (app/observability/recorder.py), written once in `watch.said`."""
     rendered = watch.line({
         "kind": "stt", "iso": "2026-09-09T20:31:03", "turn_id": "turn_abc123", "ok": True,
-        "engine": "scribe", "raw_text": "the customer's actual words", "text": "the customer's actual words",
+        "engine": "scribe", "raw_text": "reply to anna about the hoodie",
+        "text": "reply to anna about the hoodie",
     }, colour=False)
     assert "scribe" in rendered
-    assert "customer" not in rendered, "a transcript is not a semantic state"
+    assert 'VOICE  “reply to anna about the hoodie”' in rendered
+
+    private = watch.line({
+        "kind": "stt", "iso": "2026-09-09T20:31:03", "turn_id": "turn_abc123", "ok": True, "engine": "scribe",
+        "text": "send it to 14 Ravensbourne Road, BR3 4RT, or email anna@example.com on 07700 900123",
+    }, colour=False)
+    for shape in ("Ravensbourne", "BR3", "anna@example.com", "900123"):
+        assert shape not in private, shape
+    assert "[street]" in private or "[email]" in private
+
+    quiet = watch.line({"kind": "stt", "iso": "2026-09-09T20:31:03", "turn_id": "t", "ok": False,
+                        "engine": "scribe", "reason": "I did not catch any speech there."}, colour=False)
+    assert "no speech" in quiet and "catch" not in quiet
 
 
 def test_the_watch_refuses_a_field_it_was_never_told_about():
