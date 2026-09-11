@@ -99,7 +99,6 @@ async def test_a_card_the_owner_can_read_arrives_while_the_turn_is_still_running
     assert useful_at < finished, "the card must exist BEFORE the turn answers, not with it"
     # And the skeleton was there before the card was: a working screen, then the facts.
     assert seen[0].startswith("add:order"), seen
-    assert any("shell" in s for s in []) or True   # the shell's shape is asserted in the unit tests
 
 
 async def test_the_turn_reports_the_four_numbers_the_brief_asks_for(slow):
@@ -145,6 +144,22 @@ async def test_the_state_poll_carries_a_cursor_and_repeats_nothing(slow):
     assert first and first["complete"] is True and first["patches"]
     again = (await slow.get(f"/state/prog?since={first['revision']}")).json()["workspace"]
     assert again["patches"] == [], "a tablet that is up to date is given nothing to redraw"
+
+
+async def test_the_turn_log_keeps_the_shape_of_the_patches_and_not_their_contents(slow):
+    """The patches carry the cards again — a customer's name, an address, an email body — and
+    the turn log is read later, by a person, and may be handed to somebody else. It keeps
+    which card changed and nothing that was on it, exactly as it does for `ui`."""
+    import json
+
+    body = (await slow.post("/turn", json={"text": "show me order 1938", "session_id": "prog"})).json()
+    assert body["workspace"]["patches"], "the payload the tablet gets carries the cards themselves"
+    assert any("item" in p for p in body["workspace"]["patches"])
+    logged = json.loads(slow.runtime.turnlog.path.read_text(encoding="utf-8").strip().splitlines()[-1])["workspace"]
+    assert all(isinstance(p, str) and ":" in p for p in logged["patches"]), logged["patches"]
+    assert logged["renders"]["suppressed"] >= 1 and logged["timings_ms"]["time_to_shell"] is not None
+    # And nothing a card said reaches the file through this key.
+    assert "order_number" not in json.dumps(logged)
 
 
 async def test_a_session_with_no_turn_in_flight_has_no_workspace(slow):

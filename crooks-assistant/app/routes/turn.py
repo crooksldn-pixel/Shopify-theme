@@ -1329,8 +1329,19 @@ async def _answer(
         } if glass else None,
     }
     # The cards repeat what the tools returned, which the log already has in redacted form;
-    # the log keeps only which kinds were shown.
-    runtime.turnlog.write({**payload, "ui": [item["type"] for item in ui]}, names=names)
+    # the log keeps only which kinds were shown. The workspace's patches carry the same cards
+    # again — a customer's name, an address, an email body — so the log keeps their SHAPE and
+    # not their contents, for exactly the reason the line above exists.
+    runtime.turnlog.write({
+        **payload,
+        "ui": [item["type"] for item in ui],
+        "workspace": {
+            "revision": (payload.get("workspace") or {}).get("revision"),
+            "patches": [f"{p.get('op')}:{p.get('id')}" for p in ((payload.get("workspace") or {}).get("patches") or [])],
+            "renders": (payload.get("workspace") or {}).get("renders"),
+            "timings_ms": (payload.get("workspace") or {}).get("timings_ms"),
+        } if payload.get("workspace") else None,
+    }, names=names)
     return payload
 
 
