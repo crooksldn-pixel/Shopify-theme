@@ -240,3 +240,33 @@ async def test_what_was_avoided_is_measured_not_claimed(stage):
     stats = dedupe.current().stats()
     for field in ("requests_avoided", "latency_saved_ms", "provider_calls_saved", "served", "coalesced", "reused"):
         assert field in stats, f"{field} is not measured"
+
+
+async def test_the_whole_scenario_suite_reads_less_than_it_used_to(stage):
+    """The measurement over the golden scenarios rather than one contrived pair.
+
+    A floor rather than a figure: the exact number moves when a scenario is added, and a test
+    that pinned it would fail for the wrong reason. What must not move is that a real
+    session's worth of work avoids a substantial share of its reads, and that every avoided
+    read is a provider call that did not happen — `provider_calls_saved` equals
+    `requests_avoided` here because every tool in PURE_READS talks to Shopify or Gmail.
+
+    The milliseconds are small against the fixture shop, which answers instantly. Against the
+    real one, where the live session measured 17,302 ms of reading, each of these costs
+    150-400 ms.
+    """
+    from experience.scenarios import SCENARIOS
+
+    dedupe.current().reset()
+    for _name, scenario in SCENARIOS:
+        await scenario(stage)
+    stats = dedupe.current().stats()
+    assert stats["requests_avoided"] >= 25, stats
+    assert stats["provider_calls_saved"] == stats["requests_avoided"], stats
+    assert stats["latency_saved_ms"] > 0, stats
+    assert stats["requests_avoided"] > stats["served"] * 0.25, (
+        f"less than a quarter of the reads were avoided: {stats}"
+    )
+    # And the tools the live session ran twice are in the saving.
+    for tool in ("gmail_search", "shopify_order_detail"):
+        assert stats["by_tool"].get(tool), f"{tool} never avoided a request: {stats['by_tool']}"

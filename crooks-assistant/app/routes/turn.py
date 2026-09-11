@@ -1007,11 +1007,22 @@ async def _prefetch_order(runtime, session, text: str, calls: list, timings: dic
 
 
 def _hydrate_soon(order_id: str) -> asyncio.Task | None:
-    """Start the order's full read in the background. Never awaited by the turn itself."""
+    """Start the order's full read in the background. Never awaited by the turn itself.
+
+    Lane 4 — "an active branch's requested background job". The owner asked for this order,
+    so it outranks a guess; he is not waiting on this read, so it yields to his next question
+    (app/reads/budget.py). A task copies the context at creation, which is why entering the
+    lane here is enough for everything the read reaches.
+    """
+    from app.reads import budget
     from app.tools.shopify_tools import hydrator
 
+    async def read() -> Any:
+        with budget.using(budget.BACKGROUND, f"hydrate:{order_id}", yielding=False):
+            return await hydrator().order(order_id)
+
     try:
-        return asyncio.get_running_loop().create_task(hydrator().order(order_id))
+        return asyncio.get_running_loop().create_task(read())
     except Exception as exc:  # noqa: BLE001 — Shopify not bound; the model looks it up itself
         log.debug("no background hydration: %s", exc)
         return None

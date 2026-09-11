@@ -57,8 +57,27 @@ def test_no_tool_is_called_tested_because_a_unit_test_imported_it():
 
 
 def test_the_checked_in_document_is_the_generated_one():
+    """Generated in a FRESH interpreter, which is how `make tool-matrix` runs it.
+
+    Not in this one. Several tests register a tool of their own and do not take it away
+    again, so by the time the suite reaches here the registry holds four that the shipped
+    application does not — and a document compared against that is a document that can never
+    be made to match. Spawning the generator also proves it works from a cold start, which is
+    the only way anybody actually runs it.
+    """
+    import subprocess
+    import sys
+
+    root = DOC.resolve().parents[2]
+    generated = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; sys.path.insert(0, '.'); from experience import tool_matrix; "
+         "sys.stdout.write(tool_matrix.markdown())"],
+        cwd=root, capture_output=True, text=True, timeout=180, check=False,
+    )
+    assert generated.returncode == 0, generated.stderr[-2000:]
     assert DOC.exists(), f"{DOC} has not been written"
-    assert DOC.read_text(encoding="utf-8") == tool_matrix.markdown(), (
+    assert DOC.read_text(encoding="utf-8") == generated.stdout, (
         "docs/phase4/TOOL_MATRIX.md is out of date; regenerate it with `make tool-matrix`"
     )
 
