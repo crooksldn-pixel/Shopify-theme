@@ -102,9 +102,11 @@
     const options = opts || {};
     const view = options.viewport || { w: 0, h: 0 };
     const hits = [];
+    const box = (r) => (r ? `${Math.round(r.rect.left)},${Math.round(r.rect.top)} ${Math.round(r.rect.width)}x${Math.round(r.rect.height)}` : '');
     const add = (rule, a, b, over, note) => {
       hits.push({
         rule, a: a ? a.sel : '', b: b ? b.sel : '',
+        at: box(a), bt: box(b),
         w: over ? over.w : 0, h: over ? over.h : 0,
         note: note || '',
       });
@@ -164,9 +166,10 @@
     // 6 · a control that is on screen at no width, or a sliver of one. `shown` already
     // excludes display:none and [hidden]; what is left is a control the layout squeezed.
     for (const c of visible.filter((r) => has(r, 'control'))) {
-      if (c.rect.width < 1 || c.rect.height < 1) add('folded_action', c, null, null, 'zero size');
-      else if (c.rect.width < SLIVER || c.rect.height < SLIVER) {
-        add('folded_action', c, null, null, `${Math.round(c.rect.width)}×${Math.round(c.rect.height)}`);
+      const asked = c.asked || c.rect;
+      if (asked.width < 1 || asked.height < 1) add('folded_action', c, null, null, 'zero size');
+      else if (asked.width < SLIVER || asked.height < SLIVER) {
+        add('folded_action', c, null, null, `${Math.round(asked.width)}×${Math.round(asked.height)}`);
       }
     }
 
@@ -180,7 +183,17 @@
     const counts = {};
     for (const rule of RULES) counts[rule] = 0;
     for (const hit of hits) counts[hit.rule] = (counts[hit.rule] || 0) + 1;
-    return { total: hits.length, counts, hits: hits.slice(0, MAX_HITS) };
+    // One example of every rule that fired, first; then as much of the tail as the cap allows.
+    const kept = [];
+    for (const rule of RULES) {
+      const first = hits.find((h) => h.rule === rule);
+      if (first) kept.push(first);
+    }
+    for (const hit of hits) {
+      if (kept.length >= MAX_HITS) break;
+      if (kept.indexOf(hit) === -1) kept.push(hit);
+    }
+    return { total: hits.length, counts, hits: kept };
   }
 
   /* Controls too small for a thumb, and text-only actions with no box at all (section 29).
@@ -194,7 +207,8 @@
       if (!r.shown || !has(r, 'control') || !drawn(r)) continue;
       if (view.w && !onScreen(r, view)) continue;
       if (r.decorative) continue;
-      const w = Math.round(r.rect.width); const h = Math.round(r.rect.height);
+      const asked = r.asked || r.rect;
+      const w = Math.round(asked.width); const h = Math.round(asked.height);
       if (Math.min(w, h) + 0.5 < floor) small.push({ sel: r.sel, w, h });
     }
     return small.slice(0, MAX_HITS);
@@ -225,8 +239,19 @@
     try { return typeof node.matches === 'function' && node.matches(selector); } catch { return false; }
   }
 
-  /* Every node worth a rectangle, walked once. `root` defaults to the document body, so a
-     scan covers the chrome and the cards together — which is where the overlaps are. */
+  const intersect = (a, b) => ({
+    left: Math.max(a.left, b.left), top: Math.max(a.top, b.top),
+    right: Math.min(a.right, b.right), bottom: Math.min(a.bottom, b.bottom),
+  });
+  const boxOf = (rect) => ({
+    left: rect.left, top: rect.top,
+    right: rect.right === undefined ? rect.left + rect.width : rect.right,
+    bottom: rect.bottom === undefined ? rect.top + rect.height : rect.bottom,
+  });
+
+  /* Every node worth a rectangle, walked once, each one clipped by what is above it.
+     `root` defaults to the document body, so a scan covers the chrome and the cards
+     together — which is where the overlaps are. */
   function collect(doc, opts) {
     const options = opts || {};
     const scope = options.root || (doc.body || null);
@@ -237,8 +262,9 @@
       : (node) => (doc.defaultView && doc.defaultView.getComputedStyle ? doc.defaultView.getComputedStyle(node) : null);
     const out = [];
     const seen = [];
+    const screen = { left: 0, top: 0, right: view.w || 1e6, bottom: view.h || 1e6 };
 
-    const walk = (node, path) => {
+    const walk = (node, path, clip) => {
       if (!node || node.nodeType !== 1) return;
       const tag = String(node.tagName || '').toUpperCase();
       if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG' || tag === 'TEMPLATE') return;
@@ -249,7 +275,13 @@
       const invisible = style.visibility === 'hidden' || style.opacity === '0';
       const inert = style.pointerEvents === 'none';
       const rect = node.getBoundingClientRect ? node.getBoundingClientRect() : null;
+      // Fixed furniture is not inside anybody's scroller: the dock, the hold band and the
+      // sheet are painted against the screen, so their clip is the screen.
+      let here = style.position === 'fixed' ? screen : clip;
       if (rect) {
+        const own = boxOf(rect);
+        const box = intersect(own, here);
+        const clipped = box.right - box.left <= 0 || box.bottom - box.top <= 0;
         const kinds = [];
         // A control that cannot be touched is not a control: the transparent overlays and the
         // decorative layers would otherwise read as a screenful of collisions.
@@ -261,24 +293,39 @@
         if (!invisible && ownText(node)) kinds.push('text');
         if (kinds.length) {
           const record = {
-            sel: selectorOf(node), path, kinds, shown: !invisible,
+            sel: selectorOf(node), path, kinds, shown: !invisible && !clipped,
             decorative: Boolean(node.getAttribute && node.getAttribute('aria-hidden') === 'true'),
+            // The rectangle as it is DRAWN: what the element asked for, narrowed by every
+            // scroller above it. A card scrolled half out of the deck is half a card here.
             rect: {
-              left: rect.left, top: rect.top,
-              right: rect.right === undefined ? rect.left + rect.width : rect.right,
-              bottom: rect.bottom === undefined ? rect.top + rect.height : rect.bottom,
-              width: rect.width, height: rect.height,
+              left: box.left, top: box.top, right: box.right, bottom: box.bottom,
+              width: Math.max(0, box.right - box.left), height: Math.max(0, box.bottom - box.top),
             },
+            // And what it asked for, kept beside it: `folded_action` is about the layout
+            // squeezing a control, not about the owner having scrolled past it.
+            asked: { width: rect.width, height: rect.height },
             covered_by: '',
           };
           out.push(record);
           seen.push(node);
         }
+        // A scroller narrows everything inside it. Per axis, because `overflow-x:auto` on a
+        // table wrapper says nothing about its height.
+        const ox = style.overflowX || style.overflow || 'visible';
+        const oy = style.overflowY || style.overflow || 'visible';
+        if (ox !== 'visible' || oy !== 'visible') {
+          here = {
+            left: ox === 'visible' ? here.left : Math.max(here.left, own.left),
+            right: ox === 'visible' ? here.right : Math.min(here.right, own.right),
+            top: oy === 'visible' ? here.top : Math.max(here.top, own.top),
+            bottom: oy === 'visible' ? here.bottom : Math.min(here.bottom, own.bottom),
+          };
+        }
       }
       const kids = node.children || [];
-      for (let i = 0; i < kids.length; i++) walk(kids[i], `${path}/${i}`);
+      for (let i = 0; i < kids.length; i++) walk(kids[i], `${path}/${i}`, here);
     };
-    walk(scope, '');
+    walk(scope, '', screen);
 
     // The occlusion pass, which is the only honest way to ask "can he see it": take the
     // centre of each essential element and ask the browser what is on top there. Anything
@@ -328,7 +375,7 @@
     return result;
   }
 
-  const api = { RULES, SEL, TOL, SLIVER, TOUCH, check, touch, collect, scan, overlap, contains };
+  const api = { RULES, SEL, TOL, SLIVER, TOUCH, check, touch, collect, scan, overlap, contains, intersect };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.CrooksCollide = api;
 })(typeof window !== 'undefined' ? window : globalThis);

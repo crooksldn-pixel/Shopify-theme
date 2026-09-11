@@ -198,6 +198,11 @@ body[data-mode="context"] .errline{display:none}
   visibility:visible;
   transition:opacity var(--t-3) var(--ease-out),transform var(--t-3) var(--ease-spring),visibility 0s;
 }
+/* Beside the cards, the bottom 112px of the screen belongs to the dock and the hold band,
+   both of them fixed. The workspace stops there. Anything drawn past this line is invisible
+   under the scrim and untouchable under `#talk`, which is the fault the collision suite found
+   on nine of fifteen fixtures. */
+body[data-mode="context"] .context{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}
 /* The navigation is one glass object with lit spots, not a row of outlined words. The
    container carries the glass (this is one of the two places backdrop-filter is allowed);
    the chips inside are a faint step up from it at rest and a strong one when selected or
@@ -275,7 +280,7 @@ body[data-mode="context"] .errline{display:none}
 .armed-cancel:active{transform:scale(.96);background:var(--glass-control-active);border-color:var(--border-active)}
 @media (prefers-reduced-motion:reduce){.armed-dot{animation:none}}
 
-.deck{position:relative;flex:1;min-height:0}
+.deck{position:relative;flex:1;min-height:72px}
 .deck-ghost{
   position:absolute;left:26px;right:26px;top:-8px;height:40px;border-radius:var(--r-3) var(--r-3) 0 0;
   background:var(--glass);border:1px solid var(--line);border-bottom:0;opacity:0;
@@ -287,7 +292,7 @@ body[data-mode="context"] .errline{display:none}
 
 .cards{
   position:relative;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
-  padding:2px 14px calc(var(--dock) + 18px);display:flex;flex-direction:column;gap:12px;
+  padding:2px 14px 18px;display:flex;flex-direction:column;gap:12px;
 }
 .timings{
   margin:0;padding:0 14px;font-family:var(--mono);font-size:11px;color:var(--ink-4);flex:none;
@@ -643,6 +648,26 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
 @media (max-height:640px){
   :root{--orb:220px}
   body[data-mode="orb"] .orb-zone{padding-bottom:0}
+}
+/* The keyboard is open (`interactive-widget=resizes-content` shrinks the viewport, it does
+   not overlay it). A quarter of a 418px screen cannot be furniture. */
+@media (max-height:520px){
+  :root{--dock:76px}
+  body[data-mode="context"] .talk-label{height:48px;min-width:180px}
+  .dock-btn{height:48px}
+  .dock-label{display:none}
+  .dock-gap{width:192px}
+  /* The orb keeps saying which state this is, at the size a 418px screen can spare. */
+  body[data-mode="context"] .orb-zone{height:52px}
+  body[data-mode="context"] .orb-frame{transform:scale(.13);margin:calc(var(--orb) * -.435)}
+  body[data-mode="context"] .answer{-webkit-line-clamp:1}
+  body[data-mode="context"] .heard{display:none}
+  .notes{max-height:26vh}
+  .notes-workspace{padding-bottom:4px}
+  .notes-workspace .note{min-height:36px;padding:4px 6px 4px 10px}
+  .notes-workspace .note-words{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+  .notes-workspace .note-dismiss{min-height:32px;min-width:32px;padding:0 10px}
+  .context-nav{margin-bottom:6px}
 }
 @media (orientation:landscape) and (max-height:820px){
   :root{--orb:260px}
@@ -1040,7 +1065,11 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
  * web/collide.js measures in Chromium (rule `notification_over_chrome`), and it is measured
  * with the dock up, the keyboard open and both halves on screen.
  */
-.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;min-width:0}
+.notes{
+  display:flex;flex-direction:column;gap:6px;margin:0;padding:0;min-width:0;
+  /* It yields before the workspace does, and scrolls rather than spilling. */
+  flex:0 1 auto;min-height:0;max-height:32vh;overflow-y:auto;overscroll-behavior:contain;
+}
 .notes[hidden]{display:none}
 .notes-global{padding:8px 14px 0}
 .notes-workspace{padding:0 14px 8px}
@@ -1260,7 +1289,7 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
   box-shadow:var(--inset-hi);-webkit-appearance:none;appearance:none;resize:vertical;
 }
 .field-input::placeholder{color:var(--ink-4)}
-.field-input,.compose-actions,.ws-options,.action-surface{scroll-margin-bottom:calc(var(--dock) + 24px);scroll-margin-top:16px}
+.field-input,.compose-actions,.ws-options,.action-surface{scroll-margin-bottom:24px;scroll-margin-top:16px}
 .field-input:focus{outline:none;background:var(--glass-control-active);border-color:var(--border-active);box-shadow:0 0 0 3px rgba(235,232,224,.12)}
 .field-input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .field-hint{margin:0;font-size:12px;color:var(--ink-3);word-break:break-word}

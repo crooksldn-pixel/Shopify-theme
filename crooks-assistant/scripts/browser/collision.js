@@ -274,7 +274,7 @@ async function one(browser, vp) {
     const bad = results.filter((r) => (r.scan.counts || {})[rule]);
     const detail = bad.map((r) => {
       const hit = (r.scan.hits || []).find((x) => x.rule === rule) || {};
-      return `${r.id}: ${(r.scan.counts || {})[rule]}× ${hit.a || ''}${hit.b ? ` / ${hit.b}` : ''}${hit.note ? ` (${hit.note})` : ''}`;
+      return `${r.id}: ${(r.scan.counts || {})[rule]}× ${hit.a || ''}[${hit.at || ''}]${hit.b ? ` / ${hit.b}[${hit.bt || ''}]` : ''}${hit.note ? ` (${hit.note})` : ''}`;
     }).join(' | ');
     check(`${vp.name} · ${WORDS[rule] || rule}`, bad.length === 0, detail);
   }
