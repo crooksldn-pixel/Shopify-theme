@@ -178,7 +178,7 @@ def test_opening_a_composer_reads_nothing_and_stages_nothing(branch, session):
     card = answer.surfaces[0].as_ui()
     assert card["type"] == "email_compose"
     data = card["data"]
-    assert data["to"] == {"value": ADDRESS, "status": "ok", "hint": ""}
+    assert data["to"] == {"value": ADDRESS, "status": "ok", "hint": "", "editable": True}
     assert data["kind"] == "new" and not data["thread_id"]
     assert "shoot" in data["about"].lower() and "sunday" in data["about"].lower()
     assert ADDRESS not in data["about"], "the address is addressing, not what it is about"
@@ -193,7 +193,7 @@ def test_a_dictated_address_opens_the_composer_marked(branch, session):
     intent = resolve(DICTATED, branch=branch)
     ctx = RecipeCtx(runtime=None, session=session, branch=branch, intent=intent, text=DICTATED)
     data = family._open_render(ctx, None).surfaces[0].as_ui()["data"]
-    assert data["to"] == {"value": ADDRESS, "status": "uncertain",
+    assert data["to"] == {"value": ADDRESS, "status": "uncertain", "editable": True,
                           "hint": "heard, not typed — check it before this goes anywhere"}
 
 
@@ -636,7 +636,7 @@ async def test_the_model_opens_a_composer_and_the_card_is_drawn_from_it(branch, 
     ui = present(calls, session=session)
     card = [item for item in ui if item["type"] == "email_compose"]
     assert len(card) == 1, [i["type"] for i in ui]
-    assert card[0]["data"]["to"] == {"value": ADDRESS, "status": "uncertain",
+    assert card[0]["data"]["to"] == {"value": ADDRESS, "status": "uncertain", "editable": True,
                                      "hint": "heard, not typed — check it before this goes anywhere"}
 
     # And the words, into the same copy. The recipient is not an argument of this tool.

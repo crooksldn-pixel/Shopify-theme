@@ -125,6 +125,21 @@ test('an ask chip still primes the words, so nothing that worked stopped working
   assert.deepEqual(asked, ['note']);
 });
 
+test('an ask chip shows the words it primed, on itself, and only one chip at a time', () => {
+  const second = Object.assign({}, NOTE, { id: 'cancel', label: 'Cancel', instruction: 'Cancel order 1938', priority: 'primary' });
+  const node = UI.renderItem({ type: 'email_thread', data: { thread_id: THREAD, messages: [], actions: [Object.assign({}, NOTE, { priority: 'primary' }), second] } }, {});
+  const [note, cancel] = node.querySelectorAll('.rail-chip');
+  note.dispatch('click');
+  assert.equal(note.dataset.said, 'true');
+  assert.ok(note.classList.contains('is-primed'));
+  assert.match(textOf(note), /Hold the dock and say: “Add a note to 1938”/);
+  cancel.dispatch('click');
+  assert.equal(cancel.dataset.said, 'true');
+  assert.equal(note.dataset.said, '');
+  assert.ok(!note.classList.contains('is-primed'));
+  assert.equal(note.querySelectorAll('.rail-said').length, 0, 'two primed sentences at once');
+});
+
 test('a stage chip prepares the change and says it is preparing', () => {
   const staged = [];
   const node = UI.renderItem({ type: 'email_thread', data: { thread_id: THREAD, messages: [], actions: [ARCHIVE] } },

@@ -843,6 +843,44 @@ html[data-lite] .orb-zone{transition:none}
   box-shadow:0 0 0 1px var(--warn) inset;
 }
 .rail-chip.risk-red[data-primed="1"]{background:var(--bad-dim);border-color:var(--bad);box-shadow:0 0 0 1px var(--bad) inset}
+/* ---- the rail, weighed (§22)
+ *
+ * Eight actions rendered enabled across the live session and none used. Two of the reasons
+ * were geometry: everything was the same size, so nothing was first, and a disabled Fulfil
+ * sat beside an enabled Refund at the same loudness. The Mac now marks at most two chips
+ * primary; the rest go behind one disclosure that says how many there are.
+ */
+.rail{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:2px 0 6px}
+.rail-primary,.rail-rest{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+.rail-primary>.rail-chip{flex:1 1 auto;justify-content:center;align-items:center;font-size:15px;padding:10px 16px}
+.rail-primary>.rail-chip .rail-label{text-align:center}
+/* Behind the disclosure: the same chip, quieter, and never wider than what it says. */
+.rail-rest>.rail-chip{flex:0 1 auto;font-size:13px;font-weight:500;padding:7px 12px;background:transparent;border-color:var(--border-subtle);box-shadow:none}
+.rail-rest>.rail-chip.is-off{opacity:.7}
+.rail-more{
+  min-height:32px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px;
+  font:inherit;font-size:12px;font-weight:500;letter-spacing:.06em;color:var(--ink-3);cursor:pointer;
+  background:transparent;border:1px solid var(--border-subtle);border-radius:var(--radius-control);
+}
+.rail-more:active{transform:scale(.96);color:var(--ink-2)}
+.rail-more-mark{font-size:14px;line-height:1}
+/* The words an ask chip primed, on the chip that primed them. The dock label they used to be
+   written to is 788px below the finger and is overwritten by the act of speaking. */
+.rail-chip.is-primed{background:var(--warn-dim);border-color:var(--warn);box-shadow:0 0 0 1px var(--warn) inset}
+.rail-said{display:block;margin-top:3px;max-width:34ch;font-size:11px;font-weight:400;line-height:1.35;letter-spacing:.02em;color:var(--ink-2);white-space:normal;text-align:left}
+
+/* ---- a thread that has been archived, proven (§19)
+ *
+ * The one verified change whose consequence is a card the owner is still looking at: he
+ * archives a thread out of a queue and the queue still has it. `settleThread` (web/ui.js)
+ * marks the thread's own card and removes its row from the queue; these are the two pixels'
+ * worth of saying so. `.queue-note` keeps the count honest — a card that said "3 threads"
+ * and shows two has to account for the third.
+ */
+.card.card-email_thread.is-archived{opacity:.78;border-style:dashed}
+.card.card-email_thread.is-archived .rail{display:none}
+.badge.thread-archived{align-self:flex-start;margin-left:auto}
+.queue-note{margin:10px 0 0;color:var(--ink-3)}
 
 /* The draft being worked on is the active object on the screen: the strong border and the
    halo every other selected thing gets, on the whole card. A sent one goes quiet. */
@@ -1136,12 +1174,33 @@ html[data-lite] .orb-zone{transition:none}
  * that survives a workbench light.
  */
 .field{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
-.field-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.field-label{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+/* ---- D-9: the affordance the owner could not find.
+ *
+ * "How do I type a separate hall for you?" — asked out loud, over a build whose only typing
+ * surface was a card with three real, tappable, completely unannounced fields. Two words and
+ * a keyboard glyph on every label, in the quietest weight that still reads at arm's length on
+ * an eight-inch screen at 601px. It is on the LABEL rather than in the box, so it does not
+ * disappear the moment there is a value in the field to read.
+ */
+.field-type{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;font-size:9px;letter-spacing:.12em;color:var(--ink-4);font-weight:500}
+.field-type-mark{font-size:12px;line-height:1;letter-spacing:0}
+.field-static .field-label{color:var(--ink-4)}
+/* A value the owner may read and may not change: a reply's recipient, a reply's subject. It
+   must not look typeable — that is the whole reason it is not an input. */
+.field-value{
+  margin:0;padding:10px 12px;min-height:44px;box-sizing:border-box;display:flex;align-items:center;
+  font-size:15px;line-height:1.4;color:var(--ink-2);word-break:break-word;
+  background:transparent;border:1px dashed var(--border-subtle);border-radius:var(--radius-control);
+}
 .field-input{
   min-height:44px;width:100%;box-sizing:border-box;padding:11px 12px;
   font:inherit;font-size:16px;line-height:1.45;color:var(--ink);
   background:var(--glass-control);border:1px solid var(--border-rest);border-radius:var(--radius-control);
   box-shadow:var(--inset-hi);-webkit-appearance:none;appearance:none;resize:vertical;
+  /* The keyboard covers the bottom half of an 8-inch tablet. `scrollIntoView({block:'center'})`
+     on focus does the moving (web/ui.js); this keeps a margin round it when it lands. */
+  scroll-margin-block:96px;
 }
 .field-input::placeholder{color:var(--ink-4)}
 .field-input:focus{outline:none;background:var(--glass-control-active);border-color:var(--border-active);box-shadow:0 0 0 3px rgba(235,232,224,.12)}
@@ -1151,7 +1210,13 @@ html[data-lite] .orb-zone{transition:none}
 .field.is-uncertain .field-hint{color:var(--warn)}
 .field.is-invalid .field-input{border-color:var(--bad);background:var(--bad-dim)}
 .field.is-invalid .field-hint{color:var(--bad)}
+/* Typed, and the Mac has not answered for it yet. A redraw the owner did not ask for keeps
+   the characters (web/ui.js) and this is how it says so, rather than pretending it is saved. */
+.field.is-unsaved .field-input{border-style:dashed}
+.field.is-unsaved .field-label-text::after{content:" · not sent yet";font-size:9px;letter-spacing:.1em;color:var(--warn)}
 .card.card-email_compose{padding:14px 18px 18px}
+/* How to put words in this card, in the Mac's words. The one line D-9 was missing. */
+.compose-how{margin:14px 0 0;font-size:13px;line-height:1.45;color:var(--ink-2)}
 .compose-said{margin:12px 0 0;font-size:12px;color:var(--ink-4);word-break:break-word}
 .compose-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
 .compose-btn{

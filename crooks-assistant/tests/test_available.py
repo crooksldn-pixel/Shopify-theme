@@ -22,10 +22,12 @@ def ids(actions, *, enabled=None):
 
 def test_an_open_paid_order_offers_what_it_needs_first_and_the_note_besides():
     """A paid order waiting to ship needs shipping: fulfil leads, then the address, then the
-    cancel; the note is always there and never takes one of the three places."""
+    cancel. The note is always there, never takes one of the three places, and — since the
+    live session counted five renders of it and nought taps — goes last and at half weight."""
     actions = available_actions(OPEN, ALL)
-    assert ids(actions, enabled=True) == ["note", "fulfil", "address", "cancel"]
-    assert all(a["mode"] == "ask" for a in actions)
+    assert ids(actions, enabled=True) == ["fulfil", "address", "cancel", "note"]
+    assert [a["priority"] for a in actions if a["enabled"]] == ["primary", "primary", "secondary", "secondary"]
+    assert all(a["mode"] == "ask" for a in actions if a["id"] != "email")
     assert next(a for a in actions if a["id"] == "cancel")["instruction"] == "Cancel order 1938"
     assert next(a for a in actions if a["id"] == "cancel")["risk"] == "red"
     assert next(a for a in actions if a["id"] == "fulfil")["instruction"] == "Fulfil order 1938"
@@ -43,7 +45,7 @@ def test_the_email_chip_primes_a_draft_and_is_amber_for_that_reason():
 def test_a_shipped_order_cannot_be_cancelled_or_readdressed_and_says_why():
     shipped = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}])
     actions = available_actions(shipped, ALL)
-    assert ids(actions, enabled=True) == ["note", "refund", "email"]
+    assert ids(actions, enabled=True) == ["refund", "email", "note"]
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {"cancel": "already shipped", "fulfil": "already shipped"}
 
@@ -51,7 +53,7 @@ def test_a_shipped_order_cannot_be_cancelled_or_readdressed_and_says_why():
 def test_a_cancelled_or_refunded_order_offers_almost_nothing():
     cancelled = dict(OPEN, cancelled_at="2026-09-08T10:00:00Z", payment="REFUNDED", refundable=False, money={"refunded": "60.00 GBP", "total": "60.00 GBP"})
     actions = available_actions(cancelled, ALL)
-    assert ids(actions, enabled=True) == ["note", "email"]
+    assert ids(actions, enabled=True) == ["email", "note"]
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {"cancel": "already cancelled", "refund": "fully refunded"}
     part = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}], payment="PARTIALLY_REFUNDED", refundable=False, money={"refunded": "20.00 GBP", "total": "60.00 GBP"})
@@ -89,15 +91,15 @@ def test_the_context_ranks_the_rail_a_customers_email_first_and_an_old_order_to_
 
     wrote = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Order 1938", "snippet": "any news on when it ships?"}]})
     assert context_rank(wrote) == ["email"]
-    assert ids(available_actions(wrote, ALL), enabled=True) == ["note", "email", "fulfil", "address"], "the reply leads; the cancel drops off the three"
+    assert ids(available_actions(wrote, ALL), enabled=True) == ["email", "fulfil", "address", "note"], "the reply leads; the cancel drops off the three"
     cancelling = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Please cancel 1938", "snippet": "I ordered the wrong size"}]})
     assert context_rank(cancelling) == ["cancel", "email"]
-    assert ids(available_actions(cancelling, ALL), enabled=True) == ["note", "cancel", "email", "fulfil"]
+    assert ids(available_actions(cancelling, ALL), enabled=True) == ["cancel", "email", "fulfil", "note"]
     moving = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "New address", "snippet": "can you send it to my work address instead"}]})
     assert context_rank(moving) == ["address", "email"]
     shipped = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}], email={"threads": [{"sender_match": True, "subject": "Refund", "snippet": "I'd like a refund please"}]})
     assert context_rank(shipped) == ["refund", "email"]
-    assert ids(available_actions(shipped, ALL), enabled=True)[:3] == ["note", "refund", "email"]
+    assert ids(available_actions(shipped, ALL), enabled=True)[:2] == ["refund", "email"]
     someone_else = dict(OPEN, email={"threads": [{"sender_match": False, "subject": "Newsletter", "snippet": "sale now on"}]})
     assert context_rank(someone_else) == [], "mail from anyone but the customer ranks nothing"
     old = dict(OPEN, placed_at="2020-01-01T10:00:00Z")

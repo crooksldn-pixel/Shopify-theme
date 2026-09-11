@@ -124,8 +124,9 @@ def test_every_enabled_chip_on_an_order_has_a_click_path(order):
         if mode == "open":
             assert action["command"] and action["args"], action
         elif mode == "ask":
+            # The words a tap primes. The tablet shows them on the chip it was tapped on
+            # (web/ui.js), which is the visible response an ask chip owes a finger.
             assert action["instruction"], action
-            assert action["family"], f"{action['id']} arms nothing, so a tap says nothing"
 
 
 def test_every_enabled_chip_on_a_thread_has_a_click_path():
@@ -227,7 +228,6 @@ def test_reply_names_the_last_person_who_wrote_in_rather_than_the_shop(branch, s
 
 def test_the_tablet_cannot_open_a_reply_to_a_thread_it_was_never_given(branch, session):
     from app import commands
-
     from app.memory import ENTITY
     from app.memory import current as memory
 

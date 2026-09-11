@@ -39,7 +39,9 @@ class RowAction:
 
     def public(self) -> dict[str, Any]:
         return {"id": self.id, "label": self.label, "operation": self.tool, "risk": self.risk,
-                "enabled": True, "reason": "", "detail": self.detail, "mode": "stage"}
+                "enabled": True, "reason": "", "detail": self.detail, "mode": "stage",
+                # A row action posts its own id and its row's ref, never a command of its own.
+                "command": "", "args": "", "priority": "primary"}
 
 
 ROW_ACTIONS: dict[str, RowAction] = {
