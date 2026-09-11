@@ -12,6 +12,7 @@ import logging
 import time
 from typing import Any
 
+from app import progressive
 from app.actions.models import Prepared
 from app.observability import timeline
 from app.session.models import Session
@@ -169,6 +170,13 @@ async def dispatch(
 
     started = time.perf_counter()
     token = CURRENT_SESSION.set(session)
+    # The screen does not wait for the graph (§7, D-5). A read that is about to run puts a
+    # skeleton of its own card up now, and the result below is staged as cards the moment it
+    # lands — so "today's orders and today's emails" shows the orders while the inbox is still
+    # being asked, instead of the 7,975 ms of nothing the live session measured. Bookkeeping
+    # only: it stages a payload this function already has and cannot read, mutate or stage
+    # anything (app/progressive.py).
+    progressive.starting(session, name)
     try:
         payload = await registry.invoke(name, args, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
@@ -202,6 +210,8 @@ async def dispatch(
             name=name, args=args, ok=True, duration_ms=ms,
             result=payload if isinstance(payload, dict) else None,
         )))
+    # This read's cards, on the glass now rather than when the turn ends.
+    progressive.observe(session, name, payload)
 
     spec = registry.get(name)
     text = _render(spec.model_view(payload) if spec.model_view is not None and isinstance(payload, dict) else payload)

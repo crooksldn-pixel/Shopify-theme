@@ -203,6 +203,16 @@ class RenderLedger:
     def known(self, identity: str) -> bool:
         return identity in self.data_print
 
+    def has_real(self, kind: str) -> bool:
+        """Is there already a card of this kind that is NOT a skeleton?
+
+        The second read of one kind in a turn — an order found, then that order read in full —
+        must not put a skeleton up underneath the card it is about to update. That was the
+        live session's duplicate in miniature: the same record, twice on the glass.
+        """
+        shell = f"{kind}:{SHELL_SUFFIX}"
+        return any(i != shell and (i == kind or i.startswith(f"{kind}:")) for i in self.order)
+
     def stage(self, items: list[dict[str, Any]], *, at_ms: float | None = None) -> list[Patch]:
         """The patches for one phase, in the order the cards arrived.
 

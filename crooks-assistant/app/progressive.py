@@ -180,9 +180,14 @@ class Workspace:
         return self._record(self.ledger.stage(items, at_ms=now))
 
     def starting(self, tool: str) -> list[Patch]:
-        """A read has begun. Where its card is known, its skeleton goes up now."""
+        """A read has begun. Where its card is known, its skeleton goes up now.
+
+        Not when a real card of that kind is already on the glass: an order found and then
+        read in full is one card being filled in, and a skeleton under it would be exactly
+        the duplicate this pass exists to remove.
+        """
         kind = SHELL_OF_TOOL.get(str(tool or ""))
-        if not kind:
+        if not kind or self.ledger.has_real(kind):
             return []
         now = self.at_ms()
         if self.shell_ms is None:
