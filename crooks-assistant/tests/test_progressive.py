@@ -24,7 +24,9 @@ from app.presentation import UI_TYPES, present
 from app.providers.base import ToolCall
 from app.render import DATA, REMOVED, VISUAL, RenderLedger, fingerprint, render_id
 
-UI_JS = (Path(__file__).resolve().parent.parent / "web" / "ui.js").read_text(encoding="utf-8")
+WEB = Path(__file__).resolve().parent.parent / "web"
+UI_JS = (WEB / "ui.js").read_text(encoding="utf-8")
+APP_JS = (WEB / "app.js").read_text(encoding="utf-8")
 
 
 @pytest.fixture(autouse=True)
@@ -327,6 +329,45 @@ def test_the_renderer_draws_a_skeleton_for_any_card_that_says_it_is_one():
     keeps the vocabulary in step — there is nothing new in it to keep in step."""
     assert "skeletonCard" in UI_JS
     assert "data.shell === true" in UI_JS or "d.shell === true" in UI_JS
+
+
+# --------------------------------------------------------------------------- the page's side
+#
+# There is no browser in this suite (the renderer is exercised under Node, and the pixels are
+# measured in Chromium by tests/test_density.py), so these read the page as source — the same
+# discipline as tests/test_web.py, and for the same reason: these particular mistakes would
+# otherwise only be found on the tablet.
+
+
+def test_the_poll_carries_a_cursor_and_asks_for_nothing_it_has_seen():
+    assert "?since=${encodeURIComponent(String(glass.cursor))}" in APP_JS
+    assert "if (data.workspace) applyWorkspace(data.workspace);" in APP_JS
+
+
+def test_a_patch_is_never_applied_over_a_hand_on_the_glass():
+    body = APP_JS[APP_JS.index("function applyWorkspace(payload)"):]
+    body = body[: body.index("\n}")]
+    assert "held: deckHeld" in body, "the batch must be offered the hold guard"
+    # And the cursor is NOT advanced when the batch was deferred, so the next poll offers the
+    # same patches again rather than the glass silently missing them.
+    assert body.index("if (out.deferred)") < body.index("glass.cursor = Math.max")
+
+
+def test_the_answer_reconciles_against_the_glass_before_it_redraws_it():
+    body = APP_JS[APP_JS.index("function renderTurn(data)"):]
+    body = body[: body.index("\n}")]
+    assert body.index("adoptWorkspace(data)") < body.index("pushContext(ui.nodes")
+    # adoptContext keeps the nodes that are already there; pushContext clears and appends.
+    adopt = APP_JS[APP_JS.index("function adoptContext(nodes, items, question)"):]
+    adopt = adopt[: adopt.index("\n}")]
+    assert "showHistory(history.length - 1, { keep: true })" in adopt
+    assert "clear(el.cards)" not in adopt
+
+
+def test_every_way_a_turn_can_fail_takes_its_skeletons_down():
+    submit = APP_JS[APP_JS.index("async function submit(body, isAudio)"):]
+    submit = submit[: submit.index("\n}\n\nfunction sendAudio")]
+    assert submit.count("settleGlass(") == 3, "a failed, a timed-out and an abandoned turn"
 
 
 # --------------------------------------------------------------------------- D-15
