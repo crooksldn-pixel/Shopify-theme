@@ -649,6 +649,11 @@ _NEVER_A_CONTINUATION = frozenset({
     # inbox", and the inbox is what should open.
     "landing_orders", "landing_inbox", "landing_sales", "landing_products",
     "order_tab_show", "branch_switch",
+    # And the two that are about the machine rather than about the shop (§15, §16). "What does
+    # the split button do" is a question to the assistant, like "what can you do"; "log that
+    # your split function is broken" is an instruction to write something down. Tap Add a note
+    # on #1938 and say either of them, and a note containing it is the last thing wanted.
+    "ui_semantics", "owner_feedback",
 })
 # And these are the ones that NAME THEIR OWN SUBJECT, which the glue would then overrule. Tap
 # Add a note on #1938, then ask "how many orders today", and the model was handed
