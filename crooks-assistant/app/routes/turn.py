@@ -17,6 +17,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
+from app import progressive
 from app.actions import engine as action_engine
 from app.actions.grammar import AFFIRMATION_BLOCKED, affirmation_for, words_for
 from app.actions.grammar import FIXED_LINES as GRAMMAR_FIXED_LINES
@@ -246,6 +247,15 @@ async def turn(
     # What this half is doing, in the owner's words, while it does it. A half he has put
     # aside says this on its own chip rather than taking his attention (brief section 17).
     branch.working(_working_words(lane, intent))
+    # The workspace starts NOW, not when the reads are done (§7, D-5). A family the router
+    # recognised already knows what kind of card is coming, so its skeleton goes up before the
+    # first read is issued; the rest arrive as each read lands (app/tools/dispatch.py) and are
+    # collected by the tablet's /state poll. `turn_c8eb4cffe077` waited 7,975 ms for its first
+    # card and the owner said the system "waits and then dumps a large chunk".
+    progressive.begin(
+        session_id, turn_id=live.turn_id, branch_id=branch.branch_id,
+        family=str(getattr(intent, "family", "") or ""),
+    )
     if lane == "FAST" and recipe is not None:
         # The rail is worked out beside the read, not after it. A fast turn used to answer with
         # `writes` still None — that variable is set further down, on the path the fast lane
@@ -451,7 +461,7 @@ def _written(text: str, names: set[str]) -> str:
 FAMILY_LINE_PREFIX = "[What this Mac cannot do right now. Do not attempt these; say why if asked:\n"
 
 
-def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict, ui: list | None = None) -> dict:
+def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, partial: bool, session, measures: dict, ui: list | None = None, glass: dict | None = None) -> dict:
     """The turn's own measurements. No content, no arguments, no personal data: counts,
     milliseconds and names of tools."""
     from app.memory import current as memory
@@ -495,6 +505,18 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "facts_ms": facts_ms,
         "workspace_ms": workspace_ms,
         "prose_wait_ms": waited_ms,
+        # And section 7's four, which are the same turn seen from the GLASS. The three above
+        # say when the MAC held the data and had built the cards; these say when the owner
+        # had a screen, a fact on it, something he could use, and everything. A turn where
+        # `time_to_first_useful_workspace` is most of `time_to_complete_workspace` is D-5
+        # happening again, and the report can see it without being told.
+        "time_to_shell": (glass or {}).get("time_to_shell"),
+        "time_to_first_fact": (glass or {}).get("time_to_first_fact"),
+        "time_to_first_useful_workspace": (glass or {}).get("time_to_first_useful_workspace"),
+        "time_to_complete_workspace": (glass or {}).get("time_to_complete_workspace"),
+        # Section 25: what was drawn, what was patched, and the identical renders that were
+        # NOT drawn. `suppressed` is D-13's five identical order cards, as a number.
+        "renders": (glass or {}).get("renders") or None,
         # Regions the cards left still loading. The tablet collects them from /context/order,
         # whose own duration is on the timeline as `context_request` — so final enrichment is
         # measured where it happens rather than guessed at here.
@@ -1225,9 +1247,14 @@ async def _answer(
     for call in calls or []:
         if branch is not None and getattr(call, "ok", False):
             branch.remember_result(call.name, summary=_call_summary(call), ref=_call_ref(call), ms=float(getattr(call, "duration_ms", 0.0) or 0.0))
+    # The turn's own cards, reconciled against what the progressive workspace already put on
+    # the glass (§7, §25). A card that is unchanged is NOT redrawn — the whole point — and one
+    # that gained its rail or an enrichment is patched in place. The numbers come back for the
+    # performance record; the patches themselves the tablet has already collected from /state.
+    glass = progressive.complete(session, ui, branch_id=getattr(branch, "branch_id", "") or "")
     # How this turn actually went, in numbers. Every field is measured; none of it is content.
     # This is what the report's speed section and the bench read (brief section 32).
-    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session, measures=measures or {}, ui=ui)
+    performance = _performance(timings, lane=lane, recipe_id=recipe_id, branch=branch, calls=calls, partial=partial, session=session, measures=measures or {}, ui=ui, glass=glass)
     if timeline.current().active is not None:
         # An answer that declines, held against what the Mac composes: a refusal of a best
         # seller, a breakdown, a comparison or a bulk change the tools could have made is a
@@ -1298,15 +1325,38 @@ async def _answer(
         ),
         "partial": bool(partial),
         "performance": performance,
+        # What the glass still needs to agree with this payload (§7). The tablet has been
+        # collecting patches from /state while the turn ran and stops the moment this arrives,
+        # so the last reconciliation rides here: the cards it already drew are NOT in it, and
+        # that is the point — an unchanged card is not redrawn at the end of a turn.
+        "workspace": {
+            "turn_id": glass.get("turn_id") or turn_id,
+            "revision": glass.get("revision"),
+            "complete": True,
+            "patches": glass.get("patches") or [],
+            "renders": glass.get("renders"),
+            "timings_ms": {k: glass.get(k) for k in ("time_to_shell", "time_to_first_fact", "time_to_first_useful_workspace", "time_to_complete_workspace")},
+        } if glass else None,
     }
     # The cards repeat what the tools returned, which the log already has in redacted form;
-    # the log keeps only which kinds were shown.
-    runtime.turnlog.write({**payload, "ui": [item["type"] for item in ui]}, names=names)
+    # the log keeps only which kinds were shown. The workspace's patches carry the same cards
+    # again — a customer's name, an address, an email body — so the log keeps their SHAPE and
+    # not their contents, for exactly the reason the line above exists.
+    runtime.turnlog.write({
+        **payload,
+        "ui": [item["type"] for item in ui],
+        "workspace": {
+            "revision": (payload.get("workspace") or {}).get("revision"),
+            "patches": [f"{p.get('op')}:{p.get('id')}" for p in ((payload.get("workspace") or {}).get("patches") or [])],
+            "renders": (payload.get("workspace") or {}).get("renders"),
+            "timings_ms": (payload.get("workspace") or {}).get("timings_ms"),
+        } if payload.get("workspace") else None,
+    }, names=names)
     return payload
 
 
 @router.get("/state/{session_id}")
-async def state(request: Request, session_id: str) -> dict:
+async def state(request: Request, session_id: str, since: int = 0, branch_id: str = "") -> dict:
     """What the assistant is doing right now. The tablet polls this during a turn so the
     screen says CHECKING SHOPIFY because shopify_list_orders is actually running, not because
     the question had the word "orders" in it."""
@@ -1317,6 +1367,11 @@ async def state(request: Request, session_id: str) -> dict:
         return {"session_id": session_id, "known": False, "state": "READY", "detail": ""}
     if not session_matches(session, request):
         return JSONResponse(status_code=403, content={"code": "wrong_session", "detail": "That conversation belongs to another login."})
+    # The workspace as it stands, from the cursor the tablet last applied. This is the channel
+    # progressive hydration travels on: the tablet already polls this route every 400 ms to
+    # say CHECKING SHOPIFY, so the cards a landed read produced ride back on a request it was
+    # making anyway — no stream, no second socket, and nothing to keep alive.
+    workspace = progressive.current(session_id, str(branch_id or getattr(session, "focused_branch", "") or ""))
     return {
         "session_id": session_id,
         "known": True,
@@ -1325,6 +1380,7 @@ async def state(request: Request, session_id: str) -> dict:
         "turns": session.turns,
         "epoch": session.epoch,
         "heard": session.heard,
+        "workspace": workspace.public(since) if workspace is not None else None,
     }
 
 

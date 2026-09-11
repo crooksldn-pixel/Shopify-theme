@@ -58,6 +58,15 @@ class Element extends Node {
     return node;
   }
   removeChild(node) { const i = this.childNodes.indexOf(node); if (i !== -1) this.childNodes.splice(i, 1); node.parentNode = null; return node; }
+  replaceChild(fresh, old) {
+    const i = this.childNodes.indexOf(old);
+    if (i === -1) throw new Error('replaceChild: not a child');
+    if (fresh.parentNode) fresh.parentNode.removeChild(fresh);
+    this.childNodes[i] = fresh;
+    fresh.parentNode = this;
+    old.parentNode = null;
+    return old;
+  }
   insertBefore(node, before) {
     if (node.parentNode) node.parentNode.removeChild(node);
     const i = before ? this.childNodes.indexOf(before) : -1;
@@ -83,11 +92,23 @@ class Element extends Node {
   dispatch(type, detail) { for (const fn of this.listeners[type] || []) fn(Object.assign({ type, target: this, currentTarget: this, preventDefault() {} }, detail || {})); }
   setPointerCapture() {}
   releasePointerCapture() {}
+  focus() { document.activeElement = this; }
+  blur() { if (document.activeElement === this) document.activeElement = null; }
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   querySelectorAll(selector) {
     // Only what the tests need: ".class", "tag" and '[attr="value"]' selectors, descendants included.
     const out = [];
     const attr = /^\[([a-z-]+)="([^"]*)"\]$/.exec(selector);
-    const match = (el) => (attr ? el.getAttribute(attr[1]) === attr[2] : selector.startsWith('.') ? el.classList.contains(selector.slice(1)) : el.tagName === selector.toUpperCase());
+    // A data-* attribute is read from `dataset` as well: the renderer writes those through
+    // `el.dataset`, which the real DOM reflects into attributes and this shim does not.
+    const attrValue = (el, name) => {
+      const direct = el.getAttribute(name);
+      if (direct !== null) return direct;
+      if (!name.startsWith('data-')) return null;
+      const key = name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      return Object.prototype.hasOwnProperty.call(el.dataset, key) ? String(el.dataset[key]) : null;
+    };
+    const match = (el) => (attr ? attrValue(el, attr[1]) === attr[2] : selector.startsWith('.') ? el.classList.contains(selector.slice(1)) : el.tagName === selector.toUpperCase());
     const walk = (el) => { for (const c of el.children) { if (match(c)) out.push(c); walk(c); } };
     walk(this);
     return out;
@@ -107,6 +128,7 @@ class Fragment extends Element {
 }
 
 const document = {
+  activeElement: null,
   createElement: (tag) => new Element(tag),
   createElementNS: (ns, tag) => new Element(tag, ns),
   createTextNode: (data) => new Text(data),

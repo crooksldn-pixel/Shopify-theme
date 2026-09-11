@@ -627,13 +627,23 @@ async def gmail_read_thread(thread_id: str) -> dict:
                 "date": headers.get("date", ""),
                 "subject": headers.get("subject", ""),
                 "body": _extract_body(message.get("payload", {})),
+                # Gmail's own label, not a guess from the address: who sent this one. The
+                # thread card needs it to say whether anybody is waiting on us (section 8
+                # asks the email surface for a needs-reply state), and `reply_state` above
+                # already reads the same label for the same reason.
+                "outbound": "SENT" in (message.get("labelIds") or []),
             }
         )
 
+    directions = [bool(m["outbound"]) for m in out]
     return {
         "thread_id": thread_id,
         "message_count": len(thread.get("messages", [])),
         "messages_shown": len(out),
         "truncated": len(thread.get("messages", [])) > MAX_THREAD_MESSAGES,
         "messages": out,
+        # Who spoke last, and whether we have answered since. "none" when the thread has no
+        # readable message: unknown said as unknown, which is the rule everywhere else here.
+        "latest_direction": ("none" if not directions else ("outbound" if directions[-1] else "inbound")),
+        "awaiting_reply": bool(directions and not directions[-1]),
     }

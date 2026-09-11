@@ -179,14 +179,24 @@ test('sales summary shows real figures and no invented comparison', () => {
   assert.ok(!textOf(node).toLowerCase().includes('vs'));
 });
 
-test('email thread: last message open, earlier ones collapsed and openable', () => {
+test('email thread: the newest message is first and open, the history is behind one control', () => {
+  // The order of these two nodes is the information hierarchy (§8, D-12): every message was
+  // drawn open, oldest first, so the only one anybody was going to read was at the bottom of
+  // a surface measured at 1,999 px against a 680 px screen. Newest first, open; the rest
+  // complete, in the DOM, and one tap away.
   const node = UI.renderItem({ type: 'email_thread', data: { subject: 'Re: order', messages: [
     { from: 'A', body: 'first' }, { from: 'B', body: 'second' },
   ] } });
   const msgs = node.querySelectorAll('.msg');
-  assert.deepEqual(msgs.map((m) => m.classList.contains('is-collapsed')), [true, false]);
-  msgs[0].dispatch('click');
-  assert.equal(msgs[0].classList.contains('is-collapsed'), false);
+  assert.deepEqual(msgs.map((m) => m.classList.contains('is-latest')), [true, false], 'the newest message comes first');
+  assert.equal(msgs[1].classList.contains('is-collapsed'), true);
+  const disc = node.querySelector('.disc-head');
+  assert.ok(disc && /1 earlier message/.test(disc.textContent));
+  assert.equal(node.querySelector('.disc-body').hidden, true, 'the history costs no height until it is asked for');
+  disc.dispatch('click');
+  assert.equal(node.querySelector('.disc-body').hidden, false);
+  msgs[1].dispatch('click');
+  assert.equal(msgs[1].classList.contains('is-collapsed'), false);
 });
 
 test('a draft never has a send control and says nothing was sent; a sent one says sent', () => {
@@ -422,12 +432,73 @@ test('sales over several days become a strip of bars whose heights are numbers o
   assert.equal(UI.renderItem({ type: 'sales_summary', data: { revenue: '£1', by_day: [{ date: '2026-09-02', revenue: '£1' }] } }).querySelectorAll('.bar').length, 0, 'one day is not a chart');
 });
 
+test('an order says what it needs on the card, above the tabs and above the rail', () => {
+  // §8: the first viewport answers what matters. The attention card that carries the detail
+  // sits AFTER the order card, which at 601 × 889 is below the fold.
+  const node = UI.renderItem({ type: 'order', data: {
+    order_id: 'o1', order_number: '#1938', detail: true, total: '£84.00', payment: 'paid', fulfillment: 'unfulfilled',
+    attention_top: [
+      { title: 'Paid 2 days ago and not shipped', level: 'red', kind: 'unfulfilled' },
+      { title: 'They wrote in and we have not replied', level: 'amber', kind: 'email' },
+    ],
+    items: [], fulfillments: [],
+  } }, {});
+  const lines = node.querySelectorAll('.attn-line');
+  assert.equal(lines.length, 2);
+  assert.match(lines[0].textContent, /not shipped/);
+  assert.ok(lines[0].classList.contains('bad') && lines[1].classList.contains('warn'), 'the level is the tone');
+  // Above the tabs: in the DOM, the strip comes before the tab bar it must not be behind.
+  const kids = node.children.map((c) => c.className.split(' ')[0]);
+  assert.ok(kids.indexOf('attn-strip') !== -1 && kids.indexOf('attn-strip') < kids.indexOf('tabbed'), kids.join(','));
+});
+
+test('a long order note and a long item tail each go behind one control', () => {
+  // D-12, measured at 601 x 889 after the deck stopped scrolling under the dock: the worst
+  // order card stood at 757 px against a 699 px ceiling, and 213 px of it was one note read
+  // in full. A clamp was tried first and saved nothing — the 44 px its More button needs for
+  // a thumb is exactly what the clamp gave back — so the note goes behind one control, the
+  // same discipline the thread's history and the list's tail keep. Nothing is removed.
+  const note = 'A sentence about the order that keeps going and going. '.repeat(5);
+  const long = UI.renderItem({ type: 'order', data: {
+    order_id: 'o1', order_number: '#1938', detail: true, note: note,
+    items: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ({ title: 'Item ' + i, total: '£10.00', quantity: 1 })),
+    fulfillments: [],
+  } }, {});
+  const quote = long.querySelector('.note-quote');
+  assert.ok(quote, 'the note is in the DOM, complete');
+  assert.equal(textOf(quote), note, 'nothing is cut from it');
+  const discs = long.querySelectorAll('.disc');
+  const noteDisc = discs.find((d) => d.querySelector('.note-quote'));
+  assert.ok(noteDisc, 'a long note is behind a disclosure, not read in full');
+  assert.ok(noteDisc.querySelector('.disc-body').hidden, 'and it starts closed');
+  // Eight items: five in the open list, three behind their own control.
+  const lists = long.querySelectorAll('.items');
+  assert.equal(lists.length, 2, 'the tail is a second list, behind a control');
+  assert.equal(lists[0].querySelectorAll('.item').length, 5);
+  const tail = discs.find((d) => d.querySelector('.items'));
+  assert.ok(tail && /3 more items/.test(textOf(tail.querySelector('.disc-label'))), textOf(tail));
+  assert.equal(tail.querySelectorAll('.item').length, 3, 'the tail holds the rest');
+  assert.equal(long.querySelectorAll('.item').length, 8, 'every item is still in the DOM');
+
+  // A short note is still read in place: a control to open two lines is worse than the lines.
+  const brief = UI.renderItem({ type: 'order', data: {
+    order_id: 'o2', order_number: '#1939', detail: true, note: 'Hold for collection.',
+    items: [{ title: 'One thing', total: '£10.00', quantity: 1 }], fulfillments: [],
+  } }, {});
+  assert.ok(brief.querySelector('.note-quote'), 'the short note is there');
+  assert.equal(brief.querySelectorAll('.disc').filter((d) => d.querySelector('.note-quote')).length, 0,
+    'and not behind a control');
+  assert.equal(brief.querySelectorAll('.items').length, 1, 'one short list does not fold');
+});
+
 test('an email thread shows a face per message and lights the latest', () => {
   const node = UI.renderItem({ type: 'email_thread', data: { subject: 's', messages: [{ from: 'Ada Lovelace', body: 'one' }, { from: 'Sam Fixture', body: 'two' }] } });
   const msgs = node.querySelectorAll('.msg');
   assert.equal(msgs.length, 2);
-  assert.deepEqual(msgs.map((m) => textOf(m.querySelector('.avatar'))), ['AL', 'SF']);
-  assert.ok(msgs[0].classList.contains('is-collapsed') && msgs[1].classList.contains('is-latest'));
+  // Newest first: the latest message's face is at the top of the card, the earlier one's
+  // inside the history.
+  assert.deepEqual(msgs.map((m) => textOf(m.querySelector('.avatar'))), ['SF', 'AL']);
+  assert.ok(msgs[0].classList.contains('is-latest') && msgs[1].classList.contains('is-collapsed'));
 });
 
 test('the surface stops inviting a tap just before the Mac would say Expired', () => {

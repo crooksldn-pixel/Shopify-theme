@@ -46,6 +46,10 @@ ACCEPT_SCRIPT = ROOT / "scripts" / "browser" / "accept.js"
 # every rectangle on screen, read with getBoundingClientRect, against nineteen stress fixtures
 # — so an overlap fails a gate here instead of being discovered in his hand.
 COLLISION_SCRIPT = ROOT / "scripts" / "browser" / "collision.js"
+# What the first viewport says, measured at the same size (§8, D-12). Its own script and its
+# own test (tests/test_density.py) rather than a third block in the two above: the question it
+# asks is about PIXELS, and a failure in it should name density and nothing else.
+DENSITY_SCRIPT = ROOT / "scripts" / "browser" / "density.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -217,8 +221,15 @@ def _start_gate_session(scratch: str):
     return stop
 
 
-async def run_checks() -> dict[str, Any]:
-    """The browser checks on their own, for a test to assert on."""
+async def run_checks(scripts: tuple[Path, ...] | None = None) -> dict[str, Any]:
+    """The browser checks on their own, for a test to assert on.
+
+    `scripts` names which runs to do; the default is every gate. A test that is about one
+    thing — the density measurement — passes just its own script, so its failure names its own
+    subject and it pays for one browser. The DEFAULT is the whole set on purpose: a gate left
+    out of it is a gate that proves nothing between releases, which is exactly how accept.js
+    came to be the only check that had ever seen the duplicate `replaceCard`.
+    """
     ok, why = available()
     if not ok:
         return {"skipped": True, "why": why, "checks": []}
@@ -233,7 +244,7 @@ async def run_checks() -> dict[str, Any]:
     stop_session = _start_gate_session(scratch)
     try:
         results = []
-        for script in (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT):
+        for script in (scripts or (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

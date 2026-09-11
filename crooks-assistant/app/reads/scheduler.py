@@ -37,6 +37,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -232,18 +233,27 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
         if read.name in result.errors and not read.optional:
             result.partial = True
 
+    # A predicted read is nobody's question: its cards are not staged onto the glass while the
+    # owner is looking at something else (app/progressive.py, and D-4 on what happens when
+    # anticipation is allowed to spend the foreground's room).
+    from app import progressive
+
+    speculative = progressive.background() if plan.origin == "predicted" else nullcontext()
     try:
-        async with asyncio.timeout(plan.timeout_s if timeout_s is None else timeout_s):
-            for wave in _layers(plan):
-                runnable = [r for r in wave if all(d not in result.errors and d not in result.skipped for d in r.after if d in by_name)]
-                for read in wave:
-                    if read not in runnable:
-                        result.skipped[read.name] = "what it needed did not come back"
-                        result.partial = result.partial or not read.optional
-                if not runnable:
-                    continue
-                result.groups.append([r.name for r in runnable])
-                await asyncio.gather(*(one(r) for r in runnable))
+        # The flag is set before the tasks are made: `asyncio.gather` copies the context at
+        # creation, so every read in every wave runs with it.
+        with speculative:
+            async with asyncio.timeout(plan.timeout_s if timeout_s is None else timeout_s):
+                for wave in _layers(plan):
+                    runnable = [r for r in wave if all(d not in result.errors and d not in result.skipped for d in r.after if d in by_name)]
+                    for read in wave:
+                        if read not in runnable:
+                            result.skipped[read.name] = "what it needed did not come back"
+                            result.partial = result.partial or not read.optional
+                    if not runnable:
+                        continue
+                    result.groups.append([r.name for r in runnable])
+                    await asyncio.gather(*(one(r) for r in runnable))
     except TimeoutError:
         result.partial = True
         for read in plan.reads:

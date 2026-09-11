@@ -150,6 +150,42 @@
     return el;
   }
 
+  // ---------------------------------------------------------------- the shell (§7, D-5)
+  //
+  // A card that has not arrived yet. `turn_c8eb4cffe077` put NOTHING on the glass for 7,975
+  // ms because the workspace was presented once, after the whole read graph resolved; the Mac
+  // now stages a skeleton the moment it knows what kind of thing is coming (app/progressive.py)
+  // and the real card takes its place. There is no skeleton TYPE — a shell is an ordinary
+  // card whose data says `shell` — so the vocabulary the two sides agree on does not grow.
+  //
+  // It says what is coming and nothing else. A placeholder must never look like a value: the
+  // bars carry no text at all, so there is no number on this screen that is not a number the
+  // Mac read.
+  function skeletonCard(kind, d, opts) {
+    const rows = Math.max(1, Math.min(6, num(d.placeholder) === null ? 3 : d.placeholder));
+    const bars = [];
+    for (let i = 0; i < rows; i++) bars.push(h('span', { class: 'sk-row', 'aria-hidden': 'true' }));
+    const node = card(kind, [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker(text(d.title, 'Reading')),
+        h('p', { class: 'sk-note', text: 'Reading…' }),
+      ])]),
+      h('div', { class: 'sk-body' }, bars),
+    ], Object.assign({ className: 'is-shell' }, opts || {}));
+    node.dataset.shell = '1';
+    node.setAttribute('aria-busy', 'true');
+    return node;
+  }
+
+  // A read that found nothing (D-15). `turn_69abe877ef14` asked for yesterday's orders, the
+  // read came back with none, and the presentation layer drew NO CARD — one sentence over a
+  // blank screen, recorded by the analyser as "(records without a card)". "None" is an answer
+  // about the shop and it belongs on the glass, under the question it answers.
+  function emptyNote(d) {
+    if (d.empty !== true) return null;
+    return h('p', { class: 'card-note empty-line', text: text(d.note, 'Nothing to show.') });
+  }
+
   // The Mac's window ends at the start of the day after it ("until", exclusive). The day the
   // owner sees as the end is the one before that.
   function lastDayOf(until) {
@@ -199,6 +235,26 @@
     return wrap;
   }
 
+  // A region of a card behind one control: the thread's older messages, a long tail of rows.
+  // The same discipline as `folded` below and deliberately not the same thing — `folded` wraps
+  // a WHOLE CARD the Mac marked secondary, this is part of one. Nothing is removed: the body
+  // is complete and in the DOM, and the header says what is inside it.
+  function disclosure(node, label) {
+    const body = h('div', { class: 'disc-body' }, node);
+    body.hidden = true;
+    const btn = h('button', { class: 'disc-head', type: 'button', 'aria-expanded': 'false' }, [
+      h('span', { class: 'disc-label', text: label || 'More' }),
+      h('span', { class: 'disc-mark', text: '+', 'aria-hidden': 'true' }),
+    ]);
+    btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      body.hidden = open;
+      btn.querySelector('.disc-mark').textContent = open ? '+' : '−';
+    });
+    return h('section', { class: 'disc' }, [btn, body]);
+  }
+
   function expandable(el, label) {
     // A clamp with a "more" control, for long bodies. Nothing is hidden from the reader.
     el.classList.add('clamp');
@@ -221,11 +277,18 @@
   // the only route to #1938 from a list of today's orders was to say its number out loud.
   // `data-ref` and `data-kind` are what the deck's click handler posts to `open.entity`, which
   // is the same command the word "open that one" reaches.
+  // Which state a row is in, for the list's own filter chips. Three words, from the two
+  // status strings the Mac already sent — never a new fact about the order.
+  function orderState(o) {
+    if (o.cancelled_at) return 'cancelled';
+    return text(o.fulfillment).toLowerCase() === 'fulfilled' ? 'shipped' : 'to-ship';
+  }
+
   function orderRow(o) {
     const ref = text(o.order_id);
     return h('li', {
       class: ref ? 'row tappable' : 'row', role: ref ? 'button' : null, tabindex: ref ? '0' : null,
-      data: ref ? { ref, kind: 'order' } : {},
+      data: Object.assign({ state: orderState(o) }, ref ? { ref, kind: 'order' } : {}),
     }, [
       h('span', { class: 'row-main' }, [h('strong', { text: text(o.order_number, '—') }), ' ', text(o.customer_name)]),
       h('span', { class: 'row-sub', text: formatDate(o.placed_at) }),
@@ -297,7 +360,18 @@
       ]),
     ]));
     if (truncated) rows.push(h('li', { class: 'item item-more', text: 'More items than shown.' }));
-    return h('ul', { class: 'items' }, rows);
+    // The same rule the order list and the thread keep (ROWS_BEFORE_FOLD): the first few rows,
+    // then the tail behind one control. A twelve-item order was 757 px of a 699 px first
+    // screen once the deck stopped scrolling under the dock — the two fixes landed in the same
+    // pass and the second one took back the 112 px the first had been borrowing. Nothing is
+    // removed: every row is in the DOM and one tap away.
+    if (rows.length <= ROWS_BEFORE_FOLD + 1) return h('ul', { class: 'items' }, rows);
+    const shown = rows.slice(0, ROWS_BEFORE_FOLD);
+    const tail = rows.slice(ROWS_BEFORE_FOLD);
+    return h('div', { class: 'items-wrap' }, [
+      h('ul', { class: 'items' }, shown),
+      disclosure(h('ul', { class: 'items' }, tail), `${tail.length} more item${tail.length === 1 ? '' : 's'}`),
+    ]);
   }
 
   function moneyBlock(d) {
@@ -456,6 +530,27 @@
     }));
   }
 
+  // A note of a few lines reads in place. A longer one goes behind one control, which is the
+  // same discipline as the thread's history and the list's tail (`disclosure`).
+  //
+  // The threshold is four lines, in the characters that make four lines: at 15px/1.5 in the
+  // card's ~520px column a line holds about sixty. Measured at 601 x 889, a 308-character note
+  // was 169 px of a 372 px Overview panel, and once the deck stopped scrolling under the dock
+  // (the collision fix, same pass) the whole order card stood at 757 px against a 699 px
+  // ceiling. Behind a control it is 44 px, and the card is 632 px.
+  //
+  // A `clamp` with a More button was tried first and saved nothing — the 44 px the control
+  // needs for a thumb is exactly what the clamp gave back. Nothing is removed either way: the
+  // note is complete in the DOM and, folded, one tap from the reader.
+  const NOTE_LINES_BEFORE_FOLD = 4;
+  const NOTE_CHARS_PER_LINE = 60;
+
+  function noteSection(note) {
+    const quote = h('blockquote', { class: 'note-quote', text: text(note) });
+    if (text(note).length <= NOTE_LINES_BEFORE_FOLD * NOTE_CHARS_PER_LINE) return section('note', 'Note', [quote]);
+    return disclosure(quote, 'Note');
+  }
+
   function pendingLine(what) {
     return h('p', { class: 'card-note pending-line', text: what });
   }
@@ -505,7 +600,7 @@
       { name: 'overview', label: 'Overview', node: [
         overview,
         section('money', 'Money', [moneyBlock(d)]),
-        d.note ? section('note', 'Note', [h('blockquote', { class: 'note-quote', text: text(d.note) })]) : null,
+        d.note ? noteSection(d.note) : null,
       ] },
       { name: 'items', label: `Items${items.length ? ' · ' + items.length : ''}`, node: [
         section('items', `Items${items.length ? ' · ' + items.length : ''}`, [items.length ? itemsList(items, opts, Boolean(d.items_truncated)) : h('p', { class: 'card-note', text: 'No items on the order.' })]),
@@ -514,9 +609,16 @@
       { name: 'customer', label: 'Customer', node: [section('history', 'Customer', historyBody, standing ? badge(standing, 'quiet') : null)] },
       { name: 'email', label: 'Email', node: [section('email', 'Email', emailBody)] },
     ];
+    // What this order NEEDS, on the order (§8: the first viewport answers what matters). The
+    // attention card that carries the detail sits after this one — 709 px down a 671 px
+    // screen, which is to say out of sight — so the headline comes up here beside the status.
+    const attention = list(d.attention_top, 2);
     const full = card('order', [
       head,
       orderTimeline(d),
+      attention.length ? h('ul', { class: 'attn-strip' }, attention.map((a) => h('li', {
+        class: `attn-line ${a.level === 'red' ? 'bad' : a.level === 'green' ? 'ok' : 'warn'}`,
+      }, [h('span', { class: 'attn-dot', 'aria-hidden': 'true' }), h('span', { text: text(a.title) })]))) : null,
       d.cancelled_at ? h('p', { class: 'card-note bad', text: `Cancelled ${formatDate(d.cancelled_at)}${d.cancel_reason ? ' · ' + text(d.cancel_reason) : ''}` }) : null,
       rail(d.actions, opts),
       tabs(panels, { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('order', name, label) : null }),
@@ -612,15 +714,85 @@
     return fresh;
   }
 
+  // How many rows a list shows before the rest go behind one control. Measured at 601 × 889:
+  // ten full rows of an order list is 1,100 px of an 889 px screen, so the first screen
+  // answers what am I looking at / what matters / what can I do and the tail is one tap away
+  // (§8, D-12). Nothing is removed — every row is in the DOM and reachable.
+  const ROWS_BEFORE_FOLD = 5;
+
   function renderOrderList(d, opts) {
     const orders = list(d.orders, 10);
-    const meta = [];
-    if (num(d.count) !== null) meta.push(`${d.count} order${d.count === 1 ? '' : 's'}`);
-    if (d.truncated) meta.push('more not shown');
-    return card('order_list', [
-      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Orders'), h('h2', { class: 'card-title', text: text(d.title, 'Orders') }), h('p', { class: 'card-meta', text: meta.join(' · ') })])]),
-      h('ul', { class: 'rows' }, orders.map(orderRow)),
+    const count = num(d.count);
+    const whole = !d.truncated && count !== null ? count === orders.length : false;
+    // The summary: what this list IS, before any row of it. A count, the money when the Mac
+    // sent one, and how many are still to go out — which is the question an order list gets
+    // asked, and is counted only when the list is the whole of what there is.
+    const toShip = whole ? orders.filter((o) => orderState(o) === 'to-ship').length : null;
+    const stats = [
+      [count === null ? String(orders.length) : String(count), count === 1 ? 'Order' : 'Orders'],
+      text(d.value) ? [text(d.value), 'Value'] : null,
+      toShip === null ? null : [String(toShip), 'To ship'],
+    ].filter(Boolean);
+
+    const rows = orders.map(orderRow);
+    const listEl = h('ul', { class: 'rows tight' }, rows);
+    const position = h('p', { class: 'list-pos' });
+    let filter = 'all';
+    let expanded = false;
+
+    const draw = () => {
+      let shown = 0;
+      for (const row of rows) {
+        const state = row.dataset.state || '';
+        const passes = filter === 'all' || state === filter;
+        const room = expanded || shown < ROWS_BEFORE_FOLD;
+        row.hidden = !(passes && room);
+        if (passes) shown += 1;
+      }
+      const visible = expanded ? shown : Math.min(shown, ROWS_BEFORE_FOLD);
+      const total = count === null ? orders.length : count;
+      position.textContent = visible >= total && filter === 'all'
+        ? `${total} order${total === 1 ? '' : 's'}`
+        : `Showing ${visible} of ${filter === 'all' ? total : shown}${d.truncated ? ` · ${total} in the window` : ''}`;
+      if (more) {
+        more.hidden = shown <= ROWS_BEFORE_FOLD;
+        more.textContent = expanded ? 'Fewer' : `All ${shown}`;
+      }
+    };
+    const more = h('button', { class: 'link-btn', type: 'button', text: 'All' });
+    more.addEventListener('click', () => { expanded = !expanded; draw(); });
+
+    // The filters. Only where there is a mix to filter: three chips over three rows that are
+    // all in the same state is furniture, which is what §8 says not to spend the screen on.
+    const states = [];
+    for (const row of rows) if (states.indexOf(row.dataset.state) === -1) states.push(row.dataset.state);
+    const chips = states.length > 1 ? h('div', { class: 'chips list-filter', role: 'group', 'aria-label': 'Show' },
+      [['all', 'All']].concat(states.indexOf('to-ship') !== -1 ? [['to-ship', 'To ship']] : [], states.indexOf('shipped') !== -1 ? [['shipped', 'Shipped']] : [], states.indexOf('cancelled') !== -1 ? [['cancelled', 'Cancelled']] : [])
+        .map(([name, label]) => {
+          const chip = h('button', { class: 'chip', type: 'button', 'aria-pressed': name === 'all' ? 'true' : 'false', text: label, data: { filter: name } });
+          chip.addEventListener('click', () => {
+            filter = name;
+            expanded = false;
+            for (const other of chips.children) other.setAttribute('aria-pressed', other === chip ? 'true' : 'false');
+            draw();
+          });
+          return chip;
+        })) : null;
+
+    const node = card('order_list', [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker('Orders'),
+        h('h2', { class: 'card-title', text: text(d.title, 'Orders') }),
+        position,
+      ])]),
+      stats.length ? h('div', { class: `stats${stats.length === 3 ? ' three' : ''}` }, stats.map(([v, k]) => h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: v }), h('div', { class: 'stat-k', text: k })]))) : null,
+      emptyNote(d),
+      chips,
+      orders.length ? listEl : null,
+      orders.length ? more : null,
     ], opts);
+    draw();
+    return node;
   }
 
   function renderCustomer(d, opts) {
@@ -661,7 +833,8 @@
     const customers = list(d.customers, 6);
     return card('customer_list', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker(d.ambiguous ? 'Which one?' : 'Customers'), h('h2', { class: 'card-title', text: text(d.title, 'Customers') })])]),
-      h('ul', { class: 'rows' }, customers.map((c) => h('li', { class: 'row' }, [
+      emptyNote(d),
+      h('ul', { class: 'rows tight' }, customers.map((c) => h('li', { class: 'row' }, [
         h('span', { class: 'row-main', text: text(c.name, '—') }),
         h('span', { class: 'row-sub', text: text(c.email) }),
         h('span', { class: 'row-side' }, [
@@ -675,7 +848,14 @@
 
   function renderProduct(d, opts) {
     const products = list(d.products, 4);
-    if (!products.length) return null;
+    if (!products.length) {
+      // A catalogue read that matched nothing. It used to draw NO CARD, which is the shape
+      // of D-15: the payload named a type and the screen stayed empty.
+      return card('product', [
+        h('div', { class: 'card-head' }, [h('div', {}, [kicker('Product'), h('h2', { class: 'card-title', text: text(d.title, text(d.query, 'Product')) })])]),
+        emptyNote(d) || h('p', { class: 'card-note', text: 'Nothing in the catalogue matched.' }),
+      ], opts);
+    }
     const p = products[0];
     const facts = kv([['Fabric', p.fabric], ['Cut', p.cut], ['Origin', p.origin], ['Care', p.care]], true);
     const desc = p.description ? expandable(h('p', { class: 'card-body', text: text(p.description) }), 'Read more') : null;
@@ -719,6 +899,10 @@
     const products = list(d.products, 4);
     const exceptions = list(d.exceptions, 16);
     const children = [h('div', { class: 'card-head' }, [h('div', {}, [kicker('Inventory'), h('h2', { class: 'card-title', text: text(d.query, 'Stock') }), d.size ? h('p', { class: 'card-meta', text: `Size ${text(d.size)}` }) : null])])];
+    if (d.empty === true) {
+      children.push(emptyNote(d));
+      return card('inventory', children, opts);
+    }
     if (exceptions.length) {
       children.push(h('p', { class: 'card-kicker', text: 'Needs attention' }));
       children.push(h('ul', { class: 'rows' }, exceptions.map((e) => stockRow(e, true))));
@@ -797,7 +981,8 @@
     const mixed = threads.some((t) => !t.known_customer) && threads.some((t) => t.known_customer);
     return card('email_list', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email'), h('h2', { class: 'card-title', text: text(d.title, 'Email') }), h('p', { class: 'card-meta', text: num(d.count) === null ? '' : `${d.count} thread${d.count === 1 ? '' : 's'}` })])]),
-      h('ul', { class: 'rows' }, threads.map((t) => {
+      emptyNote(d),
+      h('ul', { class: 'rows tight' }, threads.map((t) => {
         const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { ref: text(t.thread_id), kind: 'email_thread' } }, [
           h('span', { class: 'row-main' }, [h('strong', { text: text(t.from, '—') }), ' — ', text(t.subject, '(no subject)')]),
           h('span', { class: 'row-sub', text: text(t.snippet) }),
@@ -846,31 +1031,78 @@
     }));
   }
 
+  // An email thread, ordered so that the FIRST VIEWPORT answers the three questions (§8).
+  //
+  // The live session measured thread surfaces up to 1,999 px against a 680 px viewport, and
+  // the reason was structural rather than decorative: every message was drawn open, one after
+  // another, so the newest — the only one anybody was going to read — was at the bottom, and
+  // the controls were above six screens of quoted text.
+  //
+  // So: who it is with and which order it is about; whether we owe them a reply; the newest
+  // message, clamped, with More; Reply and Archive; and then the history, behind one control.
+  // Every message is still in the DOM and one tap away — disclosure, not truncation.
+  function threadMessage(m, last) {
+    const msg = h('div', { class: `msg${last ? ' is-latest' : ' is-collapsed'}${m.outbound === true ? ' is-ours' : ''}` }, [
+      avatar(m.from),
+      h('div', { class: 'msg-main' }, [
+        h('div', { class: 'msg-head' }, [
+          h('div', {}, [
+            h('div', { class: 'msg-from', text: text(m.from, '—') }),
+            h('div', { class: 'msg-addr', text: text(m.from_email) }),
+          ]),
+          h('div', { class: 'msg-date', text: formatDate(m.date) }),
+        ]),
+        // The body, clamped where it is long, with a control that opens it. A 2,000-character
+        // message is four lines and a "More" until the owner wants the rest of it.
+        text(m.body).length > 320
+          ? h('div', {}, expandable(h('p', { class: 'msg-body', text: text(m.body) }), 'More of this message'))
+          : h('p', { class: 'msg-body', text: text(m.body) }),
+      ]),
+    ]);
+    if (!last) msg.addEventListener('click', () => msg.classList.toggle('is-collapsed'));
+    return msg;
+  }
+
   function renderEmailThread(d, opts) {
     const messages = list(d.messages, 6);
-    const nodes = messages.map((m, i) => {
-      const last = i === messages.length - 1;
-      const msg = h('div', { class: `msg${last ? ' is-latest' : ' is-collapsed'}` }, [
-        avatar(m.from),
-        h('div', { class: 'msg-main' }, [
-          h('div', { class: 'msg-head' }, [
-            h('div', {}, [h('div', { class: 'msg-from', text: text(m.from, '—') }), h('div', { class: 'msg-addr', text: text(m.from_email) })]),
-            h('div', { class: 'msg-date', text: formatDate(m.date) }),
-          ]),
-          h('p', { class: 'msg-body', text: text(m.body) }),
-        ]),
-      ]);
-      if (!last) msg.addEventListener('click', () => msg.classList.toggle('is-collapsed'));
-      return msg;
-    });
-    // The rail. `rail()` was called from one place — the order card — so an email had no
-    // controls on the tablet at all: Reply, Rewrite and Archive were on the Mac and reachable
-    // only by a spoken sentence, and the only way out of a thread was to put the tablet down.
+    const nodes = messages.map((m, i) => threadMessage(m, i === messages.length - 1));
+    const latest = messages.length ? messages[messages.length - 1] : null;
+    const earlier = nodes.slice(0, -1);
+    // Who is waiting on whom, from Gmail's own SENT label by way of the Mac — never read out
+    // of the words. This is "what matters" for an email, and it was nowhere on the card.
+    const waiting = d.awaiting_reply === true;
+    const withWhom = latest && latest.outbound !== true ? text(latest.from) : '';
+    const meta = [
+      num(d.message_count) === null ? '' : `${d.message_count} message${d.message_count === 1 ? '' : 's'}`,
+      latest ? formatDate(latest.date) : '',
+      d.truncated ? 'older messages not shown' : '',
+    ].filter(Boolean).join(' · ');
     return card('email_thread', [
-      h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email thread'), h('h2', { class: 'card-title', text: text(d.subject, '(no subject)') }), h('p', { class: 'card-meta', text: [num(d.message_count) === null ? '' : `${d.message_count} message${d.message_count === 1 ? '' : 's'}`, d.truncated ? 'older messages not shown' : ''].filter(Boolean).join(' · ') })])]),
+      h('div', { class: 'card-head' }, [
+        h('div', { class: 'head-main' }, [
+          kicker('Email thread'),
+          h('h2', { class: 'card-title clamp-2', text: text(d.subject, '(no subject)') }),
+          withWhom ? h('p', { class: 'card-sub', text: `with ${withWhom}` }) : null,
+          h('p', { class: 'card-meta', text: meta }),
+        ]),
+        h('div', { class: 'head-side' }, [
+          h('div', { class: 'badges' }, [
+            waiting ? badge('Needs a reply', 'warn') : (text(d.latest_direction) === 'outbound' ? badge('Replied', 'quiet ok') : null),
+          ]),
+        ]),
+      ]),
+      // Which order and which customer this is about: the relation, under the head, where the
+      // owner looks for it before he decides what to say.
       linkedOrderStrip(d),
+      emptyNote(d),
+      // The rail. `rail()` was called from one place — the order card — so an email had no
+      // controls on the tablet at all: Reply, Rewrite and Archive were on the Mac and
+      // reachable only by a spoken sentence, and the only way out of a thread was to put the
+      // tablet down. It sits ABOVE the history now: the primary action must be on the first
+      // screen, not below however much quoted text the thread happens to carry.
       rail(d.actions, opts, d.thread_id),
-      h('div', {}, nodes),
+      nodes.length ? h('div', { class: 'msg-latest' }, [nodes[nodes.length - 1]]) : null,
+      earlier.length ? disclosure(h('div', { class: 'msg-history' }, earlier), `${earlier.length} earlier message${earlier.length === 1 ? '' : 's'}`) : null,
     ], opts);
   }
 
@@ -2052,7 +2284,14 @@
   function renderItem(item, opts) {
     if (!isValid(item) || !RENDERERS[item.type]) return null;
     try {
-      return RENDERERS[item.type](item.data, opts || {}) || null;
+      // A card the Mac has promised but not yet read: one bounded placeholder, for every
+      // type, from the same data shape. The renderer for the type is not called at all —
+      // nothing on a skeleton comes from a payload that does not exist yet.
+      const node = item.data.shell === true
+        ? skeletonCard(item.type, item.data, opts || {})
+        : RENDERERS[item.type](item.data, opts || {}) || null;
+      if (node && node.dataset && !node.dataset.render) node.dataset.render = surfaceId(item);
+      return node;
     } catch (error) {
       return null;   // a malformed payload draws nothing; the spoken answer still stands
     }
@@ -2090,6 +2329,202 @@
     return title || FOLD_WORDS[item.type] || 'More';
   }
 
+  // ------------------------------------------------------------------ render identity (§25)
+  //
+  // Which card is which. The same table as app/render.py KEY_OF, held on both sides because
+  // both sides have to agree about it: the Mac names a patch and the tablet has to find the
+  // node it is about. `tests/test_progressive.py` reads this table out of this file and
+  // compares it with the Mac's, so the two cannot drift.
+  const KEY_OF = {
+    order: ['order_id', 'order_number'],
+    order_list: ['set_id', 'title', 'query'],
+    customer: ['customer_id', 'email'],
+    customer_list: ['title', 'query'],
+    product: ['product_id', 'query'],
+    inventory: ['query'],
+    sales_summary: ['title', 'since'],
+    email_list: ['title', 'query'],
+    email_thread: ['thread_id'],
+    email_draft: ['subject', 'to'],
+    attention: ['for'],
+    confirmation: ['proposal_id'],
+    success: ['proposal_id'],
+    batch_action: ['batch_id'],
+    batch_result: ['batch_id'],
+    error: ['service', 'kind'],
+    metric_group: ['title'],
+    ranking: ['title', 'mode'],
+    table: ['title'],
+    comparison: ['title'],
+    variant_matrix: ['title'],
+    trend: ['title', 'metric'],
+    working_set: ['set_id'],
+    capability: ['build'],
+    reply_state: ['thread_id'],
+    variant_picker: ['order_id'],
+    email_compose: ['compose_id'],
+    workspace: ['workspace_id'],
+  };
+  const NESTED_KEY_OF = { product: ['products', 'product_id'], inventory: ['products', 'product_id'] };
+  const SHELL_SUFFIX = '~shell';
+
+  function surfaceId(item) {
+    if (!item || typeof item !== 'object' || typeof item.type !== 'string') return '';
+    const kind = item.type;
+    const d = item.data && typeof item.data === 'object' ? item.data : {};
+    if (d.shell === true) return `${kind}:${SHELL_SUFFIX}`;
+    const nested = NESTED_KEY_OF[kind];
+    if (nested) {
+      const rows = d[nested[0]];
+      if (Array.isArray(rows) && rows.length && rows[0] && typeof rows[0] === 'object') {
+        const found = text(rows[0][nested[1]]).trim();
+        if (found) return `${kind}:${found.slice(0, 120)}`;
+      }
+    }
+    for (const name of KEY_OF[kind] || []) {
+      const value = d[name];
+      if ((typeof value === 'string' || typeof value === 'number') && String(value).trim()) {
+        return `${kind}:${String(value).trim().slice(0, 120)}`;
+      }
+    }
+    return kind;
+  }
+
+  // ------------------------------------------------------------------ patching in place (§7)
+  //
+  // The five rules, each one a test in tests/web/progressive.test.js:
+  //
+  //   1. the page is not redrawn for an enrichment — only the card named by the patch moves;
+  //   2. a control is not moved while a finger is on it — `opts.held()` defers the whole
+  //      batch, and it is applied on the next call once the hand is off;
+  //   3. keyboard focus survives — the focused field is found again by name on the new node
+  //      and its caret is put back where it was;
+  //   4. scroll position is not reset — nothing here touches scrollTop, and a replacement
+  //      keeps its predecessor's place in the list rather than being appended;
+  //   5. no flicker, no duplicate card, no repeated identical render — a replaced node is
+  //      swapped in one operation and marked so the CSS does not run the entry animation
+  //      again, and the Mac has already suppressed the renders that would change nothing.
+  //
+  // Returns what was done, in counts, for the telemetry: added, changed, visual, removed,
+  // deferred. Nothing here decides WHAT a card says — the patch carries the payload the
+  // presentation layer bounded, and it is drawn by the same renderer as always.
+  function applyPatches(host, patches, opts) {
+    const settings = opts || {};
+    const out = { added: 0, changed: 0, visual: 0, removed: 0, deferred: 0, applied: [], nodes: {} };
+    if (!host || !Array.isArray(patches) || !patches.length) return out;
+    // Rule 2. A hand is on the glass: the whole batch waits. A card that moves under a
+    // finger mid-gesture is the defect the live session's owner narrated out loud.
+    if (typeof settings.held === 'function' && settings.held()) {
+      out.deferred = patches.length;
+      return out;
+    }
+    const focus = captureFocus(host, settings);
+    for (const patch of patches) {
+      if (!patch || typeof patch !== 'object') continue;
+      const id = text(patch.id);
+      const op = text(patch.op);
+      if (!id) continue;
+      const existing = byRender(host, id);
+      if (op === 'remove') {
+        if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); out.removed += 1; out.applied.push(id); }
+        continue;
+      }
+      const item = patch.item;
+      if (!isValid(item)) continue;
+      if (op === 'visual' && existing) {
+        // Rule 5, the cheap half: the words are the same, so the DOM stays and one attribute
+        // moves. This is where "folded", "still reading" and "which tab" land.
+        applyVisual(existing, item.data);
+        out.visual += 1;
+        out.applied.push(id);
+        out.nodes[id] = existing;
+        continue;
+      }
+      let node = renderItem(item, settings.opts || settings.renderOpts || {});
+      if (!node) continue;
+      node.dataset.render = id;
+      const standin = text(patch.replaces) ? byRender(host, text(patch.replaces)) : null;
+      const target = existing || standin;
+      if (target && target.parentNode) {
+        // Rule 4 and rule 1: the new card takes the old one's PLACE. Nothing above or below
+        // it is touched, the scroller keeps its offset, and the page is not rebuilt.
+        node.dataset.patched = '1';
+        target.parentNode.replaceChild(node, target);
+        out[existing ? 'changed' : 'added'] += 1;
+      } else {
+        host.appendChild(node);
+        out.added += 1;
+      }
+      out.applied.push(id);
+      out.nodes[id] = node;
+    }
+    restoreFocus(host, focus);
+    return out;
+  }
+
+  function byRender(host, id) {
+    if (!host || !id) return null;
+    const all = host.querySelectorAll ? host.querySelectorAll(`[data-render="${id}"]`) : [];
+    return (all.length ? all[0] : null) || null;
+  }
+
+  // Rule 3. Which field the owner is typing in, by NAME, and where the caret is. A patch that
+  // took the keyboard away from an address half-typed would be worse than not patching at
+  // all — the live session's precision defect (D-9) with the enrichment layer on top.
+  function captureFocus(host, settings) {
+    const doc_ = doc();
+    const active = settings && settings.activeElement ? settings.activeElement : (doc_ && doc_.activeElement) || null;
+    if (!active || !active.dataset || !active.dataset.field) return null;
+    const owner = closestCard(active);
+    return {
+      field: active.dataset.field,
+      compose: active.dataset.compose || '',
+      render: owner && owner.dataset ? owner.dataset.render || '' : '',
+      start: typeof active.selectionStart === 'number' ? active.selectionStart : null,
+      end: typeof active.selectionEnd === 'number' ? active.selectionEnd : null,
+      value: typeof active.value === 'string' ? active.value : '',
+    };
+  }
+
+  function closestCard(node) {
+    let at = node;
+    while (at) {
+      if (at.dataset && at.dataset.type) return at;
+      at = at.parentNode;
+    }
+    return null;
+  }
+
+  function restoreFocus(host, focus) {
+    if (!focus || !focus.field) return;
+    const owner = focus.render ? byRender(host, focus.render) : host;
+    const scope = owner || host;
+    const fields = scope.querySelectorAll ? scope.querySelectorAll(`[data-field="${focus.field}"]`) : [];
+    const control = Array.prototype.filter.call(fields, (f) => f.tagName === 'INPUT' || f.tagName === 'TEXTAREA')[0];
+    if (!control) return;
+    // The characters the owner typed are his, and the Mac's copy of them may be one keystroke
+    // behind. What was in the box stays in the box.
+    if (focus.value && control.value !== focus.value) control.value = focus.value;
+    if (typeof control.focus === 'function') control.focus();
+    if (focus.start !== null && typeof control.setSelectionRange === 'function') {
+      try { control.setSelectionRange(focus.start, focus.end === null ? focus.start : focus.end); } catch (error) { /* not a text field */ }
+    }
+  }
+
+  // A visual-state change, applied without rebuilding anything: whether the card is folded,
+  // which regions are still being read, and which tab it is open on.
+  function applyVisual(node, data) {
+    const d = data && typeof data === 'object' ? data : {};
+    if (Array.isArray(d.pending)) node.dataset.pending = d.pending.map((x) => text(x)).filter(Boolean).join(' ');
+    if (d.secondary === true) node.classList.add('is-secondary'); else node.classList.remove('is-secondary');
+    if (d.shell !== true && node.dataset.shell) {
+      delete node.dataset.shell;
+      node.setAttribute('aria-busy', 'false');
+      node.classList.remove('is-shell');
+    }
+    return node;
+  }
+
   function render(items, opts) {
     const out = { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
     if (!Array.isArray(items)) return out;
@@ -2116,5 +2551,5 @@
     }, [h('span', { class: 'chip-kind', text: text(e.kind) }), h('span', { class: 'chip-label', text: text(e.label) })]));
   }
 
-  return { render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h, field, FIELD_KINDS };
+  return { render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h, field, FIELD_KINDS, applyPatches, surfaceId, KEY_OF };
 });
