@@ -95,7 +95,7 @@ async function main() {
     const anyAbove = (sel) => Array.prototype.some.call(card.querySelectorAll(sel), above);
     const tallEnough = (sel) => Array.prototype.some.call(card.querySelectorAll(sel), (el) => above(el) && el.getBoundingClientRect().height >= 44);
     const identity = ['.card-title', '.head-total', '.list-pos'];
-    const matters = ['.badge', '.head-total', '.tl', '.stats', '.link-strip', '.link-block', '.reply-line', '.empty-line', '.list-pos'];
+    const matters = ['.badge', '.head-total', '.tl', '.attn-line', '.stats', '.link-strip', '.link-block', '.reply-line', '.empty-line', '.list-pos'];
     const actions = ['.rail-chip', '.row-btn', '.tab', '.chip', '.link-btn', '.row.tappable', '.disc-head'];
     return {
       type: card.dataset.type || '',
@@ -234,6 +234,7 @@ async function main() {
       order_id: 'o-worst', order_number: '#1938', placed_at: '2026-09-09T09:42:00Z', fulfillment: 'unfulfilled',
       payment: 'paid', total: '£84.00', customer_name: 'A Customer', customer_id: 'c-worst', customer_email: 'someone@example.com',
       detail: true, items_truncated: true, tags: ['vip', 'repeat', 'fragile'],
+      attention_top: [{ title: 'Paid 2 days ago and not shipped', level: 'red', kind: 'unfulfilled' }, { title: 'They wrote in and we have not replied', level: 'amber', kind: 'email' }],
       items: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => ({
         title: 'A Product With A Long Catalogue Name ' + i, variant: 'Medium', sku: 'SKU-' + i, quantity: 1 + (i % 3),
         total: '£' + (20 + i) + '.00', image: '', variant_id: `v${i}`, product_id: `p${i}`, stock: { tracked: true, available: i },
@@ -256,6 +257,16 @@ async function main() {
     await page.route('**/turn', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(worst[kind]) }));
     await say(`the worst ${kind} this build can draw`);
     const seen = await measure(`worst ${kind}`, kind);
+    if (seen && kind === 'order') {
+      // What the order NEEDS, in the first viewport rather than on the card below it.
+      const attn = await page.evaluate(() => {
+        const deck = document.querySelector('#cards').getBoundingClientRect();
+        const lines = Array.prototype.slice.call(document.querySelectorAll('#cards .card .attn-line'));
+        return { n: lines.length, above: lines.filter((l) => l.getBoundingClientRect().top < Math.min(deck.bottom, window.innerHeight)).length };
+      });
+      check('worst order: what the order needs is in the first viewport, not on a card below it',
+        attn.n > 0 && attn.above === attn.n, JSON.stringify(attn));
+    }
     if (seen && kind === 'order_list') await foldCheck('worst order list');
     if (seen && kind === 'email_thread') await threadCheck('worst email thread');
     await shot(`04-worst-${kind}`);

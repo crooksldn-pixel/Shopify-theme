@@ -1259,3 +1259,13 @@ html[data-lite] .sk-row{animation:none;opacity:.6}
 .msg-latest{margin-top:12px}
 .msg-history{display:flex;flex-direction:column;gap:8px}
 .msg.is-ours{opacity:.92}
+
+/* What an order NEEDS, on the order itself: one line each, tone-coloured, between the status
+   strip and the rail. The attention card that carries the detail and the words to say sits
+   after the order card, which at 601 x 889 is out of sight (§8). */
+.attn-strip{display:flex;flex-direction:column;gap:4px;margin:10px 0 0;padding:0;list-style:none}
+.attn-line{display:flex;align-items:baseline;gap:8px;font-size:14px;color:var(--ink-2)}
+.attn-line.bad{color:var(--bad)}
+.attn-line.warn{color:var(--warn)}
+.attn-line.ok{color:var(--ok)}
+.attn-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto;transform:translateY(-1px)}

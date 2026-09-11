@@ -432,6 +432,26 @@ test('sales over several days become a strip of bars whose heights are numbers o
   assert.equal(UI.renderItem({ type: 'sales_summary', data: { revenue: '£1', by_day: [{ date: '2026-09-02', revenue: '£1' }] } }).querySelectorAll('.bar').length, 0, 'one day is not a chart');
 });
 
+test('an order says what it needs on the card, above the tabs and above the rail', () => {
+  // §8: the first viewport answers what matters. The attention card that carries the detail
+  // sits AFTER the order card, which at 601 × 889 is below the fold.
+  const node = UI.renderItem({ type: 'order', data: {
+    order_id: 'o1', order_number: '#1938', detail: true, total: '£84.00', payment: 'paid', fulfillment: 'unfulfilled',
+    attention_top: [
+      { title: 'Paid 2 days ago and not shipped', level: 'red', kind: 'unfulfilled' },
+      { title: 'They wrote in and we have not replied', level: 'amber', kind: 'email' },
+    ],
+    items: [], fulfillments: [],
+  } }, {});
+  const lines = node.querySelectorAll('.attn-line');
+  assert.equal(lines.length, 2);
+  assert.match(lines[0].textContent, /not shipped/);
+  assert.ok(lines[0].classList.contains('bad') && lines[1].classList.contains('warn'), 'the level is the tone');
+  // Above the tabs: in the DOM, the strip comes before the tab bar it must not be behind.
+  const kids = node.children.map((c) => c.className.split(' ')[0]);
+  assert.ok(kids.indexOf('attn-strip') !== -1 && kids.indexOf('attn-strip') < kids.indexOf('tabbed'), kids.join(','));
+});
+
 test('an email thread shows a face per message and lights the latest', () => {
   const node = UI.renderItem({ type: 'email_thread', data: { subject: 's', messages: [{ from: 'Ada Lovelace', body: 'one' }, { from: 'Sam Fixture', body: 'two' }] } });
   const msgs = node.querySelectorAll('.msg');

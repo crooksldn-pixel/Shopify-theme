@@ -577,9 +577,16 @@
       { name: 'customer', label: 'Customer', node: [section('history', 'Customer', historyBody, standing ? badge(standing, 'quiet') : null)] },
       { name: 'email', label: 'Email', node: [section('email', 'Email', emailBody)] },
     ];
+    // What this order NEEDS, on the order (§8: the first viewport answers what matters). The
+    // attention card that carries the detail sits after this one — 709 px down a 671 px
+    // screen, which is to say out of sight — so the headline comes up here beside the status.
+    const attention = list(d.attention_top, 2);
     const full = card('order', [
       head,
       orderTimeline(d),
+      attention.length ? h('ul', { class: 'attn-strip' }, attention.map((a) => h('li', {
+        class: `attn-line ${a.level === 'red' ? 'bad' : a.level === 'green' ? 'ok' : 'warn'}`,
+      }, [h('span', { class: 'attn-dot', 'aria-hidden': 'true' }), h('span', { text: text(a.title) })]))) : null,
       d.cancelled_at ? h('p', { class: 'card-note bad', text: `Cancelled ${formatDate(d.cancelled_at)}${d.cancel_reason ? ' · ' + text(d.cancel_reason) : ''}` }) : null,
       rail(d.actions, opts),
       tabs(panels, { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('order', name, label) : null }),

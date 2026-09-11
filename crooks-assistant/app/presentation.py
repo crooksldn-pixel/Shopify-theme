@@ -179,6 +179,15 @@ def present(
                 # What the order needs, read on the Mac, as its own card after the order.
                 attention = _attention_items(call.result)
                 if attention:
+                    # And the first two of them ON the order, as one line each. §8 asks the
+                    # order's FIRST VIEWPORT for critical attention, and the card beneath it
+                    # was 709 px down a 671 px screen: an unread reply on a paid order was on
+                    # the glass and out of sight. The card keeps the detail and the recovery
+                    # words; this is the headline, tone and all.
+                    item["data"]["attention_top"] = [
+                        {"title": a["title"], "level": a["level"], "kind": a["kind"]}
+                        for a in sorted(attention, key=lambda a: 0 if a.get("level") == "red" else 1)[:2]
+                    ]
                     items.append(_ui("attention", {"items": attention, "for": item["data"].get("order_id")}))
 
     items = _merge(items)
