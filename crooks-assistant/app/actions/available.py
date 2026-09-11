@@ -118,6 +118,9 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     caps = capabilities or {}
     f = order_facts(order)
     n = f["digits"] or str(order.get("order_number") or "").lstrip("#")
+    # The id the "open" chips carry, when the read model has one. A chip that cannot name its
+    # record cannot post a command about it, and falls back to priming the words.
+    order_id = str(order.get("order_id") or "")
     candidates: list[AvailableAction] = []
 
     def add(id_: str, label: str, operation: str, risk: str, ok: bool, reason: str, instruction: str,
@@ -146,8 +149,16 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         address_reason = "no shipping address"
     else:
         address_reason = ""
+    # Address OPENS the address, with the parts of the current one already in the boxes
+    # (`app/families/address.py`). A postcode is the worst thing in the shop to dictate —
+    # "BS7 9AL" and "BS7 8AL" are both valid and one of them is a stranger's house — and
+    # until this chip opened something, correcting one was a sentence into a microphone that
+    # had already produced four recordings under 150 ms. The spoken control rides along.
     add("address", "Address", "order_shipping_address_set", "red", not address_reason, address_reason,
-        f"Change the address on order {n}", family="order.change_address")
+        f"Change the address on order {n}", family="order.change_address",
+        mode="open" if order_id else "ask",
+        command="address.open" if order_id else "",
+        args=f"order_id={order_id}" if order_id else "")
     if f["refunded_all"]:
         refund_reason = "fully refunded"
     elif f["payment"] not in PAID or not f["refundable"]:
@@ -170,7 +181,6 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     # label rather than somewhere to write is the whole of D-11 in one control. The address
     # is not on the chip: the command carries the ORDER, and the Mac reads the recipient off
     # its own copy of it.
-    order_id = str(order.get("order_id") or "")
     add("email", "Email", "gmail_draft_new", "amber", f["has_email"], "no email address",
         f"Email the customer about order {n}",
         mode="open" if order_id else "ask",

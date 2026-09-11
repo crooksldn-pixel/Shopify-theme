@@ -335,6 +335,71 @@ async function main() {
     }
   }
 
+  // ---- 2c. the address, typed with a thumb (§20)
+  //
+  // The exact value the live session's own fixtures turn on. Until the Address chip opened
+  // something, correcting one was a sentence into a microphone that had already produced four
+  // recordings under 150 ms — and "SL4 1QN" and "SL4 1QM" are both valid postcodes.
+  const addressOn = await railOf(1938);
+  const addressChip = addressOn ? addressOn.chips.find((c) => c.action === 'address') : null;
+  check('an order that has not shipped offers its address as something to type',
+    Boolean(addressChip && !addressChip.off && addressChip.mode === 'open' && addressChip.command === 'address.open'),
+    JSON.stringify(addressChip));
+  if (addressChip && !addressChip.off) {
+    await tapMiddle('#cards .card-order .rail-chip[data-action="address"]');
+    await sleep(1800);
+    const form = await page.evaluate(() => {
+      const card = document.querySelector('#cards .card-workspace');
+      if (!card) return null;
+      return {
+        fields: Array.from(card.querySelectorAll('.field-input')).map((f) => ({
+          name: f.dataset.field, post: f.dataset.post, kind: f.dataset.kind,
+          value: f.value, h: Math.round(f.getBoundingClientRect().height),
+        })),
+        typeMarks: card.querySelectorAll('.field-type').length,
+        text: (card.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+        buttons: Array.from(card.querySelectorAll('.compose-btn')).map((b) => ({ action: b.dataset.action, command: b.dataset.command, off: Boolean(b.disabled) })),
+      };
+    });
+    check('tapping it opens the address as fields, already holding the address as it stands',
+      form !== null && form.fields.some((f) => f.name === 'address1' && /Bridge Street/.test(f.value))
+      && form.fields.some((f) => f.name === 'postcode' && f.value.length > 2),
+      form ? JSON.stringify(form.fields) : 'no workspace card');
+    if (form) {
+      check('every line of it says it can be typed, and is big enough to type in',
+        form.typeMarks >= form.fields.length && form.fields.every((f) => f.h >= 44),
+        `marks=${form.typeMarks} fields=${form.fields.length} ${form.fields.map((f) => `${f.name}:${f.h}px`).join(' ')}`);
+      check('and its keystrokes go to the family that owns them, not to the composer',
+        form.fields.every((f) => f.post === 'address.field'),
+        form.fields.map((f) => `${f.name}->${f.post}`).join(' '));
+      // The correction itself: the house number, typed in front of the street.
+      const street = '#cards .card-workspace .field-input[data-field="address1"]';
+      await page.click(street);
+      await page.evaluate((sel) => { const el = document.querySelector(sel); el.setSelectionRange(0, 0); }, street);
+      await page.type(street, 'Flat 4, ', { delay: 15 });
+      await sleep(1800);
+      const corrected = await page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        const card = document.querySelector('#cards .card-workspace');
+        const prepare = card ? card.querySelector('.compose-btn[data-action="prepare"]') : null;
+        return {
+          value: el ? el.value : null,
+          focused: document.activeElement === el,
+          state: (document.querySelector('#stage') || {}).dataset?.state || '',
+          prepare: prepare ? !prepare.disabled : null,
+          says: card ? (card.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200) : '',
+        };
+      }, street);
+      check('the correction lands in the field, keeps the keyboard, and starts no recording',
+        /^Flat 4, 12 Bridge/.test(String(corrected.value)) && corrected.focused === true
+        && corrected.state !== 'LISTENING' && corrected.state !== 'TRANSCRIBING',
+        JSON.stringify(corrected).slice(0, 300));
+      check('and the Mac now lets the change be prepared', corrected.prepare === true,
+        `prepare=${corrected.prepare} says=${corrected.says.slice(0, 120)}`);
+      await shot('e08-address');
+    }
+  }
+
   const shipped = await railOf(1939);
   check('a shipped order says why the things it cannot do cannot be done',
     shipped !== null && shipped.chips.filter((c) => c.off).length > 0
