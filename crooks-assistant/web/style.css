@@ -1289,7 +1289,10 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
   box-shadow:var(--inset-hi);-webkit-appearance:none;appearance:none;resize:vertical;
 }
 .field-input::placeholder{color:var(--ink-4)}
-.field-input,.compose-actions,.ws-options,.action-surface{scroll-margin-bottom:24px;scroll-margin-top:16px}
+/* When the keyboard opens the browser scrolls the focused field to the nearest edge of the
+   deck. Without a margin it stops the instant the field itself is inside, which leaves the
+   line that says what is wrong with what was typed just under the fold. */
+.field-input,.compose-actions,.ws-options,.action-surface{scroll-margin-bottom:44px;scroll-margin-top:16px}
 .field-input:focus{outline:none;background:var(--glass-control-active);border-color:var(--border-active);box-shadow:0 0 0 3px rgba(235,232,224,.12)}
 .field-input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .field-hint{margin:0;font-size:12px;color:var(--ink-3);word-break:break-word}
