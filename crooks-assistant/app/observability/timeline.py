@@ -16,6 +16,7 @@ import queue
 import re
 import threading
 import time
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,12 @@ log = logging.getLogger("crooks.observe")
 MAX_STRING = 6_000
 MAX_DEPTH = 6
 MAX_LIST = 400
+# How many recent correlation ids are kept in memory for `recent()`, and which kinds count as
+# one. A tap, a change and a branch move are what somebody is doing when he says something
+# went wrong; a render or a scroll is not, and a hundred of them would push the taps out.
+RECENT_EVENTS = 64
+RECENT_KINDS = ("command", "command_stage", "row_action", "action_", "batch_", "branch_",
+                "tablet_navigate", "tablet_action_commit", "tablet_reconcile", "tool_finished")
 
 # Keys whose values are never written, whatever they hold.
 WITHHELD_KEYS = frozenset({
@@ -86,6 +93,12 @@ class Timeline:
         self._seq = 0
         self._written = 0
         self._dropped = 0
+        # The last few CORRELATION ids to go past, so something being written down now can say
+        # what was happening around it without reading the file back. Owner feedback is the
+        # caller (app/observability/feedback.py): "log that the split is broken" is worth far
+        # more with the ids of the taps and the changes either side of it. Ids, kinds and
+        # clocks only — a bounded deque, and appending to one is atomic.
+        self._recent: deque[tuple[float, str, str, str]] = deque(maxlen=RECENT_EVENTS)
 
     # ----------------------------------------------------------------- state
 
@@ -164,6 +177,7 @@ class Timeline:
                     continue
                 event[key] = value
             event = scrub(event)
+            self._note(event)
             line = json.dumps(event, ensure_ascii=False, default=str)
             self._queue.put((self.sessions.timeline_path(session), line))
             self._ensure_writer()
@@ -172,6 +186,28 @@ class Timeline:
             self._dropped += 1
             log.debug("timeline event dropped: %s", exc)
             return None
+
+    # ------------------------------------------------------------ what just happened
+
+    def _note(self, event: dict[str, Any]) -> None:
+        """Keep this event's id, if it has one worth keeping. Ids, kinds and clocks."""
+        kind = str(event.get("kind") or "")
+        if not any(kind.startswith(prefix) or kind == prefix for prefix in RECENT_KINDS):
+            return
+        ident = str(event.get("proposal_id") or event.get("batch_id") or event.get("command")
+                    or event.get("branch_id") or event.get("action") or event.get("tool")
+                    or event.get("nav") or "")
+        self._recent.append((float(event.get("ts") or 0.0), kind, ident[:60],
+                             str(event.get("turn_id") or "")[:60]))
+
+    def recent(self, *, within_s: float = 90.0, limit: int = 8, now: float | None = None) -> list[dict[str, Any]]:
+        """What went past in the last little while: the taps, the changes and the branch moves,
+        most recent last. Read by owner feedback, so a defect narrated out loud carries the ids
+        of what the owner was doing when he narrated it."""
+        at = float(now if now is not None else self.clock())
+        rows = [row for row in list(self._recent) if at - row[0] <= within_s]
+        return [{"at": round(ts, 3), "kind": kind, "id": ident or None, "turn_id": turn or None}
+                for ts, kind, ident, turn in rows[-limit:]]
 
     # ----------------------------------------------------------------- writer
 
@@ -254,6 +290,7 @@ class NullTimeline(Timeline):
         self._written = 0
         self._dropped = 0
         self.mirror: Timeline | None = None
+        self._recent: deque[tuple[float, str, str, str]] = deque(maxlen=RECENT_EVENTS)
 
     @property
     def own(self) -> TestSession | None:
@@ -273,6 +310,9 @@ class NullTimeline(Timeline):
 
     def flush(self, timeout_s: float = 0.0) -> bool:  # noqa: ARG002
         return True
+
+    def recent(self, *, within_s: float = 90.0, limit: int = 8, now: float | None = None) -> list[dict[str, Any]]:  # noqa: ARG002
+        return []
 
     @property
     def counts(self) -> dict[str, Any]:

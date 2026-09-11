@@ -276,6 +276,16 @@ ENTRIES: tuple[Entry, ...] = (
         command="voice.bind",
         asks=_asks(r"\blistening\b", r"\bwhat does (?:reply|rewrite|add a note) do\b"),
     ),
+    Entry(
+        key="rail", control="The chips on a card", group="approval",
+        what="The chips along a card are the changes that record can take right now — reply, "
+             "archive, a note, a refund, an address, fulfilment",
+        where="Tapping one prepares the change and asks for the gesture; it does not make it. "
+              "A chip shown greyed out says why it cannot be used",
+        also=("approval", "applying"),
+        asks=_asks(r"\brail\b", r"\bchips?\b",
+                   r"\bwhat does the [a-z]{3,12} (?:button|chip) do\b"),
+    ),
     # ----------------------------------------------------------- what a half is doing
     Entry(
         key="branch_states", control="What a half is doing", group="branch_state",
