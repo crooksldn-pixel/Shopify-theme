@@ -179,14 +179,24 @@ test('sales summary shows real figures and no invented comparison', () => {
   assert.ok(!textOf(node).toLowerCase().includes('vs'));
 });
 
-test('email thread: last message open, earlier ones collapsed and openable', () => {
+test('email thread: the newest message is first and open, the history is behind one control', () => {
+  // The order of these two nodes is the information hierarchy (§8, D-12): every message was
+  // drawn open, oldest first, so the only one anybody was going to read was at the bottom of
+  // a surface measured at 1,999 px against a 680 px screen. Newest first, open; the rest
+  // complete, in the DOM, and one tap away.
   const node = UI.renderItem({ type: 'email_thread', data: { subject: 'Re: order', messages: [
     { from: 'A', body: 'first' }, { from: 'B', body: 'second' },
   ] } });
   const msgs = node.querySelectorAll('.msg');
-  assert.deepEqual(msgs.map((m) => m.classList.contains('is-collapsed')), [true, false]);
-  msgs[0].dispatch('click');
-  assert.equal(msgs[0].classList.contains('is-collapsed'), false);
+  assert.deepEqual(msgs.map((m) => m.classList.contains('is-latest')), [true, false], 'the newest message comes first');
+  assert.equal(msgs[1].classList.contains('is-collapsed'), true);
+  const disc = node.querySelector('.disc-head');
+  assert.ok(disc && /1 earlier message/.test(disc.textContent));
+  assert.equal(node.querySelector('.disc-body').hidden, true, 'the history costs no height until it is asked for');
+  disc.dispatch('click');
+  assert.equal(node.querySelector('.disc-body').hidden, false);
+  msgs[1].dispatch('click');
+  assert.equal(msgs[1].classList.contains('is-collapsed'), false);
 });
 
 test('a draft never has a send control and says nothing was sent; a sent one says sent', () => {
@@ -426,8 +436,10 @@ test('an email thread shows a face per message and lights the latest', () => {
   const node = UI.renderItem({ type: 'email_thread', data: { subject: 's', messages: [{ from: 'Ada Lovelace', body: 'one' }, { from: 'Sam Fixture', body: 'two' }] } });
   const msgs = node.querySelectorAll('.msg');
   assert.equal(msgs.length, 2);
-  assert.deepEqual(msgs.map((m) => textOf(m.querySelector('.avatar'))), ['AL', 'SF']);
-  assert.ok(msgs[0].classList.contains('is-collapsed') && msgs[1].classList.contains('is-latest'));
+  // Newest first: the latest message's face is at the top of the card, the earlier one's
+  // inside the history.
+  assert.deepEqual(msgs.map((m) => textOf(m.querySelector('.avatar'))), ['SF', 'AL']);
+  assert.ok(msgs[0].classList.contains('is-latest') && msgs[1].classList.contains('is-collapsed'));
 });
 
 test('the surface stops inviting a tap just before the Mac would say Expired', () => {

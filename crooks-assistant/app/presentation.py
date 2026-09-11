@@ -331,6 +331,12 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
             "message_count": _int(result.get("message_count")) or len(messages),
             "truncated": bool(result.get("truncated")) or len(messages) < (_int(result.get("messages_shown")) or 0),
             "messages": messages,
+            # Who spoke last, and whether anybody is waiting on us. From Gmail's own SENT
+            # label (app/tools/gmail_tools.py), never from reading the words: §8 asks the
+            # email surface to answer "what matters" in its first viewport, and on a
+            # customer's thread what matters is whether we owe them a reply.
+            "awaiting_reply": bool(result.get("awaiting_reply")),
+            "latest_direction": _text(result.get("latest_direction"), 12) or "none",
             # The order this thread is about, from the rows the Mac already holds — the
             # reverse of the order card's email region, and the strip the thread card draws
             # (Phase 2 P0 #10: a thread showed its words and hid its order). Bounded here;
@@ -681,6 +687,10 @@ def _message(m: dict[str, Any]) -> dict[str, Any]:
         "date": _text(m.get("date")),
         "subject": _text(m.get("subject")),
         "body": _text(m.get("body"), MAX_BODY_CHARS),
+        # Ours or theirs, from Gmail's SENT label. The thread card draws the latest message
+        # open and the earlier ones behind a fold, and which side each one is on is the
+        # difference between a conversation and a wall of text.
+        "outbound": bool(m.get("outbound")),
     }
 
 
