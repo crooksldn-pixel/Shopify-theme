@@ -73,7 +73,7 @@ and of source text, so it is safe against a shop it may not touch.
 | `batch_email_archive` | the model only | test_batch.py, test_claims.py | — |
 | `batch_email_drafts` | the model only | test_batch.py, test_claims.py, test_flows.py, test_registry.py | — |
 | `batch_email_send` | the model only | test_gaps.py, test_registry.py | — |
-| `batch_order_tags_add` | the model only | test_batch.py, test_claims.py, test_council_fixes.py, test_flows.py, test_memory.py, test_reads.py | — |
+| `batch_order_tags_add` | the model only | test_batch.py, test_claims.py, test_council_fixes.py, test_flows.py, test_memory.py, test_read_budget.py, test_reads.py | — |
 | `batch_order_tags_remove` | the model only | test_batch.py, test_claims.py | — |
 | `commerce_aggregate` | recipe:best_sellers_period, recipe:sales_breakdown_period, recipe:landing_sales, recipe:landing_products, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_council_fixes.py, test_flows.py, test_read_budget.py, test_registry.py, test_working_sets.py | landing_products, landing_sales |
 | `commerce_capabilities` | family:capability_reads | test_analytics_tools.py, test_registry.py | — |
@@ -103,7 +103,7 @@ and of source text, so it is safe against a shop it may not touch.
 | `shopify_list_orders` | family:order_reads | test_gate.py, test_presentation.py, test_provider.py, test_registry.py, test_routes.py, test_session.py, test_shopify_tools.py | — |
 | `shopify_order_add_item` | command:a tapped control, family:order_edit | test_order_edit.py, test_registry.py | order_edit.py |
 | `shopify_order_address` | family:order_reads | test_gaps.py, test_operations.py, test_registry.py | — |
-| `shopify_order_cancel` | family:order_cancel | test_cancel.py | — |
+| `shopify_order_cancel` | family:order_cancel | test_cancel.py, test_read_budget.py | — |
 | `shopify_order_create` | command:a tapped control, family:order_create | test_registry.py | commerce.py |
 | `shopify_order_detail` | recipe:working_set_next, recipe:working_set_previous, recipe:order_lookup, recipe:order_status_lookup, recipe:order_address_lookup, recipe:order_reopen, recipe:customer_history_lookup, recipe:order_tab_show, recipe:order_latest, recipe:order_email_reply, recipe:order_email_waiting, command:cursor:orders, family:order_reads | test_actions.py, test_analyser.py, test_anticipation.py, test_attention.py, test_branch_concurrency.py, test_context.py, test_fastpath.py, test_gate.py, test_graph.py, test_memory.py, test_observability.py, test_presentation.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_shopify_tools.py | customer_history, enrichment, full_address, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, next_previous, order_lookup, repeat_order, spoken_latest, spoken_tab |
 | `shopify_order_fulfil` | family:order_fulfil | test_fulfil.py | — |

@@ -8,12 +8,14 @@ things Claude can do in the running assistant is precisely the set of things reg
 from __future__ import annotations
 
 import asyncio
+import functools
 import inspect
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
+from app.reads import budget
 from app.tools.gate import Tier
 
 MCP_SERVER_NAME = "crooks"
@@ -175,13 +177,65 @@ def tool(
             handler=fn,
             issued_id_args=issued_id_args,
             timeout_s=timeout_s,
-            write=write,
+            write=_proving_in_lane_three(write, name) if write is not None else None,
             batch=batch,
             model_view=model_view,
         )
         return fn
 
     return decorator
+
+
+# One unit of work per precondition read, numbered. See `_proving_in_lane_three`.
+_PROOF_SEQ = [0]
+
+
+def _proving_in_lane_three(write: WriteSpec, tool: str) -> WriteSpec:
+    """A write's precondition, its proof and its card read in lane 3 (app/reads/budget.py).
+
+    `observe` is called twice by the action engine: once before the mutation, to check the
+    entity is still what the proposal was prepared against, and once after, to prove what
+    happened. Those are the two reads the brief ranks third — above a background job, above
+    speculation, and never served from anything held.
+
+    Wrapped here, at registration, rather than at the call sites: the engine calls these
+    callables directly, this is the one place every one of them passes through, and a lane
+    that had to be entered by each write tool's author is a lane that will be forgotten by
+    one of them. `budget.must_be_fresh(PRECONDITION)` is then true for anything these reads
+    reach, so app/reads/dedupe.py will not hand them a held answer or join them to a flight
+    started for something else.
+
+    Each call gets its OWN unit of work, so the bound is on that proof and not on how many
+    changes the conversation has made. A mutation that needs six reads to know what it is
+    about is a bug, not a budget.
+    """
+    wrapped: dict[str, Any] = {}
+    for step in ("observe", "settle", "entity"):
+        fn = getattr(write, step, None)
+        if callable(fn):
+            wrapped[step] = _in_lane(fn, f"{tool}:{step}")
+    return replace(write, **wrapped) if wrapped else write
+
+
+def _in_lane(fn: Callable[..., Any], label: str) -> Callable[..., Any]:
+    def key() -> str:
+        _PROOF_SEQ[0] += 1
+        return f"{label}#{_PROOF_SEQ[0]}"
+
+    if inspect.iscoroutinefunction(fn):
+        @functools.wraps(fn)
+        async def run_async(*args: Any, **kwargs: Any) -> Any:
+            with budget.using(budget.PRECONDITION, key()):
+                return await fn(*args, **kwargs)
+
+        return run_async
+
+    @functools.wraps(fn)
+    def run(*args: Any, **kwargs: Any) -> Any:
+        with budget.using(budget.PRECONDITION, key()):
+            return fn(*args, **kwargs)
+
+    return run
 
 
 def get(name: str) -> ToolSpec:

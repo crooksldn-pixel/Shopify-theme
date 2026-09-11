@@ -254,7 +254,15 @@ async def _stage(
     spec = registry.get(name)
     started = time.perf_counter()
     try:
-        prepared = await registry.invoke(name, args, timeout_s=timeout_s)
+        # Preparing a change is a PRECONDITION read: the handler builds the exact execution
+        # arguments from a fresh read of the entity, and lane 3 is where the brief ranks that
+        # — above a background job, above speculation, and never served from anything held.
+        # `budget.must_be_fresh` is true in this lane, so app/reads/dedupe.py refuses to hand
+        # this a recent answer or to join it to a flight started for something else.
+        from app.reads import budget
+
+        with budget.using(budget.PRECONDITION, f"stage:{trace.tool_call_id}"):
+            prepared = await registry.invoke(name, args, timeout_s=timeout_s)
     except _READABLE_ERRORS as exc:
         log.warning("tool=%s could not be prepared: %s", name, exc)
         if calls is not None:

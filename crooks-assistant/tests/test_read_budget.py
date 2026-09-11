@@ -211,6 +211,61 @@ async def test_the_owner_asking_stands_the_speculative_lane_down(stage):
     assert budget.BACKGROUND in stood and budget.SPECULATION in stood
 
 
+def test_a_writes_precondition_and_proof_read_in_lane_three():
+    """The lane is not decoration: a change's `observe` — called before the mutation to check
+    the entity has not moved, and after it to prove what happened — runs in it.
+
+    Wrapped at registration (app/tools/registry.py), because the action engine calls these
+    callables directly and a lane that each write tool's author had to remember to enter is a
+    lane one of them will forget.
+    """
+    import app.tools.shopify_writes  # noqa: F401
+    from app.tools import registry
+
+    seen: list[tuple[str, str]] = []
+    spec = registry.get("shopify_order_note_append")
+    assert spec.write is not None
+
+    async def look() -> str:
+        seen.append(budget.current_lane())
+        return "observed"
+
+    # The registration wrapper is what is under test, so it is applied to a fresh callable
+    # rather than reaching into the one the shop's tool registered.
+    wrapped = registry._proving_in_lane_three(
+        type(spec.write)(**{**{f: getattr(spec.write, f) for f in spec.write.__slots__}, "observe": look}),
+        "test_tool",
+    )
+    asyncio.run(wrapped.observe())
+    assert seen and seen[0][0] == budget.PRECONDITION
+    assert seen[0][1].startswith("test_tool:observe#"), "each proof needs its own unit of work"
+    assert budget.must_be_fresh(budget.PRECONDITION), "a proof could be served from what is held"
+    # And the lane is given back: a proof must not leave the next read in lane three.
+    assert budget.ambient_lane() == ("", "")
+
+
+async def test_each_proof_gets_its_own_budget():
+    """Two changes in one conversation must not share a precondition budget: the bound is on
+    one proof, not on how many changes the owner has made."""
+    import app.tools.shopify_writes  # noqa: F401
+    from app.tools import registry
+
+    keys: list[str] = []
+
+    async def look() -> str:
+        keys.append(budget.current_lane()[1])
+        return "observed"
+
+    spec = registry.get("shopify_order_note_append")
+    wrapped = registry._proving_in_lane_three(
+        type(spec.write)(**{**{f: getattr(spec.write, f) for f in spec.write.__slots__}, "observe": look}),
+        "test_tool",
+    )
+    await wrapped.observe()
+    await wrapped.observe()
+    assert len(set(keys)) == 2, f"two proofs shared one budget: {keys}"
+
+
 async def test_reads_stay_reads_whatever_lane_they_are_in():
     """The non-negotiable, restated where the lanes are chosen: no lane can name a write."""
     import app.tools.shopify_writes  # noqa: F401
@@ -220,6 +275,33 @@ async def test_reads_stay_reads_whatever_lane_they_are_in():
         plan = ReadPlan([Read("x", "shopify_order_note_append", {})], lane=lane)
         with pytest.raises(WriteInPlan):
             assert_reads_only(plan)
+
+
+def test_the_non_negotiables_hold_at_the_lane_boundary():
+    """Four rules that must not be weakened by anything in this pass, asserted where the new
+    code could have weakened them."""
+    import app.tools.batch_tools  # noqa: F401
+    import app.tools.shopify_writes  # noqa: F401
+
+    # Reads never mutate, and speculation may never write or commit: a prediction's tool is
+    # checked against the registry and the plan is refused before it runs.
+    from app.anticipation.engine import Anticipator
+    from app.reads import dedupe
+    from app.tools.gate import Disposition, classify
+
+    layer = Anticipator()
+    for tool in ("shopify_order_note_append", "batch_order_tags_add", "shopify_order_cancel"):
+        assert not layer._readable(tool), f"{tool} could be predicted"
+    assert not layer._readable("shopify_do_whatever"), "an unregistered tool was readable"
+
+    # Nothing in the dedupe layer can hold, join or reuse a change.
+    for tool in ("shopify_order_note_append", "batch_order_tags_add"):
+        assert tool not in dedupe.PURE_READS
+    # Unknown writes fail closed, in any lane.
+    for lane in budget.LANES:
+        with budget.using(lane, "x"):
+            assert classify("shopify_do_whatever", {}, ()).disposition is Disposition.DENY
+            assert classify("shopify_delete_everything", {}, ()).disposition is Disposition.DENY
 
 
 async def test_a_speculative_plan_is_in_the_speculative_lane():
