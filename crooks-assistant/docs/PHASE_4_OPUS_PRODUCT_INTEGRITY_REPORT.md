@@ -317,6 +317,28 @@ operations test. No test was weakened to accept broken behaviour.
   close that gap.
 - `TOOL_MATRIX.md` is checked in and asserted, so it goes stale whenever a family is added;
   `make tool-matrix` regenerates it.
+- The no-fake-controls sweep can only judge what the DOM shows. A control wired by an
+  `addEventListener` carries nothing a page script can read — there is no way to ask a node
+  what listeners it has — so the sweep is an allowlist of the classes the renderer wires
+  itself. A new control that is neither on it nor carrying data fails the gate until somebody
+  says which of §6's three cases it is, which is the intent; but the allowlist is a convention
+  and not a proof.
+
+## 15b · PII
+
+The raw JSONL of the live session holds three real customer email addresses and one real
+customer name. None of the four appears anywhere in the working tree — checked by machine
+over every text file in the repository, not by eye, and the check prints classifications
+rather than values so it can be re-run without becoming a leak itself. `logs/test-sessions/`
+stays gitignored.
+
+The forensics document, the acceptance script and this report were written from that evidence
+and carry none of it: every example in them is an invented fixture name.
+
+One address does appear in the repository and is not from this session: the owner's own test
+recipient in the compose bench, present since before Phase 4 and used deliberately as "a
+recipient the shop has never heard of". It is his, it predates this pass, and removing it
+would break the bench it documents — flagged here rather than changed.
 
 ## 16 · SCOPES STILL NEEDED
 
