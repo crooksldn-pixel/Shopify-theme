@@ -452,6 +452,8 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
     from app.memory import current as memory
     from app.memory.coalesce import current as coalescer
     from app.memory.prefetch import current as prefetcher
+    from app.reads import budget as read_budget
+    from app.reads.dedupe import current as dedupe
 
     sources: dict[str, float] = {}
     for call in calls or []:
@@ -502,6 +504,13 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "cache": memory().counts(),
         "coalesced": coalescer().counts(),
         "prefetch": prefetcher().counts(),
+        # What asking once instead of twice actually saved, in the three units the brief asks
+        # for: requests avoided, milliseconds saved and provider calls saved. Measured from
+        # the duration the avoided read took, not estimated (app/reads/dedupe.py).
+        "deduped": dedupe().stats(),
+        # And what each lane spent, so a refusal can be read back to the lane that caused it
+        # rather than to "the turn" (app/reads/budget.py).
+        "read_budgets": read_budget.report(session),
     }
 
 
