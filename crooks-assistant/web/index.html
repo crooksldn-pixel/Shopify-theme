@@ -89,6 +89,12 @@
         <span id="armed-what" class="armed-what"></span>
         <button id="armed-cancel" class="armed-cancel" type="button">Cancel</button>
       </div>
+      <!-- Which half this screen belongs to, and what it is doing: "ORDER · #1957", "INBOX ·
+           READY". Drawn only when the orb is divided, and drawn from the Mac's own line for
+           the branch. The Phase 3 live test found the owner tapping between two halves six
+           times in nine seconds looking for the difference; there was nothing on either
+           screen that said which half it was. -->
+      <p id="branch-head" class="branch-head" role="status" hidden></p>
       <div id="deck" class="deck" data-depth="0">
         <div class="deck-ghost g2" aria-hidden="true"></div>
         <div class="deck-ghost g1" aria-hidden="true"></div>

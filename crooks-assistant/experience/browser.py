@@ -31,6 +31,10 @@ SCRIPT = ROOT / "scripts" / "browser" / "experience.js"
 # found on the device and the 800 x 1280 gate could not see. Run after the gate, folded into
 # the same result, so one green means both sizes.
 TABLET_SCRIPT = ROOT / "scripts" / "browser" / "tablet.js"
+# D-3, at both sizes in one run: whether tapping a half changes the visible cards. The claim
+# the owner made — "it just shows two of the same thing" — is about pixels, and the 800 x 1280
+# gate and the physical 601 x 889 tablet disagree often enough that both have to be checked.
+SPLIT_SCRIPT = ROOT / "scripts" / "browser" / "split.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -141,10 +145,12 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # And the same again at the tablet's own size. The pictures that matter for an
         # eight-inch screen are the ones taken on an eight-inch screen: the Phase 2 live test
         # found clipping and a swallowed dock that the 800 x 1280 shots could not show.
-        if TABLET_SCRIPT.exists():
+        for extra in (TABLET_SCRIPT, SPLIT_SCRIPT):
+            if not extra.exists():
+                continue
             await asyncio.to_thread(
                 subprocess.run,
-                ["node", str(TABLET_SCRIPT), f"http://127.0.0.1:{port}", str(out)],
+                ["node", str(extra), f"http://127.0.0.1:{port}", str(out)],
                 cwd=ROOT, capture_output=True, text=True, timeout=300,
                 env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
             )
@@ -182,7 +188,7 @@ async def run_checks() -> dict[str, Any]:
     server, task, _store = await serve_fixture_world(port)
     try:
         results = []
-        for script in (SCRIPT, TABLET_SCRIPT):
+        for script in (SCRIPT, TABLET_SCRIPT, SPLIT_SCRIPT):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

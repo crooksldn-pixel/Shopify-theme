@@ -1001,9 +1001,31 @@ html[data-lite] .orb-zone{transition:none}
 .branch-chip{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border-radius:999px;
   border:1px solid var(--border-rest);background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
 .branch-chip[aria-pressed="true"]{background:var(--glass-control-active);color:var(--ink);border-color:var(--border-active);box-shadow:var(--shadow-active)}
+.branch-chip .branch-area{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.branch-chip[aria-pressed="false"] .branch-area{color:var(--ink-2)}
+.branch-chip .branch-detail{font-weight:500;color:var(--ink-2);max-width:11ch;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
 .branch-chip .branch-state{font-weight:500;color:var(--ink-3);text-transform:lowercase}
 .branch-chip.is-ready .branch-state{color:var(--ok,#4f9d69)}
 .branch-chip.is-failed .branch-state{color:var(--bad,#b4462f)}
+
+/* Which half this SCREEN is, above the cards. The chips say it too, but they sit in a rail of
+   other controls and the owner's complaint was about the screen: two of them looked the same.
+   Drawn only when the orb is divided. */
+.branch-head{display:flex;align-items:baseline;gap:10px;margin:0 0 8px;padding:6px 12px;
+  border-left:3px solid var(--border-active);border-radius:4px;background:var(--glass-control,rgba(0,0,0,.03));
+  font-size:12px;line-height:1.3;flex-wrap:wrap}
+.branch-head[hidden]{display:none}
+.branch-head .head-area{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.branch-head .head-detail{font-weight:600;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis}
+.branch-head .head-which{margin-left:auto;color:var(--ink-3);font-size:11px;white-space:nowrap}
+.branch-head[data-state="ready"]{border-left-color:var(--ok,#4f9d69)}
+.branch-head[data-state="failed"]{border-left-color:var(--bad,#b4462f)}
+.branch-head[data-state="working"],.branch-head[data-state="waiting"]{border-left-color:var(--ink-3)}
+
+/* A half that holds nothing, and the ways out of it. Not a card type: the Mac names the
+   commands (offer_for) and this is the shape they are drawn in. */
+.half-empty .rail{margin-top:12px}
 @media (prefers-reduced-motion: no-preference){
   .branch-chip.is-ready{animation:branch-ready 1200ms ease-out 2}
 }
