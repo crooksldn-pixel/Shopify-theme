@@ -2115,10 +2115,10 @@ function liveProposalIds() {
 // never claimed. A gesture is a request; only the Mac knows what became of it. So the page
 // asks — after every gesture and whenever it comes back to itself — and believes the answer.
 // Nothing here infers an outcome from the fact that a finger moved.
-// What the Mac's statuses do to the cards on screen: see SETTLED in web/action-state.js.
-// PENDING, EXECUTING and EXECUTED settle nothing — the change is still being made or proven,
-// and an outcome the owner has not been given is not shown as one.
-const RECONCILE_SETTLED = AS.SETTLED;
+// What the Mac's statuses do to the cards on screen is AS.SETTLED, in web/action-state.js,
+// and this page no longer keeps its own copy of it. PENDING, EXECUTING and EXECUTED settle
+// nothing there — the change is still being made or proven, and an outcome the owner has not
+// been given is not shown to him as one.
 let reconciling = false;
 // What the last reconciliation did: which cards the Mac's answer settled, and which were
 // still in flight after that and had to be corrected by force. `stuck` is meant to be empty

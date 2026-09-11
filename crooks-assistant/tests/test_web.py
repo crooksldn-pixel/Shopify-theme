@@ -456,7 +456,7 @@ def test_the_action_states_are_named_in_one_place_and_both_files_read_it():
     assert "const AS = window.CrooksActionState;" in APP_JS
     assert "AS.labelFor(code, 'Not applied')" in APP_JS, "the page keeps no second label table"
     assert "ACTION_LABELS" not in APP_JS
-    assert "const RECONCILE_SETTLED = AS.SETTLED;" in APP_JS
+    assert "RECONCILE_SETTLED" not in APP_JS, "nor a second table of what the Mac's statuses mean"
     assert "actionState()" in UI_JS, "the renderer reads the same machine"
     # And the page is served it before either of them.
     assert INDEX.index("/static/action-state.js") < INDEX.index("/static/ui.js") < INDEX.index("/static/app.js")
