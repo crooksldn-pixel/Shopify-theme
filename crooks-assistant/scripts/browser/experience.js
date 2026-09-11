@@ -192,8 +192,37 @@ async function main() {
     const form = new URLSearchParams({ session_id: 'browser', command: 'navigation.back' });
     return (await fetch('/command', { method: 'POST', body: form })).json();
   });
-  check('Back returns and redraws', back.ok === true && (back.ui || []).length > 0,
-    `ui=${(back.ui || []).map((i) => i.type).join(',')} answer=${back.answer}`);
+  // Back returns to the LIST the member was walked out of, and redraws that list — not the
+  // record, and not an empty screen with a sentence over it. The cards are what is checked,
+  // because `ok` was true twelve times in twenty-two seconds while the owner was lost.
+  const backTypes = (back.ui || []).map((i) => i.type);
+  check('Back returns to the list it came from, with cards on it',
+    backTypes.indexOf('order_list') !== -1,
+    `ui=${backTypes.join(',')} answer=${back.answer}`);
+  const backStop = (back.changed || {}).workspace || {};
+  check('and the Mac says which workspace that is',
+    backStop.kind === 'list' && Boolean(backStop.set_id),
+    JSON.stringify(backStop).slice(0, 200));
+
+  // Home is a PLACE. From a record three deep it must draw the landing for the half's area,
+  // never a replay of the record — which is what put the same email thread on screen eight
+  // times in the live session.
+  const home = await page.evaluate(async () => {
+    const form = new URLSearchParams({ session_id: 'browser', command: 'navigation.home' });
+    return (await fetch('/command', { method: 'POST', body: form })).json();
+  });
+  const homeTypes = (home.ui || []).map((i) => i.type);
+  check('Home draws the landing for this half, with cards on it',
+    homeTypes.indexOf('order_list') !== -1 && (home.changed || {}).home === true
+    && (home.changed || {}).area === 'orders',
+    `ui=${homeTypes.join(',')} changed=${JSON.stringify(home.changed || {}).slice(0, 160)}`);
+  const homeAgain = await page.evaluate(async () => {
+    const form = new URLSearchParams({ session_id: 'browser', command: 'navigation.home' });
+    return (await fetch('/command', { method: 'POST', body: form })).json();
+  });
+  check('pressed again, it is the same place and not an empty one',
+    JSON.stringify((homeAgain.ui || []).map((i) => i.type)) === JSON.stringify(homeTypes),
+    `first=${homeTypes.join(',')} again=${(homeAgain.ui || []).map((i) => i.type).join(',')}`);
 
   // ---- 6. touch, then voice
   const bound = await page.evaluate(async () => {
@@ -286,8 +315,11 @@ async function main() {
     };
     const card = document.querySelector('#cards .card');
     return {
-      back: rect('#back-btn'), next: rect('#next-btn'),
+      back: rect('#back-btn'), next: rect('#next-btn'), prev: rect('#prev-btn'),
       ref: (card && card.dataset.ref) || '', type: (card && card.dataset.type) || '',
+      types: Array.from(document.querySelectorAll('#cards .card')).map((c) => c.dataset.type || ''),
+      rows: Array.from(document.querySelectorAll('#cards .rows li, #cards .row')).length,
+      area: document.body.dataset.area || '', mode: document.body.dataset.mode || '',
       answer: ((document.querySelector('#answer') || {}).textContent || '').trim(),
       chip: ((document.querySelector('#stack .chip-set') || {}).textContent || '').trim(),
     };
@@ -299,6 +331,11 @@ async function main() {
     Boolean(atList.next && !atList.next.hidden && !atList.next.disabled)
     && Boolean(atList.back && !atList.back.hidden && atList.back.disabled),
     JSON.stringify(atList).slice(0, 200));
+  // The list's own step back sits beside its own step on, and starts greyed: the set is at
+  // its first member. Back is the trail's, and there is nothing behind a list just opened.
+  check('the list brings its own way back, greyed until the walk has begun',
+    Boolean(atList.prev && !atList.prev.hidden && atList.prev.disabled),
+    JSON.stringify(atList.prev));
 
   // The thumb test: one point on the glass, pressed twice.
   const thumb = await page.evaluate(() => {
@@ -329,13 +366,54 @@ async function main() {
     Boolean(end.next && !end.next.hidden && end.next.disabled && end.next.x === atList.next.x),
     JSON.stringify(end.next));
 
-  await page.evaluate(() => document.querySelector('#back-btn').click());
+  // The list's step back moves the CURSOR: 3 of 3 becomes 2 of 3 and Next comes alive again.
+  // Overshooting a queue by one used to be permanent — `workflow.previous` had no caller
+  // anywhere on the glass — and Back was wired to it instead, which is how one pair of
+  // buttons came to drive two cursors.
+  await page.evaluate(() => document.querySelector('#prev-btn').click());
   await sleep(1200);
   const stepped = await walkState();
-  check('Back steps the list cursor back, and Next comes alive again',
+  check('the list step back moves the cursor, and Next comes alive again',
     stepped.ref === second.ref && Boolean(stepped.next && !stepped.next.disabled) && /2 of 3/.test(stepped.answer),
     `ref=${stepped.ref} next=${JSON.stringify(stepped.next)} answer="${stepped.answer}"`);
+
+  // And Back walks the TRAIL out of the queue, one workspace at a time, ending at the list
+  // the walk started from — with its rows on screen and the dock lit for it. There was no way
+  // to reach this screen at all before: only records were stops on the trail.
+  let out = stepped;
+  for (let i = 0; i < 8 && out.type !== 'order_list' && out.back && !out.back.disabled; i++) {
+    await page.evaluate(() => document.querySelector('#back-btn').click());
+    await sleep(1100);
+    out = await walkState();
+  }
+  check('Back walks out of the queue and ends on the list itself',
+    out.type === 'order_list' && out.rows > 0 && out.mode === 'context',
+    `types=${out.types.join(',')} rows=${out.rows} answer="${out.answer}"`);
+  check('and the dock lights the place that list belongs to', out.area === 'orders', `area=${out.area}`);
+  check('at the list, Back is spent and says so in its slot',
+    Boolean(out.back && !out.back.hidden && out.back.disabled && out.back.x === atList.back.x),
+    JSON.stringify(out.back));
   await shot('05-list-walk');
+
+  // The Assistant chip, with a thumb. It is a place: a landing with cards on it, in the
+  // context mode — not the orb screen the old client-only Home dropped the owner onto, and
+  // not a replay of the record that happened to be oldest on the trail.
+  await say('show me order 1938');
+  const atRecord = await walkState();
+  check('a record is open to press Home from', atRecord.type === 'order', `type=${atRecord.type}`);
+  await page.evaluate(() => document.querySelector('#home-btn').click());
+  await sleep(1600);
+  const landed = await walkState();
+  check('the Assistant chip lands on a landing with cards, not on the orb',
+    landed.mode === 'context' && landed.types.indexOf('order_list') !== -1 && landed.type !== 'order',
+    `mode=${landed.mode} types=${landed.types.join(',')}`);
+  await page.evaluate(() => document.querySelector('#home-btn').click());
+  await sleep(1600);
+  const landedTwice = await walkState();
+  check('pressed twice, it is the same landing both times and still has cards on it',
+    JSON.stringify(landedTwice.types) === JSON.stringify(landed.types) && landedTwice.rows > 0,
+    `first=${landed.types.join(',')} again=${landedTwice.types.join(',')} rows=${landedTwice.rows}`);
+  await shot('08-assistant-landing');
 
   // ---- 9. touch, then voice, with a finger rather than with fetch
   //
