@@ -1032,6 +1032,9 @@ html[data-lite] .orb-zone{transition:none}
 @keyframes branch-ready{0%,100%{box-shadow:0 0 0 0 rgba(79,157,105,0)}50%{box-shadow:0 0 0 4px rgba(79,157,105,.22)}}
 .branch-act{min-height:40px;padding:8px 14px;border-radius:999px;border:1px solid var(--border-rest);
   background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
+/* What Split is for, on the screen with room for it. The owner asked out loud what the button
+   did; a control explained only by a gesture nobody mentioned is not discoverable. */
+.branch-why{flex-basis:100%;text-align:center;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
 
 /* ---- the capability card: what this build can do, grouped by the part of the shop.
    The kind ("Read", "Change", "Bulk") sits to the right of the sentence rather than after

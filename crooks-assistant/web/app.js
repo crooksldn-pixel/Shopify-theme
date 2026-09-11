@@ -1529,6 +1529,16 @@ function drawBranchBar() {
     split.setAttribute('aria-label', 'Divide the orb into two halves');
     split.addEventListener('click', () => splitOrb('button'));
     host.appendChild(split);
+    // On the orb screen there is room to say what it is for. "What does the split button do?"
+    // was asked out loud in the live session and answered "I don't know what that button is";
+    // a control whose only explanation is a gesture nobody was told about is not discoverable.
+    // In the rail beside Back and Next there is no room, and the chip stands alone.
+    if (!inRail) {
+      const why = document.createElement('span');
+      why.className = 'branch-why';
+      why.textContent = 'Work on two things at once';
+      host.appendChild(why);
+    }
     return;
   }
   branches.forEach((b, i) => {
@@ -1746,7 +1756,11 @@ async function restoreWorkspace() {
     const data = await response.json();
     applyBranches(data);
     const focused = branches.find((b) => b.branch_id === focusedBranch);
-    if (!focused || !focused.has_workspace) return;
+    // With one half and nothing on it there is nothing to put back. With two, the half being
+    // looked at is asked for either way: a half that holds nothing draws what it holds and the
+    // ways out of it, and a reload that left the owner on a blank screen under one of two
+    // identical chips is the state this whole section is about.
+    if (!focused || (!focused.has_workspace && branches.length < 2)) return;
     const drawn = await showBranchWorkspace(focusedBranch);
     T.record('navigate', { nav: 'restore', name: drawn ? 'drawn' : 'nothing', id: focusedBranch });
   } catch { /* offline: the idle screen is the honest one */ }

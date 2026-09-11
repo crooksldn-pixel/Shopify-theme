@@ -126,6 +126,14 @@ async function atSize(browser, size) {
   });
   check(at('a visible Split control is on the idle screen, finger-sized and on screen'),
         Boolean(splitChip && splitChip.h >= 40 && splitChip.onScreen), JSON.stringify(splitChip));
+  const why = await page.evaluate(() => {
+    const n = document.querySelector('#branch-bar .branch-why');
+    if (!n) return null;
+    const b = n.getBoundingClientRect();
+    return { text: n.textContent.trim(), onScreen: b.left >= 0 && b.right <= innerWidth };
+  });
+  check(at('and it says what it is for, rather than only what it is called'),
+        Boolean(why && why.text && why.onScreen), JSON.stringify(why));
 
   // ---- 2. one half, asked for a list. Then divide.
   await say("show me today's orders");
