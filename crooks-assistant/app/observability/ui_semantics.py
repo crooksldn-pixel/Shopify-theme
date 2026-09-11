@@ -235,7 +235,7 @@ ENTRIES: tuple[Entry, ...] = (
         where="It should last a second or two and then say Done, or say what went wrong. A card "
               "still saying it after the change has gone through is a fault on the tablet, not "
               "a change still running — the change is finished",
-        also=("approval", "undo"),
+        also=("undo", "approval"),
         asks=_asks(r"\bapplying\b", r"\bspinner\b", r"\bstill (?:going|spinning|hovering)\b"),
     ),
     Entry(
@@ -262,7 +262,7 @@ ENTRIES: tuple[Entry, ...] = (
               "to. Nothing is saved or sent until you tap — Save draft keeps it, Send sends it. "
               "A field the Mac heard rather than read is marked so you can check it",
         says=("write to them", "reply to this"),
-        also=("approval",),
+        also=("voice_bind", "approval"),
         asks=_asks(r"\bhow do i type\b", r"\btype (?:instead of|rather than) (?:speak|saying|talking)\b",
                    r"\bkeyboard\b", r"\bcomposer?\b", r"\btype (?:it|that|the)\b",
                    r"\bwithout (?:speaking|saying it|talking)\b"),
@@ -488,9 +488,14 @@ def lookup(text: str) -> Answer | None:
 
 
 def spoken(answer: Answer) -> str:
-    """The answer as it is said aloud: the sentence, and at most one pointer to a neighbour."""
+    """The answer as it is said aloud: the sentence, and at most one pointer to a neighbour.
+
+    The neighbour is the first related control the sentence has not already named — pointing
+    at Back in an answer that is mostly about Back is a sentence longer and no clearer.
+    """
     words = answer.words
-    if answer.related:
-        first = answer.related[0]
-        words = f"{words} {first.control} is the other half of that."
+    for entry in answer.related:
+        if entry.control.lower() in words.lower():
+            continue
+        return f"{words} See also {entry.control}."
     return words
