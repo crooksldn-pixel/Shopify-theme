@@ -342,7 +342,7 @@ the defects were. Specifically:
 
 ## 18 · PHYSICAL SAMSUNG TEST SCRIPT
 
-`docs/phase4/PHYSICAL_SAMSUNG_ACCEPTANCE.md` — ten steps, 15–25 minutes, each tied to the live
+`docs/phase4/PHYSICAL_SAMSUNG_ACCEPTANCE.md` — eleven steps, 17–27 minutes, each tied to the live
 defect it re-tests. Two of the steps test the system by testing the owner rather than the
 screen: step 6 asks him to find the typing path **without being told where it is** ("Find it
 without being told. That is the test."), and step 9 asks him to say a defect out loud and then

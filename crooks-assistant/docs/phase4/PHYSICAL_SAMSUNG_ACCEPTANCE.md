@@ -1,6 +1,6 @@
 # Physical acceptance on the Samsung — Phase 4
 
-**15–25 minutes.** This is not a tour of every feature. It is the highest-risk flows and the
+**17–27 minutes.** This is not a tour of every feature. It is the highest-risk flows and the
 things the last live session got wrong, in the order that would be most embarrassing to have
 got wrong again.
 
@@ -42,7 +42,9 @@ difference.
 5. While one half is still working, look at the selector: it should say so, and say **READY**
    when it finishes — without throwing anything over the half you are reading.
 6. Open the finished half. Its result must be there.
-7. Merge. The toast must not claim changes are waiting when none are.
+7. Merge. What it says about changes still waiting must be true — an Undo you have not used
+   is an offer, not a change waiting — and it must appear **above the cards, in its own
+   space**, never floating over the half you are reading.
 
 **Fail if:** the two halves are indistinguishable, or tapping a half redraws nothing.
 
@@ -81,6 +83,22 @@ looking at, what matters, what can I do.
 3. Open an order list. Same.
 
 **Fail if:** you must scroll past 1,500 px of anything to find the thing you came for.
+
+## 5b · The bottom of the deck (1 min) — D-12, and the worst thing this pass found
+
+The defect nobody reported because it reads as the tablet ignoring you: the cards were drawn
+and scrolled **through** the dock band at the bottom of the screen, so any control that came
+to rest in the bottom 112 px was untouchable — the invisible speech target took the tap
+instead. It hit nine of fifteen stress screens at your tablet's size.
+
+1. Open a long card — an order with many items, or a thread with several messages.
+2. Scroll until a **button** (an Apply, a chip, a "more" control) is sitting in the bottom
+   inch of the screen, just above the dock.
+3. **Tap it.** It must do its own job.
+
+**Fail if:** the tap starts a recording, or nothing happens at all. That is the bug, and it is
+the likeliest explanation for anything in the last session that felt like "it just would not
+let me press things".
 
 ## 6 · Typing, when the voice is wrong (2 min) — D-9
 
