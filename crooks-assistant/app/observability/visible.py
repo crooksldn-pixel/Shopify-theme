@@ -765,10 +765,6 @@ def _focus_lost(rec: Any) -> list[Finding]:
     return out
 
 
-def _feedback_findings(rec: Any) -> list[Finding]:
-    return _feedback(rec)[0]
-
-
 RULES = (_action_ui_stuck, _split_findings, _wrong_branch, _duplicate_renders, _progressive,
          _navigation, _controls, _stale_pending, _starved, _self_knowledge, _collisions,
          _focus_lost)
@@ -866,12 +862,20 @@ def read(rec: Any) -> Reading:
     """Everything this module finds in one timeline, and the two outcomes per turn."""
     findings: list[Finding] = []
     errors: list[str] = []
-    for rule in RULES + (_feedback_findings,):
+    recorded: list[dict[str, Any]] = []
+    ignored: list[dict[str, Any]] = []
+    for rule in RULES:
         try:
             findings.extend(rule(rec))
         except Exception as exc:  # noqa: BLE001 — one rule that cannot read a timeline is not a crash
             errors.append(f"{rule.__name__}: {type(exc).__name__}")
             log.warning("the experience rule %s could not read this timeline: %s", rule.__name__, exc)
+    try:
+        extra, recorded, ignored = _feedback(rec)
+        findings.extend(extra)
+    except Exception as exc:  # noqa: BLE001 — the same rule for the same reason
+        errors.append(f"_feedback: {type(exc).__name__}")
+        log.warning("owner feedback could not be read from this timeline: %s", exc)
     # Exact repeats are one finding: eleven Homes that each replayed the record in hand are one
     # defect said eleven times, and a report that lists it eleven times buries the other ten.
     seen: set[tuple[str, str, str]] = set()
@@ -883,7 +887,6 @@ def read(rec: Any) -> Reading:
         seen.add(key)
         unique.append(finding)
     findings = sorted(unique, key=lambda f: (CLASSES.index(f.name), f.turn_id))
-    _extra, recorded, ignored = _feedback(rec)
     reading = Reading(findings=findings, feedback=recorded, ignored_feedback=ignored, errors=errors)
     for turn in rec.turns:
         mine = reading.by_turn(turn.turn_id)

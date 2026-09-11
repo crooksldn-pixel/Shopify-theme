@@ -62,7 +62,7 @@ help:
 	@echo ""
 	@echo "  make bench-intelligence                       time the read layer, the working sets and batch staging against a fake store"
 	@echo "  make bench-lanes                              time the fast lane against the 9 September session's own figures"
-	@echo "  make watch [SESSION=ts-…]                     follow what it is doing, live, one line per thing"
+	@echo "  make watch [SESSION=ts-…] [V=1]               follow what it is doing, live, one line per thing (V=1 for everything)"
 	@echo ""
 	@echo "Three words on the PATH, so none of this needs a folder or a make:"
 	@echo "  make commands        install crooks-update, crooks-status and crooks-watch into ~/.local/bin"
@@ -176,7 +176,7 @@ control-app:
 	@sh mac/CrooksControl/build.sh --install
 
 watch:
-	@$(PY) scripts/watch.py $(SESSION)
+	@$(PY) scripts/watch.py $(SESSION) $(if $(V),--verbose,)
 
 bench-lanes:
 	@$(PY) scripts/bench_lanes.py $(if $(ORDERS),--orders $(ORDERS),) $(if $(LATENCY),--latency-ms $(LATENCY),)
