@@ -250,6 +250,28 @@ async function one(browser, vp) {
   }
   await shot(page, `collide-${vp.width}-cards`);
 
+  // ---- and the number a future session will record.
+  //
+  // This is the whole point of the exercise. `ts-20260911-001845` reported `clipped: 0` on
+  // every render while the owner was looking at overlapping text and controls; the flag was
+  // not lying, it was answering a narrower question. The snapshot now carries the answer to
+  // his question, from the same scan this file asserts on — so if the two ever disagree, the
+  // telemetry has stopped measuring and the gate says so.
+  const reported = await page.evaluate(() => {
+    const snap = window.CrooksTelemetry.snapshot(document.querySelector('#cards'), {});
+    const scan = window.CrooksCollide.scan({});
+    return {
+      flag: snap.overflow.collisions,
+      total: snap.collisions ? snap.collisions.total : null,
+      measured: snap.collisions ? snap.collisions.measured : 0,
+      scan: scan.total,
+      clipped: snap.overflow.clipped,
+    };
+  });
+  check(`${vp.name} · the telemetry records the real collision count, not a flag`,
+    reported.flag !== null && reported.flag === reported.scan && reported.measured > 40,
+    JSON.stringify(reported));
+
   // ---- the split: two halves, the branch selector on screen, and a message about one of them
   await page.evaluate(() => {
     const split = document.querySelector('#branch-bar [data-action="split"], #branch-rail [data-action="split"]');
