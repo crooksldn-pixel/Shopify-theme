@@ -31,11 +31,11 @@
   --border-subtle:var(--line);               /* dividers, rows                                   */
   --border-rest:var(--line-2);               /* a control at rest                                */
   --border-active:var(--line-3);             /* selected                                         */
-  --blur-surface:18px;                       /* the nav glass and the dock pill — and nothing else */
-  --blur-overlay:26px;                       /* the sheet                                        */
+  --blur-surface:12px;                       /* the nav glass and the dock pill — and nothing else */
+  --blur-overlay:16px;                       /* the sheet                                        */
   --radius-panel:20px;                       /* cards, the nav container, the dock               */
   --radius-control:14px;                     /* chips, tabs, rail chips, nested tiles            */
-  --shadow-floating:0 20px 44px -14px rgba(0,0,0,.6);
+  --shadow-floating:0 8px 20px -10px rgba(0,0,0,.62);
   --shadow-active:0 0 0 1px rgba(255,255,255,.22),0 0 18px rgba(255,255,255,.12);
   --motion-press:120ms;                      /* touch-down feedback                              */
   --motion-switch:260ms;                     /* a tab, a chip, a dock item changing state        */
@@ -50,10 +50,10 @@
   /* rhythm */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:28px; --sp-7:40px;
   --r-1:8px; --r-2:14px; --r-3:20px; --r-4:28px; --r-pill:999px;
-  --shadow-1:0 10px 30px rgba(0,0,0,.45);
-  --shadow-2:0 18px 50px rgba(0,0,0,.6);
+  --shadow-1:0 6px 16px rgba(0,0,0,.48);
+  --shadow-2:0 10px 28px rgba(0,0,0,.62);
   --inset-hi:inset 0 1px 0 rgba(255,255,255,.06);
-  --blur-1:14px; --blur-2:22px;
+  --blur-1:10px; --blur-2:16px;
   /* motion: micro / component / context */
   --t-1:120ms; --t-2:240ms; --t-3:380ms;
   --ease-out:cubic-bezier(.2,.7,.2,1);
@@ -77,11 +77,17 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 button{font:inherit;color:inherit}
-button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--line-2);outline-offset:2px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,
+a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabindex]:focus-visible,
+.row.tappable:focus-visible,.link-strip:focus-visible{
+  outline:2px solid var(--ink);outline-offset:2px;
+}
 [hidden]{display:none!important}
 
 .app{
-  position:relative;height:100%;width:100%;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr);
+  /* Four rows now: the global notification region, the wordmark, the stage, the footer. The
+     region is a row rather than a layer on purpose — see the notification block below. */
+  position:relative;height:100%;width:100%;overflow:hidden;display:grid;grid-template-rows:auto auto 1fr auto;grid-template-columns:minmax(0,1fr);
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   /* The atmosphere the glass sits on. Not black: a dark diagonal with two large, static,
      very faint glows — one warm at the top-left where the light in the cards comes from, one
@@ -107,10 +113,10 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
   margin-left:auto;display:flex;align-items:center;gap:8px;
   font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);
 }
-.conn-dot{width:6px;height:6px;border-radius:50%;background:var(--ink-4);transition:background var(--t-2)}
-.conn[data-state="ok"] .conn-dot{background:var(--ok)}
-.conn[data-state="degraded"] .conn-dot{background:var(--warn)}
-.conn[data-state="down"] .conn-dot{background:var(--bad)}
+.conn-dot{width:6px;height:6px;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1px var(--ink-4);transition:background var(--t-2)}
+.conn[data-state="ok"] .conn-dot{background:var(--ok);box-shadow:none}
+.conn[data-state="degraded"] .conn-dot{background:var(--warn);box-shadow:none;border-radius:1px;transform:rotate(45deg)}
+.conn[data-state="down"] .conn-dot{background:var(--bad);box-shadow:none;border-radius:1px}
 .conn[data-state="down"]{color:var(--ink-2)}
 .icon-btn{
   width:var(--tap);height:var(--tap);border-radius:var(--r-pill);border:1px solid var(--line);
@@ -216,7 +222,7 @@ body[data-mode="context"] .errline{display:none}
   border-radius:var(--r-pill);border:1px solid var(--border-rest);background:var(--glass-control);
   color:var(--ink-2);font-size:12px;letter-spacing:.06em;cursor:pointer;white-space:nowrap;
   transition:background var(--motion-switch) var(--ease-standard),border-color var(--motion-switch) var(--ease-standard),
-    transform var(--motion-press) var(--ease-standard),color var(--motion-switch),box-shadow var(--motion-switch);
+    transform var(--motion-press) var(--ease-standard),color var(--motion-switch);
 }
 .chip:active{transform:scale(.96);background:var(--glass-control-active);border-color:var(--border-active);transition-duration:var(--motion-press)}
 .chip[aria-pressed="true"],.chip.is-active{
@@ -254,7 +260,7 @@ body[data-mode="context"] .errline{display:none}
   flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn);
   animation:armed-pulse 1.6s var(--ease-inout) infinite;
 }
-@keyframes armed-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+@keyframes armed-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 /* The words wrap. They used to be one line with an ellipsis, which is what the owner saw
    as "clipped text" on the 601px screen. Two lines at most is plenty for "Replying to Damon". */
 .armed-what{flex:1;min-width:0;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
@@ -386,7 +392,7 @@ body[data-mode="context"] .errline{display:none}
   background:transparent;color:var(--ink-3);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
   font-weight:600;cursor:pointer;
   transition:background var(--motion-switch) var(--ease-standard),color var(--motion-switch),border-color var(--motion-switch),
-    box-shadow var(--motion-switch),transform var(--motion-press) var(--ease-standard);
+    transform var(--motion-press) var(--ease-standard);
 }
 .tab:active{transform:scale(.96);background:var(--glass-control)}
 /* Selected is fill AND border AND a soft halo. It was a hairline: the selected pill's fill
@@ -416,8 +422,9 @@ body[data-mode="context"] .errline{display:none}
 .msg.is-collapsed{cursor:pointer}
 
 .link-btn{
-  background:none;border:0;padding:8px 0;min-height:44px;color:var(--ink-2);font-size:13px;letter-spacing:.1em;
-  text-transform:uppercase;cursor:pointer;font-weight:600;
+  background:none;border:0;padding:8px 14px;min-height:44px;min-width:44px;color:var(--ink-2);font-size:13px;letter-spacing:.1em;
+  text-transform:uppercase;cursor:pointer;font-weight:600;align-self:flex-start;
+  border-radius:var(--radius-control);border:1px solid var(--border-subtle);
 }
 .link-btn:active{color:var(--ink)}
 .clamp{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
@@ -484,10 +491,12 @@ body[data-mode="context"] .bottom{opacity:0;pointer-events:none;transform:transl
 .recent .arrow{color:var(--ink-3);flex:none}
 .services{display:flex;justify-content:center;gap:26px;min-height:24px}
 .service{display:inline-flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.22em;color:var(--ink-4);text-transform:uppercase}
-.service-dot{width:5px;height:5px;border-radius:50%;background:var(--ink-4);transition:background var(--t-2)}
-.service[data-ok="true"] .service-dot{background:var(--ok)}
-.service[data-ok="false"] .service-dot{background:var(--bad)}
-.service[data-ok="off"] .service-dot{background:var(--warn)}
+/* Shape as well as colour: a disc is running, a square is down, a diamond is switched off,
+   a ring is not known yet. */
+.service-dot{width:6px;height:6px;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1px var(--ink-4);transition:background var(--t-2)}
+.service[data-ok="true"] .service-dot{background:var(--ok);box-shadow:none}
+.service[data-ok="false"] .service-dot{background:var(--bad);box-shadow:none;border-radius:1px}
+.service[data-ok="off"] .service-dot{background:var(--warn);box-shadow:none;border-radius:1px;transform:rotate(45deg)}
 /* Beside the cards the answer is the headline; "System ready." is for the empty stage. */
 body[data-mode="context"] .stage[data-state="READY"] .state-label{display:none}
 .service[data-ok="false"]{color:var(--ink-3)}
@@ -516,7 +525,7 @@ body[data-mode="context"] .talk-label{
   border-radius:var(--r-pill);border:1px solid var(--border-rest);background:var(--glass-3);color:var(--ink-2);
   box-shadow:var(--inset-hi),var(--shadow-floating);
   -webkit-backdrop-filter:blur(var(--blur-surface));backdrop-filter:blur(var(--blur-surface));
-  transition:background var(--motion-switch),border-color var(--motion-switch),box-shadow var(--motion-switch),transform var(--motion-press) var(--ease-standard);
+  transition:background var(--motion-switch),border-color var(--motion-switch),transform var(--motion-press) var(--ease-standard);
 }
 body[data-mode="context"] .talk:active .talk-label{transform:scale(.97)}
 .talk[data-recording="true"]{color:var(--ink)}
@@ -543,7 +552,7 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
   width:64px;height:56px;border-radius:var(--radius-control);border:1px solid transparent;background:transparent;
   color:var(--ink-3);cursor:pointer;
   transition:background var(--motion-switch) var(--ease-standard),border-color var(--motion-switch),color var(--motion-switch),
-    transform var(--motion-press) var(--ease-standard),box-shadow var(--motion-switch);
+    transform var(--motion-press) var(--ease-standard);
 }
 .dock-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--motion-switch) var(--ease-standard)}
 .dock-label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
@@ -602,7 +611,7 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
 .hrow{display:grid;grid-template-columns:8px 118px 1fr;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
 .hrow:first-child{border-top:0}
 .hdot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;position:relative;top:-1px}
-.hrow[data-ok="false"] .hdot{background:var(--bad)}
+.hrow[data-ok="false"] .hdot{background:var(--bad);border-radius:1px}
 .hname{color:var(--ink);font-weight:600}
 .hrow[data-ok="false"] .hname{color:var(--bad)}
 .hdetail{color:var(--ink-3);word-break:break-word;font-size:12px;line-height:1.45}
@@ -695,7 +704,13 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
 .action-surface[data-state="armed"] .action-arm{width:100%;opacity:.35}
 .action-surface[data-pressed="true"]{transform:scale(.975);background:var(--glass-3)}
 .action-surface[data-state="committing"]{color:var(--ink-2);animation:sys-pulse 1.2s var(--ease-inout) infinite}
-.action-surface[data-state="verified"]{color:var(--ok);border-color:rgba(120,200,140,.4)}
+/* Finished. The mark is the word's own, so the state survives a colour-blind eye and a
+   washed-out panel: green is the second signal, never the only one. */
+.action-surface[data-state="verified"]{color:var(--ok);border-color:rgba(120,200,140,.55);background:var(--ok-dim)}
+.action-surface[data-state="verified"] .action-label::before{content:"\2713\00a0";font-weight:700}
+/* Working. A solid amber edge as well as the pulse, because the pulse is the first thing an
+   old panel drops and the first thing prefers-reduced-motion turns off. */
+.action-surface[data-state="committing"]{border-color:var(--warn);border-style:solid}
 .action-surface[data-state="stale"],.action-surface[data-state="expired"],.action-surface[data-state="revoked"],
 .action-surface[data-state="failed"],.action-surface[data-state="unverified"],.action-surface[data-state="unsupported"],
 .action-surface[data-state="unavailable"],
@@ -712,6 +727,26 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
   .action-surface[data-state="armed"] .action-arm{width:100%;opacity:.35}
 }
 
+/* ------------------------------------------------------------- disabled, working, finished
+ *
+ * Section 29: a control that cannot be used must LOOK as though it cannot be used, from arm's
+ * length, in a workroom, on a cheap panel — so a dashed edge and a cursor as well as the
+ * opacity step, because opacity alone at .32 on a near-black ground is a control that simply
+ * looks unlit. Late in the file so it wins over the component that drew the control.
+ */
+.action[disabled],.action[aria-disabled="true"],
+.compose-btn[disabled],.compose-btn[aria-disabled="true"],
+.chip:disabled,.chip[aria-disabled="true"],
+.dock-btn[disabled],.btn[disabled],.rail-chip.is-off,
+.variant-add.is-off,.variant-row.is-off,.ws-opt[disabled],.note-dismiss[disabled]{
+  opacity:var(--opacity-disabled);cursor:not-allowed;border-style:dashed;box-shadow:none;
+}
+/* A disabled control takes no touch and no tap animation: a control that compresses under a
+   thumb and then does nothing is the worst of both. */
+.action[disabled],.compose-btn[disabled],.chip:disabled,.dock-btn[disabled],.btn[disabled],
+.rail-chip.is-off,.variant-add.is-off,.variant-row.is-off{pointer-events:none}
+.action[disabled]:active,.compose-btn[disabled]:active,.btn[disabled]:active{transform:none}
+
 /* ------------------------------------------------------------- lite device */
 /* Set by app.js on a device that reports few cores or little memory (the 2019 tablet). The
    design is the same; the blur behind the sheet and the deep card shadows are not. */
@@ -724,6 +759,34 @@ html[data-lite] .system-pulse{animation:none;opacity:.8}
 /* The stage's height change on a mode switch re-lays out every card per frame; on the old
    tablet the orb springs to size and the stage simply takes its new height. */
 html[data-lite] .orb-zone{transition:none}
+/* Arriving. A card that fades and rises is four frames of compositing per card, and three
+   cards arrive together; on the tablet the deck is simply there. */
+html[data-lite] .card,html[data-lite] .card.success,html[data-lite] .tabbed .panel,
+html[data-lite] .armed,html[data-lite] .note,html[data-lite] .sheet{animation:none}
+/* Decoration, not state: the boot pulse, the ready flourish on a half, the armed dot's
+   scale. The armed dot keeps its colour and its word; it stops moving. */
+html[data-lite] .branch-chip.is-ready{animation:none}
+html[data-lite] .armed-dot{animation:none}
+/* State, kept: a change being applied is the one thing on this screen that must be seen to
+   be still happening. Opacity only — no scale, so nothing is re-laid out. */
+html[data-lite] .action-surface[data-state="committing"]{animation:lite-working 1.4s steps(2,end) infinite}
+@keyframes lite-working{0%,49%{opacity:1}50%,100%{opacity:.62}}
+/* Two of the four layers of atmosphere. The warm glow the cards catch their edge light from
+   stays; the cool one and the wash do not. */
+html[data-lite] .app{
+  background:
+    radial-gradient(90% 60% at 8% 0%, rgba(255,232,205,.07), transparent 62%),
+    linear-gradient(160deg, #0b0b10 0%, var(--bg-0) 55%, #050507 100%);
+}
+/* The deck's own scroll is the hottest thing on this device: a translucent card over a
+   gradient, sixty times a second, under a thumb. Opaque while it moves is the one cheat that
+   buys the whole frame back, and the border and the top highlight keep the object glass. */
+html[data-lite] .card{background:var(--bg-2)}
+html[data-lite] .deck-ghost{display:none}
+html[data-lite] .row.tappable,html[data-lite] .chip,html[data-lite] .tab,html[data-lite] .dock-btn,
+html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,html[data-lite] .compose-btn{
+  transition-duration:var(--motion-press);
+}
 
 /* ------------------------------------------------------------- composition */
 /* People: an initials disc, so a customer reads as a profile and a message as a person. */
@@ -826,7 +889,7 @@ html[data-lite] .orb-zone{transition:none}
   border-radius:var(--radius-control);border:1px solid var(--border-rest);
   background:linear-gradient(180deg,var(--glass-2),var(--glass-control));color:var(--ink);box-shadow:var(--inset-hi);
   font-size:14px;font-weight:600;letter-spacing:.02em;cursor:pointer;
-  transition:transform var(--motion-press) var(--ease-standard),background var(--motion-press),border-color var(--motion-switch),box-shadow var(--motion-switch);
+  transition:transform var(--motion-press) var(--ease-standard),background var(--motion-press),border-color var(--motion-switch);
 }
 .rail-chip:active{transform:scale(.96);background:var(--glass-control-active);border-color:var(--border-active)}
 .rail-chip.risk-red{border-color:rgba(220,127,108,.35)}
@@ -941,7 +1004,9 @@ html[data-lite] .orb-zone{transition:none}
 .batch-why{color:var(--ink-3);text-align:right}
 .batch-excluded{margin-top:12px}
 .batch-members{margin-top:12px;font-size:14px}
-.batch-members summary{cursor:pointer;color:var(--ink-2);list-style:none;padding:8px 0}
+/* A text-only disclosure is still a control: it gets a box a thumb can find. */
+.batch-members summary{display:flex;align-items:center;min-height:44px;cursor:pointer;color:var(--ink-2);list-style:none;padding:8px 12px;
+  border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:var(--glass)}
 .batch-members summary::-webkit-details-marker{display:none}
 .batch-members summary::before{content:"›";display:inline-block;margin-right:8px;color:var(--ink-4);transition:transform .15s}
 .batch-members[open] summary::before{transform:rotate(90deg)}
@@ -953,26 +1018,74 @@ html[data-lite] .orb-zone{transition:none}
 .card-batch_result.partial .mark{background:var(--warn-dim,rgba(220,178,102,.18))}
 
 
-/* The toast. Fixed above every screen, out of the way of the orb, gone in four seconds. */
-/* A line that says something and goes. It must never take a touch: it used to sit at the
-   very bottom, exactly over the hold pill, and intercepted the fingers for the four seconds
-   it was up — a pinch made just after "Divided" landed on the toast and was cancelled. It
-   sits above the dock band now, and lets every touch through. */
-.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + var(--dock) + 8px);transform:translateX(-50%);
-  pointer-events:none;
-  max-width:min(92vw,560px);margin:0;padding:10px 16px;border-radius:14px;
-  background:var(--glass-surface-strong);color:var(--ink);border:1px solid var(--border-rest);
-  font-size:14px;line-height:1.35;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.35);z-index:60}
-.toast[hidden]{display:none}
-.toast.is-bad{border-color:var(--bad,#b4462f)}
-@media (prefers-reduced-motion: no-preference){.toast{animation:toast-in 140ms ease-out}}
-@keyframes toast-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+/* ------------------------------------------------------------------ notifications
+ *
+ * The floating bubble is gone. It was `position:fixed` above every screen, which is exactly
+ * why the live session's "Merged. 2 changes still waiting over there." appeared over the half
+ * the owner was reading, and why "Divided. Tap a half to talk to it…" appeared over the two
+ * chips it was telling him to tap.
+ *
+ * Three classes now, and the placement is the mechanism rather than a set of offsets to keep
+ * in step with the dock, the orb, the keyboard, Back, Next, Split, the branch selector, the
+ * composer and the approval surfaces:
+ *
+ *   .notes-global      a grid ROW above the wordmark. Two messages only — the Mac cannot be
+ *                      reached, and this build must be updated — and they push the screen
+ *                      down rather than covering it.
+ *   .notes-workspace   in flow in the workspace: under the orb's caption on the orb screen,
+ *                      above the deck beside cards.
+ *   .note-control      in flow inside the card, directly after the control it is about.
+ *
+ * None of the three is positioned, so none of them can be over anything. That is what
+ * web/collide.js measures in Chromium (rule `notification_over_chrome`), and it is measured
+ * with the dock up, the keyboard open and both halves on screen.
+ */
+.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;min-width:0}
+.notes[hidden]{display:none}
+.notes-global{padding:8px 14px 0}
+.notes-workspace{padding:0 14px 8px}
+.note{
+  display:flex;align-items:center;gap:10px;margin:0;min-height:44px;padding:6px 6px 6px 12px;
+  border-radius:var(--r-2);border:1px solid var(--border-rest);
+  background:var(--glass-surface-strong);color:var(--ink);
+  font-size:14px;line-height:1.35;
+}
+.note[hidden]{display:none}
+/* A word, always, beside the colour: Note, Done, Check, Failed. */
+.note-mark{flex:none;font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--ink-3)}
+.note-words{flex:1;min-width:0;overflow-wrap:anywhere}
+/* The same thing said twice is one row and a count, not two rows. */
+.note-count{flex:none;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.note-dismiss{
+  flex:none;min-height:44px;min-width:44px;padding:0 14px;border-radius:var(--r-pill);
+  border:1px solid var(--line-2);background:var(--glass);color:var(--ink-2);
+  font-size:12px;letter-spacing:.06em;cursor:pointer;
+}
+.note-dismiss:active{background:var(--glass-control-active);border-color:var(--border-active)}
+.note.tone-good{border-color:rgba(121,201,150,.4);background:var(--ok-dim)}
+.note.tone-good .note-mark{color:var(--ok)}
+.note.tone-warn{border-color:rgba(220,178,102,.4);background:var(--warn-dim)}
+.note.tone-warn .note-mark{color:var(--warn)}
+.note.tone-bad{border-color:var(--bad);background:var(--bad-dim)}
+.note.tone-bad .note-mark{color:var(--bad)}
+/* The machine's own state, above everything it is about. Heavier, because it is the only
+   class that interrupts. */
+.note-global{border-left-width:3px;border-radius:var(--r-2)}
+/* On the control: the card's own width, tight against the thing it is about. */
+.note-control{margin:8px 0 2px;font-size:13px;min-height:40px}
+.note-control .note-dismiss{min-height:40px;min-width:40px;padding:0 12px}
+/* Opacity only: no transform, no layout, one composited fade. Motion here says "this is new",
+   which is the whole of what it has to say. */
+@media (prefers-reduced-motion: no-preference){.note{animation:note-in 140ms ease-out}}
+@keyframes note-in{from{opacity:0}to{opacity:1}}
 
 /* A row's own buttons. Small, on the right, and only where the Mac put one. */
 .row-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex:0 0 auto}
-.row-btn{min-height:34px;padding:6px 12px;border-radius:10px;border:1px solid var(--border-rest);
+/* 44, not 34: this is the only control on a list row, it sits between two other tappable
+   rows, and it was the smallest thing on the tablet a thumb was asked to hit. */
+.row-btn{min-height:44px;min-width:44px;padding:8px 14px;border-radius:12px;border:1px solid var(--border-rest);
   background:var(--glass-surface-strong);color:var(--ink);font-size:13px;font-weight:600}
-.row-btn[disabled]{opacity:.55}
+.row-btn[disabled]{opacity:var(--opacity-disabled);border-style:dashed;cursor:not-allowed}
 .row-btn:active{transform:translateY(1px)}
 
 /* A card of tabs: one panel at a time, so an order is a screenful and not a scroll. */
@@ -998,17 +1111,19 @@ html[data-lite] .orb-zone{transition:none}
    doing in words — queued, working, waiting, ready — and never in a percentage. */
 .branch-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
 .branch-bar[hidden]{display:none}
-.branch-chip{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border-radius:999px;
+.branch-chip{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border-radius:999px;
   border:1px solid var(--border-rest);background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
 .branch-chip[aria-pressed="true"]{background:var(--glass-control-active);color:var(--ink);border-color:var(--border-active);box-shadow:var(--shadow-active)}
 .branch-chip .branch-state{font-weight:500;color:var(--ink-3);text-transform:lowercase}
 .branch-chip.is-ready .branch-state{color:var(--ok,#4f9d69)}
+.branch-chip.is-ready .branch-state::before{content:"\2713\00a0"}
 .branch-chip.is-failed .branch-state{color:var(--bad,#b4462f)}
+.branch-chip.is-failed .branch-state::before{content:"\0021\00a0"}
 @media (prefers-reduced-motion: no-preference){
   .branch-chip.is-ready{animation:branch-ready 1200ms ease-out 2}
 }
 @keyframes branch-ready{0%,100%{box-shadow:0 0 0 0 rgba(79,157,105,0)}50%{box-shadow:0 0 0 4px rgba(79,157,105,.22)}}
-.branch-act{min-height:40px;padding:8px 14px;border-radius:999px;border:1px solid var(--border-rest);
+.branch-act{min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--border-rest);
   background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
 
 /* ---- the capability card: what this build can do, grouped by the part of the shop.
@@ -1028,6 +1143,7 @@ html[data-lite] .orb-zone{transition:none}
   white-space:nowrap;justify-self:end;
 }
 .cap-row.new .cap-what,.cap-row.new{color:var(--good,#4f9d69)}
+.cap-row.new .cap-what::before{content:"\002b\00a0";font-weight:700}
 .cap-row.gone{color:var(--ink-3);text-decoration:line-through}
 
 /* The working set, as a strip rather than a card. It always sits under a list of the same
@@ -1066,7 +1182,7 @@ html[data-lite] .orb-zone{transition:none}
 .link-main{font-size:15px;font-weight:600;color:var(--ink);word-break:break-word}
 .link-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .link-chip{
-  display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 12px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border-radius:999px;
   border:1px solid var(--border-rest);background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;cursor:pointer;
 }
 .link-chip:active{background:var(--glass-control-active);border-color:var(--border-active)}
@@ -1144,7 +1260,9 @@ html[data-lite] .orb-zone{transition:none}
   box-shadow:var(--inset-hi);-webkit-appearance:none;appearance:none;resize:vertical;
 }
 .field-input::placeholder{color:var(--ink-4)}
+.field-input,.compose-actions,.ws-options,.action-surface{scroll-margin-bottom:calc(var(--dock) + 24px);scroll-margin-top:16px}
 .field-input:focus{outline:none;background:var(--glass-control-active);border-color:var(--border-active);box-shadow:0 0 0 3px rgba(235,232,224,.12)}
+.field-input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .field-hint{margin:0;font-size:12px;color:var(--ink-3);word-break:break-word}
 .field.is-ok .field-input{border-color:var(--ok)}
 .field.is-uncertain .field-input{border-color:var(--warn);background:var(--warn-dim)}

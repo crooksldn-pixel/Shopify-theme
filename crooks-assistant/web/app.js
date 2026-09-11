@@ -51,7 +51,8 @@ const el = {
   body: document.body, stage: $('stage'), conn: $('conn'), connText: $('conn-text'),
   system: $('system'), systemTitle: $('system-title'), systemSub: $('system-sub'), systemNote: $('system-note'),
   orb: $('orb'), orbFrame: $('orb-frame'), state: $('state-label'), sub: $('state-sub'),
-  heard: $('heard'), answer: $('answer'), errline: $('errline'), toast: $('toast'), timings: $('timings'),
+  heard: $('heard'), answer: $('answer'), errline: $('errline'), timings: $('timings'),
+  notesGlobal: $('notes-global'), notesOrb: $('notes-orb'), notesDeck: $('notes-deck'),
   context: $('context'), nav: $('context-nav'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
   armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'), branchRail: $('branch-rail'),
   nextBtn: $('next-btn'),
@@ -226,6 +227,9 @@ function setMode(mode) {
   el.body.dataset.mode = mode;
   if (mode === 'orb') lightDock([]);
   drawBranchBar();
+  // A workspace message follows the workspace: under the orb's caption on the orb screen,
+  // above the deck beside cards. Both are in flow, so neither can cover anything.
+  if (window.CrooksNotify) window.CrooksNotify.remode();
   el.talk.setAttribute('aria-label', mode === 'orb' ? 'Hold to speak' : 'Hold to speak (dock)');
   // Beside the cards the orb is shown at under a third of its size; it draws at that size
   // rather than painting twelve times the pixels it shows.
@@ -873,25 +877,37 @@ function pickMimeType() {
   return '';
 }
 
-// A transient line, and nothing else. A speech recogniser that heard nothing is not an
-// event worth a new screen: the September session answered "I did not catch that" with a
-// full surface, which threw away what was on it. This says the words, keeps the context,
-// and goes.
-const TOAST_MS = 4000;
-let toastTimer = null;
-function toast(message, kind) {
+// Everything this page says goes through here, and web/notify.js decides where it appears:
+// on the control, in the workspace, or — for the two states of the machine itself — above the
+// wordmark, in flow. Nothing floats over the dock, the orb, the halves or the composer any
+// more, because nothing here is positioned over anything.
+//
+// `toast(words)` and `toast(words, 'bad')` keep working as they did: the callers all around
+// this file mean "say this in the workspace", which is what they get. A caller that knows
+// better — a message about one half, a message belonging to a control, a message about the
+// Mac itself — passes a second argument instead.
+function notify(message, where) {
   const words = String(message || '').trim();
-  const node = el.toast;
-  if (!words || !node) return;
-  node.textContent = words;
-  node.className = kind === 'bad' ? 'toast is-bad' : 'toast';
-  node.hidden = false;
-  T.record('toast', { message: words.slice(0, 120), name: kind || 'note' });
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    node.textContent = '';
-    node.hidden = true;
-  }, TOAST_MS);
+  const api = typeof window !== 'undefined' ? window.CrooksNotify : null;
+  if (!words || !api) return null;
+  const spec = Object.assign({ text: words, class: 'workspace', tone: 'info' }, where || {});
+  // A message about a half is that half's. The live session threw "Merged. 2 changes still
+  // waiting over there." over the half the owner was reading; a branch-scoped message is
+  // hidden while the other half is focused, and is still there when he comes back to it.
+  if (spec.branch === undefined && spec.class === 'workspace' && focusedBranch) spec.branch = focusedBranch;
+  return api.show(spec);
+}
+function toast(message, kind) {
+  return notify(message, { tone: kind === 'bad' ? 'bad' : 'info' });
+}
+
+// CONTROL-LOCAL: the words appear directly after the control they are about, inside its own
+// card, so they scroll with it and cover nothing. A control with no parent on screen any more
+// falls back to the workspace rather than being dropped.
+function notifyControl(message, control, where) {
+  const host = control && control.parentNode ? control.parentNode : null;
+  if (!host) return notify(message, where);
+  return notify(message, Object.assign({ class: 'control', host, after: control }, where || {}));
 }
 
 // Heard nothing, or nothing usable. Say so on one line and leave the screen alone: the
@@ -1495,6 +1511,9 @@ function applyBranches(shape) {
     restoreDeck(focusedBranch);
   }
   drawBranchBar();
+  // Whose messages these are. A message about the other half stays where it is and stops
+  // being drawn, which is the fix for the merge line that landed over the wrong workspace.
+  if (window.CrooksNotify) window.CrooksNotify.focusBranch(focusedBranch);
   const split = branches.length > 1 ? 1 : 0;
   const which = branches.length > 1 && branches[1] && branches[1].branch_id === focusedBranch ? 1 : 0;
   if (orb && typeof orb.setSplit === 'function') orb.setSplit(split, which);
@@ -1573,7 +1592,7 @@ async function focusBranch(branchId) {
     el.answer.textContent = '';
     el.heard.textContent = '';
     setMode('orb');
-    toast('This half has nothing yet. Ask it something.');
+    notify('This half has nothing yet. Ask it something.', { code: 'half_empty', branch: branchId });
   }
 }
 
@@ -1628,16 +1647,19 @@ async function branchCommand(branchId, verb) {
     if (verb === 'merge' && data.merged) {
       const waiting = Array.isArray(data.merged.still_waiting) ? data.merged.still_waiting.length : 0;
       const looked = Array.isArray(data.merged.looked_at) ? data.merged.looked_at.length : 0;
-      toast(waiting
+      // On the half that is left, which is the half that did the merging — never over the
+      // other one's workspace, which is what the live session did.
+      notify(waiting
         ? `Merged. ${waiting} change${waiting === 1 ? '' : 's'} still waiting over there.`
-        : `Merged. ${looked} thing${looked === 1 ? '' : 's'} it looked at came back.`);
+        : `Merged. ${looked} thing${looked === 1 ? '' : 's'} it looked at came back.`,
+      { tone: waiting ? 'warn' : 'good', code: 'merged', branch: focusedBranch });
     }
     if (verb === 'cancel' && Array.isArray(data.revoked) && data.revoked.length) {
       settleProposals(data.revoked, 'revoked', 'Withdrawn');
     }
     return data;
   } catch {
-    toast('The Mac did not answer.');
+    notify('The Mac did not answer.', { class: 'global', machine: true, tone: 'bad', code: 'backend_silent' });
     return null;
   }
 }
@@ -1654,7 +1676,10 @@ async function splitOrb(how) {
   if (branches.length > 1) return;
   T.record('navigate', { nav: 'split', name: how });
   const data = await branchCommand('', 'fork');
-  if (data) { haptic(HAPTIC.done); toast('Divided. Tap a half to talk to it; the other keeps working.'); }
+  if (data) {
+    haptic(HAPTIC.done);
+    notify('Divided. Tap a half to talk to it; the other keeps working.', { code: 'divided', tone: 'good', branch: focusedBranch });
+  }
 }
 async function mergeOrb(how) {
   const other = (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
@@ -1827,7 +1852,7 @@ async function armAction(proposalId) {
 // anything — it puts the words in the owner's mouth. The dock says what to say; the hold
 // asks; the Mac prepares; the gesture applies. Nothing shortcuts that.
 let primedInstruction = '';
-async function primeAction(action) {
+async function primeAction(action, chip) {
   const words = String(action && action.instruction || '').trim();
   if (!words || actionBlocked()) return;
   if (liveActionSurface()) {
@@ -1838,7 +1863,7 @@ async function primeAction(action) {
     // mode (web/style.css), and a card waiting for a gesture is ALWAYS context mode — so this
     // sentence, and the one below it, were written to an invisible element in every state
     // where they could occur. Measured shown:false in every context-mode sample.
-    toast('Finish or leave the card that is waiting first.', 'bad');
+    notifyControl('Finish or leave the card that is waiting first.', chip, { tone: 'bad', code: 'card_waiting' });
     haptic(HAPTIC.error);
     T.record('action_primed', { action: String(action.id || ''), outcome: 'blocked_by_live_card' });
     return;
@@ -1877,7 +1902,7 @@ async function primeAction(action) {
     // The Mac refused — there is no record of that kind open. Say the reason it gave rather
     // than leaving the owner holding a primed sentence that will not land where he thinks.
     primedInstruction = '';
-    toast((bound && (bound.answer || bound.detail)) || 'There is nothing open to do that to.', 'bad');
+    notifyControl((bound && (bound.answer || bound.detail)) || 'There is nothing open to do that to.', chip, { tone: 'bad', code: 'nothing_open' });
     T.record('action_primed', { action: String(action.id || ''), outcome: 'refused' });
     return;
   }
@@ -1976,7 +2001,9 @@ function settleAction(node, payload, status) {
     settleActionNode(node, code === 'verified' ? 'verified' : code, ACTION_LABELS[code] || 'Not applied');
   }
   if (status >= 400 && !items.length) {
-    toast(ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.'), 'bad');
+    const surface = node.querySelector ? node.querySelector('.action-surface') : null;
+    notifyControl(ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.'),
+      surface, { tone: 'bad', code: `action_${code || 'refused'}` });
   }
   // Whatever this page believes just happened, ask the Mac. It is the only one that knows.
   reconcileActions('gesture');
@@ -2246,7 +2273,7 @@ async function submit(body, isAudio) {
     const response = await fetch('/turn', options);
     if (!response.ok) {
       T.record('turn_failed', { status: response.status, ms: Date.now() - startedAt });
-      if (!stillHere()) { decks.delete(askedBranch); toast('The other half hit a problem.'); return; }
+      if (!stillHere()) { decks.delete(askedBranch); notify('The other half hit a problem.', { tone: 'bad', code: 'half_failed', branch: askedBranch }); return; }
       lastWasError = true;
       lastErrorTitle = response.status === 403 ? 'Not allowed' : 'The Mac hit a problem';
       el.errline.textContent = response.status === 403
@@ -2277,7 +2304,7 @@ async function submit(body, isAudio) {
       if (data.branches) applyBranches(data.branches);
       if (Array.isArray(data.revoked) && data.revoked.length) settleProposals(data.revoked, 'revoked', 'Withdrawn');
       haptic(HAPTIC.done);
-      toast('The other half has an answer. Tap it to see.');
+      notify('The other half has an answer. Tap it to see.', { code: 'half_ready', branch: askedBranch });
       return;
     }
     el.heard.textContent = data.question ? `“${data.question}”` : '';
@@ -2307,7 +2334,7 @@ async function submit(body, isAudio) {
       return;
     }
     T.record('turn_failed', { status: 0, aborted: controller.signal.aborted, ms: Date.now() - startedAt });
-    if (!stillHere()) { decks.delete(askedBranch); toast('The other half hit a problem.'); return; }
+    if (!stillHere()) { decks.delete(askedBranch); notify('The other half hit a problem.', { tone: 'bad', code: 'half_failed', branch: askedBranch }); return; }
     lastWasError = true;
     lastErrorTitle = controller.signal.aborted ? 'The Mac took too long' : 'The Mac did not answer';
     el.errline.textContent = controller.signal.aborted
@@ -2894,6 +2921,20 @@ function registerServiceWorker() {
   });
 }
 
+// The three places a message may appear, handed over once. `mode` is asked rather than
+// pushed, because a workspace message drawn while the orb is the screen belongs under the
+// caption and the same message drawn beside cards belongs above the deck.
+if (window.CrooksNotify) {
+  window.CrooksNotify.init({
+    document,
+    global: el.notesGlobal,
+    orbWorkspace: el.notesOrb,
+    deckWorkspace: el.notesDeck,
+    mode: () => el.body.dataset.mode || 'orb',
+    record: (kind, fields) => T.record(kind, fields),
+  });
+}
+
 wireOrbGestures();
 registerServiceWorker();
 checkReachable();
@@ -3096,7 +3137,7 @@ if (!window.__crooksCommandDelegate) {
       if (!name) return;
       if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
       // Voice wins over a tap, here as at every other control on the glass.
-      if (actionBlocked()) { toast('Finish speaking first.'); return; }
+      if (actionBlocked()) { notifyControl('Finish speaking first.', button, { tone: 'warn', code: 'speaking' }); return; }
       let args = {};
       try { args = JSON.parse(button.dataset.args || '{}'); } catch { args = {}; }
       if (!args || typeof args !== 'object' || Array.isArray(args)) return;
@@ -3114,7 +3155,7 @@ if (!window.__crooksCommandDelegate) {
       if (!reply || reply.ok !== true) {
         // Refused, or the Mac is away. Say why and give the button back — a control that
         // goes dead on a refusal is worse than one that says what happened.
-        toast(String((reply && (reply.detail || reply.answer)) || 'The Mac did not answer.'));
+        notifyControl(String((reply && (reply.detail || reply.answer)) || 'The Mac did not answer.'), button, { tone: 'bad', code: 'command_refused' });
         button.disabled = false;
         if (label && label !== button) label.textContent = was;
         return;

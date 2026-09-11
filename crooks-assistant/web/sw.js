@@ -28,6 +28,8 @@ const SHELL = [
   '/static/app.js',
   '/static/ui.js',
   '/static/telemetry.js',
+  '/static/collide.js',
+  '/static/notify.js',
   '/static/orb.js',
   '/static/audio-viz.js',
   '/manifest.webmanifest',
