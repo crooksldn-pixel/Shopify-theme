@@ -194,6 +194,36 @@ def test_back_restores_the_working_set_and_the_cursor(world):
     assert "3 of 3" in forward.answer, forward.answer
 
 
+def test_back_to_a_narrowed_list_comes_back_narrowed(world):
+    """The filters come back with the set, and are not kept on the stop.
+
+    A working set is immutable and carries the query that made it, so restoring `set_id`
+    restores exactly the narrowing the owner was looking at — including one made by a second
+    narrowing step, which is a new set with the first as its parent. A stop that copied the
+    filters instead could disagree with the set it named.
+    """
+    session, branch = world
+    wide = orders_list(session, branch)
+    narrow = working_sets.create(
+        session, kind="orders", members=[ORDER_A], label="unfulfilled, over £50",
+        provenance={"tool": "commerce_query", "parent": wide.set_id, "step": "narrow",
+                    "query": {"filters": {"fulfillment": "unfulfilled", "total_min": 50}}},
+    )
+    branch.enter(area="orders", kind=LIST_KIND, ref=narrow.set_id, label=narrow.label,
+                 set_id=narrow.set_id, set_kind="orders", set_label=narrow.label, total=1)
+    branch.workflow = Workflow(workflow_id="wf_narrow", set_id=narrow.set_id, kind="orders",
+                               label=narrow.label, cursor=-1, total=1)
+    branch.set_id = narrow.set_id
+    run("open.entity", session, branch, kind="order", ref=ORDER_A, label="CROOKS-1957")
+
+    back = run("navigation.back", session, branch)
+    restored = working_sets.get(session, back.changed["workspace"]["set_id"])
+    assert restored is not None and restored.set_id == narrow.set_id
+    assert restored.provenance["query"]["filters"] == {"fulfillment": "unfulfilled", "total_min": 50}
+    assert restored.parent == wide.set_id, "the narrowing forgot what it narrowed"
+    assert branch.workflow.set_id == narrow.set_id and branch.workflow.total == 1
+
+
 def test_back_remembers_which_record_the_workspace_was_reached_from(world):
     """"Customer ON CROOKS-1957". A customer opened from an order is not the same workspace as
     the same customer opened from the inbox, and the relation is what the card says."""
