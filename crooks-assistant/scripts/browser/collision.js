@@ -13,7 +13,7 @@
  *   601 × 889 at DPR 1.33 — the Galaxy Tab A 8.0 in the owner's hand
  *   800 × 1280 at DPR 1   — the gate's own portrait
  *
- * Fifteen fixtures, every one a value a real shop has: a customer with a very long name, an
+ * Nineteen fixtures, every one a value a real shop has: a customer with a very long name, an
  * eighty-character email address, a four-line postal address, a long SKU, a long tracking
  * number, a product title that does not fit, a subject that does not fit, a note with five
  * paragraphs in it, a total in the millions, nine status chips, five actions, the split, the
@@ -130,6 +130,38 @@ const CASES = [
     notes: ['Nothing exists in the shop until the card that follows is authorised.'],
     actions: [{ id: 'prepare', label: 'Prepare the change', command: 'workspace.prepare', args: 'workspace_id=ws_collide1', enabled: true, risk: 'amber' }, { id: 'discard', label: 'Throw it away', command: 'workspace.discard', args: 'workspace_id=ws_collide1', enabled: false, risk: 'amber' }],
   } }] },
+  // A list whose rows carry their own buttons (app/actions/rows.py), a thread with a linked
+  // order and a customer chip, a bulk result with its members folded away, and a variant
+  // picker with a stepper: between them they draw every control the section 29 pass resized —
+  // .row-btn, .link-chip, .link-strip, a <summary> and the stepper — so the 44px check has
+  // something to measure rather than passing because nothing on screen was small.
+  { id: 'row_actions', ui: [{ type: 'email_list', data: { title: 'Waiting for a reply', count: 3, threads: [
+    { thread_id: 't1', from: LONG_NAME, from_email: LONG_EMAIL, subject: LONG_SUBJECT, date: 'Tue, 8 Sep 2026 10:12:00 +0100', snippet: LONG_NOTE, known_customer: true, likely_bulk: false,
+      actions: [{ id: 'reply', label: 'Reply', enabled: true, detail: 'Arms the microphone' }, { id: 'email_archive', label: 'Archive', enabled: true, detail: 'Prepares the change' }, { id: 'later', label: 'Later', enabled: false, detail: 'not yet' }] },
+    { thread_id: 't2', from: 'Carrier Updates', from_email: 'no-reply@example.com', subject: 'Weekly digest', date: 'Mon, 7 Sep 2026 07:00:00 +0100', snippet: 'This week in shipping…', likely_bulk: true, known_customer: false,
+      actions: [{ id: 'email_archive', label: 'Archive', enabled: true }] },
+  ] } }] },
+  { id: 'linked_graph', ui: [
+    { type: 'email_thread', data: { thread_id: 't1', subject: LONG_SUBJECT, message_count: 1, truncated: false,
+      link_confidence: 'confident', link_provenance: ['the order number is in the message', 'the sender is the customer on the order'],
+      linked_order: { order_id: 'gid://shopify/Order/0', order_number: '#1938', total: BIG_MONEY, fulfillment: 'unfulfilled' },
+      linked_customer: { customer_id: 'gid://shopify/Customer/0', name: LONG_NAME },
+      messages: [{ from: LONG_NAME, from_email: LONG_EMAIL, date: 'Tue, 8 Sep 2026 10:12:00 +0100', subject: LONG_SUBJECT, body: LONG_NOTE }],
+      actions: [{ id: 'reply', label: 'Reply', enabled: true, risk: 'amber', mode: 'ask', family: 'email.reply', instruction: 'Reply' }] } },
+    { type: 'reply_state', data: { thread_id: 't1', latest_direction: 'inbound', replied: false, waiting_since: 'Tuesday', last_from: LONG_EMAIL, order_number: '#1938', confidence: 'confident', provenance: ['the order number is in the message'] } },
+  ] },
+  { id: 'bulk_result', ui: [{ type: 'batch_result', data: { batch_id: 'batch_collide1', operation: 'batch_order_tags_add',
+    title: 'Tags added: 20 of 21', detail: LONG_SUBJECT, all_verified: false, summary: '20 applied, 1 not',
+    counts: { requested: 23, eligible: 21, excluded: 2, verified: 20, unverified: 0, stale: 0, failed: 1, not_attempted: 0 },
+    rows: [{ label: '#1938', outcome: 'applied', code: 'verified' }, { label: '#1935', outcome: 'not applied', code: 'failed' }],
+    note: 'The one marked not applied was left as it was.',
+    undo: { batch_id: 'batch_collide_undo', label: 'Undo all', interaction: 'hold_to_arm', ttl_s: 120, armed_after_ms: 650 } } }] },
+  { id: 'variant_picker', ui: [{ type: 'variant_picker', data: { order_id: 'gid://shopify/Order/0', order_number: '#1938',
+    count: 2, quantity: 2, max_quantity: 9, confident_variant_id: 'gid://shopify/ProductVariant/1',
+    candidates: [
+      { variant_id: 'gid://shopify/ProductVariant/1', title: LONG_TITLE, options: ['W34', 'L32', 'Unwashed'], price: BIG_MONEY, available: 3, tracked: true },
+      { variant_id: 'gid://shopify/ProductVariant/2', title: 'Yard Jeans', options: ['W36', 'L32'], price: '£95.00', available: 0, tracked: true },
+    ] } }] },
   // Everything at once, which is how a workbench screen actually looks.
   { id: 'everything', ui: [
     { type: 'order', data: order({ customer_name: LONG_NAME, customer_email: LONG_EMAIL, tags: CHIPS, note: LONG_NOTE, total: BIG_MONEY, shipping_address: LONG_ADDRESS, actions: ACTIONS_FIVE, items: [{ title: LONG_TITLE, variant: 'W34 / L32', sku: LONG_SKU, quantity: 2, total: BIG_MONEY, stock: { tracked: true, available: 0 } }] }) },
