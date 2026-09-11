@@ -98,15 +98,15 @@ while looking at overlapping text.
 | D-2 | Undo offer counted as a change still waiting | `waiting_ids`/`undoable_ids` split in `app/actions/engine.py`; `POST /actions/{id}/dismiss` | `tests/test_actions.py`, `action_state.js` merge check |
 | D-3 | Split showed two identical screens | `fork_from`: a half inherits what its parent HOLDS and nothing of what it SHOWS; per-branch state and headline; five branch states | `tests/test_split.py` (19), `scripts/browser/split.js` (23 × 2 viewports) |
 | D-4 | The owner's read refused because an earlier turn read too much | Five read lanes in priority order, each keyed on a unit of work; foreground yields nothing to background | `tests/test_read_budget.py` (17) |
-| D-5 | Nothing appeared until everything was ready | Progressive workspaces: shell at 0.0 ms, first fact at 2.5 ms, complete at 210 ms | `tests/test_progressive.py` (31), `tests/test_progressive_turn.py` (6), `tests/web/progressive.test.js` (13) |
+| D-5 | Nothing appeared until everything was ready | Progressive workspaces: shell at 0.0 ms, first fact at 0.9 ms, complete at 253 ms | `tests/test_progressive.py` (31), `tests/test_progressive_turn.py` (6), `tests/web/progressive.test.js` (13) |
 | D-6 | The assistant disclaimed its own interface | `app/observability/ui_semantics.py` + `app/families/self_knowledge.py` | analyser suite |
 | D-7 | Owner-reported defects had nowhere to go | `app/observability/feedback.py` + `app/families/owner_feedback.py`; report §15 carries them verbatim | analyser suite |
 | D-8 | "today's — uh — yesterday's" answered for today | `app/fastpath/correction.py`; nine correction shapes, nine comparisons that must not flip | `tests/test_self_correction.py` (25) |
 | D-9 | Precision had no keyboard | Typable fields with a visible "Tap to type"; a new address workspace; drafts survive a redraw with the caret | `tests/test_address_typing.py` (36), `tests/web/email.test.js` (24) |
 | D-10 | Navigation answered ok=true while the owner was lost | Home is a branch-local landing; Back restores a workspace; Next carries position and total as numbers; the list got its own step-back chip | `tests/test_navigation.py` (20), 4 golden scenarios, 11 browser checks |
 | D-11 | Eight rail actions rendered, none used | At most two primary chips by context; the rest behind one control; every disabled chip says why | `tests/test_email_workspace.py` (34) |
-| D-12 | Cards far taller than the screen, controls under the dock | Deck ends where the dock begins; thread 1,488→640 px, order list 933→665 px, worst order 633 px | `tests/test_density.py` (39 checks), `scripts/browser/collision.js` (26 checks, 21 fixtures, 7 rules, both viewports) |
-| D-13 | Duplicate reads inside one turn | Read dedupe: 66 requests avoided of 139 across all 55 scenarios | `tests/test_read_dedupe.py` (15) |
+| D-12 | Cards far taller than the screen, controls under the dock | Deck ends where the dock begins; thread 1,488→640 px, order list 933→665 px, worst order 633 px | `tests/test_density.py` (39 checks), `scripts/browser/collision.js` (28 checks, 21 fixtures, 7 rules, both viewports) |
+| D-13 | Duplicate reads inside one turn | Read dedupe: 74 requests avoided of 157 across all 59 scenarios | `tests/test_read_dedupe.py` (15) |
 | D-14 | A status aside hijacked the request | `asked` signal (question OR listing); clause splitting on sentences only | `tests/test_multi_intent.py` (6) |
 | D-15 | A card type the tablet could not draw | A read that found nothing draws a card saying so; an unknown type is dropped loudly | `tests/test_progressive.py` |
 
@@ -236,17 +236,22 @@ not repeat it.
 | Measure | Before | After |
 |---------|--------|-------|
 | Time to shell (first card on the glass) | — (nothing until the turn finished; `turn_c8eb4cffe077` waited 7,975 ms) | **0.0 ms** |
-| Time to first fact | 7,975 ms observed | **2.5 ms** |
-| Time to first useful workspace | = time to final prose | **2.5 ms** |
-| Time to complete workspace | — | **210.3 ms** (with a deliberately slow 500 ms customer read) |
-| Duplicate reads across 55 scenarios | 0 avoided | **66 avoided of 139 served (47%)** |
-| Provider calls saved | 0 | **66** |
-| Renders drawn vs suppressed, one live turn | 7 drawn | **4 drawn, 3 suppressed** |
+| Time to first fact | 7,975 ms observed | **0.9 ms** |
+| Time to first useful workspace | = time to final prose | **0.9 ms** |
+| Time to complete workspace | — | **253.3 ms** (with a deliberately slow 500 ms customer read) |
+| Duplicate reads across the 59 golden scenarios | 0 avoided | **74 avoided of 157 (47%)** |
+| Provider calls saved | 0 | **74** |
+| Renders drawn vs suppressed, one turn | 7 drawn | **4 drawn, 3 suppressed** (2 order, 1 attention) |
 | 24 identical thread renders | 24 drawn | **1 drawn, 23 suppressed** |
 
-The milliseconds saved by dedupe are small against the fixture shop, which answers instantly.
-Against the real store — where the live session measured **17,302 ms** of reading — each
-avoided request is 150–400 ms.
+Every figure above was measured on THIS tree, after all eight merges, not carried over from
+the branch that produced the change.
+
+The milliseconds saved by dedupe are small against the fixture shop, which answers instantly
+(37.8 ms over the whole suite). Against the real store — where the live session measured
+**17,302 ms** of reading — each avoided request is 150–400 ms. The heaviest savings are the
+two tools the live session ran twice in a turn: `shopify_order_detail` 40 and
+`shopify_find_order` 26.
 
 ## 11 · TOOL MATRIX
 
@@ -289,7 +294,7 @@ viewports throughout. A re-run writes 96; the 31 kept are the ones worth carryin
 |-------|-------------|-------------|
 | Python | 2,040 passed, 2 skipped | **2,399 passed, 2 skipped** |
 | Node (`tests/web/*.test.js`) | 131 | **203** |
-| Chromium checks in the gate | 61 | **227** |
+| Chromium checks in the gate | 61 | **229** |
 | Browser scripts in the default gate | 2 | **7** |
 
 The two permanent skips are unchanged and are environment, not code:
@@ -357,7 +362,7 @@ check that the report carries his words verbatim.
 | Full Python suite green | ✅ 2,399 passed, 2 skipped |
 | JS / web suites green | ✅ 203 node tests, `node --check` clean on every script |
 | Lint green | ✅ ruff, all checks passed |
-| Browser checks green | ✅ 227 checks, 0 failed |
+| Browser checks green | ✅ 229 checks, 0 failed |
 | Golden experience scenarios green | ✅ 59 scenarios |
 | 601 × 889 collision suite green | ✅ |
 | 800 × 1280 collision suite green | ✅ |
@@ -367,7 +372,7 @@ check that the report carries his words verbatim.
 | Owner-feedback test green | ✅ |
 | Tool matrix report complete | ✅ `docs/phase4/TOOL_MATRIX.md` |
 | No known P0 | ✅ |
-| No fake enabled controls | ✅ every control works, is visibly disabled with a reason, or no longer looks like a control |
+| No fake enabled controls | ✅ swept across 21 fixtures at both viewports — `collision.js` check "every control either works, or says why it cannot" |
 | Working tree clean | ✅ |
 | Branch pushed | ✅ |
 | Suite re-run from clean HEAD | ✅ |
