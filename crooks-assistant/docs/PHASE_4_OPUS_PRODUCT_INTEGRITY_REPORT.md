@@ -156,9 +156,14 @@ EXPIRED and UNDONE are terminal and nothing leaves them.
 - 12 Chromium checks drive the machine through every transition including the one the owner
   watched get stuck.
 
-`crooks-watch`, replayed over the real hour, prints
-`UI action prop_037e20c6ea04 stuck EXECUTING after server VERIFIED` at 00:21:55 — four turns
-before the owner first asked what was wrong.
+`crooks-watch`, replayed over the real hour on this tree, prints
+
+    00:21:36 7a4bc0 UI     confirmation → VERIFIED 1.3s
+    00:21:36 7a4bc0 UI     action prop_d90e88a91d3a stuck EXECUTING after server VERIFIED
+    00:21:36 7a4bc0 ERROR  ACTION_UI_STUCK  the tablet resubmitted 1 proposal(s) and kept 1
+
+— the first of two, at 00:21:36, minutes before the owner asked what was wrong. The evidence
+was in the file that night; nothing was reading it.
 
 ## 6 · SPLIT RESULTS
 
@@ -292,7 +297,7 @@ viewports throughout. A re-run writes 96; the 31 kept are the ones worth carryin
 
 | Suite | Phase 3 end | Phase 4 end |
 |-------|-------------|-------------|
-| Python | 2,040 passed, 2 skipped | **2,399 passed, 2 skipped** |
+| Python | 2,040 passed, 2 skipped | **2,400 passed, 2 skipped** |
 | Node (`tests/web/*.test.js`) | 131 | **203** |
 | Chromium checks in the gate | 61 | **229** |
 | Browser scripts in the default gate | 2 | **7** |
@@ -381,7 +386,7 @@ check that the report carries his words verbatim.
 
 | Gate | Result |
 |------|--------|
-| Full Python suite green | ✅ 2,399 passed, 2 skipped |
+| Full Python suite green | ✅ 2,400 passed, 2 skipped (from clean HEAD, 10:06) |
 | JS / web suites green | ✅ 203 node tests, `node --check` clean on every script |
 | Lint green | ✅ ruff, all checks passed |
 | Browser checks green | ✅ 229 checks, 0 failed |
