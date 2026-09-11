@@ -432,6 +432,19 @@ def test_an_empty_card_never_sits_above_the_card_that_is_the_answer():
     assert [i["type"] for i in mixed] == ["workspace"]
 
 
+def test_a_card_the_tablet_cannot_draw_is_dropped_loudly(caplog, monkeypatch):
+    """It has always been dropped. Dropping it SILENTLY is how a turn could produce "records
+    without a card" and leave nothing to read afterwards — so the Mac names the type and says
+    where the two sides of the vocabulary are kept."""
+    import app.presentation as presentation
+
+    monkeypatch.setattr(presentation, "_from_result", lambda name, result: [{"type": "hologram", "data": {"x": 1}}])
+    with caplog.at_level("WARNING", logger="crooks.presentation"):
+        items = present([ToolCall(name="shopify_list_orders", args={}, ok=True, result={"orders": []})])
+    assert items == [], "a type outside the vocabulary never reaches the tablet"
+    assert any("hologram" in record.message for record in caplog.records), caplog.text
+
+
 def test_an_empty_read_of_every_listing_kind_draws_a_card():
     empties = {
         "shopify_list_orders": {"orders": [], "count": 0},

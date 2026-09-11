@@ -20,6 +20,7 @@ before the tool ran; this runs afterwards and only shapes what is already known.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
@@ -27,6 +28,8 @@ from app.actions import grammar
 from app.providers.base import ToolCall
 from app.session.models import Session
 from app.tools.gate import Disposition, classify
+
+log = logging.getLogger("crooks.presentation")
 
 # The component vocabulary. The tablet renders exactly these; anything else is dropped there
 # too, so a typo here cannot become a blank card.
@@ -203,7 +206,17 @@ def present(
     out = _only_empty_when_nothing_else(items) + list(errors.values())
     if session is not None and len(session.context) >= 2:
         out.append(_ui("context_stack", {"entries": [dict(c) for c in session.context[:MAX_CONTEXT]]}))
-    return [item for item in out if item["type"] in UI_TYPES]
+    kept = [item for item in out if item["type"] in UI_TYPES]
+    if len(kept) != len(out):
+        # A type outside the vocabulary is dropped here, as it always has been — and it used
+        # to be dropped SILENTLY, which is how D-15 ("records without a card") could happen
+        # and leave nothing to read afterwards. A builder that named a card the tablet cannot
+        # draw is a bug in this repository, and it says so on the Mac's own log.
+        log.warning(
+            "dropped %s: not in the card vocabulary (app/presentation.py UI_TYPES and web/ui.js RENDERERS)",
+            ", ".join(sorted({item["type"] for item in out if item["type"] not in UI_TYPES})),
+        )
+    return kept
 
 
 def _only_empty_when_nothing_else(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
