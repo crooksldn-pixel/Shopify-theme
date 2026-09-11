@@ -617,22 +617,62 @@ def test_what_the_owner_reported_becomes_the_heaviest_candidate(tmp_path):
 # ----------------------------------------------------------------- every class has a fixture
 
 
+# What the SEPTEMBER classifier — everything in the report except this module — makes of each
+# fixture. Eight of the ten it had no word for at all; the two it did are the blunter readings
+# it gave, at severity 2, to the dead control and the starved read.
+SEPTEMBER: dict[str, list[str]] = {
+    "applying_stuck": [],
+    "split": [],
+    "late": [],
+    "navigation": [],
+    "controls": ["UI_NAVIGATION_PROBLEM"],
+    "undos": [],
+    "starved": ["TOOL_SELECTION_ERROR"],
+    "disclaimed": [],
+    "feedback": [],
+    "fingers": [],
+}
+FIXTURES = (
+    ("applying_stuck", applying_stuck),
+    ("split", a_split_that_showed_two_of_the_same),
+    ("late", the_screen_redrawn_and_late),
+    ("navigation", eight_homes_and_four_backs),
+    ("controls", controls_with_nothing_behind_them),
+    ("undos", two_undos_counted_as_work),
+    ("starved", the_owners_own_read_refused),
+    ("disclaimed", the_assistant_disclaimed_its_own_screen),
+    ("feedback", two_defects_narrated_and_discarded),
+    ("fingers", fingers_and_places_lost),
+)
+
+
+@pytest.mark.parametrize(("name", "build"), FIXTURES, ids=[n for n, _b in FIXTURES])
+def test_the_old_classifier_found_nothing_in_any_of_these(name, build, tmp_path):
+    """The "fails first" half, as an assertion rather than a claim.
+
+    Every rule the report had before this pass is still running on these timelines, and this
+    is what it makes of them: eight of the ten produce not one class, and the other two produce
+    the blunter reading they were given. Every turn in eight of the ten was SUCCESSFUL. That is
+    how an hour the owner spent reporting four defects came out as eleven of fourteen.
+    """
+    rec = reconstruct(read_events(build(tmp_path / name)))
+    before = sorted({c for t in rec.turns for c in t.classes if c not in visible.CLASSES})
+    assert before == SEPTEMBER[name], f"{name}: the old classifier now says {before}"
+
+    after = sorted({c for t in rec.turns for c in t.classes if c in visible.CLASSES})
+    assert after, f"{name}: this fixture produces none of the new classes"
+    if not SEPTEMBER[name]:
+        assert all(t.outcome == "successful" for t in rec.turns), \
+            "every turn here was successful by the old rule"
+    assert any(t.experience != "SUCCESSFUL" for t in rec.turns), \
+        "and not one of them was successful as the owner lived it"
+
+
 def test_every_class_this_module_files_has_a_fixture_that_produces_it(tmp_path):
     """A classification nobody can reproduce is a classification nobody can trust. Between the
     fixtures in this file, every one of the fifteen appears at least once."""
     seen: set[str] = set()
-    for name, build in (
-        ("applying_stuck", applying_stuck),
-        ("split", a_split_that_showed_two_of_the_same),
-        ("late", the_screen_redrawn_and_late),
-        ("navigation", eight_homes_and_four_backs),
-        ("controls", controls_with_nothing_behind_them),
-        ("undos", two_undos_counted_as_work),
-        ("starved", the_owners_own_read_refused),
-        ("disclaimed", the_assistant_disclaimed_its_own_screen),
-        ("feedback", two_defects_narrated_and_discarded),
-        ("fingers", fingers_and_places_lost),
-    ):
+    for name, build in FIXTURES:
         rec = reconstruct(read_events(build(tmp_path / name)))
         assert rec.experience.errors == [], (name, rec.experience.errors)
         seen |= {f.name for f in rec.experience.findings}
