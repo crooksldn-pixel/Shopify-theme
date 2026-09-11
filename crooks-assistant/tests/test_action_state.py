@@ -22,13 +22,50 @@ from app.actions.models import PROPOSAL_TTL_S, UNDO_TTL_S, ActionStatus
 from app.main import app
 from app.routes import branches as branch_routes
 from app.session.manager import SessionManager
-from app.tools import shopify_tools
+from app.session.models import Session
+from app.tools import gmail_writes, shopify_tools
 from app.tools.dispatch import dispatch
 from tests.test_actions import ORDER, TOOL, FakeStore
 from tests.test_actions_routes import PROXIED, FakeProvider, configure
-from tests.test_gmail_writes import THREAD, box, engine, lookup, session, stage, tap  # noqa: F401 — fixtures
+from tests.test_gmail_writes import (
+    BODY,
+    CUSTOMER_ID,
+    THREAD,
+    FakeGmail,
+    Policy,
+    customer_of,
+    stage,
+    tap,
+)
 
 OWNER = "owner@example.com"
+
+
+# The inbox, the engine and the conversation the email tests use, built here so that this
+# file's names are its own (see tests/test_gmail_writes.py for the world they describe).
+@pytest.fixture()
+def box():
+    inbox = FakeGmail()
+    gmail_writes.bind(inbox, customer=customer_of, policy=lambda: Policy())
+    yield inbox
+    gmail_writes.bind(None)
+
+
+@pytest.fixture()
+def engine(monkeypatch):
+    made = ActionEngine(ledger=NullLedger())
+    monkeypatch.setattr(engine_module, "_engine", made)
+    monkeypatch.setattr(gmail_writes, "SETTLE_POLL_S", 0.0)
+    monkeypatch.setattr(gmail_writes, "SETTLE_S", 0.5)
+    return made
+
+
+@pytest.fixture()
+def session():
+    conversation = Session(session_id="c1")
+    conversation.issue(ORDER, THREAD, CUSTOMER_ID)
+    conversation.epoch = 1
+    return conversation
 
 
 async def archived_with_an_undo(box, engine, session):
@@ -79,7 +116,8 @@ async def test_the_undo_has_its_own_clock(box, engine, session):
 
 async def test_an_undo_can_be_let_go_without_withdrawing_anything_else(box, engine, session):
     done, undo = await archived_with_an_undo(box, engine, session)
-    _, waiting = await stage(session, "gmail_thread_archive", thread_id=THREAD)
+    # And a real change waiting beside it, to prove the one does not take the other.
+    _, waiting = await stage(session, "gmail_draft_reply", thread_id=THREAD, body=BODY)
     assert engine.dismiss_undo(undo.proposal_id) is True
     assert undo.status is ActionStatus.EXPIRED and undo.code == "expired" and undo.reason == "the offer was let go"
     assert undoable_ids(session) == []
@@ -135,22 +173,22 @@ async def client(monkeypatch):
 async def note_applied(client, session_id="s1"):
     """A note added and proven through the routes, with the undo the Mac then offers."""
     configure(client, writes=True)
-    session = client.runtime.sessions.get_or_create(session_id)
-    session.issue(ORDER)
-    session.epoch = max(session.epoch, 1)
-    session.branch()
-    text = await dispatch(TOOL, {"order_id": ORDER, "note": "Customer asked for an exchange"}, session=session, timeout_s=5)
+    conversation = client.runtime.sessions.get_or_create(session_id)
+    conversation.issue(ORDER)
+    conversation.epoch = max(conversation.epoch, 1)
+    conversation.branch()
+    text = await dispatch(TOOL, {"order_id": ORDER, "note": "Customer asked for an exchange"}, session=conversation, timeout_s=5)
     assert text.startswith("PROPOSED")
-    proposal = session.proposals[-1]
+    proposal = conversation.proposals[-1]
     answer = await client.post(f"/actions/{proposal.proposal_id}/commit", data={"session_id": session_id}, headers=PROXIED)
     assert answer.status_code == 200 and answer.json()["status"] == "verified"
-    undo = session.proposal(proposal.undo_id)
+    undo = conversation.proposal(proposal.undo_id)
     assert undo is not None
-    return session, proposal, undo
+    return conversation, proposal, undo
 
 
 async def test_the_states_route_separates_what_is_waiting_from_what_can_be_undone(client):
-    session, done, undo = await note_applied(client)
+    conversation, done, undo = await note_applied(client)
     ids = ",".join([done.proposal_id, undo.proposal_id])
     answer = await client.get(f"/actions/states?session_id=s1&ids={ids}", headers=PROXIED)
     body = answer.json()
@@ -162,7 +200,7 @@ async def test_the_states_route_separates_what_is_waiting_from_what_can_be_undon
 
 
 async def test_a_merge_says_nothing_is_waiting_when_all_that_is_left_is_an_undo(client):
-    session, _done, undo = await note_applied(client)
+    conversation, _done, undo = await note_applied(client)
     forked = await client.post("/branches/fork", data={"session_id": "s1"}, headers=PROXIED)
     assert forked.status_code == 200
     other = [b["branch_id"] for b in forked.json()["branches"] if b["branch_id"] != forked.json()["focused"]]
@@ -178,7 +216,7 @@ async def test_a_merge_says_nothing_is_waiting_when_all_that_is_left_is_an_undo(
 
 
 async def test_an_undo_offer_can_be_let_go_through_the_route(client):
-    session, done, undo = await note_applied(client)
+    conversation, done, undo = await note_applied(client)
     answer = await client.post(f"/actions/{undo.proposal_id}/dismiss", data={"session_id": "s1"}, headers=PROXIED)
     assert answer.status_code == 200 and answer.json()["status"] == "expired"
     assert undo.status is ActionStatus.EXPIRED

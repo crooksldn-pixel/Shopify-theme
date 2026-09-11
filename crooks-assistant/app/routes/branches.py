@@ -83,13 +83,24 @@ def _shape(session) -> dict[str, Any]:
 
 
 def _waiting(session, branch_id: str) -> list[str]:
-    """Every change staged in this branch that is still waiting for a gesture — INCLUDING the
-    undo the Mac offered after a change was proven here, which is a change like any other and
-    must not be left committable in a half that is closing."""
-    return [
-        p.proposal_id for p in session.proposals
-        if str(getattr(p, "branch_id", "") or "") == branch_id and p.status.value == "PENDING"
-    ]
+    """Every change staged in this branch that is still WAITING for a gesture: work the owner
+    has not decided about.
+
+    An undo offer is not that (see `_undoable`), and neither is a proposal whose time has run
+    out. On 11 September a merge said "2 changes still waiting over there" when both were undo
+    offers for changes already made, and the older of the two had expired two minutes before.
+    """
+    from app.actions.engine import waiting_ids
+
+    return waiting_ids(session, branch_id=branch_id)
+
+
+def _undoable(session, branch_id: str) -> list[str]:
+    """The undo offers standing in this branch: changes that are DONE and can still be put
+    back. Named so the owner can be told they exist, and never counted as work outstanding."""
+    from app.actions.engine import undoable_ids
+
+    return undoable_ids(session, branch_id=branch_id)
 
 
 @router.get("", response_model=None)
@@ -149,7 +160,10 @@ async def focus(request: Request, branch_id: str, session_id: str = Form(default
 @router.post("/{branch_id}/background", response_model=None)
 async def background(request: Request, branch_id: str, session_id: str = Form(default="")) -> JSONResponse | dict:
     """Put a branch to one side. It carries on reading; it can never commit while it is there,
-    so a change waiting for a gesture stops it rather than being left unappliable."""
+    so a change waiting for a gesture stops it rather than being left unappliable.
+
+    An undo offer does not stop it: the change it would reverse is done, and an offer nobody
+    has to answer is not a reason to keep a half in front of the owner."""
     session, refusal = _session(request, session_id)
     if refusal is not None:
         return refusal
@@ -186,6 +200,7 @@ async def merge(request: Request, branch_id: str, session_id: str = Form(default
     if branch.branch_id == session.focused_branch and len(_live(session)) > 1:
         return _refuse(409, "merge_into_itself", "Tap the half you want to keep first, then pinch.")
     waiting = _waiting(session, branch_id)
+    undoable = _undoable(session, branch_id)
     summary = {
         "branch_id": branch.branch_id,
         "label": branch.label,
@@ -198,6 +213,9 @@ async def merge(request: Request, branch_id: str, session_id: str = Form(default
         "actions": list(branch.recent_actions[:4]),
         # Named, not moved: the owner is told what is still waiting over there and where.
         "still_waiting": waiting,
+        # And, separately, what is merely on offer: an undo of something already done over
+        # there. It is not waiting on him, and the toast must not say that it is.
+        "undoable": undoable,
     }
     branch.status = "MERGED"
     _prune(session)
@@ -207,7 +225,8 @@ async def merge(request: Request, branch_id: str, session_id: str = Form(default
     for said, value in branch.resolutions.items():
         keeper.resolutions.setdefault(said, value)
     timeline.emit("branch_merged", session_id=session.session_id, branch_id=branch_id, into=keeper.branch_id,
-                  looked_at=len(summary["looked_at"]), read=len(summary["read"]), still_waiting=len(waiting) or None)
+                  looked_at=len(summary["looked_at"]), read=len(summary["read"]), still_waiting=len(waiting) or None,
+                  undoable=len(undoable) or None)
     return {**_shape(session), "merged": summary}
 
 
@@ -229,8 +248,10 @@ async def cancel(request: Request, branch_id: str, session_id: str = Form(defaul
     from app.memory.prefetch import current as prefetcher
 
     dropped = prefetcher().cancel_branch(branch_id)
-    # The ids first, so the answer can name exactly which cards the tablet must settle.
-    revoked = _waiting(session, branch_id)
+    # The ids first, so the answer can name exactly which cards the tablet must settle. A
+    # half that is closing takes its undo offers with it as well as its waiting changes:
+    # nothing of a closed half may stay tappable, whichever kind of card it is.
+    revoked = _waiting(session, branch_id) + _undoable(session, branch_id)
     runtime.actions.revoke_ids(revoked, "that half was closed")
     if session.focused_branch == branch_id:
         session.focused_branch = next((b.branch_id for b in _live(session)), "")
