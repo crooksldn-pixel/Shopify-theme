@@ -117,6 +117,11 @@ async def fork(request: Request, session_id: str = Form(default=""), label: str 
         label=str(label or "").strip()[:40] or "second",
         entity=dict(parent.entity) if parent.entity else None,
         set_id=parent.set_id, tab=parent.tab,
+        # Where the new half's "back to the assistant" goes. The half starts where the old one
+        # is, and the place it is in is part of that; without this a half forked out of the
+        # inbox went home to orders. A VALUE, not the stack: the trail itself is built below
+        # and the two halves never share one (app/session/branch.py).
+        landing=parent.landing,
     )
     if parent.workflow is not None:
         # The same set at the same place; advancing one cursor does not move the other.

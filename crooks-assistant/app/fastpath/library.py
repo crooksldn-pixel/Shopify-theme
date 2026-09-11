@@ -280,6 +280,12 @@ def _nav_plan(ctx: Ctx) -> ReadPlan | None:
     kind, ref = str(moved.get("kind") or ""), str(moved.get("ref") or "")
     if not moved.get("landed") or not ref:
         return None
+    entry = ctx.branch.here
+    if entry is not None and entry.is_workspace:
+        # A listing or a landing. Its own cards come back when it kept them; when it did not —
+        # a draw that failed, a stop whose cards have been trimmed — the PLACE is read again by
+        # its own recipe rather than announced over an empty screen.
+        return None if entry.ui else _landing_plan(ctx, entry.area)
     if replay(CommandCtx(ctx.runtime, ctx.session, ctx.branch), kind, ref):
         return None                      # held: nothing to read
     tool, argument, _ = MEMBER_READ.get(_SET_KIND.get(kind, ""), ("", "", ""))
@@ -307,12 +313,22 @@ def _navigated(ctx: Ctx, result: ReadResult, *, words) -> FastAnswer:
     kind, ref, label = str(moved.get("kind") or ""), str(moved.get("ref") or ""), str(moved.get("label") or "")
     entry = ctx.branch.here
     if entry is not None and entry.is_workspace:
-        # A listing. It cannot be replayed from the entity cache, so its own cards come back;
-        # with none kept, the spoken path says where it is rather than inventing a screen.
+        # A listing cannot be replayed from the entity cache — there is no `list_id` in memory
+        # — so its own cards come back.
+        if entry.ui:
+            return FastAnswer(answer=words(label), surfaces=[AsUi(u) for u in entry.ui],
+                              trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
+                                     "workspace": entry.kind, "drawn": True})
+        # None kept, so the plan read the place again; draw it with its own recipe.
+        recipe = _landing_recipe(entry.area)
+        if recipe is not None and recipe.render is not None and result.values:
+            drawn = recipe.render(ctx, result)
+            if not drawn.deferred:
+                drawn.trace = {**(drawn.trace or {}), "nav": moved.get("direction"), "landing": recipe.recipe_id}
+                return drawn
         return FastAnswer(answer=words(label),
-                          surfaces=[AsUi(u) for u in entry.ui],
                           trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
-                                 "workspace": entry.kind, "drawn": bool(entry.ui)})
+                                 "workspace": entry.kind, "drawn": False})
     calls = list(result.calls) or replay(CommandCtx(ctx.runtime, ctx.session, ctx.branch), kind, ref)
     return FastAnswer(answer=words(label), calls=calls, partial=result.partial,
                       trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
@@ -324,13 +340,30 @@ def _nav_back(ctx: Ctx, result: ReadResult) -> FastAnswer:
         f"Back to {label}." if label else "That is as far back as this conversation goes."))
 
 
+def _landing_recipe(area: str):
+    """The recipe that draws one of the dock's places.
+
+    The table belongs to the landings themselves (app/families/landings.py) and is handed down
+    to `app/commands.py` so that a command need not import a family. This reads it from there
+    rather than keeping a second copy that could disagree.
+    """
+    from app.commands import LANDING_FOR
+    from app.fastpath.recipes import RECIPES
+
+    return RECIPES.get(LANDING_FOR.get(str(area or ""), ""))
+
+
+def _landing_plan(ctx: Ctx, area: str) -> ReadPlan | None:
+    recipe = _landing_recipe(area)
+    return recipe.plan(ctx) if recipe is not None and recipe.plan is not None else None
+
+
 def _home_recipe(ctx: Ctx):
     """The landing recipe this half's Home resolves to. One decision, shared with the tap."""
     from app.commands import home_target
-    from app.fastpath.recipes import RECIPES
 
-    _area, recipe_id = home_target(ctx.branch)
-    return RECIPES.get(recipe_id)
+    area, recipe_id = home_target(ctx.branch)
+    return _landing_recipe(area) if recipe_id else None
 
 
 def _home_plan(ctx: Ctx) -> ReadPlan | None:
@@ -367,7 +400,13 @@ def _replay(ctx: Ctx, entry) -> list[Any]:
     return [ToolCall(name=tool, args={f"{entry.kind}_id": entry.ref}, ok=True, result=held.value)]
 
 
+# Back reads the record it landed on when memory has dropped it, and reads the PLACE again
+# when the stop it landed on is a listing that kept no cards. Both sets of primitives are
+# declared, because `assert_read_only` is checked against what a recipe can actually cause.
 register(Recipe(recipe_id="navigation_back", intent_family="navigation_back", ui="context_stack",
+                read_primitives=("shopify_order_detail", "shopify_customer_history", "gmail_read_thread",
+                                 "commerce_query", "email_query", "gmail_search",
+                                 "commerce_aggregate", "inventory_query"),
                 cache_policy=CACHE_HOT, min_confidence=0.75, target_ms=100, plan=_nav_plan, render=_nav_back))
 # Home reads what its landing reads, which is why its primitives are the union of the four
 # landings' (app/families/landings.py) rather than none: it delegates, and `assert_read_only`
