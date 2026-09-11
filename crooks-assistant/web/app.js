@@ -125,6 +125,11 @@ let scrollMax = 0;           // how far down the cards the owner went since the 
 // call here is a boolean test; nothing on this page ever waits for it.
 const T = window.CrooksTelemetry || { record() {}, configure() {}, setContext() {}, flush() {}, snapshot() { return {}; }, pathOnly() { return ''; } };
 
+// The one action state machine (web/action-state.js): the named states a card passes
+// through, which of them are terminal, and the rule that the Mac's terminal status settles a
+// card from any state that is not. The renderer reads the same file.
+const AS = window.CrooksActionState;
+
 // One player, for the life of the page. 2ms of silence, used once inside the first touch to
 // prove to Chrome that this element is allowed to make sound.
 const player = new Audio();
@@ -1459,9 +1464,23 @@ function actionBlocked() {
   return recording || pendingStart || busy;
 }
 
+// An undo offer the owner never took up. Its surface has just lapsed here; the Mac is told,
+// so its copy stops being something that could still be waiting on him. It is a dismissal of
+// an OFFER — nothing is applied, nothing else is withdrawn, and the Mac refuses anything
+// that is not an undo.
+function dismissUndo(proposalId) {
+  if (!proposalId || !sessionId) return;
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  fetch(`/actions/${encodeURIComponent(proposalId)}/dismiss`, { method: 'POST', body: form, cache: 'no-store' })
+    .then(() => T.record('undo_dismissed', { proposal_id: proposalId, reason: 'expired' }))
+    .catch(() => { /* the Mac's own clock expires it too */ });
+}
+
 function renderOpts() {
   return {
     onCommit: commitAction, onArm: armAction, blocked: actionBlocked, onAction: primeAction,
+    onUndoExpire: dismissUndo,
     // Which tab a card opens on, when the branch was left on one, and where a change of tab
     // is reported. Both are the Mac's state, not the page's: see /branches/{id}/mark.
     tab: branchState && branchState.tab ? branchState.tab : '',
@@ -1888,9 +1907,25 @@ async function primeAction(action) {
   T.record('action_primed', { action: String(action.id || ''), outcome: 'primed', name: family });
 }
 
+// No surface may sit in EXECUTING or VERIFYING once the Mac has finished with its proposal.
+// The commit's own answer normally settles it; when that answer is lost — a dropped tailnet,
+// a tab the system froze, a re-render — this is what notices. It asks the Mac and believes
+// the answer; it never re-sends the change.
+const WATCHDOG_MS = 20000;
+const WATCHDOG_TRIES = 6;
+
+function watchCommit(node, tries) {
+  setTimeout(() => {
+    if (!AS.isInFlight(AS.tokenOf(node))) return;   // settled by its own answer, as it should be
+    reconcileActions('watchdog');
+    if (tries > 1) watchCommit(node, tries - 1);
+  }, WATCHDOG_MS);
+}
+
 async function commitAction(proposalId, node, nonce) {
   if (actionBlocked()) { settleActionNode(node, 'armed', 'Tap to apply'); T.record('action_commit', { proposal_id: proposalId, outcome: 'blocked_busy' }); return; }
   haptic(HAPTIC.start);
+  watchCommit(node, WATCHDOG_TRIES);
   const commitStartedAt = Date.now();
   const form = new FormData();
   form.append('session_id', sessionId);
@@ -1951,7 +1986,10 @@ function settleAction(node, payload, status) {
     return;
   }
   if (code === 'in_progress' && !payload._recovered) {
-    // The Mac is still proving the change: ask again until it knows, never tap again.
+    // The Mac is still proving the change: ask again until it knows, never tap again. The
+    // surface says so in its own state — sent, being proven — rather than staying in the one
+    // that means "this page is still waiting for an answer to its own request".
+    settleActionNode(node, 'verifying', 'Applying…');
     recoverActionState(node.dataset.proposal || '').then((later) => settleAction(node, later ? Object.assign({ _recovered: true }, later) : null, 200));
     return;
   }
@@ -1970,10 +2008,21 @@ function settleAction(node, payload, status) {
   // never replaced by the answer to a tap that did not happen: the undo's surface settles
   // and the proof stays on screen.
   const keepTheCard = node.classList && node.classList.contains('card-success') && payload.status !== 'verified' && payload.status !== 'done';
+  const ref = node.dataset ? String(node.dataset.ref || '') : '';
   if (rendered.nodes.length && !keepTheCard) {
+    // The Apply affordance goes and the proof takes its place — carrying the entity as the
+    // Mac has just re-read it, and the undo as a control of its own. The deck's history is
+    // patched in place (replaceCard), so where the owner is does not move.
     replaceCard(node, rendered.nodes);
   } else {
-    settleActionNode(node, code === 'verified' ? 'verified' : code, ACTION_LABELS[code] || 'Not applied');
+    settleActionNode(node, code === 'verified' ? 'verified' : code, AS.labelFor(code, 'Not applied'));
+  }
+  if (proven) {
+    // The entity has moved. Any other card still offering a change to it was prepared
+    // against the state that has just changed, and the Mac would refuse it as stale: it says
+    // so now, rather than after a gesture that cannot work.
+    const retired = retireStaleAffordances(ref, String(node.dataset ? node.dataset.proposal || '' : ''), rendered.nodes);
+    if (retired.length) T.record('action_stale_affordance', { count: retired.length, entity: ref.slice(0, 80) });
   }
   if (status >= 400 && !items.length) {
     toast(ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.'), 'bad');
@@ -1989,15 +2038,9 @@ function settleAction(node, payload, status) {
   if (payload.spoken) speakAnswer(String(payload.spoken), { isError: !proven });
 }
 
-const ACTION_LABELS = {
-  verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', already_executed: 'Already applied',
-  executing: 'Applying…', executed: 'Applying…', in_progress: 'Applying…', refused: 'Refused', not_armed: 'Hold first',
-  blocked: 'Refused', done: 'Applied', batch_member: 'Part of a batch',
-  unverified: 'Not confirmed', service_unavailable: 'Not applied', writes_disabled: 'Switched off',
-  not_authorised: 'Not on the list', not_authorised_local: 'Not from the Mac itself',
-  allow_list_missing: 'Not configured', scope_missing: 'Not permitted', wrong_session: 'Not this conversation',
-  unknown: 'No longer waiting',
-};
+// The words for every outcome either side can produce live in web/action-state.js, beside the
+// state each of them means. This page and the renderer read the same table.
+const ACTION_LABELS = AS.LABELS;
 const ACTION_REASONS = {
   refused: 'The service refused that. The card says why.',
   not_authorised: "This tablet's login is not on the Mac's allowed list (CROOKS_ALLOWED_LOGINS).",
@@ -2009,8 +2052,26 @@ const ACTION_REASONS = {
   wrong_session: 'That proposal belongs to another conversation.',
 };
 
+// One card, settled — unless it is already finished, which nothing may undo.
 function settleActionNode(node, state, label) {
-  if (node && typeof node.settle === 'function') node.settle(state, label);
+  return AS.settleCard(node, state, label);
+}
+
+// Every other card still offering a change to an entity that has just changed. A proposal is
+// prepared from a read; once the thing it was prepared against has moved, the Mac's own
+// precondition will refuse it. The affordance goes now, with the reason on it.
+function retireStaleAffordances(ref, keep, fresh) {
+  if (!ref) return [];
+  const skip = new Set(fresh || []);
+  const retired = [];
+  for (const card of AS.cards(visibleCards())) {
+    if (card.id === keep || skip.has(card.node)) continue;
+    if (!card.node.dataset || String(card.node.dataset.ref || '') !== ref) continue;
+    if (String(card.node.dataset.type || '') !== 'confirmation') continue;
+    if (AS.isTerminal(card.token) || AS.isInFlight(card.token)) continue;
+    if (settleActionNode(card.node, 'stale', 'It changed first')) retired.push(card.id);
+  }
+  return retired;
 }
 
 // True when every card in this answer is a confirmation whose surface is already arming or
@@ -2021,7 +2082,9 @@ function onlyLiveCardsAlreadyShown(items) {
   return cards.every((i) => {
     const id = String(i.data && (i.data.proposal_id || i.data.batch_id) || '').replace(/["\\]/g, '');
     const node = el.cards ? el.cards.querySelector(`[data-proposal="${id}"] .action-surface`) : null;
-    return Boolean(node) && (node.dataset.state === 'arming' || node.dataset.state === 'armed');
+    if (!node) return false;
+    const state = AS.stateOf(node.dataset.state);
+    return state === 'ARMING' || state === 'ARMED';
   });
 }
 
@@ -2039,27 +2102,30 @@ function cancelTurn(form, whyItIsSafeToIgnore) {
 // The cards the Mac named, wherever the deck still holds them.
 // ------------------------------------------------- what the Mac says is true
 
-// Every card on this screen that is still waiting or still in flight, by proposal id.
+// Every card the deck is holding, wherever it is: the history's entries and whatever is on
+// screen now. The state machine walks exactly this list.
+function visibleCards() {
+  const nodes = [];
+  for (const entry of history) for (const node of entry.nodes) nodes.push(node);
+  if (el.cards) for (const node of Array.from(el.cards.children)) nodes.push(node);
+  return nodes;
+}
+
+// Every card on this screen that has not finished, by proposal id. A terminal card is never
+// asked about again: the live session's tablet re-submitted two settled proposals to every
+// reconcile for six turns, one HTTP round trip each, correcting nothing.
 function liveProposalIds() {
-  const ids = new Set();
-  const visit = (node) => {
-    if (node && node.dataset && node.dataset.proposal) {
-      const surface = node.querySelector ? node.querySelector('.action-surface') : null;
-      const state = surface ? surface.dataset.state : '';
-      if (state !== 'done' && state !== 'failed' && state !== 'settled') ids.add(String(node.dataset.proposal));
-    }
-  };
-  for (const entry of history) for (const node of entry.nodes) visit(node);
-  if (el.cards) for (const node of Array.from(el.cards.children)) visit(node);
-  return Array.from(ids);
+  return AS.liveProposalIds(visibleCards());
 }
 
 // The September session ended with two batches this page reported committed that the Mac
 // never claimed. A gesture is a request; only the Mac knows what became of it. So the page
 // asks — after every gesture and whenever it comes back to itself — and believes the answer.
 // Nothing here infers an outcome from the fact that a finger moved.
-const RECONCILE_SETTLED = { verified: ['done', 'Done'], executed: ['done', 'Done'], unverified: ['failed', 'Not confirmed'],
-  failed: ['failed', 'Failed'], stale: ['failed', 'It changed first'], expired: ['settled', 'Expired'], revoked: ['revoked', 'Withdrawn'] };
+// What the Mac's statuses do to the cards on screen: see SETTLED in web/action-state.js.
+// PENDING, EXECUTING and EXECUTED settle nothing — the change is still being made or proven,
+// and an outcome the owner has not been given is not shown as one.
+const RECONCILE_SETTLED = AS.SETTLED;
 let reconciling = false;
 
 async function reconcileActions(reason) {
@@ -2071,10 +2137,15 @@ async function reconcileActions(reason) {
     if (!response.ok) return;
     const data = await response.json();
     const states = (data && data.states) || {};
-    let corrected = 0;
-    for (const id of Object.keys(states)) {
-      const settled = RECONCILE_SETTLED[String(states[id].status || '').toLowerCase()];
-      if (settled) { settleProposals([id], settled[0], settled[1]); corrected += 1; }
+    // Every card the Mac has finished with is settled, from whatever state it is in. The one
+    // exception is a card that is already terminal, which nothing may touch.
+    const { corrected, stuck } = AS.reconcile(visibleCards(), states);
+    // The watchdog. A surface still EXECUTING or VERIFYING after its proposal reached a
+    // terminal state on the Mac is the September defect itself, and it is reported as one
+    // rather than quietly repaired: the state was written by force above because nothing on
+    // the page could ask that surface to settle.
+    for (const surface of stuck) {
+      T.record('action_watchdog', { reason, proposal_id: surface.proposal_id, before: surface.was, after: surface.state, status: surface.status });
     }
     // An id the Mac has never heard of cannot be applied by any gesture, so it must stop
     // looking as though it can — but only when the Mac is holding this conversation. A Mac
@@ -2082,7 +2153,9 @@ async function reconcileActions(reason) {
     // proposal, and its silence is not evidence that a card is dead.
     const unknown = data && data.session_known ? (Array.isArray(data.unknown) ? data.unknown : []) : [];
     if (unknown.length) settleProposals(unknown, 'settled', 'No longer waiting');
-    if (corrected || unknown.length) T.record('reconcile', { reason, count: ids.length, kept: corrected, cancelled: unknown.length });
+    if (corrected.length || unknown.length || stuck.length) {
+      T.record('reconcile', { reason, count: ids.length, kept: corrected.length, cancelled: unknown.length, errors: stuck.length || undefined });
+    }
   } catch {
     // The Mac did not answer. The cards stay as they are and the next reconcile tries again.
   } finally {
@@ -2090,20 +2163,11 @@ async function reconcileActions(reason) {
   }
 }
 
+// The Mac has spoken about these proposals. Every card showing one of them settles — from
+// ARMING, from ARMED, from EXECUTING, from anything that is not already finished. Settling
+// from two states only is what left a proved send saying "Applying…" all session.
 function settleProposals(ids, state, label) {
-  const wanted = new Set(ids.map(String));
-  const seen = new Set();
-  const visit = (node) => {
-    if (!node || seen.has(node)) return;
-    seen.add(node);
-    if (typeof node.settle === 'function' && node.dataset && wanted.has(node.dataset.proposal)) {
-      const surface = node.querySelector ? node.querySelector('.action-surface') : null;
-      const current = surface ? surface.dataset.state : '';
-      if (current === 'arming' || current === 'armed') node.settle(state, label);
-    }
-  };
-  for (const entry of history) for (const node of entry.nodes) visit(node);
-  if (el.cards) for (const node of Array.from(el.cards.children)) visit(node);
+  return AS.settleProposals(ids, state, label, visibleCards());
 }
 
 // A settled action replaces its card, and a verified re-read of the entity replaces every

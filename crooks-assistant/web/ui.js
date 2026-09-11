@@ -1056,12 +1056,30 @@
     }[text(code)] || "Can't apply from here";
   }
 
+  // The words for a status the Mac has already settled. One table, in web/action-state.js,
+  // beside the named state each word means; the page reads the same one.
   function settledLabel(status) {
-    return { verified: 'Applied', stale: 'Not applied', expired: 'Expired', revoked: 'Withdrawn', failed: 'Not applied', unverified: 'Not confirmed', executing: 'Applying…', executed: 'Applying…' }[status] || 'Not available';
+    const machine = actionState();
+    return machine ? machine.labelFor(text(status), 'Not available') : 'Not available';
   }
 
-  // One wiring for every kind. The states a surface passes through:
-  //   arming → armed → (holding → held →) committing → a settled state
+  // The state machine, however this file was loaded: on the tablet it is on the window, and
+  // under Node it is the module beside this one. Looked up when needed rather than at load,
+  // so the order the two scripts are parsed in cannot matter.
+  function actionState() {
+    const global = typeof globalThis !== 'undefined' ? globalThis : null;
+    if (global && global.CrooksActionState) return global.CrooksActionState;
+    if (typeof require === 'function') {
+      try { return require('./action-state.js'); } catch (error) { /* the page keeps it on the window */ }
+    }
+    return null;
+  }
+
+  // One wiring for every kind. The states a surface passes through, in the vocabulary of
+  // web/action-state.js (the token each one writes into dataset.state in brackets):
+  //   ARMING (arming) → ARMED (armed) → (ARMING/ARMED again while a hold runs: holding, held)
+  //   → EXECUTING (committing) → VERIFYING (verifying) → one of the four terminal states.
+  // Only the Mac settles a card into a terminal state, and a terminal card is never moved.
   // A press that began before arming never counts, whatever it ends as; nothing counts while
   // the app says it is busy; and a settled surface answers to nothing.
   function wireGesture(node, surface, kind, proposalId, armedAfter, opts, ttlS, word) {
@@ -1097,7 +1115,11 @@
     if (surface.style && surface.style.setProperty) surface.style.setProperty('--hold-ms', `${HOLD_MS + HOLD_MARGIN_MS}ms`);
     const armTimer = timers.set(() => { if (!committed && state() === 'arming') setState('armed'); }, armedAfter);
     const expiryTimer = ttlS !== null && ttlS !== undefined ? timers.set(() => {
-      if (!committed && ['arming', 'armed', 'holding', 'held'].indexOf(state()) !== -1) node.settle('expired', 'Expired');
+      if (committed || ['arming', 'armed', 'holding', 'held'].indexOf(state()) === -1) return;
+      node.settle('expired', 'Expired');
+      // An offer that lapsed here has lapsed there too; the Mac is told, so that its own copy
+      // stops being something the owner could still be waiting on. Nothing is applied by it.
+      if (typeof opts.onExpire === 'function') opts.onExpire(proposalId);
     }, Math.max(0, ttlS * 1000 - 1000)) : null;
     const metas = node.querySelectorAll ? node.querySelectorAll('.action-meta') : [];
     const meta = metas.length ? metas[metas.length - 1] : null;
@@ -1302,10 +1324,15 @@
       const surface = buildSurface(kind, kind === 'tap_commit' ? text(undo.label, 'Undo') : `${text(undo.label, 'Undo')} · ${gestureLabel(kind).toLowerCase()}`, '', 'arming', true);
       surface.classList.add('quiet');
       node.dataset.proposal = text(undo.proposal_id);
+      // What this surface is: an offer against a change that is FINISHED, not a change still
+      // waiting to be made. Anything counting work outstanding reads this and passes over it.
+      node.dataset.undoOf = text(undo.undo_of || d.proposal_id);
       node.appendChild(surface);
       node.appendChild(h('p', { class: 'action-meta', text: num(undo.ttl_s) !== null ? `Undo available for ${Math.round(undo.ttl_s)} s` : '' }));
-      // The undo has its own minute on the Mac's clock, and says how much of it is left.
-      wireGesture(node, surface, kind, text(undo.proposal_id), armedAfter, opts, num(undo.ttl_s), (left) => (left > 0 ? `Undo available for ${left} s` : 'The undo has expired.'));
+      // The undo has its own clock on the Mac, and says how much of it is left. When it runs
+      // out the Mac is told, so an offer nobody took up stops being anything at all.
+      const undoOpts = Object.assign({}, opts, { onExpire: opts.onUndoExpire });
+      wireGesture(node, surface, kind, text(undo.proposal_id), armedAfter, undoOpts, num(undo.ttl_s), (left) => (left > 0 ? `Undo available for ${left} s` : 'The undo has expired.'));
     }
     return node;
   }
