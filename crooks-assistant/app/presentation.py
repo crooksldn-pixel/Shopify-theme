@@ -239,11 +239,19 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
                 "title": "Which customer?", "query": _text(result.get("query")),
                 "customers": [_customer(c) for c in matched], "ambiguous": True,
             }))
+        if not out:
+            # Looked for, and not found. There is nothing else to say and it still gets said
+            # on the screen — see `_empty` and D-15.
+            out.append(_empty("order_list", "Orders", f"Nothing matched {_text(result.get('query'), 40)}." if result.get("query") else "No order matched."))
         return out
     if name == "shopify_list_orders":
         orders = [_order(o) for o in _list(result.get("orders"), MAX_ORDERS)]
         if not orders:
-            return []
+            window = _window_title(result)
+            return [_empty("order_list", window, f"No orders {_when_words(result)}.", extra={
+                "since": _text(result.get("since")), "until": _text(result.get("until")),
+                "days": _int(result.get("days")), "days_ago": _int(result.get("days_ago")),
+            })]
         return [_ui("order_list", {
             "title": _window_title(result),
             "since": _text(result.get("since")), "until": _text(result.get("until")),
@@ -268,11 +276,11 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
                 "query": _text(result.get("query")), "customers": customers,
                 "ambiguous": bool(result.get("ambiguous")),
             })]
-        return []
+        return [_empty("customer_list", "Customers", f"No customer matched {_text(result.get('query'), 40)}." if result.get("query") else "No customer matched.")]
     if name == "shopify_inventory":
         products = [_inventory_product(p) for p in _list(result.get("products"), MAX_PRODUCTS)]
         if not products:
-            return []
+            return [_empty("inventory", _text(result.get("product")) or "Stock", f"Nothing in the catalogue matched {_text(result.get('product'), 40)}." if result.get("product") else "No product matched.", extra={"products": [], "exceptions": [], "low_stock_at": LOW_STOCK_AT})]
         exceptions = [e for p in products for e in p.pop("_exceptions")]
         return [_ui("inventory", {
             "query": _text(result.get("product")), "size": _text(result.get("size")),
@@ -300,7 +308,7 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
     if name == "shopify_product_info":
         products = [_product(p) for p in _list(result.get("products"), MAX_PRODUCTS)]
         if not products:
-            return []
+            return [_empty("product", _text(result.get("product")) or "Product", f"Nothing in the catalogue matched {_text(result.get('product'), 40)}." if result.get("product") else "No product matched.", extra={"products": []})]
         return [_ui("product", {
             "query": _text(result.get("product")), "size": _text(result.get("size")),
             "products": products,
@@ -308,7 +316,7 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
     if name == "gmail_search":
         threads = [_thread_summary(t) for t in _list(result.get("threads"), MAX_THREADS)]
         if not threads:
-            return []
+            return [_empty("email_list", "Email", "Nothing in the inbox matched.", extra={"query": _text(result.get("query"), MAX_NOTE_CHARS), "threads": []})]
         return [_ui("email_list", {
             "title": "Email", "query": _text(result.get("query"), MAX_NOTE_CHARS),
             "count": _int(result.get("count")) or len(threads), "threads": threads,
@@ -316,7 +324,7 @@ def _from_result(name: str, result: dict[str, Any]) -> list[dict[str, Any]]:
     if name == "gmail_read_thread":
         messages = [_message(m) for m in _list(result.get("messages"), MAX_MESSAGES)]
         if not messages:
-            return []
+            return [_empty("email_thread", "Email thread", "That thread has no readable messages.", extra={"thread_id": _text(result.get("thread_id")), "messages": []})]
         return [_ui("email_thread", {
             "thread_id": _text(result.get("thread_id")),
             "subject": next((m["subject"] for m in messages if m["subject"]), ""),
@@ -1282,6 +1290,52 @@ def _sales_day(day: object, currency: str) -> dict:
         "orders": _int(day.get("orders")),
         "revenue": _money_display(revenue, currency) if revenue is not None else None,
     }
+
+
+# Which key on each card holds its rows. Used only to make an empty one well-formed: a card
+# that says "none" must still be the shape the renderer draws, or it is a blank region.
+_ROWS_OF = {
+    "order_list": "orders", "customer_list": "customers", "email_list": "threads",
+    "email_thread": "messages", "inventory": "products", "product": "products",
+}
+
+
+def _empty(kind: str, title: str, note: str, *, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A read that found nothing, as a card (D-15).
+
+    `turn_69abe877ef14` asked for orders, the read came back with none, and the presentation
+    layer returned an empty list — so the turn drew NOTHING. The analyser recorded it as
+    "(records without a card)" and the owner got one sentence over a blank screen. "None" is
+    an answer about the world and belongs on the glass with the question it answers: the same
+    card, the same title, `empty` true, a count of zero and one line saying what was looked
+    for. `empty` is a visual state (app/render.py VISUAL_KEYS knows nothing of it and does not
+    need to: a card that goes from none to some has changed its DATA).
+    """
+    data: dict[str, Any] = {
+        "title": _text(title, 60), "count": 0, "empty": True, "note": _text(note, MAX_NOTE_CHARS),
+    }
+    rows = _ROWS_OF.get(kind)
+    if rows:
+        data[rows] = []
+    for key, value in (extra or {}).items():
+        data.setdefault(key, value)
+        if key in data and value not in (None, ""):
+            data[key] = value
+    return _ui(kind, data)
+
+
+def _when_words(result: dict[str, Any]) -> str:
+    """"today", "yesterday", "in the last 7 days" — the window, in the words the empty card
+    uses. The same arithmetic as `_window_title`, said as part of a sentence."""
+    days = _int(result.get("days")) or 1
+    ago = _int(result.get("days_ago")) or 0
+    if days == 1 and ago == 0:
+        return "today"
+    if days == 1 and ago == 1:
+        return "yesterday"
+    if ago == 0:
+        return f"in the last {days} days"
+    return f"in that {days}-day window"
 
 
 def _window_title(result: dict[str, Any]) -> str:
