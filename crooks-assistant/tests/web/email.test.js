@@ -342,3 +342,42 @@ test('settling a thread nobody drew changes nothing and throws nothing', () => {
   UI.settleThread(deck, {});
   assert.equal(deck.querySelectorAll('.row').length, 0);
 });
+
+
+/* --------------------------------- the two P0s the browser run found, held here cheaply */
+
+test('a key with nothing behind it is absent, never the string "null"', () => {
+  // `h()` drops a null ATTRIBUTE and used to stringify a null DATASET value, so
+  // `{ ref: staged ? text(ref) : null }` wrote data-ref="null" onto every chip that was not
+  // staged. The page has one delegated handler for [data-command]; the instant a rail chip
+  // carried data-command="null", every chip on every card posted the command "null" to the
+  // Mac and took a 400.
+  const chip = UI.h('button', { class: 'x', title: null, data: { command: null, args: undefined, action: 'note' } });
+  assert.equal(chip.dataset.command, undefined);
+  assert.equal(chip.dataset.args, undefined);
+  assert.equal(chip.dataset.action, 'note');
+  assert.equal(chip.getAttribute('title'), null);
+  // And on the real thing: only an "open" chip carries a command.
+  const rail = thread({ actions: [REPLY, ARCHIVE, NOTE, DEAD_FULFIL] });
+  for (const c of rail.querySelectorAll('.rail-chip')) {
+    const has = c.dataset.command !== undefined;
+    assert.equal(has, c.dataset.mode === 'open', `${c.dataset.action} mode=${c.dataset.mode} command=${c.dataset.command}`);
+    assert.notEqual(c.dataset.command, 'null');
+    assert.notEqual(c.dataset.ref, 'null');
+  }
+});
+
+test('no two top-level functions in the page share a name', () => {
+  // web/app.js declared replaceCard twice at the top level — the composer's, which takes
+  // payload ITEMS, and the action engine's, which takes rendered NODES. The later one won for
+  // every call site in the file, so every committed change left its card saying "Applying…"
+  // for ever over a change the Mac had proved. A declaration that quietly replaces another
+  // eight hundred lines away is not a thing to find twice.
+  const fs = require('node:fs');
+  for (const file of ['app.js', 'ui.js']) {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'web', file), 'utf8');
+    const names = [...source.matchAll(/^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/gm)].map((m) => m[1]);
+    const twice = names.filter((n, i) => names.indexOf(n) !== i);
+    assert.deepEqual([...new Set(twice)], [], `${file} declares these more than once at the top level`);
+  }
+});
