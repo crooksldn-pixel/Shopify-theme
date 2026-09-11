@@ -410,8 +410,12 @@ class Watch:
         if kind.startswith("tablet_"):
             what = kind[len("tablet_"):]
             if what in ("tab", "scroll", "gesture"):
-                return [f"{head}    tablet {what} "
-                        f"{event.get('label') or event.get('depth') or event.get('gesture') or ''}"]
+                # `depth` is a number and a scroll back to the top is 0, which is the
+                # interesting one: a falsy test printed the line with nothing on it.
+                detail = event.get("label") or event.get("gesture") or ""
+                if what == "scroll":
+                    detail = f"{event.get('depth', 0)} px of {event.get('height', 0)}"
+                return [f"{head}    tablet {what} {detail}".rstrip()]
         return []
 
 
