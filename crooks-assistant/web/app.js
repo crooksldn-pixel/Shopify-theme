@@ -2059,19 +2059,9 @@ function settleActionNode(node, state, label) {
 
 // Every other card still offering a change to an entity that has just changed. A proposal is
 // prepared from a read; once the thing it was prepared against has moved, the Mac's own
-// precondition will refuse it. The affordance goes now, with the reason on it.
+// precondition will refuse it, so the affordance goes now with the reason on it.
 function retireStaleAffordances(ref, keep, fresh) {
-  if (!ref) return [];
-  const skip = new Set(fresh || []);
-  const retired = [];
-  for (const card of AS.cards(visibleCards())) {
-    if (card.id === keep || skip.has(card.node)) continue;
-    if (!card.node.dataset || String(card.node.dataset.ref || '') !== ref) continue;
-    if (String(card.node.dataset.type || '') !== 'confirmation') continue;
-    if (AS.isTerminal(card.token) || AS.isInFlight(card.token)) continue;
-    if (settleActionNode(card.node, 'stale', 'It changed first')) retired.push(card.id);
-  }
-  return retired;
+  return AS.staleAffordances(visibleCards(), ref, keep, fresh);
 }
 
 // True when every card in this answer is a confirmation whose surface is already arming or

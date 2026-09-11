@@ -251,6 +251,31 @@ test('the watchdog fires for VERIFYING as well, and for nothing that is not in f
   assert.deepEqual(ordinary.stuck, []);
 });
 
+// ------------------------------------------------------------------ the entity moved
+
+test('a change that lands retires every other offer against the same thing', () => {
+  const applied = card('prop_note', { entity_ref: 'gid://shopify/Order/1' });
+  const other = card('prop_tags', { entity_ref: 'gid://shopify/Order/1' });
+  const elsewhere = card('prop_else', { entity_ref: 'gid://shopify/Order/2' });
+  const running = card('prop_running', { entity_ref: 'gid://shopify/Order/1' });
+  running.commit();
+  const nodes = [applied.node, other.node, elsewhere.node, running.node];
+
+  const retired = AS.staleAffordances(nodes, 'gid://shopify/Order/1', 'prop_note', [applied.node]);
+  assert.deepEqual(retired, ['prop_tags']);
+  assert.equal(AS.stateOf(other.surface.dataset.state), 'FAILED');
+  assert.equal(other.label(), 'It changed first');
+  // Not the card that just landed, not another order's, and never one the Mac is acting on.
+  assert.equal(AS.stateOf(applied.surface.dataset.state), 'ARMING');
+  assert.equal(AS.stateOf(elsewhere.surface.dataset.state), 'ARMING');
+  assert.equal(AS.stateOf(running.surface.dataset.state), 'EXECUTING');
+  // And a second landing has nothing left to retire.
+  assert.deepEqual(AS.staleAffordances(nodes, 'gid://shopify/Order/1', 'prop_note', [applied.node]), []);
+  // The retired card cannot be tapped.
+  other.surface.dispatch('pointerdown'); other.surface.dispatch('pointerup');
+  assert.deepEqual(other.commits, []);
+});
+
 // ------------------------------------------------------------------ D-2: undo is not waiting
 
 test('a pending undo is undoable, never a change still waiting', () => {

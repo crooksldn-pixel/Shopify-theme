@@ -215,6 +215,32 @@ async def test_a_merge_says_nothing_is_waiting_when_all_that_is_left_is_an_undo(
     assert merged["undoable"] == [undo.proposal_id]
 
 
+async def test_the_watchdog_and_the_dismissal_reach_the_record_with_their_fields(client):
+    """D-1's other half: the tablet's telemetry recorded the stuck card once a turn for six
+    turns and nobody read it. The watchdog's event says plainly what it corrected — which
+    state the surface was in, what the Mac said, which proposal — and the route must carry
+    all of it rather than dropping the fields on the floor."""
+    from pathlib import Path
+
+    from app.observability.timeline import read_events
+
+    await client.post("/test-session/start", json={"name": "watchdog"})
+    conversation, _done, undo = await note_applied(client)
+    assert conversation is not None
+    posted = await client.post("/telemetry", json={"session_id": "s1", "events": [
+        {"kind": "action_watchdog", "proposal_id": "prop_stuck", "before": "EXECUTING", "after": "VERIFIED", "status": "verified", "reason": "turn"},
+        {"kind": "undo_dismissed", "proposal_id": undo.proposal_id, "reason": "expired"},
+    ]}, headers=PROXIED)
+    assert posted.status_code == 204 and posted.headers["x-crooks-telemetry"] == "2"
+    stopped = (await client.post("/test-session/stop")).json()
+    client.runtime.timeline.flush()
+    events = read_events(Path(stopped["path"]))
+    watchdog = next(e for e in events if e["kind"] == "tablet_action_watchdog")
+    assert watchdog["proposal_id"] == "prop_stuck" and watchdog["before"] == "EXECUTING"
+    assert watchdog["after"] == "VERIFIED" and watchdog["status"] == "verified" and watchdog["reason"] == "turn"
+    assert any(e["kind"] == "tablet_undo_dismissed" for e in events)
+
+
 async def test_an_undo_offer_can_be_let_go_through_the_route(client):
     conversation, done, undo = await note_applied(client)
     answer = await client.post(f"/actions/{undo.proposal_id}/dismiss", data={"session_id": "s1"}, headers=PROXIED)

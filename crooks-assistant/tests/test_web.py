@@ -499,6 +499,20 @@ def test_the_page_stops_asking_about_a_card_the_mac_has_finished_with():
     assert "if (isTerminal(card.token)" in live
 
 
+def test_a_proved_change_replaces_its_own_affordance_and_retires_the_others():
+    """On VERIFIED: the Apply surface goes and the proof takes its place — carrying the entity
+    as the Mac has just re-read it, and the undo as a control of its own — the deck's history
+    is patched where it stands so navigation does not move, and any other card still offering
+    a change to the thing that has just moved says so."""
+    body = function_body(APP_JS, "function settleAction(node, payload, status)")
+    assert "replaceCard(node, rendered.nodes);" in body, "the affordance is replaced, not appended"
+    assert "pushContext(" not in body, "a settled change never pushes a new screen"
+    assert "retireStaleAffordances(ref," in body and "if (proven) {" in body
+    # The fresh entity is patched into every other card showing it, in place.
+    replace = function_body(APP_JS, "function replaceCard(oldNode, newNodes)")
+    assert "entry.nodes.splice(at, 1, ...newNodes)" in replace and "refreshEntityCards(node)" in replace
+
+
 def test_an_undo_offer_is_not_counted_as_a_change_still_waiting():
     """D-2. The offer is a property of a change that is finished; the renderer marks it as
     one, and an offer that lapses on the glass is let go on the Mac — never applied there."""

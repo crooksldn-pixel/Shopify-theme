@@ -227,6 +227,28 @@
     return { corrected, stuck };
   }
 
+  /* Every other card still offering a change to an entity that has just changed.
+   *
+   * A proposal is prepared from a read, and the Mac checks that read again before it writes:
+   * once the thing has moved, a card prepared against the old state can only be refused as
+   * stale. So the affordance goes now, with the reason on it, rather than after a gesture
+   * that cannot work. `keep` is the proposal that just landed and `skip` the nodes its answer
+   * drew — the success card and the undo it carries are not stale, they are the proof. */
+  function staleAffordances(nodes, ref, keep, skip) {
+    if (!ref) return [];
+    const untouched = new Set(skip || []);
+    const retired = [];
+    for (const card of cards(nodes)) {
+      if (card.id === String(keep || '') || untouched.has(card.node)) continue;
+      if (String(card.node.dataset.ref || '') !== String(ref)) continue;
+      if (String(card.node.dataset.type || '') !== 'confirmation') continue;
+      // Not one that is finished, and not one the Mac is acting on this second.
+      if (isTerminal(card.token) || isInFlight(card.token)) continue;
+      if (settleCard(card.node, 'stale', 'It changed first')) retired.push(card.id);
+    }
+    return retired;
+  }
+
   // What is actually waiting for the owner, and what is merely on offer. An undo is a
   // property of a change that is finished; counting it as unfinished work told the owner
   // "2 changes still waiting over there" when nothing was waiting at all.
@@ -244,6 +266,7 @@
   return {
     STATES, TERMINAL, IN_FLIGHT, TOKENS, TOKEN, LABELS, SETTLED,
     stateOf, tokenFor, labelFor, isTerminal, isLive, isInFlight, settledFor,
-    surfaceIn, tokenOf, cards, settleCard, settleProposals, liveProposalIds, force, reconcile, waiting,
+    surfaceIn, tokenOf, cards, settleCard, settleProposals, liveProposalIds, force, reconcile,
+    staleAffordances, waiting,
   };
 });
