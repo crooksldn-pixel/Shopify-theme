@@ -422,7 +422,8 @@ def test_a_card_already_on_screen_is_not_pushed_again():
     body = function_body(APP_JS, "function renderTurn(data)")
     assert "if (ui.hasContext && onlyLiveCardsAlreadyShown(data.ui))" in body
     keep = function_body(APP_JS, "function onlyLiveCardsAlreadyShown(items)")
-    assert "'confirmation'" in keep and "'arming'" in keep and "'armed'" in keep
+    # The states are named once, in web/action-state.js; this reads them from there.
+    assert "'confirmation'" in keep and "'ARMING'" in keep and "'ARMED'" in keep
 
 
 def test_letting_go_of_a_question_settles_the_cards_the_mac_withdrew():

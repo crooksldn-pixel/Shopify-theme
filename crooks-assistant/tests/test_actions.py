@@ -15,7 +15,7 @@ import pytest
 from app.actions import engine as engine_module
 from app.actions.engine import ActionEngine
 from app.actions.ledger import ActionLedger, NullLedger
-from app.actions.models import ActionStatus, Prepared
+from app.actions.models import PROPOSAL_TTL_S, UNDO_TTL_S, ActionStatus, Prepared
 from app.clients.shopify import REVIEWED_MUTATIONS, ShopifyClient, ShopifyError
 from app.session.models import Session
 from app.tools import mock, registry, shopify_tools  # noqa: F401 — mock registers the echo tool
@@ -405,10 +405,14 @@ async def test_undo_refuses_if_the_note_moved_on(store, engine, session):
 
 
 async def test_undo_expires_with_its_own_clock(store, engine, session, clock):
+    """Its own clock, and a longer one: deciding you want something back takes longer than
+    deciding to do it, and nothing is waiting on the offer meanwhile (UNDO_TTL_S)."""
     _, proposal = await stage(session)
     await engine.commit(proposal.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)
     undo = session.proposal(proposal.undo_id)
-    clock.now += 61
+    clock.now += PROPOSAL_TTL_S + 1
+    assert engine.find(undo.proposal_id).status is ActionStatus.PENDING, "a card's minute is not the offer's"
+    clock.now += UNDO_TTL_S
     assert (await engine.commit(undo.proposal_id, "t1", caller="o", spec_lookup=spec_lookup)).code == "expired"
 
 
