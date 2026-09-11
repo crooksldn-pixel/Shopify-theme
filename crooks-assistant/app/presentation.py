@@ -819,6 +819,10 @@ def _confirmation(proposal, *, writes: dict[str, Any] | None = None) -> dict[str
         "expires_at": proposal.public()["expires_at"],
         "ttl_s": proposal.ttl_s(),
         "reversible": bool(proposal.reversible),
+        # Which change this card would put back, when it is an offer rather than a change
+        # waiting. Everything that counts work outstanding reads this and passes over it: an
+        # undo belongs to a change that is finished, and is not waiting on anybody.
+        "undo_of": _text(proposal.undo_of or "", 40),
         "commit": commit if commit else {"allowed": True},
     })
 

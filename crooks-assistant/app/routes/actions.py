@@ -471,11 +471,48 @@ async def states(request: Request, session_id: str = "", ids: str = "") -> JSONR
         # The Mac has never heard of it, or it belonged to a conversation that has gone.
         # Either way the tablet must stop showing it as live.
         unknown.append(proposal_id)
+    # What is WAITING, and what is merely on OFFER. Two lists, because they are two kinds of
+    # thing and only one of them is counted: a change waiting is work the owner has not
+    # decided about, and an undo is a way back from work that is finished. The live session's
+    # merge toast counted two undo offers as "2 changes still waiting over there".
+    pending = [pid for pid, state in found.items() if state.get("status") == "pending" and not state.get("undo_of")]
+    undoable = [pid for pid, state in found.items() if state.get("status") == "pending" and state.get("undo_of")]
     # Whether the Mac is holding this conversation at all. When it is not — it restarted, or
     # the conversation idled out — the answer is not authoritative about which proposals
     # exist, and the tablet must not settle a card on the strength of it.
     return {"session_id": session_id, "session_known": session is not None, "states": found,
-            "unknown": unknown, "epoch": getattr(session, "epoch", 0)}
+            "unknown": unknown, "pending": pending, "undoable": undoable,
+            "epoch": getattr(session, "epoch", 0)}
+
+
+@router.post("/{proposal_id}/dismiss", response_model=None)
+async def dismiss(request: Request, proposal_id: str, session_id: str = Form(default="")) -> JSONResponse | dict:
+    """Let an undo OFFER go.
+
+    The tablet posts this when an undo's own clock runs out on the glass, so that the Mac's
+    copy stops being something the owner could still be waiting on. It applies nothing,
+    reverses nothing and withdraws nothing else — and a proposal that is not an undo is
+    refused here, whatever the tablet believes: a change waiting for a gesture is let go by
+    moving on from it, never by this door.
+    """
+    runtime = request.app.state.runtime
+    if not session_id.strip():
+        return _refuse(400, "wrong_session", "The session is missing.")
+    try:
+        owner_session = runtime.sessions.peek(session_id.strip())
+    except KeyError:
+        owner_session = None
+    if owner_session is not None and not session_matches(owner_session, request):
+        return _refuse(403, "wrong_session", "That conversation belongs to another login.")
+    proposal = runtime.actions.state(proposal_id, session_id.strip())
+    if proposal is None:
+        return _refuse(404, "unknown", "No such proposal for this session.")
+    if proposal.undo_of is None:
+        return _refuse(409, "not_an_undo", "That is a change waiting for you, not an offer to undo one.")
+    dismissed = runtime.actions.dismiss_undo(proposal_id)
+    timeline.emit("undo_dismissed", session_id=session_id.strip(), proposal_id=proposal_id,
+                  turn_id=proposal.turn_id or None, ok=dismissed, status=proposal.status.value)
+    return {"proposal_id": proposal.proposal_id, "status": proposal.status.value.lower(), "dismissed": dismissed}
 
 
 @router.get("/{proposal_id}", response_model=None)

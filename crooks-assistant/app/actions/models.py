@@ -21,6 +21,13 @@ from typing import Any
 # short enough that a card the owner walked away from cannot be acted on later.
 PROPOSAL_TTL_S = 60.0
 
+# How long an UNDO stays on offer. Its own clock, because it is not the same kind of thing: a
+# proposal is work the owner has not decided about yet, and an undo is a way back from work
+# that is finished. He reads the success card, hears the line, looks at the order — and only
+# then decides he wants it back, which takes longer than deciding to tap. Nothing is waiting
+# on this clock: an offer that lapses changes nothing and is counted nowhere.
+UNDO_TTL_S = 120.0
+
 
 class ActionStatus(StrEnum):
     PENDING = "PENDING"          # staged, waiting for the owner

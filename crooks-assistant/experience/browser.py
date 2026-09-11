@@ -31,6 +31,9 @@ SCRIPT = ROOT / "scripts" / "browser" / "experience.js"
 # found on the device and the 800 x 1280 gate could not see. Run after the gate, folded into
 # the same result, so one green means both sizes.
 TABLET_SCRIPT = ROOT / "scripts" / "browser" / "tablet.js"
+# And the action surface, driven to the state the owner physically watched get stuck: a
+# commit whose answer never came back, over a change the Mac had already proved (D-1).
+ACTION_SCRIPT = ROOT / "scripts" / "browser" / "action_state.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -182,7 +185,7 @@ async def run_checks() -> dict[str, Any]:
     server, task, _store = await serve_fixture_world(port)
     try:
         results = []
-        for script in (SCRIPT, TABLET_SCRIPT):
+        for script in (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

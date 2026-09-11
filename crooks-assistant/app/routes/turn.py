@@ -17,6 +17,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.actions import engine as action_engine
 from app.actions.grammar import AFFIRMATION_BLOCKED, affirmation_for, words_for
 from app.actions.grammar import FIXED_LINES as GRAMMAR_FIXED_LINES
 from app.logging.turnlog import redact
@@ -116,7 +117,11 @@ async def turn(
         timeline.emit(
             "turn_started", session_id=session_id, turn_id=live.turn_id, input="audio" if audio is not None else "text",
             turns_before=live.turns, epoch=epoch, lost_thread=lost_thread, focus=(live.context[0] if live.context else None),
-            waiting=[p.proposal_id for p in live.proposals if p.status.value == "PENDING" and not p.batch_id] + [b.batch_id for b in live.batches.values() if b.status.value == "PENDING"],
+            # What was WAITING when this turn began: changes the owner has not decided about.
+            # An undo offer is not one of those and is recorded separately — the report read
+            # `waiting` and called two undo offers two outstanding changes.
+            waiting=[p for p in action_engine.waiting_ids(live) if not live.proposal(p).batch_id] + [b.batch_id for b in live.batches.values() if b.status.value == "PENDING"],
+            undoable=action_engine.undoable_ids(live) or None,
         )
 
     if audio is not None:

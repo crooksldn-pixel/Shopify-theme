@@ -694,14 +694,22 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
 .action-surface[data-state="armed"]{color:var(--ink);border-color:rgba(220,178,102,.6);cursor:pointer}
 .action-surface[data-state="armed"] .action-arm{width:100%;opacity:.35}
 .action-surface[data-pressed="true"]{transform:scale(.975);background:var(--glass-3)}
-.action-surface[data-state="committing"]{color:var(--ink-2);animation:sys-pulse 1.2s var(--ease-inout) infinite}
-.action-surface[data-state="verified"]{color:var(--ok);border-color:rgba(120,200,140,.4)}
+/* In flight: with the Mac, being sent (EXECUTING) or being proven (VERIFYING). These are the
+   only states that move, and a card leaves them the moment the Mac has an outcome. */
+.action-surface[data-state="committing"],.action-surface[data-state="executing"],
+.action-surface[data-state="in_progress"],
+.action-surface[data-state="verifying"],.action-surface[data-state="executed"]{color:var(--ink-2);animation:sys-pulse 1.2s var(--ease-inout) infinite}
+/* Finished, and proved. Nothing here animates. */
+.action-surface[data-state="verified"],.action-surface[data-state="done"],
+.action-surface[data-state="already_executed"]{color:var(--ok);border-color:rgba(120,200,140,.4);animation:none}
 .action-surface[data-state="stale"],.action-surface[data-state="expired"],.action-surface[data-state="revoked"],
+.action-surface[data-state="settled"],.action-surface[data-state="undone"],
 .action-surface[data-state="failed"],.action-surface[data-state="unverified"],.action-surface[data-state="unsupported"],
 .action-surface[data-state="unavailable"],
-.action-surface[data-state="unknown"]{color:var(--ink-4);border-style:dashed;border-color:var(--line)}
+.action-surface[data-state="unknown"]{color:var(--ink-4);border-style:dashed;border-color:var(--line);animation:none}
 .action-surface[data-state="unavailable"]{color:var(--warn);border-color:rgba(220,178,102,.3)}
 .action-surface[data-state="stale"] .action-label,.action-surface[data-state="expired"] .action-label,
+.action-surface[data-state="settled"] .action-label,
 .action-surface[data-state="revoked"] .action-label{text-decoration:line-through;text-decoration-color:var(--ink-4)}
 .action-meta{margin:10px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);min-height:1em}
 .action-why{margin:10px 0 0;color:var(--warn)}

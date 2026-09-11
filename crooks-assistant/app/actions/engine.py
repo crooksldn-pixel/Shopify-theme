@@ -32,6 +32,7 @@ from app.actions.grammar import ARMED_FOR_S, dwell_ms, gesture_for
 from app.actions.ledger import ActionLedger, NullLedger
 from app.actions.models import (
     PROPOSAL_TTL_S,
+    UNDO_TTL_S,
     ActionProposal,
     ActionStatus,
     Observed,
@@ -196,7 +197,10 @@ class ActionEngine:
             summary={"undo": True},
             fingerprint=args_fingerprint(f"undo:{spec.name}", {"of": done.proposal_id}),
             created_at=now,
-            expires_at=now + self.ttl_s,
+            # An offer has its own clock (UNDO_TTL_S), longer than a card waiting for a tap:
+            # wanting something back takes longer to decide than doing it did. Nothing is
+            # waiting on it, so nothing is hurried by it.
+            expires_at=now + UNDO_TTL_S,
             undo_of=done.proposal_id,
             turn_id=done.turn_id,
             # The undo of a batch member is a batch member from birth: never committable on
@@ -255,6 +259,20 @@ class ActionEngine:
                 self._finish(proposal, ActionStatus.REVOKED, "revoked", reason=reason)
                 revoked.append(proposal.proposal_id)
         return revoked
+
+    def dismiss_undo(self, proposal_id: str) -> bool:
+        """Let an undo OFFER go. Not a revocation of work — there is no work: the change it
+        would reverse is finished and proven, and this only takes away the way back.
+
+        The tablet calls it when the offer's own clock runs out on the glass, so that the
+        Mac's copy stops being something the owner could still be waiting on. Anything that
+        is not an undo is refused: a change waiting for a gesture is never dismissed by this
+        door."""
+        proposal = self.find(proposal_id)
+        if proposal is None or proposal.undo_of is None or proposal.status is not ActionStatus.PENDING:
+            return False
+        self._finish(proposal, ActionStatus.EXPIRED, "expired", reason="the offer was let go")
+        return True
 
     def revoke_ids(self, proposal_ids: list[str], reason: str) -> int:
         """Withdraw these proposals, if still waiting, whatever epoch they were staged in."""
@@ -594,6 +612,40 @@ def _forget_what_changed(proposal: ActionProposal) -> None:
         log.debug("could not invalidate the read caches: %s", exc)
 
 
+def waiting_ids(session: Session, *, branch_id: str = "", now: float | None = None) -> list[str]:
+    """The changes in this conversation that are still waiting for the owner.
+
+    A change waiting is work he has not decided about. Two things are NOT that, and the live
+    session counted both:
+
+    * an UNDO — an offer against a change that is finished; "2 changes still waiting over
+      there" at the merge was two undo offers for two completed changes;
+    * a proposal whose time has run out. Expiry is the Mac's clock, and a proposal is marked
+      EXPIRED only when something next looks at it, so a proposal nobody has asked about is
+      still stamped PENDING long after it stopped being anything. One of the two the merge
+      toast counted had been staged three minutes earlier, and the TTL is sixty seconds.
+
+    With `branch_id`, only that half of the orb's.
+    """
+    moment = time.time() if now is None else now
+    return [
+        p.proposal_id for p in session.proposals
+        if p.status is ActionStatus.PENDING and p.undo_of is None and not p.expired(moment)
+        and (not branch_id or str(getattr(p, "branch_id", "") or "") == branch_id)
+    ]
+
+
+def undoable_ids(session: Session, *, branch_id: str = "", now: float | None = None) -> list[str]:
+    """The undo offers still standing: changes that are DONE and can still be put back. Named
+    separately from what is waiting, everywhere, because they are not the same thing."""
+    moment = time.time() if now is None else now
+    return [
+        p.proposal_id for p in session.proposals
+        if p.status is ActionStatus.PENDING and p.undo_of is not None and not p.expired(moment)
+        and (not branch_id or str(getattr(p, "branch_id", "") or "") == branch_id)
+    ]
+
+
 class PreconditionFailed(RuntimeError):
     """Shopify refused the change because the entity was not as the proposal expected — a
     compare-and-swap that found a different quantity, an order that is already cancelled.
@@ -689,4 +741,7 @@ def current() -> ActionEngine:
     return _engine
 
 
-__all__ = ["ActionEngine", "CommitResult", "CODES", "Observed", "Prepared", "PreconditionFailed", "current", "install"]
+__all__ = [
+    "ActionEngine", "CommitResult", "CODES", "Observed", "Prepared", "PreconditionFailed",
+    "current", "install", "undoable_ids", "waiting_ids",
+]
