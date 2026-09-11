@@ -169,7 +169,13 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # And the same again at the tablet's own size. The pictures that matter for an
         # eight-inch screen are the ones taken on an eight-inch screen: the Phase 2 live test
         # found clipping and a swallowed dock that the 800 x 1280 shots could not show.
-        for extra in (TABLET_SCRIPT, COLLISION_SCRIPT, SPLIT_SCRIPT):
+        #
+        # Every gate, into the one directory, because the index in the report is meant to be
+        # the whole build and not the half of it that one file happens to take. Each script
+        # prefixes its own names (accept-, action-, collide-, density-, split-, tab-, e0...),
+        # so nothing here overwrites anything else.
+        for extra in (TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
+                      SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT):
             if not extra.exists():
                 continue
             await asyncio.to_thread(

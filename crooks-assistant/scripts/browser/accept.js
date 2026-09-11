@@ -50,7 +50,9 @@ async function main() {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const shot = async (name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`) }); };
+  // Prefixed, because this file's names (01-, 02-, ...) are the same names experience.js
+  // uses and the screenshot index writes every gate into one directory.
+  const shot = async (name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `accept-${name}.png`) }); };
   const posts = [];
   const telemetry = [];   // every batch the page posted to /telemetry; the Mac keeps them too
   await page.route('**/telemetry', (route) => { telemetry.push(route.request().postData() || ''); route.continue(); });
