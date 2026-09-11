@@ -99,8 +99,15 @@ FIELDS = ("to", "to_name", "subject", "body")
 REPLY_FIELDS = ("body",)
 # The one line the composer says about itself. D-9: the owner asked "how do I type a separate
 # hall for you?" over a build whose only typing surface was this card, and nothing on it, or
-# anywhere else, said that a field could be tapped.
+# anywhere else, said that a field could be tapped. Two lines, because an empty box and a
+# written one need different instructions — and the second is where "rewrite" lives, which
+# was reachable only by knowing the sentence.
 HOW_TO_WRITE = "Tap the box to type, or hold the dock and say it."
+HOW_TO_CHANGE = "Tap the box to edit it, or hold the dock and say how to change it."
+
+
+def how_to_write(compose: dict[str, Any]) -> str:
+    return HOW_TO_CHANGE if str(compose.get("body") or "").strip() else HOW_TO_WRITE
 
 
 def _now() -> float:
@@ -414,7 +421,7 @@ def compose_surface(compose: dict[str, Any]) -> Surface:
             "about": str(compose.get("about") or "")[:MAX_ABOUT_CHARS],
             "resolved_when": (dict(compose.get("resolved_when") or {}) or None),
             "original": str(compose.get("original") or "")[:MAX_ABOUT_CHARS],
-            "how": HOW_TO_WRITE,
+            "how": how_to_write(compose),
             "actions": compose_actions(compose),
         },
         spoken_summary="Nothing is saved or sent until you tap.",

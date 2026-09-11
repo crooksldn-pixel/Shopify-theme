@@ -19,7 +19,7 @@ from experience.browser import EMAIL_SCRIPT, available, run_checks
 
 # Every check the script makes must actually be made: a run that silently stopped after the
 # first section would otherwise pass with three green lines.
-EXPECTED_CHECKS = 24
+EXPECTED_CHECKS = 43
 
 
 async def test_the_email_workspace_works_under_a_finger():

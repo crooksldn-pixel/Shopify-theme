@@ -245,6 +245,108 @@ async function main() {
     drove.every((d) => !/could not|did not answer|cannot/i.test(d.toast)),
     drove.map((d) => `${d.action}:${d.toast}`).join(' | '));
 
+  // ---- 2b. the ORDER rail, pressed the same way
+  //
+  // Six of the eight actions the live session rendered and nobody used live here: note,
+  // refund, email, fulfil, address, cancel. Same rule as the thread's — an enabled chip that
+  // does nothing when a finger lands on it is furniture — and the same method: press each
+  // one, from a freshly drawn card, and read the screen afterwards.
+  const railOf = async (number) => {
+    await say(`show me order ${number}`);
+    await openRail();
+    return page.evaluate(() => {
+      const card = document.querySelector('#cards .card-order');
+      if (!card) return null;
+      return {
+        chips: Array.from(card.querySelectorAll('.rail-chip')).map((c) => {
+          const b = c.getBoundingClientRect();
+          return {
+            action: c.dataset.action || '', mode: c.dataset.mode || '', command: c.dataset.command || '',
+            args: c.dataset.args || '', family: c.dataset.family || '',
+            off: c.getAttribute('aria-disabled') === 'true',
+            why: ((c.querySelector('.rail-why') || {}).textContent || '').trim(),
+            behind: Boolean(c.closest('.rail-rest')),
+            h: Math.round(b.height),
+          };
+        }),
+      };
+    });
+  };
+
+  const open1938 = await railOf(1938);
+  check('an order still has a rail', open1938 !== null && open1938.chips.length > 0,
+    open1938 ? JSON.stringify(open1938.chips) : 'no order card');
+  if (open1938) {
+    const lead = open1938.chips.filter((c) => !c.behind).map((c) => c.action);
+    // 1938 is unfulfilled and paid, AND its customer has written about it. So the reply
+    // leads and the fulfilment is beside it: the order's own context decides, which is what
+    // §22 asks for and what a rail that put Note first on every card could never do.
+    check('an order leads with what its own state needs, not with a note',
+      lead.length > 0 && lead.length <= 2 && lead[0] === 'email'
+      && lead.indexOf('fulfil') !== -1 && lead.indexOf('note') === -1,
+      `lead=${lead.join(',')} rest=${open1938.chips.filter((c) => c.behind).map((c) => c.action).join(',')}`);
+    check('and every chip on it, disclosed or not, is a finger-sized control',
+      open1938.chips.every((c) => c.h >= 44), open1938.chips.map((c) => `${c.action}:${c.h}px`).join(' '));
+
+    const droveOrder = [];
+    for (const chip of open1938.chips.filter((c) => !c.off)) {
+      await railOf(1938);
+      const before = await cards();
+      const hit = await tapMiddle(`#cards .card-order .rail-chip[data-action="${chip.action}"]`);
+      await sleep(1800);
+      const after = await page.evaluate((action) => {
+        const c = document.querySelector(`#cards .rail-chip[data-action="${action}"]`);
+        return {
+          list: Array.from(document.querySelectorAll('#cards .card')).map((x) => x.dataset.type || ''),
+          said: c ? ((c.querySelector('.rail-said') || {}).textContent || '') : '',
+          primed: c ? (c.dataset.said || c.dataset.primed || '') : '',
+          armed: Boolean(document.querySelector('#cards .armed-inline') || (document.querySelector('#armed') && !document.querySelector('#armed').hidden)),
+          toast: ((document.querySelector('#toast') || {}).textContent || '').trim(),
+        };
+      }, chip.action);
+      const responded = chip.mode === 'ask'
+        ? Boolean(after.said || after.primed || after.armed)
+        : JSON.stringify(after.list) !== JSON.stringify(before);
+      droveOrder.push({ action: chip.action, mode: chip.mode, hit, responded, said: after.said.slice(0, 48), toast: after.toast });
+    }
+    check('every enabled chip on an order, pressed with a finger, changes the screen',
+      droveOrder.length > 0 && droveOrder.every((d) => d.hit && d.responded),
+      JSON.stringify(droveOrder));
+    check('and none of those answered with an error',
+      droveOrder.every((d) => !/could not|did not answer|cannot|nothing open/i.test(d.toast)),
+      droveOrder.map((d) => `${d.action}:${d.toast}`).join(' | '));
+    // Email on an order is an "open" chip now: it puts a composer addressed to the customer
+    // on the screen, which is the second typing path §20 asks for.
+    const emailChip = open1938.chips.find((c) => c.action === 'email');
+    if (emailChip && !emailChip.off) {
+      await railOf(1938);
+      await tapMiddle('#cards .card-order .rail-chip[data-action="email"]');
+      await sleep(1800);
+      const composed = await page.evaluate(() => {
+        const card = document.querySelector('#cards .card-email_compose');
+        return card ? {
+          inputs: Array.from(card.querySelectorAll('.field-input')).map((f) => f.dataset.field),
+          text: (card.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+        } : null;
+      });
+      check('Email on an order opens an email to that customer, with the address typable',
+        composed !== null && composed.inputs.indexOf('to') !== -1 && composed.inputs.indexOf('body') !== -1,
+        composed ? JSON.stringify(composed) : 'no composer');
+    }
+  }
+
+  const shipped = await railOf(1939);
+  check('a shipped order says why the things it cannot do cannot be done',
+    shipped !== null && shipped.chips.filter((c) => c.off).length > 0
+    && shipped.chips.filter((c) => c.off).every((c) => c.why.length > 0),
+    shipped ? JSON.stringify(shipped.chips.filter((c) => c.off)) : 'no order card');
+  check('and it does not put a dead Fulfil beside a live Refund',
+    shipped !== null
+    && shipped.chips.filter((c) => c.off).every((c) => c.behind)
+    && shipped.chips.filter((c) => !c.behind).every((c) => !c.off),
+    shipped ? shipped.chips.map((c) => `${c.action}:${c.off ? 'off' : 'on'}:${c.behind ? 'behind' : 'lead'}`).join(' ') : '');
+  await shot('e07-order-rail');
+
   // ---- 3. the Reply path, end to end, asserting the VISIBLE state at every step
   await say('which customers need replying to?');
   await tapMiddle('#cards .row.tappable[data-kind="email_thread"]');
