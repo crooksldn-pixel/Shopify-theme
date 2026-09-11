@@ -191,10 +191,22 @@ def present(
         )
         errors.setdefault(service, _error(service, error_kind, title, recovery))
 
-    out = items + list(errors.values())
+    out = _only_empty_when_nothing_else(items) + list(errors.values())
     if session is not None and len(session.context) >= 2:
         out.append(_ui("context_stack", {"entries": [dict(c) for c in session.context[:MAX_CONTEXT]]}))
     return [item for item in out if item["type"] in UI_TYPES]
+
+
+def _only_empty_when_nothing_else(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """An empty-state card is the ANSWER, or it is nothing.
+
+    "No orders yesterday" is worth a card when it is what the turn found (D-15). It is noise
+    above the card that IS the answer — a note being staged on the order a first, wider lookup
+    missed; a customer list offered because the order number matched nobody. So: where the
+    turn produced anything substantive, the empties go.
+    """
+    substantive = [item for item in items if not (isinstance(item.get("data"), dict) and item["data"].get("empty"))]
+    return substantive if substantive else items
 
 
 # --------------------------------------------------------------------------- per tool
@@ -1173,6 +1185,9 @@ def compact(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
       the second ranking is one tap away (→ 736 px). Nothing is removed: the folded card is
       the whole card.
     """
+    # And the same rule once more over the WHOLE screen: a recipe's own card can be the answer
+    # a tool read found none of, and "no orders yesterday" must not sit above it.
+    items = _only_empty_when_nothing_else(list(items))
     out: list[dict[str, Any]] = []
     seen_kinds: set[str] = set()
     have_set = False

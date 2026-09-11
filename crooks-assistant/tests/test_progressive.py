@@ -353,6 +353,26 @@ def test_no_read_result_with_records_in_it_can_produce_no_card():
             assert item["type"] in UI_TYPES, f"{name} drew {item['type']}, which is not in the vocabulary"
 
 
+def test_an_empty_card_never_sits_above_the_card_that_is_the_answer():
+    """"No orders matched 1938" is the answer when it is all the turn found, and noise above
+    the note being staged on the order a wider lookup missed. So the empties go where the turn
+    produced anything substantive — this is the rule that keeps D-15's card from becoming its
+    own defect."""
+    from app.presentation import compact
+
+    missed = ToolCall(name="shopify_find_order", args={}, ok=True, result={"orders": [], "query": "1938"})
+    found = ToolCall(name="shopify_order_detail", args={}, ok=True,
+                     result={"order_id": "g1", "order_number": "#1938", "items": []})
+    items = present([missed, found])
+    assert [i["type"] for i in items] == ["order"], items
+    # And once more over the whole screen, where the answer is a recipe's own card.
+    mixed = compact([
+        {"type": "order_list", "data": {"title": "Orders", "count": 0, "empty": True, "note": "none", "orders": []}},
+        {"type": "workspace", "data": {"workspace_id": "w1", "title": "A discount code"}},
+    ])
+    assert [i["type"] for i in mixed] == ["workspace"]
+
+
 def test_an_empty_read_of_every_listing_kind_draws_a_card():
     empties = {
         "shopify_list_orders": {"orders": [], "count": 0},
