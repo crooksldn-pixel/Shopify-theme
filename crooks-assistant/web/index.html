@@ -74,9 +74,12 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Assistant</span>
         </button>
         <button id="back-btn" class="chip" type="button" hidden>Back</button>
-        <!-- Shown only while a list is open. "Next" was sayable and not tappable, which made
-             the one operation two: the word moved the Mac's cursor and nothing on the tablet
-             could. Both now post workflow.next. -->
+        <!-- Shown only while a list is open, and both of them together: the pair walks the
+             LIST, and Back walks the TRAIL. Back used to be wired to workflow.previous
+             whenever a set was open, so one pair of buttons drove two different cursors and
+             the owner reported that Back and Next had both regressed. Previous is the list's
+             own way back, beside the list's own way on. -->
+        <button id="prev-btn" class="chip chip-step" type="button" hidden aria-label="The one before it in this list">‹</button>
         <button id="next-btn" class="chip" type="button" hidden>Next</button>
         <!-- The halves, when cards are up: Split with one, the two named with Merge and
              Close when there are two. The same chips sit under the orb on the orb screen. -->

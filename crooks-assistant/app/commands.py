@@ -186,21 +186,39 @@ def replay(ctx: Ctx, kind: str, ref: str) -> list[Any]:
 
 
 def _landed(ctx: Ctx, moved: dict[str, Any], *, words: str) -> Outcome:
-    """Draw the record the trail landed on, from memory if it is held.
+    """Draw the workspace the trail landed on.
 
-    When it is not, `needs_read` names it and the caller reads it — the route awaits, and the
-    fast lane plans for it. Announcing a move and leaving the screen where it was is the
-    failure this whole pass is about, and a dropped cache entry is no excuse for it.
+    Three kinds of stop, three ways of drawing one, and no fourth:
+
+      a record the Mac holds       replayed from the entity cache, free and instant
+      a record it has dropped      `needs_read` names it and the caller reads it
+      a listing or a landing       the cards kept with the stop, or — if the tablet never
+                                   sent them, or they have been dropped — the landing recipe
+                                   for its area, read again deterministically
+
+    Announcing a move and leaving the screen where it was is the failure this whole pass is
+    about, so every branch here ends in something to look at.
     """
+    from app.session.branch import LANDING_KIND
+
+    branch = ctx.branch
+    entry = branch.here
+    changed: dict[str, Any] = {**moved, "workspace": branch.where()}
+    if entry is not None and entry.is_workspace:
+        if entry.ui:
+            return Outcome(answer=words or entry.answer, surfaces=[AsUi(u) for u in entry.ui],
+                           changed={**changed, "replayed": True})
+        # Nothing kept: draw the place again from its own reads. A landing is a fixed shape
+        # whatever was said before it, so this cannot come back as a different screen.
+        recipe = LANDING_FOR.get(entry.area or "")
+        if recipe:
+            return Outcome(answer="", changed={**changed, "replayed": False, "recipe": recipe,
+                                               "area": entry.area, "kind": LANDING_KIND})
+        return Outcome(answer=words, changed={**changed, "replayed": False})
     kind, ref = str(moved.get("kind") or ""), str(moved.get("ref") or "")
     calls = replay(ctx, kind, ref)
-    if moved.get("tab"):
-        ctx.branch.mark(tab=str(moved["tab"]))
-    changed: dict[str, Any] = {
-        **moved,
-        "entity": {"kind": kind, "ref": ref, "label": str(moved.get("label") or "")},
-        "replayed": bool(calls),
-    }
+    changed.update({"entity": {"kind": kind, "ref": ref, "label": str(moved.get("label") or "")},
+                    "replayed": bool(calls)})
     if not calls and kind in REPLAY_TOOL:
         changed["needs_read"] = {"kind": kind, "ref": ref, "set_kind": _SET_KIND.get(kind, "")}
     return Outcome(answer=words, calls=calls, changed=changed)
@@ -214,8 +232,29 @@ _SET_KIND = {"order": "orders", "customer": "customers", "email_thread": "emails
 # --------------------------------------------------------------------------- navigation
 
 
-# Which way each navigation command moves the branch's trail.
-NAV_MOVES = {"navigation.back": "back", "navigation.forward": "forward", "navigation.home": "home"}
+# Which way each navigation command moves the branch's trail. Home is deliberately absent:
+# it is not a move along the trail at all (see `_home`), and while it was one it walked to
+# `nav[0]` and replayed whatever record happened to be oldest.
+NAV_MOVES = {"navigation.back": "back", "navigation.forward": "forward"}
+
+# The dock's places, by area, to the recipe that draws each one. Filled in by
+# `app/families/landings.py` at import — the landings own their own shapes, and this file
+# stays free of them, because a command must not depend on a family.
+LANDING_FOR: dict[str, str] = {}
+# Where "back to the assistant" goes on a half that has never been anywhere.
+DEFAULT_LANDING = "orders"
+
+
+def home_target(branch: Any) -> tuple[str, str]:
+    """The area a Home on this half lands in, and the recipe that draws it.
+
+    One implementation for both ends: `POST /command` runs the recipe this names, and the fast
+    lane's `navigation_home` recipe delegates to it, so a tapped Assistant chip and the spoken
+    "back to the assistant" cannot reach two different screens.
+    """
+    area = str(getattr(branch, "home_area", "") or DEFAULT_LANDING)
+    recipe = LANDING_FOR.get(area) or LANDING_FOR.get(DEFAULT_LANDING, "")
+    return (area if recipe and area in LANDING_FOR else DEFAULT_LANDING), recipe
 
 
 def move_nav(branch: Any, direction: str) -> dict[str, Any]:
@@ -230,49 +269,64 @@ def move_nav(branch: Any, direction: str) -> dict[str, Any]:
         entry = branch.back()
     elif direction == "forward":
         entry = branch.forward()
-    elif direction == "home" and branch.nav:
-        while branch.nav_index > 0 and branch.back() is not None:
-            pass
-        branch.nav_index = 0
-        entry = branch.nav[0]
-        branch.entity = {"kind": entry.kind, "ref": entry.ref, "label": entry.label}
     if entry is None:
         return {"landed": False, "direction": direction}
     return {"landed": True, "direction": direction, "kind": entry.kind, "ref": entry.ref,
-            "label": entry.label, "tab": entry.tab}
+            "label": entry.label, "tab": entry.tab, "area": entry.area,
+            "set_id": entry.set_id, "position": entry.position, "total": entry.total}
 
 
 def _navigate(ctx: Ctx, direction: str, *, nowhere: str, words) -> Outcome:
     moved = move_nav(ctx.branch, direction)
     if not moved.get("landed"):
-        return Outcome(answer=nowhere, changed=moved)
+        # Nowhere to go, and the branch has not moved. Said rather than refused: the owner
+        # tapped something that does not apply, which is not a fault.
+        return Outcome(answer=nowhere, changed={**moved, "workspace": ctx.branch.where()})
     return _landed(ctx, moved, words=words(moved["label"]))
 
 
 def _back(ctx: Ctx) -> Outcome:
+    """The workspace the owner came from — all of it.
+
+    Not a render popped off a stack and not the previous member of the open list: the stop
+    behind this one, put back the way it was. `Branch._land` is where that happens, and what
+    it restores is the point of the whole defect: the record, the part of it showing, how far
+    down, the working set, the cursor's place in it, the rows opened in place, and which
+    record this one was reached from.
+    """
     return _navigate(ctx, "back", nowhere="That is as far back as this conversation goes.",
-                     words=lambda label: f"Back to {label}.")
+                     words=lambda label: f"Back to {label}." if label else "Back.")
 
 
 def _forward(ctx: Ctx) -> Outcome:
     return _navigate(ctx, "forward", nowhere="There is nothing forward of here.",
-                     words=lambda label: f"Forward to {label}.")
+                     words=lambda label: f"Forward to {label}." if label else "Forward.")
 
 
 def _home(ctx: Ctx) -> Outcome:
-    """The start of this branch's trail.
+    """Back to the assistant: this half's LANDING workspace.
 
-    It goes through the same landing the other two do, so home draws the record it lands on
-    rather than announcing a move and leaving the screen where it was — which is what it did
-    when it set nav_index by hand.
+    This is the eight-Homes-in-twenty-two-seconds defect. Home used to walk the trail to
+    `nav[0]` and replay the record it found there, and since every read leaves a stop, the
+    record it found was the oldest thing the branch had looked at — an email thread from nine
+    minutes earlier. It answered `ok=True` and drew that thread, eight times, while the owner
+    pressed the button again because nothing useful was happening.
+
+    A landing is a PLACE: a fixed shape, whatever was said before it, read deterministically
+    by the same recipe the dock icon reaches (app/families/landings.py). So Home cannot
+    replay a stale record, cannot depend on the trail having anything on it, and cannot
+    answer differently the second time. The recipe is named here and run by the caller,
+    because a command is synchronous by design and a landing is three reads.
     """
-    return _navigate(ctx, "home", nowhere="There is nothing to go back to yet.",
-                     words=lambda label: f"Back to the start: {label}.")
+    area, recipe = home_target(ctx.branch)
+    if not recipe:
+        return Outcome.refused("no_landing", "I have no landing to go back to.")
+    return Outcome(answer="", changed={"recipe": recipe, "area": area, "home": True})
 
 
-register(Command("navigation.back", "The record before this one", _back))
-register(Command("navigation.forward", "The record after this one", _forward))
-register(Command("navigation.home", "The start of this trail", _home))
+register(Command("navigation.back", "The workspace you came from", _back))
+register(Command("navigation.forward", "The workspace you came back from", _forward))
+register(Command("navigation.home", "This half's landing workspace", _home))
 
 
 # --------------------------------------------------------------------------- the cursor
@@ -282,6 +336,11 @@ def _member_words(ctx: Ctx, label: str) -> str:
     workflow = ctx.branch.workflow
     where = f"{workflow.position} of {workflow.total}"
     return f"{label}. {where}." if label else f"{where}."
+
+
+def _position(ctx: Ctx) -> int:
+    workflow = getattr(ctx.branch, "workflow", None)
+    return int(workflow.position) if workflow is not None else 0
 
 
 # Which tool reads one member of a set of each kind, and what that kind of record is called.
@@ -345,12 +404,18 @@ def _step_cursor(ctx: Ctx, *, forward: bool) -> Outcome:
     if not moved.get("moved"):
         code = str(moved.get("code") or "")
         if code in BOUND_WORDS:
-            return Outcome(answer=BOUND_WORDS[code], changed=moved)
+            return Outcome(answer=BOUND_WORDS[code], changed={**moved, "position": _position(ctx),
+                                                              "workspace": ctx.branch.where()})
         return Outcome.refused(code or "no_set", "There is no list open to move through.")
     kind, ref, label = str(moved["kind"]), str(moved["ref"]), str(moved["label"])
     ctx.branch.visit(kind, ref, label, set_id=str(moved.get("set_id") or ""))
     calls = replay(ctx, kind, ref)
-    outcome = Outcome(answer=_member_words(ctx, label), calls=calls, changed={**moved, "replayed": bool(calls)})
+    # The position as a number as well as in the sentence. The chip on the glass draws "3 of
+    # 10" and used to parse it out of the prose, which meant it was right only for as long as
+    # the wording stayed the same.
+    outcome = Outcome(answer=_member_words(ctx, label), calls=calls,
+                      changed={**moved, "replayed": bool(calls), "position": _position(ctx),
+                               "workspace": ctx.branch.where()})
     if not calls:
         # Memory does not hold this member. The caller reads it: the route can await, and the
         # fast lane already has a read plan for exactly this.
@@ -358,6 +423,10 @@ def _step_cursor(ctx: Ctx, *, forward: bool) -> Outcome:
     return outcome
 
 
+# Next is the CURRENT SET under the CURSOR and nothing else. `needs_workflow` is what keeps
+# it from becoming "the next historical item": with no list open it refuses rather than
+# walking the trail, which is the muddle the owner was reporting when he said Back and Next
+# had both regressed — one pair of buttons over two different cursors.
 register(Command("workflow.next", "The next one in the open list",
                  lambda ctx: _step_cursor(ctx, forward=True), needs_workflow=True))
 register(Command("workflow.previous", "The one before it in the open list",
@@ -441,12 +510,30 @@ def _expand_row(ctx: Ctx) -> Outcome:
         expanded.remove(ref)
     else:
         expanded.append(ref)
-    ctx.branch.expanded = expanded[-12:]
+    ctx.branch.mark(expanded=expanded[-12:])
     return Outcome(answer="", changed={"expanded": list(ctx.branch.expanded)})
+
+
+def _scrolled(ctx: Ctx) -> Outcome:
+    """How far down the screen is, kept against the stop it belongs to.
+
+    A depth is the same sort of thing a tab is: a small value about the screen, not an
+    execution argument, and the Mac decides what it means. It is here because the brief asks
+    Back to restore the position "where practical", and the tablet is the only thing that
+    knows how far down a thumb pushed the cards. Nothing is read and nothing changes.
+    """
+    raw = ctx.arg("depth") or ctx.arg("scroll")
+    try:
+        depth = max(0, min(int(float(raw)), 100_000))
+    except ValueError:
+        return Outcome.refused("no_depth", "That does not say how far down the screen is.")
+    ctx.branch.mark(scroll=depth)
+    return Outcome(answer="", changed={"scroll": depth})
 
 
 register(Command("surface.tab", "Show one part of the open record", _select_tab))
 register(Command("surface.expand", "Open a row where it sits", _expand_row, voice=False))
+register(Command("surface.scroll", "How far down the screen is", _scrolled, voice=False))
 # The spoken shortcuts people actually use. Each is the tab command with its argument fixed,
 # so there is still one implementation of "show the shipping".
 register(Command("order.open_shipping", "The shipping on this order",
@@ -489,12 +576,12 @@ def _branch_show(ctx: Ctx) -> Outcome:
                            changed={"branch_id": branch.branch_id, "question": branch.last_question, "replayed": True})
     if not ui and not branch.last_answer:
         return Outcome(answer="", changed={"branch_id": branch.branch_id, "empty": True})
-    return Outcome(answer=branch.last_answer, surfaces=[_AsUi(u) for u in ui],
+    return Outcome(answer=branch.last_answer, surfaces=[AsUi(u) for u in ui],
                    changed={"branch_id": branch.branch_id, "question": branch.last_question,
                             "task": dict(branch.task) if branch.task else None})
 
 
-class _AsUi:
+class AsUi:
     """A presented card handed back as it was. `present()` is not run again on it."""
 
     __slots__ = ("item",)

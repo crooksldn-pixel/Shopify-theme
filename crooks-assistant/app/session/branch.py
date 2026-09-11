@@ -28,6 +28,26 @@ MAX_NAV = 12
 RESOLUTION_TTL_S = 900.0
 MAX_RESOLUTIONS = 60
 
+# What kind of workspace a stop on the trail is. Two of them are not records:
+#
+#   LIST_KIND     the listing a working set came from — "today's orders", the reply queue.
+#                 It has a set_id rather than an entity id, and it cannot be replayed from
+#                 the entity cache, because a listing is not a record: there is no
+#                 `list_id` in app/memory to read. So its cards travel with the stop.
+#   LANDING_KIND  one of the dock's places (Sales, Products) that opens no set at all.
+#
+# Before these existed, only records were stops, so the Orders list the owner started from
+# was never on the trail and no number of Backs could reach it.
+LIST_KIND = "list"
+LANDING_KIND = "landing"
+WORKSPACE_KINDS = (LIST_KIND, LANDING_KIND)
+# Cards kept with a workspace stop, so Back to a list redraws the list. Bounded twice: the
+# tablet shows a handful, and this is presentation that has already been sent once.
+MAX_STOP_UI = 4
+# Where a branch goes when the owner asks for the assistant and the branch has never been
+# anywhere. The dock's first place; `Branch.landing` names the one it was actually in.
+DEFAULT_AREA = "orders"
+
 
 def new_branch_id() -> str:
     return f"br_{os.urandom(5).hex()}"
@@ -82,8 +102,27 @@ class Workflow:
 
 @dataclass(slots=True)
 class NavEntry:
-    """One stop on the branch's back stack. Holds what it takes to put the screen back as it
-    was — which entity, which tab, how far down — never the rendered cards themselves."""
+    """One stop on the branch's back stack: a WORKSPACE, not a render.
+
+    The distinction is the whole of defect D-10. A stop used to be an entity, a tab and a
+    scroll depth, so Back put the record back and lost everything else the screen was made
+    of — which set "these" meant, where the cursor stood in it, which rows were open, and
+    which record this one had been reached from. The owner came back to a screen that looked
+    like the one he had left and did not behave like it, four times in twenty-two seconds.
+
+    So a stop holds everything it takes to put the screen back:
+
+        kind/ref/label   the record, or the set a listing found, or a dock area
+        tab, scroll      which part of it, and how far down
+        set_id …total    the working set and the cursor's place in it AT THIS STOP
+        expanded         the rows opened in place
+        from_*           the record this workspace was reached FROM — "Customer on #1957"
+        ui               the cards, for a stop that no cache can rebuild (a listing)
+
+    The filters are not here and do not need to be: a working set is immutable and carries
+    the query that made it (app/analytics/sets.py provenance), so restoring `set_id` restores
+    exactly the narrowing the owner was looking at.
+    """
 
     entry_id: str
     kind: str
@@ -92,11 +131,51 @@ class NavEntry:
     tab: str = ""
     scroll: int = 0
     set_id: str = ""
+    # The cursor, as this stop had it. A member of a set is not the same workspace as the same
+    # record opened cold: the position is part of what the owner can see.
+    cursor: int = -1
+    total: int = 0
+    set_kind: str = ""
+    set_label: str = ""
+    operation: str = "review"
+    workflow_id: str = ""
+    # Which of the dock's places this workspace belongs to, so Home knows where home is and
+    # the dock can light the right icon when Back arrives.
+    area: str = ""
+    expanded: list[str] = field(default_factory=list)
+    # The record open at this stop. The same thing as kind/ref/label for a record stop; for a
+    # list stop it is whatever was open when the list was drawn, which is usually nothing.
+    entity: dict[str, str] | None = None
+    # Where this stop was reached from, and nothing about why: the relation is the pair.
+    from_kind: str = ""
+    from_ref: str = ""
+    from_label: str = ""
+    # Cards as presented, for a workspace stop only (see WORKSPACE_KINDS). A record stop keeps
+    # none: `commands.replay` rebuilds it from the shared entity cache, which is cheaper and
+    # cannot go stale in a way this would hide.
+    ui: list[dict[str, Any]] = field(default_factory=list)
+    answer: str = ""
     at: float = field(default_factory=time.time)
+
+    @property
+    def is_workspace(self) -> bool:
+        return self.kind in WORKSPACE_KINDS
+
+    @property
+    def position(self) -> int:
+        """The cursor as a person counts it, one-based; nought before the first member."""
+        if not self.total or self.cursor < 0:
+            return 0
+        return min(self.cursor + 1, self.total)
 
     def public(self) -> dict[str, Any]:
         return {"entry_id": self.entry_id, "kind": self.kind, "ref": self.ref, "label": self.label,
-                "tab": self.tab, "scroll": self.scroll, "set_id": self.set_id}
+                "tab": self.tab, "scroll": self.scroll, "set_id": self.set_id,
+                "cursor": self.cursor, "position": self.position, "total": self.total,
+                "set_kind": self.set_kind, "set_label": self.set_label, "area": self.area,
+                "expanded": list(self.expanded),
+                "from": ({"kind": self.from_kind, "ref": self.from_ref, "label": self.from_label}
+                         if self.from_ref else None)}
 
 
 @dataclass(slots=True)
@@ -131,6 +210,11 @@ class Branch:
     nav_index: int = -1
     tab: str = ""
     scroll: int = 0
+    # Which of the dock's places this half is in, and therefore where "back to the assistant"
+    # goes. Branch state like every other position: the right half working in the inbox goes
+    # home to the inbox while the left half goes home to orders. Empty until the half has
+    # actually been somewhere; `home_area` supplies the default.
+    landing: str = ""
     # Rows opened in place on the current surface, by ref. Branch state rather than something
     # only the DOM knows, so a Back that returns here returns to the same shape of screen, and
     # a half put aside keeps its own.
@@ -189,6 +273,13 @@ class Branch:
         self.last_answer = str(answer or "")[:400]
         self.last_question = str(question or "")[:200]
         self.last_at = clock()
+        # A stop that no cache can rebuild keeps its own cards, so Back to the Orders list
+        # redraws the Orders list rather than announcing a move over an empty screen. A record
+        # stop keeps none: `commands.replay` rebuilds it from the shared entity cache.
+        entry = self.here
+        if entry is not None and entry.is_workspace and kept:
+            entry.ui = kept[:MAX_STOP_UI]
+            entry.answer = self.last_answer
 
     # ------------------------------------------------------------------ work
 
@@ -214,8 +305,19 @@ class Branch:
 
     # ------------------------------------------------------------- navigation
 
-    def visit(self, kind: str, ref: str, label: str, *, tab: str = "", set_id: str = "") -> NavEntry:
-        """Go somewhere. Truncates any forward history, as a browser does.
+    @property
+    def here(self) -> NavEntry | None:
+        """The stop the branch is standing on, if it is standing on one."""
+        return self.nav[self.nav_index] if 0 <= self.nav_index < len(self.nav) else None
+
+    @property
+    def home_area(self) -> str:
+        """Where "back to the assistant" goes on this half. Never a record."""
+        return self.landing or DEFAULT_AREA
+
+    def visit(self, kind: str, ref: str, label: str, *, tab: str = "", set_id: str = "",
+              area: str = "") -> NavEntry:
+        """Go to a RECORD. Truncates any forward history, as a browser does.
 
         Asking about the record you are already on is not going anywhere, so it does not push a
         stop. Every read calls this (`app/fastpath/library.py:_remember`), so three questions
@@ -223,58 +325,210 @@ class Branch:
         landed on the same record, on the same tab, and said the same sentence, which is a
         button that visibly does nothing. The owner has no way to tell that from a Back that
         failed.
+
+        Two things happen here that did not before, and both are what Back needs to be worth
+        pressing. The stop being LEFT is stamped with the screen as it actually stands — how
+        far down, which rows are open, where the cursor is — because those change after a stop
+        is pushed and a snapshot taken at push time is a snapshot of the wrong moment. And the
+        stop being MADE records the record it was reached from, so a customer opened from
+        CROOKS-1957 comes back as the customer on CROOKS-1957.
         """
-        current = self.nav[self.nav_index] if 0 <= self.nav_index < len(self.nav) else None
+        current = self.here
+        self._stamp()
         if current is not None and current.kind == kind and current.ref == str(ref) and current.tab == tab:
             current.set_id = set_id or self.set_id
+            self._bind_cursor(current)
             self.entity = {"kind": kind, "ref": str(ref), "label": str(label)[:80]}
+            current.entity = dict(self.entity)
             self.scroll = 0
+            current.scroll = 0
             self.remember_entity(kind, ref, label)
             return current
+        entry = NavEntry(entry_id=f"nav_{os.urandom(4).hex()}", kind=kind, ref=str(ref),
+                         label=str(label)[:80], tab=tab, set_id=set_id or self.set_id,
+                         area=area or (current.area if current is not None else ""),
+                         entity={"kind": kind, "ref": str(ref), "label": str(label)[:80]})
+        if current is not None:
+            entry.from_kind, entry.from_ref, entry.from_label = current.kind, current.ref, current.label
+        self._bind_cursor(entry)
+        self._push(entry)
+        self.entity = dict(entry.entity or {})
+        self.tab = tab
+        self.scroll = 0
+        self.expanded = []
+        self.remember_entity(kind, ref, label)
+        return entry
+
+    def enter(self, *, area: str, kind: str = LANDING_KIND, ref: str = "", label: str = "",
+              set_id: str = "", set_kind: str = "", set_label: str = "", total: int = 0,
+              operation: str = "review", workflow_id: str = "") -> NavEntry:
+        """Arrive at a PLACE: a listing, or one of the dock's landings.
+
+        A place is a stop on the trail like a record is, and this is the only way one gets
+        there. Before it existed the Orders list the owner started from was not on the trail
+        at all — `_open_workflow` set a cursor and nothing else — so no number of Backs could
+        return to it, and Home had nowhere to go but the oldest record the branch held.
+
+        Arriving somewhere the branch already is updates that stop rather than pushing
+        another: eight Homes in twenty-two seconds must not leave eight stops behind, and a
+        re-listing of the same area is the same place with fresher rows. The area, not the set
+        id, is the identity — a new read makes a new set every time.
+        """
+        area = str(area or "")[:24]
+        current = self.here
+        self._stamp()
+        if current is not None and current.is_workspace and current.area == area:
+            entry = current
+            # A landing arriving where a listing already stands does not erase the listing:
+            # the Inbox landing draws the reply queue, and the queue is what the cursor walks.
+            if kind != LANDING_KIND or not entry.set_id:
+                entry.kind = kind or entry.kind
+                entry.ref = str(ref or entry.ref)
+                entry.label = str(label or entry.label)[:80]
+            # Fresher rows: the cards this stop was showing are no longer what it shows, and
+            # `shown()` will stamp the new ones.
+            entry.ui = []
+        else:
+            entry = NavEntry(entry_id=f"nav_{os.urandom(4).hex()}", kind=kind, ref=str(ref),
+                             label=str(label)[:80], area=area,
+                             entity=dict(self.entity) if self.entity else None)
+            if current is not None:
+                entry.from_kind, entry.from_ref, entry.from_label = current.kind, current.ref, current.label
+            self._push(entry)
+        if set_id:
+            entry.set_id, entry.set_kind, entry.set_label = str(set_id), str(set_kind), str(set_label)[:80]
+            entry.total, entry.cursor, entry.operation = int(total), -1, str(operation)
+            entry.workflow_id = str(workflow_id)
+        entry.tab, entry.scroll = "", 0
+        entry.expanded = []
+        self.tab, self.scroll, self.expanded = "", 0, []
+        self.landing = area or self.landing
+        return entry
+
+    def _push(self, entry: NavEntry) -> None:
         if self.nav_index >= 0:
             del self.nav[self.nav_index + 1 :]
-        entry = NavEntry(entry_id=f"nav_{os.urandom(4).hex()}", kind=kind, ref=str(ref), label=str(label)[:80], tab=tab, set_id=set_id or self.set_id)
         self.nav.append(entry)
         del self.nav[:-MAX_NAV]
         self.nav_index = len(self.nav) - 1
-        self.entity = {"kind": kind, "ref": str(ref), "label": str(label)[:80]}
-        self.tab = tab
-        self.scroll = 0
-        self.remember_entity(kind, ref, label)
-        return entry
+
+    def _stamp(self) -> None:
+        """Write the screen as it now stands onto the stop being left.
+
+        `mark()` keeps the tab and the scroll up to date as they change; the cursor and the
+        opened rows move without anything telling the stack, and they are half of what makes
+        one workspace different from another.
+        """
+        entry = self.here
+        if entry is None:
+            return
+        entry.scroll = self.scroll
+        entry.tab = self.tab
+        entry.expanded = list(self.expanded)
+        # The cursor is stamped on a LISTING as the walk moves it, so returning to the list
+        # returns to where the walk had got to. It is NOT stamped on a record: a member's stop
+        # is the place that member holds in the set, fixed when it was opened. Stamping it
+        # here would have written the cursor's new value onto the stop it had just left —
+        # `move_cursor` moves the cursor before the visit that records the arrival — and every
+        # stop on the trail would have carried the same position.
+        if entry.is_workspace and self.workflow is not None and self.workflow.set_id == entry.set_id:
+            entry.cursor, entry.total = self.workflow.cursor, self.workflow.total
+
+    def _bind_cursor(self, entry: NavEntry) -> None:
+        """The set and the place in it, as the stop being MADE has them."""
+        if self.workflow is None:
+            return
+        entry.set_id = entry.set_id or self.workflow.set_id
+        if entry.set_id != self.workflow.set_id:
+            return
+        entry.cursor, entry.total = self.workflow.cursor, self.workflow.total
+        entry.set_kind, entry.set_label = self.workflow.kind, self.workflow.label
+        entry.operation, entry.workflow_id = self.workflow.operation, self.workflow.workflow_id
 
     def back(self) -> NavEntry | None:
         if self.nav_index <= 0:
             return None
+        self._stamp()
         self.nav_index -= 1
         return self._land()
 
     def forward(self) -> NavEntry | None:
         if self.nav_index < 0 or self.nav_index >= len(self.nav) - 1:
             return None
+        self._stamp()
         self.nav_index += 1
         return self._land()
 
     def _land(self) -> NavEntry:
+        """Put the branch back the way this stop had it. Everything the screen is made of.
+
+        What this restores beyond the record is the point: the working set "these" means, the
+        cursor's place in it, the part of the record that was showing, how far down it was
+        scrolled, and the rows that were open. A Back that restored only the record put the
+        owner on a screen that looked right and behaved like a different one.
+        """
         entry = self.nav[self.nav_index]
-        self.entity = {"kind": entry.kind, "ref": entry.ref, "label": entry.label}
+        self.entity = dict(entry.entity) if entry.entity else (
+            {"kind": entry.kind, "ref": entry.ref, "label": entry.label} if not entry.is_workspace else None
+        )
         self.tab = entry.tab
         self.scroll = entry.scroll
+        self.expanded = list(entry.expanded)
         self.set_id = entry.set_id or self.set_id
+        if entry.area:
+            self.landing = entry.area
+        self._restore_cursor(entry)
         return entry
 
-    def mark(self, *, tab: str | None = None, scroll: int | None = None) -> None:
+    def _restore_cursor(self, entry: NavEntry) -> None:
+        """The cursor as this stop had it, rebuilding the workflow when the branch has since
+        walked a different set. A stop that names no set leaves the branch's set alone: the
+        screen it describes was drawn before "these" meant anything."""
+        if not entry.set_id:
+            return
+        if self.workflow is not None and self.workflow.set_id == entry.set_id:
+            self.workflow.cursor = entry.cursor
+            if entry.total:
+                self.workflow.total = entry.total
+            return
+        self.workflow = Workflow(
+            workflow_id=entry.workflow_id or f"wf_{os.urandom(4).hex()}", set_id=entry.set_id,
+            kind=entry.set_kind or "orders", label=entry.set_label, operation=entry.operation,
+            cursor=entry.cursor, total=entry.total,
+        )
+
+    def where(self) -> dict[str, Any]:
+        """Where this half is, as the tablet needs it: the stop it stands on, plus what the
+        branch holds when it does not stand on one yet.
+
+        Named `where` rather than `workspace` because `workspace` is already this half's
+        half-written discount or order (above) — a different thing entirely."""
+        entry = self.here
+        if entry is not None:
+            return {**entry.public(), "entity": dict(self.entity) if self.entity else None}
+        return {"entry_id": "", "kind": "", "ref": "", "label": "", "tab": self.tab or "",
+                "scroll": self.scroll, "set_id": self.set_id, "cursor": -1, "position": 0,
+                "total": 0, "set_kind": "", "set_label": "", "area": self.landing,
+                "expanded": list(self.expanded), "from": None,
+                "entity": dict(self.entity) if self.entity else None}
+
+    def mark(self, *, tab: str | None = None, scroll: int | None = None,
+             expanded: list[str] | None = None) -> None:
         """The screen moved. Kept on the current stack entry so going back restores it."""
         if tab is not None:
             self.tab = str(tab)[:40]
         if scroll is not None:
             self.scroll = max(0, int(scroll))
-        if 0 <= self.nav_index < len(self.nav):
-            entry = self.nav[self.nav_index]
+        if expanded is not None:
+            self.expanded = [str(x)[:200] for x in expanded][-12:]
+        entry = self.here
+        if entry is not None:
             if tab is not None:
                 entry.tab = self.tab
             if scroll is not None:
                 entry.scroll = self.scroll
+            if expanded is not None:
+                entry.expanded = list(self.expanded)
 
     # ---------------------------------------------------------------- memory
 
@@ -388,8 +642,17 @@ class Branch:
             "building": ({"workspace_id": str(self.workspace.get("workspace_id") or ""),
                           "kind": str(self.workspace.get("kind") or "")}
                          if isinstance(self.workspace, dict) and self.workspace.get("workspace_id") else None),
+            # Whether there is anywhere to go, and where. `can_back` is the trail's own answer
+            # and the only one the Back chip may be drawn from: while the tablet decided for
+            # itself — a local render cache, or "the list cursor is not at the start" — Back
+            # meant two different things depending on which of them happened to be true.
             "can_back": self.nav_index > 0, "can_forward": 0 <= self.nav_index < len(self.nav) - 1,
             "depth": max(0, self.nav_index), "recent": list(self.recent_entities[:4]),
+            # Which of the dock's places this half is in, and the one Home goes back to. The
+            # dock lights the first; the Assistant chip is the second, and neither is a guess
+            # the tablet has to make from the card types on screen.
+            "area": (self.here.area if self.here is not None else self.landing) or None,
+            "landing": self.home_area,
             "task": dict(self.task) if self.task else None,
             # Whether there is a screen to show for this half, and what it answered. The cards
             # themselves come through `branch.show`, on request, not with every reply.

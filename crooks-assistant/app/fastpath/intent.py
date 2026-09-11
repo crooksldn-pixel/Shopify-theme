@@ -103,7 +103,10 @@ def _tokens(lowered: str) -> tuple[str, ...]:
 _NEXT = frozenset({"next", "onwards", "forward", "another", "following"})
 _PREV = frozenset({"previous", "prior", "before", "last"})
 _BACK = frozenset({"back", "return"})
-_HOME = frozenset({"home", "start", "top", "beginning"})
+# Where the assistant's own landing is. "Assistant" is one of these because the chip on the
+# glass says Assistant and the owner says "back to the assistant" — four words with "back" in
+# them, which was read as one step back along the trail.
+_HOME = frozenset({"home", "start", "top", "beginning", "assistant"})
 
 # Meta: questions about the assistant rather than the shop.
 _SELF = frozenset({"you", "your", "yourself"})
@@ -350,12 +353,15 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
     if bare and len(words) <= 5:
         if have & _NEXT:
             sig.direction = "next"
+        # Home before back, because the words overlap and the phrase that names a PLACE is the
+        # specific one: "back to the start" and "back to the assistant" are both a landing, and
+        # both were read as one step along the trail because "back" was tested first.
+        elif have & _HOME and len(words) <= 4:
+            sig.direction = "home"
         elif have & _BACK:
             sig.direction = "back"
         elif have & _PREV:
             sig.direction = "previous"
-        elif have & _HOME and len(words) <= 3:
-            sig.direction = "home"
     if branch is not None:
         sig.has_entity = bool(getattr(branch, "entity", None))
         sig.has_set = bool(getattr(branch, "set_id", ""))

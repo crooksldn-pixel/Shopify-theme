@@ -258,6 +258,7 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     same read-only assertion, the same timeline event; the intent is the recipe's own family
     at full confidence, because a tap on Orders is not ambiguous."""
     from app import commands as command_mod
+    from app.analytics import plan as turn_plan
     from app.fastpath import RECIPES
     from app.fastpath import run as run_recipe
     from app.fastpath.intent import Intent, signals_for
@@ -267,6 +268,12 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     recipe = RECIPES.get(recipe_id)
     if recipe is None:
         return command_mod.Outcome.refused("unknown_recipe", f"There is no recipe called {recipe_id!r}.")
+    # A tap is its own interaction, and gets its own read bounds. Without this it inherited
+    # the last SPOKEN turn's: the second press of the Assistant chip was handed "the same
+    # query already ran this turn" and drew a landing with nothing on it, and a press after a
+    # turn that had read a lot was refused `landing_unavailable` — which is what happened on
+    # the tablet at 00:25:48. The bounds are unchanged; only their scope is.
+    turn_plan.restart(session)
     # A tap can be about something as well as somewhere. A landing is not — Orders is Orders —
     # but a picker is about a product, and the words that narrow it come from the control that
     # was tapped. They travel where a sentence's own parameters travel, `intent.slots`, so a

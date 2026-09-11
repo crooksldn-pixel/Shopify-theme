@@ -280,6 +280,12 @@ def _nav_plan(ctx: Ctx) -> ReadPlan | None:
     kind, ref = str(moved.get("kind") or ""), str(moved.get("ref") or "")
     if not moved.get("landed") or not ref:
         return None
+    entry = ctx.branch.here
+    if entry is not None and entry.is_workspace:
+        # A listing or a landing. Its own cards come back when it kept them; when it did not —
+        # a draw that failed, a stop whose cards have been trimmed — the PLACE is read again by
+        # its own recipe rather than announced over an empty screen.
+        return None if entry.ui else _landing_plan(ctx, entry.area)
     if replay(CommandCtx(ctx.runtime, ctx.session, ctx.branch), kind, ref):
         return None                      # held: nothing to read
     tool, argument, _ = MEMBER_READ.get(_SET_KIND.get(kind, ""), ("", "", ""))
@@ -291,22 +297,39 @@ def _nav_plan(ctx: Ctx) -> ReadPlan | None:
 
 
 def _navigated(ctx: Ctx, result: ReadResult, *, words) -> FastAnswer:
-    """The sentence and the card for a trail move the runner already made.
+    """The sentence and the cards for a trail move the runner already made.
 
     The move is `app/commands.py:move_nav` — the same function a tap reaches, so there is one
-    implementation of Back. What is left here is drawing what it landed on: from memory when
-    the Mac holds it, from the read the plan made when it does not.
+    implementation of Back. What is left here is drawing the workspace it landed on: the cards
+    kept with a listing, the record from memory when the Mac holds it, or the read the plan
+    made when it does not.
     """
+    from app.commands import AsUi, replay
     from app.commands import Ctx as CommandCtx
-    from app.commands import replay
 
     moved = getattr(ctx, "moved", None) or {}
     if not moved.get("landed"):
         return FastAnswer(answer=words(None), trace={"nav": moved.get("direction"), "landed": False})
     kind, ref, label = str(moved.get("kind") or ""), str(moved.get("ref") or ""), str(moved.get("label") or "")
+    entry = ctx.branch.here
+    if entry is not None and entry.is_workspace:
+        # A listing cannot be replayed from the entity cache — there is no `list_id` in memory
+        # — so its own cards come back.
+        if entry.ui:
+            return FastAnswer(answer=words(label), surfaces=[AsUi(u) for u in entry.ui],
+                              trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
+                                     "workspace": entry.kind, "drawn": True})
+        # None kept, so the plan read the place again; draw it with its own recipe.
+        recipe = _landing_recipe(entry.area)
+        if recipe is not None and recipe.render is not None and result.values:
+            drawn = recipe.render(ctx, result)
+            if not drawn.deferred:
+                drawn.trace = {**(drawn.trace or {}), "nav": moved.get("direction"), "landing": recipe.recipe_id}
+                return drawn
+        return FastAnswer(answer=words(label),
+                          trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
+                                 "workspace": entry.kind, "drawn": False})
     calls = list(result.calls) or replay(CommandCtx(ctx.runtime, ctx.session, ctx.branch), kind, ref)
-    if moved.get("tab"):
-        ctx.branch.mark(tab=str(moved["tab"]))
     return FastAnswer(answer=words(label), calls=calls, partial=result.partial,
                       trace={"nav": moved.get("direction"), "landed": True, "ref": ref,
                              "drawn": bool(calls), "read": bool(result.calls)})
@@ -317,9 +340,48 @@ def _nav_back(ctx: Ctx, result: ReadResult) -> FastAnswer:
         f"Back to {label}." if label else "That is as far back as this conversation goes."))
 
 
+def _landing_recipe(area: str):
+    """The recipe that draws one of the dock's places.
+
+    The table belongs to the landings themselves (app/families/landings.py) and is handed down
+    to `app/commands.py` so that a command need not import a family. This reads it from there
+    rather than keeping a second copy that could disagree.
+    """
+    from app.commands import LANDING_FOR
+    from app.fastpath.recipes import RECIPES
+
+    return RECIPES.get(LANDING_FOR.get(str(area or ""), ""))
+
+
+def _landing_plan(ctx: Ctx, area: str) -> ReadPlan | None:
+    recipe = _landing_recipe(area)
+    return recipe.plan(ctx) if recipe is not None and recipe.plan is not None else None
+
+
+def _home_recipe(ctx: Ctx):
+    """The landing recipe this half's Home resolves to. One decision, shared with the tap."""
+    from app.commands import home_target
+
+    area, recipe_id = home_target(ctx.branch)
+    return _landing_recipe(area) if recipe_id else None
+
+
+def _home_plan(ctx: Ctx) -> ReadPlan | None:
+    """"Back to the assistant", said. It is the dock's landing for this half's area and not a
+    walk back along the trail: the same place the Assistant chip reaches, read by the same
+    recipe, so the two cannot show different screens."""
+    recipe = _home_recipe(ctx)
+    return recipe.plan(ctx) if recipe is not None and recipe.plan is not None else None
+
+
 def _nav_home(ctx: Ctx, result: ReadResult) -> FastAnswer:
-    return _navigated(ctx, result, words=lambda label: (
-        f"Back to the start: {label}." if label else "There is nothing to go back to yet."))
+    recipe = _home_recipe(ctx)
+    if recipe is None or recipe.render is None:
+        return FastAnswer(answer="", defer="this half has no landing to go back to")
+    answer = recipe.render(ctx, result)
+    if not answer.deferred:
+        answer.trace = {**(answer.trace or {}), "nav": "home", "landing": recipe.recipe_id}
+    return answer
 
 
 def _replay(ctx: Ctx, entry) -> list[Any]:
@@ -338,10 +400,22 @@ def _replay(ctx: Ctx, entry) -> list[Any]:
     return [ToolCall(name=tool, args={f"{entry.kind}_id": entry.ref}, ok=True, result=held.value)]
 
 
+# Back reads the record it landed on when memory has dropped it, and reads the PLACE again
+# when the stop it landed on is a listing that kept no cards. Both sets of primitives are
+# declared, because `assert_read_only` is checked against what a recipe can actually cause.
 register(Recipe(recipe_id="navigation_back", intent_family="navigation_back", ui="context_stack",
+                read_primitives=("shopify_order_detail", "shopify_customer_history", "gmail_read_thread",
+                                 "commerce_query", "email_query", "gmail_search",
+                                 "commerce_aggregate", "inventory_query"),
                 cache_policy=CACHE_HOT, min_confidence=0.75, target_ms=100, plan=_nav_plan, render=_nav_back))
-register(Recipe(recipe_id="navigation_home", intent_family="navigation_home", ui="context_stack",
-                cache_policy=CACHE_HOT, min_confidence=0.75, target_ms=100, plan=_nav_plan, render=_nav_home))
+# Home reads what its landing reads, which is why its primitives are the union of the four
+# landings' (app/families/landings.py) rather than none: it delegates, and `assert_read_only`
+# is checked against what it can actually cause.
+register(Recipe(recipe_id="navigation_home", intent_family="navigation_home", ui="order_list",
+                read_primitives=("commerce_query", "email_query", "gmail_search",
+                                 "commerce_aggregate", "inventory_query"),
+                cache_policy=CACHE_HOT, min_confidence=0.75, target_ms=2500,
+                plan=_home_plan, render=_nav_home))
 
 
 # -------------------------------------------------------------- working sets
@@ -1184,11 +1258,24 @@ def _waiting_surface(waiting: list[dict[str, Any]], *, unchecked: int = 0):
     )
 
 
-def _open_workflow(ctx: Ctx, body: dict[str, Any], *, kind: str, operation: str, set_id: str = "") -> None:
+# Which of the dock's places a set of each kind belongs to, so a listing lands the branch
+# somewhere Home and Back can name. The reply queue lists CUSTOMERS and is the inbox.
+SET_AREA = {"orders": "orders", "emails": "email", "customers": "email",
+            "products": "products", "variants": "products"}
+
+
+def _open_workflow(ctx: Ctx, body: dict[str, Any], *, kind: str, operation: str, set_id: str = "",
+                   area: str = "") -> None:
     """A listing becomes something to work through: the branch takes its cursor to the top.
-    "Next" is then arithmetic, which is the whole point."""
+    "Next" is then arithmetic, which is the whole point.
+
+    And the LISTING ITSELF becomes a stop on the trail. That is new, and it is what makes Back
+    worth pressing: the owner starts at a list, opens a row, follows a relation, and the way
+    back out was missing its first step — the list was never on the trail, because only
+    records were, so the deepest Back he could reach was the first record he had opened.
+    """
     from app.analytics import sets as working_sets
-    from app.session.branch import Workflow
+    from app.session.branch import LIST_KIND, Workflow
 
     set_id = set_id or _set_id_of(body)
     if not set_id:
@@ -1199,7 +1286,11 @@ def _open_workflow(ctx: Ctx, body: dict[str, Any], *, kind: str, operation: str,
     ctx.branch.set_id = ws.set_id
     # Before the first member, so the first "Next" lands on it — the same place a set adopted
     # by a bare "Next" starts from (app/fastpath/runner.py).
-    ctx.branch.workflow = Workflow(workflow_id=f"wf_{int(time.time() * 1000) % 10**9:09d}", set_id=ws.set_id, kind=kind, label=ws.label, operation=operation, cursor=-1, total=len(ws.members))
+    workflow_id = f"wf_{int(time.time() * 1000) % 10**9:09d}"
+    ctx.branch.workflow = Workflow(workflow_id=workflow_id, set_id=ws.set_id, kind=kind, label=ws.label, operation=operation, cursor=-1, total=len(ws.members))
+    ctx.branch.enter(area=area or SET_AREA.get(kind, ""), kind=LIST_KIND, ref=ws.set_id,
+                     label=ws.label, set_id=ws.set_id, set_kind=kind, set_label=ws.label,
+                     total=len(ws.members), operation=operation, workflow_id=workflow_id)
 
 
 register(Recipe(

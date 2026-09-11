@@ -44,6 +44,26 @@ def plan_for(session: Any) -> TurnPlan:
     return plan
 
 
+def restart(session: Any) -> TurnPlan:
+    """Begin a fresh scope for reads that are not part of the turn before them.
+
+    A TAP is such a read. The plan is keyed on `session.turn_id`, and a tap does not start a
+    turn, so every tap after a spoken question inherited that question's bounds: the second
+    press of Back-to-the-assistant was handed "the same query already ran this turn" and drew
+    an empty landing, and a tap after a turn that had run eight queries was refused outright —
+    which is exactly the `landing_unavailable` in the live session's timeline at 00:25:48.
+
+    Nothing about the bounds themselves changes here; this says only that a new interaction
+    gets its own.
+    """
+    plan = TurnPlan(turn_id=str(getattr(session, "turn_id", "") or ""))
+    try:
+        session.plan = plan
+    except AttributeError:
+        pass
+    return plan
+
+
 def check(session: Any, name: str, args: dict[str, Any], *, cost: int) -> tuple[str | None, str | None]:
     """(refusal, cached) — a refusal when the turn's bounds are spent, the earlier answer when
     this exact query already ran this turn, else (None, None)."""

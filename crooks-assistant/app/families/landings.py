@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app import commands as commands_mod
 from app.commands import Command, Outcome
 from app.commands import Ctx as CommandCtx
 from app.commands import register as register_command
@@ -49,8 +50,30 @@ AREAS: dict[str, str] = {
     "products": "landing_products",
 }
 
+# The same table, where `navigation.home` can find it. A command must not import a family —
+# `app/commands.py` is the bottom of the stack and the families sit on top of it — so the
+# families hand their landings down instead. Home is then "the recipe for this half's area",
+# resolved in one place for the tap and the sentence both (app/commands.py:home_target).
+commands_mod.LANDING_FOR.update(AREAS)
+
 
 # ------------------------------------------------------------------------------ orders
+
+# What each place is called on the trail, so a Back that lands on one can name it.
+AREA_LABELS = {"orders": "Orders", "email": "Inbox", "sales": "Sales", "products": "Products"}
+
+
+def _arrived(ctx: Ctx, area: str) -> None:
+    """This half is now in this place.
+
+    A landing is a stop on the trail, and the place a Home goes back to. It is recorded here
+    rather than in the command that names the recipe, because a landing that could not be
+    drawn is not somewhere the owner arrived — and the two landings that open a working set
+    refine this stop with the set a moment later (`library._open_workflow`).
+    """
+    from app.session.branch import LANDING_KIND
+
+    ctx.branch.enter(area=area, kind=LANDING_KIND, ref=area, label=AREA_LABELS.get(area, area))
 
 
 def _orders_plan(ctx: Ctx) -> ReadPlan | None:
@@ -86,6 +109,7 @@ def _orders_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     open_body, today_body = result.values.get("open"), result.values.get("today")
     if not isinstance(open_body, dict) and not isinstance(today_body, dict):
         return FastAnswer(answer="", defer="the order reads did not answer")
+    _arrived(ctx, "orders")
     waiting, today = _rows(open_body), _rows(today_body)
     # The set the cursor walks is the operational one: the orders still to go out, oldest
     # first. On a day with nothing waiting, today's orders are the set.
@@ -122,6 +146,7 @@ def _inbox_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     recent = library._inbox_render(ctx, result)
     if queue.deferred and recent.deferred:
         return FastAnswer(answer="", defer=f"{queue.defer}; {recent.defer}")
+    _arrived(ctx, "email")
     parts = [a.answer for a in (queue, recent) if not a.deferred and a.answer]
     surfaces = list(queue.surfaces) if not queue.deferred else []
     # The queue is the recipe's own card; the recent threads are drawn from the search read.
@@ -155,6 +180,7 @@ def _sales_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     week = library._breakdown_render(ctx, result)
     if week.deferred:
         return week
+    _arrived(ctx, "sales")
     words = week.answer
     today = result.values.get("today")
     if isinstance(today, dict) and isinstance(today.get("totals"), dict) and today["totals"]:
@@ -189,6 +215,7 @@ def _products_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     stock = _rows(result.values.get("stock"))
     if not isinstance(result.values.get("top"), dict) and not isinstance(result.values.get("stock"), dict):
         return FastAnswer(answer="", defer="the product reads did not answer")
+    _arrived(ctx, "products")
     words = []
     if top:
         first = top[0]

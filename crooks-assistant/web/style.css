@@ -242,6 +242,10 @@ body[data-mode="context"] .context{padding-bottom:calc(var(--dock) + env(safe-ar
 .chip .chip-kind{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
 .chip .chip-label{max-width:180px;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;font-size:13px}
 .chip-home{color:var(--ink)}
+/* The list's own step back, beside the list's own step on. Narrower than the words beside it
+   because it carries a mark rather than a label — and still 44px tall, like everything a
+   thumb has to find on the 8-inch screen. */
+.chip-step{padding-left:14px;padding-right:14px;font-size:17px;line-height:1;color:var(--ink-2)}
 .branch-rail{display:contents}
 .branch-rail:empty,.branch-rail[hidden]{display:none}
 .chip-split{color:var(--ink-2)}

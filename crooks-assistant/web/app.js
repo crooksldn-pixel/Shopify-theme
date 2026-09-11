@@ -55,7 +55,7 @@ const el = {
   notesGlobal: $('notes-global'), notesOrb: $('notes-orb'), notesDeck: $('notes-deck'),
   context: $('context'), nav: $('context-nav'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
   armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'), branchRail: $('branch-rail'),
-  nextBtn: $('next-btn'),
+  nextBtn: $('next-btn'), prevBtn: $('prev-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
   recent: $('recent'), recentLabel: $('recent-label'), branchBar: $('branch-bar'), orbZone: $('orb-zone'),
@@ -1061,10 +1061,10 @@ function entitiesOf(items) {
   return out;
 }
 
-function pushContext(nodes, items, question) {
+function pushContext(nodes, items, question, restoreTo) {
   history.push({ nodes, entities: entitiesOf(items), question: question || '' });
   while (history.length > MAX_HISTORY) history.shift();
-  showHistory(history.length - 1);
+  showHistory(history.length - 1, { scrollTo: restoreTo });
   renderRecent();
   armDeckExpiry();
   for (const node of nodes) collectPending(node);
@@ -1239,14 +1239,18 @@ function armDeckExpiry() {
   }, DECK_IDLE_MS);
 }
 
-// Is there anywhere back from here? Three ways there can be: the list cursor can step back,
-// the Mac's trail has a stop behind this one, or the local render cache does. Kept in one
-// place because two writers set the Back chip — showHistory on every draw, noteBranch on
-// every reply — and they used to disagree about what Back was for.
+// Is there anywhere BACK from here? The Mac's trail decides, and the local render cache
+// stands in only when the Mac cannot be reached. Kept in one place because two writers set
+// the Back chip — showHistory on every draw, noteBranch on every reply — and they used to
+// disagree about what Back was for.
+//
+// What used to be here as well: `workflow && !workflow.at_start`. While a list was open the
+// chip meant "the cursor can step back", so Back stepped the LIST and not the trail — one
+// pair of buttons over two different cursors, which is what the owner was describing when he
+// said the back button and the next button had both regressed. The list's own step back is
+// its own chip now (#prev-btn), and Back is the trail's.
 function canGoBack(index) {
-  const workflow = branchState && branchState.workflow;
-  if (workflow && !workflow.at_start) return true;
-  if (branchState && branchState.can_back) return true;
+  if (branchState && typeof branchState.can_back === 'boolean') return branchState.can_back;
   return typeof index === 'number' ? index > 0 : historyIndex > 0;
 }
 
@@ -1261,10 +1265,16 @@ const AREA_OF = {
 };
 function lightDock(nodes) {
   if (!el.dock) return;
-  let area = '';
-  for (const node of nodes || []) {
-    const type = node && node.dataset ? node.dataset.type : '';
-    if (AREA_OF[type]) { area = AREA_OF[type]; break; }
+  // The Mac says which of its places this workspace belongs to, and it is right about stops
+  // the cards alone cannot describe — a landing that drew a ranking is still Products, and a
+  // Back that lands on a list arrives with the area on it. The card types stand in when the
+  // branch has not said.
+  let area = (branchState && branchState.area) || '';
+  if (!area) {
+    for (const node of nodes || []) {
+      const type = node && node.dataset ? node.dataset.type : '';
+      if (AREA_OF[type]) { area = AREA_OF[type]; break; }
+    }
   }
   for (const btn of el.dock.querySelectorAll('.dock-btn')) {
     btn.setAttribute('aria-pressed', btn.dataset.area === area ? 'true' : 'false');
@@ -1276,6 +1286,10 @@ function lightDock(nodes) {
 // because they were patched in there as the reads landed (adoptContext). Everything else —
 // which dock light is on, the two chips, the mode — is the same work either way, which is why
 // it is one function and not two.
+//
+// `opts.scrollTo` is how far down the owner was when he left this stop. Back to a list three
+// screens down is back to where he was IN it; the depth comes from the Mac's stop, not from
+// the page, so it survives a reload and a branch switch.
 function showHistory(index, opts) {
   if (index < 0 || index >= history.length) return;
   const keep = Boolean(opts && opts.keep);
@@ -1285,24 +1299,43 @@ function showHistory(index, opts) {
     for (const node of history[index].nodes) el.cards.appendChild(node);
   }
   lightDock(history[index].nodes);
+  // A patch leaves the owner where he was reading. A redraw starts at the top, unless the
+  // stop says how far down he was, in which case it goes back there (`surface.scroll` reports
+  // the depth as the thumb moves).
   if (!keep) {
-    // A redraw starts at the top; a patch leaves the owner where he was reading.
+    const restoreTo = opts && typeof opts.scrollTo === 'number' ? opts.scrollTo : null;
     el.cards.scrollTop = 0;
-    scrollMax = 0;
+    if (restoreTo !== null && restoreTo > 0) {
+      const settle = () => { el.cards.scrollTop = restoreTo; scrollMax = restoreTo; };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(settle); else settle();
+    }
+    scrollMax = restoreTo !== null ? Math.max(0, restoreTo) : 0;
   }
   el.deck.dataset.depth = String(Math.min(2, index));
-  // Both chips keep their slots for the whole walk, and grey out at the ends rather than
-  // vanishing.
-  //
-  // Back used to be `hidden` at the start of a list, so the FIRST Next tap made it appear —
-  // and Next slid 68px (9.1mm) to the right, out from under the thumb that had just pressed
-  // it, onto the spot the 60px Back chip now occupied. Driven with real taps at one fixed
-  // point, tap one advanced the list and tap two at the identical point hit BACK. Walking a
-  // queue one-handed is a repeated press in one place; the control under that place must not
-  // change identity between presses.
+  drawWalkChips(index);
+  renderStackChips();
+  setMode('context');
+}
+
+// Back, Previous and Next: three controls over two cursors, each drawn from the one the Mac
+// says it belongs to. Back is the TRAIL (`can_back`); Previous and Next are the open LIST
+// (`workflow`), and the two of them appear and disappear together.
+//
+// Every chip keeps its slot for the whole walk and greys out at the ends rather than
+// vanishing. Back used to be `hidden` at the start of a list, so the FIRST Next tap made it
+// appear — and Next slid 68px (9.1mm) to the right, out from under the thumb that had just
+// pressed it, onto the spot the 60px Back chip now occupied. Driven with real taps at one
+// fixed point, tap one advanced the list and tap two at the identical point hit BACK. Walking
+// a queue one-handed is a repeated press in one place; the control under that place must not
+// change identity between presses.
+function drawWalkChips(index) {
   const workflow = branchState && branchState.workflow;
   el.backBtn.hidden = false;
   el.backBtn.disabled = !canGoBack(index);
+  if (el.prevBtn) {
+    el.prevBtn.hidden = !workflow;
+    el.prevBtn.disabled = Boolean(workflow && workflow.at_start);
+  }
   if (el.nextBtn) {
     // Next belongs to the list, not to the history: it exists while a set is open, and greys
     // at the end of it. It used to hide itself on `at_end`, which shuffled the rail a third
@@ -1310,8 +1343,6 @@ function showHistory(index, opts) {
     el.nextBtn.hidden = !workflow;
     el.nextBtn.disabled = Boolean(workflow && workflow.at_end);
   }
-  renderStackChips();
-  setMode('context');
 }
 
 // Back is the Mac's to decide, not this page's.
@@ -1326,24 +1357,25 @@ function showHistory(index, opts) {
 // tailnet dropped — the screen still goes back, because a Back button that does nothing when
 // the network hiccups is worse than one that is occasionally out of step.
 //
-// And while a list is open, Back is the INVERSE OF NEXT rather than the branch's trail. That
-// was the last place two cursors still shared one pair of buttons: Next moved the list
-// cursor, Back moved the navigation stack, and nothing on the tablet ever moved the list
-// cursor backwards. `workflow.at_end` is sticky, Next hid itself on it, and
-// `workflow.previous` — registered at app/commands.py:363 and reachable by voice since
-// Phase 1 — had no caller anywhere in web/. So overshooting a queue by one was permanent:
-// measured, three Nexts then two Backs left the owner standing on member 1 of 3 with Next
-// gone, and the only way forward again was to say the whole question out loud a second time.
-// Stepping the cursor back clears `at_end` on its own, so Next comes back by itself.
+// Back is the TRAIL, and only the trail. It was wired to `workflow.previous` whenever a list
+// was open, which made one pair of buttons drive two cursors: Back stepped the list, Next
+// stepped the list, and nothing on the glass returned to the screen the owner had come from.
+// That is the pairing the owner reported as "the back button and the next button" having
+// regressed, and it is why he could not get out of a queue he had walked into. The list's own
+// step back is now its own chip (#prev-btn), which is also how `workflow.previous` keeps the
+// caller it needs.
+//
+// What comes back is a WORKSPACE: the record or the list, the tab, the set, the cursor's
+// place in it, and how far down it was (app/commands.py:_back). The scroll is applied here,
+// because it is the one part of a workspace only the page can put back.
 async function goBack() {
   T.record('navigate', { nav: 'back', from: historyIndex, to: historyIndex > 0 ? historyIndex - 1 : -1 });
-  const workflow = branchState && branchState.workflow;
-  const stepping = Boolean(workflow && !workflow.at_start);
-  const landed = await semanticCommand(stepping ? 'workflow.previous' : 'navigation.back');
+  const landed = await semanticCommand('navigation.back');
   if (landed && landed.ok && Array.isArray(landed.ui) && landed.ui.length) {
     const rendered = window.CrooksUI.render(landed.ui, renderOpts());
     if (rendered.nodes.length) {
-      pushContext(rendered.nodes, landed.ui, landed.answer || '');
+      const stop = (landed.changed || {}).workspace || {};
+      pushContext(rendered.nodes, landed.ui, landed.answer || '', Number(stop.scroll) || 0);
       // Say where it landed. This used to write #answer only on the FAILURE branch, so a
       // successful Back left the previous turn's sentence standing over a different record —
       // measured reading "That is the last one." above member 1 of 3, twice in a row.
@@ -1366,27 +1398,32 @@ async function goBack() {
   else goHome();
 }
 
-// The next member of the open list. The same command the word "next" reaches, so the cursor
-// is one cursor: tapping and saying it alternate correctly rather than each keeping a count.
-async function goNext() {
-  const moved = await semanticCommand('workflow.next');
+// The open list, one member at a time. The same two commands the words "next" and "previous"
+// reach, so the cursor is one cursor: tapping and saying it alternate correctly rather than
+// each keeping a count. Neither of them is Back — Back is the trail (`goBack`), and the
+// position these two move is the set's.
+async function stepSet(command, way) {
+  const moved = await semanticCommand(command);
   if (!moved) return;
   if (moved.ok && Array.isArray(moved.ui) && moved.ui.length) {
     const rendered = window.CrooksUI.render(moved.ui, renderOpts());
     if (rendered.nodes.length) {
       pushContext(rendered.nodes, moved.ui, moved.answer || '');
-      // `_member_words` (app/commands.py:266) already returns "Priya Raman. 1 of 3." and this
+      // `_member_words` (app/commands.py) already returns "Priya Raman. 1 of 3." and this
       // threw it away, passing it to pushContext as a history LABEL and writing #answer only
       // when the move failed. Measured: three successful Next taps, three different orders,
       // and one unchanged line reading "3 orders today; 2 still to go out." over all of them.
       if (moved.answer) el.answer.textContent = moved.answer;
-      T.record('navigate', { nav: 'next', cursor: (moved.changed || {}).cursor, total: (moved.changed || {}).total });
+      T.record('navigate', { nav: way, cursor: (moved.changed || {}).cursor, total: (moved.changed || {}).total });
       return;
     }
   }
-  // At the end of the list, or nothing to draw: say what happened rather than going quiet.
+  // At an end of the list, or nothing to draw: say what happened rather than going quiet.
   if (moved.answer) el.answer.textContent = moved.answer;
 }
+
+const goNext = () => stepSet('workflow.next', 'next');
+const goPrevious = () => stepSet('workflow.previous', 'previous');
 
 // Open a record the current screen linked to. The same command the words reach, so a tap on
 // the third row and "open the third one" land in exactly the same place — and neither asks the
@@ -1435,10 +1472,14 @@ async function semanticCommand(name, extra) {
   }
 }
 
-// Home, like Back and Next, is a move on the Mac's trail — `navigation.home` walks the branch
-// to its first stop and redraws that record. This was left on the old client-only path when
-// the other two were wired up, so tapping Home put the tablet on the orb screen while the
-// branch stayed exactly where it was, and the next "next" carried on from there.
+// The Assistant chip: this half's LANDING workspace.
+//
+// It is not a move along the trail. While it was one it walked the branch to `nav[0]` and
+// redrew whatever record was oldest — in the live session an email thread from nine minutes
+// earlier, redrawn eight times in twenty-two seconds while the owner pressed the chip again
+// because nothing useful was happening. The Mac now answers with the dock landing for the
+// area this half is in (app/commands.py:_home), which is a place with a fixed shape: it
+// cannot be a stale record, and it is the same screen every time it is pressed.
 async function goHome() {
   T.record('navigate', { nav: 'home', from: historyIndex });
   const landed = await semanticCommand('navigation.home');
@@ -1450,7 +1491,9 @@ async function goHome() {
       return;
     }
   }
-  // Nothing to go back to, or the Mac is unreachable: the orb screen, as before.
+  // The Mac is unreachable, or has no landing to draw: the orb screen, as before. A refusal
+  // says why rather than leaving the owner to guess from a screen that changed on its own.
+  if (landed && landed.ok === false && landed.detail) toast(landed.detail);
   setMode('orb');
   renderRecent();
 }
@@ -1879,8 +1922,10 @@ function noteBranch(branch) {
   if (!before && inflight.has('_')) { inflight.set(turnKey(focusedBranch), inflight.get('_')); inflight.delete('_'); }
   if (before !== focusedBranch) syncBusy();
   drawBranchBar();
-  el.backBtn.hidden = false;
-  el.backBtn.disabled = !canGoBack();
+  // All three walk chips, from the branch that just answered: Back from its trail, Previous
+  // and Next from its open list. Two writers used to set the Back chip and disagreed about
+  // what Back was for; there is one function now (`drawWalkChips`).
+  drawWalkChips();
   drawArmed(branch.listening_for);
   T.record('branch', { id: branch.branch_id, name: branch.status, depth: branch.depth, label: branch.label || undefined });
 }
@@ -2777,12 +2822,24 @@ for (const type of ['pointerdown', 'pointerup', 'pointercancel']) {
   }, true);
 }
 let scrollReportTimer = null;
+// How far down the cards the thumb went. Two destinations, and they are different things:
+// the telemetry line is how the deep-scroll defect was measured, and `surface.scroll` tells
+// the MAC, which keeps it against the stop the screen is on so a Back returns to it. It is
+// the one part of a workspace the Mac cannot know by itself, and it was going nowhere but a
+// log — so every Back landed at the top of a list the owner had come halfway down.
+let scrollTold = -1;
 el.cards.addEventListener('scroll', () => {
   scrollMax = Math.max(scrollMax, el.cards.scrollTop);
   if (scrollReportTimer) return;
   scrollReportTimer = setTimeout(() => {
     scrollReportTimer = null;
+    const depth = Math.round(el.cards.scrollTop);
     T.record('scroll', { depth: Math.round(scrollMax), height: el.cards.scrollHeight, width: el.cards.clientHeight });
+    // Only when it has actually moved, and never while a question is in flight: a depth is
+    // worth one small post, not one per scroll event.
+    if (Math.abs(depth - scrollTold) < 24 || busy) return;
+    scrollTold = depth;
+    semanticCommand('surface.scroll', { depth });
   }, 1500);
 }, { passive: true });
 window.addEventListener('error', (event) => {
@@ -2857,6 +2914,7 @@ async function openArea(area, fallback) {
 }
 el.backBtn.addEventListener('click', goBack);
 if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);
+if (el.prevBtn) el.prevBtn.addEventListener('click', goPrevious);
 el.recent.addEventListener('click', () => { T.record('navigate', { nav: 'recent', to: history.length - 1 }); if (history.length) showHistory(history.length - 1); });
 el.attention.addEventListener('click', () => {
   T.record('navigate', { nav: 'attention_open', count: attentionItems.length });
