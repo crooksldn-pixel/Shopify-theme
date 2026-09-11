@@ -180,18 +180,40 @@ async def test_speculation_never_spends_the_owners_turn_budget(stage):
     assert not rendered.startswith("REFUSED"), f"the owner's own read was refused: {rendered[:120]}"
 
 
-async def test_a_budget_refusal_is_not_reported_as_a_missing_landing(stage):
+async def test_a_budget_refusal_is_not_reported_as_a_missing_landing(stage, monkeypatch):
     """`landing_unavailable` means "that could not be drawn"; a spent budget is not that.
-    The owner was told the screen did not exist when the truth was that it had read too much."""
-    session = stage.runtime.sessions.get_or_create("s1")
-    ledger = budget.ledger_for(session)
-    while not ledger.check(budget.NAVIGATION, "open.area", cost=6):
-        ledger.record(budget.NAVIGATION, "open.area", cost=6)
+
+    At 00:25:48 the owner was told a screen that exists could not be drawn, when the truth
+    was that the one budget there was had been spent two questions earlier. He cannot act on
+    the first sentence and can act on the second.
+
+    The navigation lane is narrowed to nothing so the tap's own fresh budget is spent on its
+    first read — which is the only way to reach this branch now that a tap starts fresh.
+    """
+    monkeypatch.setitem(budget.BUDGETS, budget.NAVIGATION, budget.Budget(calls=0, cost=0, elapsed_s=0.0))
     tap = await stage.touch("open.area", area="orders")
-    if tap.raw.get("ok") is False:
-        assert tap.raw.get("code") == "read_budget_spent", (
-            f"a budget refusal came back as {tap.raw.get('code')!r}"
-        )
+    assert tap.raw.get("ok") is False, "the budget was not actually spent, so this proves nothing"
+    assert tap.raw.get("code") == "read_budget_spent", (
+        f"a budget refusal came back as {tap.raw.get('code')!r}: {tap.raw.get('detail')}"
+    )
+    assert "could not be drawn" not in str(tap.raw.get("detail") or "")
+
+
+async def test_a_landing_that_really_cannot_be_drawn_still_says_so(stage, monkeypatch):
+    """The other half of the same distinction: a recipe that defers for its own reasons is
+    still `landing_unavailable`, and narrowing the code to budgets only must not swallow it."""
+    import dataclasses
+
+    from app.fastpath import RECIPES
+    from app.fastpath.models import FastAnswer
+
+    monkeypatch.setitem(RECIPES, "landing_orders", dataclasses.replace(
+        RECIPES["landing_orders"],
+        render=lambda ctx, result: FastAnswer(answer="", defer="the order reads did not answer"),
+    ))
+    tap = await stage.touch("open.area", area="orders")
+    assert tap.raw.get("ok") is False
+    assert tap.raw.get("code") == "landing_unavailable", tap.raw
 
 
 async def test_the_owner_asking_stands_the_speculative_lane_down(stage):
