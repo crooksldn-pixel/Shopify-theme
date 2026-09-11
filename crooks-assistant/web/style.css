@@ -1194,3 +1194,68 @@ html[data-lite] .orb-zone{transition:none}
 .ws-opt.is-on{color:var(--ink);font-weight:600;border-color:var(--border-active);background:var(--glass-control-active);box-shadow:var(--inset-hi)}
 .ws-opt:active{transform:scale(.96);transition-duration:var(--motion-press)}
 .card-note.tone-warn{color:var(--warn)}
+
+/* ------------------------------------------------ the workspace as it arrives (§7, §8, §28)
+ *
+ * Three things, all of them about a 2019 tablet and a first viewport of 601 × 889:
+ *
+ *   - the skeleton a card wears while its read is running, and the rule that a card which
+ *     was PATCHED does not play the entry animation again (that is the flicker §7 forbids);
+ *   - the density work of §8: tighter tappable rows that keep their 44 px target, a list
+ *     that folds after five, a thread whose history is behind one control, clamped titles;
+ *   - nothing continuous, nothing blurred. The skeleton's breath is one opacity keyframe on
+ *     three small bars, and it stops entirely in lite mode and under reduced motion.
+ */
+.card.is-shell{background:var(--bg-2);box-shadow:none;border-color:var(--border-subtle)}
+.card.is-shell::before{display:none}          /* no edge-light gradient on a placeholder */
+.sk-note{margin:0;font-size:13px;color:var(--ink-3)}
+.sk-body{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.sk-row{
+  display:block;height:14px;border-radius:7px;background:var(--glass-2);
+  animation:sk-breathe 1.8s var(--ease-inout) infinite;
+}
+.sk-row:nth-child(2){width:82%;animation-delay:.2s}
+.sk-row:nth-child(3){width:64%;animation-delay:.4s}
+.sk-row:nth-child(n+4){width:72%;animation-delay:.6s}
+@keyframes sk-breathe{0%,100%{opacity:.5}50%{opacity:.85}}
+html[data-lite] .sk-row{animation:none;opacity:.6}
+@media (prefers-reduced-motion:reduce){.sk-row{animation:none;opacity:.6}}
+
+/* A card that was patched in place is the SAME card with new words in it. Playing the arrival
+   animation over it would make an enrichment look like a new answer, which is the flicker the
+   brief forbids and the thing the owner reads as "it redrew everything again". */
+.card[data-patched]{animation:none}
+
+/* A read that found nothing, said in the card rather than nowhere at all (D-15). */
+.empty-line{color:var(--ink-2)}
+
+/* Part of a card behind one control: the thread's older messages, the tail of a list.
+   Disclosure, not truncation — the body is complete and in the DOM. */
+.disc{margin:12px -4px 0;border-top:1px solid var(--line)}
+.disc-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  min-height:var(--tap);padding:0 4px;background:none;border:0;color:var(--ink-2);
+  font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer;
+}
+.disc-head:active{background:var(--glass-control-active);border-radius:var(--radius-control)}
+.disc-mark{color:var(--ink-3);font-size:16px;line-height:1}
+.disc-body{padding:4px 4px 0}
+
+/* Tappable rows, tighter. `compact` is for figures and drops the tap target to nothing,
+   which is right for a column of daily revenue and wrong for a list of orders: these keep
+   the full 44 px and take their height out of the padding and the clamped sub-line. */
+.rows.tight .row{padding:9px 0}
+.rows.tight .row-main{font-size:15px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.rows.tight .row-sub{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.rows.tight .row.is-open .row-main,.rows.tight .row.is-open .row-sub{-webkit-line-clamp:unset}
+
+/* Where the owner is in a list, and the filter over it: the two things §8 asks a list for
+   besides its rows. The chips are the page's own chips at their ordinary tap size. */
+.list-pos{margin:2px 0 0;font-size:13px;color:var(--ink-3)}
+.list-filter{margin:12px 0 0}
+.clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* The newest message, open, at the top of a thread; ours set apart from theirs. */
+.msg-latest{margin-top:12px}
+.msg-history{display:flex;flex-direction:column;gap:8px}
+.msg.is-ours{opacity:.92}

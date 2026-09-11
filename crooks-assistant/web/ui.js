@@ -696,7 +696,7 @@
     ].filter(Boolean);
 
     const rows = orders.map(orderRow);
-    const listEl = h('ul', { class: 'rows compact' }, rows);
+    const listEl = h('ul', { class: 'rows tight' }, rows);
     const position = h('p', { class: 'list-pos' });
     let filter = 'all';
     let expanded = false;
@@ -795,7 +795,7 @@
     return card('customer_list', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker(d.ambiguous ? 'Which one?' : 'Customers'), h('h2', { class: 'card-title', text: text(d.title, 'Customers') })])]),
       emptyNote(d),
-      h('ul', { class: 'rows compact' }, customers.map((c) => h('li', { class: 'row' }, [
+      h('ul', { class: 'rows tight' }, customers.map((c) => h('li', { class: 'row' }, [
         h('span', { class: 'row-main', text: text(c.name, '—') }),
         h('span', { class: 'row-sub', text: text(c.email) }),
         h('span', { class: 'row-side' }, [
@@ -943,7 +943,7 @@
     return card('email_list', [
       h('div', { class: 'card-head' }, [h('div', {}, [kicker('Email'), h('h2', { class: 'card-title', text: text(d.title, 'Email') }), h('p', { class: 'card-meta', text: num(d.count) === null ? '' : `${d.count} thread${d.count === 1 ? '' : 's'}` })])]),
       emptyNote(d),
-      h('ul', { class: 'rows compact' }, threads.map((t) => {
+      h('ul', { class: 'rows tight' }, threads.map((t) => {
         const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { ref: text(t.thread_id), kind: 'email_thread' } }, [
           h('span', { class: 'row-main' }, [h('strong', { text: text(t.from, '—') }), ' — ', text(t.subject, '(no subject)')]),
           h('span', { class: 'row-sub', text: text(t.snippet) }),
