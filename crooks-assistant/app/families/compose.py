@@ -92,6 +92,22 @@ PLACEHOLDER_SUBJECT = "the assistant is writing this"
 # What may be typed into the composer, and nothing else. A field name outside this set is
 # refused: the tablet must not be able to name a key of the Mac's own context.
 FIELDS = ("to", "to_name", "subject", "body")
+# And which of them a REPLY will accept. A reply's recipient and subject belong to the thread
+# — `gmail_draft_reply` re-reads both there — so the card shows them and will not take a
+# keystroke for either. The card says so (`editable: False`) and this enforces it, because a
+# closed set is only closed if the Mac closes it.
+REPLY_FIELDS = ("body",)
+# The one line the composer says about itself. D-9: the owner asked "how do I type a separate
+# hall for you?" over a build whose only typing surface was this card, and nothing on it, or
+# anywhere else, said that a field could be tapped. Two lines, because an empty box and a
+# written one need different instructions — and the second is where "rewrite" lives, which
+# was reachable only by knowing the sentence.
+HOW_TO_WRITE = "Tap the box to type, or hold the dock and say it."
+HOW_TO_CHANGE = "Tap the box to edit it, or hold the dock and say how to change it."
+
+
+def how_to_write(compose: dict[str, Any]) -> str:
+    return HOW_TO_CHANGE if str(compose.get("body") or "").strip() else HOW_TO_WRITE
 
 
 def _now() -> float:
@@ -340,9 +356,47 @@ ACTIONS: tuple[dict[str, Any], ...] = (
 )
 
 
+def editable_fields(compose: dict[str, Any]) -> tuple[str, ...]:
+    """Which fields of THIS composer a keystroke may reach."""
+    return REPLY_FIELDS if compose.get("kind") == "reply" else FIELDS
+
+
+def compose_actions(compose: dict[str, Any]) -> list[dict[str, Any]]:
+    """The buttons on this composer, with the command each one posts.
+
+    Every button carries a command NAME and its own arguments, built here — so the card has
+    one shape whatever is on it and the tablet decides nothing (web/ui.js:renderEmailCompose).
+    A reply gets one more than a new email: **Dictate**, which binds `email.reply` to this
+    thread so the next sentence is the reply. Typing and dictating are then two visible
+    controls on one card, which is what §20 asks for and what the live session had neither of.
+    """
+    ident = str(compose["compose_id"])
+    out: list[dict[str, Any]] = []
+    thread_id = str(compose.get("thread_id") or "")
+    if compose.get("kind") == "reply" and thread_id:
+        out.append({
+            "id": "dictate", "label": "Dictate", "mode": "arm", "command": "voice.bind",
+            "args": f"family=email.reply&kind=email_thread&ref={thread_id}",
+        })
+    for action in ACTIONS:
+        entry = dict(action)
+        if entry["id"] == "discard":
+            entry.update({"label": "Cancel", "command": "compose.discard", "args": f"compose_id={ident}"})
+        else:
+            mode = "send" if entry["id"] == "send" else "draft"
+            entry.update({"command": "compose.stage", "args": f"compose_id={ident}&mode={mode}"})
+        out.append(entry)
+    return out
+
+
 def compose_surface(compose: dict[str, Any]) -> Surface:
     """The composer as a card. Every value copied key by key and bounded, which is
-    `app/presentation.py`'s rule kept here because this card is built outside it."""
+    `app/presentation.py`'s rule kept here because this card is built outside it.
+
+    `editable` on each field is the Mac saying which boxes have a keyboard. It is not advice:
+    `compose.field` refuses a field this says is fixed, so the card and the wire agree.
+    """
+    typable = editable_fields(compose)
     return Surface(
         surface_type="email_compose",
         ui_type="email_compose",
@@ -352,19 +406,23 @@ def compose_surface(compose: dict[str, Any]) -> Surface:
             "kind": str(compose["kind"]),
             "to": {"value": str(compose.get("to") or ""),
                    "status": str(compose.get("to_status") or "invalid"),
-                   "hint": str(compose.get("to_hint") or "")[:120]},
+                   "hint": str(compose.get("to_hint") or "")[:120],
+                   "editable": "to" in typable},
             "to_name": str(compose.get("to_name") or "")[:80],
             "subject": {"value": str(compose.get("subject") or "")[:MAX_SUBJECT_CHARS],
                         "status": str(compose.get("subject_status") or "uncertain"),
-                        "placeholder": PLACEHOLDER_SUBJECT},
+                        "placeholder": PLACEHOLDER_SUBJECT,
+                        "editable": "subject" in typable},
             "body": {"value": str(compose.get("body") or "")[:MAX_BODY_CHARS],
                      "status": str(compose.get("body_status") or "uncertain"),
-                     "placeholder": PLACEHOLDER_SUBJECT},
+                     "placeholder": PLACEHOLDER_SUBJECT,
+                     "editable": "body" in typable},
             "thread_id": str(compose.get("thread_id") or "")[:120],
             "about": str(compose.get("about") or "")[:MAX_ABOUT_CHARS],
             "resolved_when": (dict(compose.get("resolved_when") or {}) or None),
             "original": str(compose.get("original") or "")[:MAX_ABOUT_CHARS],
-            "actions": [dict(a) for a in ACTIONS],
+            "how": how_to_write(compose),
+            "actions": compose_actions(compose),
         },
         spoken_summary="Nothing is saved or sent until you tap.",
     )
@@ -664,6 +722,13 @@ def _compose_field(ctx: CommandCtx) -> Outcome:
         # something a keystroke may set.
         log.warning("compose.field refused: %r is not a field of the composer", name)
         return Outcome.refused("unknown_field", f"There is no field called {name!r} on the composer.")
+    if name not in editable_fields(compose):
+        # A reply's recipient and subject. The card draws them fixed; this is why they are.
+        return Outcome.refused(
+            "not_editable",
+            "A reply goes back to whoever wrote last in the thread, under the thread's own "
+            "subject. I read both there when the reply is prepared.",
+        )
     raw = str(ctx.args.get("value") or "")
     if name == "to":
         value, status, hint = check_address(raw)
@@ -681,6 +746,150 @@ def _compose_field(ctx: CommandCtx) -> Outcome:
     return Outcome(answer="", surfaces=[compose_surface(compose)],
                    changed={"compose_id": str(compose["compose_id"]), "field": name,
                             "status": str(compose.get(f"{name}_status") or "ok")})
+
+
+def _held_record(ctx: CommandCtx, kind: str, ref: str) -> tuple[dict[str, Any] | None, Outcome | None]:
+    """A record this conversation was shown and the Mac still holds, or the refusal to say so.
+
+    Two checks, two different refusals, and they must not be one. `may_open` is permission —
+    the entity cache is process-global and a ref is a guess away from another conversation's
+    customer — and a miss is a cache miss, which is a different sentence to the owner and a
+    different thing for him to do about it.
+    """
+    from app.commands import may_open
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    if not ref:
+        return None, Outcome.refused("no_record", "Nothing was named to do that to.")
+    if not may_open(ctx, kind, ref):
+        return None, Outcome.refused(
+            "not_this_conversation",
+            "That is not something this conversation has been shown.",
+        )
+    held = memory().get(ENTITY, f"{kind}:{ref}", allow_stale=True)
+    value = getattr(held, "value", None) if held is not None else None
+    if not isinstance(value, dict):
+        word = "thread" if kind == "email_thread" else kind
+        return None, Outcome.refused(
+            f"{'thread' if kind == 'email_thread' else kind}_not_held",
+            f"I am not holding that {word} any more — open it again and I'll write the reply.",
+        )
+    return value, None
+
+
+def _last_inbound(thread: dict[str, Any]) -> dict[str, Any]:
+    """The most recent message in the thread that came IN.
+
+    Replying to our own last message is the failure this exists to stop: the newest message in
+    a thread the shop has already answered is the shop's. `outbound` is the read model's own
+    flag where it has one; failing that, the newest message is the fallback, which is what the
+    thread card itself shows as the latest.
+    """
+    messages = [m for m in (thread.get("messages") or []) if isinstance(m, dict)]
+    for message in reversed(messages):
+        if not message.get("outbound") and (message.get("from_email") or message.get("from")):
+            return message
+    return messages[-1] if messages else {}
+
+
+def _stand_on(ctx: CommandCtx, kind: str, ref: str, label: str, *, tab: str = "") -> None:
+    """Where the owner is, once a composer is open over a record: still on the record.
+
+    The composer is a context on the branch, not a stop on the trail, so Back from it returns
+    to the thread or the order the reply is about. `visit` does not push a second stop for the
+    record the owner is already on, which is the usual case — he tapped Reply on its card.
+    """
+    ctx.branch.visit(kind, ref, label, tab=tab)
+    remember = getattr(ctx.session, "remember_context", None)
+    if callable(remember):
+        remember(kind, label, ref)
+    focus = getattr(ctx.session, "set_focus", None)
+    if callable(focus):
+        focus(kind, ref)
+
+
+def _compose_reply(ctx: CommandCtx) -> Outcome:
+    """Reply, tapped on an email thread. Opens the reply; stages nothing; reads nothing.
+
+    The tablet posts a thread id and nothing else. Everything on the card is read off the
+    Mac's own copy of that thread: who wrote in last, under what subject, in which thread. The
+    recipient is shown and is NOT editable, because it is not the composer's to decide — the
+    write tool re-reads the thread when the gesture comes and replies to whoever wrote last,
+    exactly as it did before this control existed.
+
+    D-11: Reply was rendered on twenty-four email cards in the live session and used on none.
+    It armed the microphone and wrote a label to the dock, 788 pixels below the finger, which
+    the act of speaking then overwrote. A chip called Reply now produces a reply.
+    """
+    thread_id = ctx.arg("thread_id") or ctx.arg("ref")
+    thread, refused = _held_record(ctx, "email_thread", thread_id)
+    if refused is not None:
+        return refused
+    assert thread is not None
+    message = _last_inbound(thread)
+    address = str(message.get("from_email") or "").strip()
+    if not address or not EMAIL_ADDRESS.match(address):
+        return Outcome.refused(
+            "no_sender",
+            "I cannot tell who to reply to in that thread, so I have not opened a reply.",
+        )
+    subject = next((str(m.get("subject") or "") for m in reversed(thread.get("messages") or [])
+                    if isinstance(m, dict) and m.get("subject")), "")
+    from app.tools.gmail_writes import reply_subject
+
+    compose_id = open_compose(
+        ctx.branch, kind="reply", to=address, to_name=str(message.get("from") or ""),
+        subject=reply_subject(subject), body="", thread_id=thread_id,
+        about=f"a reply to {_first_word(str(message.get('from') or '')) or 'them'}",
+        origin_text="",
+    )
+    compose = held(ctx.branch, compose_id) or {}
+    # This address came off a thread Gmail served, not out of a microphone. Marking it
+    # `uncertain` would be a lie, and `_ready_to_stage` would then refuse to prepare it.
+    compose["to_status"], compose["to_hint"] = "ok", ""
+    ctx.session.issue(compose_id)
+    ctx.session.remember_pii(*[v for v in (compose.get("to"), compose.get("to_name")) if v])
+    _stand_on(ctx, "email_thread", thread_id, subject[:80], tab="")
+    return Outcome(answer=_spoken(compose), surfaces=[compose_surface(compose)],
+                   changed={"compose_id": compose_id, "thread_id": thread_id, "kind": "reply"})
+
+
+def _compose_to_customer(ctx: CommandCtx) -> Outcome:
+    """Email, tapped on an order. Opens a new email to that order's customer.
+
+    The same shape as the reply and for the same reason: the tablet posts the ORDER, and the
+    address is read off the Mac's own copy of it. Here the recipient IS editable — it is a new
+    email and the owner may be writing to somebody else about the order — so it goes through
+    `check_address` on every keystroke like any other typed address.
+    """
+    order_id = ctx.arg("order_id") or ctx.arg("ref")
+    order, refused = _held_record(ctx, "order", order_id)
+    if refused is not None:
+        return refused
+    assert order is not None
+    address = str(order.get("customer_email") or "").strip()
+    if not address or not EMAIL_ADDRESS.match(address):
+        return Outcome.refused("no_address", "That order has no email address on it.")
+    number = str(order.get("order_number") or "").lstrip("#")
+    compose_id = open_compose(
+        ctx.branch, kind="new", to=address, to_name=str(order.get("customer_name") or ""),
+        subject=f"Your order {number}".strip() if number else "", body="",
+        about=f"an email about order {number}" if number else "an email to the customer",
+        origin_text="",
+    )
+    compose = held(ctx.branch, compose_id) or {}
+    compose["to_status"], compose["to_hint"] = "ok", ""
+    ctx.session.issue(compose_id)
+    ctx.session.remember_pii(*[v for v in (compose.get("to"), compose.get("to_name")) if v])
+    _stand_on(ctx, "order", order_id, f"#{number}" if number else "", tab="email")
+    return Outcome(answer=_spoken(compose), surfaces=[compose_surface(compose)],
+                   changed={"compose_id": compose_id, "order_id": order_id, "kind": "new"})
+
+
+def _first_word(who: str) -> str:
+    word = str(who or "").strip().split(",")[0].strip().split(" ")[0].strip(" <>\"'")
+    return word if word and "@" not in word else ""
 
 
 # Which write tool each gesture on the composer reaches. Server-owned: the tablet posts
@@ -714,10 +923,12 @@ def _ready_to_stage(compose: dict[str, Any]) -> str:
         if compose.get("to_status") == "uncertain":
             return "That address is what I heard, not what you typed. Tap it, check it, and then I'll prepare this."
         return "There is no address I can send to yet."
-    if not str(compose.get("subject") or "").strip():
+    # A reply's subject is the thread's, read there when the change is prepared; a thread with
+    # no subject line at all is not a reason to refuse to answer it.
+    if compose["kind"] == "new" and not str(compose.get("subject") or "").strip():
         return "It has no subject yet."
     if not str(compose.get("body") or "").strip():
-        return "It has no words in it yet."
+        return "It has no words in it yet. Tap the box and type, or hold the dock and say it."
     return ""
 
 
@@ -865,6 +1076,11 @@ extend([
            base=0.8, floor=0.7, max_words=40, serves_mutation_words=True, many_clauses=True),
 ])
 
+# Reply and Email, tapped on a card. Touch only: a spoken "reply to this" is the `email.reply`
+# continuation and goes to the model with the thread named, which is a different thing to
+# opening a box to type in. Neither reads anything and neither can stage.
+register_command(Command("compose.reply", "Open a reply to this email thread", _compose_reply, voice=False))
+register_command(Command("compose.to_customer", "Open an email to this order's customer", _compose_to_customer, voice=False))
 register_command(Command("compose.field", "Type into the email being written", _compose_field, voice=False))
 register_command(Command("compose.stage", "Save the email as a draft, or send it", _compose_stage, voice=False))
 register_command(Command("compose.discard", "Throw away the email being written", _compose_discard, voice=False))
@@ -881,5 +1097,8 @@ register_capability(CapabilityFamily(
     tools=("gmail_compose_open", "gmail_compose_fill"),
     scopes=("https://www.googleapis.com/auth/gmail.compose",),
     state="READY",
-    detail="the composer opens instantly; the draft and the send are gestures on its card",
+    # The last clause is the answer to a question the owner asked out loud and got "that
+    # didn't come through clearly" to: how do I type? Reply on an email and Email on an order
+    # open this card, and every box on it takes a keyboard.
+    detail="tap Reply on an email, or Email on an order, and type it; the draft and the send are gestures on the card",
 ))

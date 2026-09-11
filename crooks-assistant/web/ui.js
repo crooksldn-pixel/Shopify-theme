@@ -36,7 +36,17 @@
         else if (key === 'on' && typeof value === 'object') {
           for (const type in value) el.addEventListener(type, value[type]);
         } else if (key === 'data' && typeof value === 'object') {
-          for (const d in value) el.dataset[d] = String(value[d]);
+          // Absent, not "null". Every other attribute here is dropped when its value is null
+          // or undefined; `data` stringified it, so `{ ref: staged ? text(ref) : null }` wrote
+          // `data-ref="null"` onto every chip that was not staged. That is not cosmetic: the
+          // page has one delegated handler for `[data-command]`, so the instant a rail chip
+          // carried `data-command="null"` every chip on every card posted the command "null"
+          // to the Mac and got a 400 — an entire class of control quietly broken by a
+          // ternary. A key with nothing behind it is simply not set.
+          for (const d in value) {
+            if (value[d] === null || value[d] === undefined) continue;
+            el.dataset[d] = String(value[d]);
+          }
         } else el.setAttribute(key, String(value));
       }
     }
@@ -476,15 +486,27 @@
       // From line matches the order and nothing else does; or the order is merely mentioned.
       const verified = t.verified_sender === true;
       const matches = verified || t.sender_match === true;
-      const row = h('li', { class: 'row tappable', role: 'button', tabindex: '0', data: { thread: text(t.thread_id) } }, [
+      // A DOOR, not a caption. The thread card has said which order it is about since Phase 2
+      // (`linkedOrderStrip`) and the order card has listed its email for just as long — but
+      // these rows carried `data-thread`, which nothing on the page opens on, and a click
+      // handler that only expanded them. So the graph was navigable thread→order and not
+      // order→thread: the owner could read that a customer had written and had no way to
+      // reach what they wrote. `data-ref` + `data-kind` is what the deck's one click handler
+      // posts to `open.entity` — the same door a list row goes through.
+      const ref = text(t.thread_id);
+      const row = h('li', {
+        class: `row${ref ? ' tappable' : ''}`, role: ref ? 'button' : null, tabindex: ref ? '0' : null,
+        data: ref ? { ref, kind: 'email_thread' } : {},
+      }, [
         h('span', { class: 'row-main' }, [
           badge(verified ? 'From the customer · verified' : matches ? 'Sender matches' : 'Mentions the order', verified ? 'quiet ok' : matches ? 'quiet warn' : 'quiet'),
           ' ', h('strong', { text: text(t.subject, '(no subject)') }),
         ]),
         h('span', { class: 'row-sub', text: [text(t.from), text(t.snippet)].filter(Boolean).join(' — ') }),
         h('span', { class: 'row-side' }, [h('span', { class: 'card-meta', text: formatDate(t.date) })]),
+        ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '›' }) : null,
       ]);
-      row.addEventListener('click', () => row.classList.toggle('is-open'));
+      if (!ref) row.addEventListener('click', () => row.classList.toggle('is-open'));
       return row;
     }))];
   }
@@ -494,40 +516,122 @@
   // so the ask, the proposal and the gesture stay exactly what they are by voice. A chip the
   // Mac disabled shows its one reason and does nothing.
   //
-  // Two kinds of chip share the rail. An "ask" chip primes the hold (and, when it carries a
-  // family, tells the Mac what the next sentence is about). A "stage" chip is a row action
-  // (app/actions/rows.py) on the record itself: the tap asks the Mac to PREPARE the change,
-  // and the card that comes back still waits for a gesture. `ref` is the record the stage
-  // chips act on; it is posted back with the action id and nothing else.
+  // THREE kinds of chip share the rail, and the Mac says which each one is.
+  //
+  //   "ask"    primes the hold with the words, and — when it carries a family — tells the Mac
+  //            what the next sentence is about. The words it primed are then shown ON THE
+  //            CHIP, because the dock label they used to be written to is 788px below the
+  //            finger and is overwritten by the act of speaking.
+  //   "stage"  a row action (app/actions/rows.py) on the record itself: the tap asks the Mac
+  //            to PREPARE the change, and the card that comes back still waits for a gesture.
+  //            `ref` is the record those chips act on; it is posted with the action id and
+  //            nothing else.
+  //   "open"   the tap posts the semantic command the Mac put on the chip (`data-command`,
+  //            `data-args`) through the page's one delegated handler (web/app.js), and a
+  //            screen comes back — the reply composer, an email to a customer. Reply is the
+  //            first of these: it was rendered twenty-four times in the live session and
+  //            tapped nought, because tapping it produced a label rather than a reply.
+  //
+  // And a rail is not a capability list. The Mac marks at most two chips `primary`; the rest
+  // — the fallbacks and every disabled one — go behind one disclosure that says how many.
+  function railChip(a, opts, ref) {
+    const staged = text(a.mode) === 'stage';
+    const opened = text(a.mode) === 'open';
+    const enabled = a.enabled === true
+      && (staged ? Boolean(text(ref)) : opened ? Boolean(text(a.command)) : Boolean(text(a.instruction)));
+    const chip = h('button', {
+      class: `rail-chip risk-${text(a.risk) === 'red' ? 'red' : 'amber'}${enabled ? '' : ' is-off'}`, type: 'button',
+      'aria-disabled': enabled ? 'false' : 'true', title: staged ? text(a.detail) : null,
+      // `family` is the spoken control this chip arms, when it arms one — the Mac's own
+      // mapping (commands.SPOKEN_CONTROLS), carried here so the page never invents one and
+      // so the armed chip can be found again when the Mac says it is listening. `command`
+      // and `args` are what an "open" chip posts, built on the Mac; the page forwards them.
+      data: {
+        action: text(a.id), mode: text(a.mode, 'ask'), family: text(a.family),
+        ref: staged ? text(ref) : null,
+        command: enabled && opened ? text(a.command) : null,
+        args: enabled && opened ? text(a.args) : null,
+      },
+    }, [
+      h('span', { class: 'rail-label', text: text(a.label, '—') }),
+      !enabled && a.reason ? h('span', { class: 'rail-why', text: text(a.reason) }) : null,
+    ]);
+    if (enabled && staged) {
+      chip.addEventListener('click', (event) => {
+        if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (!opts || typeof opts.onRowAction !== 'function' || chip.disabled) return;
+        chip.disabled = true;
+        opts.onRowAction(text(a.id), text(ref), chip);
+      });
+    } else if (enabled && opened) {
+      // Nothing to wire: the deck's delegated [data-command] handler posts it and draws what
+      // comes back. One handler for every command on every card is the whole reason a card
+      // redrawn mid-gesture still has working buttons.
+      chip.classList.add('is-open');
+    } else if (enabled) {
+      chip.addEventListener('click', () => {
+        primedChip(chip, text(a.instruction));
+        if (opts && typeof opts.onAction === 'function') opts.onAction(a, chip);
+      });
+    }
+    return chip;
+  }
+
+  // The visible answer to a tap on an "ask" chip: the words it primed, on the chip that
+  // primed them.
+  //
+  // This is the other half of D-11. An ask chip stages nothing by design — it puts a sentence
+  // in the owner's mouth — and the only sign that it had done so was a line written to the
+  // dock label 788 pixels below the finger, which "Release to send" overwrites the instant the
+  // thumb goes down to speak. Eight chips, forty-odd renders, nought taps. The words now sit
+  // on the chip, and stay there. `data-said` rather than `data-primed`, because `data-primed`
+  // belongs to the Mac's armed state (web/app.js:drawArmed) and the two must not overwrite
+  // each other: a chip with a family gets both, a chip without gets this.
+  function primedChip(chip, words) {
+    const rail_ = chip.parentNode && chip.parentNode.parentNode ? chip.parentNode.parentNode : chip.parentNode;
+    const root = rail_ && typeof rail_.querySelectorAll === 'function' ? rail_ : null;
+    const strip = (el) => {
+      for (const said of el.querySelectorAll('.rail-said')) { if (said.parentNode) said.parentNode.removeChild(said); }
+    };
+    if (root) {
+      for (const other of root.querySelectorAll('.rail-chip')) {
+        if (other === chip) continue;
+        other.classList.remove('is-primed');
+        other.dataset.said = '';
+        strip(other);
+      }
+    }
+    strip(chip);
+    chip.classList.add('is-primed');
+    chip.dataset.said = 'true';
+    if (words) chip.appendChild(h('span', { class: 'rail-said', text: `Hold the dock and say: “${words}”` }));
+  }
+
   function rail(actions, opts, ref) {
     const list_ = list(actions, 6);
     if (!list_.length) return null;
-    return h('div', { class: 'rail', role: 'group', 'aria-label': 'Changes' }, list_.map((a) => {
-      const staged = text(a.mode) === 'stage';
-      const enabled = a.enabled === true && (staged ? Boolean(text(ref)) : Boolean(text(a.instruction)));
-      const chip = h('button', {
-        class: `rail-chip risk-${text(a.risk) === 'red' ? 'red' : 'amber'}${enabled ? '' : ' is-off'}`, type: 'button',
-        'aria-disabled': enabled ? 'false' : 'true', title: staged ? text(a.detail) : null,
-        // `family` is the spoken control this chip arms, when it arms one — the Mac's own
-        // mapping (commands.SPOKEN_CONTROLS), carried here so the page never invents one and
-        // so the armed chip can be found again when the Mac says it is listening.
-        data: { action: text(a.id), mode: text(a.mode, 'ask'), family: text(a.family), ref: staged ? text(ref) : null },
-      }, [
-        h('span', { class: 'rail-label', text: text(a.label, '—') }),
-        !enabled && a.reason ? h('span', { class: 'rail-why', text: text(a.reason) }) : null,
-      ]);
-      if (enabled && staged) {
-        chip.addEventListener('click', (event) => {
-          if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
-          if (!opts || typeof opts.onRowAction !== 'function' || chip.disabled) return;
-          chip.disabled = true;
-          opts.onRowAction(text(a.id), text(ref), chip);
-        });
-      } else if (enabled) {
-        chip.addEventListener('click', () => { if (opts && typeof opts.onAction === 'function') opts.onAction(a, chip); });
-      }
-      return chip;
-    }));
+    const primary = list_.filter((a) => text(a.priority) !== 'secondary');
+    const rest = list_.filter((a) => text(a.priority) === 'secondary');
+    const wrap = h('div', { class: 'rail', role: 'group', 'aria-label': 'Changes' });
+    // A rail the Mac did not weigh at all — an older payload — is drawn as it always was.
+    const lead = primary.length ? primary : list_;
+    const behind = primary.length ? rest : [];
+    wrap.appendChild(h('div', { class: 'rail-primary' }, lead.map((a) => railChip(a, opts, ref))));
+    if (!behind.length) return wrap;
+    const body = h('div', { class: 'rail-rest', hidden: true }, behind.map((a) => railChip(a, opts, ref)));
+    const more = h('button', {
+      class: 'rail-more', type: 'button', 'aria-expanded': 'false',
+    }, [h('span', { class: 'rail-more-label', text: `${behind.length} more` }),
+        h('span', { class: 'rail-more-mark', 'aria-hidden': 'true', text: '+' })]);
+    more.addEventListener('click', (event) => {
+      if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+      const open = more.getAttribute('aria-expanded') === 'true';
+      more.setAttribute('aria-expanded', open ? 'false' : 'true');
+      body.hidden = open;
+      more.querySelector('.rail-more-mark').textContent = open ? '+' : '−';
+    });
+    append(wrap, [more, body]);
+    return wrap;
   }
 
   // A note of a few lines reads in place. A longer one goes behind one control, which is the
@@ -1077,7 +1181,7 @@
       latest ? formatDate(latest.date) : '',
       d.truncated ? 'older messages not shown' : '',
     ].filter(Boolean).join(' · ');
-    return card('email_thread', [
+    const node = card('email_thread', [
       h('div', { class: 'card-head' }, [
         h('div', { class: 'head-main' }, [
           kicker('Email thread'),
@@ -1104,6 +1208,10 @@
       nodes.length ? h('div', { class: 'msg-latest' }, [nodes[nodes.length - 1]]) : null,
       earlier.length ? disclosure(h('div', { class: 'msg-history' }, earlier), `${earlier.length} earlier message${earlier.length === 1 ? '' : 's'}`) : null,
     ], opts);
+    // Which thread this card is, so a proven archive can find it again (`settleThread`) and
+    // so Back can tell one thread card from another.
+    node.dataset.ref = text(d.thread_id);
+    return node;
   }
 
   // The order this thread is about, under the head, from what the Mac worked out
@@ -1536,8 +1644,77 @@
     return svg;
   };
 
+  // ---- a proven change to a thread's home, applied to the deck that is already on screen.
+  //
+  // Archive is the one verified change whose consequence is a card the owner is still looking
+  // at: he archives a thread out of a queue and the queue still has it in it. The Mac names
+  // the thread that left the inbox on the success card (`archived`, `restored` —
+  // app/presentation.py:_inbox_change); this marks the thread's own card and takes its row out
+  // of the active queue, and the undo puts both back. Nothing here decides what archiving
+  // means, and nothing here asks the Mac anything: it is one fact, applied.
+  function settleThread(root, d) {
+    if (!root || typeof root.querySelectorAll !== 'function' || !d || typeof d !== 'object') return 0;
+    const gone = d.archived && typeof d.archived === 'object' ? text(d.archived.ref) : '';
+    const back = d.restored && typeof d.restored === 'object' ? text(d.restored.ref) : '';
+    const ref = gone || back;
+    if (!ref) return 0;
+    let touched = 0;
+    // `querySelectorAll` never matches the root, and the page hands this single CARDS as well
+    // as decks — the copy of the queue on the back stack is one detached node, and it is the
+    // one the owner returns to.
+    const within = (sel) => {
+      const found = Array.prototype.slice.call(root.querySelectorAll(sel));
+      if (root.classList && root.classList.contains(sel.replace('.', ''))) found.unshift(root);
+      return found;
+    };
+    // The thread's own card, if it is open: it says what it now is, in a word.
+    for (const open of within('.card-email_thread')) {
+      if (text(open.dataset.ref) !== ref && text(open.dataset.thread) !== ref) continue;
+      touched += 1;
+      const head = open.querySelector('.card-head');
+      for (const mark of open.querySelectorAll('.thread-archived')) {
+        if (mark.parentNode) mark.parentNode.removeChild(mark);
+      }
+      if (gone) {
+        open.classList.add('is-archived');
+        if (head) head.appendChild(h('span', { class: 'badge ok thread-archived', text: 'Archived · out of the inbox' }));
+      } else {
+        open.classList.remove('is-archived');
+      }
+    }
+    // And the queue it was in. An archived thread is not a row with a line through it: it has
+    // left, and the card says how many left so the count on screen is not a lie.
+    for (const queue of within('.card-email_list')) {
+      const rows = queue.querySelector('.rows');
+      if (!rows) continue;
+      if (gone) {
+        for (const row of rows.querySelectorAll('.row')) {
+          if (text(row.dataset.ref) !== ref) continue;
+          rows.removeChild(row);
+          touched += 1;
+          const kept = Number(queue.dataset.archived || 0) + 1;
+          queue.dataset.archived = String(kept);
+          let note = queue.querySelector('.queue-note');
+          if (!note) { note = h('p', { class: 'card-note queue-note' }); queue.appendChild(note); }
+          note.textContent = `${kept} archived and out of this queue.`;
+        }
+      }
+    }
+    return touched;
+  }
+
   function renderSuccess(d, opts) {
     opts = opts || {};
+    // The deck the owner is looking at, settled from the one fact the Mac sent. Before the
+    // new card is appended, because what it changes is the cards that are already there.
+    const where = doc() && doc().body ? doc().body : null;
+    if (where) settleThread(where, d);
+    // And the screens the owner will come BACK to. The page keeps its own copies of those as
+    // detached nodes, which nothing in the document can reach, so it settles them itself —
+    // otherwise Back from a proven archive lands on a queue that still lists the thread.
+    if (typeof opts.onThreadMoved === 'function' && (d.archived || d.restored)) {
+      try { opts.onThreadMoved(d); } catch (error) { /* the proof is drawn either way */ }
+    }
     const node = card('success', [
       h('div', { class: 'card-head' }, [h('div', { class: 'mark ok' }, CHECK()), h('div', {}, [kicker('Done'), h('h2', { class: 'card-title', text: text(d.title, 'Done') }), h('p', { class: 'card-sub', text: text(d.detail) })])]),
       // What the Mac's proof could not yet see: said on the card as well as out loud.
@@ -1548,6 +1725,10 @@
     // A reversible action offers its undo: a second proposal the Mac staged, authorised the
     // same way (its own dead time, its own tap) and executed by the same path.
     const undo = d.undo && typeof d.undo === 'object' && d.undo.proposal_id ? d.undo : null;
+    // Which thread this card is the proof about, so a deck redrawn after the card lands can
+    // be settled again from the card itself rather than from a payload nobody kept.
+    if (d.archived && typeof d.archived === 'object' && text(d.archived.ref)) node.dataset.archived = text(d.archived.ref);
+    if (d.restored && typeof d.restored === 'object' && text(d.restored.ref)) node.dataset.restored = text(d.restored.ref);
     if (!undo && d.proposal_id) node.dataset.proposal = text(d.proposal_id);
     if (undo) {
       const armedAfter = num(undo.armed_after_ms) === null ? 650 : undo.armed_after_ms;
@@ -2050,6 +2231,43 @@
   };
   const FIELD_STATUSES = ['ok', 'uncertain', 'invalid'];
 
+  // ---- what the thumb has typed and the Mac has not answered for yet.
+  //
+  // D-9 §20: "preserve unsaved content across harmless redraws". A keystroke is posted after
+  // 400 ms of quiet (web/app.js) and the Mac answers with the card again — but a card is also
+  // redrawn for reasons the owner did not ask for: a background enrichment landing on the
+  // order underneath, a sibling card settling, a half-swap. Every one of those draws the
+  // field from the Mac's copy, which is one round trip behind the thumb, and each of them
+  // used to silently delete the last few characters of an address.
+  //
+  // So the last typed value is kept here, keyed by card and field, and a render whose
+  // incoming value does not match it shows the typed one and says so (`data-unsaved`). The
+  // Mac is still the authority: the moment its copy agrees, the draft is dropped, and a
+  // value the MAC changed afterwards (a rewrite it did itself) is then shown as it should be.
+  // The TTL is the backstop — a draft is unsaved work for the next few seconds, never a
+  // shadow copy of the email.
+  const FIELD_DRAFT_TTL_MS = 15000;
+  const DRAFTS = new Map();
+  const nowMs = () => (typeof Date !== 'undefined' && Date.now ? Date.now() : 0);
+  const draftKey = (composeId, name) => `${composeId} ${name}`;
+  // Which field the thumb is in, so a redraw puts the caret back where it was rather than at
+  // the end of what was typed.
+  let focusedField = '';
+
+  function clearFieldDrafts() { DRAFTS.clear(); focusedField = ''; }
+  // For the tests: move every draft back in time, rather than making the clock injectable
+  // for one line of arithmetic.
+  function ageFieldDrafts(ms) {
+    for (const entry of DRAFTS.values()) entry.at -= Number(ms) || 0;
+  }
+
+  function fieldDraft(composeId, name) {
+    const entry = DRAFTS.get(draftKey(composeId, name));
+    if (!entry) return null;
+    if (nowMs() - entry.at > FIELD_DRAFT_TTL_MS) { DRAFTS.delete(draftKey(composeId, name)); return null; }
+    return entry;
+  }
+
   // A single line of text, whatever the payload said. A field's LABEL and HINT are the Mac's
   // words; its value is the owner's.
   function fieldStatus(value) {
@@ -2084,9 +2302,16 @@
       data: { compose: text(s.compose_id), field: name, kind, post: text(s.post, 'compose.field') },
     });
     // Both, because a textarea's text is its content and an input's is its value, and the
-    // page reads `.value` for both.
-    control.value = text(s.value);
-    if (shape.tag === 'textarea') control.textContent = text(s.value);
+    // page reads `.value` for both. What is shown is the Mac's value — unless the thumb has
+    // typed something the Mac has not answered for yet, in which case it is the thumb's, and
+    // the field says so.
+    const key = draftKey(text(s.compose_id), name);
+    const draft = fieldDraft(text(s.compose_id), name);
+    const unsaved = Boolean(draft && draft.value !== text(s.value));
+    if (draft && !unsaved) DRAFTS.delete(key);          // the Mac has it: it is the authority again
+    const shown = unsaved ? draft.value : text(s.value);
+    control.value = shown;
+    if (shape.tag === 'textarea') control.textContent = shown;
     // The deck holds a delegated click handler that opens a record from any [data-ref], a
     // pointer probe that records gestures, and — in orb mode — a hold surface over the whole
     // stage. A finger landing in a field must reach the field and go no further, or typing an
@@ -2095,15 +2320,78 @@
     for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'click', 'touchstart', 'keydown', 'keyup']) {
       control.addEventListener(type, swallow);
     }
-    if (typeof settings.onField === 'function') {
-      control.addEventListener('input', () => settings.onField(name, control.value, control));
+    // Every keystroke into the draft, whether or not anything is listening for it. A field
+    // drawn without an `onField` — a card rendered for a snapshot, a card whose handler is
+    // delegated on the deck (which is how the app reads these) — still has to keep what was
+    // typed across a redraw, so this is not inside the `onField` branch.
+    control.addEventListener('input', () => {
+      DRAFTS.set(key, {
+        value: control.value === undefined ? '' : String(control.value), at: nowMs(),
+        start: typeof control.selectionStart === 'number' ? control.selectionStart : null,
+      });
+      if (typeof settings.onField === 'function') settings.onField(name, control.value, control);
+    });
+    // Which field the keyboard is in, so a redraw can put it back. And, on the way in, the
+    // field is scrolled into the middle of what is left of the screen: an 8-inch tablet's
+    // keyboard covers the bottom half, and a Body field at the foot of a composer opened
+    // underneath it (§20: "remain visible above the keyboard").
+    control.addEventListener('focus', () => {
+      focusedField = key;
+      if (typeof control.scrollIntoView !== 'function' || typeof setTimeout !== 'function') return;
+      setTimeout(() => {
+        try { control.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { /* older engine */ }
+      }, 250);
+    });
+    control.addEventListener('blur', () => { if (focusedField === key) focusedField = ''; });
+    // And the other half of it: this render replaced the node the thumb was in, so the
+    // keyboard has to be given back to the new one. A macrotask, because the node is not in
+    // the document until the caller has appended it.
+    if (focusedField === key && typeof control.focus === 'function' && typeof setTimeout === 'function') {
+      const at = draft && draft.start !== null ? draft.start : null;
+      setTimeout(() => {
+        try {
+          control.focus({ preventScroll: true });
+          if (at !== null && typeof control.setSelectionRange === 'function') control.setSelectionRange(at, at);
+        } catch { /* a browser that will not move the caret still has the value */ }
+      }, 0);
     }
     const hint = h('p', { class: 'field-hint', text: text(s.hint) });
     hint.hidden = !text(s.hint);
-    return h('label', { class: `field field-${kind} is-${status}`, data: { field: name, status } }, [
-      h('span', { class: 'field-label', text: text(s.label, name) }),
+    const wrap = h('label', {
+      class: `field field-${kind} is-${status}${unsaved ? ' is-unsaved' : ''}`,
+      // `data-typable` is the machine-readable half of the affordance below: a browser check
+      // can count the typing paths on a screen, which is how D-9 gets a regression test.
+      data: { field: name, status, typable: 'true' },
+    }, [
+      h('span', { class: 'field-label' }, [
+        h('span', { class: 'field-label-text', text: text(s.label, name) }),
+        // D-9. The owner asked, out loud, "How do I type a separate hall for you?" — over a
+        // build whose fields were real, tappable and completely unannounced. Two words and a
+        // keyboard glyph on every label, so the answer is on the screen he was looking at.
+        h('span', { class: 'field-type' }, [
+          h('span', { class: 'field-type-mark', 'aria-hidden': 'true', text: '⌨' }),
+          h('span', { class: 'field-type-word', text: 'Tap to type' }),
+        ]),
+      ]),
       control,
       hint,
+    ]);
+    if (unsaved) wrap.dataset.unsaved = 'true';
+    return wrap;
+  }
+
+  // A value the owner may read and may not change: a reply's recipient, a reply's subject.
+  // Drawn like a field so the card reads as one form, and carrying no control at all so
+  // there is nothing to tap and no keystroke to refuse. The Mac decides which of its fields
+  // are like this (`editable: false`) and refuses a keystroke for them on the wire too
+  // (app/families/compose.py), so the card and the command agree.
+  function fieldStatic(spec) {
+    const s = spec && typeof spec === 'object' ? spec : {};
+    const note = text(s.hint);
+    return h('div', { class: 'field field-static', data: { field: text(s.name) } }, [
+      h('span', { class: 'field-label' }, [h('span', { class: 'field-label-text', text: text(s.label, text(s.name)) })]),
+      h('p', { class: 'field-value', text: text(s.value, '—') }),
+      note ? h('p', { class: 'field-hint', text: note }) : null,
     ]);
   }
 
@@ -2122,23 +2410,44 @@
     const meta = [];
     if (when && text(when.date)) meta.push(`${text(when.phrase, 'when')} · ${text(when.date)}`);
     if (reply && text(d.thread_id)) meta.push('in the same thread');
-    const buttons = list(d.actions, 4).map((a) => {
+    const buttons = list(d.actions, 5).map((a) => {
       const staged = text(a.mode) === 'stage';
       const mode = text(a.id) === 'send' ? 'send' : 'draft';
-      const chip = h('button', {
+      // The command is the Mac's, on the card. The fallback is what this file used to decide
+      // for itself, kept so a card built before that seam — or by a family that has not
+      // caught up — still stages and still discards.
+      const command = text(a.command) || (staged ? 'compose.stage' : 'compose.discard');
+      const args = text(a.args) || (staged ? `compose_id=${id}&mode=${mode}` : `compose_id=${id}`);
+      return h('button', {
         class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${staged ? '' : ' quiet'}`,
         type: 'button',
-        // The whole payload of a gesture on this card: which command, which composer, and —
-        // for a staging button — draft or send. `data-args` is read by the page's delegated
-        // handler (web/app.js); there is no path from here to the body of the email.
-        data: {
-          command: staged ? 'compose.stage' : 'compose.discard',
-          args: staged ? `compose_id=${id}&mode=${mode}` : `compose_id=${id}`,
-          action: text(a.id),
-        },
+        // The whole payload of a gesture on this card: which command, and which composer or
+        // thread it is about. `data-args` is read by the page's delegated handler
+        // (web/app.js); there is no path from here to the body of the email.
+        data: { command, args, action: text(a.id) },
       }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
-      return chip;
     });
+    // Which boxes have a keyboard. The Mac says so per field, and says no for a reply's
+    // recipient and subject — both belong to the thread and both are re-read there when the
+    // change is prepared. A field the Mac fixed is drawn as a fact, not as a dead input:
+    // there is then nothing to tap, and nothing for `compose.field` to refuse.
+    const typable = (f, fallback) => (f && f.editable !== undefined ? f.editable !== false : fallback);
+    const recipient = typable(to, !reply)
+      ? field({
+        kind: 'email', name: 'to', label: 'To', value: to.value, status: to.status, hint: to.hint,
+        compose_id: id, maxlength: 254, placeholder: 'name@example.com',
+      }, settings)
+      : fieldStatic({
+        name: 'to', label: reply ? 'Replying to' : 'To',
+        value: [text(d.to_name), text(to.value)].filter(Boolean).join(' · '),
+        hint: reply ? 'whoever wrote last in this thread — read from the thread, not typed' : text(to.hint),
+      });
+    const line = typable(subject, true)
+      ? field({
+        kind: 'text', name: 'subject', label: 'Subject', value: subject.value, status: subject.status,
+        hint: subject.hint, compose_id: id, maxlength: 120, rows: 2, placeholder: text(subject.placeholder),
+      }, settings)
+      : fieldStatic({ name: 'subject', label: 'Subject', value: subject.value, hint: "the thread's own subject" });
     const node = card('email_compose', [
       h('div', { class: 'card-head' }, [
         h('div', {}, [
@@ -2148,23 +2457,22 @@
         ]),
         h('div', { class: 'badges' }, [badge(reply ? 'Reply' : 'New', 'warn')]),
       ]),
-      reply ? null : field({
-        kind: 'email', name: 'to', label: 'To', value: to.value, status: to.status, hint: to.hint,
-        compose_id: id, maxlength: 254, placeholder: 'name@example.com',
-      }, settings),
-      field({
-        kind: 'text', name: 'subject', label: 'Subject', value: subject.value, status: subject.status,
-        hint: subject.hint, compose_id: id, maxlength: 120, rows: 2, placeholder: text(subject.placeholder),
-      }, settings),
+      recipient,
+      line,
       field({
         kind: 'text', name: 'body', label: 'Body', value: body.value, status: body.status,
         hint: body.hint, compose_id: id, maxlength: 2000, rows: 8, placeholder: text(body.placeholder),
       }, settings),
+      // D-9, in the Mac's own words: how to put words in this card. It is above the buttons
+      // because that is where the thumb is going next, and it names both ways in — the live
+      // session had an owner asking out loud how to type and a system that had no answer.
+      text(d.how) ? h('p', { class: 'compose-how', text: text(d.how) }) : null,
       text(d.original) ? h('p', { class: 'compose-said', text: `You said: ${text(d.original)}` }) : null,
       h('div', { class: 'compose-actions', role: 'group', 'aria-label': 'What to do with this email' }, buttons),
       h('p', { class: 'future', text: 'Nothing is saved or sent until you tap.' }),
     ], settings);
     node.dataset.compose = id;
+    if (text(d.thread_id)) node.dataset.thread = text(d.thread_id);
     return node;
   }
 
@@ -2527,6 +2835,7 @@
 
   function render(items, opts) {
     const out = { nodes: [], skipped: [], stack: null, errors: [], hasContext: false };
+    const moved = [];
     if (!Array.isArray(items)) return out;
     for (const item of items.slice(0, 16)) {   // more than the vocabulary is long is a bug upstream
       if (!isValid(item)) { out.skipped.push(item && typeof item.type === 'string' ? item.type : 'invalid'); continue; }
@@ -2537,7 +2846,13 @@
       if (item.data && item.data.secondary === true) node = folded(node, foldLabel(item));
       out.nodes.push(node);
       if (CONTEXT_TYPES.indexOf(item.type) !== -1) out.hasContext = true;
+      // A proven archive comes with the thread it archived, so the owner lands back on the
+      // conversation rather than on a receipt (app/presentation.py:_thread_card). The success
+      // card is drawn FIRST, so at the moment it settles the deck that thread does not exist
+      // yet — it is settled here instead, once every card in this answer has been built.
+      if (item.type === 'success' && (item.data.archived || item.data.restored)) moved.push(item.data);
     }
+    for (const fact of moved) for (const node of out.nodes) settleThread(node, fact);
     return out;
   }
 
@@ -2551,5 +2866,14 @@
     }, [h('span', { class: 'chip-kind', text: text(e.kind) }), h('span', { class: 'chip-label', text: text(e.label) })]));
   }
 
-  return { render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate, TYPES, CONTEXT_TYPES, h, field, FIELD_KINDS, applyPatches, surfaceId, KEY_OF };
+  return {
+    render, renderItem, renderStack, hydrateOrder, settleOrder, isValid, formatDate,
+    TYPES, CONTEXT_TYPES, h, field, fieldStatic, FIELD_KINDS,
+    // The progressive workspace's seams: a patch applied to a card already drawn, and the
+    // identity a patch addresses it by (web/app.js, tests/web/progressive.test.js).
+    applyPatches, surfaceId, KEY_OF,
+    // The email workspace's own seams: a proven archive applied to the deck on screen, and
+    // the unsaved-typing store a redraw must not delete (web/app.js, tests/web/email.test.js).
+    settleThread, clearFieldDrafts, ageFieldDrafts, fieldDraft, FIELD_DRAFT_TTL_MS,
+  };
 });

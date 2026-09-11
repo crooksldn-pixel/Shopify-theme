@@ -54,6 +54,11 @@ DENSITY_SCRIPT = ROOT / "scripts" / "browser" / "density.js"
 # the owner made — "it just shows two of the same thing" — is about pixels, and the 800 x 1280
 # gate and the physical 601 x 889 tablet disagree often enough that both have to be checked.
 SPLIT_SCRIPT = ROOT / "scripts" / "browser" / "split.js"
+# The email workspace, driven with a finger: the Reply path end to end, every enabled rail
+# chip actually pressed, a precision field typed into through a redraw, and the archive
+# proven out of the queue (§19, §20, §22). Its own file and its own run, because it walks one
+# long path rather than sampling many screens, and a failure in it has to name the step.
+EMAIL_SCRIPT = ROOT / "scripts" / "browser" / "email.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -225,14 +230,16 @@ def _start_gate_session(scratch: str):
     return stop
 
 
-async def run_checks(scripts: tuple[Path, ...] | None = None) -> dict[str, Any]:
+async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, Any]:
     """The browser checks on their own, for a test to assert on.
 
-    `scripts` names which runs to do; the default is every gate. A test that is about one
-    thing — the density measurement — passes just its own script, so its failure names its own
-    subject and it pays for one browser. The DEFAULT is the whole set on purpose: a gate left
-    out of it is a gate that proves nothing between releases, which is exactly how accept.js
-    came to be the only check that had ever seen the duplicate `replaceCard`.
+    `scripts` names which runs to make; the default is every gate. A test that is about one
+    thing — the density measurement, the email workspace — passes just its own file, so its
+    failure names its own subject and it pays for one browser. The DEFAULT is the whole set on
+    purpose: a gate left out of it is a gate that proves nothing between releases, which is
+    exactly how accept.js came to be the only check that had ever seen the duplicate
+    `replaceCard`. Keyword-only, so nobody narrows the default sweep by accident.
+
     """
     ok, why = available()
     if not ok:
@@ -248,7 +255,8 @@ async def run_checks(scripts: tuple[Path, ...] | None = None) -> dict[str, Any]:
     stop_session = _start_gate_session(scratch)
     try:
         results = []
-        for script in (scripts or (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT, SPLIT_SCRIPT)):
+        for script in (scripts if scripts is not None else
+                       (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT, SPLIT_SCRIPT, EMAIL_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

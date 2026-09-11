@@ -456,6 +456,9 @@ def _actions(order: dict[str, Any], capabilities: dict[str, Any]) -> list[dict[s
             "risk": "red" if a.get("risk") == "red" else "amber", "enabled": bool(a.get("enabled")),
             "reason": _text(a.get("reason"), 60), "instruction": _text(a.get("instruction"), 120), "mode": _text(a.get("mode"), 12) or "ask",
             "family": _text(a.get("family"), 40),
+            # Where a tap on an "open" chip goes, and how loud the chip is. Both the Mac's.
+            "command": _text(a.get("command"), 40), "args": _text(a.get("args"), 200),
+            "priority": "secondary" if a.get("priority") == "secondary" else "primary",
         }
         for a in available_actions(order, capabilities)[:6]
     ]
@@ -471,6 +474,8 @@ def _email_actions(thread: dict[str, Any], capabilities: dict[str, Any],
             "risk": "red" if a.get("risk") == "red" else "amber", "enabled": bool(a.get("enabled")),
             "reason": _text(a.get("reason"), 60), "instruction": _text(a.get("instruction"), 120), "mode": _text(a.get("mode"), 12) or "ask",
             "family": _text(a.get("family"), 40), "detail": _text(a.get("detail"), 160),
+            "command": _text(a.get("command"), 40), "args": _text(a.get("args"), 200),
+            "priority": "secondary" if a.get("priority") == "secondary" else "primary",
         }
         for a in available_email_actions(thread, capabilities, row_actions=row_actions)
     ]
@@ -913,6 +918,52 @@ def _entity_line(proposal) -> str:
     return _text(f"{kind} {proposal.entity_label}".strip())
 
 
+# Which verified operations change where a thread LIVES, and therefore change a card the
+# tablet already has on screen. A closed table: the only thing that may claim a thread left
+# the inbox is the one operation that takes it out of the inbox.
+_INBOX_OUT = frozenset({"gmail_thread_archive"})
+
+
+def _thread_of(proposal) -> str:
+    """The email thread this change was about, when it was about one. Read from what the MAC
+    stored as the change's own identity — `entity_ref` for a reply and for an archive — never
+    from what a model or a tablet said."""
+    if not str(proposal.operation or "").startswith("gmail_"):
+        return ""
+    ref = _text(proposal.entity_ref, 120)
+    execution = dict(getattr(proposal, "execution", None) or {})
+    thread = _text(execution.get("thread_id"), 120) or ref
+    return thread if thread and thread == ref else ""
+
+
+def _thread_card(proposal) -> dict[str, Any] | None:
+    """The thread as the Mac last read it, for the card that follows a proven email change."""
+    if not _thread_of(proposal):
+        return None
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    held = memory().get(ENTITY, f"email_thread:{_thread_of(proposal)}", allow_stale=True)
+    value = getattr(held, "value", None) if held is not None else None
+    if not isinstance(value, dict) or not value.get("messages"):
+        return None
+    drawn = _from_result("gmail_read_thread", value)
+    return drawn[0] if drawn else None
+
+
+def _inbox_change(proposal) -> dict[str, Any]:
+    """`archived` or `restored`, when this proven change moved a thread out of the inbox or
+    put it back. Empty for everything else — including for an archive whose own undo is what
+    was proven, which is the `restored` case and not the `archived` one."""
+    if str(proposal.operation or "").removesuffix("_undo") not in _INBOX_OUT:
+        return {}
+    ref = _text(proposal.entity_ref, 120)
+    if not ref:
+        return {}
+    where = {"kind": "email_thread", "ref": ref}
+    return {"restored": where} if proposal.undo_of else {"archived": where}
+
+
 def present_action(result, *, session: Session | None = None, writes: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """What the tablet shows once a tap has been answered: a success card and the entity as
     it now is (from the verifying re-read), or a calm failure. Built from the engine's result,
@@ -1067,6 +1118,13 @@ def present_proposal_state(
             # What the proof could not yet see ("the refund isn't showing yet"): on the card,
             # not only in the voice.
             "note": _text(proposal.note, 200),
+            # A proven archive is the one verified change whose consequence is a card ALREADY
+            # ON SCREEN: the thread the owner archived is still sitting in the queue he
+            # archived it out of. The Mac says which thread left the inbox (and which came
+            # back, on an undo) and the tablet settles its own deck from that
+            # (web/ui.js:settleThread). Named rather than inferred, because "the operation
+            # ended in _archive" is the sort of guess that eventually archives an order.
+            **_inbox_change(proposal),
         }))
         if isinstance(proposal.entity, dict) and proposal.entity_kind == "order":
             items.append(_ui("order", _order(proposal.entity, detail=True)))
@@ -1076,6 +1134,13 @@ def present_proposal_state(
                 "to": _text(e.get("to")), "subject": _text(e.get("subject"), 200), "body": _text(e.get("body"), MAX_EMAIL_BODY_CHARS),
                 "state": "sent" if e.get("state") == "sent" else "draft",
             }))
+        # …and the conversation it was about, so the owner lands back on the thread rather
+        # than on a receipt. §19: "see VERIFIED → return to the thread". Rebuilt from the read
+        # the Mac already holds, so it costs nothing and asks Gmail nothing; absent when the
+        # Mac has dropped it, which draws one card fewer and never a wrong one.
+        thread = _thread_card(proposal)
+        if thread is not None:
+            items.append(thread)
     elif status == "pending":
         # Whether a tap from this request could work, on this card too: a card recovered
         # after a lost connection must not offer a tap the Mac would refuse.
