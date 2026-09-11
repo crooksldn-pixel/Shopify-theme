@@ -1010,6 +1010,9 @@ function stashDeck() {
 function restoreDeck(branchId) {
   const saved = decks.get(branchId);
   history.length = 0; historyIndex = -1; currentStack = []; currentSet = null;
+  // The other half's deck is not this half's screen: whatever was being patched into the one
+  // we are leaving has nothing to do with the nodes we are about to put up.
+  resetGlass();
   deckBranch = branchId;
   if (!saved || !saved.history.length) { clear(el.cards); renderStackChips(); return false; }
   for (const entry of saved.history) history.push(entry);
@@ -1046,6 +1049,108 @@ function pushContext(nodes, items, question) {
   for (const node of nodes) collectPending(node);
   T.record('navigate', { nav: 'new', index: historyIndex, entities: history[historyIndex].entities });
   snapshotSoon({ fixture: typeof question === 'string' && question.startsWith('fixture:') ? question.slice(8) : undefined });
+}
+
+// The same, for a screen that is ALREADY DRAWN. `pushContext` clears the deck and appends —
+// which is right for an answer that arrives whole, and is exactly the whole-page redraw §7
+// forbids for one that arrived in pieces: it would throw away the nodes the patches built,
+// reset the scroll and drop the keyboard, at the very end of the turn. So the history takes
+// the nodes that are on the glass, and the glass is left alone.
+function adoptContext(nodes, items, question) {
+  history.push({ nodes, entities: entitiesOf(items), question: question || '' });
+  while (history.length > MAX_HISTORY) history.shift();
+  showHistory(history.length - 1, { keep: true });
+  renderRecent();
+  armDeckExpiry();
+  for (const node of nodes) collectPending(node);
+  T.record('navigate', { nav: 'patched', index: historyIndex, entities: history[historyIndex].entities });
+  snapshotSoon({ patched: true });
+}
+
+/* ------------------------------------------- the workspace, as it arrives (§7, D-5)
+ *
+ * The Mac stages the screen in pieces now: a skeleton the moment it knows what kind of thing
+ * is coming, each read's cards as that read lands, and the turn's own presentation reconciled
+ * against what is already here (app/progressive.py). The patches ride back on the /state poll
+ * this page was already making every 400 ms to say CHECKING SHOPIFY — no stream, no second
+ * socket, nothing to keep alive on a tablet that sleeps.
+ *
+ * `turn_c8eb4cffe077` put nothing on the glass for 7,975 ms and the owner said the system
+ * "waits and then dumps a large chunk". This is the other end of that.
+ */
+const glass = { turn: '', cursor: 0, applied: 0, stale: false };
+
+// Rule: never move a control the owner is touching, and never take the keyboard or the
+// microphone away mid-gesture. While any of these is true the whole batch waits — the cursor
+// is not advanced, so the next poll offers the same patches again.
+const deckPointers = new Set();
+function deckHeld() {
+  return deckPointers.size > 0 || recording || pendingStart || liveActionSurface();
+}
+
+function resetGlass() {
+  glass.turn = '';
+  glass.cursor = 0;
+  glass.applied = 0;
+  glass.stale = false;
+}
+
+// Apply what the Mac has staged. Returns true when anything was drawn.
+function applyWorkspace(payload) {
+  if (!payload || typeof payload !== 'object') return false;
+  if (!window.CrooksUI || typeof window.CrooksUI.applyPatches !== 'function') return false;
+  const turnId = String(payload.turn_id || '');
+  if (turnId && glass.turn !== turnId) {
+    // A new question. Its shell takes the screen the last answer had; the last answer's own
+    // nodes are still in the history array, so Back still reaches it.
+    resetGlass();
+    glass.turn = turnId;
+    clear(el.cards);
+  }
+  if (payload.gap) { glass.stale = true; return false; }
+  const patches = Array.isArray(payload.patches) ? payload.patches : [];
+  if (!patches.length) return false;
+  const out = window.CrooksUI.applyPatches(el.cards, patches, { held: deckHeld, opts: renderOpts() });
+  if (out.deferred) {
+    T.record('workspace_deferred', { count: out.deferred, name: recording ? 'recording' : 'gesture' });
+    return false;
+  }
+  glass.cursor = Math.max(glass.cursor, Number(payload.revision) || 0);
+  const drawn = out.added + out.changed + out.visual + out.removed;
+  if (!drawn) return false;
+  glass.applied += drawn;
+  // A working screen, from the first patch: the deck comes up rather than the orb sitting
+  // there until the whole read graph has resolved.
+  if (el.body.dataset.mode !== 'context') setMode('context');
+  lightDock(Array.prototype.slice.call(el.cards.children));
+  T.record('workspace_patch', {
+    added: out.added || undefined, changed: out.changed || undefined, visual: out.visual || undefined,
+    removed: out.removed || undefined, index: glass.cursor,
+    detail: (payload.timings_ms && payload.timings_ms.time_to_first_useful_workspace) || undefined,
+  });
+  return true;
+}
+
+// The turn has answered. Its cards are reconciled against what the patches already drew
+// rather than the page being rebuilt under the owner's finger — which is the whole of §7's
+// "cards PATCH IN PLACE". Returns false when the glass and the payload disagree about what
+// is on screen, and the caller then draws the answer the old way; a page that patched itself
+// into a state the Mac does not recognise must redraw, not guess.
+function adoptWorkspace(data) {
+  const payload = data && data.workspace;
+  if (!payload || glass.stale) return null;
+  if (String(payload.turn_id || '') !== glass.turn || !glass.applied) return null;
+  applyWorkspace(payload);
+  const want = [];
+  for (const item of data.ui || []) {
+    if (!item || item.type === 'context_stack') continue;
+    const id = window.CrooksUI.surfaceId(item);
+    if (id) want.push(id);
+  }
+  const nodes = Array.prototype.slice.call(el.cards.children);
+  const have = nodes.map((n) => (n.dataset ? n.dataset.render || '' : ''));
+  for (const id of want) if (have.indexOf(id) === -1) return null;
+  return nodes;
 }
 
 // The screen as structure, once it has been laid out: card types, tabs, the rail, sizes.
@@ -1094,6 +1199,7 @@ function armDeckExpiry() {
   deckExpiryTimer = setTimeout(() => {
     if (busy || recording || speakingVia || liveActionSurface()) { armDeckExpiry(); return; }
     history.length = 0; historyIndex = -1; currentStack = []; currentSet = null; decks.clear();
+    resetGlass();
     clear(el.cards); renderStackChips(); renderRecent();
     el.heard.textContent = ''; el.answer.textContent = '';
     setMode('orb');
@@ -1133,14 +1239,24 @@ function lightDock(nodes) {
   el.body.dataset.area = area;
 }
 
-function showHistory(index) {
+// `opts.keep` draws nothing: the nodes for this entry are already the deck's children,
+// because they were patched in there as the reads landed (adoptContext). Everything else —
+// which dock light is on, the two chips, the mode — is the same work either way, which is why
+// it is one function and not two.
+function showHistory(index, opts) {
   if (index < 0 || index >= history.length) return;
+  const keep = Boolean(opts && opts.keep);
   historyIndex = index;
-  clear(el.cards);
-  for (const node of history[index].nodes) el.cards.appendChild(node);
+  if (!keep) {
+    clear(el.cards);
+    for (const node of history[index].nodes) el.cards.appendChild(node);
+  }
   lightDock(history[index].nodes);
-  el.cards.scrollTop = 0;
-  scrollMax = 0;
+  if (!keep) {
+    // A redraw starts at the top; a patch leaves the owner where he was reading.
+    el.cards.scrollTop = 0;
+    scrollMax = 0;
+  }
   el.deck.dataset.depth = String(Math.min(2, index));
   // Both chips keep their slots for the whole walk, and grey out at the ends rather than
   // vanishing.
@@ -1429,6 +1545,18 @@ function renderTurn(data) {
     // because the answer is about a card the owner may have left behind.
     setMode('context');
     snapshotSoon(Object.assign({ kept: true }, renderInfo));
+    return;
+  }
+  // The cards arrived in pieces while the reads landed, and they are on the glass already:
+  // the answer reconciles against them instead of the page being rebuilt at the end of the
+  // turn (§7 — cards patch in place; do not redraw the whole page for an enrichment). When
+  // the glass and the payload disagree about what is on screen, this returns nothing and the
+  // ordinary path below redraws, because a page in a state the Mac does not recognise must
+  // redraw rather than guess.
+  const patched = ui.hasContext ? adoptWorkspace(data) : null;
+  if (patched) {
+    adoptContext(patched, data.ui, data.question);
+    snapshotSoon(Object.assign({ patched: true }, renderInfo));
     return;
   }
   if (ui.hasContext) {
@@ -2164,8 +2292,13 @@ function startStatePolling() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), STATE_POLL_TIMEOUT_MS);
     try {
-      const data = await (await fetch(`/state/${encodeURIComponent(sessionId)}`, { cache: 'no-store', signal: controller.signal })).json();
+      const url = `/state/${encodeURIComponent(sessionId)}?since=${encodeURIComponent(String(glass.cursor))}`
+        + (focusedBranch ? `&branch_id=${encodeURIComponent(focusedBranch)}` : '');
+      const data = await (await fetch(url, { cache: 'no-store', signal: controller.signal })).json();
       if (!busy || !data.known) return;
+      // The workspace as it stands, patched in place. A card the reads have already produced
+      // is readable NOW; the turn's own answer reconciles against it when it comes.
+      if (data.workspace) applyWorkspace(data.workspace);
       if (data.state && data.state !== 'READY' && data.state !== 'ERROR') setState(data.state, undefined, detailWords(data.detail, data.state));
       else if (busy && Date.now() - turnStartedAt > LONG_THINK_MS) el.sub.textContent = `Still working · ${Math.round((Date.now() - turnStartedAt) / 1000)} s`;
       // The transcript, the moment the Mac has it: a mis-heard question shows before the
@@ -2510,6 +2643,20 @@ el.cards.addEventListener('error', (event) => {
   const target = event.target;
   if (target && target.tagName === 'IMG') T.record('image_failed', { src: T.pathOnly(target.getAttribute('src')) });
 }, true);
+// A hand on the deck. While one is down nothing is patched under it: a control that moves
+// mid-gesture is the defect the owner narrated out loud, and §7 forbids it outright.
+//
+// By pointer id, and released on the DOCUMENT rather than on the deck — a thumb that slides
+// off a card still lifts, and a count that could be left stuck above zero would block every
+// patch for the rest of the session, which is worse than the thing it was guarding.
+el.cards.addEventListener('pointerdown', (event) => {
+  deckPointers.add(event && event.pointerId !== undefined ? event.pointerId : 1);
+}, true);
+for (const type of ['pointerup', 'pointercancel']) {
+  document.addEventListener(type, (event) => {
+    deckPointers.delete(event && event.pointerId !== undefined ? event.pointerId : 1);
+  }, true);
+}
 for (const type of ['pointerdown', 'pointerup', 'pointercancel']) {
   el.cards.addEventListener(type, (event) => {
     const surface = event.target && event.target.closest ? event.target.closest('.action-surface') : null;

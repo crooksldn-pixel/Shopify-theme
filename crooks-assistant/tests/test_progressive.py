@@ -267,6 +267,43 @@ def test_every_shell_promises_a_card_the_renderer_can_draw():
             assert kind in renderers, f"{family} promises {kind}, which the tablet cannot draw"
 
 
+def test_the_two_sides_name_the_same_cards_the_same_way():
+    """Render identity is a contract, so it is held in both files and compared here.
+
+    The Mac names a patch and the tablet has to find the node it is about. A table that drifts
+    would not fail loudly — it would put a second card on the glass, which is the defect
+    (D-13) rather than a symptom of one.
+    """
+    from app.render import KEY_OF as MAC
+
+    block = UI_JS[UI_JS.index("const KEY_OF = {"):]
+    block = block[: block.index("\n  };")]
+    tablet = {}
+    for line in block.splitlines()[1:]:
+        line = line.strip().rstrip(",")
+        if not line or ":" not in line:
+            continue
+        name, keys = line.split(":", 1)
+        tablet[name.strip()] = tuple(k.strip().strip("'\"") for k in keys.strip().strip("[]").split(",") if k.strip())
+    assert tablet == MAC, "the render-identity tables disagree"
+    # And the shell suffix, which is how a skeleton hands its place over.
+    from app.render import SHELL_SUFFIX
+
+    assert f"const SHELL_SUFFIX = '{SHELL_SUFFIX}';" in UI_JS
+
+
+def test_the_tablet_is_told_how_to_find_every_card_it_can_draw():
+    """A type the tablet renders and the identity table does not name is identified by its
+    kind alone — which is correct for the assistant's sentence and wrong for a record. Every
+    type that carries a record must be in the table."""
+    renderers = set(re.findall(r"^\s{4}(\w+): render\w+,$", UI_JS, re.M))
+    from app.render import KEY_OF
+
+    recordless = {"assistant", "attention", "inventory", "capability", "working_set"}
+    for kind in sorted(renderers - set(KEY_OF) - recordless):
+        raise AssertionError(f"{kind} has no render identity rule; two of them would be two cards")
+
+
 def test_the_renderer_draws_a_skeleton_for_any_card_that_says_it_is_one():
     """No skeleton TYPE: a shell is an ordinary card whose data says `shell`. That is what
     keeps the vocabulary in step — there is nothing new in it to keep in step."""

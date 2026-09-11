@@ -367,8 +367,17 @@ def complete(session: Any, items: list[dict[str, Any]], *, branch_id: str = "") 
         workspace = _workspace_for(session, branch_id)
         if workspace is None:
             return {}
-        workspace.complete(list(items or []))
-        return {**workspace.timings(), "renders": workspace.ledger.report(), "revision": workspace.revision}
+        patches = workspace.complete(list(items or []))
+        return {
+            **workspace.timings(),
+            "renders": workspace.ledger.report(),
+            "revision": workspace.revision,
+            "turn_id": workspace.turn_id,
+            # The reconciliation itself, so the turn's own response can carry it: the tablet
+            # stops polling the moment the turn answers, and these are the patches that would
+            # otherwise never be collected.
+            "patches": [p.public() for p in patches],
+        }
     except Exception as exc:  # noqa: BLE001
         log.debug("progressive reconciliation failed: %s", type(exc).__name__)
         return {}

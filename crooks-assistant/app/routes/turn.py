@@ -1315,6 +1315,18 @@ async def _answer(
         ),
         "partial": bool(partial),
         "performance": performance,
+        # What the glass still needs to agree with this payload (§7). The tablet has been
+        # collecting patches from /state while the turn ran and stops the moment this arrives,
+        # so the last reconciliation rides here: the cards it already drew are NOT in it, and
+        # that is the point — an unchanged card is not redrawn at the end of a turn.
+        "workspace": {
+            "turn_id": glass.get("turn_id") or turn_id,
+            "revision": glass.get("revision"),
+            "complete": True,
+            "patches": glass.get("patches") or [],
+            "renders": glass.get("renders"),
+            "timings_ms": {k: glass.get(k) for k in ("time_to_shell", "time_to_first_fact", "time_to_first_useful_workspace", "time_to_complete_workspace")},
+        } if glass else None,
     }
     # The cards repeat what the tools returned, which the log already has in redacted form;
     # the log keeps only which kinds were shown.
