@@ -134,6 +134,10 @@ async def command(
         # comes back 200 with the reason so the tablet can say so without a failure state.
         return {
             "ok": False, "code": outcome.code, "detail": outcome.detail, "answer": outcome.answer,
+            # What the owner can do instead, when the refusal knows: an `offer` of commands the
+            # tablet can post unchanged, and what this half holds. A refusal with nothing to
+            # tap is a dead control, which is what a forked half was twice in the live session.
+            "changed": outcome.changed,
             "ui": [], "command": name, "branch": branch.public(), "session_id": session.session_id,
             "ms": round(elapsed, 1), "lane": "TOUCH",
         }
@@ -282,14 +286,24 @@ async def _run_recipe(runtime, session, branch, recipe_id: str, outcome):
     # write (app/fastpath/recipes.py assert_read_only).
     intent = Intent(family=recipe.intent_family, confidence=1.0, signals=signals_for("", branch=branch), reason="a tap",
                     slots={str(k)[:40]: v for k, v in (outcome.changed.get("slots") or {}).items()})
-    branch.working("opening " + str(outcome.changed.get("area") or recipe.ui))
+    area = str(outcome.changed.get("area") or "")
+    branch.begin_turn("opening " + (area or recipe.ui))
     try:
         answer = await run_recipe(recipe, RecipeCtx(runtime=runtime, session=session, branch=branch, intent=intent,
                                                    text=str(outcome.changed.get("said") or ""), memory=memory()))
     finally:
+        branch.end_turn()
         branch.idle()
     if answer.deferred:
-        return command_mod.Outcome.refused("landing_unavailable", f"That could not be drawn just now ({answer.defer}).")
+        # Named, and with the same tap offered back. `landing_unavailable` reached the owner
+        # on a forked half as one unactionable sentence; a landing that could not be read is a
+        # source that did not answer, and trying it again is a reasonable thing to be able to do.
+        return command_mod.Outcome.refused(
+            "landing_unavailable",
+            f"{(area or 'That').capitalize()} could not be read just now ({answer.defer}). Tap it again, or ask for it out loud.",
+            changed={"area": area, "retry": {"command": "open.area", "area": area} if area else None,
+                     "offer": command_mod.offer_for(branch), "holds": branch.holds()},
+        )
     calls = list(answer.calls if answer.drawn is None else answer.drawn)
     changed = {**outcome.changed, "lane": "FAST", "recipe_id": recipe_id, "partial": bool(answer.partial),
                "reads": list((answer.trace or {}).get("reads") or []), "ms": (answer.trace or {}).get("ms")}

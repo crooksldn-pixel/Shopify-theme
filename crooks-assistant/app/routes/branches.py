@@ -32,7 +32,7 @@ from fastapi.responses import JSONResponse
 
 from app.observability import timeline
 from app.routes.actions import session_matches
-from app.session.branch import MAX_BRANCHES, Branch, new_branch_id
+from app.session.branch import MAX_BRANCHES, Branch, fork_from
 
 log = logging.getLogger("crooks.branches")
 
@@ -114,35 +114,28 @@ async def listing(request: Request, session_id: str = "") -> JSONResponse | dict
 
 @router.post("/fork", response_model=None)
 async def fork(request: Request, session_id: str = Form(default=""), label: str = Form(default="")) -> JSONResponse | dict:
-    """The orb divides. The new half starts where the old one is — same entity, same working
-    set, same place in the workflow — and then goes its own way. Nothing is copied that could
-    be applied: proposals stay with the branch that staged them."""
+    """The orb divides. The new half INHERITS what the old one holds — the record it is on,
+    the set, the names it has already resolved — and shows none of what the old one is showing.
+
+    What each half holds is `app/session/branch.py:fork_from`, which is one function so that
+    the contract has one test. Both halves are named here, because a chip reading "First" beside
+    a chip reading "Second" is not a difference the owner can see on an eight-inch screen —
+    each says what it is looking at, and what it is doing."""
     session, refusal = _session(request, session_id)
     if refusal is not None:
         return refusal
     parent = session.branch()
     if len(_live(session)) >= MAX_BRANCHES:
         return _refuse(409, "too_many_branches", f"The orb divides once. Merge or close one of the {MAX_BRANCHES} first.")
-    child = Branch(
-        branch_id=new_branch_id(), session_id=session.session_id, parent_id=parent.branch_id,
-        label=str(label or "").strip()[:40] or "second",
-        entity=dict(parent.entity) if parent.entity else None,
-        set_id=parent.set_id, tab=parent.tab,
-        # Where the new half's "back to the assistant" goes. The half starts where the old one
-        # is, and the place it is in is part of that; without this a half forked out of the
-        # inbox went home to orders. A VALUE, not the stack: the trail itself is built below
-        # and the two halves never share one (app/session/branch.py).
-        landing=parent.landing,
-    )
-    if parent.workflow is not None:
-        # The same set at the same place; advancing one cursor does not move the other.
-        from dataclasses import replace
-
-        child.workflow = replace(parent.workflow, workflow_id=f"{parent.workflow.workflow_id}b", visited=list(parent.workflow.visited))
-    if parent.entity:
-        child.visit(parent.entity["kind"], parent.entity["ref"], parent.entity["label"], tab=parent.tab)
+    child = fork_from(parent, label=label)
+    if not parent.label:
+        parent.label = "first"
     session.branches[child.branch_id] = child
-    timeline.emit("branch_forked", session_id=session.session_id, branch_id=child.branch_id, parent_branch_id=parent.branch_id)
+    timeline.emit("branch_forked", session_id=session.session_id, branch_id=child.branch_id,
+                  parent_branch_id=parent.branch_id,
+                  # What each half now says it is, so a fork that produced two identical
+                  # screens is visible in the timeline rather than only in the owner's face.
+                  headline=child.headline()["title"], parent_headline=parent.headline()["title"])
     log.info("branch %s forked from %s", child.branch_id, parent.branch_id)
     return {**_shape(session), "branch_id": child.branch_id}
 
@@ -158,7 +151,13 @@ async def focus(request: Request, branch_id: str, session_id: str = Form(default
     if branch.status == "BACKGROUND":
         branch.status = "ACTIVE"
     session.focus_branch(branch_id)
-    timeline.emit("branch_focused", session_id=session.session_id, branch_id=branch_id)
+    # What the tablet is about to draw, named on the event itself. The live session recorded
+    # six `branch_focused` in nine seconds and the report could only say "focus changed with
+    # nothing redrawn"; with the headline here, a focus that changes nothing visible is a
+    # difference two events apart rather than something only the owner can see.
+    timeline.emit("branch_focused", session_id=session.session_id, branch_id=branch_id,
+                  headline=branch.headline()["title"], state=branch.state(),
+                  workspace=bool(branch.last_ui or branch.last_answer))
     return _shape(session)
 
 
@@ -209,6 +208,10 @@ async def merge(request: Request, branch_id: str, session_id: str = Form(default
     summary = {
         "branch_id": branch.branch_id,
         "label": branch.label,
+        # What that half WAS, in the line the tablet had been drawing on it, so the owner is
+        # told what came back in the same words he had been reading.
+        "headline": branch.headline(),
+        "state": branch.state(),
         "entity": branch.entity,
         "set_id": branch.set_id or None,
         "workflow": branch.workflow.public() if branch.workflow else None,

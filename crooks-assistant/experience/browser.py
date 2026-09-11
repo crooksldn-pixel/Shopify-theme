@@ -50,6 +50,10 @@ COLLISION_SCRIPT = ROOT / "scripts" / "browser" / "collision.js"
 # own test (tests/test_density.py) rather than a third block in the two above: the question it
 # asks is about PIXELS, and a failure in it should name density and nothing else.
 DENSITY_SCRIPT = ROOT / "scripts" / "browser" / "density.js"
+# D-3, at both sizes in one run: whether tapping a half changes the visible cards. The claim
+# the owner made — "it just shows two of the same thing" — is about pixels, and the 800 x 1280
+# gate and the physical 601 x 889 tablet disagree often enough that both have to be checked.
+SPLIT_SCRIPT = ROOT / "scripts" / "browser" / "split.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -160,7 +164,7 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # And the same again at the tablet's own size. The pictures that matter for an
         # eight-inch screen are the ones taken on an eight-inch screen: the Phase 2 live test
         # found clipping and a swallowed dock that the 800 x 1280 shots could not show.
-        for extra in (TABLET_SCRIPT, COLLISION_SCRIPT):
+        for extra in (TABLET_SCRIPT, COLLISION_SCRIPT, SPLIT_SCRIPT):
             if not extra.exists():
                 continue
             await asyncio.to_thread(
@@ -244,7 +248,7 @@ async def run_checks(scripts: tuple[Path, ...] | None = None) -> dict[str, Any]:
     stop_session = _start_gate_session(scratch)
     try:
         results = []
-        for script in (scripts or (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT)):
+        for script in (scripts or (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT, SPLIT_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

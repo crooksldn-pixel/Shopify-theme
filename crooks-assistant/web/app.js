@@ -59,6 +59,7 @@ const el = {
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
   recent: $('recent'), recentLabel: $('recent-label'), branchBar: $('branch-bar'), orbZone: $('orb-zone'),
+  branchHead: $('branch-head'),
   svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice'), changes: $('svc-changes') },
   talk: $('talk'), talkLabel: $('talk-label'),
   settings: $('settings'), settingsBtn: $('settings-btn'), closeSettings: $('close-settings'),
@@ -1441,9 +1442,15 @@ async function openEntity(kind, ref, label) {
       return;
     }
   }
-  // The Mac no longer holds it, or could not draw it. Say so rather than doing nothing at all.
+  // The Mac cannot open it. Say so — and where the refusal names somewhere to go instead,
+  // put those on the glass as controls. `open.entity ok=False code=not_held` reached the owner
+  // in the live session as one sentence with nothing under it, which is a dead control.
   if (opened && opened.answer) el.answer.textContent = opened.answer;
   else if (opened && opened.detail) el.answer.textContent = opened.detail;
+  if (opened && opened.changed && Array.isArray(opened.changed.offer) && opened.changed.offer.length) {
+    if (historyIndex >= 0) offerBeside(opened.answer || opened.detail || '', opened.changed);
+    else drawEmptyHalf({ answer: opened.answer || opened.detail || '', changed: opened.changed });
+  }
 }
 
 // One semantic command, posted the way the tablet posts everything else: which command, and
@@ -1743,25 +1750,49 @@ function drawBranchBar() {
     split.setAttribute('aria-label', 'Divide the orb into two halves');
     split.addEventListener('click', () => splitOrb('button'));
     host.appendChild(split);
+    // On the orb screen there is room to say what it is for. "What does the split button do?"
+    // was asked out loud in the live session and answered "I don't know what that button is";
+    // a control whose only explanation is a gesture nobody was told about is not discoverable.
+    // In the rail beside Back and Next there is no room, and the chip stands alone.
+    if (!inRail) {
+      const why = document.createElement('span');
+      why.className = 'branch-why';
+      why.textContent = 'Work on two things at once';
+      host.appendChild(why);
+    }
     return;
   }
   branches.forEach((b, i) => {
-    const task = b.task && typeof b.task === 'object' ? String(b.task.state || '').toLowerCase() : '';
-    const word = TASK_WORDS[task] || (b.status === 'BACKGROUND' ? 'aside' : '');
+    // What the half IS and what it is DOING, both from the Mac. A chip reading "First" beside
+    // one reading "Second" is not a difference a thumb can act on; "ORDERS · today" beside
+    // "INBOX · ready" is. Neither word is invented here.
+    const head = b.headline && typeof b.headline === 'object' ? b.headline : {};
+    const state = String(b.state || '').toLowerCase();
+    const word = TASK_WORDS[state] || (b.status === 'BACKGROUND' ? 'aside' : '');
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.className = `branch-chip${task === 'ready' ? ' is-ready' : ''}${task === 'failed' ? ' is-failed' : ''}`;
+    chip.className = `branch-chip${state === 'ready' ? ' is-ready' : ''}${state === 'failed' ? ' is-failed' : ''}`;
     chip.setAttribute('aria-pressed', b.branch_id === focusedBranch ? 'true' : 'false');
-    const name = document.createElement('span');
-    name.textContent = b.label || (b.entity && b.entity.label) || (i === 0 ? 'First' : 'Second');
-    chip.appendChild(name);
+    const area = document.createElement('span');
+    area.className = 'branch-area';
+    area.textContent = head.area || b.label || (i === 0 ? 'FIRST' : 'SECOND');
+    chip.appendChild(area);
+    const detail = String(head.detail || '');
+    if (detail && detail.toLowerCase() !== state) {
+      const what = document.createElement('span');
+      what.className = 'branch-detail';
+      what.textContent = detail;
+      chip.appendChild(what);
+    }
     if (word) {
-      const state = document.createElement('span');
-      state.className = 'branch-state';
-      state.textContent = word;
-      chip.appendChild(state);
+      const says = document.createElement('span');
+      says.className = 'branch-state';
+      says.textContent = word;
+      chip.appendChild(says);
     }
     chip.dataset.branch = b.branch_id;
+    chip.dataset.head = head.title || '';
+    chip.setAttribute('aria-label', `${head.title || area.textContent}${word ? `, ${word}` : ''}`);
     chip.addEventListener('click', () => focusBranch(b.branch_id));
     host.appendChild(chip);
   });
@@ -1776,6 +1807,95 @@ function drawBranchBar() {
     button.addEventListener('click', () => branchCommand(target(), verb));
     host.appendChild(button);
   }
+  drawBranchHead();
+}
+
+// The line on the screen itself, above the cards: which half this is, and what it is doing.
+// The chips say it too, but they sit in a rail of eight other controls, and the owner's
+// question was about the SCREEN — two of them looked the same. Drawn only when the orb is
+// divided: with one half there is nothing to tell apart.
+function drawBranchHead() {
+  const node = el.branchHead;
+  if (!node) return;
+  const half = branches.find((b) => b.branch_id === focusedBranch) || branchState;
+  const head = half && half.headline && typeof half.headline === 'object' ? half.headline : null;
+  if (branches.length < 2 || !head) { node.textContent = ''; node.hidden = true; node.dataset.state = ''; return; }
+  clear(node);
+  const area = document.createElement('span');
+  area.className = 'head-area';
+  area.textContent = head.area || '';
+  node.appendChild(area);
+  if (head.detail) {
+    const detail = document.createElement('span');
+    detail.className = 'head-detail';
+    detail.textContent = head.detail;
+    node.appendChild(detail);
+  }
+  const which = branches.findIndex((b) => b.branch_id === focusedBranch);
+  const side = document.createElement('span');
+  side.className = 'head-which';
+  side.textContent = which === 0 ? 'half 1 of 2' : 'half 2 of 2';
+  node.appendChild(side);
+  node.dataset.state = String(head.state || '').toLowerCase();
+  node.hidden = false;
+}
+
+// A way forward, as the Mac named it: what this half holds, said in a line, and each thing
+// that can be done from here as a control. The Mac decides the words and the commands
+// (`app/commands.py:offer_for`); this only draws them. The alternative the owner met was a
+// blank screen under one chip and a line of toast that had gone by the time he looked up.
+function wayForward(words, changed) {
+  const head = (changed && changed.headline) || {};
+  const offer = changed && Array.isArray(changed.offer) ? changed.offer.slice(0, 5) : [];
+  const panel = document.createElement('section');
+  panel.className = 'card half-empty';
+  panel.dataset.type = 'half_empty';
+  const kicker = document.createElement('p');
+  kicker.className = 'card-kicker';
+  kicker.textContent = head.title || 'Nothing here';
+  panel.appendChild(kicker);
+  const said = document.createElement('p');
+  said.className = 'card-body';
+  said.textContent = String(words || 'This half holds nothing yet.');
+  panel.appendChild(said);
+  if (offer.length) {
+    const rail = document.createElement('div');
+    rail.className = 'rail';
+    for (const item of offer) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rail-chip';
+      button.textContent = String(item.words || '').slice(0, 40);
+      button.dataset.offer = String(item.command || '');
+      button.addEventListener('click', () => {
+        if (item.command === 'open.entity') openEntity(item.kind, item.ref, item.label);
+        else if (item.command === 'open.area') openArea(item.area, '');
+      });
+      rail.appendChild(button);
+    }
+    panel.appendChild(rail);
+  }
+  return panel;
+}
+
+// A half with nothing on it, drawn as a half with nothing on it. The cards are replaced,
+// because there are none of this half's to keep.
+function drawEmptyHalf(shown) {
+  const changed = (shown && shown.changed) || {};
+  clear(el.cards);
+  el.cards.appendChild(wayForward(shown && shown.answer, changed));
+  renderStackChips();
+  setMode('context');
+  drawBranchHead();
+  T.record('render', { name: 'half_empty', items: ['half_empty'], id: changed.branch_id });
+}
+
+// A refusal on a screen that already has cards on it. The way forward goes UNDER them: the
+// list the owner was looking at when he tapped is not his fault and is not taken away.
+function offerBeside(words, changed) {
+  for (const stale of document.querySelectorAll('#cards .half-empty')) stale.remove();
+  el.cards.appendChild(wayForward(words, changed));
+  T.record('render', { name: 'offer_beside', items: ['half_empty'] });
 }
 
 // Tapping a half is switching workspaces (§3D of the Phase 3 brief). Focusing it on the Mac
@@ -1783,19 +1903,43 @@ function drawBranchBar() {
 // holds per branch and hands back through `branch.show`.
 async function focusBranch(branchId) {
   if (!branchId || branchId === focusedBranch) return;
+  const before = screenFingerprint();
   const data = await branchCommand(branchId, 'focus');   // applyBranches swaps the decks
   if (!data) return;
   haptic(HAPTIC.start);
-  if (historyIndex >= 0) return;                          // its cards were still on this tablet
-  const drawn = await showBranchWorkspace(branchId);      // else the Mac's copy of its screen
+  // `applyBranches` has already swapped this half's deck in, so its own cards are on the
+  // glass when the tablet still holds them; when it does not, the Mac's copy of that half's
+  // screen is asked for — and a half that holds nothing draws THAT, rather than leaving the
+  // other half's cards standing under a different chip.
+  const drawn = historyIndex >= 0 || await showBranchWorkspace(branchId);
   if (!drawn) {
-    // A fresh half with nothing on it yet. Say so; do not leave the other half's cards up.
-    clear(el.cards); renderStackChips();
+    clear(el.cards);
+    renderStackChips();
     el.answer.textContent = '';
     el.heard.textContent = '';
     setMode('orb');
-    notify('This half has nothing yet. Ask it something.', { code: 'half_empty', branch: branchId });
+    // Not "this half is empty" — a half that holds nothing draws its own screen above
+    // (showBranchWorkspace, from the Mac's own words and its offer of ways out). Reaching
+    // here means the Mac did not answer for it at all.
+    notify('That half could not be read from the Mac.', { tone: 'bad', code: 'half_unreachable', branch: branchId });
   }
+  drawBranchHead();
+  // Whether the SCREEN changed, not whether the focus did. A tap that moved the focus and
+  // left the glass identical is a defect, and this is the line that makes it visible in the
+  // timeline rather than only on the owner's face: the report could say no more than "focus
+  // changed with nothing redrawn", four times, without being able to say what the screen was.
+  T.record('branch_switch', {
+    id: branchId, name: screenFingerprint() === before ? 'same_screen' : 'redrawn',
+    detail: (data.branches || []).map((b) => (b.headline || {}).title || '').join(' | ').slice(0, 120),
+  });
+}
+
+// What is on the glass, in one short string: the header, and the cards in order with what
+// each is about. Compared before and after a switch, and never shown to anybody.
+function screenFingerprint() {
+  const cards = Array.from(document.querySelectorAll('#cards .card'))
+    .map((c) => `${c.dataset.type || ''}:${c.dataset.ref || ''}`).join(',');
+  return `${el.branchHead ? el.branchHead.textContent : ''}|${cards}`;
 }
 
 // What a branch is looking at, drawn. Filled in with the per-branch decks below.
@@ -1810,8 +1954,18 @@ async function showBranchWorkspace(branchId) {
       // A card waiting for a gesture is drawn as the Mac last presented it; whether it still
       // waits is the Mac's to say. Never trusted from a copy.
       if (liveProposalIds().length) reconcileActions('workspace restored');
+      drawBranchHead();
       return true;
     }
+  }
+  if (shown && shown.ok && shown.changed && shown.changed.empty) {
+    // A half that holds nothing. The Mac says what it holds and what can be done from here,
+    // and that is drawn as a screen of its own — never the other half's cards left standing,
+    // and never a line of toast that has gone by the time he looks up.
+    el.answer.textContent = shown.answer || '';
+    el.heard.textContent = '';
+    drawEmptyHalf(shown);
+    return true;
   }
   return false;
 }
@@ -1827,7 +1981,11 @@ async function restoreWorkspace() {
     const data = await response.json();
     applyBranches(data);
     const focused = branches.find((b) => b.branch_id === focusedBranch);
-    if (!focused || !focused.has_workspace) return;
+    // With one half and nothing on it there is nothing to put back. With two, the half being
+    // looked at is asked for either way: a half that holds nothing draws what it holds and the
+    // ways out of it, and a reload that left the owner on a blank screen under one of two
+    // identical chips is the state this whole section is about.
+    if (!focused || (!focused.has_workspace && branches.length < 2)) return;
     const drawn = await showBranchWorkspace(focusedBranch);
     T.record('navigate', { nav: 'restore', name: drawn ? 'drawn' : 'nothing', id: focusedBranch });
   } catch { /* offline: the idle screen is the honest one */ }
@@ -1921,7 +2079,7 @@ function noteBranch(branch) {
   // The first answer names the half the tablet had been calling '_' until now.
   if (!before && inflight.has('_')) { inflight.set(turnKey(focusedBranch), inflight.get('_')); inflight.delete('_'); }
   if (before !== focusedBranch) syncBusy();
-  drawBranchBar();
+  drawBranchBar();      // which redraws the header band with it
   // All three walk chips, from the branch that just answered: Back from its trail, Previous
   // and Next from its open list. Two writers used to set the Back chip and disagreed about
   // what Back was for; there is one function now (`drawWalkChips`).
@@ -2557,13 +2715,17 @@ async function submit(body, isAudio) {
     store.set('crooks.turns', String(turns));
     if (!stillHere()) {
       // The owner is talking to the other half. This half's chip says READY (the Mac marked
-      // it so, seeing the focus elsewhere); its cards are the Mac's to redraw when tapped.
-      // Nothing here is spoken over the conversation he is having now.
+      // it so, seeing the focus elsewhere) and pulses once; its cards are the Mac's to redraw
+      // when tapped. Nothing here is spoken, written or thrown over the conversation he is
+      // having now — the brief is explicit: READY on the selector, no toast over the other
+      // branch. The chip IS the notification.
       decks.delete(askedBranch);
       if (data.branches) applyBranches(data.branches);
       if (Array.isArray(data.revoked) && data.revoked.length) settleProposals(data.revoked, 'revoked', 'Withdrawn');
       haptic(HAPTIC.done);
-      notify('The other half has an answer. Tap it to see.', { code: 'half_ready', branch: askedBranch });
+      // No message over the conversation he is having: the chip says READY and pulses, and
+      // he comes to it. The live session's floating "the other half has an answer" landed on
+      // top of the half he was reading.
       return;
     }
     el.heard.textContent = data.question ? `“${data.question}”` : '';
@@ -2909,8 +3071,15 @@ async function openArea(area, fallback) {
     }
   }
   T.record('chip_ask', { text: fallback.slice(0, 60), name: `dock:${area}:fallback`, detail: opened ? String(opened.code || opened.detail || '').slice(0, 80) : 'offline' });
-  if (fallback) submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false);
-  else if (opened && (opened.answer || opened.detail)) el.answer.textContent = opened.answer || opened.detail;
+  if (fallback) { submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false); return; }
+  // No sentence to fall back on — the tap came from a half's own way-forward rail rather than
+  // from the dock. Say what happened, and leave the ways forward the refusal named on screen:
+  // `landing_unavailable` reached the owner as one sentence he could not act on.
+  if (opened && (opened.answer || opened.detail)) el.answer.textContent = opened.answer || opened.detail;
+  if (opened && opened.changed && Array.isArray(opened.changed.offer) && opened.changed.offer.length) {
+    if (historyIndex >= 0) offerBeside(opened.answer || opened.detail || '', opened.changed);
+    else drawEmptyHalf({ answer: opened.answer || opened.detail || '', changed: opened.changed });
+  }
 }
 el.backBtn.addEventListener('click', goBack);
 if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);
