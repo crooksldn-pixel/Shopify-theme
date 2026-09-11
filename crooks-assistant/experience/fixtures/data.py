@@ -565,7 +565,13 @@ _DUBLIN = {"name": "Fionn Doherty", "firstName": "Fionn", "lastName": "Doherty",
            "address2": "", "city": "Dublin", "provinceCode": "", "zip": "D02 XE01", "country": "Ireland",
            "countryCodeV2": "IE", "phone": "", "company": ""}
 
-INTERNATIONAL_ORDER = OrderSpec(1927, FIONN, 14, 11, "78.00", "UNFULFILLED", "PAID",
+# Hour 0, deliberately. The age the system reports is the FLOOR of the elapsed time, so an
+# order placed 14 days ago at 11:00 has been waiting 14 days after 11am and 13 days before it
+# — and `query_international_waiting` asserts the declared 14 appears in the answer. That test
+# passed all day and failed every night between midnight and 11am. Placing it at the start of
+# the day takes the fixture off the floor boundary: elapsed is then 14 days plus however far
+# into today it is, which floors to 14 at every hour.
+INTERNATIONAL_ORDER = OrderSpec(1927, FIONN, 14, 0, "78.00", "UNFULFILLED", "PAID",
                                 [("gid://shopify/ProductVariant/9102", 1), ("gid://shopify/ProductVariant/9301", 1)],
                                 _DUBLIN)
 ORDERS.append(INTERNATIONAL_ORDER)

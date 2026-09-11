@@ -43,3 +43,34 @@ async def test_the_fixture_world_can_read_the_recipient_off_an_order(stage):
 
     assert who["email"] == data.MIA.email.lower(), who
     assert who["name"] and who["label"] == "#1938", who
+
+
+def test_the_waiting_order_reports_the_same_age_at_every_hour_of_the_day():
+    """An age the system reports is the FLOOR of the elapsed time, so a fixture placed part-way
+    through a day sits on a boundary and reports two different ages depending on when you run.
+
+    `query_international_waiting` asserts the declared `days_ago` appears in the answer. The
+    order was placed 14 days ago at 11:00, so it had been waiting 14 days after 11am and 13
+    days before it: the scenario passed all day and failed every night between midnight and
+    11am. It was found at 01:20 in the morning, by the suite, which is the only reason it was
+    found at all.
+
+    This walks the clock through a full day and asserts the age never moves. It fails for any
+    hour but midnight if the fixture is put back on a boundary.
+    """
+    from datetime import timedelta
+
+    from experience.fixtures import data
+
+    spec = data.INTERNATIONAL_ORDER
+    placed = data._local(spec.days_ago, spec.hour)
+    declared = int(spec.days_ago)
+
+    for hour in range(24):
+        # "Now", walked across a whole day, from the same midnight the fixture was built from.
+        now = data.NOW.replace(hour=hour, minute=30, second=0, microsecond=0)
+        elapsed = (now - placed) / timedelta(days=1)
+        assert int(elapsed) == declared, (
+            f"at {hour:02d}:30 the order reads as {int(elapsed)} days old, not {declared} — "
+            "the fixture is on a floor boundary and the scenario will fail for part of the day"
+        )
