@@ -1100,12 +1100,10 @@ function armDeckExpiry() {
   }, DECK_IDLE_MS);
 }
 
-// Is there anywhere back from here? Three ways there can be: the list cursor can step back,
-// the Mac's trail has a stop behind this one, or the local render cache does. Kept in one
-// place because two writers set the Back chip — showHistory on every draw, noteBranch on
-// every reply — and they used to disagree about what Back was for.
 // Is there anywhere BACK from here? The Mac's trail decides, and the local render cache
-// stands in only when the Mac cannot be reached.
+// stands in only when the Mac cannot be reached. Kept in one place because two writers set
+// the Back chip — showHistory on every draw, noteBranch on every reply — and they used to
+// disagree about what Back was for.
 //
 // What used to be here as well: `workflow && !workflow.at_start`. While a list was open the
 // chip meant "the cursor can step back", so Back stepped the LIST and not the trail — one
@@ -1161,24 +1159,22 @@ function showHistory(index, restoreTo) {
   }
   scrollMax = typeof restoreTo === 'number' ? Math.max(0, restoreTo) : 0;
   el.deck.dataset.depth = String(Math.min(2, index));
-  // Both chips keep their slots for the whole walk, and grey out at the ends rather than
-  // vanishing.
-  //
-  // Back used to be `hidden` at the start of a list, so the FIRST Next tap made it appear —
-  // and Next slid 68px (9.1mm) to the right, out from under the thumb that had just pressed
-  // it, onto the spot the 60px Back chip now occupied. Driven with real taps at one fixed
-  // point, tap one advanced the list and tap two at the identical point hit BACK. Walking a
-  // queue one-handed is a repeated press in one place; the control under that place must not
-  // change identity between presses.
   drawWalkChips(index);
   renderStackChips();
   setMode('context');
 }
 
-// Back, Previous and Next: three controls, two cursors, and each chip drawn from the one the
-// Mac says it belongs to. Back is the trail (`can_back`); Previous and Next are the open
-// list (`workflow`), and they appear and disappear together so neither ever slides out from
-// under a thumb mid-walk.
+// Back, Previous and Next: three controls over two cursors, each drawn from the one the Mac
+// says it belongs to. Back is the TRAIL (`can_back`); Previous and Next are the open LIST
+// (`workflow`), and the two of them appear and disappear together.
+//
+// Every chip keeps its slot for the whole walk and greys out at the ends rather than
+// vanishing. Back used to be `hidden` at the start of a list, so the FIRST Next tap made it
+// appear — and Next slid 68px (9.1mm) to the right, out from under the thumb that had just
+// pressed it, onto the spot the 60px Back chip now occupied. Driven with real taps at one
+// fixed point, tap one advanced the list and tap two at the identical point hit BACK. Walking
+// a queue one-handed is a repeated press in one place; the control under that place must not
+// change identity between presses.
 function drawWalkChips(index) {
   const workflow = branchState && branchState.workflow;
   el.backBtn.hidden = false;
