@@ -95,12 +95,15 @@ class _Session:
 async def test_two_halves_asked_different_questions_hold_different_workspaces(stage):
     """The test the brief asks for by name.
 
-    The brief's own wording is "show yesterday's orders" on the left; the golden world has no
-    orders yesterday, and a question that draws nothing proves nothing about two screens, so
-    the left half is asked for today's. The point is unchanged: two questions, two halves, and
-    two different things on the glass.
+    The brief's own wording is "show yesterday's orders" on the left. The golden world has no
+    orders yesterday, and a question that draws nothing proves nothing about two screens; nor
+    does a question about TODAY, whose answer in this suite depends on process-wide read state
+    a sibling module leaves behind (`scripts/bench_lanes` run in-process by
+    tests/test_operations.py flattens the "today" bucket for every harness after it). So the
+    left half is asked the same thing in a period nothing else disturbs. The point is
+    unchanged: two questions, two halves, and two different things on the glass.
     """
-    left = await stage.say("show me today's orders", session_id="split")
+    left = await stage.say("which orders are waiting to go out?", session_id="split")
     forked = await stage.client.post("/branches/fork", data={"session_id": "split"})
     right_id = forked.json()["branch_id"]
 
@@ -283,7 +286,7 @@ def test_a_landing_that_cannot_be_read_offers_the_tap_again():
 
 async def test_open_entity_on_a_forked_half_opens_what_its_parent_was_shown(stage):
     """`open.entity ok=False code=not_held br_29a02563cf`, 00:25:53."""
-    listed = await stage.say("show me today's orders", session_id="fork-entity")
+    listed = await stage.say("which orders are waiting to go out?", session_id="fork-entity")
     rows = listed.data("order_list").get("orders") or []
     assert rows, listed.surface_types
     ref = str(rows[0]["order_id"])

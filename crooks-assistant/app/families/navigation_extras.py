@@ -191,10 +191,16 @@ def _switch_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
     # failure this whole area exists to fix.
     outcome = commands.run("branch.show", commands.Ctx(ctx.runtime, ctx.session, ctx.branch, {"branch_id": branch_id}))
     label = str(getattr(other, "label", "") or "the other half")
+    # Which half, in the same words the tablet draws on it, so a spoken switch and a tapped
+    # chip name the half identically. `headline()` is the Mac's one line for a branch.
+    head = other.headline()["title"] if hasattr(other, "headline") else label
     if outcome.ok and outcome.surfaces:
-        return FastAnswer(answer=outcome.answer or f"That is {label}.", surfaces=list(outcome.surfaces), drawn=[],
+        return FastAnswer(answer=f"{head}. {outcome.answer}".strip() if outcome.answer else f"That is {head}.",
+                          surfaces=list(outcome.surfaces), drawn=[],
                           trace={"branch_id": branch_id, "drawn": True})
-    return FastAnswer(answer=f"{label.capitalize()} has nothing on it yet. Ask it something.",
+    # The same sentence `branch.show` gives the tablet: what this half holds, not merely that
+    # it holds nothing. Said once, on the Mac, so both ends say it.
+    return FastAnswer(answer=outcome.answer or f"{label.capitalize()} has nothing on it yet. Ask it something.",
                       trace={"branch_id": branch_id, "drawn": False})
 
 
