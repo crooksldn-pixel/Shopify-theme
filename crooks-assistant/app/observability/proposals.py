@@ -21,6 +21,12 @@ from app.observability.report import (
 )
 from app.observability.timeline import read_events
 
+# What the OWNER said was wrong outranks everything derived. The other weights are a severity
+# times a count, so this is deliberately above any of them: a defect a person narrated while it
+# was happening is better evidence than any rule in this file, and it goes at the top of the
+# page whatever the counts say.
+OWNER_FIRST = 1_000
+
 # The invariant every candidate is held to, named once.
 INVARIANTS = (
     "reads never mutate; a change is a reviewed mutation on the action engine with a fresh read, a precondition, one execution and a proving re-read",
@@ -169,7 +175,7 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None,
             "cannot record it.",
             "the regression test for whatever he named; a fixture timeline of this turn if the "
             "defect is in the analyser or the surface.",
-            "none: this is a bug report, not a change to the bounds.", 10)
+            "none: this is a bug report, not a change to the bounds.", OWNER_FIRST)
     for row in (experience.ignored_feedback if experience is not None else []):
         words = " ".join(str(row.get("text") or "").split())
         add("OWNER_REPORTED", f"The owner reported this and NOTHING recorded it: “{_cell(words, 90)}”",
@@ -180,7 +186,7 @@ def candidates(rec: Reconstruction, *, registered: list[str] | None = None,
             "not take it.",
             "say the same sentence during an active test session and assert both the event and "
             "the report's OWNER-REPORTED DEFECTS section.",
-            "none: recording what somebody said is not a change to the shop.", 12)
+            "none: recording what somebody said is not a change to the shop.", OWNER_FIRST + 1)
     for o in _opportunities(rec, turns, registered, capability_states):
         # The report's own ranked list, carried over as summaries beside the specific rows above.
         add("REPORT", o["problem"], list(o["examples"]), o["component"], o["task"],
