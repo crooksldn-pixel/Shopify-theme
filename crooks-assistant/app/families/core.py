@@ -88,8 +88,11 @@ FAMILIES = (
     ),
     CapabilityFamily(
         key="order_address", label="Changing a shipping address", area="orders",
-        what="correct the address on an order that has not gone out",
+        what="correct the address on an order that has not gone out — tap Address and type it",
         operations=("order_shipping_address_set",), scopes=_ORDERS_W, state="READY",
+        # Said out loud in the capability answer, because the owner asked how to type and
+        # nothing on the screen or in the sentence could tell him (app/families/address.py).
+        detail="the Address chip opens the address as fields, with the current one in them",
     ),
     CapabilityFamily(
         key="order_notes", label="Notes and tags", area="orders",

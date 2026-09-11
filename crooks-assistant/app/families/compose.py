@@ -1097,5 +1097,8 @@ register_capability(CapabilityFamily(
     tools=("gmail_compose_open", "gmail_compose_fill"),
     scopes=("https://www.googleapis.com/auth/gmail.compose",),
     state="READY",
-    detail="the composer opens instantly; the draft and the send are gestures on its card",
+    # The last clause is the answer to a question the owner asked out loud and got "that
+    # didn't come through clearly" to: how do I type? Reply on an email and Email on an order
+    # open this card, and every box on it takes a keyboard.
+    detail="tap Reply on an email, or Email on an order, and type it; the draft and the send are gestures on the card",
 ))
