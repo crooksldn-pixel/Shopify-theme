@@ -271,9 +271,15 @@ async def cancel(request: Request, branch_id: str, session_id: str = Form(defaul
 
 
 @router.post("/{branch_id}/mark", response_model=None)
-async def mark(request: Request, branch_id: str, session_id: str = Form(default=""), tab: str = Form(default=""), scroll: str = Form(default="")) -> JSONResponse | dict:
+async def mark(request: Request, branch_id: str, session_id: str = Form(default=""), tab: str = Form(default=""), scroll: str = Form(default=""), of: str = Form(default="")) -> JSONResponse | dict:
     """The screen moved: a tab was chosen, or it was scrolled. Kept against the branch's
-    current stop so that going back and coming forward again puts it where it was."""
+    current stop so that going back and coming forward again puts it where it was.
+
+    `of` is the RECORD the tab belongs to, as a render identity ("customer:cus_1"). Without
+    it a tab was branch state, and the tablet handed one value to every card that had tabs:
+    one tap on Email put twenty-three later cards on Email, for records the owner had never
+    opened (D-2). A tab is one record's.
+    """
     session, refusal = _session(request, session_id)
     if refusal is not None:
         return refusal
@@ -283,7 +289,7 @@ async def mark(request: Request, branch_id: str, session_id: str = Form(default=
         depth = int(scroll) if scroll not in (None, "") else None
     except (TypeError, ValueError):
         depth = None
-    session.branches[branch_id].mark(tab=tab or None, scroll=depth)
+    session.branches[branch_id].mark(tab=tab or None, scroll=depth, of=str(of or "")[:160])
     return {"branch": session.branches[branch_id].public()}
 
 

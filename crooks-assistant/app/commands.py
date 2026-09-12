@@ -527,9 +527,13 @@ register(Command("open.entity", "Open a linked record", _open_entity, voice=Fals
 def _select_tab(ctx: Ctx) -> Outcome:
     """Which part of the open record is showing.
 
-    The selected tab is branch state rather than something only the DOM knows, so it survives
-    a reload, a branch switch and a Back, and so "show me the shipping" and a tap on Shipping
+    The selected tab is held on the Mac rather than in the DOM alone, so it survives a
+    reload, a branch switch and a Back, and so "show me the shipping" and a tap on Shipping
     are the same operation.
+
+    It is held against the RECORD, not the half (D-2): a tab is a fact about the thing the
+    owner is reading, and treating it as a fact about the branch put every later card on the
+    last tab he happened to tap. `mark` files it under the record this half is standing on.
     """
     surface, tab = ctx.arg("surface"), ctx.arg("tab").lower()
     allowed = TABS.get(surface or _surface_of(ctx), ())

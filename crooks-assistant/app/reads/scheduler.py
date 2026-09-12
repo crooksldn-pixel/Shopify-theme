@@ -309,6 +309,12 @@ async def run_plan(plan: ReadPlan, *, session: Any, timeout_s: float | None = No
     from app import progressive
 
     speculative = progressive.background() if plan.origin == "predicted" else nullcontext()
+    # What this plan is going to put on the screen, said BEFORE the first read runs (§15):
+    # the workspace names itself and the sections coming, each waiting, rather than the owner
+    # watching an empty screen until the graph resolves. Bookkeeping only, and never for a
+    # read nobody asked for.
+    if plan.origin != "predicted":
+        progressive.planning(session, [r.tool for r in plan.reads])
     try:
         # The flag is set before the tasks are made: `asyncio.gather` copies the context at
         # creation, so every read in every wave runs with it.

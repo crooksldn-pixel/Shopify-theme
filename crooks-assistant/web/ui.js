@@ -187,6 +187,56 @@
     return node;
   }
 
+  // ---------------------------------------------------------------- the workspace itself (§15, §27)
+  //
+  // What Phase 4 got wrong about progressive rendering: it put grey boxes up and called that
+  // progress. An empty box says nothing, so there is nothing on it to read. A compound task
+  // establishes its IDENTITY first — what this workspace is, and one line per section, each
+  // in a state —
+  //
+  //     TODAY'S ACTIVITY
+  //     Orders        loading…
+  //     Inbox         waiting…
+  //
+  // — and then each line is patched in place as its read lands: `Orders · 7`, `Inbox · 4`.
+  // The card is ONE card for the life of the turn (identity `workspace_plan:<turn>`), so a
+  // section arriving patches this node and never replaces the workspace, never reorders it
+  // and never duplicates it.
+  //
+  // §27's five states, in words rather than colour alone. EMPTY IS NOT ERROR: a read that
+  // found nothing says what it looked for and found none of, and the workspace stays.
+  const PLAN_WORDS = { loading: 'loading…', waiting: 'waiting…', ready: '', empty: 'none', error: 'unavailable', partial: '' };
+  const PLAN_STATE = { loading: 'Working', partial: 'Part way', ready: 'Ready', empty: 'Nothing found', error: 'Could not read' };
+
+  function renderWorkspacePlan(d, opts) {
+    const sections = list(d.sections, 6);
+    const state = text(d.state, 'loading');
+    const rows = sections.map((s) => {
+      const name = text(s.name);
+      const at = text(s.state, 'waiting');
+      // The count when the Mac has read one, the section's own sentence when it found none
+      // or could not be read, and the state's word while it is still coming. Never both, and
+      // never a number that is not a number the Mac read.
+      const said = text(s.value) || text(s.note) || PLAN_WORDS[at] || at;
+      return h('li', {
+        class: `row${at === 'error' ? ' bad' : ''}`, data: { section: name, state: at },
+      }, [
+        h('span', { class: 'row-main', text: text(s.label, name) }),
+        h('span', { class: 'row-side' }, [h('span', { class: 'card-meta', text: said })]),
+      ]);
+    });
+    const node = card('workspace_plan', [
+      h('div', { class: 'card-head' }, [h('div', {}, [
+        kicker(PLAN_STATE[state] || 'Working'),
+        h('h2', { class: 'card-title', text: text(d.title, 'Workspace') }),
+      ])]),
+      rows.length ? h('ul', { class: 'rows tight' }, rows) : null,
+    ], opts);
+    node.dataset.state = state;
+    if (state === 'loading' || state === 'partial') node.setAttribute('aria-busy', 'true');
+    return node;
+  }
+
   // A read that found nothing (D-15). `turn_69abe877ef14` asked for yesterday's orders, the
   // read came back with none, and the presentation layer drew NO CARD — one sentence over a
   // blank screen, recorded by the analyser as "(records without a card)". "None" is an answer
@@ -203,13 +253,58 @@
     return Number.isFinite(ms) ? new Date(ms - 1).toISOString() : until;
   }
 
+  // ---------------------------------------------------------------- which tab (D-2)
+  //
+  // The owner's loudest complaint of the live session, at 20:18:12: "I'm not seeing any UI
+  // here except email where there's nothing … I want to also be seeing his orders and his
+  // history". It was all there, one tab away on the same card.
+  //
+  // `renderOpts().tab` was ONE value per BRANCH, handed to every card that had tabs. He
+  // tapped Email once, on one customer, early in the session; from that moment every customer
+  // card on that branch opened on Email — all seven cards of turn_be1b384ca420 included, for
+  // seven customers he had never opened. The Email tab was tapped TWICE all session and was
+  // active on 23 rendered cards, usually over an empty panel.
+  //
+  // So a tab belongs to a RECORD, and this is the only place that decides which one a card
+  // opens on. In order:
+  //
+  //   1. `opts.tabNow` — the tab THIS card is open on at this moment. A patch that landed
+  //      while the owner was reading Orders does not move him to Email (applyPatches).
+  //   2. `d.tab` — the tab the TASK implies, named by the Mac on this card and no other
+  //      (app/presentation.py; `tab` is visual state in app/render.py, so naming it does not
+  //      redraw the card). A request naming orders opens Orders.
+  //   3. `opts.tabOf(id)` — the tab the owner left THIS record on, by render identity
+  //      (web/app.js `cardTabs`, the Mac's copy in `branch.tabs`). Returning to a card he
+  //      had left on a tab still restores that card's tab.
+  //   4. nothing: the card's own first panel.
+  //
+  // At no step is it a tab tapped on a different record.
+  function tabFor(kind, d, opts) {
+    const settings = opts || {};
+    if (text(settings.tabNow)) return text(settings.tabNow);
+    if (text(d && d.tab)) return text(d.tab);
+    if (typeof settings.tabOf === 'function') {
+      const found = settings.tabOf(surfaceId({ type: kind, data: d || {} }), kind);
+      if (text(found)) return text(found);
+    }
+    return '';
+  }
+
+  // Report a tap to whoever is keeping the record's tab, naming the RECORD it was on — the
+  // render identity, which is the same name the patch protocol addresses the card by.
+  function tabReporter(kind, d, opts) {
+    if (!opts || typeof opts.onTab !== 'function') return null;
+    const id = surfaceId({ type: kind, data: d || {} });
+    return (name, label) => opts.onTab(id, name, label, kind);
+  }
+
   // A card of tabs. panels: [{ name, label, node }]. One panel is open at a time, which is
   // what keeps an order card the height of the screen instead of seven thousand pixels.
   //
-  // `opts.initial` opens a named panel — how the back stack puts a card back on the tab it
-  // was left on. `opts.onChange(name)` is called when the owner moves, so the app can tell
-  // the Mac where the branch now is. The wrapper carries data-tab, so nothing has to be
-  // scraped out of the DOM to know.
+  // `opts.initial` opens a named panel — decided by `tabFor` above, per card, never per
+  // branch. `opts.onChange(name)` is called when the owner moves, so the page can remember
+  // where he left THIS record and tell the Mac. The wrapper carries data-tab, so nothing has
+  // to be scraped out of the DOM to know.
   function tabs(panels, opts) {
     const settings = opts || {};
     const kept = panels.filter((p) => p && p.node);
@@ -725,7 +820,7 @@
       }, [h('span', { class: 'attn-dot', 'aria-hidden': 'true' }), h('span', { text: text(a.title) })]))) : null,
       d.cancelled_at ? h('p', { class: 'card-note bad', text: `Cancelled ${formatDate(d.cancelled_at)}${d.cancel_reason ? ' · ' + text(d.cancel_reason) : ''}` }) : null,
       rail(d.actions, opts),
-      tabs(panels, { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('order', name, label) : null }),
+      tabs(panels, { initial: tabFor('order', d, opts), onChange: tabReporter('order', d, opts) }),
     ], opts);
     full.dataset.ref = text(d.order_id);
     full.dataset.pending = pending.join(' ');
@@ -930,7 +1025,7 @@
       { name: 'overview', label: 'Overview', node: [overview] },
       history ? { name: 'orders', label: 'Orders', node: [history] } : null,
       mail ? { name: 'email', label: 'Email', node: [mail] } : null,
-    ].filter(Boolean), { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('customer', name, label) : null });
+    ].filter(Boolean), { initial: tabFor('customer', d, opts), onChange: tabReporter('customer', d, opts) });
   }
 
   function renderCustomerList(d, opts) {
@@ -1963,7 +2058,7 @@
               : null,
           ])
         : null,
-      panels.length ? tabs(panels, { initial: opts && opts.tab, onChange: opts && opts.onTab ? (name, label) => opts.onTab('capability', name, label) : null }) : null,
+      panels.length ? tabs(panels, { initial: tabFor('capability', d, opts), onChange: tabReporter('capability', d, opts) }) : null,
       examples.length
         ? section('cap-examples', 'Try asking', [
             h('div', { class: 'chips' }, examples.map((q) => {
@@ -2579,6 +2674,7 @@
     variant_picker: renderVariantPicker,
     email_compose: renderEmailCompose,
     workspace: renderWorkspace,
+    workspace_plan: renderWorkspacePlan,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
@@ -2672,6 +2768,7 @@
     variant_picker: ['order_id'],
     email_compose: ['compose_id'],
     workspace: ['workspace_id'],
+    workspace_plan: ['workspace_id'],
   };
   const NESTED_KEY_OF = { product: ['products', 'product_id'], inventory: ['products', 'product_id'] };
   const SHELL_SUFFIX = '~shell';
@@ -2748,7 +2845,12 @@
         out.nodes[id] = existing;
         continue;
       }
-      let node = renderItem(item, settings.opts || settings.renderOpts || {});
+      // Rule 3's sibling, and the other half of D-2: a patch does not move the tab the owner
+      // is READING. Whatever the payload would have opened, the card comes back on the tab it
+      // was on — the same discipline as the keyboard and the caret below.
+      const base = settings.opts || settings.renderOpts || {};
+      const reading = tabOpenOn(existing);
+      let node = renderItem(item, reading ? Object.assign({}, base, { tabNow: reading }) : base);
       if (!node) continue;
       node.dataset.render = id;
       const standin = text(patch.replaces) ? byRender(host, text(patch.replaces)) : null;
@@ -2768,6 +2870,13 @@
     }
     restoreFocus(host, focus);
     return out;
+  }
+
+  // Which tab a card that is ON THE GLASS is open on. Read from the wrapper `tabs()` marks,
+  // so nothing has to be inferred from which panel happens to be visible.
+  function tabOpenOn(node) {
+    const wrap = node && node.querySelector ? node.querySelector('.tabbed') : null;
+    return wrap && wrap.dataset ? text(wrap.dataset.tab) : '';
   }
 
   function byRender(host, id) {

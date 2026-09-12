@@ -14,17 +14,45 @@ arrive together however fast the reads were.
 
 This module is the other half: a workspace that exists from the first moment and fills in.
 
-    shell            the frame and a skeleton of each card that is coming     ~0 ms
+    identity         WHAT this workspace is, and the sections coming            ~0 ms
     first fact       the first read lands; its card takes the skeleton's place
     next section     the second read lands; its card is patched in beside it
     complete         the turn returns; what changed is patched, what did not is NOT redrawn
 
-Four numbers, and they are the point of the exercise (§7, §25):
+**§15 — identity, not a spinner.** Phase 4 put a skeleton up and called that progress. An
+empty grey box is not progress: it does not say what workspace this is, so there is nothing
+on it to read. A compound task now establishes its IDENTITY first — the workspace's name and
+one line per section, each in a state —
 
-    time_to_shell                    when there was a working screen
-    time_to_first_fact               when the first real value was on it
-    time_to_first_useful_workspace   when it could be used — a record, not a spinner
-    time_to_complete_workspace       when nothing more was coming
+    TODAY'S ACTIVITY
+    Orders        loading…
+    Inbox         waiting…
+
+— and then each section is PATCHED IN PLACE as it lands: `Orders · 7`, then `Inbox · 4`. The
+workspace is never replaced, never reordered, never duplicated. That card is `workspace_plan`
+(`PLAN_TYPE`), the one card the Mac stages that `present()` never builds; it goes up when the
+workspace has at least two sections, because a one-section task already names itself on the
+titled skeleton of the single card it is about.
+
+**§27 — five deliberate states**, for the workspace and for every section of it: LOADING,
+PARTIAL, READY, EMPTY, ERROR. **EMPTY IS NOT ERROR**: a Gmail search that found no threads
+keeps the workspace and says `Inbox — No messages found`, rather than replacing the workspace
+with an empty email screen. An ERROR is confined to the section whose read failed; the
+sections that landed keep what they found, and the workspace as a whole is PARTIAL, not dead.
+
+Four numbers, and they are the point of the exercise (§15, §25). They are Phase 4's four,
+RENAMED to say what they actually measure:
+
+    time_to_visible_shell             when the screen said what workspace this is
+                                      (Phase 4: `time_to_shell`, which counted an anonymous
+                                      skeleton — §15 says that does not count, so this one
+                                      is only set by a shell carrying IDENTITY)
+    time_to_first_meaningful_fact     when the first real value was on it
+                                      (Phase 4: `time_to_first_fact`, unchanged in meaning:
+                                      a shell is not a fact, an error about the world is)
+    time_to_first_actionable_surface  when it could be USED — a record or rows, not a state
+                                      (Phase 4: `time_to_first_useful_workspace`)
+    time_to_complete_workspace        when nothing more was coming (unchanged)
 
 They live beside `facts_ms` / `workspace_ms` / `prose_wait_ms` in the turn's performance
 record rather than replacing them: those three measure the MAC (when it held the data, when
@@ -57,6 +85,30 @@ from app.render import ADDED, DATA, Patch, RenderLedger, render_id
 
 log = logging.getLogger("crooks.progressive")
 
+# ----------------------------------------------------------------------- §27, the five states
+#
+# One vocabulary for the workspace and for every section of it. WAITING is deliberately not
+# one of them: it describes a read that has not started, which is a fact about the plan rather
+# than a state of the workspace — a workspace all of whose sections are waiting is LOADING.
+LOADING, PARTIAL, READY, EMPTY, ERROR = "loading", "partial", "ready", "empty", "error"
+WAITING = "waiting"
+STATES = (LOADING, PARTIAL, READY, EMPTY, ERROR)
+
+# The card that carries the workspace's identity and its sections' states. It is the only card
+# the Mac stages that `present()` never builds, which is why its name is here: the tablet's
+# renderer (web/ui.js `renderWorkspacePlan`) and `app/render.py KEY_OF` are held against this
+# by `tests/test_progressive_states.py`.
+PLAN_TYPE = "workspace_plan"
+
+# The four numbers §15 asks for, named once so the turn's performance record and its log
+# cannot drift from them (app/routes/turn.py reads this tuple).
+TIMINGS = (
+    "time_to_visible_shell",
+    "time_to_first_meaningful_fact",
+    "time_to_first_actionable_surface",
+    "time_to_complete_workspace",
+)
+
 # What each read is going to put on the screen, so a skeleton can stand there while it runs.
 # Read alongside `presentation._from_result`, which is the code that decides for real: the
 # test `test_every_shell_promises_a_card_the_renderer_can_draw` holds the two together, so a
@@ -74,6 +126,22 @@ SHELL_OF_TOOL: dict[str, str] = {
     "gmail_read_thread": "email_thread",
 }
 
+# Which SECTION of a workspace each card belongs to, and what that section is called on the
+# workspace's own header. Two cards of one section are one section: an order list and an order
+# are both Orders, a thread and a search are both the Inbox. `tests/test_progressive_states.py`
+# holds this against SHELL_OF_TOOL, so a read whose card has no section cannot exist.
+SECTION_OF_KIND: dict[str, tuple[str, str]] = {
+    "order": ("orders", "Orders"),
+    "order_list": ("orders", "Orders"),
+    "customer": ("customer", "Customer"),
+    "customer_list": ("customer", "Customers"),
+    "product": ("products", "Products"),
+    "inventory": ("stock", "Stock"),
+    "sales_summary": ("sales", "Sales"),
+    "email_list": ("inbox", "Inbox"),
+    "email_thread": ("inbox", "Inbox"),
+}
+
 # The words on a skeleton. Never a value, never a count of anything that has not been read —
 # the kind of thing that is coming, and that is all it is allowed to say.
 SHELL_WORDS: dict[str, tuple[str, int]] = {
@@ -88,28 +156,35 @@ SHELL_WORDS: dict[str, tuple[str, int]] = {
     "email_thread": ("Email thread", 3),
 }
 
-# Which of the fast lane's families already knows what it is about to draw, so the shell can
-# be up before the first read has even been issued. A family that is not here gets its
-# skeleton when its first read starts, which is still far short of 7,975 ms.
-SHELL_OF_FAMILY: dict[str, tuple[str, ...]] = {
-    "order_lookup": ("order",),
-    "order_reopen": ("order",),
-    "order_list_period": ("order_list",),
-    "order_status_lookup": ("order",),
-    "order_address_lookup": ("order",),
-    "delayed_orders": ("order_list",),
-    "customer_history_lookup": ("customer",),
-    "customer_purchase_lookup": ("customer",),
-    "sales_breakdown_period": ("sales_summary",),
-    "inbox_state": ("email_list",),
-    "needs_reply": ("email_list",),
-    "stock_cover_analysis": ("inventory",),
+# Which of the fast lane's families already knows what workspace it is about to draw: its
+# NAME, and the sections coming — so the identity is up before the first read has even been
+# issued. A family that is not here (the model's lane, where the compound questions live) is
+# named by its sections instead, as each read starts, which is still far short of 7,975 ms.
+PLAN_OF_FAMILY: dict[str, tuple[str, tuple[str, ...]]] = {
+    "order_lookup": ("The order", ("order",)),
+    "order_reopen": ("The order", ("order",)),
+    "order_list_period": ("Orders", ("order_list",)),
+    "order_status_lookup": ("The order", ("order",)),
+    "order_address_lookup": ("The order", ("order",)),
+    "delayed_orders": ("Orders", ("order_list",)),
+    "customer_history_lookup": ("The customer", ("customer",)),
+    "customer_purchase_lookup": ("The customer", ("customer",)),
+    "sales_breakdown_period": ("Sales", ("sales_summary",)),
+    "inbox_state": ("The inbox", ("email_list",)),
+    "needs_reply": ("The inbox", ("email_list",)),
+    "stock_cover_analysis": ("Stock", ("inventory",)),
 }
 
+# Phase 4's name for the same table, derived rather than repeated: what a family promises to
+# draw is one fact, and two copies of it could disagree about a family.
+SHELL_OF_FAMILY: dict[str, tuple[str, ...]] = {family: kinds for family, (_title, kinds) in PLAN_OF_FAMILY.items()}
+
 # A card that is worth looking at: it is about a record, or it carries rows. An error, the
-# assistant's own sentence and the context stack are none of those, which is why a turn that
-# drew only those is the failure §8 is about rather than a workspace.
-NOT_USEFUL = frozenset({"assistant", "error", "context_stack"})
+# assistant's own sentence, the context stack and the workspace's own header are none of
+# those, which is why a turn that drew only those is the failure §8 is about rather than a
+# workspace. The header is on this list deliberately: §15's whole point is that a shell,
+# however well it names itself, is not a fact and is not something the owner can act on.
+NOT_USEFUL = frozenset({"assistant", "error", "context_stack", PLAN_TYPE})
 ROW_KEYS = ("orders", "threads", "messages", "customers", "products", "rows", "items", "metrics", "points", "cells")
 
 # Bounds. The patch log is read by a tablet that polls every 400 ms and may miss a poll; it is
@@ -132,6 +207,11 @@ def _useful(item: dict[str, Any]) -> bool:
     return bool(key_of(item))
 
 
+# What a skeleton says when the Mac cannot name what is coming. §15: a box that says this and
+# nothing else is NOT a visible shell, and `_identity` refuses to count it as one.
+GENERIC_TITLE = "Reading"
+
+
 def shell_item(kind: str, *, title: str = "", rows: int = 0) -> dict[str, Any]:
     """One skeleton card, in the same `{type, data}` shape as every other card.
 
@@ -139,11 +219,56 @@ def shell_item(kind: str, *, title: str = "", rows: int = 0) -> dict[str, Any]:
     card whose data says so (web/ui.js `skeletonCard`), which is why this adds nothing to the
     vocabulary: there is no skeleton type to keep in step with anything.
     """
-    words, count = SHELL_WORDS.get(kind, ("Reading", 3))
+    words, count = SHELL_WORDS.get(kind, (GENERIC_TITLE, 3))
     return {
         "type": kind,
         "data": {"shell": True, "loading": True, "title": str(title or words)[:40], "placeholder": int(rows or count)},
     }
+
+
+def _identity(item: dict[str, Any]) -> bool:
+    """Does this patch put IDENTITY on the glass — does the screen now say what it is about?
+
+    §15's rule, and the whole of the `time_to_shell` → `time_to_visible_shell` rename: the
+    workspace's own header with a name on it, a skeleton that names its section ("Orders"),
+    or a real card about a record. A bounded grey box saying "Reading…" is none of those and
+    is not progress, however early it appeared.
+    """
+    data = item.get("data")
+    if not isinstance(data, dict):
+        return False
+    kind = str(item.get("type") or "")
+    if kind == PLAN_TYPE:
+        return bool(str(data.get("title") or "").strip())
+    if data.get("shell") is True:
+        title = str(data.get("title") or "").strip()
+        return bool(title) and title != GENERIC_TITLE
+    return _useful(item)
+
+
+@dataclass(slots=True)
+class Section:
+    """One part of a workspace, and what state it is in (§27).
+
+    `value` is a count the Mac has READ — never an estimate, never a percentage. `note` is the
+    one line an EMPTY or an ERROR section says instead: "No messages found", "Gmail did not
+    answer". Which is the whole of EMPTY IS NOT ERROR: two states, two sentences, one card.
+    """
+
+    name: str
+    label: str
+    kind: str
+    state: str = WAITING
+    value: str = ""
+    note: str = ""
+
+    def public(self) -> dict[str, Any]:
+        out: dict[str, Any] = {"name": self.name, "label": self.label, "state": self.state}
+        if self.value:
+            out["value"] = self.value
+        if self.note:
+            out["note"] = self.note
+        return out
 
 
 @dataclass(slots=True)
@@ -158,9 +283,15 @@ class Workspace:
     ledger: RenderLedger = field(default_factory=RenderLedger)
     patches: list[Patch] = field(default_factory=list)
     revision: int = 0
-    shell_ms: float | None = None
-    first_fact_ms: float | None = None
-    first_useful_ms: float | None = None
+    # §15: what this workspace IS, and the sections it is made of, each in a state (§27).
+    title: str = ""
+    sections: OrderedDict[str, Section] = field(default_factory=OrderedDict)
+    planned: bool = False
+    # §15's four numbers, measured on the GLASS. The module docstring says what each one
+    # means and what Phase 4 called it.
+    visible_shell_ms: float | None = None
+    fact_ms: float | None = None
+    actionable_ms: float | None = None
     complete_ms: float | None = None
     finished: bool = False
 
@@ -168,45 +299,193 @@ class Workspace:
         if not self.started:
             self.started = self.clock()
 
+    # ----------------------------------------------------------------- the sections (§15, §27)
+
+    def section(self, kind: str) -> Section | None:
+        """The section a card of this kind belongs to, made if this is the first of them."""
+        found = SECTION_OF_KIND.get(str(kind or ""))
+        if found is None:
+            return None
+        name, label = found
+        held = self.sections.get(name)
+        if held is None:
+            held = Section(name=name, label=label, kind=str(kind))
+            self.sections[name] = held
+        return held
+
+    @property
+    def state(self) -> str:
+        """§27, for the workspace as a whole, read from the states of its sections.
+
+        EMPTY and ERROR are not the same thing, and neither of them is the end of the
+        workspace: one empty section beside a full one is READY, and a workspace whose inbox
+        read failed is PARTIAL — what landed is still there and still usable.
+        """
+        states = [s.state for s in self.sections.values()]
+        if not states:
+            return READY if self.finished else LOADING
+        if all(s in (WAITING, LOADING) for s in states):
+            return LOADING
+        if all(s == EMPTY for s in states):
+            return EMPTY
+        if all(s == ERROR for s in states):
+            return ERROR
+        if any(s in (WAITING, LOADING, ERROR) for s in states):
+            return PARTIAL
+        return READY
+
+    def _plan_item(self) -> dict[str, Any]:
+        """The workspace's own header, as a card. Never a value the Mac has not read: a
+        section says `loading…`, `waiting…`, what it found, or why it found nothing."""
+        title = self.title or " · ".join(s.label for s in self.sections.values())
+        return {
+            "type": PLAN_TYPE,
+            "data": {
+                "workspace_id": self.turn_id or self.session_id or "workspace",
+                "title": str(title or "Workspace")[:60],
+                "state": self.state,
+                "sections": [s.public() for s in self.sections.values()],
+            },
+        }
+
+    def plan(self, title: str = "", kinds: tuple[str, ...] | list[str] = ()) -> list[Patch]:
+        """Name this workspace and the sections coming, and put that on the glass NOW.
+
+        §15: identity first. The header is ONE card for the life of the turn — patched in
+        place as each section lands, never replaced, and the sections under it never reorder.
+        """
+        if title:
+            self.title = str(title)[:60]
+        for kind in list(kinds)[:6]:
+            self.section(kind)
+        self.planned = True
+        return self._plan_now(self.at_ms())
+
+    def _plan_now(self, at_ms: float) -> list[Patch]:
+        """The header, staged or patched.
+
+        It goes up once there are two sections to name — a one-section task already names
+        itself on the titled skeleton of the single card it is about, and a header over one
+        card is a second placeholder for the same thing. After that, every change to a
+        section is a patch to this one card; a restage that changes nothing produces no patch
+        at all, because the ledger sees to that (§25).
+        """
+        if not self.sections or (not self.planned and len(self.sections) < 2):
+            return []
+        self.planned = True
+        return self._record(self.ledger.stage([self._plan_item()], at_ms=at_ms))
+
+    def _observe(self, items: list[dict[str, Any]]) -> None:
+        """What the cards that just landed say about their sections (§27).
+
+        A read that returned rows makes its section READY and says how many. A read that
+        returned none makes it EMPTY, with the sentence the presentation layer already wrote
+        for the card — "No messages found" is an answer about the shop — and EMPTY IS NOT
+        ERROR: the workspace stays, every section stays, and nothing is replaced.
+        """
+        for item in items or []:
+            if not isinstance(item, dict):
+                continue
+            data = item.get("data")
+            if not isinstance(data, dict) or data.get("shell") is True:
+                continue
+            kind = str(item.get("type") or "")
+            if kind == PLAN_TYPE:
+                continue
+            section = self.section(kind)
+            if section is None:
+                continue
+            count = _count_of(data)
+            if data.get("empty") is True or count == 0:
+                section.state, section.value = EMPTY, ""
+                section.note = str(data.get("note") or "Nothing found")[:80]
+            else:
+                section.state = READY
+                section.value = "" if count is None else str(count)
+                section.note = ""
+
+    def _settle_sections(self, at_ms: float) -> list[Patch]:
+        """The sections this turn never got to, at the end of it.
+
+        A placeholder is never left saying "loading…": the live session's "Checking the
+        inbox…" was still on the glass 34.8 seconds after the asking had stopped, read as calm
+        while a customer waited. A read that STARTED and never came back is an ERROR on its
+        own section; a section whose read never started was never part of this workspace.
+        """
+        for name, section in list(self.sections.items()):
+            if section.state == WAITING:
+                del self.sections[name]
+            elif section.state == LOADING:
+                section.state, section.value = ERROR, ""
+                section.note = "That lookup did not come back"
+        if self.sections or not self.planned:
+            return []
+        self.planned = False
+        return self._record(self.ledger.drop(render_id(self._plan_item()), PLAN_TYPE, at_ms=at_ms))
+
     # ----------------------------------------------------------------- the phases
 
     def at_ms(self) -> float:
         return max(0.0, (self.clock() - self.started) * 1000.0)
 
-    def shell(self, kinds: tuple[str, ...] | list[str]) -> list[Patch]:
-        """The frame, and a skeleton for each card the Mac already knows is coming."""
+    def shell(self, kinds: tuple[str, ...] | list[str], *, title: str = "") -> list[Patch]:
+        """The workspace's identity, and a skeleton for each card the Mac knows is coming."""
         now = self.at_ms()
-        if self.shell_ms is None:
-            self.shell_ms = now
-        items = [shell_item(kind) for kind in list(kinds)[:4] if kind in SHELL_WORDS]
-        return self._record(self.ledger.stage(items, at_ms=now))
+        if title:
+            self.title = str(title)[:60]
+        wanted = [kind for kind in list(kinds)[:4] if kind in SHELL_WORDS]
+        for kind in wanted:
+            self.section(kind)
+        patches = self._plan_now(now)
+        return patches + self._record(self.ledger.stage([shell_item(kind) for kind in wanted], at_ms=now))
 
     def starting(self, tool: str) -> list[Patch]:
-        """A read has begun. Where its card is known, its skeleton goes up now.
+        """A read has begun. Its section says so, and where its card is known its skeleton
+        goes up now.
 
         Not when a real card of that kind is already on the glass: an order found and then
         read in full is one card being filled in, and a skeleton under it would be exactly
         the duplicate this pass exists to remove.
         """
         kind = SHELL_OF_TOOL.get(str(tool or ""))
-        if not kind or self.ledger.has_real(kind):
+        if not kind:
             return []
         now = self.at_ms()
-        if self.shell_ms is None:
-            self.shell_ms = now
-        return self._record(self.ledger.stage([shell_item(kind)], at_ms=now))
+        section = self.section(kind)
+        if section is not None and section.state == WAITING:
+            section.state = LOADING
+        patches = self._plan_now(now)
+        if self.ledger.has_real(kind):
+            return patches
+        return patches + self._record(self.ledger.stage([shell_item(kind)], at_ms=now))
+
+    def failed(self, tool: str, why: str = "") -> list[Patch]:
+        """A read did not come back (§27). Its section says so — and only its section.
+
+        An error in one part of a workspace never destroys another: the orders that landed
+        keep saying what they found, their card is untouched, and the workspace is PARTIAL
+        rather than an error screen. The failed read's own skeleton comes down, because
+        nothing is coming to fill it.
+        """
+        kind = SHELL_OF_TOOL.get(str(tool or ""))
+        if not kind:
+            return []
+        now = self.at_ms()
+        section = self.section(kind)
+        if section is not None and section.state not in (READY, EMPTY):
+            section.state, section.value = ERROR, ""
+            section.note = str(why or "That lookup failed")[:80]
+        patches = self._record(self.ledger.drop_shell(kind, at_ms=now))
+        return patches + self._plan_now(now)
 
     def facts(self, items: list[dict[str, Any]]) -> list[Patch]:
-        """A read has landed. Its cards take their skeletons' places, or are added."""
+        """A read has landed. Its section is patched in place; its cards take their
+        skeletons' places, or are added."""
         now = self.at_ms()
-        patches = self._record(self.ledger.stage(list(items), at_ms=now))
-        for patch in patches:
-            if patch.op not in (ADDED, DATA) or patch.item is None:
-                continue
-            if self.first_fact_ms is None:
-                self.first_fact_ms = now
-            if self.first_useful_ms is None and _useful(patch.item):
-                self.first_useful_ms = now
+        self._observe(list(items))
+        patches = self._plan_now(now)
+        patches += self._record(self.ledger.stage(list(items), at_ms=now))
+        self._measure(patches, now)
         return patches
 
     def complete(self, items: list[dict[str, Any]]) -> list[Patch]:
@@ -218,23 +497,42 @@ class Workspace:
         down rather than left saying "reading…".
         """
         now = self.at_ms()
+        self._observe(list(items))
         patches = self._record(self.ledger.stage(list(items), at_ms=now))
-        for patch in patches:
-            if patch.op in (ADDED, DATA) and patch.item is not None:
-                if self.first_fact_ms is None:
-                    self.first_fact_ms = now
-                if self.first_useful_ms is None and _useful(patch.item):
-                    self.first_useful_ms = now
+        self._measure(patches, now)
+        patches += self._settle_sections(now)
+        patches += self._plan_now(now)
         patches += self._record(self.ledger.drop_shells(at_ms=now))
         self.complete_ms = now
         self.finished = True
         return patches
+
+    def _measure(self, patches: list[Patch], now: float) -> None:
+        """§15's two middle numbers. A shell is not a fact, however well it names itself, and
+        the workspace's own header is not something the owner can act on."""
+        for patch in patches:
+            if patch.op not in (ADDED, DATA) or patch.item is None or patch.type == PLAN_TYPE:
+                continue
+            data = patch.item.get("data")
+            if isinstance(data, dict) and data.get("shell") is True:
+                continue
+            if self.fact_ms is None:
+                self.fact_ms = now
+            if self.actionable_ms is None and _useful(patch.item):
+                self.actionable_ms = now
 
     # ----------------------------------------------------------------- what the glass reads
 
     def _record(self, patches: list[Patch]) -> list[Patch]:
         if not patches:
             return []
+        # §15's first number, at the one place every patch passes through: the moment the
+        # screen said what it was about. An anonymous skeleton does not count (`_identity`).
+        if self.visible_shell_ms is None:
+            for patch in patches:
+                if patch.item is not None and _identity(patch.item):
+                    self.visible_shell_ms = patch.at_ms if patch.at_ms is not None else self.at_ms()
+                    break
         self.patches.extend(patches)
         if len(self.patches) > MAX_PATCHES:
             del self.patches[: len(self.patches) - MAX_PATCHES]
@@ -258,6 +556,11 @@ class Workspace:
             "turn_id": self.turn_id,
             "branch_id": self.branch_id,
             "complete": bool(self.finished),
+            # What this workspace is and how far it has got (§15, §27). The cards say it too —
+            # the header is one of them — and a poll that arrives between patches can read it
+            # here without reassembling the sections itself.
+            "title": self.title,
+            "state": self.state,
             "patches": pending,
             # A tablet that fell far enough behind that the log no longer reaches its cursor
             # must redraw from the turn's payload rather than apply half a sequence.
@@ -267,16 +570,35 @@ class Workspace:
         }
 
     def timings(self) -> dict[str, float | None]:
+        """§15's four, in the order the owner experiences them. Keys named in `TIMINGS`."""
         return {
-            "time_to_shell": _ms(self.shell_ms),
-            "time_to_first_fact": _ms(self.first_fact_ms),
-            "time_to_first_useful_workspace": _ms(self.first_useful_ms),
+            "time_to_visible_shell": _ms(self.visible_shell_ms),
+            "time_to_first_meaningful_fact": _ms(self.fact_ms),
+            "time_to_first_actionable_surface": _ms(self.actionable_ms),
             "time_to_complete_workspace": _ms(self.complete_ms),
         }
 
 
 def _ms(value: float | None) -> float | None:
     return None if value is None else round(float(value), 1)
+
+
+def _count_of(data: dict[str, Any]) -> int | None:
+    """How many things a card carries, as the card itself says — never a guess.
+
+    `count` is what the presentation layer puts on a listing; a card about one record has no
+    count and gets none invented for it, which is why this returns None rather than 1.
+    """
+    count = data.get("count")
+    if isinstance(count, bool):
+        return None
+    if isinstance(count, int):
+        return max(0, count)
+    for key in ROW_KEYS:
+        rows = data.get(key)
+        if isinstance(rows, list):
+            return len(rows)
+    return None
 
 
 # --------------------------------------------------------------------------- the live ones
@@ -301,7 +623,8 @@ def begin(session_id: str, *, turn_id: str = "", branch_id: str = "", family: st
     _LIVE[_key(session_id, branch_id)] = workspace
     while len(_LIVE) > MAX_LIVE:
         _LIVE.popitem(last=False)
-    workspace.shell(SHELL_OF_FAMILY.get(str(family or ""), ()))
+    title, kinds = PLAN_OF_FAMILY.get(str(family or ""), ("", ()))
+    workspace.shell(kinds, title=title)
     return workspace
 
 
@@ -359,6 +682,43 @@ def starting(session: Any, tool: str) -> None:
             workspace.starting(tool)
     except Exception as exc:  # noqa: BLE001 — bookkeeping must not break a read
         log.debug("progressive shell for %s failed: %s", tool, type(exc).__name__)
+
+
+def planning(session: Any, tools: list[str] | tuple[str, ...]) -> None:
+    """A read plan is about to run: the workspace says what it will be made of (§15).
+
+    This is the earliest honest moment for a compound task — the graph is known and not one
+    read of it has gone out yet, so the sections can be named and shown WAITING rather than
+    the owner watching an empty screen until the last of them lands. Never raises, and never
+    invents: the sections are the cards the planned reads are going to draw.
+    """
+    try:
+        workspace = _workspace_for(session)
+        if workspace is None or workspace.finished:
+            return
+        kinds = [SHELL_OF_TOOL[tool] for tool in tools if tool in SHELL_OF_TOOL]
+        seen: list[str] = []
+        for kind in kinds:
+            if kind not in seen:
+                seen.append(kind)
+        if len(seen) > 1:
+            workspace.plan(kinds=seen)
+    except Exception as exc:  # noqa: BLE001 — bookkeeping must not break a read plan
+        log.debug("progressive plan failed: %s", type(exc).__name__)
+
+
+def failed(session: Any, tool: str, why: str = "") -> None:
+    """A read did not come back. Its section says so, and nothing else changes (§27).
+
+    Never raises, for the same reason `starting` does not: a workspace that could not record
+    a failure is not a failed turn, and the spoken answer still says what happened.
+    """
+    try:
+        workspace = _workspace_for(session)
+        if workspace is not None and not workspace.finished:
+            workspace.failed(tool, why)
+    except Exception as exc:  # noqa: BLE001 — bookkeeping must not break the error path
+        log.debug("progressive failure for %s failed: %s", tool, type(exc).__name__)
 
 
 def observe(session: Any, name: str, result: Any) -> None:

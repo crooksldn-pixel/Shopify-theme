@@ -186,6 +186,10 @@ async def dispatch(
         if calls is not None:
             calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=str(exc), duration_ms=_elapsed(started))))
         trace.finish("error", error=str(exc), ms=_elapsed(started))
+        # §27: this section of the workspace says it could not be read, and only this one.
+        # Its skeleton comes down — nothing is coming to fill it — and every other section
+        # keeps exactly what it found.
+        progressive.failed(session, name, str(exc))
         return (
             f"ERROR: {exc} Say that this lookup failed. Do not invent a result and do not "
             "report success."
@@ -195,6 +199,7 @@ async def dispatch(
         if calls is not None:
             calls.append(trace.call(ToolCall(name=name, args=args, ok=False, error=repr(exc), duration_ms=_elapsed(started))))
         trace.finish("exception", error=f"{type(exc).__name__}: {exc}", ms=_elapsed(started))
+        progressive.failed(session, name, "That lookup failed")
         return (
             f"ERROR: {name} failed unexpectedly ({type(exc).__name__}). Say the lookup failed. "
             "Do not invent a result."

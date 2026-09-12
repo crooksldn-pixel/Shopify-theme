@@ -1086,7 +1086,8 @@ function adoptContext(nodes, items, question) {
   armDeckExpiry();
   for (const node of nodes) collectPending(node);
   T.record('navigate', { nav: 'patched', index: historyIndex, entities: history[historyIndex].entities });
-  snapshotSoon({ patched: true });
+  // No snapshot here. This runs from `renderTurn`, which takes one for the whole answer —
+  // two snapshots of one screen is half of D-8's seven renders of one turn.
 }
 
 /* ------------------------------------------- the workspace, as it arrives (§7, D-5)
@@ -1160,7 +1161,7 @@ function applyWorkspace(payload) {
   T.record('workspace_patch', {
     added: out.added || undefined, changed: out.changed || undefined, visual: out.visual || undefined,
     removed: out.removed || undefined, index: glass.cursor,
-    detail: (payload.timings_ms && payload.timings_ms.time_to_first_useful_workspace) || undefined,
+    detail: (payload.timings_ms && payload.timings_ms.time_to_first_actionable_surface) || undefined,
   });
   return true;
 }
@@ -1188,8 +1189,37 @@ function adoptWorkspace(data) {
 }
 
 // The screen as structure, once it has been laid out: card types, tabs, the rail, sizes.
+//
+// D-8: `turn_f0628fcf7be5` recorded `order_list + working_set + folded` SEVEN times — #2
+// through #7 at 0.0 s apart — and nine of the session's twenty-one long-scroll surfaces are
+// that one turn. Six identical snapshots in one instant is a deck drawn, recorded, and drawn
+// again: the answer's own draw, the adoption of the patches that had already drawn it, and a
+// navigation landing on the screen it was already on. Each one cost the scroll position, and
+// he was scrolling (26 reports, deepest 971 px).
+//
+// So a draw whose RESULT is the screen that is already there is not a render and is not
+// counted as one. It is not swallowed either: `render_repeat` says it happened, with the
+// count, so the timeline keeps the truth about how often the page redrew itself while the
+// `render` events stay one-per-screen.
+let deckPrint = '';
+let deckRepeats = 0;
+function screenPrint() {
+  const cards = Array.prototype.slice.call(el.cards.children)
+    .map((n) => `${(n.dataset && n.dataset.type) || ''}:${(n.dataset && n.dataset.render) || (n.dataset && n.dataset.ref) || ''}`);
+  return `${currentTurnId}|${el.body.dataset.mode || ''}|${cards.join(',')}`;
+}
 function snapshotSoon(extra) {
-  const take = () => T.record('render', T.snapshot(el.cards, extra));
+  const take = () => {
+    const print = screenPrint();
+    if (print === deckPrint) {
+      deckRepeats += 1;
+      T.record('render_repeat', { count: deckRepeats, name: 'same_screen' });
+      return;
+    }
+    deckPrint = print;
+    deckRepeats = 0;
+    T.record('render', T.snapshot(el.cards, extra));
+  };
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(take); else take();
 }
 
@@ -1687,9 +1717,12 @@ function renderOpts() {
   return {
     onCommit: commitAction, onArm: armAction, blocked: actionBlocked, onAction: primeAction,
     onUndoExpire: dismissUndo,
-    // Which tab a card opens on, when the branch was left on one, and where a change of tab
-    // is reported. Both are the Mac's state, not the page's: see /branches/{id}/mark.
-    tab: branchState && branchState.tab ? branchState.tab : '',
+    // Which tab a card opens on, and where a change of tab is reported. Per RECORD, never per
+    // branch: `tab: branchState.tab` was here, one value handed to every card with tabs, and
+    // it is D-2 — one tap on Email put twenty-three later cards on Email, for records the
+    // owner had never opened. The renderer decides per card (web/ui.js `tabFor`); this hands
+    // it the place the answer is kept, and the Mac's copy is `branch.tabs`.
+    tabOf: tabOfCard,
     onTab: noteTab,
     // A button beside a row. The tablet posts which action and which row and nothing else.
     onRowAction: rowAction,
@@ -2155,14 +2188,49 @@ function drawArmed(listening) {
   }
 }
 
-// A tab was chosen. The Mac keeps it against the branch's current stop, so going back and
-// coming forward again puts the card back on the tab it was left on.
-function noteTab(kind, name, label) {
-  T.record('tab', { name: kind, label: label || name });
+/* ------------------------------------------------------ which tab, per record (D-2)
+ *
+ * 20:18:12: "I'm not seeing any UI here except email where there's nothing … I want to also
+ * be seeing his orders and his history". It was there, one tab away on the same card.
+ *
+ * `renderOpts().tab` was ONE value per BRANCH. He tapped Email once, on one customer; from
+ * then on every card with tabs opened on Email — twenty-three of them, over a panel that was
+ * usually empty, for records he had never opened. So a tab belongs to a RECORD, and the key
+ * is the render identity: the same name the patch protocol addresses that card by, so the
+ * page, the Mac (`branch.tabs`) and the renderer all mean the same card.
+ *
+ * Per half as well as per record: the same customer, open on two halves of the orb, is two
+ * screens and the owner may be reading a different part of him on each.
+ */
+const cardTabs = new Map();
+const MAX_CARD_TABS = 48;
+function tabKeyOf(id) { return `${focusedBranch || '_'}|${id}`; }
+
+// The tab this record was left on: what the page has been told, and failing that the Mac's
+// own copy, which is what survives a reload, a branch switch and a half put aside. The local
+// answer wins because it is the newer of the two — the POST below may still be in flight.
+function tabOfCard(id) {
+  const mine = cardTabs.get(tabKeyOf(id));
+  if (mine) return mine;
+  const held = branchState && branchState.tabs ? branchState.tabs[id] : '';
+  return typeof held === 'string' ? held : '';
+}
+
+// A tab was chosen, on a particular record. The Mac keeps it against that record and against
+// the branch's current stop, so going back and coming forward again puts THAT card back on
+// the tab it was left on — and nothing else on it.
+function noteTab(id, name, label, kind) {
+  if (id && name) {
+    cardTabs.delete(tabKeyOf(id));
+    cardTabs.set(tabKeyOf(id), name);
+    while (cardTabs.size > MAX_CARD_TABS) cardTabs.delete(cardTabs.keys().next().value);
+  }
+  T.record('tab', { name: kind || '', label: label || name, detail: id || undefined });
   if (!branchState) return;
   const form = new FormData();
   form.append('session_id', sessionId);
   form.append('tab', name);
+  form.append('of', id || '');
   fetch(`/branches/${encodeURIComponent(branchState.branch_id)}/mark`, { method: 'POST', body: form, cache: 'no-store' }).catch(() => {});
 }
 
