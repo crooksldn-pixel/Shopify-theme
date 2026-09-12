@@ -182,7 +182,9 @@ async function atSize(browser, size) {
   }
 
   /* One control, tapped the way a thumb taps it, and the four counts that must not move.
-     `expect` is a substring of what the click must have landed on or inside. */
+     `expect` is a substring of what the click must have landed on or inside, or a list of
+     them where one control has more than one shape: Split is a `.branch-act` in the branch
+     band and a `.chip` in the navigation rail. */
   async function tapControl(label, selector, expect) {
     const box = await boxOf(selector);
     if (!box) { check(at(`tap ${label}`), false, `${selector} is not on screen at all`); return null; }
@@ -193,7 +195,8 @@ async function atSize(browser, size) {
     const starts = await holdStarts();
     const short = await tooShort();
     const after = { turns: turns(), submits: (await audit() || {}).submits };
-    const reached = expect ? landed.some((c) => c.includes(expect)) : landed.length > 0;
+    const wanted = expect ? [].concat(expect) : [];
+    const reached = wanted.length ? landed.some((c) => wanted.some((w) => c.includes(w))) : landed.length > 0;
     const quiet = after.turns === before.turns && short === 0 && starts === 0
       && after.submits === before.submits;
     check(at(`tap ${label}`), box.onScreen && box.hitBy.startsWith('itself') && reached && quiet, JSON.stringify({
@@ -315,7 +318,7 @@ async function atSize(browser, size) {
   // could not press. A question first, so the fresh half inherits something and Merge has
   // something to merge — §18 forbids drawing it otherwise.
   await say("show me today's orders");
-  await tapControl('Split', '#branch-bar [data-action="split"], #branch-rail [data-action="split"]', 'branch-act');
+  await tapControl('Split', '#branch-bar [data-action="split"], #branch-rail [data-action="split"]', ['branch-act', 'chip']);
   await sleep(800);
   const divided = await branchesNow();
   check(at('and the tap on Split actually divided the orb'), divided.count === 2, `branches=${divided.count}`);
@@ -347,7 +350,7 @@ async function atSize(browser, size) {
   check(at('and the tap on Merge actually folded the halves back'),
         (await branchesNow()).count === 1, JSON.stringify(await branchesNow()));
 
-  await tapControl('Split (again)', '#branch-bar [data-action="split"], #branch-rail [data-action="split"]', 'branch-act');
+  await tapControl('Split (again)', '#branch-bar [data-action="split"], #branch-rail [data-action="split"]', ['branch-act', 'chip']);
   await sleep(800);
   await tapControl('Close', '#branch-bar [data-action="cancel"]', 'branch-act');
   await sleep(800);
