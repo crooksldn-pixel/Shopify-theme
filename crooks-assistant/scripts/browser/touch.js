@@ -267,6 +267,31 @@ async function atSize(browser, size) {
     return { faults: window.CrooksTouch.covering(zones), zones: zones.length };
   });
 
+  /* A row of controls that is WIDER THAN ITS OWN CONTAINER. `#context-nav` is
+     `overflow-x:auto`, so its last chip is simply cut off at the right edge — drawn, reported
+     as present by every gate, and unreachable without a horizontal scroll nobody knows is
+     there. It is not an overlap, so collision.js cannot see it; it is not off the VIEWPORT, so
+     an `onScreen` test cannot either. It is measured here, at both sizes. */
+  async function railFits(where) {
+    const rail = await page.evaluate(() => {
+      const nav = document.querySelector('#context-nav');
+      if (!nav) return null;
+      const shown = Array.from(nav.children).filter((c) => c.getBoundingClientRect().width > 0);
+      const last = shown[shown.length - 1];
+      const box = last ? last.getBoundingClientRect() : null;
+      return {
+        scroll: Math.round(nav.scrollWidth), client: Math.round(nav.clientWidth),
+        controls: shown.length,
+        labels: shown.map((c) => (c.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 12)),
+        lastRight: box ? Math.round(box.right) : 0,
+        navRight: Math.round(nav.getBoundingClientRect().right),
+      };
+    });
+    check(at(`the navigation row fits its own container ${where}`),
+          Boolean(rail && rail.scroll <= rail.client + 1 && rail.lastRight <= rail.navRight + 1),
+          JSON.stringify(rail));
+  }
+
   async function ladderHolds(where) {
     const measured = await zonesNow();
     check(at(`the layer ladder holds ${where}: nothing covers an interactive layer`),
@@ -280,7 +305,7 @@ async function atSize(browser, size) {
 
   // ================================================================== §8, measured
   await ladderHolds('on the idle screen');
-  const splitBox = await boxOf('#branch-bar [data-action="split"]');
+  const splitBox = await boxOf('#branch-bar [data-action="split"], #branch-rail [data-action="split"]');
   check(at('the Split control is on screen, finger-sized, and is what is on top of itself'),
         Boolean(splitBox && splitBox.onScreen && splitBox.h >= 40 && splitBox.hitBy.startsWith('itself')),
         JSON.stringify(splitBox));
@@ -290,7 +315,7 @@ async function atSize(browser, size) {
   // could not press. A question first, so the fresh half inherits something and Merge has
   // something to merge — §18 forbids drawing it otherwise.
   await say("show me today's orders");
-  await tapControl('Split', '#branch-bar [data-action="split"]', 'branch-act');
+  await tapControl('Split', '#branch-bar [data-action="split"], #branch-rail [data-action="split"]', 'branch-act');
   await sleep(800);
   const divided = await branchesNow();
   check(at('and the tap on Split actually divided the orb'), divided.count === 2, `branches=${divided.count}`);
@@ -301,6 +326,7 @@ async function atSize(browser, size) {
   await tapControl('a notification', '#notes-orb .note, #notes-deck .note', '.note');
 
   await ladderHolds('with the orb divided');
+  await railFits('with the orb divided');
   const chipsOnScreen = await page.evaluate(() => Array.from(document.querySelectorAll('.branch-chip')).map((c) => {
     const b = c.getBoundingClientRect();
     return { text: c.textContent.replace(/\s+/g, ' ').trim().slice(0, 44), w: Math.round(b.width), h: Math.round(b.height),
@@ -321,7 +347,7 @@ async function atSize(browser, size) {
   check(at('and the tap on Merge actually folded the halves back'),
         (await branchesNow()).count === 1, JSON.stringify(await branchesNow()));
 
-  await tapControl('Split (again)', '#branch-bar [data-action="split"]', 'branch-act');
+  await tapControl('Split (again)', '#branch-bar [data-action="split"], #branch-rail [data-action="split"]', 'branch-act');
   await sleep(800);
   await tapControl('Close', '#branch-bar [data-action="cancel"]', 'branch-act');
   await sleep(800);
@@ -332,6 +358,7 @@ async function atSize(browser, size) {
   // ================================================================== the navigation chrome
   await say("show me today's orders");
   await ladderHolds('beside the cards');
+  await railFits('beside the cards, with one half');
   await tapControl('an order card\'s row', '#cards li.row[data-kind="order"]', 'li.row');
   await sleep(700);
   await tapControl('Back', '#back-btn', 'back-btn');

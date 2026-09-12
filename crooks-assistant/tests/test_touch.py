@@ -212,16 +212,36 @@ def test_the_dock_band_is_reserved_once_for_the_whole_column():
 # --------------------------------------------------------------------------- §17 / §18 / §6
 
 
-def test_the_branch_chrome_has_one_home_in_both_modes():
-    """It used to be drawn into the context nav rail beside Back and Next — six heterogeneous
-    controls in one flex row, which at 601 CSS px ran off the right edge and cut the second
-    half's chip in half. The collision gate cannot see that: it looks for overlapping
-    rectangles, not for a flex row whose last child is clipped by its own container."""
+def test_the_two_halves_are_only_ever_drawn_in_their_own_band():
+    """The rule, and the two defects that set it.
+
+    The HALVES — both chips, Merge, Close — are always in `#branch-zone`, a row of `.app`
+    outside the stage `#talk` is positioned in. Drawing them into the context nav rail made
+    that row six heterogeneous controls wide (a landing, a trail step, a list step, a set
+    cursor and two branch chips), which at 601 CSS px ran off the right edge and cut the second
+    half's chip in half. The collision gate cannot see that — it looks for overlapping
+    rectangles, not for a flex row whose last child is clipped by its own container — so
+    `railFits()` in scripts/browser/touch.js measures it at both sizes.
+
+    The INVITATION — one Split chip, while there is one half — is in the band on the idle
+    screen and in the nav rail beside the cards. This test's first draft required ONE home for
+    everything, which held the band open beside the cards for a single chip and cost the first
+    viewport 54px: three density fixtures went past the screen-and-a-quarter ceiling and
+    tests/test_density.py failed. A zone has to be worth its pixels, and this one is worth them
+    when there are two halves in it and not when there is one chip. Both shapes are asserted
+    here so neither can drift back.
+    """
     body = APP_JS[APP_JS.index("function drawBranchBar()"):]
     body = body[:body.index("\n}\n")]
-    assert "const host = el.branchBar;" in body
-    assert "branchRail" not in APP_JS, "the nav rail is still a home for the branch chrome"
-    assert 'id="branch-rail"' not in INDEX
+    # The rail is only ever reached with fewer than two halves, and only beside the cards.
+    assert "const inRail = branches.length < 2 && el.body.dataset.mode === 'context' && el.branchRail;" in body
+    # The halves and their actions are appended to `host`, which is the band whenever there are
+    # two of them — and `halves` / `acts` are built after the one-half branch has returned.
+    assert body.index("if (branches.length < 2) {") < body.index("halves.className = 'branch-halves'")
+    assert "acts.appendChild(branchAct('Merge'" in body and "acts.appendChild(branchAct('Close'" in body
+    assert 'id="branch-rail"' in INDEX
+    # And the band collapses to nothing when it is holding nothing.
+    assert ".branch-zone:has(> [hidden]){min-height:0;padding:0}" in STYLE
 
 
 def test_merge_is_only_drawn_when_there_is_something_to_merge():
@@ -344,6 +364,9 @@ def test_the_touch_gate_measures_both_viewports_and_uses_real_touches():
     # And nothing in it presses a control by reaching into the DOM.
     assert not re.search(r"\.click\(\)\s*;?\s*\}?\s*\)?,?\s*'(Split|Merge|Close)", gate)
     # The labels as the gate presses them: `tapControl(label, …)` reports "tap <label>".
+    # The row-overflow check the collision gate cannot make.
+    assert "async function railFits(where)" in gate
+    assert "nav.scrollWidth" in gate and "nav.clientWidth" in gate
     for required in ("tapControl('Split'", "tapControl('Merge'", "tapControl('Close'",
                      "tapControl('Back'", "tapControl('Home'", "tapControl('Next'",
                      "tapControl('a text field'", "tapControl('a notification'",

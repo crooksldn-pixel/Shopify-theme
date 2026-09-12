@@ -357,8 +357,14 @@ body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-i
    nothing else, which read as a control with no name — it says Previous now, at the same size
    as Next, and is still 44px tall like everything a thumb has to find on the 8-inch screen. */
 .chip-step{padding-left:14px;padding-right:14px;color:var(--ink-2)}
-/* The branch chrome is NOT in this row any more — see `.branch-zone`. `.chip-step` keeps its
-   own rule because it is a NAVIGATION chip (Previous, beside Next) and always was. */
+/* The INVITATION to divide can sit in this row — one chip, and only while there is one half.
+   The two halves and their Merge and Close never do: see `.branch-zone`. `display:contents`,
+   so the chip is a child of the rail's own flex row rather than a box inside a box. */
+.branch-rail{display:contents}
+.branch-rail:empty,.branch-rail[hidden]{display:none}
+.chip-split{color:var(--ink-2)}
+.chip-split::before{content:"";width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;
+  background:linear-gradient(90deg,currentColor 50%,transparent 50%);opacity:.8}
 .branch-split{padding:8px 18px}
 .branch-split::before{content:"";width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;
   background:linear-gradient(90deg,currentColor 50%,transparent 50%);opacity:.8;margin-right:8px;display:inline-block;
@@ -1371,6 +1377,11 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
    them — and the branch layer paints above the navigation layer, so the icons stopped
    answering. The touch gate measures exactly that, in both directions. */
 body[data-mode="context"] .branch-zone{min-height:0;padding:6px 14px 4px}
+/* And it takes NO space at all when it is holding nothing — which beside the cards is
+   whenever there is one half, because the Split chip is in the navigation rail then. A band
+   held open for one chip cost the first viewport 54px and took three density fixtures past the
+   screen-and-a-quarter ceiling; a zone has to be worth its pixels. */
+.branch-zone:has(> [hidden]){min-height:0;padding:0}
 body[data-mode="context"] .branch-why{display:none}
 body[data-mode="context"] .branch-chip .branch-bare{display:none}
 

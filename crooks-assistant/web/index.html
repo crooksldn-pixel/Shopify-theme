@@ -80,10 +80,16 @@
              name on it. Next says Next; this says Previous. -->
         <button id="prev-btn" class="chip chip-step" type="button" hidden aria-label="The one before it in this list">Previous</button>
         <button id="next-btn" class="chip" type="button" hidden>Next</button>
-        <!-- NO branch chrome here. It lived in this row until Phase 5 and made it six
-             heterogeneous controls wide, which at 601 CSS px ran off the right edge and cut the
-             second half's chip in half. The halves have their own band (#branch-zone), which is
-             §8's zoning: VOICE, NAVIGATION and SPLIT-BRANCH do not share a row. -->
+        <!-- The INVITATION to divide, and nothing else: one Split chip, while there is one
+             half. The two halves themselves, and their Merge and Close, are never drawn here —
+             they have their own band (#branch-zone). That division is the fix for two defects
+             at once. Six heterogeneous controls in this row ran off the right edge at 601 CSS
+             px and cut the second half's chip in half (§8's zoning: VOICE, NAVIGATION and
+             SPLIT-BRANCH do not share a row). And a band held open here for one chip cost the
+             first viewport 54px, which took three of the density fixtures past the
+             screen-and-a-quarter ceiling (tests/test_density.py). One chip fits this row with
+             35px to spare; the two-half chrome does not, and does not belong here. -->
+        <span id="branch-rail" class="branch-rail" aria-label="Divide"></span>
         <div id="stack" class="stack" aria-label="Active context"></div>
       </nav>
       <!-- What the next sentence will be applied to, while the Mac is listening for it. It

@@ -54,7 +54,7 @@ const el = {
   heard: $('heard'), answer: $('answer'), errline: $('errline'), timings: $('timings'),
   notesGlobal: $('notes-global'), notesOrb: $('notes-orb'), notesDeck: $('notes-deck'),
   context: $('context'), nav: $('context-nav'), stack: $('stack'), homeBtn: $('home-btn'), backBtn: $('back-btn'),
-  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'),
+  armed: $('armed'), armedWhat: $('armed-what'), armedCancel: $('armed-cancel'), dock: $('dock'), branchRail: $('branch-rail'),
   nextBtn: $('next-btn'), prevBtn: $('prev-btn'),
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
@@ -1852,28 +1852,43 @@ function branchAct(label, verb, branchId, why) {
   return button;
 }
 
-/* The halves, named, and the way in. ONE home in both modes: the branch band of `.app`
- * (`#branch-zone`), which is D-1's fix and §8's zoning in the same move.
+/* The halves, named, and the way in. TWO HOMES, and which is which is the whole of the rule:
  *
- * It used to draw into the context nav rail when cards were up — six heterogeneous controls in
- * one horizontal flex row (a landing, a trail step, an unlabelled list step, a set cursor and
- * two branch chips) which at 601 CSS px RAN OFF THE RIGHT EDGE: the second half's chip was cut
- * in half by the viewport. The collision gate could not see it, because it looks for
- * overlapping rectangles, not for a flex row whose last child is clipped by its own container.
- * §8 asks for VOICE / NAVIGATION / SPLIT-BRANCH in clearly distinct zones, and three kinds of
- * control competing for one 573px row is the opposite of that.
+ *   THE HALVES — both chips, Merge and Close — are ALWAYS in the branch band of `.app`
+ *   (`#branch-zone`), in both modes. That is D-1's fix: the band is a row of `.app`, outside
+ *   the stage `#talk` is positioned in, so the voice target cannot reach it and the chips need
+ *   no z-index argument to be pressable.
  *
- * With one half there is one chip, Split: the feature must not depend on a secret gesture.
+ *   THE INVITATION — one Split chip, while there is one half — is in the band on the idle
+ *   screen, where there is room to say what it is for, and in the navigation rail beside Back
+ *   and Next when cards are up.
+ *
+ * Two defects set that division, and it is the only shape that answers both. Drawing the
+ * HALVES into the nav rail made it six heterogeneous controls wide — a landing, a trail step,
+ * a list step, a set cursor and two branch chips — which at 601 CSS px RAN OFF THE RIGHT EDGE
+ * and cut the second half's chip in half. (The collision gate cannot see that: it looks for
+ * overlapping rectangles, not for a flex row whose last child is clipped by its own
+ * container.) And holding the band open in context mode for the ONE chip cost the first
+ * viewport 54px, which took three density fixtures past the screen-and-a-quarter ceiling
+ * (tests/test_density.py) — a zone is not free, and this one is worth its space when there are
+ * two halves in it and not when there is one chip.
+ *
+ * With one half there is always a chip, wherever it is: the feature must not depend on a
+ * secret gesture.
  */
 function drawBranchBar() {
-  const host = el.branchBar;
+  const inRail = branches.length < 2 && el.body.dataset.mode === 'context' && el.branchRail;
+  const host = inRail ? el.branchRail : el.branchBar;
   if (!host) return;
+  for (const other of [el.branchBar, el.branchRail]) {
+    if (other && other !== host) { clear(other); other.hidden = true; }
+  }
   clear(host);
   host.hidden = false;
   if (branches.length < 2) {
     const split = document.createElement('button');
     split.type = 'button';
-    split.className = 'branch-act branch-split';
+    split.className = inRail ? 'chip chip-split' : 'branch-act branch-split';
     split.dataset.action = 'split';
     split.textContent = 'Split';
     split.setAttribute('aria-label', 'Divide the orb into two halves');
@@ -1881,11 +1896,14 @@ function drawBranchBar() {
     host.appendChild(split);
     // What it is FOR. "What does the split button do?" was asked out loud in the live session
     // and answered "I don't know what that button is"; a control whose only explanation is a
-    // gesture nobody was told about is not discoverable. It has room in its own band now.
-    const why = document.createElement('span');
-    why.className = 'branch-why';
-    why.textContent = 'Work on two things at once';
-    host.appendChild(why);
+    // gesture nobody was told about is not discoverable. The band has room for the sentence;
+    // the rail, beside Back and Next, does not, and the chip stands alone there.
+    if (!inRail) {
+      const why = document.createElement('span');
+      why.className = 'branch-why';
+      why.textContent = 'Work on two things at once';
+      host.appendChild(why);
+    }
     return;
   }
   // Two halves, divided visibly: a column each, a rule between them, and neither column able
