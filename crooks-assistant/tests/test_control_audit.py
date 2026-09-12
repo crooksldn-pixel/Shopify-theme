@@ -20,6 +20,71 @@ two, and each test is anchored to a number from the live tablet session of 11 Se
 §28 · MOTION THAT COMMUNICATES, AND NOTHING ELSE
     The old Samsung runs `html[data-lite]`, where at most ONE continuous animation may
     survive, and only if it is state rather than decoration.
+
+-------------------------------------------------------------------------------------------
+THE AUDIT ITSELF. Every persistent control, against §25's five questions — does the owner use
+it, does it explain itself, is it in the right place, is there a better contextual location,
+does it visually compete with something more important. Usage is the live session's own count
+of renders and taps. This table is the record; the tests below are the parts of it that can be
+enforced.
+
+  CONTROL            USED          VERDICT        WHERE IT WENT
+  ─────────────────  ────────────  ─────────────  ──────────────────────────────────────────
+  Note (order rail)  5 rendered    REMOVED        voice ("add a note to order 1938") and
+                     0 tapped                     `owner_feedback`, which answers "make a
+                                                  note" with no order open at all
+  Cancel             2 / 0         REMOVED from   voice; and behind the rail's disclosure,
+                                   the enabled    disabled with its reason, on the orders
+                                   set            where the owner would ask and be told no
+  Fulfil             2 / 0         KEPT · 1       the single primary slot on an unfulfilled
+                                   primary        paid order: it is what the order needs
+  Address            2 / 1 ← the   KEPT           the secondary slot; `mode=open`, so a tap
+                     only tap on                  reaches the address screen rather than a
+                     the rail all                 microphone
+                     evening
+  Refund             3 / 0         KEPT           primary when the customer's own email asks
+                                                  for one (`context_rank`), else dropped
+  Email              3 / 0         KEPT           `mode=open` → the composer
+  Reply (thread)     24 / 0        KEPT · 1       primary; Phase 4 made it open a composer
+                                   primary        instead of arming a microphone
+  Archive (thread)   24 / 0        KEPT           behind the disclosure; stage → gesture
+  Dictate (thread)   n/a (Phase 4) REMOVED        the composer's own Dictate — `voice.bind`,
+                                                  same family, same ref, one tap deeper
+  a chip with no     —             REMOVED        not drawn (it rendered as an em dash)
+  label
+  a chip the page    —             REMOVED        not drawn (D-6: a control offered before
+  cannot wire                                     its destination was known to exist)
+  a chip disabled    —             REMOVED        not drawn (§19: a disabled control says
+  with no reason                                  why, or it is not a control)
+  a rail of only     —             FIXED          behind the disclosure; it used to be
+  disabled chips                                  promoted to full weight wholesale
+  composer button    —             REMOVED        not drawn (two builders, same em dash)
+  with no label
+  row button with    —             REMOVED        not drawn (it said "Do")
+  no label
+  toast(words)       11 of the 16  REMOVED        `notify(words, { code })`; a message that
+                     notifications                cannot be named cannot be governed
+  "Divided…"         3 of 5        REMOVED        the orb visibly dividing, and two named
+                                                  chips under it
+  "Merged. N came    2 of 5        REMOVED        one orb, one chip, and the deck has them
+  back."
+
+AUDITED AND KEPT, with the reason, so the next pass does not re-litigate them:
+
+  #conn (the header's reachability pill) — not a control and never tapped, but it is the only
+  always-visible statement of tablet→Mac reachability, and `wentOffline()` already defers to a
+  turn's own error copy rather than stacking on it (`if (quiet())`). Not redundant.
+  .services (Shopify / Gmail / Voice / Changes) — a different fact from #conn: those are the
+  MAC's reachability of each service, not the tablet's of the Mac.
+  familyRow's fallback to a raw key or a SCREAMING_SNAKE state — the settings sheet is a
+  debug surface, where §26 permits a technical name.
+
+NOT FIXED, AND OWNED ELSEWHERE (recorded so they are not lost):
+  `.rail-why` is 11px — that is kicker size for text §19 makes essential. Typography in
+  web/style.css, which this workstream owns only for animation.
+  `.action-target` is 9px uppercase for a hold-drag instruction (gesture surfaces, workstream A).
+  `app/tools/shopify_writes.py` and `app/tools/gmail_writes.py` raise "No order with id
+  gid://shopify/Order/…" — a raw id in a sentence, in files this workstream does not own.
 """
 
 from __future__ import annotations
