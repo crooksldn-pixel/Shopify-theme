@@ -82,9 +82,13 @@ Use it for: a refund that was proved, an archive that came back, a half that hit
 that came back from a merge still waiting for a gesture.
 
 ### GLOBAL — `class: 'global', machine: true`
-**Genuinely global system problems ONLY**, and there are three: *Disconnected*, *Backend unavailable*,
-*Update required*. These are states of the machine itself. In flow, at the top, above the wordmark,
-pushing the screen down.
+**Genuinely global system problems ONLY.** Three are permitted, and no fourth: *Disconnected*,
+*Backend unavailable*, *Update required*. These are states of the machine itself. In flow, at the top,
+above the wordmark, pushing the screen down.
+
+Of the three, the tablet uses two. A new build needs no message: the page reloads itself onto it when
+the screen is idle (`web/app.js`, `UPDATE_GRACE_MS`), which is §10 again — the state change updates
+the thing the state is about, and there is nothing for the owner to do.
 
 Asking to be global is not enough to be global: without `machine: true` the class is silently demoted
 to `workspace`, because anything else that asks to be seen everywhere is a workspace message that has
@@ -124,11 +128,19 @@ silently is indistinguishable from not having a policy at all.
 
 ## DEDUPLICATION
 
-Two messages are **the same message** when their class, their **name** and their half match. Not their
-sentence. The sentence used to be part of the key, so every message carrying a count, a name or an
-amount defeated deduplication by definition: *"1 change still waiting"* and *"2 changes still waiting"*
-were two rows about one recurring event. One event is one row, with a count, and the newest words are
-the ones on it. The half stays part of the key, so one half's news never overwrites the other's.
+Two messages are **the same message** when their class, their **name**, their half — and, for a
+control-local one, their **control** — match. Not their sentence.
+
+The sentence used to be part of the key, so every message carrying a count, a name or an amount
+defeated deduplication by definition: *"1 change still waiting"* and *"2 changes still waiting"* were
+two rows about one recurring event. One event is one row, with a count, and the newest words are the
+ones on it.
+
+Two things stay part of the key because collapsing on them would put a message in the wrong place. The
+**half**, so one half's news never overwrites the other's. And the **control** (by reference, not by
+name), so two fields the Mac refused are two refusals, one beside each field, even though both are
+`field_refused` — otherwise one control keeps a message that is not about it and the other gets none,
+which is the exact failure CONTROL-LOCAL exists to avoid.
 
 ## LIFETIME, AND THE ONE CONTROL A MESSAGE MAY CARRY
 
