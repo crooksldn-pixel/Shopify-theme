@@ -251,6 +251,35 @@ def test_a_branch_control_resolves_its_destination_before_it_is_drawn():
     assert "if (otherId) {" in body, "Close can be drawn with nothing to close"
 
 
+def test_a_way_out_of_a_half_either_works_or_says_why_it_cannot():
+    """§6 / D-6, the other control in this territory. `turn_dd093f86b92d` posted `open.entity`,
+    was refused `not_held`, and the half then drew `half_empty` — the control had been offered
+    before its destination was known to exist, and pressing it produced a screen saying the
+    half was empty. Two halves to the rule: an offer with no destination at all is drawn
+    disabled with the reason on it, and one the Mac refuses stops being a control THEN, with
+    the Mac's own words beside it, instead of staying live and dead."""
+    chip = APP_JS[APP_JS.index("function offerChip(item)"):]
+    chip = chip[:chip.index("\n}\n")]
+    # Before the tap: no destination, no live control.
+    assert "command === 'open.entity' ? (!item.kind || !item.ref)" in chip
+    assert "command === 'open.area' ? !item.area" in chip
+    assert "button.className = 'rail-chip is-off';" in chip
+    assert "button.setAttribute('aria-disabled', 'true');" in chip
+    assert "rail-why" in chip, "a disabled offer says nothing about why"
+    # After the tap: the refusal settles the control the finger touched.
+    assert "if (answered && answered.ok !== false) return;" in chip
+    assert "button.classList.add('is-off');" in chip
+    assert "notifyControl(said, button);" in chip
+    # Which needs both openers to report their outcome, rather than returning nothing.
+    for opener in ("async function openEntity(kind, ref, label)", "async function openArea(area, fallback)"):
+        body = APP_JS[APP_JS.index(opener):]
+        body = body[:body.index("\n}\n")]
+        assert "return opened" in body, f"{opener} tells its caller nothing"
+    # And the renderer's own shape, so the collision suite's "every control either works, or
+    # says why it cannot" sweep holds this to the same rule as a chip drawn in web/ui.js.
+    assert "label.className = 'rail-label';" in chip
+
+
 def test_each_half_says_which_it_is_what_it_is_about_and_what_it_is_doing():
     """§17. And never two contradictory things at once: the Phase 5 visual pass found a chip
     reading "EMPTY To go out" — it holds nothing AND it is about its parent's working set.

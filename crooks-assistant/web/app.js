@@ -1452,6 +1452,9 @@ async function openEntity(kind, ref, label) {
     if (historyIndex >= 0) offerBeside(opened.answer || opened.detail || '', opened.changed);
     else drawEmptyHalf({ answer: opened.answer || opened.detail || '', changed: opened.changed });
   }
+  // Handed back so the control that was tapped can settle ITSELF (§6, D-6): a chip that has
+  // just been refused must stop being a live control, and must say why on itself.
+  return opened || null;
 }
 
 // One semantic command, posted the way the tablet posts everything else: which command, and
@@ -1939,6 +1942,73 @@ function drawBranchHead() {
   node.hidden = false;
 }
 
+/* One way out of a half, as a control that either WORKS or SAYS WHY IT CANNOT. §6/D-6:
+ * `turn_dd093f86b92d` posted `open.entity`, was refused `not_held`, and the half then drew
+ * `half_empty` — the control had been offered before its destination was known to exist, and
+ * pressing it produced a screen that said the half was empty. §18 puts it plainly: a control
+ * is drawn when its destination is resolved, or drawn disabled with the reason on it.
+ *
+ * Two halves, because there are two ways a destination can fail to be there:
+ *
+ *   BEFORE the tap   the offer carries no destination at all — an `open.entity` with no kind
+ *                    or no ref, an `open.area` with no area. Drawn disabled, saying so, rather
+ *                    than drawn live over nothing.
+ *   AFTER the tap    the Mac refuses. The chip is disabled THEN, with the Mac's own reason
+ *                    beside it, so the owner is not left pressing a control that has already
+ *                    told him no once. The refusal's own ways forward are drawn by
+ *                    `openEntity` as usual; this is about the control he touched.
+ */
+function offerChip(item) {
+  const command = String((item && item.command) || '');
+  /* The same shape the renderer draws a rail chip in (web/ui.js): a `.rail-label`, `is-off`
+     and `aria-disabled` when it cannot be used, and the reason in `.rail-why` beside the
+     label. The collision suite's "every control either works, or says why it cannot" sweep
+     reads exactly that, so an offer drawn here is held to the rule one drawn there is. */
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.offer = command;
+  const label = document.createElement('span');
+  label.className = 'rail-label';
+  label.textContent = String((item && item.words) || '—').slice(0, 40);
+  button.appendChild(label);
+  const why = (reason) => {
+    const said = document.createElement('span');
+    said.className = 'rail-why';
+    said.textContent = reason;
+    button.appendChild(said);
+    button.title = reason.slice(0, 120);
+  };
+  const missing = command === 'open.entity' ? (!item.kind || !item.ref)
+    : command === 'open.area' ? !item.area
+      : true;
+  if (missing) {
+    button.className = 'rail-chip is-off';
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    why(command === 'open.entity' ? 'the Mac did not say which record'
+      : command === 'open.area' ? 'the Mac did not say which place'
+        : 'this build does not know that command');
+    return button;
+  }
+  button.className = 'rail-chip';
+  button.setAttribute('aria-disabled', 'false');
+  button.addEventListener('click', async () => {
+    if (button.disabled) return;
+    const answered = command === 'open.entity'
+      ? await openEntity(item.kind, item.ref, item.label)
+      : await openArea(item.area, '');
+    if (answered && answered.ok !== false) return;
+    // Refused. It stops being a control, and it says why where the eye already is.
+    button.classList.add('is-off');
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    const said = String((answered && (answered.answer || answered.detail)) || 'The Mac would not open that.');
+    why(said.slice(0, 60));
+    notifyControl(said, button);
+  });
+  return button;
+}
+
 // A way forward, as the Mac named it: what this half holds, said in a line, and each thing
 // that can be done from here as a control. The Mac decides the words and the commands
 // (`app/commands.py:offer_for`); this only draws them. The alternative the owner met was a
@@ -1960,18 +2030,7 @@ function wayForward(words, changed) {
   if (offer.length) {
     const rail = document.createElement('div');
     rail.className = 'rail';
-    for (const item of offer) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'rail-chip';
-      button.textContent = String(item.words || '').slice(0, 40);
-      button.dataset.offer = String(item.command || '');
-      button.addEventListener('click', () => {
-        if (item.command === 'open.entity') openEntity(item.kind, item.ref, item.label);
-        else if (item.command === 'open.area') openArea(item.area, '');
-      });
-      rail.appendChild(button);
-    }
+    for (const item of offer) rail.appendChild(offerChip(item));
     panel.appendChild(rail);
   }
   return panel;
@@ -3245,11 +3304,13 @@ async function openArea(area, fallback) {
       el.heard.textContent = '';
       if (opened.answer) el.answer.textContent = opened.answer;
       T.record('render', { name: `dock:${area}`, items: opened.ui.map((i) => i && i.type), ms: opened.served_ms });
-      return;
+      return opened;
     }
   }
   T.record('chip_ask', { text: fallback.slice(0, 60), name: `dock:${area}:fallback`, detail: opened ? String(opened.code || opened.detail || '').slice(0, 80) : 'offline' });
-  if (fallback) { submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false); return; }
+  // A dock tap has a sentence to fall back on, so something DID happen: the caller is told so
+  // (§6) rather than being left to treat a working control as a refused one.
+  if (fallback) { submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false); return { ok: true, fallback: true }; }
   // No sentence to fall back on — the tap came from a half's own way-forward rail rather than
   // from the dock. Say what happened, and leave the ways forward the refusal named on screen:
   // `landing_unavailable` reached the owner as one sentence he could not act on.
@@ -3258,6 +3319,8 @@ async function openArea(area, fallback) {
     if (historyIndex >= 0) offerBeside(opened.answer || opened.detail || '', opened.changed);
     else drawEmptyHalf({ answer: opened.answer || opened.detail || '', changed: opened.changed });
   }
+  // Handed back so the control that was tapped can settle itself (§6, D-6).
+  return opened || null;
 }
 el.backBtn.addEventListener('click', goBack);
 if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);
