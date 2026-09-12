@@ -60,12 +60,6 @@
         <p id="answer" class="answer" aria-live="polite"></p>
         <p id="errline" class="errline"></p>
       </div>
-      <!-- WORKSPACE notifications while the orb is the screen — the draft that saved, the
-           half that divided. Under the caption and above the halves, in flow. -->
-      <div id="notes-orb" class="notes notes-workspace" role="status" aria-live="polite" hidden></div>
-      <!-- The two halves, named, when there are two. The gestures are the quick way; this is
-           the way that always works, and the way a half working in the background says so. -->
-      <div id="branch-bar" class="branch-bar" hidden></div>
     </section>
 
     <section id="context" class="context" aria-label="Context">
@@ -78,12 +72,18 @@
              LIST, and Back walks the TRAIL. Back used to be wired to workflow.previous
              whenever a set was open, so one pair of buttons drove two different cursors and
              the owner reported that Back and Next had both regressed. Previous is the list's
-             own way back, beside the list's own way on. -->
-        <button id="prev-btn" class="chip chip-step" type="button" hidden aria-label="The one before it in this list">‹</button>
+             own way back, beside the list's own way on.
+
+             It says "Previous", in words. It was a bare ‹ glyph, 44px wide, greyed at the start
+             of a list, and the Phase 5 visual pass called it "a tiny unlabelled chip that means
+             nothing to anyone" — four kinds of control in one row and this the only one with no
+             name on it. Next says Next; this says Previous. -->
+        <button id="prev-btn" class="chip chip-step" type="button" hidden aria-label="The one before it in this list">Previous</button>
         <button id="next-btn" class="chip" type="button" hidden>Next</button>
-        <!-- The halves, when cards are up: Split with one, the two named with Merge and
-             Close when there are two. The same chips sit under the orb on the orb screen. -->
-        <span id="branch-rail" class="branch-rail" aria-label="Halves"></span>
+        <!-- NO branch chrome here. It lived in this row until Phase 5 and made it six
+             heterogeneous controls wide, which at 601 CSS px ran off the right edge and cut the
+             second half's chip in half. The halves have their own band (#branch-zone), which is
+             §8's zoning: VOICE, NAVIGATION and SPLIT-BRANCH do not share a row. -->
         <div id="stack" class="stack" aria-label="Active context"></div>
       </nav>
       <!-- What the next sentence will be applied to, while the Mac is listening for it. It
@@ -115,8 +115,14 @@
       <p id="timings" class="timings" hidden></p>
     </section>
 
-    <!-- The hold-to-speak region. Transparent and much larger than anything it sits over: the
-         whole stage in orb mode, a dock along the bottom in context mode. -->
+    <!-- ZONE 3 · VOICE, and nothing else. Transparent, bounded, and — since D-1 — deliberately
+         NOT the whole screen. On the idle screen it is the orb's own band: the orb zone above
+         the branch band, holding the orb and five lines of text and no control of any kind. In
+         context mode it is the 252px pill's slot in the middle of the dock band, between the
+         dock's two pairs of icons, rather than the full width of it.
+         `body[data-mode="orb"] .talk{inset:0}` — a voice target the size of the viewport — was
+         the mechanism of D-1 and is gone. The orb itself (#orb-frame) is the other voice
+         target, and the two of them are all there is. -->
     <button id="talk" class="talk" type="button" aria-label="Hold to speak">
       <span id="talk-label" class="talk-label">Hold to speak</span>
     </button>
@@ -147,6 +153,29 @@
     </nav>
 
   </main>
+
+  <!-- ZONE 4 · WORKSPACE MESSAGES while the orb is the screen — the draft that saved, the half
+       that divided. Under the orb's caption and above the halves, in flow, and (D-1) a band of
+       the APP rather than a child of the orb zone: it carries a Dismiss button, and inside the
+       orb zone that button sat under the voice target with the branch chips. -->
+  <div id="notes-orb" class="notes notes-workspace" role="status" aria-live="polite" hidden></div>
+
+  <!-- ZONE 5 · BRANCH CHROME. The two halves, named, when there are two; Split when there is
+       one. The gestures are the quick way; this is the way that always works, and the way a
+       half working in the background says so.
+
+       It is a band of the APP, a sibling of the stage and the footer, and that placement is
+       the fix for D-1 rather than a tidy-up. It used to be the last child of
+       <section id="orb-zone">, which is `position:relative; z-index:1` — a stacking context —
+       while #talk was its sibling at z-index 3 and, on the idle screen, `inset:0`. No z-index
+       on a chip could escape its parent's cap, so the transparent voice target was painted and
+       hit-tested over Split, Merge and Close, and 63 taps on them in one evening became
+       recordings. Out here there is no cap to escape and nothing above it: #talk is positioned
+       inside the stage and cannot reach this band at all. Same precedent as `.bottom`
+       (web/style.css) — "why can't I click orders unless you're already thinking". -->
+  <section id="branch-zone" class="branch-zone" aria-label="Halves">
+    <div id="branch-bar" class="branch-bar" hidden></div>
+  </section>
 
   <footer class="bottom">
     <button id="attention" class="attention" type="button" hidden>
@@ -216,6 +245,7 @@
 <script src="/static/orb.js"></script>
 <script src="/static/audio-viz.js"></script>
 <script src="/static/collide.js"></script>
+<script src="/static/touch.js"></script>
 <script src="/static/telemetry.js"></script>
 <script src="/static/notify.js"></script>
 <script src="/static/action-state.js"></script>

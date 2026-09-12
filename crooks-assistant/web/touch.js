@@ -67,6 +67,7 @@
 
   const SPLIT_TRAVEL = 70;    // CSS px of change in separation; about 9mm on the Tab A
   const TOL = 2;              // px of overlap in BOTH axes before two rectangles count
+  const STALE_MS = 90000;     // a pointer still "down" this long was never lifted at all
 
   /* Everything a finger presses, as one selector. The page passes the match in; this is here
      so the page and the tests agree on the list. `#talk` and `#orb-frame` are deliberately
@@ -214,6 +215,7 @@
      * back with `first: false` and nothing happens twice. */
     function down(hit) {
       const id = hit && hit.pointerId !== undefined ? hit.pointerId : 1;
+      sweep();
       const existing = points.get(id);
       if (existing) {
         return { owner: existing.owner, pointerId: id, first: false, voice: false,
@@ -311,6 +313,17 @@
         paired: wasPaired, remaining: points.size,
         ms: Math.max(0, Math.round(clock() - point.at)),
       };
+    }
+
+    /* A pointer the browser stopped telling us about — a capture lost with no lift, a gesture
+       Android took for itself. One left in the map would pair with the next finger for the
+       rest of the session, and the voice would simply stop working with nothing on screen to
+       say why. Nothing a thumb does takes STALE_MS, so anything that old was never lifted. */
+    function sweep() {
+      if (!points.size) return;
+      const cutoff = clock() - STALE_MS;
+      for (const [id, point] of Array.from(points)) if (point.at < cutoff) points.delete(id);
+      if (!points.size) pair = null;
     }
 
     // Everything down, dropped, submitting nothing. For a mode change, a reset, a blur.
