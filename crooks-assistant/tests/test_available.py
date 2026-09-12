@@ -20,29 +20,30 @@ def ids(actions, *, enabled=None):
     return [a["id"] for a in actions if enabled is None or a["enabled"] is enabled]
 
 
-def test_an_open_paid_order_offers_one_loud_thing_and_one_behind_it():
-    """A paid order waiting to ship needs shipping: fulfil leads, the address sits behind it.
+def test_an_open_paid_order_offers_what_it_needs_and_no_cancel_nobody_asked_for():
+    """A paid order waiting to ship needs shipping: fulfil leads, the address beside it.
 
-    CHANGED IN PHASE 5 (§25), and the reason is the live session's own count rather than a
-    judgement: this rail exposed fulfil, address, cancel AND note on every order card — four
-    enabled chips, four exposures each — and one tap landed on any of them all evening.
-    Phase 4's answer was to demote two of the four; the brief's answer is to remove rather
-    than demote, because a chip nobody uses does not earn its space at half weight either.
-    MAX_ENABLED is 2 and MAX_PRIMARY is 1, and `note` is gone from the rail entirely.
+    CHANGED IN PHASE 5 (§25). The chip that moved is `cancel`: it was the third thing on
+    every open order card — two renders, nought taps, and the reddest and least reversible
+    thing on the rail — and an order needs cancelling because a PERSON said so, never
+    because of its own state. So it now ranks LAST unless the customer's own email asks for
+    it (`context_rank`), and on any order with something else to offer, last means off the
+    card. The refund takes the place it was holding.
 
-    WHAT WAS NOT WEAKENED: every assertion about what a chip SAYS, what it risks, and what
-    mode it is in still holds, and cancel is now asserted to be ABSENT rather than present —
-    which is the stronger claim.
+    Note stays, last and at half weight, and this test says why: it is the only chip that
+    both primes a sentence and names the spoken control it arms, which makes it the one way
+    to bind the microphone to THIS order with a thumb (§20, D-11). Five renders and nought
+    taps justify its WEIGHT, not its deletion.
     """
     actions = available_actions(OPEN, ALL)
-    assert ids(actions, enabled=True) == ["fulfil", "address"]
-    assert [a["priority"] for a in actions if a["enabled"]] == ["primary", "secondary"]
-    assert all(a["mode"] == "ask" for a in actions if a["id"] != "address")
-    assert "cancel" not in ids(actions), "removed, not demoted: two renders, nought taps"
-    assert "note" not in ids(actions), "five renders, nought taps, and never what the order needs"
+    assert ids(actions, enabled=True) == ["fulfil", "address", "refund", "note"]
+    assert [a["priority"] for a in actions if a["enabled"]] == ["primary", "primary", "secondary", "secondary"]
+    assert all(a["mode"] == "ask" for a in actions if a["id"] not in ("address", "email"))
+    assert "cancel" not in ids(actions), "nothing about this order asks to be cancelled"
+    assert next(a for a in actions if a["id"] == "note")["family"] == "order.add_note"
     assert next(a for a in actions if a["id"] == "fulfil")["instruction"] == "Fulfil order 1938"
     assert next(a for a in actions if a["id"] == "fulfil")["risk"] == "red"
-    assert "email" not in ids(actions), "two places, taken by what the order needs"
+    assert "email" not in ids(actions), "three places, taken by what the order needs"
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {}
 
@@ -56,7 +57,7 @@ def test_the_email_chip_primes_a_draft_and_is_amber_for_that_reason():
 def test_a_shipped_order_cannot_be_cancelled_or_readdressed_and_says_why():
     shipped = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}])
     actions = available_actions(shipped, ALL)
-    assert ids(actions, enabled=True) == ["refund", "email"]   # note removed in Phase 5, §25
+    assert ids(actions, enabled=True) == ["refund", "email", "note"]
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {"cancel": "already shipped", "fulfil": "already shipped"}
 
@@ -64,7 +65,7 @@ def test_a_shipped_order_cannot_be_cancelled_or_readdressed_and_says_why():
 def test_a_cancelled_or_refunded_order_offers_almost_nothing():
     cancelled = dict(OPEN, cancelled_at="2026-09-08T10:00:00Z", payment="REFUNDED", refundable=False, money={"refunded": "60.00 GBP", "total": "60.00 GBP"})
     actions = available_actions(cancelled, ALL)
-    assert ids(actions, enabled=True) == ["email"]   # note removed in Phase 5, §25
+    assert ids(actions, enabled=True) == ["email", "note"]
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {"cancel": "already cancelled", "refund": "fully refunded"}
     part = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}], payment="PARTIALLY_REFUNDED", refundable=False, money={"refunded": "20.00 GBP", "total": "60.00 GBP"})
@@ -79,12 +80,9 @@ def test_an_unpaid_order_is_not_fulfilled_or_refunded():
 
 
 def test_a_change_that_is_not_built_or_not_granted_is_not_a_chip():
-    # `order_note_append` no longer produces a chip at all (note was removed from the rail in
-    # Phase 5, §25), so a Mac that can ONLY append a note has an empty rail — which is the
-    # same rule as before, applied to one fewer action.
     only_note = {"order_note_append": READY, "order_cancel": {"state": "blocked", "detail": "blocked — Shopify write_orders scope missing"}}
     actions = available_actions(OPEN, only_note)
-    assert ids(actions) == []
+    assert ids(actions) == ["note"]
     assert available_actions(OPEN, {}) == [] and available_actions(OPEN, None) == []
     unknown = {"order_cancel": {"state": "unknown", "detail": "ready, unverified"}}
     assert ids(available_actions(OPEN, unknown)) == ["cancel"], "a scope the Mac could not check is offered; Shopify decides the tap"
@@ -105,12 +103,11 @@ def test_the_context_ranks_the_rail_a_customers_email_first_and_an_old_order_to_
 
     wrote = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Order 1938", "snippet": "any news on when it ships?"}]})
     assert context_rank(wrote) == ["email"]
-    # TWO places now rather than three-plus-note (Phase 5, §25): the reply the customer is
-    # waiting on, and the shipping the order is waiting on. The ranking itself is unchanged.
-    assert ids(available_actions(wrote, ALL), enabled=True) == ["email", "fulfil"], "the reply leads; the rest drop off"
+    assert ids(available_actions(wrote, ALL), enabled=True) == ["email", "fulfil", "address", "note"], "the reply leads; the cancel drops off the three"
     cancelling = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Please cancel 1938", "snippet": "I ordered the wrong size"}]})
     assert context_rank(cancelling) == ["cancel", "email"]
-    assert ids(available_actions(cancelling, ALL), enabled=True) == ["cancel", "email"]
+    # The one order that DOES offer a cancel: its own customer asked for one, in writing.
+    assert ids(available_actions(cancelling, ALL), enabled=True) == ["cancel", "email", "fulfil", "note"]
     moving = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "New address", "snippet": "can you send it to my work address instead"}]})
     assert context_rank(moving) == ["address", "email"]
     shipped = dict(OPEN, fulfillment="FULFILLED", items=[{"unfulfilled_quantity": 0}], fulfillments=[{"status": "SUCCESS"}], email={"threads": [{"sender_match": True, "subject": "Refund", "snippet": "I'd like a refund please"}]})

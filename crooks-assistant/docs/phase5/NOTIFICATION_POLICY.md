@@ -96,6 +96,38 @@ not been told where it belongs.
 
 ---
 
+## WHAT THIS POLICY DEPENDS ON, AND THE ONE PLACE IT IS NOT YET TRUE
+
+Refusing a message because "the place the state lives already shows it" is only right if that
+place **actually shows it**. Every muted code is therefore a debt owed by some other surface,
+and the debt is listed here so that a broken surface reads as a broken surface rather than as
+a quiet tablet:
+
+| muted code | the surface that owes it | proved by |
+|---|---|---|
+| `draft_saved`, `saved`, `applied`, `verified`, `committed` | the action surface's own state and label | `web/action-state.js`, `tests/web/action-state.test.js`, `scripts/browser/action_state.js` |
+| `divided`, `merged`, `split`, `closed` | the orb, and the branch chips under it | `scripts/browser/split.js`, `scripts/browser/tablet.js` |
+| `opened`, `order_opened`, `navigated`, `home`, `back`, `next` | the screen that came back | `scripts/browser/experience.js` |
+| `tab`, `tab_changed` | the selected tab | `tests/web/ui.test.js` |
+| `archived` | the row leaving the queue | `scripts/browser/email.js` |
+| **`ready`** | **the branch chip saying `READY`** | **NOT YET PROVED — see below** |
+
+**The open one.** The gate workstream's screenshot matrix reports shot 22, *"split branch
+ready"*, as MISSING: the other half answered while the owner was looking elsewhere and
+**nothing on the selector said so**. `ready` is muted here on the strength of §10 — *"a branch
+result finishing → the branch chip says READY"* — so until that chip does say it, this policy
+is suppressing a message for a state nothing is displaying. The fix belongs to the branch
+chips (`web/app.js drawBranchBar`, and `.branch-chip.is-ready` in `web/style.css`), not here:
+the answer to a state with no home is to give it a home, never to float a bubble over
+unrelated work. Whoever closes shot 22 closes this row.
+
+The same discipline applies to the branch strip itself, which the gate measured at **Merge on
+x=590 and Close on x=664 of a 601px screen** — a 571px strip asked to hold 807px of controls,
+with two of them substantially off the glass. A control that is off the screen shows no state
+at all, so that measurement is part of this table's ledger too.
+
+---
+
 ## THE FOUR REFUSALS
 
 Applied by `check(spec)` in `web/notify.js` to **every** message before it is built. `check` is exported

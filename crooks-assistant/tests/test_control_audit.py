@@ -9,9 +9,27 @@ two, and each test is anchored to a number from the live tablet session of 11 Se
 §25 · THE RAIL, AND THE SESSION'S OWN COUNT
     Four enabled actions on every order card — fulfil, address, cancel, note — four exposures
     each, sixteen chip-exposures in one evening, and ONE tap on any of them (`address`, once).
-    "Exposed but never used: cancel, fulfil, note." Phase 4 answered by demoting two of the
-    four to half weight. This pass removes: MAX_ENABLED 3->2, MAX_PRIMARY 2->1, and `note` is
-    not a chip at all.
+    "Exposed but never used: cancel, fulfil, note."
+
+    THE OBVIOUS ANSWER WAS TRIED AND IS WRONG, and the record of that is the most useful part
+    of this audit. Cutting the rail to two chips with one at full weight, and deleting `note`
+    and the thread's `dictate` outright, breaks three things the product needs and the gates
+    already assert:
+
+      * `note` is the only chip on an order carrying a `family`, so tapping it is the ONLY
+        touch path to binding the microphone to that order (§20, D-11,
+        `scripts/browser/experience.js`). Its numbers justify its weight, not its deletion.
+      * `dictate` is the same door on a thread, and the composer's own Dictate only exists
+        once a composer is open (`scripts/browser/tablet.js`).
+      * a real order — unfulfilled, paid, the customer has written, the address needs fixing
+        — owes four things, and two slots dropped `address`, which is the one chip the owner
+        DID tap (`scripts/browser/email.js`).
+
+    So the count is not the defect; the weight and the relevance are. What this pass removes
+    from the rail is `cancel` on any order whose own context does not ask for it — the
+    reddest, least reversible chip, two renders and nought taps — and everything the renderer
+    was drawing that was not a control at all. §25 has five questions and "remove it" is one
+    of five answers.
 
 §26 · HUMAN LANGUAGE, ALWAYS
     "Order #1962", never `gid://shopify/Order/…`, and never a control primed with a sentence
@@ -28,28 +46,34 @@ does it visually compete with something more important. Usage is the live sessio
 of renders and taps. This table is the record; the tests below are the parts of it that can be
 enforced.
 
-  CONTROL            USED          VERDICT        WHERE IT WENT
+  CONTROL            USED          VERDICT        WHERE IT WENT / WHY IT STAYED
   ─────────────────  ────────────  ─────────────  ──────────────────────────────────────────
-  Note (order rail)  5 rendered    REMOVED        voice ("add a note to order 1938") and
-                     0 tapped                     `owner_feedback`, which answers "make a
-                                                  note" with no order open at all
-  Cancel             2 / 0         REMOVED from   voice; and behind the rail's disclosure,
-                                   the enabled    disabled with its reason, on the orders
-                                   set            where the owner would ask and be told no
-  Fulfil             2 / 0         KEPT · 1       the single primary slot on an unfulfilled
-                                   primary        paid order: it is what the order needs
-  Address            2 / 1 ← the   KEPT           the secondary slot; `mode=open`, so a tap
-                     only tap on                  reaches the address screen rather than a
-                     the rail all                 microphone
-                     evening
-  Refund             3 / 0         KEPT           primary when the customer's own email asks
-                                                  for one (`context_rank`), else dropped
+  Cancel             2 / 0         REMOVED from   ranked last unless the customer's own
+                                   the enabled    email asks for it (`context_rank`), and on
+                                   set            an order with anything else to offer, last
+                                                  means off the card. Still reachable by
+                                                  voice, and still shown with its one reason
+                                                  when it CANNOT be done (§19).
+  Note (order rail)  5 / 0         KEPT, last     removal was tried and reverted: it is the
+                                   and never      only chip on an order carrying a `family`,
+                                   loud           so it is the one touch path to binding the
+                                                  microphone to that order (§20, D-11).
+  Dictate (thread)   n/a (Phase 4) KEPT, behind   removal was tried and reverted: the
+                                   the            composer's own Dictate exists only once a
+                                   disclosure     composer is open; this is the only way to
+                                                  bind the microphone to a thread before it.
+  Fulfil             2 / 0         KEPT · leads   what an unfulfilled paid order needs, and
+                                   by context     the gate asserts it leads on order 1938
+  Address            2 / 1 ← the   KEPT           `mode=open`, so a tap reaches the address
+                     only tap on                  screen rather than a microphone. Cutting
+                     the rail all                 the rail to two chips dropped it, which is
+                     evening                      why the rail holds three plus the note.
+  Refund             3 / 0         KEPT           leads when the customer's own email asks
+                                                  for one; takes the place cancel had
   Email              3 / 0         KEPT           `mode=open` → the composer
-  Reply (thread)     24 / 0        KEPT · 1       primary; Phase 4 made it open a composer
-                                   primary        instead of arming a microphone
-  Archive (thread)   24 / 0        KEPT           behind the disclosure; stage → gesture
-  Dictate (thread)   n/a (Phase 4) REMOVED        the composer's own Dictate — `voice.bind`,
-                                                  same family, same ref, one tap deeper
+  Reply (thread)     24 / 0        KEPT · leads   Phase 4 made it open a composer instead of
+                                                  arming a microphone
+  Archive (thread)   24 / 0        KEPT           stage → gesture, at full weight beside it
   a chip with no     —             REMOVED        not drawn (it rendered as an em dash)
   label
   a chip the page    —             REMOVED        not drawn (D-6: a control offered before
@@ -69,6 +93,11 @@ enforced.
   "Merged. N came    2 of 5        REMOVED        one orb, one chip, and the deck has them
   back."
 
+THE LESSON, since it cost a gate run: a control that nobody taps is not the same thing as a
+control that nobody needs. Ask what is the ONLY WAY to reach a capability before removing the
+thing that reaches it — "exposed but never used" is an argument about weight and placement,
+and only sometimes an argument about existence.
+
 AUDITED AND KEPT, with the reason, so the next pass does not re-litigate them:
 
   #conn (the header's reachability pill) — not a control and never tapped, but it is the only
@@ -78,6 +107,22 @@ AUDITED AND KEPT, with the reason, so the next pass does not re-litigate them:
   MAC's reachability of each service, not the tablet's of the Mac.
   familyRow's fallback to a raw key or a SCREAMING_SNAKE state — the settings sheet is a
   debug surface, where §26 permits a technical name.
+
+THE LOUDEST §25 FINDING IN THE WHOLE PASS, AND IT IS NOT THIS WORKSTREAM'S TO FIX. The gate
+workstream measured the branch strip on the tablet's own 601px screen: **Merge is drawn at
+x=590 and Close at x=664** — a 571px strip asked to hold 807px of controls, with two of its
+four substantially OFF THE GLASS. That is not clutter to be rearranged; it is a strip whose
+contents do not fit by design, and §25's answer to a control that does not fit is to remove
+one, not to shrink four. It is `web/app.js drawBranchBar` and the `#branch-bar` / `#branch-rail`
+layout, which workstream A owns this pass (D-1 is the P0 there). Recorded here with the
+number so it is not lost, and cross-referenced from
+`docs/phase5/NOTIFICATION_POLICY.md` — a control that is off the screen shows no state, which
+is the premise every muted notification code depends on.
+
+Related, same owner: the gate's shot 22 ("split branch ready") is MISSING — the other half
+answered while the owner was elsewhere and nothing on the selector said so. This workstream
+MUTES the `ready` notification on the strength of §10 ("the branch chip says READY"), so that
+chip owes the state. The policy document lists it as the one row that is not yet proved.
 
 NOT FIXED, AND OWNED ELSEWHERE (recorded so they are not lost):
   `.rail-why` is 11px — that is kicker size for text §19 makes essential. Typography in
@@ -154,16 +199,21 @@ EVERY_STATE = [OPEN, SHIPPED, CANCELLED, UNPAID, ASKING]
 def test_an_order_card_does_not_expose_four_equally_weighted_enabled_actions(order):
     """The defect, stated as the session measured it.
 
-    Four enabled chips on every order card, sixteen exposures, one tap. Two of those four
-    were removed rather than demoted — `note` from the rail entirely, and whatever the
-    order's state does not put in its first two — and only ONE is drawn at full weight, so
-    the card's answer to "what can I do" is one thing rather than a shrug.
+    Four enabled chips at four exposures each, sixteen chip-exposures, one tap. What is
+    forbidden is four of them at the SAME weight, which is how the card answered "what can I
+    do" with a shrug: at most two are drawn at full weight, the context decides which two,
+    and every one of the rest sits behind one disclosure. And `cancel` — the reddest chip,
+    two renders, nought taps — is not on the card at all unless the order asks for it.
     """
     actions = available_actions(order, CAPS)
     enabled = [a for a in actions if a["enabled"]]
     primary = [a for a in enabled if a["priority"] == "primary"]
-    assert len(enabled) <= MAX_ENABLED == 2, f"{[a['id'] for a in enabled]}"
-    assert len(primary) <= MAX_PRIMARY == 1, f"one loud thing, not a menu: {[a['id'] for a in primary]}"
+    assert len(primary) <= MAX_PRIMARY == 2, f"not a menu: {[a['id'] for a in primary]}"
+    assert len(enabled) - len(primary) >= 1 or len(enabled) <= MAX_PRIMARY, \
+        f"if there are more than two, the rest are disclosed: {[(a['id'], a['priority']) for a in enabled]}"
+    # Never four at one weight — which is the thing the session measured.
+    assert len(primary) < 4 and len([a for a in enabled if a["priority"] == "secondary"]) <= MAX_ENABLED, \
+        f"{[(a['id'], a['priority']) for a in enabled]}"
     # A disabled chip never sits beside a live one, and never leads.
     for action in actions:
         if not action["enabled"]:
@@ -174,32 +224,72 @@ def test_an_order_card_does_not_expose_four_equally_weighted_enabled_actions(ord
             assert len(action["reason"]) <= 40, action["reason"]
 
 
-def test_note_is_not_a_chip_on_any_order_in_any_state():
-    """Five renders, nought taps, and first on every card whatever the order was. It is not
-    what an order needs, it is what is left to offer when the order needs nothing.
+def test_cancel_is_not_on_an_order_that_nobody_asked_to_cancel():
+    """THE REMOVAL §25's evidence supports. Two renders, nought taps, and it is the reddest
+    and least reversible thing on the rail. An order needs cancelling because a PERSON said
+    so — which `context_rank` reads out of the customer's own email — and nothing about an
+    order's own state asks for it.
 
-    §19 · a control that is REMOVED must not leave a spoken claim that it exists. Nothing
-    else claims it: "add a note to order 1938" is a sentence the Mac still answers, and
-    `owner_feedback` answers "make a note" with no order open at all."""
+    §19 · a control that is removed must not leave a spoken claim that it exists, and it must
+    not go silent where the owner would ask. Both hold: "cancel order 1938" is a sentence the
+    Mac still answers, and a cancel that CANNOT be done still appears with its one reason."""
+    # A paid order with real work to do does not carry it at all.
+    assert "cancel" not in [a["id"] for a in available_actions(OPEN, CAPS) if a["enabled"]]
+    # And nowhere, in any state, is it ever drawn at full weight unless the order asks:
+    # an unpaid order that has not shipped is one you MIGHT cancel, so it stays reachable —
+    # behind the disclosure, after the things that are not irreversible.
     for order in EVERY_STATE:
-        ids = [a["id"] for a in available_actions(order, CAPS)]
-        assert "note" not in ids, f"{ids}"
-    # And it is gone from the rail's own vocabulary, not merely unranked: a Mac whose only
-    # granted write is the note has an empty rail rather than a one-chip one.
-    assert available_actions(OPEN, {"order_note_append": READY}) == []
+        for action in available_actions(order, CAPS):
+            if action["id"] == "cancel" and action["priority"] == "primary":
+                raise AssertionError(f"a red irreversible chip, loud, unasked: {order.get('payment')}")
+    # The customer asked, in writing. Now it leads.
+    asked = dict(OPEN, email={"threads": [{"thread_id": "t1", "sender_match": True,
+                                           "subject": "please cancel", "snippet": "I ordered the wrong size."}]})
+    cancel = next(a for a in available_actions(asked, CAPS) if a["id"] == "cancel")
+    assert (cancel["enabled"], cancel["priority"]) == (True, "primary")
+    # And where it cannot be done, it still says so rather than vanishing.
+    off = {a["id"]: a["reason"] for a in available_actions(SHIPPED, CAPS) if not a["enabled"]}
+    assert off.get("cancel") == "already shipped"
+    # Ranked, not filtered: a Mac whose only granted write is the cancel still offers it,
+    # because there is nothing else to offer.
+    assert [a["id"] for a in available_actions(OPEN, {"order_cancel": READY})] == ["cancel"]
 
 
-def test_dictate_is_not_a_second_control_for_a_thing_the_composer_already_does():
-    """§25 · "is there a better contextual location?" There was, one tap deeper and already
-    built: the composer Reply opens carries `voice.bind` with this thread's own family and
-    ref (tests/test_email_workspace.py). Two controls, one behaviour."""
+def test_note_stays_and_is_the_only_door_it_is_the_only_one_to():
+    """Removal was TRIED and reverted, which is the useful half of this audit.
+
+    Five renders and nought taps justify its weight — last, and never at full weight, which
+    Phase 4 already did — but not its deletion: it is the only chip on an order carrying a
+    `family`, so tapping it is the one way to bind the microphone to THIS order with a thumb
+    (§20 — voice is intent, touch is precision, and they are two controls). A chip nobody taps
+    is not the same thing as a chip nobody needs."""
+    for order in EVERY_STATE:
+        by_id = {a["id"]: a for a in available_actions(order, CAPS)}
+        assert "note" in by_id, [a["id"] for a in available_actions(order, CAPS)]
+        assert by_id["note"]["priority"] == "secondary", "never at full weight"
+        assert by_id["note"]["family"] == "order.add_note"
+        assert by_id["note"]["mode"] == "ask", "it primes a sentence, which is what arms the family"
+    # It is last, always: it is what is left to offer, not what the order needs.
+    ids = [a["id"] for a in available_actions(OPEN, CAPS) if a["enabled"]]
+    assert ids[-1] == "note", ids
+
+
+def test_dictate_stays_because_the_composers_own_dictate_is_not_reachable_yet():
+    """§25 · "is there a better contextual location?" — asked, and the answer was no.
+
+    The composer that Reply opens does carry a Dictate with this thread's own family and ref
+    (tests/test_email_workspace.py), so this chip looks like a duplicate. It is not: that one
+    exists only once a composer is open, and this is the only way to bind the microphone to a
+    thread before then. Removing it closed the only door, which the browser gate caught by
+    tapping `.rail-chip[data-mode="ask"][data-family="email.reply"]`."""
     rail = available_email_actions({"thread_id": "t1"}, EMAIL_CAPS, row_actions=list(ARCHIVE_ROW))
     ids = [a["id"] for a in rail]
-    assert "dictate" not in ids, ids
-    assert ids == ["reply", "email_archive"]
-    assert [a["priority"] for a in rail] == ["primary", "secondary"]
-    # Voice is not lost: the chip that leads still names the spoken control it arms.
-    assert rail[0]["family"] == "email.reply"
+    assert ids == ["reply", "email_archive", "dictate"]
+    assert [a["priority"] for a in rail] == ["primary", "primary", "secondary"]
+    dictate = rail[-1]
+    assert (dictate["mode"], dictate["family"]) == ("ask", "email.reply")
+    # And the one that leads reaches a screen rather than a microphone (Phase 4, D-11).
+    assert (rail[0]["mode"], rail[0]["command"]) == ("open", "compose.reply")
 
 
 def test_a_rail_is_weighed_in_exactly_one_place():

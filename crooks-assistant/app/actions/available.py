@@ -34,26 +34,37 @@ from app.context.order import order_digits
 
 # The most a card offers, and the most it offers at FULL weight.
 #
-# PHASE 5 · §25, with the live session as the evidence rather than a judgement. The rail
-# exposed `fulfil`, `address`, `cancel` and `note` on EVERY order card — four enabled
-# actions, four exposures each, sixteen chip-exposures in one evening — and exactly one tap
-# landed on any of them (`address`, once). "Exposed but never used: cancel, fulfil, note."
+# PHASE 5 · §25, AND WHAT THE AUDIT ACTUALLY FOUND. The live session's numbers are the
+# starting point, not the conclusion: the rail exposed `fulfil`, `address`, `cancel` and
+# `note` on EVERY order card — four enabled actions, four exposures each, sixteen
+# chip-exposures in one evening — and exactly one tap landed on any of them (`address`,
+# once). "Exposed but never used: cancel, fulfil, note."
 #
-# Phase 4 answered that by DEMOTING: two at full weight, two behind a disclosure. The brief's
-# answer is to REMOVE rather than demote, because a control that is never used does not earn
-# its space at half weight either. So:
+# The obvious answer is to cut the rail to two chips with one at full weight. It was tried,
+# and it is WRONG, for reasons the browser gate and the golden scenarios state plainly:
 #
-#   MAX_ENABLED  3 -> 2   two enabled chips on an order card, not four. What the order's own
-#                         state needs first, and the one behind it. Everything else is
-#                         reachable by voice, which is how this shop actually works, and by
-#                         the disclosure when it is disabled and the owner would otherwise
-#                         ask and be told no.
-#   MAX_PRIMARY  2 -> 1   ONE primary action. §26: the first viewport answers WHAT IS THIS /
-#                         WHAT MATTERS / WHAT CAN I DO, and two chips of equal loudness answer
-#                         the last of those with a shrug. Primary action, secondary group,
-#                         more — in that order, chosen by context.
-MAX_ENABLED = 2
-MAX_PRIMARY = 1
+#   * `note` is the only `ask`-mode chip on an order that carries a `family`. Tapping it is
+#     the ONLY WAY TO BIND THE MICROPHONE TO THIS ORDER BY TOUCH (§20 — voice is intent,
+#     touch is precision, and they are two controls; D-11 is the whole of that story).
+#     Deleting it deletes a capability, not a decoration. It stays, and it stays LAST and
+#     never at full weight — which is what its five renders and nought taps do justify.
+#   * on a real order — unfulfilled, paid, the customer has written in, and the address
+#     needs correcting — the card genuinely owes FOUR things: the reply the customer is
+#     waiting on, the shipping the order is waiting on, the address as something to type,
+#     and the microphone. Two slots cannot hold them, and `address` is the one chip the
+#     owner did use. Cutting to two dropped it (`scripts/browser/email.js`: "an order that
+#     has not shipped offers its address as something to type").
+#
+# So the number of chips is not the defect. Their WEIGHT and their RELEVANCE are:
+#
+#   MAX_ENABLED = 3   plus the note, which is always offered and never counted
+#   MAX_PRIMARY = 2   chosen by the order's own context — "the reply leads and the
+#                     fulfilment is beside it" — and everything else disclosed
+#
+# and the removal the evidence does support is one chip rather than a quota: see `cancel`
+# below. §25's five questions have five answers, and "remove it" is only one of them.
+MAX_ENABLED = 3
+MAX_PRIMARY = 2
 
 # What the owner calls an order. Never an id: §26 — "Order #1962", never
 # `gid://shopify/Order/…`, and a technical id only on a debug surface. This is not
@@ -187,12 +198,14 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         candidates.append(AvailableAction(id_, label, operation, risk, ok, "" if ok else reason, instruction,
                                           family=family, mode=mode, command=command, args=args))
 
-    # NOTE IS GONE. §25 · the clearest removal the session's own numbers support: it was the
-    # FIRST chip on every order card whatever the order was — five renders, nought taps — and
-    # it is not what an order needs, it is what is left to offer when the order needs nothing.
-    # Nothing is lost and nothing claims it is there: "add a note to order 1938" is unchanged
-    # by voice, and `owner_feedback` already answers "make a note" without an order being
-    # open at all (§20/§21, D-9).
+    # NOTE. Five renders, nought taps, and it was the FIRST chip on every order card whatever
+    # the order was — so Phase 4 sent it last and behind the disclosure, and that is correct
+    # and stays. It is not REMOVED, and the §25 question it passes is "is there a better
+    # contextual location": there is not. It is the only chip on an order that both primes a
+    # sentence and names the spoken control it arms (`family`), which makes it the one way to
+    # bind the microphone to THIS order with a thumb. A chip nobody taps is still the only
+    # door to a capability.
+    add("note", "Note", "order_note_append", "amber", True, "", f"Add a note to {phrase}", family="order.add_note")
     if f["cancelled"]:
         cancel_reason = "already cancelled"
     elif f["shipped"]:
@@ -253,12 +266,37 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     # that has waited too long. Decided here from the read model, never by the model.
     first = context_rank(order, f)
     enabled_all = [a for a in candidates if a.enabled]
-    rest = sorted(enabled_all, key=lambda a: (first.index(a.id) if a.id in first else len(first),
-                                              order_of_need.index(a.id) if a.id in order_of_need else 99))
-    enabled = rest[:MAX_ENABLED]
+    # The note is always offered and never takes one of the three places (see above).
+    note = [a for a in enabled_all if a.id == "note"]
+
+    # CANCEL GOES LAST UNLESS THE ORDER ITSELF ASKS FOR IT — and on any order with something
+    # else to offer, last means off the card. This is the removal §25's evidence supports:
+    # two renders, nought taps, and it is the reddest, least reversible thing on the rail.
+    # An order needs cancelling because a PERSON said so, which `context_rank` already reads
+    # out of the customer's own email; nothing about an order's state asks for it by itself.
+    #
+    # Ranked rather than filtered, deliberately: a Mac whose only granted write is the cancel
+    # still offers it (there is nothing else to offer), and a cancel that CANNOT be done is
+    # untouched by this and still appears with its one reason (§19 — the owner who would ask
+    # is told no).
+    def rank(a: AvailableAction) -> tuple[int, int, int]:
+        return (
+            first.index(a.id) if a.id in first else len(first),
+            1 if a.id == "cancel" and "cancel" not in first else 0,
+            order_of_need.index(a.id) if a.id in order_of_need else 99,
+        )
+
+    rest = sorted((a for a in enabled_all if a.id != "note"), key=rank)
     # A disabled chip is shown only where the owner would otherwise ask and be told no.
     disabled = [a for a in candidates if not a.enabled and a.id in ("cancel", "refund", "fulfil") and a.reason][:2]
-    return [a.public() for a in weigh(enabled) + [_secondary(a) for a in disabled]]
+    # THE NOTE IS WEIGHED SEPARATELY, and that is the fix rather than a detail: it used to be
+    # appended to `enabled` and then weighed by POSITION, so on an order with only one other
+    # thing to offer — a cancelled one, a fully refunded one — it landed at index 1 and was
+    # drawn at FULL WEIGHT. "Note first on every card" is the defect the live session counted,
+    # and the quietest version of it survived Phase 4 on exactly the orders that need nothing.
+    return [a.public() for a in weigh(rest[:MAX_ENABLED])
+            + [_secondary(a) for a in note]
+            + [_secondary(a) for a in disabled]]
 
 
 def _secondary(action: AvailableAction) -> AvailableAction:
@@ -315,17 +353,28 @@ def available_email_actions(thread: dict[str, Any], capabilities: dict[str, dict
     for a in row_actions or []:
         if isinstance(a, dict) and a.get("id"):
             public.append({"command": "", "args": "", **dict(a)})
-    # Reply leads; Archive is the one behind it. The same `MAX_PRIMARY` as the order card,
-    # because "this is not a menu" has to mean the same thing on both.
-    #
-    # DICTATE IS GONE. §25 · it was a third chip whose whole job was to arm the microphone
-    # for this thread — `family="email.reply"`, this thread's ref — and the composer that
-    # Reply opens carries EXACTLY that control, with exactly those two arguments, in the
-    # place the reply is actually written (`voice.bind`, tests/test_email_workspace.py). Two
-    # controls, one behaviour, one tap apart: the outer one does not earn its space. Voice is
-    # not lost — Reply still carries `family`, and the dock still hears "reply to this email".
-    return [{**a, "priority": "primary" if i < MAX_PRIMARY else "secondary"}
-            for i, a in enumerate(public[:MAX_ENABLED])]
+    # Reply and Archive are the two things a thread is for, so they are the two at full
+    # weight; everything after them is disclosed.
+    public = [{**a, "priority": "primary" if i < MAX_PRIMARY else "secondary"} for i, a in enumerate(public)]
+    if out:
+        # And the other way in, behind the disclosure: arm the microphone for this thread
+        # without opening a keyboard first. §20's two halves as two controls — voice is
+        # intent, touch is precision — with the precision one leading, because that is the
+        # one the live session had no way to reach at all.
+        #
+        # PHASE 5 · §25 asked whether this earns its space, given that the composer Reply
+        # opens carries a Dictate of its own with the same family and the same ref. It does:
+        # that one only EXISTS once a composer is open, and this is the only way to bind the
+        # microphone to a thread before then — the difference between "dictate this reply"
+        # and "say something about this thread". Removing it was tried and it closed the
+        # only door (`scripts/browser/tablet.js` taps
+        # `.rail-chip[data-mode="ask"][data-family="email.reply"]` for exactly this reason).
+        dictate = AvailableAction(
+            "dictate", "Dictate", "gmail_draft_reply", "amber", True, "", "Reply to this email",
+            family="email.reply", mode="ask", priority="secondary",
+        )
+        public.append(dictate.public())
+    return public[:6]
 
 
 def context_rank(order: dict[str, Any], facts: dict[str, Any] | None = None) -> list[str]:
