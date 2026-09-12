@@ -445,6 +445,14 @@ async def test_the_audit_table():
     requests, and zero per-entity reads where the aggregation replaced them.
     """
     rows = []
+    # Once through both halves of every workflow before anything is timed. The first call
+    # into a recipe pays for the lazy imports underneath it — 200 ms of them, measured, which
+    # is not a cost of the read pattern and would have sat in the table looking like one.
+    for _name, before, after in AUDIT:
+        warm = Counting()
+        _bind(warm)
+        await before(warm)
+        await after(warm)
     for name, before, after in AUDIT:
         measured = {}
         for label, delay in (("fast", 0.0), ("real", SESSION_MS_PER_READ / 1000.0)):
