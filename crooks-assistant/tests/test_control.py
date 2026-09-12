@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -268,6 +269,52 @@ def running(here, monkeypatch):
     return state
 
 
+PRINTED_RUNNING = "\tstate = running\n\tpid = 4242\n\tlast exit code = 0\n"
+
+
+@pytest.fixture()
+def fake_mac(tmp_path, monkeypatch):
+    """A Mac, on a machine that is not one.
+
+    Two login services registered, a launchctl that answers, a checkout with the two files
+    preflight insists on, a clock that moves when something sleeps, and /health under the
+    test's control. Everything the lifecycle layer reaches for goes through `Machine`, which
+    is why substituting one is enough — and what it emphatically does NOT prove is that macOS
+    accepts these launchctl invocations, because there is no launchctl here to accept them.
+    """
+    from scripts import service
+
+    agent_dir = tmp_path / "LaunchAgents"
+    agent_dir.mkdir()
+    for label in ("com.crooks.assistant", "com.crooks.whisper"):
+        (agent_dir / f"{label}.plist").write_text("<plist/>", encoding="utf-8")
+    root = tmp_path / "mac-checkout"
+    (root / "app").mkdir(parents=True)
+    (root / "app" / "main.py").write_text("app = None\n", encoding="utf-8")
+    (root / ".venv" / "bin").mkdir(parents=True)
+    (root / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+    clock = {"t": 0.0}
+    runner = service.Scripted({"print": service.Ran((), 0, PRINTED_RUNNING)})
+    state = {"health": health_doc(), "port_open": True, "route": ("crooks.ts.net", ""),
+             "runner": runner, "agent_dir": agent_dir, "root": root, "clock": clock}
+
+    def sleep(seconds):
+        clock["t"] += seconds
+
+    machine = service.Machine(
+        runner=runner,
+        read_health=lambda fresh=False: state["health"],
+        port_open=lambda: state["port_open"] or state["health"] is not None,
+        ensure_route=lambda: state["route"],
+        is_macos=lambda: True, sleep=sleep, now=lambda: clock["t"], log_dir=tmp_path / "logs",
+    )
+    state["machine"] = machine
+    monkeypatch.setattr(control, "machine_for", lambda p: machine)
+    monkeypatch.setattr(control, "launchd_for",
+                        lambda m: service.Launchd(m, agent_dir=agent_dir, root=root, uid=501))
+    return state
+
+
 # ----------------------------------------------------------------------- the four colours
 
 
@@ -406,8 +453,12 @@ def test_writes_blocked_by_configuration_is_named_as_blocked(running):
 def test_every_row_the_brief_asks_for_is_there_and_in_order(running):
     doc = control.status_document()
     keys = [row["key"] for row in doc["rows"]]
+    # `pad` joined the list in Phase 6, directly under `tablet`, and the pairing is the point:
+    # the row above it is the route (the door), this one is the tablet (whether anybody came
+    # through it). The old list had only the door and called it "Tablet", which is §16's
+    # complaint.
     assert keys == ["online", "build", "backend", "speech", "speaks", "claude", "shopify", "gmail",
-                    "orders", "tablet", "mutation", "session", "branch", "known_good"]
+                    "orders", "tablet", "pad", "mutation", "session", "branch", "known_good"]
     assert all(set(row) == {"key", "label", "state", "value", "detail"} for row in doc["rows"])
     assert all(row["state"] in ("ok", "off", "bad") for row in doc["rows"])
     rows = {row["key"]: row for row in doc["rows"]}
@@ -600,7 +651,11 @@ def test_the_clicked_update_moves_the_build_verifies_it_and_marks_it_good(runnin
     assert head(here) == candidate and kicked == ["restart"]
     assert doc["update"]["moved"] is True and doc["update"]["verified"] is True
     assert doc["build"]["was"]["sha"] == was and doc["build"]["current"]["sha"] == candidate
-    assert [s["stage"] for s in doc["stages"]] == ["tablet", "mark"]
+    # "healthy" sits between the two now. Before Phase 6 the mark stage carried both the
+    # decision and the evidence for it; splitting them out is what makes it possible to say,
+    # in one line of the document, WHY a build was or was not recorded as good.
+    assert [s["stage"] for s in doc["stages"]] == ["tablet", "healthy", "mark"]
+    assert next(s for s in doc["stages"] if s["stage"] == "healthy")["state"] == "ok"
     assert doc["tablet"]["url"] == "https://crooks-assistant.taildfb357.ts.net/"
     assert doc["marked_good"]["sha"] == candidate and doc["marked_good"]["build"] == "b-after"
     assert doc["marked_good"]["recorded_by"] == "crooks-control apply"
@@ -628,9 +683,16 @@ def test_an_update_with_nothing_to_pull_marks_nothing(running, here, monkeypatch
     assert control.read_known_good() is None, "an update that did nothing proves nothing"
 
 
-def test_a_health_check_that_does_not_come_back_offers_the_rollback(running, here, monkeypatch):
-    """Step 9 failed. The code moved and the backend did not answer, so the document's answer
-    is the rollback — to the build that was recorded good before the update."""
+def test_a_health_check_that_does_not_come_back_puts_the_mac_back(running, here, monkeypatch, fake_mac):
+    """Step 9 failed: the code moved and the backend did not answer.
+
+    This test used to assert `next == "rollback"` — that the document OFFERED the rollback and
+    stopped. That expectation was wrong, and §5.5 is why: the owner of this appliance has no
+    Terminal and is looking at a menu bar. A Mac left half-updated with a suggestion attached
+    is a broken Mac, and the suggestion is not a recovery. So the update now performs the
+    rollback itself and reports what it did — and reports it as a FAILED update, because it
+    was one.
+    """
     good = head(here)
     control.mark_good_document()
     commit_upstream(here)
@@ -641,11 +703,117 @@ def test_a_health_check_that_does_not_come_back_offers_the_rollback(running, her
 
     monkeypatch.setattr(control.update_module(), "stage_verify", unhealthy)
     doc = control.apply_document(yes=True, run_tests=False)
-    assert doc["ok"] is False and doc["next"] == "rollback"
+    assert doc["ok"] is False, "an update that had to be undone is not a success"
+    assert doc["next"] == "rolled_back"
     assert doc["stop"]["stage"] == "verify" and "did not come back healthy" in doc["stop"]["reason"]
     assert doc["update"]["moved"] is True and doc["update"]["verified"] is False
     assert doc["rollback"]["safe"] is True and doc["rollback"]["sha"] == good
+    assert doc["recovery"] == {"attempted": True, "ok": True, "sha": good, "short": good[:10],
+                               "restarted": True, "human": f"Update failed. Restored {good[:10]}."}
+    assert head(here) == good, "and the checkout really went back, not merely offered to"
+    assert [s["stage"] for s in doc["stages"]] == ["restore", "restore_restart"]
+    assert fake_mac["runner"].ran("kickstart"), "the restored build was actually restarted"
     assert control.read_known_good()["sha"] == good, "the record still names the build that worked"
+
+
+def test_the_offer_without_the_doing_is_still_available_but_is_not_the_default(running, here, monkeypatch):
+    """`--no-recover` keeps the old behaviour for whoever wants to look before anything moves.
+    It is not the default, and the flag says so."""
+    good = head(here)
+    control.mark_good_document()
+    candidate = commit_upstream(here)
+    monkeypatch.setattr(control.update_module(), "stage_restart", lambda **kw: None)
+    monkeypatch.setattr(control.update_module(), "stage_verify",
+                        lambda **_kw: (_ for _ in ()).throw(update.Stopped("The backend did not come back healthy.")))
+    doc = control.apply_document(yes=True, run_tests=False, recover=False)
+    assert doc["ok"] is False and doc["next"] == "rollback" and doc["recovery"] is None
+    assert head(here) == candidate, "nothing moved back"
+    assert doc["rollback"]["safe"] is True and doc["rollback"]["sha"] == good
+
+
+def test_an_update_that_pulls_fine_and_comes_up_broken_is_a_failed_update(running, here, monkeypatch, fake_mac):
+    """The §5.5 case in full, and the one a naive updater gets wrong: every command exits 0.
+    git fast-forwards, the deps install, the suite passes, launchctl kickstarts, /health
+    ANSWERS — and Shopify, which was working ten seconds ago, is now down. Exit codes say
+    success. The product is broken. The verdict is taken from the health of the new build
+    measured against the health of the old one, and nothing else."""
+    good = head(here)
+    control.mark_good_document()
+    commit_upstream(here)
+    broken = health_doc(build="b-broken")
+    broken["checks"]["shopify"] = check(False, "ImportError: cannot import name 'Client'")
+    upd = control.update_module()
+    monkeypatch.setattr(upd, "stage_restart", lambda *, check_only, port: None)
+
+    def verify(*, check_only, port):
+        # The new build comes up. It answers. It is broken. Every exit code so far is 0.
+        running["health"] = broken
+        return broken
+
+    monkeypatch.setattr(upd, "stage_verify", verify)
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["update"]["ok"] is True and doc["update"]["verified"] is True, "every command exited 0"
+    assert doc["ok"] is False, "and the update still failed, because the product is what failed"
+    healthy = next(s for s in doc["stages"] if s["stage"] == "healthy")
+    assert healthy["state"] == "fail" and "shopify" in healthy["detail"]
+    assert doc["next"] == "rolled_back" and doc["recovery"]["ok"] is True
+    assert doc["recovery"]["human"] == f"Update failed. Restored {good[:10]}."
+    assert head(here) == good
+    assert doc["marked_good"] is None, "a build that broke the store is never recorded as good"
+
+
+def test_something_that_was_already_down_does_not_trigger_a_rollback(running, here, monkeypatch, fake_mac):
+    """The other half of the same rule. Shopify was down before the update and is down after
+    it; the update did not do that, and undoing the update will not fix it. Rolling back for
+    an outage would be churn with an air of competence."""
+    was_down = health_doc()
+    was_down["checks"]["shopify"] = check(False, "the store is not answering")
+    running["health"] = was_down
+    control.write_known_good({"version": 1, "sha": head(here), "short": head(here)[:10], "recorded_at": 1.0})
+    candidate = commit_upstream(here)
+    upd = control.update_module()
+    monkeypatch.setattr(upd, "stage_restart", lambda *, check_only, port: None)
+    monkeypatch.setattr(upd, "stage_verify", lambda *, check_only, port: was_down)
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is True and doc["next"] == "done" and doc["recovery"] is None
+    assert head(here) == candidate, "the update stands"
+    assert next(s for s in doc["stages"] if s["stage"] == "healthy")["state"] == "ok"
+
+
+def test_a_restore_that_cannot_restart_says_so_rather_than_claiming_it_worked(running, here, monkeypatch, fake_mac):
+    """The worst available failure, and the one that must never be reported as a success: the
+    files go back and the service does not come up. There is no "Restored" sentence here."""
+    good = head(here)
+    control.mark_good_document()
+    commit_upstream(here)
+    monkeypatch.setattr(control.update_module(), "stage_restart", lambda **kw: None)
+    monkeypatch.setattr(control.update_module(), "stage_verify",
+                        lambda **_kw: (_ for _ in ()).throw(update.Stopped("The backend did not come back healthy.")))
+    fake_mac["health"] = None      # nothing answers, before or after the restore
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is False and doc["next"] == "recovery_failed"
+    assert doc["recovery"]["ok"] is False and doc["recovery"]["restarted"] is False
+    assert "Restored" not in doc["recovery"]["human"]
+    assert "did not come back up" in doc["recovery"]["human"]
+    assert head(here) == good, "the files did go back; it is the service that did not"
+
+
+def test_dependencies_that_will_not_install_put_the_code_back_too(running, here, monkeypatch, fake_mac):
+    """§5.4's dependency failure. The fast-forward has already happened when pip fails, so the
+    code on disk has moved and the running build has not — the same half-updated state a
+    failed health check leaves, and it gets the same answer."""
+    good = head(here)
+    control.mark_good_document()
+    commit_upstream(here, path="pyproject.toml", text="[project]\nname='x'\nversion='2'\n")
+    upd = control.update_module()
+    monkeypatch.setattr(upd, "stage_restart", lambda **kw: pytest.fail("restarted a build whose dependencies are missing"))
+    monkeypatch.setattr(upd, "stage_deps", lambda changed, *, check_only: (_ for _ in ()).throw(
+        update.Stopped("Installing the dependencies failed:\nERROR: No matching distribution found for av>=13.1")))
+    doc = control.apply_document(yes=True, run_tests=False)
+    assert doc["ok"] is False and doc["stop"]["stage"] == "deps"
+    assert doc["update"]["moved"] is True, "the pull had already happened"
+    assert doc["next"] == "rolled_back" and doc["recovery"]["ok"] is True
+    assert head(here) == good
 
 
 def test_an_update_that_never_moved_is_blocked_rather_than_rolled_back(running, here, monkeypatch):
@@ -729,10 +897,16 @@ def test_the_environment_is_read_for_shapes_not_for_use(monkeypatch):
 # --------------------------------------------------------------------- the buttons
 
 
+# Start and Stop were the hole in this list, and the hole was the product defect: with no
+# Start button the RED state had nothing to offer but a line of Terminal. "Stop recording"
+# became "Stop & analyse" because stopping a session and then leaving the owner to press
+# Generate report is three buttons for one intention.
 REQUIRED_BUTTONS = {
+    "start": "Start", "stop": "Stop",
     "open": "Open CROOKS OS", "restart": "Restart", "update": "Update", "check": "Check for update",
     "tests": "Run tests", "tests_ui": "Run UI tests", "session_start": "Start live recording",
-    "session_stop": "Stop recording", "report": "Generate report", "report_open": "Open latest report",
+    "session_status": "Recording status", "session_stop": "Stop & analyse",
+    "report": "Generate report", "report_open": "Open latest report",
     "logs": "Open logs", "folder": "Open project folder",
 }
 
@@ -769,8 +943,11 @@ def test_every_button_runs_something_that_exists(buttons):
 
 
 def test_the_buttons_that_change_the_mac_ask_first(buttons):
+    """Stop joins the list; Start deliberately does not. Stopping takes the tablet down and
+    the owner may have meant Restart. Starting is what the button says on it, and an appliance
+    that asks whether you meant to turn it on is not an appliance."""
     asks = {action["id"] for action in buttons if action["confirm"]}
-    assert asks == {"restart", "update", "rollback"}
+    assert asks == {"restart", "stop", "update", "rollback"}
     for action in buttons:
         if action["confirm"]:
             assert "?" in action["confirm_text"], action["id"]
@@ -981,17 +1158,54 @@ def test_a_quiet_run_does_not_silence_the_next_one(here, capsys):
     assert code == 0 and "crooks-update" in capsys.readouterr().out
 
 
-def test_the_restart_button_is_the_line_make_restart_runs(buttons):
-    """Not launchctl, and not an uninstall-and-install: the same script `make restart` runs,
-    which kickstarts the agents that were installed at login and leaves them installed. That
-    is how the backend and whisper-server keep starting when the Mac starts."""
+def test_restart_is_the_same_mechanism_make_restart_runs(buttons):
+    """This used to assert the button ran `install_launchd.py --restart` — the exact line the
+    Makefile runs — and that was the right instinct with the wrong implementation. A "shell"
+    button can only show output, and `make restart` printed launchctl's exit code and stopped
+    there; a backend that dies on its first import kickstarts perfectly well and prints
+    exactly the same thing. The button is a "control" action now, so what comes back is a
+    verdict with /health in it.
+
+    The instinct the old test was protecting is kept, and is what is asserted here: there is
+    ONE restart mechanism. `make restart`, `crooks-control restart` and the button all go
+    through scripts/service.py, so they cannot leave the Mac in different states.
+    """
     restart = next(action for action in buttons if action["id"] == "restart")
     makefile = (PROJECT / "Makefile").read_text(encoding="utf-8")
-    assert "scripts/install_launchd.py --restart" in makefile
-    assert restart["command"][1].endswith("scripts/install_launchd.py")
-    assert restart["command"][2:] == ["--restart"]
+    assert "scripts/install_launchd.py --restart" in makefile, "make restart still works"
+    assert restart["command"][1].endswith("scripts/control.py") and restart["command"][2:] == ["restart"]
     installer = (PROJECT / "scripts" / "install_launchd.py").read_text(encoding="utf-8")
     assert "kickstart" in installer and "def restart" in installer
+    assert "svc.restart(" in installer, "make restart goes through the one mechanism"
+    assert "service_module().restart(" in (PROJECT / "scripts" / "control.py").read_text(encoding="utf-8")
+
+
+def test_start_and_stop_are_the_buttons_that_did_not_exist(buttons):
+    """§5.2, which is the whole reason for this phase's operations work. Before it, the
+    actions document had thirteen entries and neither of these was one of them — so a Mac
+    with nothing running had no button that could change that, and the status text said to
+    open a Terminal and type `make up`."""
+    by_id = {action["id"]: action for action in buttons}
+    assert by_id["start"]["kind"] == "control" and by_id["start"]["command"][2:] == ["start"]
+    assert by_id["stop"]["kind"] == "control" and by_id["stop"]["command"][2:] == ["stop"]
+    assert by_id["start"]["confirm"] is False
+    for action in (by_id["start"], by_id["stop"]):
+        assert "make up" not in action["why"] and "Terminal" not in action["why"]
+
+
+def test_no_button_and_no_status_line_tells_the_owner_to_open_a_terminal(buttons, running, monkeypatch):
+    """The defect, asserted directly. With nothing answering at all — the state in which the
+    old text appeared — no sentence the app would draw may name `make up` or `make install`."""
+    monkeypatch.setattr(control, "read_health", lambda p, fresh=False: None)
+    doc = control.status_document()
+    drawn = json.dumps({"why": doc["why"], "rows": doc["rows"], "lifecycle": doc["lifecycle"],
+                        "actions": buttons})
+    # `make restart` appears in one button's "why", describing what that button is the same
+    # thing as. That is a description of a button, not an instruction to go and type it, and
+    # it is the distinction §5.2 draws: the RECOVERY PATH may not be a command line.
+    for banned in ("make up", "make install", "open Terminal", "in Terminal"):
+        assert banned not in drawn, f"a document the app draws still says {banned!r}"
+    assert "Press Start" in doc["why"]
 
 
 def test_the_run_tests_button_is_the_offline_suite_make_test_runs(buttons):
@@ -1036,3 +1250,278 @@ def test_a_git_error_quoting_a_token_is_masked_in_the_json_too(here, monkeypatch
     assert "ghp_" not in out and control.MASK in out
     document = json.loads(out)
     assert document["stop"]["stage"] == "fetch" and "could not read from" in document["stop"]["reason"]
+
+
+# ------------------------------------------------------- is the tablet there (§16)
+
+
+def test_a_build_that_reports_no_heartbeat_is_not_a_tablet_that_has_gone_away(running):
+    """Ignorance is not evidence. A backend that does not report a heartbeat leaves the row
+    UNKNOWN and the colour alone — an unknown drawn as a red light is how a status screen
+    teaches its owner to stop reading it."""
+    doc = control.status_document()
+    assert doc["pad"] == {"known": False, "alive": None, "age_s": None, "app": "", "version": "",
+                          "build": "", "source": "absent",
+                          "detail": "this build does not say whether the tablet has been heard from; the route being open is not a heartbeat"}
+    assert doc["state"] == "GREEN" and "tablet" not in doc["degraded"]
+    rows = {row["key"]: row for row in doc["rows"]}
+    assert rows["pad"]["state"] == "off" and rows["pad"]["value"] == "unknown"
+
+
+def test_a_tablet_heard_from_a_moment_ago_is_here(running):
+    running["health"]["pad"] = {"last_seen_s": 4.0, "app": "CROOKS Pad", "version": "1.0", "build": "b-2"}
+    doc = control.status_document()
+    assert doc["pad"]["known"] is True and doc["pad"]["alive"] is True and doc["pad"]["age_s"] == 4.0
+    assert doc["state"] == "GREEN"
+    rows = {row["key"]: row for row in doc["rows"]}
+    assert rows["pad"]["state"] == "ok" and rows["pad"]["value"] == "here · CROOKS Pad"
+    assert "last heard from 4s ago" in rows["pad"]["detail"]
+
+
+def test_a_routed_tailnet_with_a_silent_tablet_is_not_green(running):
+    """§16's whole point. Tailscale is serving the address, the Tablet row is a tick, and the
+    tablet itself has been off since yesterday. The route is the door; it is not the tablet,
+    and until Phase 6 this side had no way to tell the owner which of the two it was reading."""
+    running["health"]["pad"] = {"last_seen_s": 8 * 3600}
+    doc = control.status_document()
+    assert doc["tablet"]["host"], "the route is up"
+    assert doc["state"] == "AMBER" and doc["degraded"] == ["tablet"]
+    assert "CROOKS Pad not heard from for 8.0h" in doc["why"]
+    rows = {row["key"]: row for row in doc["rows"]}
+    assert rows["tablet"]["state"] == "ok" and rows["pad"]["state"] == "bad"
+
+
+@pytest.mark.parametrize(("field", "alive"), [
+    ({"last_seen_s": 10}, True),
+    ({"age_s": 10}, True),
+    ({"seen_s_ago": 10}, True),
+    ({"last_seen_s": 9999}, False),
+    ({"last_seen_at": None}, None),
+    ({"connected": True, "last_seen_s": 9999}, True),
+    ({"connected": False, "last_seen_s": 1}, False),
+    ({"app": "CROOKS Pad"}, None),
+])
+def test_the_heartbeat_is_read_from_whichever_shape_the_backend_chose(field, alive):
+    """This side and the backend side of Phase 6 were written at the same time, so the shape
+    had to be agreed without either waiting for the other: an age under any of three names, an
+    instant under either of two, and an explicit verdict from the backend outranking our own
+    arithmetic, because the backend is the one holding the socket."""
+    if "last_seen_at" in field:
+        field, alive = {"last_seen_at": time.time() - 5}, True
+    assert control.pad_status({"pad": field})["alive"] is alive
+
+
+def test_the_tablet_key_is_read_too_so_neither_side_had_to_wait_for_the_other():
+    assert control.pad_status({"tablet": {"last_seen_s": 2}})["source"] == "tablet"
+    assert control.pad_status({"pad": {"last_seen_s": 2}})["source"] == "pad"
+    assert control.pad_status({"pad": {}, "tablet": {"last_seen_s": 2}})["source"] == "tablet", "an empty one is not an answer"
+    assert control.pad_status(None)["known"] is False
+
+
+# --------------------------------------------------------- start, stop, restart
+
+
+def _recording(fn):
+    """A runner that records what it was asked to run and then answers however the test
+    wants — the seam that stands in for a Mac."""
+
+    class Recording:
+        def __init__(self):
+            self.calls = []
+
+        def __call__(self, argv, *, timeout_s=60.0):
+            self.calls.append(list(argv))
+            return fn(list(argv), timeout_s=timeout_s)
+
+    return Recording()
+
+
+PRINTED_STOPPED = "\tstate = not running\n\tlast exit code = 0\n"
+
+
+def test_start_is_a_document_the_app_can_draw(running, here, fake_mac):
+    from scripts import service
+
+    fake_mac["health"] = None
+    fake_mac["port_open"] = False
+    kicks = {"n": 0}
+
+    def run(argv, *, timeout_s=60.0):
+        if "kickstart" in argv:
+            kicks["n"] += 1
+            fake_mac["health"] = health_doc()
+        if "print" in argv:
+            # Registered, and not a process until something kicks it. The two facts come
+            # apart, and the whole lifecycle verdict turns on which one is being read.
+            return service.Ran(tuple(argv), 0, PRINTED_RUNNING if kicks["n"] else PRINTED_STOPPED)
+        return service.Ran(tuple(argv), 0, "")
+
+    fake_mac["machine"].runner = _recording(run)
+    doc = control.start_document(wait_s=30.0)
+    assert doc["command"] == "start" and doc["ok"] is True and doc["contract"] == control.CONTRACT
+    assert doc["human"] == "CROOKS OS is running." and doc["problem"] is None
+    assert doc["lifecycle"]["crooks_os"] == "running" and doc["lifecycle"]["supervised"] is True
+    assert doc["before"]["crooks_os"] == "stopped"
+    assert kicks["n"] == 2, "the backend and whisper-server"
+
+
+def test_stop_is_a_document_and_says_it_will_come_back_at_login(running, here, fake_mac):
+    from scripts import service
+
+    down = {"yet": False}
+
+    def run(argv, *, timeout_s=60.0):
+        if "bootout" in argv:
+            down["yet"] = True
+            fake_mac["health"] = None
+            fake_mac["port_open"] = False
+        if "print" in argv:
+            return service.Ran(tuple(argv), 0, PRINTED_STOPPED if down["yet"] else PRINTED_RUNNING)
+        return service.Ran(tuple(argv), 0, "")
+
+    fake_mac["machine"].runner = _recording(run)
+    doc = control.stop_document()
+    assert doc["command"] == "stop" and doc["ok"] is True and doc["next"] == "stopped"
+    assert doc["lifecycle"]["crooks_os"] == "stopped"
+    assert "starts again the next time this Mac is logged in" in doc["note"]
+
+
+def test_restart_reports_a_verdict_rather_than_an_exit_code(running, here, fake_mac):
+    doc = control.restart_document(wait_s=10.0)
+    assert doc["command"] == "restart" and doc["ok"] is True
+    assert doc["human"] == "CROOKS OS restarted and is running."
+    assert [s["stage"] for s in doc["stages"]] == ["check", "restart", "route", "verify"]
+    assert "all good" in next(s for s in doc["stages"] if s["stage"] == "verify")["detail"]
+
+
+def test_a_start_that_never_becomes_ready_is_a_failure_with_an_expansion(running, here, fake_mac, capsys):
+    fake_mac["health"] = None
+    fake_mac["port_open"] = False
+    assert control.main(["start", "--wait", "5"]) == 1
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["ok"] is False and doc["command"] == "start"
+    assert doc["problem"]["human"] == "CROOKS OS started but never became ready."
+    assert "127.0.0.1" not in doc["problem"]["human"], "the owner's half carries no address"
+    assert "127.0.0.1" in doc["problem"]["developer"], "and the developer's half does"
+
+
+def test_the_lifecycle_of_a_running_mac_is_reported_on_every_status(running, here, fake_mac):
+    doc = control.status_document()
+    assert doc["lifecycle"]["state"] == "RUNNING" and doc["lifecycle"]["healthy"] is True
+    assert "Closing this window will not stop it" in doc["lifecycle"]["human"]
+    assert "does not stop CROOKS OS" in doc["lifecycle"]["window"]
+
+
+def test_a_backend_run_from_a_terminal_window_is_named_as_one_on_the_status(running, here, fake_mac):
+    """And the difference is the one §5.3 asks for: this one DOES stop when its window is
+    closed, and an owner told otherwise will close it and wonder why the tablet died."""
+    from scripts import service
+
+    fake_mac["machine"].runner = service.Scripted(
+        {"print": service.Ran((), 0, "\tstate = running\n\tlast exit code = 0\n")})
+    doc = control.status_document()
+    assert doc["lifecycle"]["state"] == "RUNNING_WINDOW" and doc["lifecycle"]["supervised"] is False
+    assert "WILL stop it" in doc["lifecycle"]["human"]
+    assert doc["lifecycle"]["crooks_os"] == "running", "it is still running; it is only unsupervised"
+
+
+def test_no_secret_reaches_the_app_through_a_lifecycle_document(running, here, fake_mac, monkeypatch, capsys):
+    """The redaction promise, extended to the documents that did not exist when it was made.
+    A Tailscale error quoting an auth key is exactly the shape of thing that lands in a
+    stage's detail, and a stage's detail is drawn."""
+    key = "tskey-auth-" + "k9x2" * 8
+    monkeypatch.setenv("TAILSCALE_AUTH_TOKEN", key)
+    fake_mac["route"] = (None, f"tailscale serve failed: the auth key {key} has expired")
+    control.main(["restart", "--wait", "5"])
+    out = capsys.readouterr().out
+    assert key not in out and control.MASK in out
+    assert "the auth key" in out, "the diagnosis survives; only the credential goes"
+
+
+# --------------------------------------------------------- the contract, version two
+
+
+V1_FIELDS = {
+    "status": {"state", "headline", "why", "issues", "degraded", "rows", "build", "tablet",
+               "mutation", "test_session", "local_work", "rollback", "port"},
+    "plan": {"update", "click", "build", "local_work", "rollback", "next", "stop"},
+    "apply": {"update", "stages", "tablet", "marked_good", "build", "local_work", "rollback",
+              "click", "stop", "next"},
+    "rollback": {"rollback", "stages", "build", "stop", "next"},
+    "mark-good": {"marked_good", "build", "stop", "next"},
+    "actions": {"actions"},
+    "contract": {"version", "envelope_keys", "documents", "states"},
+}
+
+
+def test_version_two_is_additive_and_took_nothing_away():
+    """The reason 1 is still in `compatible_clients`. Every field a version-1 client decoded
+    is still printed, unchanged, so a client willing to accept the number renders correctly.
+    If a field is ever REMOVED or renamed this fails, the version stops being additive, and
+    the Swift side has to move in the same change rather than afterwards."""
+    documents = control.contract_document()["documents"]
+    for name, fields in V1_FIELDS.items():
+        missing = fields - set(documents[name])
+        assert missing == set(), f"{name} no longer prints {sorted(missing)}, which version 1 decoded"
+    assert control.CONTRACT == 2 and list(control.COMPATIBLE_CLIENTS) == [1, 2]
+
+
+def test_the_version_the_swift_app_declares_is_one_this_side_still_speaks():
+    """The handoff, checked rather than assumed. mac/CrooksControl compares the number for
+    EQUALITY, so the app as it stands will refuse a document marked 2 and has to be rebuilt
+    against this contract — a real integration step, written down here rather than discovered
+    on the Mac. What this test holds is the weaker, checkable half: the number the app
+    declares is one these documents are still compatible with."""
+    import re as _re
+
+    declared = _re.search(r"static let expected = (\d+)", swift_documents())
+    assert declared, "the app no longer declares a contract version"
+    assert int(declared.group(1)) in control.COMPATIBLE_CLIENTS
+
+
+def _canned_backend(*_a, **_kw) -> dict:
+    """One answer that serves all three session endpoints, so the contract tests below touch
+    neither the network nor the session files on disk."""
+    return {"started": True, "test_session_id": "ts-x", "name": "x", "path": "/x/ts-x.jsonl",
+            "started_at": 1.0, "active": False, "last": {},
+            "stopped": False, "detail": "No test session is running."}
+
+
+def test_every_document_the_command_line_offers_is_named_in_the_contract():
+    """The `what` list and the contract cannot drift: a subcommand whose document nothing
+    describes is a subcommand the next client has to guess at."""
+    named = set(control.contract_document()["documents"])
+    assert set(control.WHAT) == named, f"{sorted(set(control.WHAT) ^ named)} is in one and not the other"
+
+
+def test_the_lifecycle_and_session_documents_carry_only_what_the_contract_names(running, here, fake_mac, monkeypatch):
+    from scripts import session_ops
+
+    monkeypatch.setattr(session_ops, "call", _canned_backend)
+    contract = control.contract_document()
+    envelope_keys = set(contract["envelope_keys"])
+    documents = {
+        "start": control.start_document(wait_s=5.0),
+        "stop": control.stop_document(),
+        "restart": control.restart_document(wait_s=5.0),
+        "session-start": control.session_start_document("first hour"),
+        "session-status": control.session_status_document(),
+        "session-stop": control.session_stop_document(analyse=False),
+    }
+    for name, doc in documents.items():
+        assert doc["command"] == name and doc["contract"] == control.CONTRACT
+        assert set(doc) & envelope_keys == envelope_keys, f"{name} is missing an envelope field"
+        unnamed = set(doc) - envelope_keys - set(contract["documents"][name])
+        assert unnamed == set(), f"{name} returns {sorted(unnamed)}, which the contract does not name"
+        json.dumps(doc), "and every one of them is something the app can decode"
+
+
+def test_the_session_label_is_the_only_text_from_the_app_that_reaches_a_command(buttons):
+    """And it reaches it as one element of an argv list, never as a string a shell will read.
+    Everything else in the actions document is fixed, which is why there is nothing to escape."""
+    asking = [action for action in buttons if action.get("ask")]
+    assert [action["id"] for action in asking] == ["session_start"]
+    assert asking[0]["ask"]["flag"] == "--label" and asking[0]["ask"]["optional"] is True
+    for action in buttons:
+        for word in action.get("command", []):
+            assert not any(character in word for character in ";|&$`"), action["id"]
