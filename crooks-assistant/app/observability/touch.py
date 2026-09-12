@@ -136,6 +136,8 @@ MULTITOUCH_NEAR_MS = 250.0
 OWNER_WINDOW_S = 30.0
 # A touch shorter than this never reached the recogniser and is not a recording at all.
 FLICK_MS = 5.0
+# How much of the owner's sentence travels with a corroborated finding.
+OWNER_QUOTE_CHARS = 220
 
 # The voice target, by every name the tablet has used for it. Anything else named as a
 # pointer target or owner is an interactive control, and a touch that began there and became
@@ -335,7 +337,9 @@ def _said_so(events: list[dict[str, Any]], start: float, end: float) -> str:
             continue
         said = " ".join(str(event.get("text") or "").split())
         if PRESS_LEADS_TO_LISTENING.search(said):
-            return said[:160]
+            # Enough of it to carry the sentence that corroborates the class. His own words
+            # are the evidence, and a quote cut off before "listening" is not evidence.
+            return said[:OWNER_QUOTE_CHARS]
     return ""
 
 

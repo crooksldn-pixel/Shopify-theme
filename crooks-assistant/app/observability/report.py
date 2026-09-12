@@ -771,6 +771,14 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str], list[str]]:
     verdict = turn.verdict if turn.verdict is not None else semantics.read_request(question, lane=turn.lane)
     turn.verdict = verdict
     kind = contract_mod.contract_of(question, ui_asked=ui_asked)
+    # §5. "Can you expand his customer page?", "bring up a UI for the customer's page",
+    # "show me his orders" — a request for a visible workspace. `contract_of` reads the nouns
+    # of the screen (button, tab, column, card) and misses every one of these, so the report
+    # filed the three attempts of 20:14:02–20:14:22 as read requests and never asked whether
+    # anything appeared. The verb is what makes it a UI request, and the verb is here.
+    if kind in (contract_mod.READ_INTENT, contract_mod.META_CAPABILITY_INTENT) and _asked_to_see(question):
+        kind = contract_mod.UI_INTENT
+        notes.append("read as a request for a workspace: " + _asked_to_see(question))
     if kind == contract_mod.WRITE_INTENT and not verdict.mutation:
         # §27D. A noun or a state is not a requested mutation: "what is the refund status",
         # "which customers need replying to", "find an order that has not been fulfilled".
@@ -1192,8 +1200,20 @@ def _recorded_feedback(turn: Turn) -> str:
 
 
 # The words that ask for a workspace. §5: expand, bring up and show require something visible.
+# Anchored on an OBJECT, so "see if he's in Gmail anywhere" and "show me" on its own are not
+# this: a request for a workspace names the thing it wants on the screen.
 _ASKED_TO_SEE_RE = re.compile(
-    r"\b(?:show|open|pull up|bring up|expand|view|display|put up|let me see|see)\b", re.I)
+    r"\b(show me|open|pull up|bring up|expand|display|put up|let me see|"
+    r"give me a (?:view|screen|page|ui)|i want to (?:see|be seeing))\b"
+    r"(?=[^.?!]{0,60}\b(?:page|screen|ui|u\.i\.|card|profile|workspace|orders?|history|"
+    r"inbox|email|customer|order|thread|list|details?|everything|it|him|her|them|that|this)\b)",
+    re.I)
+
+
+def _asked_to_see(question: str) -> str:
+    """The words in this request that ask for something to be on the screen, or "" ."""
+    found = _ASKED_TO_SEE_RE.search(question or "")
+    return found.group(1).lower() if found else ""
 # Cards that are not a workspace for anything the owner asked about: the assistant's own
 # chrome, an error, the context stack, and the capability list — which is what "can you expand
 # his customer page" produced, 1,014 px of what the system can do.
@@ -1987,11 +2007,21 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
     # 12 -----------------------------------------------------------------------------
     add("## 12. Top improvement opportunities")
     add("")
+    add("Ranked by what engineering should do FIRST: severity decides the order, and frequency "
+        f"decides within a severity — `severity × min(distinct turns, {RANK_CAP}) × confidence`, "
+        f"with an inferred class discounted to {INFERRED_CONFIDENCE}. The three numbers are printed "
+        "beside each row so the order can be disagreed with. The 11 September report ranked on "
+        "occurrences alone, which put a severity-2 guess multiplied by 62 swallowed control taps "
+        "above every P0 in the session.")
+    add("")
     opportunities = _opportunities(rec, turns, registered, capability_states)
     if not opportunities:
         add("_Nothing in this session's evidence calls for a change._")
     for i, o in enumerate(opportunities, 1):
-        add(f"{i}. **{o['problem']}** — {o['frequency']}; severity {o['severity']}/5; e.g. {', '.join(o['examples']) or '—'}. Likely component: {o['component']}. Task: {o['task']}")
+        add(f"{i}. **{o['problem']}** — {o['frequency']}; severity {o['severity']}/5; "
+            f"rank {o['weight']} ({o.get('basis') or 'severity × sites'}); "
+            f"e.g. {', '.join(o['examples']) or '—'}. Likely component: {o['component']}. "
+            f"Task: {o['task']}")
     add("")
 
     # 13 -----------------------------------------------------------------------------

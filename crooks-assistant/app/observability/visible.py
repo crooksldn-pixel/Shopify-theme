@@ -664,7 +664,7 @@ def _empty_notifications(rec: Any) -> list[Finding]:
         out.append(Finding(
             "EMPTY_NOTIFICATION", str(event.get("turn_id") or _turn_at(rec, ts)),
             f"a {event.get('name') or 'notification'} was raised with no text, no code and "
-            f"nothing to read",
+            f"nothing to read (seq {event.get('seq') or '?'})",
             subject=str(event.get("name") or "notification"),
         ))
     return out
