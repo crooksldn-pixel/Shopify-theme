@@ -735,7 +735,12 @@ def apply_document(*, yes: bool, branch: str = "", run_tests: bool = True, recov
         return plan
     the_port = port()
     stages: list[dict] = []
-    before_health = read_health(the_port)
+    # Fresh, and deliberately: /health answers from a ninety-second cache, and this reading is
+    # the one the whole rollback decision is measured against. A cached answer from eighty
+    # seconds ago showing Shopify up, against a fresh one showing it down, reads as "this
+    # update broke the store" and rolls back a perfectly good build over somebody else's
+    # outage. Once per update, the real check is worth the few seconds it costs.
+    before_health = read_health(the_port, fresh=True)
     code, doc = upd.run(check=False, branch=branch, test=run_tests, quiet=True)
     build_before = doc.get("current") or {}
     good = read_known_good()
