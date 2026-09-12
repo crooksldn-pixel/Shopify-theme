@@ -2568,23 +2568,24 @@
     const lines = list(r.lines, 4);
     const tone = ['red', 'amber', 'good'].indexOf(text(r.tone)) === -1 ? '' : text(r.tone);
     return h('li', {
-      class: `sum-row${tap ? ' tappable' : ''}${tone ? ' tone-' + tone : ''}`,
+      // The list vocabulary the tablet already has — `.row`, `.row-main`, `.row-sub`,
+      // `.row-side`, `.row-go`, `.hist-lines` — so a compact summary row looks and presses
+      // exactly like a row on an order list, and this component needs no styling of its own.
+      class: `row${tap ? ' tappable' : ''}`,
       role: tap ? 'button' : null,
       tabindex: tap ? '0' : null,
       data: tap ? { ref: text(r.ref), kind: text(r.kind) } : null,
     }, [
-      h('div', { class: 'sum-main' }, [
-        h('span', { class: 'sum-label', text: text(r.label, '—') }),
-        text(r.sub) ? h('span', { class: 'sum-sub', text: text(r.sub) }) : null,
-        lines.length ? h('span', { class: 'sum-lines' }, lines.map((l) => h('span', { class: 'sum-line' }, [
-          h('span', { class: 'sum-line-k', text: text(l.label) }),
-          h('span', { class: 'sum-line-v', text: text(l.value, '—') }),
-        ]))) : null,
+      h('span', { class: 'row-main' }, [h('strong', { text: text(r.label, '—') })]),
+      text(r.sub) ? h('span', { class: 'row-sub', text: text(r.sub) }) : null,
+      lines.length ? h('ul', { class: 'hist-lines' }, lines.map((l) => h('li', {
+        class: `hist-line${tone === 'red' ? ' warn' : ''}`,
+        text: text(l.label) ? `${text(l.label)}: ${text(l.value, '—')}` : text(l.value, '—'),
+      }))) : null,
+      h('span', { class: 'row-side' }, [
+        text(r.badge) ? badge(r.badge, tone === 'red' ? 'bad' : tone === 'amber' ? 'warn' : tone === 'good' ? 'ok' : 'quiet') : null,
       ]),
-      h('div', { class: 'sum-side' }, [
-        text(r.badge) ? badge(r.badge, tone === 'red' ? 'bad' : tone === 'amber' ? 'warn' : tone === 'good' ? 'good' : 'quiet') : null,
-        tap ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '›' }) : null,
-      ]),
+      tap ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
     ]);
   }
 
@@ -2597,14 +2598,14 @@
       kicker(text(d.kicker, text(d.title, 'Summary'))),
       h('h2', { class: 'card-title' }, [
         h('span', { text: text(d.title, 'Summary') }),
-        count === null ? null : h('span', { class: 'sum-count', text: ` · ${count}` }),
+        count === null ? null : h('span', { text: ` \u00b7 ${count}` }),
       ]),
       text(d.subtitle) ? h('p', { class: 'card-meta', text: text(d.subtitle) }) : null,
     ])]);
     const node = card('summary_list', [
       head,
       // Nothing found is an ANSWER and gets a card (D-15), in the words the Mac chose.
-      rows.length ? h('ul', { class: 'sum-rows' }, rows.map(summaryRow))
+      rows.length ? h('ul', { class: 'rows tight' }, rows.map(summaryRow))
         : h('p', { class: 'card-note', text: `No ${text(d.count_label, 'results')}.` }),
       d.truncated ? h('p', { class: 'card-note', text: `Showing ${rows.length} of ${count === null ? rows.length : count}.` }) : null,
       text(d.note) ? h('p', { class: 'card-note', text: text(d.note) }) : null,
