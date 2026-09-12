@@ -67,6 +67,12 @@ UI_TYPES = frozenset({
     # posts the field's NAME and the characters, the Mac validates them into its own copy,
     # and the execution arguments are built from that copy when a gesture asks for them.
     "workspace",
+    # one record, composed (app/workspace.py). Not another card per read: the TASK's surface,
+    # built over the canonical entity of §6 and hydrated section by section, which is what
+    # D-3 asked for and did not get — `turn_1e7f630eae7e` held two orders and £120 of
+    # lifetime value and drew an email list. Each section carries its own state, so a new
+    # read enriches the workspace and an empty or failed one cannot destroy it (§27).
+    "customer_workspace", "order_workspace",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})
@@ -128,9 +134,19 @@ def present(
     session: Session | None = None,
     error_kind: str | None = None,
     writes: dict[str, Any] | None = None,
+    question: str = "",
+    pending: tuple[str, ...] | list[str] = (),
 ) -> list[dict[str, Any]]:
-    """The `ui` list for one turn: context cards from the tool results, one error card per
-    failed service, and the context stack when the conversation has accumulated one."""
+    """The `ui` list for one turn: the TASK's workspace where the task has one, context cards
+    from the tool results, one error card per failed service, and the context stack when the
+    conversation has accumulated one.
+
+    `question` is what was asked, which is what decides the workspace (§3: intent first, not
+    the last tool). It defaults to `session.heard` — set by /turn before a single read is
+    issued — so the ordinary path needs to pass nothing and a caller with a better copy of
+    the words may pass one. `pending` names sections whose read has not landed yet, for
+    progressive hydration; a section in it says "Reading…" rather than claiming to be empty.
+    """
     items: list[dict[str, Any]] = []
     errors: dict[str, dict[str, Any]] = {}
     calls = list(calls or [])
@@ -194,6 +210,10 @@ def present(
                     items.append(_ui("attention", {"items": attention, "for": item["data"].get("order_id")}))
 
     items = _merge(items)
+    # The task's own surface, over the canonical entity rather than over the last result.
+    # Everything the workspace now contains comes out of the deck: a customer touched by
+    # three reads is one customer (§6), not a card each.
+    items = _compose_workspace(items, calls, session=session, question=question, pending=pending)
     if session is not None:
         _remember(items, session)
 
@@ -217,6 +237,181 @@ def present(
             ", ".join(sorted({item["type"] for item in out if item["type"] not in UI_TYPES})),
         )
     return kept
+
+
+# --------------------------------------------------------------- the task's own workspace
+
+
+def _compose_workspace(
+    items: list[dict[str, Any]],
+    calls: list[ToolCall],
+    *,
+    session: Session | None,
+    question: str = "",
+    pending: tuple[str, ...] | list[str] = (),
+) -> list[dict[str, Any]]:
+    """Replace `TOOL RETURNS X → DRAW X CARD` with the task's own surface (§3).
+
+    D-3 is the whole reason this function exists. `turn_1e7f630eae7e` asked for a customer's
+    history, his order count, his lifetime spend and whether he was in Gmail. The Mac held all
+    of it and the answer said all of it; the only NEW read was `gmail_search`, so the screen
+    became an email list. The task was a customer workspace.
+
+    What happens here, in order:
+
+    1. every read this turn is folded into the conversation's canonical entities (§6), so a
+       customer touched by three reads is one customer and a fourth read PATCHES him;
+    2. the question is asked what workspace it wants (`app/workspace.py:desired`) — and the
+       answer is usually None, which is correct: an aggregate question wants a summary (§13,
+       another workstream) and a single lookup is already served by its own card;
+    3. the workspace is filled from the entity, section by section, each section carrying its
+       own state;
+    4. the cards the workspace now CONTAINS come out of the deck, and it goes in front.
+
+    Nothing is lost by step 4: a card is absorbed only when every record on it is on the
+    workspace. A list of other orders, an analytic summary, an email thread opened in its own
+    right — those are different surfaces and they stay.
+    """
+    if session is None:
+        return items
+    from app import entities, workspace
+
+    graph = entities.graph_for(session)
+    filled: set[str] = set()
+    failed: set[str] = set()
+    for call in calls:
+        if call.ok and isinstance(call.result, dict):
+            graph.ingest(call.name, call.result)
+            filled.update(entities.FILLS.get(call.name, ()))
+        elif not call.ok:
+            # The read fell over. Which SECTION that leaves unreadable, so the section can say
+            # so and the rest of the workspace can carry on standing (§27).
+            failed.update(entities.FILLS.get(call.name, ()))
+    # An inbox row says who the message is from AND which record it is about (§12), from the
+    # graph rather than from a new read. Done before the workspace question, because the rows
+    # are the same rows either way: a thread that ends up in a customer workspace's Inbox
+    # carries the same context as one on a list of its own.
+    _link_inbox(items, graph, session)
+    said = question or str(getattr(session, "heard", "") or "")
+    if not said:
+        return items
+    plan = workspace.desired(said, graph=graph, calls=calls)
+    if plan is None or not plan.composes:
+        return items
+    built = workspace.compose(
+        plan, graph=graph, session=session,
+        filled=filled, failed=failed - filled, pending=pending,
+    )
+    if built is None or built["type"] not in UI_TYPES:
+        return items
+    held = _workspace_keys(built["data"], plan)
+    kept = [item for item in items if not _absorbed(item, held)]
+    return [built, *kept]
+
+
+def _link_inbox(items: list[dict[str, Any]], graph: Any, session: Session) -> None:
+    """What each inbox row is ABOUT, added from what the Mac holds (§12's inbox list).
+
+    A row used to carry the sender, the subject, the date and a snippet. §12 asks it for the
+    customer, the order, whether we owe a reply, how old it is and how much it matters —
+    which is the difference between a picture of an inbox and somewhere to work from.
+
+    Every value comes from the canonical graph, so this costs no read. The evidence rules are
+    `app/context/graph.py`'s, deliberately: the sender's address matched EXACTLY against a
+    customer the conversation already knows, and an order link only where that customer has
+    exactly one order in hand — a name is not evidence and a guess on the thread the owner is
+    about to reply to is worse than no link at all.
+
+    §18 all the way through: a link is only offered where the ref is a shape the gate accepts
+    and the conversation has been issued it, and the issuing happens here because the row
+    showing the link IS the conversation being shown the record.
+    """
+    from app import workspace
+
+    for item in items:
+        if item["type"] != "email_list" or not isinstance(item.get("data"), dict):
+            continue
+        for row in item["data"].get("threads") or []:
+            if not isinstance(row, dict):
+                continue
+            thread = graph.get("email_thread", row.get("thread_id"))
+            person = graph.customer_of(thread.key) if thread is not None else None
+            if person is None:
+                person = graph.find_by_email("customer", row.get("from_email"))
+            orders = graph.orders_of(person.key) if person is not None else []
+            if thread is not None and graph.orders_of(thread.key):
+                orders = graph.orders_of(thread.key)      # the thread named one itself
+            if person is not None:
+                link = workspace.link_for(session, "customer", person)
+                if link:
+                    row["customer_link"] = link
+            # Exactly one, or the link is a guess. `app/context/graph.py` calls several
+            # recent orders "possible" rather than confident, and a row has space for one.
+            if len(orders) == 1:
+                link = workspace.link_for(session, "order", orders[0])
+                if link:
+                    row["order_link"] = link
+            row["needs_reply"] = bool(row.get("needs_reply") or (thread is not None and thread.get("awaiting_reply")))
+            row["priority"] = _inbox_priority(row, person)
+
+
+def _inbox_priority(row: dict[str, Any], person: Any) -> str:
+    """How much this row matters, from facts already on it and nothing else.
+
+    Three words, so the list can be read at a glance and sorted by a renderer without asking
+    the Mac a second question. Never a score: a number invites the owner to believe a
+    precision that is not there.
+    """
+    if row.get("needs_reply"):
+        return "high"
+    if row.get("likely_bulk"):
+        return "low"
+    return "normal" if person is not None or row.get("known_customer") else "unknown"
+
+
+def _workspace_keys(data: dict[str, Any], plan: Any) -> frozenset[str]:
+    """Every record the workspace now shows, by canonical key. What a card has to be entirely
+    about before it may be taken out of the deck."""
+    from app import entities
+
+    keys = {plan.key}
+    for section in (data.get("sections") or {}).values():
+        for row in section.get("rows") or []:
+            for field, kind in (("order_id", "order"), ("thread_id", "email_thread"),
+                                ("customer_id", "customer")):
+                found = entities.key(kind, row.get(field))
+                if found:
+                    keys.add(found)
+    return frozenset(keys)
+
+
+def _absorbed(item: dict[str, Any], held: frozenset[str]) -> bool:
+    """Whether this card is now a part of the workspace rather than a surface of its own.
+
+    Every record on the card must be on the workspace. "Every" matters: a list with one
+    unheld row on it still says something the workspace does not, and a list with no rows at
+    all says nothing either way and is left for `_only_empty_when_nothing_else` to judge.
+    """
+    from app import entities
+
+    kind, data = item["type"], item["data"]
+    if not isinstance(data, dict) or data.get("empty"):
+        return False
+    if kind == "customer":
+        return entities.key("customer", data.get("customer_id")) in held
+    if kind == "order":
+        return entities.key("order", data.get("order_id")) in held
+    if kind == "attention":
+        return entities.key("order", data.get("for")) in held
+    rows, field, of = {
+        "customer_list": (data.get("customers"), "customer_id", "customer"),
+        "order_list": (data.get("orders"), "order_id", "order"),
+        "email_list": (data.get("threads"), "thread_id", "email_thread"),
+    }.get(kind, (None, "", ""))
+    if not rows:
+        return False
+    refs = [entities.key(of, row.get(field)) for row in rows if isinstance(row, dict)]
+    return bool(refs) and all(ref in held for ref in refs)
 
 
 def _only_empty_when_nothing_else(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1308,6 +1503,19 @@ def _remember(items: list[dict[str, Any]], session: Session) -> None:
                 session.remember_context("customer", data["customer_name"], data["customer_id"], limit=MAX_CONTEXT)
         elif kind == "customer":
             session.remember_context("customer", data.get("name") or "", data.get("customer_id") or "", limit=MAX_CONTEXT)
+        elif kind in ("customer_workspace", "order_workspace"):
+            # The composed surface establishes its entity exactly as the single card did, and
+            # with a HUMAN label (§26): "#1962", never the gid the tap posts.
+            session.remember_context(str(data.get("kind") or ""), data.get("label") or "",
+                                     data.get("ref") or "", limit=MAX_CONTEXT)
+            # Every record the workspace shows is a record this conversation has been shown,
+            # so `open.entity` on any of its rows cannot be refused `not_held` (§18). The
+            # rows themselves were only marked openable once the ref passed the gate's shape
+            # check (app/workspace.py:_open), which is where the issuing happens.
+            for section in (data.get("sections") or {}).values():
+                for row in section.get("rows") or []:
+                    if row.get("open"):
+                        session.issue(str(row.get("order_id") or row.get("thread_id") or row.get("customer_id") or ""))
         elif kind == "email_thread":
             session.remember_context("email", data.get("subject") or "(no subject)", data.get("thread_id") or "", limit=MAX_CONTEXT)
             # The strip's orders and customer came from the cache, not from a tool result, so
@@ -1368,8 +1576,23 @@ def _status(value: Any) -> str:
 
 
 def _order_number(value: Any) -> str:
-    """The store names orders "CROOKS-1928" and older ones "#1036"; the card says #1928."""
+    """The store names orders "CROOKS-1928" and older ones "#1036"; the card says #1928.
+
+    And where the value is a technical id it says nothing at all rather than saying the id.
+    §26: "Order #1962", never "gid://shopify/Order/…" — and this fell through to `return text`,
+    so a row whose `order_number` was a gid put the gid in the card's own title. Measured on
+    this tree before the change:
+
+        present([order_detail with order_number="gid://shopify/Order/1962"])
+        -> {'order_number': 'gid://shopify/Order/1962'}   ← the card's heading
+
+    The digits are in the gid, so the number is recoverable and is used; a gid of some other
+    kind leaves the field empty, which the renderer already draws as "Order" with no number.
+    """
     text = _text(value)
+    if text.startswith("gid://"):
+        tail = text.rstrip("/").rsplit("/", 1)[-1]
+        return f"#{tail}" if tail.isdigit() else ""
     digits = text.rsplit("-", 1)[-1].lstrip("#").strip()
     return f"#{digits}" if digits.isdigit() else text
 

@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.surfaces import ENTITY_KINDS
+from app.workspace import SECTIONS as WORKSPACE_SECTIONS
 
 log = logging.getLogger("crooks.commands")
 
@@ -48,10 +49,16 @@ REPLAY_TOOL = {
 
 # The tabs each surface offers. Held here rather than in the renderer because "show shipping"
 # spoken and a tap on Shipping have to reach the same place, and only one of those two ever
-# sees the DOM.
+# sees the DOM — and READ from app/workspace.py rather than written out again, because a
+# composed surface's sections and the tabs the owner may ask for are the same list said
+# twice. A customer's Inbox is "inbox" there and was "email" here, so "show me the email"
+# would have set a tab the workspace does not have: the quiet kind of mismatch §18 calls a
+# control with no destination.
 TABS: dict[str, tuple[str, ...]] = {
-    "order": ("overview", "items", "shipping", "customer", "email"),
-    "customer": ("overview", "orders", "email"),
+    "order": WORKSPACE_SECTIONS["order"],
+    # "email" stays beside "inbox" on a customer: it is the word the owner says for that tab,
+    # and `_select_tab` must not refuse a word that has somewhere to go.
+    "customer": (*WORKSPACE_SECTIONS["customer"], "email"),
     "capability": ("orders", "customers", "products", "email", "analytics", "system"),
 }
 

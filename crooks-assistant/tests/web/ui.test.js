@@ -28,6 +28,9 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     'variant_picker',
     'batch_action', 'batch_result', 'capability', 'reply_state', 'email_compose',
     'workspace',
+    // The composed surfaces of §3/§12 — one record, not a card per read. Drawn by
+    // renderCustomerWorkspace / renderOrderWorkspace; behaviour in workspaces.test.js.
+    'customer_workspace', 'order_workspace',
   ]));
 });
 

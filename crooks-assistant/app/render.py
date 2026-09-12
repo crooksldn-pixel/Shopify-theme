@@ -66,6 +66,12 @@ KEY_OF: dict[str, tuple[str, ...]] = {
     "variant_picker": ("order_id",),
     "email_compose": ("compose_id",),
     "workspace": ("workspace_id",),
+    # A composed surface is identified by the canonical entity it is about and by nothing
+    # else (app/workspace.py). That is the point of it: the customer read three times is one
+    # card with one identity, so the second read PATCHES the first rather than landing beside
+    # it — which is what §6 asks for and what D-3's deck did not do.
+    "customer_workspace": ("ref",),
+    "order_workspace": ("ref",),
 }
 
 # A product or an inventory card is about a product, and the query that found it is not its
