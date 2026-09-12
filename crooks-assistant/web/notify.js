@@ -153,8 +153,13 @@
     return TONES.indexOf(word) === -1 ? 'info' : word;
   }
 
+  /* WHAT MAKES TWO MESSAGES THE SAME MESSAGE: the class, the NAME and the half. Not the
+     sentence. It used to include the text, so "1 change still waiting" and "2 changes still
+     waiting" were two rows about one recurring event — and every message that varies by a
+     count, a name or an amount defeated the deduplication by definition. One event is one
+     row; the newest words win, because they are the current ones. */
   function keyOf(entry) {
-    return `${entry.class}:${entry.code || ''}:${entry.text}:${entry.branch || ''}`;
+    return `${entry.class}:${entry.code}:${entry.branch || ''}`;
   }
 
   /* THE POLICY, as one pure function.
@@ -353,6 +358,13 @@
     if (same) {
       same.repeats += 1;
       same.at = entry.at;
+      // The newest words, on the row that is already there. `textContent`, like everything
+      // else the owner did not type.
+      if (same.text !== entry.text) {
+        same.text = entry.text;
+        const wordsNode = same.node && same.node.querySelector ? same.node.querySelector('.note-words') : null;
+        if (wordsNode) wordsNode.textContent = entry.text;
+      }
       if (same.countNode) {
         same.countNode.textContent = `×${same.repeats}`;
         same.countNode.hidden = false;
