@@ -501,7 +501,21 @@ def test_each_detection_becomes_a_candidate_a_person_can_pick_up(tmp_path):
     intel = intelligence(rec, TOOLS)
     assert [n for _shape, n, _ids, _why in intel["new_read_families"] if n >= 2], intel["new_read_families"]
     assert any("typed into the composer" in what for _t, what, _d in intel["precision_input"])
-    assert any("too short" in what for _t, what, _d in intel["precision_input"])
+    # CHANGED IN PHASE 5, because the old expectation was provably wrong (§21).
+    #
+    # This line used to read `assert any("too short" in what ...)`: a recording the tablet
+    # threw away counted as evidence that a value had to be exact. Held against the 11
+    # September timeline, 61 of the 62 rows that expectation produced were ordinary taps on
+    # Split, Merge and Close — 39–140 ms, 63 of them, in 17 bursts, with ZERO accepted commands
+    # anywhere in the largest — swallowed by the voice layer because the branch bar sits inside
+    # `.orb-zone`'s stacking context. Not one was about precision input, and the rule made the
+    # precision-input path the report's number one improvement candidate at 2 × 62 = 124.
+    #
+    # A short recording is now `app/observability/touch.py`'s business, in four classes
+    # (CONTROL_TAP_MISROUTED_TO_VOICE, REAL_SHORT_VOICE_RECORDING, GESTURE_COLLISION,
+    # PRECISION_INPUT_REQUIRED), and this table holds only positive evidence of exact entry.
+    assert not any("too short" in what for _t, what, _d in intel["precision_input"]), \
+        "a tap the voice layer swallowed is not a value that had to be exact"
     assert [n for _shape, n, _ids in intel["cross_source_workflows"] if n >= 2], intel["cross_source_workflows"]
 
     text = write_proposals(path, tmp_path / "reports").read_text(encoding="utf-8")

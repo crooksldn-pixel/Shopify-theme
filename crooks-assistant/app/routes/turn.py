@@ -1235,6 +1235,12 @@ async def _answer(
         names = set(session.pii_seen)
     except KeyError:
         pass
+    # D-15. The one call that feeds the timeline's redaction seam. Redacting at each call site
+    # is what left three real customer email addresses in the 11 September file: `tts.text`,
+    # `model.answer` and `prediction.key` are written by other code, and nothing told them.
+    # `app/observability/timeline.py::scrub` takes contact details out by SHAPE on every event
+    # whether or not this runs; a NAME is not a shape, and this is the place that knows them.
+    timeline.note_names(names)
     # Abandoned: the owner cancelled, or asked something else while this was being answered.
     # The session's position has moved past this turn's; nobody is waiting for its voice.
     abandoned = bool(session is not None and _moved_on(session, branch, epoch=epoch, seq=seq))

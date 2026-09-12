@@ -669,10 +669,18 @@ def test_the_old_classifier_found_nothing_in_any_of_these(name, build, tmp_path)
 
 
 def test_every_class_this_module_files_has_a_fixture_that_produces_it(tmp_path):
-    """A classification nobody can reproduce is a classification nobody can trust. Between the
-    fixtures in this file, every one of the fifteen appears at least once."""
+    """A classification nobody can reproduce is a classification nobody can trust.
+
+    Between the fixtures in this file and the Phase 5 ones in `tests/phase5_timeline.py`,
+    every class this module files appears at least once. Phase 5 added six — the four touch
+    classes, the summary answered with profiles, the wordless notification and the wrong entity
+    answered — and their fixtures are rebuilt from the 11 September evening, so they live
+    beside that evening's other cases rather than being duplicated here.
+    """
+    from tests.phase5_timeline import FIXTURES as PHASE_5
+
     seen: set[str] = set()
-    for name, build in FIXTURES:
+    for name, build in (*FIXTURES, *PHASE_5):
         rec = reconstruct(read_events(build(tmp_path / name)))
         assert rec.experience.errors == [], (name, rec.experience.errors)
         seen |= {f.name for f in rec.experience.findings}

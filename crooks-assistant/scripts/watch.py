@@ -107,6 +107,14 @@ try:
     from app.observability.visible import NAV_BURST, NAV_WINDOW_S
 except Exception:      # noqa: BLE001 — the watch runs from a checkout without the app importable
     NAV_BURST, NAV_WINDOW_S = 4, 30.0
+# And the same for what makes a touch a TAP rather than a hold to speak. §21: 63 of the 11
+# September session's taps became recordings and nobody saw it happen — the report found it
+# twelve hours later and called it a precision-input failure. The bar the acceptance script
+# sets for this is ZERO, so the terminal has to say it at the moment the finger lifts.
+try:
+    from app.observability.touch import BURST_MIN, BURST_S, TAP_MS
+except Exception:      # noqa: BLE001 — same reason
+    TAP_MS, BURST_MIN, BURST_S = 200.0, 3, 12.0
 NAV_COMMANDS = {"navigation.home": "Home", "navigation.back": "Back", "navigation.forward": "Forward",
                 "workflow.next": "Next", "workflow.previous": "Previous"}
 
@@ -167,6 +175,10 @@ class Watch:
         self.told: set[str] = set()               # proposals already reported as stuck
         self.nav: deque[tuple[float, str]] = deque(maxlen=32)
         self.said_burst = 0.0
+        # The touches too short to carry speech, so a burst of them can be said once rather
+        # than twenty-six times (§21).
+        self.taps: deque[float] = deque(maxlen=64)
+        self.said_taps = 0.0
 
     # ------------------------------------------------------------------ helpers
 
@@ -303,7 +315,38 @@ class Watch:
         if what == "hold" and str(event.get("phase") or "") == "multitouch":
             return [f"{head} {self.tint('WARN', 'warn')}   {event.get('fingers') or 2} fingers on the "
                     f"{event.get('target') or 'orb'} at once"]
+        if what == "hold" and str(event.get("phase") or "") == "release":
+            return self._short_hold(head, event)
+        if what == "recording_too_short":
+            return []      # the release beside it already said it, with the target
         return self._verbose(head, f"tablet_{what}", event) if self.verbose else []
+
+    def _short_hold(self, head: str, event: dict[str, Any]) -> list[str]:
+        """A touch too short to carry speech, said at the moment the finger lifts.
+
+        §21 and §39 step 1. The bar is ZERO ordinary control taps becoming recordings, and a
+        bar nobody can see being crossed is a bar nobody holds. A tap on its own is a warning;
+        three inside twelve seconds is the burst the 11 September evening had seventeen of, and
+        that gets said once, loudly, rather than once per tap.
+        """
+        ms = event.get("ms")
+        try:
+            ms = float(ms)
+        except (TypeError, ValueError):
+            return []
+        if ms >= TAP_MS or str(event.get("outcome") or "") != "sent":
+            return []
+        ts = float(event.get("ts") or 0.0)
+        self.taps.append(ts)
+        recent = [at for at in self.taps if ts - at <= BURST_S]
+        out = [f"{head} {self.tint('TAP→MIC', 'warn')} a {ms:.0f} ms touch became a recording"
+               + self.dim(f"  under {TAP_MS:.0f} ms, so no speech was in it")]
+        if len(recent) >= BURST_MIN and ts - self.said_taps > BURST_S:
+            self.said_taps = ts
+            out.append(f"{head} {self.tint('SWALLOWED', 'error')} {len(recent)} taps in "
+                       f"{ts - recent[0]:.0f}s, every one sent to the recogniser — the voice "
+                       f"layer is over a control (web/style.css stacking context)")
+        return out
 
     def _control(self, head: str, kind: str, event: dict[str, Any]) -> list[str]:
         name = str(event.get("command") or event.get("action") or kind)
