@@ -231,10 +231,33 @@ The point of §30 and §34 is that a green gate should mean something. What chan
 - **The analyser** ranks by severity before frequency, with a confidence discount on inferred
   findings, so 2 × 62 taps can no longer outrank every P0.
 
-Five shots remain MISSING, each saved under that name with its reason and owner in the file
-name — a progressive shell nothing currently produces on the fixture world, and a
-branch-ready state that needs a half to finish while unfocused. They are named rather than
-quietly absent, which is the §32 requirement.
+Four shots remain MISSING, each saved under that name with its reason and owner in the file
+name. They are named rather than quietly absent, which is the §32 requirement — and one of
+them has a specific cause worth writing down rather than leaving as "not produced":
+
+**`present(pending=…)` has no live caller, so no section is ever drawn as LOADING.** The
+workspace composition accepts `pending` and each section renderer honours it; the two
+vocabularies were even checked and found compatible (`_hit` in app/workspace.py takes the
+section's own name and its aliases, so E's "orders"/"inbox" and B's "email" all land). What
+is missing is a place to call it from:
+
+* `progressive.observe()` calls `present()` with **no session** on purpose — so that early
+  staging does not put a record on the context stack the owner never saw, or issue an id
+  nobody was shown — and `_compose_workspace` returns immediately without one. So `pending`
+  passed there would be discarded.
+* the turn's own `present()` (app/routes/turn.py) runs when the turn is **over**, by which
+  point every read has landed or failed and `in_flight` is empty by construction.
+
+So the section that is still reading is not drawn as loading — it is simply not drawn yet,
+and appears when it lands. That is honest but it is not §15's "watch each one fill in", and
+it is why shots 17–19 cannot be photographed: there is no promised-but-unread card on the
+glass to photograph.
+
+Deliberately NOT wired. E left this join unwired and said why ("guessing which it wants
+would have been a silent mismatch"); the remaining gap is not the vocabulary but the call
+site, and adding the line at the site E named would be a no-op that LOOKS done — which is
+worse than the gap, and is the exact failure mode §34 is about. The fix is a composition
+that runs while reads are in flight, which is a piece of work, not a line.
 
 ## 8b · What the final gate found, which is the point of having one
 
