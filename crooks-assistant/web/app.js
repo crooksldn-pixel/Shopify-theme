@@ -888,10 +888,11 @@ function pickMimeType() {
 // wordmark, in flow. Nothing floats over the dock, the orb, the halves or the composer any
 // more, because nothing here is positioned over anything.
 //
-// `toast(words)` and `toast(words, 'bad')` keep working as they did: the callers all around
-// this file mean "say this in the workspace", which is what they get. A caller that knows
-// better — a message about one half, a message belonging to a control, a message about the
-// Mac itself — passes a second argument instead.
+// D-10: `toast(words)` IS GONE. It was the one way to say something without naming it, and
+// eleven of the live session's sixteen notifications came through it — recorded as
+// `{name:"workspace", tone:"info"}` and nothing else, because a code is the only thing that
+// makes a message nameable, deduplicable, testable, or refusable. Every caller in this file
+// now says WHICH message it is, and web/notify.js refuses one that does not.
 function notify(message, where) {
   const words = String(message || '').trim();
   const api = typeof window !== 'undefined' ? window.CrooksNotify : null;
@@ -903,8 +904,14 @@ function notify(message, where) {
   if (spec.branch === undefined && spec.class === 'workspace' && focusedBranch) spec.branch = focusedBranch;
   return api.show(spec);
 }
-function toast(message, kind) {
-  return notify(message, { tone: kind === 'bad' ? 'bad' : 'info' });
+
+// A NAME for a message whose name came off the wire. web/notify.js requires every message to
+// carry a lower_snake_case `code` and refuses one that does not — which would silently lose a
+// refusal whose code the Mac spelled some other way. The boundary normalises it here rather
+// than the policy loosening for it.
+function codeOf(raw, fallback) {
+  const name = String(raw || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return /^[a-z][a-z0-9_]*$/.test(name) ? name : fallback;
 }
 
 // CONTROL-LOCAL: the words appear directly after the control they are about, inside its own
@@ -920,7 +927,12 @@ function notifyControl(message, control, where) {
 // cards, the tab and the scroll are all exactly where the owner left them. A recogniser
 // that missed a word must not cost him what he was reading.
 function sayAndStay(data) {
-  toast(data.answer, 'bad');
+  // A FALLBACK, because `data.answer` can be empty and a message with no words is not a
+  // message — one of the eleven. And `warn` rather than `bad`: a missed word is not a
+  // failure that has to be acknowledged before the screen can be used again, and the whole
+  // point of this path is to leave the screen alone.
+  notify(String(data.answer || '').trim() || 'Nothing usable was heard. Say it again.',
+    { tone: 'warn', code: 'not_heard' });
   el.answer.textContent = '';
   setState('READY', '');
   speakAnswer(data.answer, { isError: true });
@@ -1500,7 +1512,7 @@ async function goHome() {
   }
   // The Mac is unreachable, or has no landing to draw: the orb screen, as before. A refusal
   // says why rather than leaving the owner to guess from a screen that changed on its own.
-  if (landed && landed.ok === false && landed.detail) toast(landed.detail);
+  if (landed && landed.ok === false && landed.detail) notify(String(landed.detail), { tone: 'warn', code: 'no_landing' });
   setMode('orb');
   renderRecent();
 }
@@ -2019,17 +2031,25 @@ async function branchCommand(branchId, verb) {
     const response = await fetch(path, { method: 'POST', body: form, cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
     T.record('branch_command', { action: verb, status: response.status, id: branchId || undefined });
-    if (!response.ok) { toast(String(data.detail || 'That is not possible just now.')); return null; }
+    if (!response.ok) { notify(String(data.detail || 'That is not possible just now.'), { tone: 'bad', code: 'branch_refused' }); return null; }
     applyBranches(data);
     if (verb === 'merge' && data.merged) {
       const waiting = Array.isArray(data.merged.still_waiting) ? data.merged.still_waiting.length : 0;
-      const looked = Array.isArray(data.merged.looked_at) ? data.merged.looked_at.length : 0;
-      // On the half that is left, which is the half that did the merging — never over the
-      // other one's workspace, which is what the live session did.
-      notify(waiting
-        ? `Merged. ${waiting} change${waiting === 1 ? '' : 's'} still waiting over there.`
-        : `Merged. ${looked} thing${looked === 1 ? '' : 's'} it looked at came back.`,
-      { tone: waiting ? 'warn' : 'good', code: 'merged', branch: focusedBranch });
+      // D-10. "Merged. 2 things it looked at came back." IS GONE, and so is every other way
+      // of saying `merged`: the orb visibly becoming one orb, the two chips becoming one and
+      // the deck gaining what came back are the notification. Three of the live session's
+      // five texted notifications were `divided` and two were `merged`; they are all zero
+      // now, and web/notify.js refuses either code outright (SCREEN_SHOWS).
+      //
+      // What the screen does NOT show is a change the other half had staged and nobody has
+      // authorised yet — it survived the merge and is still waiting for a gesture. That is a
+      // meaningful task outcome with nowhere else to live, so it stays, as a WARN with its
+      // own name, and only when there is one. On the session's own timeline, where zero
+      // proposals were ever staged, this says nothing at all.
+      if (waiting) {
+        notify(`${waiting} change${waiting === 1 ? '' : 's'} came back still waiting for you.`,
+          { tone: 'warn', code: 'merge_waiting', branch: focusedBranch });
+      }
     }
     if (verb === 'cancel' && Array.isArray(data.revoked) && data.revoked.length) {
       settleProposals(data.revoked, 'revoked', 'Withdrawn');
@@ -2053,10 +2073,11 @@ async function splitOrb(how) {
   if (branches.length > 1) return;
   T.record('navigate', { nav: 'split', name: how });
   const data = await branchCommand('', 'fork');
-  if (data) {
-    haptic(HAPTIC.done);
-    notify('Divided. Tap a half to talk to it; the other keeps working.', { code: 'divided', tone: 'good', branch: focusedBranch });
-  }
+  // D-10. "Divided. Tap a half to talk to it; the other keeps working." IS GONE. It was said
+  // three times in the live session, over a screen that had just visibly become two halves
+  // with two named chips under it. The haptic stays: it is the confirmation a thumb gets
+  // without looking, and it is not a message.
+  if (data) haptic(HAPTIC.done);
 }
 async function mergeOrb(how) {
   const other = (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
@@ -2183,7 +2204,9 @@ async function rowAction(action, ref, button) {
     const data = await response.json().catch(() => ({}));
     T.record('row_action', { action, status: response.status, outcome: response.ok ? 'staged' : 'refused', proposal_id: data && data.proposal_id });
     if (!response.ok) {
-      toast(String((data && data.detail) || 'That could not be prepared.'));
+      // CONTROL-LOCAL: a refusal about THIS chip belongs beside it, where the thumb is.
+      notifyControl(String((data && data.detail) || 'That could not be prepared.'), button,
+        { tone: 'bad', code: 'row_refused' });
       restore();
       return;
     }
@@ -2197,7 +2220,7 @@ async function rowAction(action, ref, button) {
     }
   } catch {
     T.record('row_action', { action, status: 0, outcome: 'refused' });
-    toast('The Mac did not answer.');
+    notifyControl('The Mac did not answer.', button, { tone: 'bad', code: 'offline' });
     restore();
   }
 }
@@ -2412,7 +2435,7 @@ function settleAction(node, payload, status) {
   if (status >= 400 && !items.length) {
     const surface = node.querySelector ? node.querySelector('.action-surface') : null;
     notifyControl(ACTION_REASONS[code] || String(payload.detail || 'That could not be applied.'),
-      surface, { tone: 'bad', code: `action_${code || 'refused'}` });
+      surface, { tone: 'bad', code: codeOf(`action_${code}`, 'action_refused') });
   }
   // Whatever this page believes just happened, ask the Mac. It is the only one that knows.
   reconcileActions('gesture');
@@ -3497,7 +3520,10 @@ async function composeFieldChanged(control) {
   const post = control.dataset.post || 'compose.field';
   const answered = await semanticCommand(post, { compose_id: composeId, field: name, value });
   if (!answered) return;                                   // offline: the field keeps what was typed
-  if (!answered.ok) { toast(String(answered.detail || 'That could not be applied.')); return; }
+  // CONTROL-LOCAL: a rejected value is about the FIELD it was typed into. It used to be a
+  // workspace line — a message about the screen, printed for something that happened inside
+  // one control, 788px from the thumb that typed it.
+  if (!answered.ok) { notifyControl(String(answered.detail || 'That could not be applied.'), control, { tone: 'bad', code: 'field_refused' }); return; }
   if (!Array.isArray(answered.ui) || !answered.ui.length || !card) return;
   const fresh = replaceComposeCard(card, answered.ui);
   if (!fresh) return;
@@ -3581,7 +3607,7 @@ if (!window.__crooksCommandDelegate) {
     // where the thumb already is and where it scrolls with the card. A toast over the dock
     // is a message about the screen, and this is not one.
     if (!answered) { notifyControl('The Mac did not answer.', button, { tone: 'bad', code: 'offline' }); return; }
-    if (!answered.ok) { notifyControl(String(answered.detail || 'That could not be done.'), button, { tone: 'bad', code: String(answered.code || 'command_refused') }); return; }
+    if (!answered.ok) { notifyControl(String(answered.detail || 'That could not be done.'), button, { tone: 'bad', code: codeOf(answered.code, 'command_refused') }); return; }
     if (Array.isArray(answered.ui) && answered.ui.length && window.CrooksUI) {
       const rendered = window.CrooksUI.render(answered.ui, renderOpts());
       if (rendered.nodes.length) pushContext(rendered.nodes, answered.ui, answered.answer || '');
