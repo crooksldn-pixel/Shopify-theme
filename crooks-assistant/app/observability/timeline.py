@@ -5,7 +5,35 @@ thread writes it. Off — no session active — `emit` is a cached stat and a re
 Every event carries the time, a sequence number, the test session, its source and its kind,
 and whatever correlation ids the caller has (session_id, turn_id, tool_call_id, proposal_id,
 context_request_id). Never a credential: keys that name one are withheld and strings that
-look like one are scrubbed, whatever the caller passed."""
+look like one are scrubbed, whatever the caller passed.
+
+And never a customer's contact details, for the same reason and by the same seam. D-15,
+measured over all 1,365 events of the 11 September session:
+
+    turn_finished.question   redacted — 8 events carry `[name]`
+    turn_finished.answer     redacted — 7 events carry `[name]`
+    tts.text                 NOT redacted — raw name and raw email address
+    model.answer             NOT redacted — raw email address
+    prediction.key           NOT redacted — raw email address
+
+Three real customer email addresses sat in that file, in fields the redactor did not cover,
+because redaction was applied at ONE CALL SITE (`app/routes/turn.py::_written`, on the turn
+record) and not at the seam. The same sentence was scrubbed where it was written down as an
+ANSWER and intact where it was written down as something SPOKEN. `logs/test-sessions/` is
+gitignored so nothing reached the repository — but a timeline is exported, read, pasted into
+reports and handed to engineering agents, and this pass received three real addresses exactly
+that way.
+
+So `scrub` — which every event passes through on its way to the queue, and which is the only
+path there is — now redacts by SHAPE as well: email addresses, card numbers, postcodes and
+telephone numbers, using the same rule the turn log has always used
+(`app/logging/turnlog.py::redact_text`). A new event kind cannot arrive unredacted, because
+there is nowhere for it to arrive from that does not go through here.
+
+A name cannot be found by shape. It can be found because we know exactly which names a turn's
+tools returned, so `note_names` takes them and every event written afterwards has them
+replaced too — one call, at the one place that already computes the set, rather than a rule
+per field."""
 
 from __future__ import annotations
 
@@ -40,6 +68,14 @@ WITHHELD_KEYS = frozenset({
     "token", "access_token", "refresh_token", "id_token", "oauth_token", "client_secret", "secret",
     "password", "nonce", "arm_nonce", "x-crooks-arm", "headers", "raw_headers", "credentials", "credential",
 })
+# How many of the names a session has been told about are kept. Bounded, because this is a
+# process-lifetime set and a long session reads a lot of customers.
+MAX_NAMES = 256
+# The names to replace wherever they appear in a written event, newest first. Fed by
+# `note_names` from the place that already knows them (a turn's own tool results); empty
+# until something tells it, and shape redaction runs whether or not anything has.
+_names: deque[str] = deque(maxlen=MAX_NAMES)
+
 # Strings shaped like a credential, scrubbed wherever they appear.
 _SECRET = re.compile(
     r"(shpat_[A-Za-z0-9]{8,}|shpca_[A-Za-z0-9]{8,}|shpss_[A-Za-z0-9]{8,}|sk-ant-[A-Za-z0-9_\-]{8,}|sk_[A-Za-z0-9]{20,}"
@@ -74,7 +110,50 @@ def scrub(value: Any, depth: int = 0) -> Any:
         return f"<{len(value)} bytes>"
     text = value if isinstance(value, str) else str(value)
     text = _SECRET.sub("[secret]", text)
+    text = _redact(text)
     return text if len(text) <= MAX_STRING else text[:MAX_STRING] + "…"
+
+
+def note_names(names: Any) -> None:
+    """The customer names this process has been shown, so written events can lose them.
+
+    A name is not a shape, so it cannot be found by pattern; it can be found because the turn
+    that is about to be written down knows exactly which names its own tools returned. One call
+    from there covers every event of that turn and every event after it — `tts.text`,
+    `model.answer`, `prediction.key` and any kind added later — rather than a redaction rule
+    per field, which is what left three real addresses in the 11 September file.
+    """
+    for name in names or ():
+        text = str(name or "").strip()
+        if len(text) >= 3 and text not in _names:
+            _names.append(text)
+
+
+def forget_names() -> None:
+    """Empty the name set. For tests, and for a process handed to a different shop."""
+    _names.clear()
+
+
+def _redact(text: str) -> str:
+    """Contact details out of one string, by shape and by the names we have been told.
+
+    The rule is `app/logging/turnlog.py`'s, which is the one the M13 check is written against —
+    "open a real log file and confirm there are none" — so the timeline and the turn log cannot
+    disagree about what counts as personal data. Never raises: an event that cannot be redacted
+    is not an event that gets written unredacted, it is an event that gets written as nothing.
+    """
+    if not text:
+        return text
+    try:
+        from app.logging.turnlog import redact_text
+
+        return redact_text(text, tuple(_names))
+    except Exception:  # noqa: BLE001 — observability never takes a turn down
+        # Belt and braces: the one shape that actually leaked, with no import behind it.
+        return _EMAIL_FALLBACK.sub("[email]", text)
+
+
+_EMAIL_FALLBACK = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 
 
 class Timeline:
