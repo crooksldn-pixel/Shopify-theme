@@ -1511,8 +1511,15 @@ async function goHome() {
     }
   }
   // The Mac is unreachable, or has no landing to draw: the orb screen, as before. A refusal
-  // says why rather than leaving the owner to guess from a screen that changed on its own.
-  if (landed && landed.ok === false && landed.detail) notify(String(landed.detail), { tone: 'warn', code: 'no_landing' });
+  // says why rather than leaving the owner to guess from a screen that changed on its own —
+  // and it says SOMETHING even when the Mac sent no reason, which is how a message with no
+  // words happens. The guard used to require `landed.detail`, so a refusal with an empty
+  // detail changed the screen and explained nothing: one of the eleven, in the one place a
+  // message was most owed.
+  if (landed && landed.ok === false) {
+    notify(String(landed.detail || '').trim() || 'There is nothing on this half to come back to.',
+      { tone: 'warn', code: 'no_landing' });
+  }
   setMode('orb');
   renderRecent();
 }
