@@ -30,9 +30,12 @@ one line per section, each in a state —
 
 — and then each section is PATCHED IN PLACE as it lands: `Orders · 7`, then `Inbox · 4`. The
 workspace is never replaced, never reordered, never duplicated. That card is `workspace_plan`
-(`PLAN_TYPE`), the one card the Mac stages that `present()` never builds; it goes up when the
-workspace has at least two sections, because a one-section task already names itself on the
-titled skeleton of the single card it is about.
+(`PLAN_TYPE`), the one card the Mac stages that `present()` never builds, and it goes up when
+two conditions hold: there are at least two sections to name, and no fact has landed yet. A
+one-section task already names itself on the titled skeleton of the single card it is about,
+and a header that arrives after the cards it describes is a fifth wheel — so the earliest
+honest moment is where this is done from: `app/reads/scheduler.py` names the sections of a
+read plan before it runs the first read of it.
 
 **§27 — five deliberate states**, for the workspace and for every section of it: LOADING,
 PARTIAL, READY, EMPTY, ERROR. **EMPTY IS NOT ERROR**: a Gmail search that found no threads
@@ -402,7 +405,7 @@ class Workspace:
             section = self.section(kind)
             if section is None:
                 continue
-            count = _count_of(data)
+            count = _count_of(kind, data)
             if data.get("empty") is True or count == 0:
                 section.state, section.value = EMPTY, ""
                 section.note = str(data.get("note") or "Nothing found")[:80]
@@ -590,21 +593,34 @@ def _ms(value: float | None) -> float | None:
     return None if value is None else round(float(value), 1)
 
 
-def _count_of(data: dict[str, Any]) -> int | None:
+# What a count means on each kind of card, and the only keys it may be read from. Kept per
+# kind rather than "the first list on the card", because the first list on an ORDER is its
+# line items and `Orders · 3` would then be a count of socks. A kind that is not here is about
+# one record and gets no count at all — never a 1 invented to fill the space.
+COUNT_OF_KIND: dict[str, tuple[str, ...]] = {
+    "order_list": ("count", "orders"),
+    "customer_list": ("count", "customers"),
+    "email_list": ("count", "threads"),
+    "email_thread": ("count", "messages"),
+    "product": ("count", "products"),
+    "inventory": ("count", "products"),
+}
+
+
+def _count_of(kind: str, data: dict[str, Any]) -> int | None:
     """How many things a card carries, as the card itself says — never a guess.
 
-    `count` is what the presentation layer puts on a listing; a card about one record has no
-    count and gets none invented for it, which is why this returns None rather than 1.
+    `count` is what the presentation layer puts on a listing. Returns None for a card about
+    one record, and 0 only when the read genuinely found nothing (which is EMPTY, not ERROR).
     """
-    count = data.get("count")
-    if isinstance(count, bool):
-        return None
-    if isinstance(count, int):
-        return max(0, count)
-    for key in ROW_KEYS:
-        rows = data.get(key)
-        if isinstance(rows, list):
-            return len(rows)
+    for key in COUNT_OF_KIND.get(str(kind or ""), ()):
+        value = data.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return max(0, value)
+        if isinstance(value, list):
+            return len(value)
     return None
 
 

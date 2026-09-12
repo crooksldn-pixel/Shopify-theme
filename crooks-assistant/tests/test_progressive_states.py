@@ -154,6 +154,26 @@ def test_the_page_no_longer_hands_one_branch_tab_to_every_card():
     assert UI_JS.count("initial: tabFor(") == 3, "every card with tabs resolves its own"
 
 
+def test_a_spoken_request_for_a_part_of_a_record_is_that_records_tab():
+    """"Show me the shipping on 1912" is a task that names a tab (§3/§12), and it reaches the
+    card the same way a tap does — through `surface.tab`, filed against the RECORD.
+
+    So the task-implied tab is not a new mechanism: the command layer already had it, and
+    what was wrong was where it was kept. This is the end of that path, from the command to
+    the map the tablet resolves a card's tab from.
+    """
+    from app import commands
+
+    branch = Branch(branch_id="br_1", session_id="s1")
+    branch.visit("order", "g1", "#1912")
+    outcome = commands.run("surface.tab", commands.Ctx(None, None, branch, {"surface": "order", "tab": "shipping"}))
+    assert outcome.ok, outcome.refusal
+    assert branch.tab_for("order", "g1") == "shipping"
+    assert branch.public()["tabs"] == {"order:g1": "shipping"}
+    # And the order beside it on the same half is not moved to Shipping.
+    assert branch.tab_for("order", "g2") == ""
+
+
 def test_the_tab_a_task_implies_is_named_on_the_card_it_is_about():
     """The contract with the workspace composition (workstream B): the intended tab rides on
     the CARD, as `data.tab`, which `app/render.py` already treats as visual state — so naming
@@ -413,6 +433,21 @@ def test_every_planned_section_names_a_card_the_renderer_can_draw():
             assert kind in renderers, f"{family} plans {kind}, which the tablet cannot draw"
     for kind in progressive.SECTION_OF_KIND:
         assert kind in UI_TYPES, f"{kind} has a section and is not in the vocabulary"
+
+
+def test_a_count_on_a_section_counts_the_section_and_not_the_first_list_on_the_card():
+    """`Orders · 3` must mean three orders. The first list on an ORDER card is its line
+    items, so a count read from "the first list on the card" would have said three socks."""
+    clock = Clock()
+    workspace = progressive.begin("s1", turn_id="t1", clock=clock)
+    workspace.facts([{"type": "order", "data": {"order_id": "g1", "order_number": "#1938", "detail": True,
+                                                "items": [{"title": "Socks"}, {"title": "Hoodie"}, {"title": "Cap"}]}}])
+    section = workspace.sections["orders"]
+    assert section.state == progressive.READY
+    assert section.value == "", "a card about one record was given a count of its contents"
+    # A listing does carry one, and it is the listing's own.
+    workspace.facts([inbox(4)])
+    assert workspace.sections["inbox"].value == "4"
 
 
 def test_every_read_that_draws_a_card_belongs_to_a_section():
