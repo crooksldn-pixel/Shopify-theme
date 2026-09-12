@@ -428,6 +428,57 @@ def test_an_analytic_question_is_not_turned_into_an_entity_workspace():
     assert "customer_workspace" not in types(items), types(items)
 
 
+# ------------------------------------------------------------------ §12, the inbox list
+
+
+def test_an_inbox_row_says_who_and_what_it_is_about():
+    """§12's INBOX list: sender, subject, customer link, order link, needs-reply, age,
+    priority. A row that carries only a sender and a snippet is a picture of an inbox; these
+    are what make it somewhere to work from — and every one of them comes from what the Mac
+    already holds, so the list costs no extra read.
+    """
+    live = session("Anything in the inbox?", "inbox")
+    # The customer and his one order are already held, from an earlier turn.
+    present([ok("shopify_customer_history", {**HISTORY, "orders": 1,
+                                             "recent": [HISTORY["recent"][0]],
+                                             "last_order": HISTORY["last_order"]})], session=live)
+    items = present([ok("gmail_search", {**THREADS, "threads": [
+        {**THREADS["threads"][0], "awaiting_reply": True, "known_customer": True}]})], session=live)
+    row = only(items, "email_list")["threads"][0]
+
+    assert row["from"] == "Daniel Sear" and row["subject"] == "Where is my order"
+    assert row["date"] == "Mon"                                   # age
+    assert row["needs_reply"] is True
+    assert row["priority"] == "high"
+    assert row["customer_link"] == {"kind": "customer", "ref": CUSTOMER,
+                                    "label": "Daniel Sear", "command": "open.entity"}
+    assert row["order_link"] == {"kind": "order", "ref": ORDER_A,
+                                 "label": "#1962", "command": "open.entity"}
+    # §18: both refs were issued before the links were offered, so neither tap is refused.
+    assert CUSTOMER in live.issued_ids and ORDER_A in live.issued_ids
+
+
+def test_an_inbox_row_offers_no_link_it_cannot_stand_behind():
+    """Two rules from `app/context/graph.py`, kept: a name is not evidence, and several
+    recent orders are "possible" rather than confident. A stranger gets no customer link and
+    a customer with two orders in hand gets no order link — §18 would rather show nothing
+    than a control that opens the wrong record."""
+    stranger = session("Anything in the inbox?", "inbox-2")
+    items = present([ok("gmail_search", {"query": "x", "threads": [
+        {"thread_id": THREAD_ID, "from": "Daniel Sear", "from_email": "someone@example.com",
+         "subject": "Hello", "date": "Mon", "snippet": ""}]})], session=stranger)
+    row = only(items, "email_list")["threads"][0]
+    assert "customer_link" not in row and "order_link" not in row
+    assert row["priority"] == "unknown"
+
+    # Known sender, two orders held: the customer is certain, the order is not.
+    live = session("Anything in the inbox?", "inbox-3")
+    present([ok("shopify_customer_history", HISTORY)], session=live)
+    row = only(present([ok("gmail_search", THREADS)], session=live), "email_list")["threads"][0]
+    assert row["customer_link"]["label"] == "Daniel Sear"
+    assert "order_link" not in row, "two held orders is a guess, and a guess is not a link"
+
+
 def _graph_with_history(sid: str) -> entities.EntityGraph:
     g = entities.graph_for(Session(session_id=sid))
     g.ingest("shopify_customer_history", HISTORY)

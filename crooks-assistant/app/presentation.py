@@ -287,6 +287,11 @@ def _compose_workspace(
             # The read fell over. Which SECTION that leaves unreadable, so the section can say
             # so and the rest of the workspace can carry on standing (§27).
             failed.update(entities.FILLS.get(call.name, ()))
+    # An inbox row says who the message is from AND which record it is about (§12), from the
+    # graph rather than from a new read. Done before the workspace question, because the rows
+    # are the same rows either way: a thread that ends up in a customer workspace's Inbox
+    # carries the same context as one on a list of its own.
+    _link_inbox(items, graph, session)
     said = question or str(getattr(session, "heard", "") or "")
     if not said:
         return items
@@ -302,6 +307,66 @@ def _compose_workspace(
     held = _workspace_keys(built["data"], plan)
     kept = [item for item in items if not _absorbed(item, held)]
     return [built, *kept]
+
+
+def _link_inbox(items: list[dict[str, Any]], graph: Any, session: Session) -> None:
+    """What each inbox row is ABOUT, added from what the Mac holds (§12's inbox list).
+
+    A row used to carry the sender, the subject, the date and a snippet. §12 asks it for the
+    customer, the order, whether we owe a reply, how old it is and how much it matters —
+    which is the difference between a picture of an inbox and somewhere to work from.
+
+    Every value comes from the canonical graph, so this costs no read. The evidence rules are
+    `app/context/graph.py`'s, deliberately: the sender's address matched EXACTLY against a
+    customer the conversation already knows, and an order link only where that customer has
+    exactly one order in hand — a name is not evidence and a guess on the thread the owner is
+    about to reply to is worse than no link at all.
+
+    §18 all the way through: a link is only offered where the ref is a shape the gate accepts
+    and the conversation has been issued it, and the issuing happens here because the row
+    showing the link IS the conversation being shown the record.
+    """
+    from app import workspace
+
+    for item in items:
+        if item["type"] != "email_list" or not isinstance(item.get("data"), dict):
+            continue
+        for row in item["data"].get("threads") or []:
+            if not isinstance(row, dict):
+                continue
+            thread = graph.get("email_thread", row.get("thread_id"))
+            person = graph.customer_of(thread.key) if thread is not None else None
+            if person is None:
+                person = graph.find_by_email("customer", row.get("from_email"))
+            orders = graph.orders_of(person.key) if person is not None else []
+            if thread is not None and graph.orders_of(thread.key):
+                orders = graph.orders_of(thread.key)      # the thread named one itself
+            if person is not None:
+                link = workspace.link_for(session, "customer", person)
+                if link:
+                    row["customer_link"] = link
+            # Exactly one, or the link is a guess. `app/context/graph.py` calls several
+            # recent orders "possible" rather than confident, and a row has space for one.
+            if len(orders) == 1:
+                link = workspace.link_for(session, "order", orders[0])
+                if link:
+                    row["order_link"] = link
+            row["needs_reply"] = bool(row.get("needs_reply") or (thread is not None and thread.get("awaiting_reply")))
+            row["priority"] = _inbox_priority(row, person)
+
+
+def _inbox_priority(row: dict[str, Any], person: Any) -> str:
+    """How much this row matters, from facts already on it and nothing else.
+
+    Three words, so the list can be read at a glance and sorted by a renderer without asking
+    the Mac a second question. Never a score: a number invites the owner to believe a
+    precision that is not there.
+    """
+    if row.get("needs_reply"):
+        return "high"
+    if row.get("likely_bulk"):
+        return "low"
+    return "normal" if person is not None or row.get("known_customer") else "unknown"
 
 
 def _workspace_keys(data: dict[str, Any], plan: Any) -> frozenset[str]:

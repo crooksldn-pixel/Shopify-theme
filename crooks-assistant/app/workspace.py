@@ -787,6 +787,25 @@ def _open(session: Any, kind: str, ref: str) -> dict[str, Any]:
     return {"open": True, "open_note": ""}
 
 
+def link_for(session: Any, kind: str, entity: entities.Entity | None) -> dict[str, Any]:
+    """A link to another record, or {} — never a link that would be refused (§18).
+
+    Used by the inbox list as well as by the workspaces, so a thread's customer and order
+    links obey the same rule wherever the thread is drawn. The label is human (§26): a name,
+    or "Order #1962", and never the ref the tap posts — which rides beside it.
+    """
+    if entity is None:
+        return {}
+    ref = _ref(entity)
+    state = _open(session, kind, ref)
+    if not state["open"]:
+        return {}
+    label = _number(entity) if kind == "order" else _text(entity.get("name") or entity.get("subject"), 40)
+    if not label:
+        return {}
+    return {"kind": kind, "ref": ref, "label": label, "command": "open.entity"}
+
+
 def _actions_for(session: Any, order: entities.Entity | None, thread: entities.Entity | None,
                  *, customer: entities.Entity | None = None) -> list[dict[str, Any]]:
     """WHAT CAN I DO, and every one of them a real destination.

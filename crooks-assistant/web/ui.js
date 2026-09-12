@@ -1092,9 +1092,14 @@
           h('span', { class: 'row-sub', text: text(t.snippet) }),
           h('span', { class: 'row-side' }, [
             h('span', { class: 'card-meta', text: formatDate(t.date) }),
+            t.needs_reply === true ? badge('Needs reply', 'warn') : null,
             mixed && t.known_customer ? badge('Customer', 'quiet ok') : null,
             t.likely_bulk ? badge('Bulk', 'quiet') : null,
           ]),
+          // Which record the message is about (§12). The Mac only sends a link it has made
+          // good — kind, ref and a human label — so these are never the dead control of D-6;
+          // where it sent none, there is no chip rather than a chip that goes nowhere.
+          mailLinks(t),
           rowActions(t, opts),
           // The affordance instead of the sentence. This card used to end with 'Say "read that
           // one" to open a thread.' — a line of instruction under rows that gave no sign of
@@ -1106,6 +1111,24 @@
       })),
       d.note ? h('p', { class: 'card-note', text: text(d.note) }) : null,
     ], opts);
+  }
+
+  // The records an inbox row is about, as chips. The pair the deck posts to `open.entity`
+  // rides on each one, and the label beside it is words (§26) — "Order #1962", a person's
+  // name — never the ref itself.
+  function mailLinks(t) {
+    const links = [t.customer_link, t.order_link].filter((l) => l && typeof l === 'object');
+    const chips = [];
+    for (const l of links) {
+      const ref = text(l.ref);
+      const kind = text(l.kind);
+      const label = text(l.label);
+      if (!ref || !kind || !label) continue;
+      chips.push(h('button', { class: 'row-btn', type: 'button', data: { ref, kind }, text: label }));
+    }
+    // `row-actions` and `row-btn`, the classes the row buttons already use: a 44 px target
+    // and no new rule in web/style.css, whose layering is another workstream's this pass.
+    return chips.length ? h('span', { class: 'row-actions' }, chips) : null;
   }
 
   // The buttons beside a row, exactly as the Mac listed them (app/actions/rows.py). The
