@@ -56,9 +56,17 @@ times, and finally said *"bring up a UI for the customer's page"*.
    empty Email tab.
 4. Watch the Inbox section fill in when Gmail answers. If he has no email, it must say
    *"no messages found"* **and the rest of the workspace must still be there**.
-5. Now tap **Email** on this customer. Then ask for a **different** customer.
+5. **The write box you asked for.** You said, last time: *"I want to also be seeing his
+   orders and his history and like an email write box."* There should now be a control
+   reading **Email <his name>** among the things to do on that card. Tap it. A composer must
+   open, addressed to him, with his address already in it and nothing sent.
+   Then tap **Cancel** on it. The composer must **leave the screen** — last time Cancel said
+   "Gone. Nothing was saved." and the composer stayed exactly where it was.
+6. Now tap **Email** on this customer. Then ask for a **different** customer.
 
-**FAIL IF:** the second customer opens on Email. That is last session's defect exactly.
+**FAIL IF:** the second customer opens on Email. That is last session's defect exactly. Or
+if **Email <name>** is missing from a customer the Mac has just read — a customer you can
+see and cannot write to is the thing you complained about.
 
 **Feel check:** did the first screen answer what you asked, or did you have to hunt?
 
