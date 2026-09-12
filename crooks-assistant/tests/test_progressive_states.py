@@ -474,6 +474,20 @@ def test_the_workspace_plan_is_a_card_both_sides_know():
     assert progressive.PLAN_TYPE == "workspace_plan"
 
 
+def test_both_sides_know_the_same_five_states():
+    """§27's vocabulary is a contract, so it is held in both files and compared here: a state
+    the Mac can send and the tablet has no word for would be drawn as the raw word, and one
+    the tablet knows and the Mac never sends is a screen nobody can reach."""
+    words = re.search(r"const PLAN_WORDS = \{([^}]*)\}", UI_JS)
+    assert words, "the tablet has no words for the states"
+    tablet = {part.split(":")[0].strip() for part in words.group(1).split(",") if ":" in part}
+    assert tablet == set(progressive.STATES) | {progressive.WAITING}, tablet
+    kickers = re.search(r"const PLAN_STATE = \{([^}]*)\}", UI_JS)
+    assert kickers, "the tablet has no line for the workspace's own state"
+    heads = {part.split(":")[0].strip() for part in kickers.group(1).split(",") if ":" in part}
+    assert heads == set(progressive.STATES), heads
+
+
 def test_every_planned_section_names_a_card_the_renderer_can_draw():
     renderers = set(re.findall(r"^\s{4}(\w+): render\w+,$", UI_JS, re.M))
     for family, (title, kinds) in progressive.PLAN_OF_FAMILY.items():
