@@ -236,6 +236,39 @@ name — a progressive shell nothing currently produces on the fixture world, an
 branch-ready state that needs a half to finish while unfocused. They are named rather than
 quietly absent, which is the §32 requirement.
 
+## 8b · What the final gate found, which is the point of having one
+
+Worth recording separately, because the pass would have reported itself finished without it.
+The full suite was green at 2,812 passed / 2 failed, and those two failures carried twelve
+browser checks between them. Six of the twelve were instruments; **three were real**:
+
+- **D-6's whole CLASS, not the instance.** §33's sweep tried every `[data-ref]` on a products
+  landing and three product rows were refused `not_held`. `app/analytics/present.py` takes
+  `ref`/`kind` off an aggregate's GROUP KEY, and it is handed a read result and no session —
+  so it cannot ask whether a record is openable at all. Every product an aggregate grouped by
+  got a tappable row whether the Mac had read it or not. Fixed as a sweep where the session
+  is, asking the two things the tap will ask.
+- **The label scrape a second time**, visible in the gate's own failure text:
+  `"1Convict Hoodie3units£180.00 r"`. Ranking rows carried no name of their own.
+- **A bug of my own**, and the reason every state also asserts `no script error while
+  replaying it`: I added `fx()` to a branch without adding it to the function's signature,
+  and one undefined name failed a whole state and took its other eight checks with it.
+
+And one finding that is a lesson rather than a defect. Fixing D-6 made
+`no_control_carries_unheld_ref` **unmeasurable** — with every dead ref correctly withheld,
+that deck offers nothing, and the check reported "0 offered ... so §18 could not be
+measured" rather than passing. It was right to. *Unmeasurable is not satisfied*, and a gate
+that goes green because nothing happened is how the Phase 4 suite stayed green. So the
+fixture now drives both directions on two decks: the ranking's refs withheld while its
+figures survive, then a deck whose offers the Mac does hold — because without that second
+leg the sweep could have withheld EVERY ref on the product and nothing would have noticed.
+
+Three fixtures also turned out to be asserting the DEFECT, which is what the FIXTURE half of
+a live state is for: it reproduces what the tablet recorded. Two of those states can no
+longer be reproduced, because the fix is in the renderer the fixture drives. Each became the
+claim that now matters rather than being weakened — `no_card_open_on` is a rule where
+`every_card_open_on` had been a description.
+
 ## 9 · §38 — the final gate
 
 Run from a clean head, in one process, with nothing else on the machine — which matters: the
