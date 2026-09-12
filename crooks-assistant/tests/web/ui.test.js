@@ -1714,3 +1714,78 @@ test('the attention summary tones its rows and keeps its rows rows', () => {
   assert.equal(tapTargets(node).length, 2);
   assert.ok(!textOf(node).includes('gid://'));
 });
+
+
+// ---- the hop from an order to its customer (the click-path audit's path 1, step 4 of 8).
+
+function orderWithCustomer(over) {
+  return UI.renderItem({ type: 'order', data: Object.assign({
+    order_id: 'gid://shopify/Order/1938', order_number: '#1938', detail: true,
+    customer_name: 'Mia Jones', customer_id: 'gid://shopify/Customer/7001',
+    customer_email: 'mia@example.com', total: '£84.00', fulfillment: 'unfulfilled',
+    payment: 'paid', items: [], pending: [],
+    history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] },
+  }, over || {}) }, {});
+}
+
+test('an order card offers a control that opens its customer', () => {
+  // The click-path audit found path 1 dead here: an order card with its Customer tab open
+  // offered nothing that opened the customer — everything tappable in that tab went to
+  // another ORDER. Order to customer was not walkable at all.
+  const node = orderWithCustomer();
+  const doors = node.querySelectorAll('.link-customer');
+  assert.equal(doors.length, 1, 'the order card offers no way to its customer');
+  assert.equal(doors[0].dataset.ref, 'gid://shopify/Customer/7001');
+  assert.equal(doors[0].dataset.kind, 'customer');
+  assert.ok(textOf(doors[0]).includes('Mia Jones'), textOf(doors[0]));
+  assert.ok(!textOf(node).includes('gid://'), 'an id reached something readable');
+});
+
+test('the door to the customer stands while the history is still being read', () => {
+  // Who the order belongs to is on the ORDER. Waiting for the history read to land before
+  // offering the hop is how step 4 came to be dead in the first place.
+  const node = orderWithCustomer({ pending: ['history'], history: null });
+  assert.equal(node.querySelectorAll('.link-customer').length, 1);
+  assert.ok(textOf(node).includes('Reading their history'), textOf(node));
+});
+
+test('the door stands when the history could not be read at all', () => {
+  const node = orderWithCustomer({ history: { available: false } });
+  assert.equal(node.querySelectorAll('.link-customer').length, 1);
+  assert.ok(textOf(node).includes('couldn’t load the customer'), textOf(node));
+});
+
+test('a guest order offers no door, because there is nobody behind it', () => {
+  // §18 the other way round: no customer, no control. A button that posts an empty ref is
+  // the dead control this rule exists to stop.
+  const node = orderWithCustomer({ customer_id: '', customer_name: '', history: null });
+  assert.equal(node.querySelectorAll('.link-customer').length, 0);
+  assert.ok(textOf(node).includes('No customer is attached'), textOf(node));
+});
+
+test('a customer ref of the wrong shape is not offered as a door', () => {
+  for (const bad of ['7001', 'gid://shopify/Order/1938', 'gid://shopify/Customer/abc', '../../etc']) {
+    const node = orderWithCustomer({ customer_id: bad });
+    assert.equal(node.querySelectorAll('.link-customer').length, 0, bad);
+  }
+});
+
+test('the late history fill keeps the door', () => {
+  // /context/order redraws that region and its payload is about the ORDER's regions, not
+  // about who it belongs to — so the door would have been dropped by the very read it was
+  // waiting for.
+  const node = orderWithCustomer({ pending: ['history'], history: null });
+  UI.hydrateOrder(node, { order_id: 'gid://shopify/Order/1938', pending: [],
+                          history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] } });
+  const doors = node.querySelectorAll('.link-customer');
+  assert.equal(doors.length, 1, 'the hop was lost when the history landed');
+  assert.equal(doors[0].dataset.ref, 'gid://shopify/Customer/7001');
+});
+
+test('the customer card does not offer a door to itself', () => {
+  const node = UI.renderItem({ type: 'customer', data: {
+    customer_id: 'gid://shopify/Customer/7001', name: 'Mia Jones', orders: 3, spent: '£410.00',
+    history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] },
+  } }, {});
+  assert.equal(node.querySelectorAll('.link-customer').length, 0);
+});

@@ -432,12 +432,38 @@
   }
 
   // ---- the customer's history, beside their order or on their own card.
-  function historyBlock(hist) {
+  // Where a customer id may be tapped from: the shape, checked here because the renderer
+  // cannot ask the Mac anything. The PERMISSION half is the Mac's — app/presentation.py
+  // issues an order's customer id when it draws the order, which is what makes this control
+  // resolvable rather than a `not_held` refusal (§18).
+  const CUSTOMER_REF = /^gid:\/\/shopify\/Customer\/\d+$/;
+
+  // The one control that walks from an ORDER to its CUSTOMER.
+  //
+  // The click-path audit found path 1 dead at step 4 of 8: an order card with its Customer
+  // tab open offered nothing that opened the customer. Everything tappable in that tab went
+  // to another ORDER. So the tab that is about a person now starts with a door to them, in
+  // the same shape the email thread's card already uses for the same hop (`link-customer`).
+  function customerDoor(who) {
+    const ref = text((who || {}).customer_id);
+    if (!CUSTOMER_REF.test(ref)) return null;
+    return h('button', {
+      class: 'link-chip link-customer', type: 'button', data: { ref, kind: 'customer' },
+    }, [
+      h('span', { class: 'link-chip-label', text: text((who || {}).customer_name, 'Open the customer') }),
+      h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }),
+    ]);
+  }
+
+  function historyBlock(hist, who) {
+    const door = customerDoor(who);
     // Not found, and could not be read, are different facts and get different sentences. The
     // Phase 2 live test found a failed read printed as "No customer on this order." under a
     // header naming the customer — infrastructure turned into business truth.
-    if (!hist || typeof hist !== 'object') return [h('p', { class: 'card-note', text: 'No customer is attached to this order.' })];
-    if (hist.available === false) return [h('p', { class: 'card-note unread-line', text: 'I couldn’t load the customer this time. Say “what else has this customer ordered?” to try again.' })];
+    if (!hist || typeof hist !== 'object') return [door, h('p', { class: 'card-note', text: 'No customer is attached to this order.' })];
+    // And the door stands even here — this is the case where it is worth most: the history
+    // could not be read and the customer can still be opened.
+    if (hist.available === false) return [door, h('p', { class: 'card-note unread-line', text: 'I couldn’t load the customer this time. Say “what else has this customer ordered?” to try again.' })];
     const orders = num(hist.orders);
     const stats = h('div', { class: 'stats three' }, [
       h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: orders === 1 ? 'Order' : 'Orders' })]),
@@ -466,7 +492,7 @@
         ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
       ]);
     })) : null;
-    return [stats, lines.length ? h('ul', { class: 'hist-lines' }, lines) : null, rows];
+    return [door, stats, lines.length ? h('ul', { class: 'hist-lines' }, lines) : null, rows];
   }
 
   // ---- email that is about this order, with how sure that is on every line.
@@ -695,7 +721,13 @@
       return brief;
     }
     const pending = Array.isArray(d.pending) ? d.pending.map((x) => text(x)) : [];
-    const historyBody = pending.indexOf('history') !== -1 ? [pendingLine('Reading their history…')] : historyBlock(d.history);
+    const who = { customer_id: d.customer_id, customer_name: d.customer_name };
+    const historyBody = pending.indexOf('history') !== -1
+      // Even while the history is still being read, the door is there: who the order belongs
+      // to is on the order, and waiting for a read to finish before offering the hop is how
+      // step 4 of the click path came to be dead.
+      ? [customerDoor(who), pendingLine('Reading their history…')]
+      : historyBlock(d.history, who);
     const emailBody = pending.indexOf('email') !== -1 ? [pendingLine('Checking the inbox…')] : relatedEmailBlock(d.email);
     const standing = d.history && typeof d.history === 'object' ? text(d.history.standing) : '';
     // Five tabs, one open. The September session drew order cards 7,524 pixels tall against
@@ -729,6 +761,12 @@
     ], opts);
     full.dataset.ref = text(d.order_id);
     full.dataset.pending = pending.join(' ');
+    // Kept on the node because /context/order redraws this region later and its payload is
+    // about the ORDER's regions, not about who it belongs to (app/presentation.py
+    // `present_extension`) — so the door would have been dropped by the very read it was
+    // waiting for.
+    full.dataset.customer = text(d.customer_id);
+    full.dataset.customerName = text(d.customer_name);
     return full;
   }
 
@@ -747,7 +785,9 @@
       append(sec, body);
     };
     if (pending.indexOf('history') === -1 && Object.prototype.hasOwnProperty.call(ext, 'history')) {
-      fill('history', historyBlock(ext.history));
+      fill('history', historyBlock(ext.history, {
+        customer_id: node.dataset.customer, customer_name: node.dataset.customerName,
+      }));
       const k = node.querySelector('.sec-history') && node.querySelector('.sec-history').querySelector('.sec-kicker');
       const standing = ext.history && typeof ext.history === 'object' ? text(ext.history.standing) : '';
       if (k && standing && !k.querySelector('.badge')) k.appendChild(badge(standing, 'quiet'));

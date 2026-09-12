@@ -324,6 +324,58 @@ async def test_a_tap_the_mac_does_not_hold_reads_it_rather_than_refusing(shop):
     assert opened.calls or opened.changed.get("needs_read"), opened.changed
 
 
+async def test_the_order_to_customer_hop_resolves_even_on_a_replayed_card(shop):
+    """The click-path audit: path 1 dead at step 4 of 8 — an order card with its Customer tab
+    open offers no control that opens the customer.
+
+    The renderer's half is in tests/web/ui.test.js. This is the half that decides whether the
+    control is alive: `open.entity` refuses a ref this conversation was never shown, and a
+    REPLAYED order card is rebuilt from the entity cache rather than from a tool result, so
+    `_harvest_ids` never sees its customer id. Drawing the card is the showing.
+    """
+    from app.memory import ENTITY
+    from app.memory import current as memory
+    from app.presentation import present
+
+    order_id = "gid://shopify/Order/1938"
+    customer_id = "gid://shopify/Customer/7001"
+    held = {
+        "order_id": order_id, "order_number": "CROOKS-1938", "detail": True,
+        "customer_id": customer_id, "customer_name": "Mia Jones",
+        "customer_email": "mia@example.com", "total": "84.00 GBP",
+        "fulfillment": "UNFULFILLED", "payment": "PAID", "items": [],
+    }
+    memory().put(ENTITY, f"order:{order_id}", held, source="shopify", query="test:hop",
+                 provenance={"test": "hop"})
+    memory().put(ENTITY, f"customer:{customer_id}", {
+        "customer_id": customer_id, "name": "Mia Jones", "orders": 3, "spent": "410.00 GBP",
+        "standing": "returning", "recent": [],
+    }, source="shopify", query="test:hop", provenance={"test": "hop"})
+
+    session = Session(session_id="hop")
+    session.issue(order_id)          # the list that was tapped issued the ORDER and nothing else
+    branch = Branch(branch_id="br_hop", session_id="hop")
+    opened = commands.run("open.entity", commands.Ctx(
+        runtime=None, session=session, branch=branch,
+        args={"kind": "order", "ref": order_id, "label": "CROOKS-1938"},
+    ))
+    assert opened.ok, f"{opened.code}: {opened.detail}"
+    drawn = present(list(opened.calls), session=session)
+    assert "order" in [item["type"] for item in drawn], [item["type"] for item in drawn]
+
+    # The card is on the glass and it names the customer, so the hop off it must work. The
+    # behavioural assertion comes first because it holds on any tree: post what the
+    # renderer's control posts and read what comes back.
+    hop = commands.run("open.entity", commands.Ctx(
+        runtime=None, session=session, branch=branch,
+        args={"kind": "customer", "ref": customer_id, "label": "Mia Jones"},
+    ))
+    assert hop.ok, f"the hop from the order to its customer was refused: {hop.code} {hop.detail}"
+    assert "customer" in [item["type"] for item in present(list(hop.calls), session=session)]
+    # And the same question the builder asks before it draws a control at all (§18).
+    assert summaries().destination_for(session, "customer", customer_id) == "open.entity", sorted(session.issued_ids)
+
+
 def test_a_row_whose_destination_does_not_resolve_is_drawn_without_a_tap():
     """§18, stated as the builder's own rule.
 
