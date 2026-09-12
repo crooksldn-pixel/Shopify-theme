@@ -628,3 +628,38 @@ def test_one_delegate_owns_a_card_button_and_it_can_read_what_the_card_wrote():
         assert "URLSearchParams(" in parser, "a card writes query-string args and the parser does not read them"
     # And it reads the OTHER encoding too, so neither card style can regress silently.
     assert "JSON.parse(" in parser and "URLSearchParams(" in parser, parser[:200]
+
+
+def test_a_card_the_mac_has_taken_away_leaves_the_glass():
+    """§19 — visual state outranks the spoken claim — asserted at the one place it failed.
+
+    `compose.discard` answers "Gone. Nothing was saved.", sets `branch.compose = None` and
+    sends `changed.discarded` with the composer's id and NO `ui`, because a discarded
+    composer has nothing left to draw. Nothing on the tablet acted on that key, so Cancel
+    SPOKE and the composer stayed exactly where it was — and the owner's next tap on it was
+    refused `no_composer`, the Mac having discarded a card the screen still showed.
+
+    §33's click-path matrix is what found it, and the finding is worth quoting because it
+    reads as the opposite of the defect:
+
+        PATH 3-customer-inbox-compose-cancel · step 7 · the discard action → no email_compose
+        INERT — "Cancel" does nothing even when activated directly. email_compose is still
+        on the glass · the Mac said: /command 200 answer="There is no email open on this
+        half to do that to."
+
+    That refusal is the SECOND tap. The first worked; the glass did not follow. Instrumenting
+    the refusal to print what it was comparing said so in one run:
+    `asked='cmp_77b0e6b06c' held=None branch='br_64e4ee1'`.
+
+    This assertion is deliberately about the MECHANISM rather than the one command: any
+    `changed.discarded` the Mac sends takes its card off the deck, so a second Mac-side
+    removal does not need a second tablet-side fix.
+    """
+    handler = APP_JS[APP_JS.index("const answered = await semanticCommand(name, args);"):]
+    handler = handler[:handler.index("\n}\n")]
+    assert "changed.discarded" in handler, (
+        "a /command reply that says a card is gone does not take it off the glass")
+    assert 'data-compose="' in handler and ".remove()" in handler, handler[-400:]
+    # And the selector is built through an escape, not by interpolating a payload value raw.
+    assert "cssEscape(" in handler, "an id from the wire goes into a selector unescaped"
+    assert "function cssEscape(" in APP_JS

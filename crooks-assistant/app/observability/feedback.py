@@ -110,8 +110,27 @@ KINDS: tuple[tuple[str, Any], ...] = (
         r"\bwhy (?:is|are) there\b[^?]{0,60}\b(?:on (?:the|my) screen|here|up)\b"
         r"|\bwhy (?:can'?t|cannot|won'?t) i\b"
         r"|\bwhy (?:is|are)(?: there)? (?:nothing|no \w+|it) (?:happening|showing|working|there)\b"
-        r"|\bwhy (?:did|does) (?:it|you) (?:do|show|open|pull up) that\b"
-        r"|\bwhat is (?:it|this) doing\b", re.I)),
+        r"|\bwhy (?:did|does) (?:it|you) (?:do|show|open|pull up) that\b", re.I)),
+    # `\bwhat is (?:it|this) doing\b` was the sixth alternative here and had to come out.
+    #
+    # It is the only one in a "why" shape that is not a why, and it collided head-on with
+    # D-11. "What is it doing?" is step 7 of docs/phase5/PHYSICAL_SAMSUNG_ACCEPTANCE.md and
+    # one of the three sentences the `screen_state` family (app/families/self_knowledge.py)
+    # exists to answer — which that family does with no read and no model, from what is
+    # actually on the glass. Because recognised feedback takes a turn before anything else
+    # gets it, the shape won, `screen_state` blocks on `reports_a_defect`, and the question
+    # went to Claude: the owner asked what the screen was doing and was told his complaint
+    # had been recorded.
+    #
+    # The tie-break is not in the words — both readings of that sentence are fair — it is
+    # that ONE OF THEM CAN BE ANSWERED. A product able to say what is in front of him should
+    # say it; filing the question as a defect gives him neither an answer nor a reason. And
+    # nothing is lost from D-12: every complaint here is a judgement or an impossibility
+    # ("why can't I press anything", "why is nothing happening", and the owner's own "why is
+    # there bullshit on the screen right now?", which the first alternative still takes), and
+    # a sentence carrying an actual judgement is caught by `broken`, `wrong` or
+    # `did_the_wrong_thing` whatever question word it opens with.
+
 )
 # The shapes that are a statement about the product rather than an instruction to record one.
 # Held by name so `recognise` can hold them to the extra tests below and the imperatives are

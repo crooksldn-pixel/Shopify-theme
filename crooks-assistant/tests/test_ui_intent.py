@@ -260,7 +260,13 @@ async def test_expand_a_customer_page_draws_the_customer_and_calls_no_model(stag
     """
     capture = await stage.say("Expand David Randall's customer page")
     assert not capture.prose_only, f"nothing was drawn: {capture.answer!r}"
-    assert "customer" in capture.surface_types, capture.surface_types
+    # Was `"customer" in capture.surface_types`, which named one component. §3's composition
+    # then drew `customer_workspace` — the customer, his orders, his inbox and somewhere to
+    # write, on one surface — and this assertion called the better answer a failure. It now
+    # asks the contract's own question: is what was drawn a surface that ANSWERS a demand
+    # about a customer? That is a stronger claim than a type name and it cannot drift from
+    # the contract, because it reads the contract's table.
+    assert set(capture.surface_types) & ui_intent.SATISFIES[ui_intent.CUSTOMER], capture.surface_types
     assert "capability" not in capture.surface_types, "a capability card again"
     assert capture.model_calls == 0, "navigation must not need a model (§36)"
     assert ui_intent.turn_outcome(capture.command, capture.ui) == ui_intent.SUCCESSFUL

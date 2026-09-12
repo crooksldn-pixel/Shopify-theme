@@ -80,17 +80,31 @@ UNKNOWN = ""
 # figures under an envelope are `analytics`. A contract that knew only one of the two would
 # call a drawn card undrawn, which is the mistake this module exists to stop making in the
 # other direction.
+#
+# AND the composed surfaces, which is the mistake above happening a third time and being
+# caught by this table's own tests. `customer_workspace` and `order_workspace` (§3) and
+# `summary_list` (§13) did not exist when this was written, so "expand David Randall's
+# customer page" drew `['customer_workspace']` — the richest possible answer to it — and the
+# contract called the turn UNSUCCESSFUL because the word `customer` was not among the types.
+# A composed workspace about a record is MORE of an answer than the card it replaced, and a
+# compact summary is the answer to a summary question rather than a smaller version of the
+# wrong one. Both belong in every subject they can be about.
 SATISFIES: dict[str, frozenset[str]] = {
     CUSTOMER: frozenset({"customer", "customer_list", "order_list", "order", "order_detail",
-                         "email_list", "email_thread", "work_queue", "working_set", "workspace"}),
+                         "email_list", "email_thread", "work_queue", "working_set", "workspace",
+                         "customer_workspace", "order_workspace", "summary_list"}),
     ORDER: frozenset({"order_detail", "order", "order_list", "work_queue", "working_set",
-                      "email_thread", "workspace", "variant_picker"}),
+                      "email_thread", "workspace", "variant_picker",
+                      "order_workspace", "customer_workspace", "summary_list"}),
     EMAIL: frozenset({"email_list", "email_thread", "email_queue", "email_draft",
-                      "email_compose", "reply_state", "work_queue", "working_set"}),
+                      "email_compose", "reply_state", "work_queue", "working_set",
+                      # A customer workspace carries his inbox as one of its sections, which
+                      # is what "is he in Gmail anywhere" asked for and did not get.
+                      "customer_workspace", "summary_list"}),
     SALES: frozenset({"analytics", "metric_group", "ranking", "table", "comparison", "trend",
-                      "sales_summary", "order_list", "work_queue", "working_set"}),
+                      "sales_summary", "order_list", "work_queue", "working_set", "summary_list"}),
     PRODUCTS: frozenset({"product", "inventory", "analytics", "ranking", "table",
-                         "variant_matrix", "order_list", "working_set"}),
+                         "variant_matrix", "order_list", "working_set", "summary_list"}),
     SCREEN: frozenset({"capability", "context", "assistant"}),
     ASSISTANT: frozenset({"capability", "assistant", "context"}),
 }

@@ -2127,8 +2127,14 @@ function offerChip(item) {
     button.disabled = true;
     button.setAttribute('aria-disabled', 'true');
     const said = String((answered && (answered.answer || answered.detail)) || 'The Mac would not open that.');
+    // The reason goes ON the control and nowhere else. There was a `notifyControl(said,
+    // button)` here as well, and F's notification policy caught it twice over: it carried no
+    // `code`, so two identical refusals could not be deduped, and §10 forbids it outright
+    // either way — `why()` has just written the sentence into the button and put it in the
+    // title, and the button is visibly disabled. A floating message beside a control that
+    // already says why is the second, worse claim on one event, which is the whole of
+    // web/notify.js's CONTROL_SHOWS.
     why(said.slice(0, 60));
-    notifyControl(said, button);
   });
   return button;
 }
@@ -3945,6 +3951,16 @@ el.cards.addEventListener('change', (event) => {
 //
 // One handler now, and it reads both. JSON first because it is unambiguous: a query string
 // never starts with `{`, so there is no encoding a card can choose that this gets wrong.
+/* An id out of a payload, safe inside an attribute selector. `CSS.escape` where the
+   browser has it; otherwise everything outside the id alphabet is dropped, which for a
+   `cmp_`/`prop_` id is a no-op and for anything else makes the selector match nothing
+   rather than become a different selector. */
+function cssEscape(value) {
+  const said = String(value == null ? '' : value);
+  if (typeof CSS !== 'undefined' && CSS && typeof CSS.escape === 'function') return CSS.escape(said);
+  return said.replace(/[^\w-]/g, '');
+}
+
 function commandArgs(raw) {
   const text = String(raw || '').trim();
   if (!text) return {};
@@ -3984,6 +4000,22 @@ if (!window.__crooksCommandDelegate) {
     // is a message about the screen, and this is not one.
     if (!answered) { notifyControl('The Mac did not answer.', button, { tone: 'bad', code: 'offline' }); return; }
     if (!answered.ok) { notifyControl(String(answered.detail || 'That could not be done.'), button, { tone: 'bad', code: codeOf(answered.code, 'command_refused') }); return; }
+    /* A card the Mac has just taken away goes off the glass (§19: visual state outranks
+       the spoken claim). `compose.discard` answers "Gone. Nothing was saved." and sends
+       `changed.discarded` — the composer's own id — and NO `ui`, because there is nothing
+       to draw. Nothing here acted on that, so Cancel spoke, the composer stayed exactly
+       where it was, and the owner's next tap on it was refused `no_composer`: the Mac had
+       discarded it and the screen had not. The click-path gate called it
+       "INERT — Cancel does nothing even when activated directly", which was the second tap
+       being answered rather than the first being ignored.
+
+       Removed rather than redrawn: a discarded composer has no later state, and `pushContext`
+       with an empty deck would push a stop onto the trail for a screen with nothing on it. */
+    if (answered.changed && answered.changed.discarded) {
+      const gone = String(answered.changed.discarded);
+      for (const card of document.querySelectorAll(`#cards [data-compose="${cssEscape(gone)}"]`)) card.remove();
+      T.record('render', { name: 'compose_discarded', items: [], id: gone });
+    }
     if (Array.isArray(answered.ui) && answered.ui.length && window.CrooksUI) {
       const rendered = window.CrooksUI.render(answered.ui, renderOpts());
       if (rendered.nodes.length) pushContext(rendered.nodes, answered.ui, answered.answer || '');

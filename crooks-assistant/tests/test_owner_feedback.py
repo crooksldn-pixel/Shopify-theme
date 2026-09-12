@@ -123,7 +123,6 @@ def test_a_sentence_about_the_shop_is_not_a_bug_report(said):
     ("it showed me somebody else", "did_the_wrong_thing"),
     ("why can't I press anything", "why_is_it"),
     ("why is nothing happening", "why_is_it"),
-    ("what is it doing?", "why_is_it"),
 ])
 def test_a_defect_stated_plainly_is_recorded_without_the_magic_word(said, kind):
     """D-12. BEFORE: the family keyed on log / record / note / broken, so "logical error here,
@@ -138,6 +137,34 @@ def test_a_defect_stated_plainly_is_recorded_without_the_magic_word(said, kind):
     assert got is not None, said
     assert got.kind == kind, (said, got.kind)
     assert got.text, said
+
+
+
+@pytest.mark.parametrize("said", ["what is it doing?", "What is it doing?",
+                                  "what is this doing", "what is this?", "what is on this screen?"])
+def test_a_question_the_product_can_answer_is_not_filed_as_a_complaint(said):
+    """The D-11/D-12 boundary, in the one place the two workstreams collided.
+
+    `what is (?:it|this) doing` was an alternative in the `why_is_it` shape. It was the only
+    one there that is not a "why", and it is step 7 of the physical acceptance script and one
+    of the three sentences `screen_state` (app/families/self_knowledge.py) exists to answer.
+    Recognised feedback takes a turn before anything else does, and `screen_state` blocks on
+    `reports_a_defect`, so the shape won and the question went to the model: the owner asked
+    what was in front of him and was told his complaint had been recorded.
+
+    The rule this pins: BOTH readings of that sentence are fair, and the tie-break is that one
+    of them can be ANSWERED. A product able to say what is on its own glass should say it.
+
+    The other half of the boundary is `test_a_defect_stated_plainly_is_recorded_without_the_magic_word`
+    above, which still holds every genuine complaint including the owner's own "why is there
+    bullshit on the screen right now?" — so this test cannot be satisfied by narrowing the
+    shapes generally, only by narrowing this one alternative.
+    """
+    assert feedback.recognise(said) is None, said
+    # And the question reaches the family that answers it, with no model on the path.
+    import app.families  # noqa: F401 — registers every family, as the app does
+    from app.fastpath.intent import resolve
+    assert resolve(said).family == "screen_state", f"{said!r} -> {resolve(said).family or '(the model)'}"
 
 
 @pytest.mark.parametrize("said", [

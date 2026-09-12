@@ -156,9 +156,15 @@ const MATRIX = [
     name: 'returning-customers-result',
     owner: 'workstream C — families and presentation (§13)',
     reach: (p, k) => k.ask('has anyone bought today that has bought before, a returning customer?'),
-    // The live answer was ONE returning customer drawn as seven full profiles. The shot is of
-    // the fixed surface: a summary, at most one profile in it.
-    need: { anyType: ['customer_list', 'table', 'metric_group', 'assistant'], maxOfType: { customer: 1 } },
+    /* The live answer was ONE returning customer drawn as seven full profiles. The shot is of
+       the fixed surface: a summary, at most one profile in it.
+
+       `summary_list` was not in this list and the capture reported the shot MISSING with the
+       detail "none of customer_list/table/metric_group/assistant on the glass (there is
+       summary_list)" — which is the fix being rejected by the expectation written before it
+       existed. A compact count with a row each is the ANSWER to D-4; a `customer_list` is
+       the nearest wrong thing. So it goes first, and the profile cap stays where it was. */
+    need: { anyType: ['summary_list', 'customer_list', 'table', 'metric_group', 'assistant'], maxOfType: { customer: 1 } },
   },
   {
     id: '17',
@@ -216,9 +222,21 @@ const MATRIX = [
     id: '29',
     fresh: true,
     name: 'empty-email-section',
-    // Straight off the live timeline: the customer card he was shown, open on an empty Email
-    // tab. "I'm not seeing any UI here except email where there's nothing."
+    /* Straight off the live timeline: the customer card he was shown, open on an empty Email
+       tab. "I'm not seeing any UI here except email where there's nothing."
+
+       The route to it changed, and had to. `drawLive` passes the fixture's recorded
+       `tab: 'email'` as a DECK-WIDE option, which is D-2 itself — one tab handed to every
+       card that has tabs. Workstream E removed that, so both cards now open on Overview and
+       the capture reported "the open tab is overview,overview, not email". The old route
+       cannot photograph this state any more because the old route WAS the defect.
+
+       So the tab is now tapped, on one card, the way the owner taps it. That makes a better
+       picture than the original: the first card is open on Email and says its inbox has
+       nothing in it with the rest of the workspace still standing (§27), and the second
+       card beside it is still on Overview — which is the D-2 fix, visible in a photograph. */
     reach: (p, k) => k.drawLive('empty_email_section'),
+    then: (p, k) => k.tab('email'),
     need: { types: ['customer', 'customer'], tab: 'email' },
   },
   { id: '30', fresh: true, name: 'notification-local', reach: (p, k) => k.notify('workspace'), need: { note: 'workspace' } },
@@ -352,7 +370,16 @@ async function judge(page, need, vp) {
     // their email AND somewhere to write. Recognised by what is on it, not by a card name, so
     // whatever shape workstream D builds satisfies it if it does the job.
     workspace: (() => {
-      const card = Array.from(document.querySelectorAll('#cards .card')).find((c) => (c.dataset.type || '') === 'customer' || (c.dataset.type || '') === 'workspace');
+      // Recognised by what it DOES, so whatever shape a workstream builds satisfies it — and
+      // then the list of names was still written out by hand, and missed the one that was
+      // built (`customer_workspace`). Any card about a customer counts now, however it is
+      // named: a `data-workspace` marker, or a type that is or begins as `customer`.
+      const about = (c) => {
+        const type = c.dataset.type || '';
+        return Boolean(c.dataset.workspace) || type === 'customer' || type === 'workspace'
+          || type === 'customer_workspace' || type === 'order_workspace';
+      };
+      const card = Array.from(document.querySelectorAll('#cards .card')).find(about);
       if (!card) return null;
       const words = (card.textContent || '').toLowerCase();
       const labels = Array.from(card.querySelectorAll('[role="tab"], .disc-label, .sec-head')).map((t) => (t.textContent || '').toLowerCase()).join(' ');
@@ -582,7 +609,18 @@ function makeKit(page, context, vp) {
           if (conn) { conn.dataset.state = 'down'; const t = document.querySelector('#conn-text'); if (t) t.textContent = 'Offline'; }
           window.CrooksNotify.show({ text: 'The Mac cannot be reached. Nothing is lost; it will answer when it is back.', class: 'global', tone: 'bad', code: 'backend_down', machine: true });
         } else {
-          window.CrooksNotify.show({ text: 'Draft saved in Gmail drafts.', class: 'workspace', tone: 'good', code: 'draft_saved' });
+          /* Was `draft_saved`, and the capture reported the shot MISSING with "no workspace
+             message is on the glass". That is §10 working: `draft_saved` is in
+             web/notify.js's CONTROL_SHOWS, because Save draft becomes Saved on the control
+             itself, and a floating message about it is a second, worse claim on the same
+             event. So this shot was photographing a message the policy now forbids.
+
+             The replacement is the case §10 exists FOR: a change proved on the store, which
+             nothing on the glass says by itself and which the owner must be told. Chosen
+             from web/notify.js's own permitted set (it is in neither SCREEN_SHOWS nor
+             CONTROL_SHOWS), so the shot stands or falls with the policy rather than beside
+             it. */
+          window.CrooksNotify.show({ text: 'The refund was proved on the store: £40.00 back to the card.', class: 'workspace', tone: 'good', code: 'refund_proved' });
         }
         return true;
       }, which);
