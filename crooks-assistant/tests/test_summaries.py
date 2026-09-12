@@ -475,6 +475,18 @@ def test_lifetime_metrics_for_several_customers_at_once_read_nothing():
     assert held["gid://shopify/Customer/404"] == {"held": False}, "never guessed at"
 
 
+async def test_an_empty_answer_is_a_card_in_the_right_sentence(shop):
+    """D-15 and §13 together. "Nothing needs attention" is not "no orders" — there were nine
+    orders — so the empty sentence is the Mac's, per task, and reaches the surface."""
+    # A day with orders, none of them from a returning buyer: yesterday's two are both first
+    # orders, so the same question asked of yesterday finds nobody.
+    _fast, ui, _session, _branch = await answer_for("any returning customers yesterday")
+    data = ui[0]["data"]
+    assert data["count"] == 0 and data["empty"] is True, data
+    assert data["empty_words"] == "Nobody who bought yesterday had bought before.", data["empty_words"]
+    assert data["title"] == "Returning customers yesterday", data["title"]
+
+
 def test_a_summary_is_bounded_and_tells_the_truth_about_the_count():
     """Twenty-five matches on a twelve-row surface: the rows are capped, the count is not."""
     many = [node(2000 + n, days_ago=0.1 + n * 0.01, items=[(*JOGGERS, "Black", "L", 1, 45.0)],

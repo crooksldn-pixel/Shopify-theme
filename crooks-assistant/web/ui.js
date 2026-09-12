@@ -2604,9 +2604,11 @@
     ])]);
     const node = card('summary_list', [
       head,
-      // Nothing found is an ANSWER and gets a card (D-15), in the words the Mac chose.
+      // Nothing found is an ANSWER and gets a card (D-15), in the Mac's own sentence: "no
+      // returning customers" and "nothing needs attention" are different sentences, and the
+      // second is not "no orders" — there were plenty of orders.
       rows.length ? h('ul', { class: 'rows tight' }, rows.map(summaryRow))
-        : h('p', { class: 'card-note', text: `No ${text(d.count_label, 'results')}.` }),
+        : h('p', { class: 'card-note', text: text(d.empty_words, `No ${text(d.count_label, 'results')}.`) }),
       d.truncated ? h('p', { class: 'card-note', text: `Showing ${rows.length} of ${count === null ? rows.length : count}.` }) : null,
       text(d.note) ? h('p', { class: 'card-note', text: text(d.note) }) : null,
     ], opts);

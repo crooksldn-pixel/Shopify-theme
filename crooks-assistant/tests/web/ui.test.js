@@ -1649,11 +1649,17 @@ test('a row the Mac said has nowhere to go is not a button', () => {
 });
 
 test('nothing found is still an answer, in the Mac\'s own words', () => {
-  const node = summaryNode({ count: 0, rows: [], empty: true, count_label: 'returning customers' });
+  // D-15, and the reason the sentence is the Mac's and not the renderer's: "nothing needs
+  // attention" is not "no orders" — there were plenty of orders.
+  const node = summaryNode({ count: 0, rows: [], empty: true, count_label: 'returning customers',
+                             empty_words: 'Nobody who bought today had bought before.' });
   assert.ok(node, 'an empty summary drew nothing at all');
   const said = textOf(node);
-  assert.ok(said.includes('No returning customers'), said);
+  assert.ok(said.includes('Nobody who bought today had bought before.'), said);
   assert.ok(said.includes('· 0'), said);
+  // And with no sentence sent, it still says something rather than nothing.
+  const bare = summaryNode({ count: 0, rows: [], empty: true, count_label: 'orders', empty_words: '' });
+  assert.ok(textOf(bare).includes('No orders'), textOf(bare));
 });
 
 test('a capped summary says how many it is showing of how many there are', () => {

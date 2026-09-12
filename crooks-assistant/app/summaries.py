@@ -251,13 +251,19 @@ def _require_human(value: Any, what: str, limit: int = MAX_TEXT) -> str:
 def summary(
     *, task: str, title: str, rows: list[Row], count: int, count_label: str,
     session: Any = None, kicker: str = "", subtitle: str = "", note: str = "",
-    truncated: bool = False, spoken: str = "", entity: Entity | None = None,
-    freshness: Freshness | None = None, set_id: str = "",
+    truncated: bool = False, spoken: str = "", empty_words: str = "",
+    entity: Entity | None = None, freshness: Freshness | None = None, set_id: str = "",
 ) -> Surface:
     """One compact surface for one task. The only way a summary reaches the glass.
 
     `count` is the WHOLE count and `rows` may be fewer: "four need attention" stays true on a
     surface that shows three of them and says so.
+
+    `empty_words` is what the card says when the answer is none of them. It is the Mac's
+    sentence and not the renderer's, because "no returning customers" and "nothing needs
+    attention" are different sentences about different questions and the second one is not
+    "no orders" — there were plenty of orders. D-15: an empty answer is an answer and gets a
+    card; this is what is written on it.
     """
     drawn = [row.as_dict(session) for row in rows[:MAX_ROWS]]
     data: dict[str, Any] = {
@@ -271,6 +277,7 @@ def summary(
         "note": _require_human(note, "note", MAX_NOTE),
         "truncated": bool(truncated) or len(rows) > MAX_ROWS,
         "empty": not drawn,
+        "empty_words": _require_human(empty_words or f"No {count_label}.", "empty words", MAX_NOTE),
         "tappable": sum(1 for row in drawn if row.get("tap")),
     }
     if set_id:
@@ -363,6 +370,7 @@ def returning_customers(found: dict[str, Any], *, session: Any = None, period: s
         subtitle=subtitle, note=note, rows=rows,
         truncated=bool(found.get("truncated")),
         spoken=_returning_words(count, period),
+        empty_words=_returning_words(0, period),
         freshness=freshness,
     )
 
@@ -417,6 +425,7 @@ def attention_rows(found: dict[str, Any], *, session: Any = None, period: str = 
         note=(f"Read from the {considered} {plural(considered, 'order')} the Mac holds." if considered else ""),
         rows=rows, truncated=bool(found.get("truncated")),
         spoken=_attention_words(count, red),
+        empty_words=_attention_words(0, 0),
         freshness=freshness,
     )
 
@@ -472,6 +481,7 @@ def order_rows(found: dict[str, Any], *, session: Any = None, period: str = "tod
         subtitle=" · ".join(p for p in parts if p),
         rows=rows, truncated=bool(found.get("truncated")), set_id=set_id,
         spoken=_order_list_words(count, period, to_ship),
+        empty_words=_order_list_words(0, period, 0),
         freshness=freshness,
     )
 
