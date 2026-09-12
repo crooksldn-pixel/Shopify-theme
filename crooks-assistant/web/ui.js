@@ -648,9 +648,19 @@
     if (!back.length) return wrap;
     const behindCount = back.length;
     const body = h('div', { class: 'rail-rest', hidden: true }, back);
+    // WHAT THE DISCLOSURE SAYS IT HOLDS. "2 more" reads correctly after a chip — more than
+    // the one you can see — and reads as a question when there is nothing above it, which is
+    // the case this pass created: an order that can no longer be cancelled, refunded or
+    // shipped has only dead chips, and they no longer get promoted to full weight. So when
+    // the rail leads with nothing, the control names what is behind it instead of counting
+    // past something that is not there (§26 — a control explains itself).
+    const allOff = back.every((c) => c.getAttribute('aria-disabled') === 'true');
+    const label = !front.length && allOff
+      ? `${behindCount} unavailable`
+      : `${behindCount} more`;
     const more = h('button', {
       class: 'rail-more', type: 'button', 'aria-expanded': 'false',
-    }, [h('span', { class: 'rail-more-label', text: `${behindCount} more` }),
+    }, [h('span', { class: 'rail-more-label', text: label }),
         h('span', { class: 'rail-more-mark', 'aria-hidden': 'true', text: '+' })]);
     more.addEventListener('click', (event) => {
       if (event && typeof event.stopPropagation === 'function') event.stopPropagation();

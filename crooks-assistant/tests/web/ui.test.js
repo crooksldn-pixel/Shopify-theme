@@ -1043,6 +1043,39 @@ test('an email thread carries a rail: Reply primes the hold, Archive asks the Ma
   assert.ok(chips[1].disabled, 'and Archive cannot be pressed twice while it is being prepared');
 });
 
+test('a weighed rail draws one chip loud and the rest behind a disclosure that names them', () => {
+  /* §25 · one primary action, a secondary group, then more — and the renderer never overturns
+     the weight the Mac decided. It used to: `primary.length ? primary : list_` drew EVERY chip
+     at full weight whenever nothing was marked primary, which is exactly what a rail of
+     disabled chips is, so "a dead chip must not sit beside a live one" held in the payload and
+     failed on the glass. */
+  const order = (actions) => UI.renderItem({ type: 'order', data: { detail: true, order_number: '#1938', items: [], pending: [], actions } }, {});
+  const weighed = order([
+    { id: 'fulfil', label: 'Fulfil', risk: 'red', enabled: true, instruction: 'Fulfil order 1938', mode: 'ask', priority: 'primary' },
+    { id: 'address', label: 'Address', risk: 'red', enabled: true, instruction: 'Change the address on order 1938', mode: 'ask', priority: 'secondary' },
+    { id: 'cancel', label: 'Cancel', risk: 'red', enabled: false, reason: 'already shipped', instruction: 'Cancel order 1938', mode: 'ask', priority: 'secondary' },
+  ]);
+  const inside = (node, cls) => (node ? node.querySelectorAll(cls) : []);
+  assert.deepEqual(inside(weighed.querySelector('.rail-primary'), '.rail-chip').map((c) => c.dataset.action), ['fulfil']);
+  assert.deepEqual(inside(weighed.querySelector('.rail-rest'), '.rail-chip').map((c) => c.dataset.action), ['address', 'cancel']);
+  assert.equal(weighed.querySelector('.rail-more-label').textContent, '2 more');
+  assert.equal(weighed.querySelector('.rail-rest').hidden, true, 'behind the disclosure until it is asked for');
+
+  // Nothing can be done to this order. The dead chips stay reachable — §19, the owner who
+  // would ask is told no — but they do not lead, and the control names what it holds rather
+  // than counting past a chip that is not there.
+  const allDead = order([
+    { id: 'cancel', label: 'Cancel', risk: 'red', enabled: false, reason: 'already cancelled', instruction: 'Cancel order 1938', mode: 'ask', priority: 'secondary' },
+    { id: 'refund', label: 'Refund', risk: 'red', enabled: false, reason: 'fully refunded', instruction: 'Refund order 1938', mode: 'ask', priority: 'secondary' },
+  ]);
+  assert.equal(allDead.querySelectorAll('.rail-primary').length, 0, 'no dead chip at full weight');
+  assert.equal(allDead.querySelector('.rail-more-label').textContent, '2 unavailable');
+  assert.deepEqual(inside(allDead.querySelector('.rail-rest'), '.rail-chip').map((c) => c.getAttribute('aria-disabled')), ['true', 'true']);
+  for (const chip of allDead.querySelectorAll('.rail-chip')) {
+    assert.ok(textOf(chip).length > 6, `§19: a disabled control says why — ${textOf(chip)}`);
+  }
+});
+
 test('a staged chip with no record to act on is not drawn at all, whatever the Mac said', () => {
   /* CHANGED IN PHASE 5 (§19/§25). It used to render, dimmed, with `aria-disabled="true"` —
      and with NOTHING SAYING WHY, because `reason` is empty exactly when the Mac believes the
