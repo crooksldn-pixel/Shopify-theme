@@ -722,7 +722,10 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .dock-btn[disabled]{opacity:var(--opacity-disabled);pointer-events:none}
 /* In orb mode the whole stage is the hold; its label lifts above the dock, and the footer's
    status line clears it. */
-body[data-mode="orb"] .talk{padding-bottom:calc(var(--dock) - 14px)}
+/* The label sits at the BOTTOM of the region it names, 24px clear of the branch band below
+   it, so the boundary between the voice zone and the branch zone is visible and not merely
+   true. It used to be 98px up, clearing a dock that is no longer the thing beneath it. */
+body[data-mode="orb"] .talk{padding-bottom:24px}
 body[data-mode="orb"] .bottom{padding-bottom:calc(var(--dock) - 8px)}
 body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgba(7,7,10,.8) 45%)}
 @media (max-width:560px){:root{--hold-w:200px}.dock-btn{width:52px}.dock-label{display:none}}
@@ -1367,7 +1370,7 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
    own padding put the band's BOX over the dock's four icons even though its chips sat above
    them — and the branch layer paints above the navigation layer, so the icons stopped
    answering. The touch gate measures exactly that, in both directions. */
-body[data-mode="context"] .branch-zone{min-height:0;padding:0 14px 4px}
+body[data-mode="context"] .branch-zone{min-height:0;padding:6px 14px 4px}
 body[data-mode="context"] .branch-why{display:none}
 body[data-mode="context"] .branch-chip .branch-bare{display:none}
 

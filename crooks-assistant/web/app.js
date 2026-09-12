@@ -1779,6 +1779,13 @@ function branchChip(half, index) {
   const word = TASK_WORDS[state] || (half.status === 'BACKGROUND' ? 'aside' : '');
   const token = String(head.area || half.label || (index === 0 ? 'FIRST' : 'SECOND'));
   const area = AREA_WORDS[token.toUpperCase()] || token;
+  // A half the Mac describes with a STATE rather than a place holds nothing identifiable, and
+  // a half that holds nothing must not also carry a task label. The visual pass caught the
+  // chip saying both: "EMPTY To go out" — it holds nothing, AND it is about its parent's
+  // working set. A fork inherits its parent's set and trail (app/session/branch.py:fork_from,
+  // deliberately) so `headline.detail` falls back to that set's label; that is the right
+  // answer for a half that is working on it, and no answer at all for one that is not.
+  const bare = Object.prototype.hasOwnProperty.call(AREA_WORDS, token.toUpperCase());
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = `branch-chip${state === 'ready' ? ' is-ready' : ''}${state === 'failed' ? ' is-failed' : ''}`;
@@ -1798,7 +1805,7 @@ function branchChip(half, index) {
   // said twice — "NOTHING YET · nothing yet" is the same contradiction in the other order.
   const detail = String(head.detail || '');
   const says = detail.toLowerCase();
-  if (detail && says !== state && says !== area.toLowerCase() && says !== 'nothing yet') {
+  if (!bare && detail && says !== state && says !== area.toLowerCase() && says !== 'nothing yet') {
     const what = document.createElement('span');
     what.className = 'branch-detail';
     what.textContent = detail;
@@ -1811,12 +1818,14 @@ function branchChip(half, index) {
     chip.appendChild(doing);
   }
   // Whether there is a SCREEN on that half, which is a different question from what it is
-  // doing, and the one the owner was asking when he tapped a half and saw nothing.
-  if (!half.has_workspace) {
-    const bare = document.createElement('span');
-    bare.className = 'branch-bare';
-    bare.textContent = 'no screen yet';
-    chip.appendChild(bare);
+  // DOING, and the one the owner was asking when he tapped a half and saw nothing. Not said
+  // when the identity line is already saying it: "NOTHING YET / no screen yet" is the
+  // contradiction this chip exists to have stopped making, in the other direction.
+  if (!half.has_workspace && !bare) {
+    const nothing = document.createElement('span');
+    nothing.className = 'branch-bare';
+    nothing.textContent = 'no screen yet';
+    chip.appendChild(nothing);
   }
   chip.dataset.branch = half.branch_id;
   chip.dataset.head = head.title || '';

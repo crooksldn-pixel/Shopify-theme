@@ -291,8 +291,13 @@ def test_each_half_says_which_it_is_what_it_is_about_and_what_it_is_doing():
     assert "branch-bare" in chip, "a half with no screen on it does not say so"
     assert "AREA_WORDS[token.toUpperCase()] || token" in chip
     assert "const AREA_WORDS = { EMPTY: 'NOTHING YET', WORKSPACE: 'THIS HALF' };" in APP_JS
-    # The task label is dropped when it would repeat the identity or the state.
+    # The task label is dropped when it would repeat the identity or the state, and dropped
+    # outright on a half the Mac describes with a STATE rather than a place: "EMPTY To go out"
+    # said it held nothing AND that it was about its parent's working set, which a fork
+    # inherits by design (app/session/branch.py:fork_from).
     assert "says !== state && says !== area.toLowerCase() && says !== 'nothing yet'" in chip
+    assert "const bare = Object.prototype.hasOwnProperty.call(AREA_WORDS, token.toUpperCase());" in chip
+    assert "if (!bare && detail" in chip
 
 
 def test_the_halves_divide_visibly_and_cannot_push_each_other_off_the_screen():
