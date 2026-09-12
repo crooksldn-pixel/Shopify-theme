@@ -218,6 +218,20 @@ async function replay(page, state, fx, gate) {
       tabbed.length > 0 && wrong.length === 0,
       `${tabbed.length} tabbed, ${wrong.length} not on ${want.every_card_open_on}: ${tabbed.map((c) => c.tab_active).join(',')}`);
   }
+  /* The inverse, and the reason it exists. A FIXTURE expectation reproduces what the tablet
+     recorded, so `every_card_open_on` asserted a DEFECT — seven cards forced onto Email by
+     one deck-wide tab. D-2's fix is in this renderer, so that state cannot be reproduced any
+     more, and an expectation that cannot fail for the right reason must not be left standing
+     as though it could. This is what replaced it: the same payload, the same deck-wide tab
+     handed in by `__replayDraw`, and the claim that it reaches NO card. Stronger than what
+     it replaced, because "this is what he saw" was a description and this is a rule. */
+  if (want.no_card_open_on) {
+    const tabbed = deck.cards.filter((c) => c.tabs.length);
+    const forced = tabbed.filter((c) => c.tab_active === want.no_card_open_on);
+    check(fx(`no card can be forced onto ${want.no_card_open_on} by a deck-wide tab (D-2)`),
+      tabbed.length > 0 && forced.length === 0,
+      `${tabbed.length} tabbed, ${forced.length} on ${want.no_card_open_on}: ${tabbed.map((c) => c.tab_active).join(',')}`);
+  }
 
   // §9 applies to a live state as much as to a stress fixture: the screen he actually had must
   // not contain an interactive collision either.
@@ -274,8 +288,32 @@ async function ask(page, state, gate, owned) {
 
   if (spec.require_any_type) {
     const hit = spec.require_any_type.some((t) => types.indexOf(t) !== -1);
-    check(gate(`"${spec.text.slice(0, 58)}…" puts one of ${spec.require_any_type.join('/')} on screen`) + owned,
-      hit, `${drew} · ${routed}${because} · answer="${String(turn.answer || '').slice(0, 70)}"`);
+    /* `routes_to_model` says the DESIGN sends this sentence to the model, and it changes what
+       the absence of a card means. Without it, "nothing was drawn" is D-4's defect: a
+       question no family claimed, left to a model that then read seven customers one at a
+       time. With it, the same absence is this world's own limit — `experience/harness.py`
+       binds a provider that answers "[model answer]" and calls no tools, so a model-routed
+       turn CANNOT draw anything here however well the product handles it.
+
+       The distinction is a fixture's to declare, not a check's to infer, because the two
+       cases look identical from the browser. Declared on exactly one state, with the reason
+       and the word count, and the check then measures what it can see: that the routing is
+       the routing the design intends. The §3/§4 claim for that sentence — a new read
+       ENRICHES the workspace instead of becoming the screen — is held where it is
+       measurable, by tests/test_workspaces.py's D-3 test against the real payload.
+
+       What this must never become is a way to excuse an unclaimed sentence. A state that
+       declares it and then turns out to be claimed by a family is reported too, below. */
+    if (spec.routes_to_model) {
+      check(fx(`"${spec.text.slice(0, 48)}…" is routed as the design intends: to the model`),
+        stub && !turn.recipe_id,
+        `${routed} · ${drew} — ${spec.routes_to_model}`);
+      check(fx('and this world cannot draw a model-routed turn, so §4 is held in pytest instead'),
+        !hit, `${drew} — if a card DID come back, this fixture no longer needs the exemption`);
+    } else {
+      check(gate(`"${spec.text.slice(0, 58)}…" puts one of ${spec.require_any_type.join('/')} on screen`) + owned,
+        hit, `${drew} · ${routed}${because} · answer="${String(turn.answer || '').slice(0, 70)}"`);
+    }
   }
   if (spec.forbid_types) {
     const bad = spec.forbid_types.filter((t) => types.indexOf(t) !== -1);

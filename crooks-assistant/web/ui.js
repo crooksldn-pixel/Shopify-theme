@@ -2025,7 +2025,22 @@
         const pct = num(r.pct);
         const fill = pct === null ? null : h('span', { class: 'rank-fill' });
         if (fill && fill.style && fill.style.setProperty) fill.style.setProperty('--w', `${Math.max(0, Math.min(100, pct))}%`);
-        const li = h('li', { class: `rank${r.known === false ? ' is-unknown' : ''}`, data: { ref: text(r.ref), kind: text(r.kind) } }, [
+        /* A row is tappable only where it has somewhere to go. `data-ref` used to be written
+           unconditionally, so a ranking row for a product the Mac had never read still
+           posted `open.entity` and took a `not_held` — D-6 exactly, and §33's click sweep
+           found three of them in one products landing. The Mac now withholds the ref for a
+           destination it could not open (`app/presentation.py:_withhold_dead_refs`), and
+           this is the other half: no ref, no attributes, and a `data-label` so the name that
+           travels with a tap is the row's own rather than every word on it run together. */
+        const rref = text(r.ref);
+        const rkind = text(r.kind);
+        const opens = Boolean(rref && rkind);
+        const li = h('li', {
+          class: `rank${r.known === false ? ' is-unknown' : ''}${opens ? ' tappable' : ''}`,
+          role: opens ? 'button' : null,
+          tabindex: opens ? '0' : null,
+          data: opens ? { ref: rref, kind: rkind, label: text(r.label) } : {},
+        }, [
           h('span', { class: 'rank-n', text: num(r.rank) === null ? '' : String(r.rank) }),
           h('div', { class: 'rank-main' }, [
             h('div', { class: 'rank-label', text: text(r.label, '—') }),

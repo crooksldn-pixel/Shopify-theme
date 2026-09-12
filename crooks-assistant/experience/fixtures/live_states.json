@@ -11,6 +11,7 @@
     },
     "max_deck_height": 1200,
     "require_any_type": [
+     "summary_list",
      "customer_list",
      "table",
      "metric_group",
@@ -152,7 +153,7 @@
      "card_count": 7,
      "deck_height_min": 1700,
      "distinct_refs": 7,
-     "every_card_open_on": "Email",
+     "no_card_open_on": "Email",
      "types": [
       "customer",
       "customer",
@@ -519,8 +520,10 @@
   {
    "ask": {
     "require_any_type": [
-     "customer"
+     "customer",
+     "customer_workspace"
     ],
+    "routes_to_model": "28 words, against customer_purchase_lookup's max_words=14",
     "text": "pull up the history of Mia Jones and her orders, see how many times she has ordered, see how much she spent in total, and see if she is in Gmail anywhere"
    },
    "forensics": "D-3 \u00b7 the turn's only new read was gmail_search; renders were [['email_list'],['email_list']]",
@@ -554,7 +557,6 @@
    "replay": {
     "expect": {
      "card_count": 1,
-     "deck_height_max": 400,
      "types": [
       "email_list"
      ]
@@ -582,7 +584,8 @@
      "capability"
     ],
     "require_any_type": [
-     "customer"
+     "customer",
+     "customer_workspace"
     ],
     "text": "can you expand Mia Jones's customer page?"
    },

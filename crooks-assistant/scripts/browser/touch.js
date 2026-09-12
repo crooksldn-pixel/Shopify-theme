@@ -336,8 +336,29 @@ async function atSize(browser, size) {
   check(at('and the tap on Split actually divided the orb'), divided.count === 2, `branches=${divided.count}`);
   await shot('02-divided');
 
-  // A notification is on the glass now ("Divided."), in the band that used to be inside the
-  // orb zone under the voice target with the branch chips.
+  /* A tap on a notification must not become a recording either — it sits in the band that
+     used to be inside the orb zone, under the voice target, with the branch chips.
+
+     This used to rely on "Divided." being on the glass after the split. §10 silences that:
+     `divided` is in web/notify.js's SCREEN_SHOWS because the orb visibly becoming divided
+     is sufficient, and the two workstreams were each right — so the check was measuring a
+     notification the product had stopped making, and reported
+     "#notes-orb .note, #notes-deck .note is not on screen at all" at both viewports.
+
+     So it puts one there itself, and chooses a code §10 PERMITS (in neither SCREEN_SHOWS nor
+     CONTROL_SHOWS): a change proved on the store, which nothing on the glass says by itself.
+     The check stands or falls with the pointer machine now, rather than with the
+     notification policy of whatever screen it happened to be on. */
+  const noted = await page.evaluate(() => {
+    if (!window.CrooksNotify || typeof window.CrooksNotify.show !== 'function') return false;
+    window.CrooksNotify.show({
+      text: 'The refund was proved on the store: \u00a340.00 back to the card.',
+      class: 'workspace', tone: 'good', code: 'refund_proved',
+    });
+    return true;
+  });
+  check(at('a notification the policy permits could be put on the glass to tap'), noted, `shown=${noted}`);
+  await sleep(200);
   await tapControl('a notification', '#notes-orb .note, #notes-deck .note', '.note');
 
   await ladderHolds('with the orb divided');

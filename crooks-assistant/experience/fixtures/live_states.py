@@ -419,14 +419,30 @@ AUTHORED: dict[str, dict[str, Any]] = {
         "replay": {
             "mode": "context", "tab": "email",
             "ui": [{"type": "customer", "data": _customer(ref)} for ref in SEVEN],
+            # `every_card_open_on: "Email"` was here and had to go, and the reason is the
+            # point of the whole section. A FIXTURE expectation reproduces what the tablet
+            # recorded, so this one asserted the DEFECT: seven cards forced onto Email by one
+            # deck-wide tab. D-2's fix is in the renderer this fixture drives — there is no
+            # deck-wide tab left for `spec.tab` to set — so the state cannot be reproduced,
+            # and an expectation that cannot fail for the right reason cannot pass for one
+            # either. The claim replacing it is stronger, not weaker: on this exact payload a
+            # deck-wide tab must reach NO card. `no_card_open_on` is asserted the same way
+            # and against the same seven cards.
             "expect": {
                 "card_count": 7, "types": ["customer"] * 7, "distinct_refs": 7,
-                "deck_height_min": 1700, "every_card_open_on": "Email",
+                "deck_height_min": 1700, "no_card_open_on": "Email",
             },
         },
         "ask": {
             "text": "has anyone bought today that has bought before, a returning customer?",
-            "require_any_type": ["customer_list", "table", "metric_group", "assistant", "customer"],
+            # `summary_list` first, because it is the ANSWER to this question (§13) rather
+            # than the nearest tolerable thing. It was absent from this list, so the gate
+            # reported the fix as a failure: `ui=summary_list · lane=FAST
+            # recipe=returning_customers · answer="2 of today's buyers had bought before."`
+            # — the compact count the brief asked for, rejected by an expectation written
+            # before it existed. The profile cap below is what actually holds D-4 shut.
+            "require_any_type": ["summary_list", "customer_list", "table", "metric_group",
+                                 "assistant", "customer"],
             "max_cards_of_type": {"customer": 1},
             "max_deck_height": 1200,
         },
@@ -469,12 +485,35 @@ AUTHORED: dict[str, dict[str, Any]] = {
                 "title": "Email", "count": 0, "threads": [], "empty": True,
                 "note": "Nothing from them in the inbox.",
             }}],
-            "expect": {"card_count": 1, "types": ["email_list"], "deck_height_max": 400},
+            # `deck_height_max: 400` was here, matching the 207 px the tablet measured. It
+            # was never about height: the deck was SHORT because it drew the wrong thing —
+            # an email list where a customer workspace belonged — and shortness was the
+            # symptom, not the fault. The renderer now composes a workspace from the same
+            # payload, which is legitimately taller (515 px), so the ceiling had begun to
+            # fail for the fix and would have had to be raised on every enrichment.
+            # `types` is what carries the fixture's meaning here and it is unchanged; the
+            # density ceiling is measured properly, per viewport, by tests/test_density.py.
+            "expect": {"card_count": 1, "types": ["email_list"]},
         },
         "ask": {
             "text": "pull up the history of Mia Jones and her orders, see how many times she has "
                     "ordered, see how much she spent in total, and see if she is in Gmail anywhere",
-            "require_any_type": ["customer"],
+            # A composed workspace about the customer is MORE of an answer than the card it
+            # replaced, so both names count. The same stale-list mistake as D-4's above, and
+            # the same one app/capabilities/ui_intent.py's own SATISFIES table had made.
+            "require_any_type": ["customer", "customer_workspace"],
+            # AND this sentence is 28 words, against `customer_purchase_lookup`'s
+            # `max_words=14` (app/fastpath/intent.py) — so the fast path declines it ON
+            # PURPOSE, because a long compound sentence is more likely to be about several
+            # things than one. It goes to the model, which reads, and `_compose_workspace`
+            # then builds the customer workspace from those reads: that is D-3's fix and it
+            # works on the model path exactly as it does on a recipe's.
+            #
+            # This world has no model, so nothing can be drawn here whatever the product
+            # does. Declared rather than inferred, and the §3/§4 claim for this sentence is
+            # asserted against the real payload by
+            # tests/test_workspaces.py::test_the_d3_request_renders_a_customer_workspace_not_an_email_list.
+            "routes_to_model": "28 words, against customer_purchase_lookup's max_words=14",
         },
     },
     # ---------------------------------------------------------------- D-5 -----------------
@@ -532,7 +571,12 @@ AUTHORED: dict[str, dict[str, Any]] = {
         },
         "ask": {
             "text": "can you expand Mia Jones's customer page?",
-            "require_any_type": ["customer"],
+            # Both names, for the reason given on D-3's list above: the composed workspace is
+            # the richest answer to "expand her customer page" and this list did not know it
+            # existed, so the gate read `ui=customer_workspace` as a failure. `forbid_types`
+            # is what actually holds D-5 shut — the capability card must not come back — and
+            # it was passing all along.
+            "require_any_type": ["customer", "customer_workspace"],
             "forbid_types": ["capability"],
         },
     },

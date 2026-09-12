@@ -225,6 +225,10 @@ def present(
     items = _compose_workspace(items, calls, session=session, question=question, pending=pending)
     if session is not None:
         _remember(items, session)
+        # §18, as a SWEEP rather than one renderer at a time. After `_remember`, which is
+        # what issues the ids a card's own offers rest on, so a row this turn legitimately
+        # showed keeps its ref and only a row pointing at nothing loses it.
+        _withhold_dead_refs(items, session)
 
     if error_kind:
         service, title, recovery = _TURN_ERRORS.get(
@@ -1367,6 +1371,10 @@ def present_proposal_state(
         items.append(_error(_service_of(proposal), _text(code, 40), title, _text(words, 200)))
     if session is not None:
         _remember(items, session)
+        # §18, as a SWEEP rather than one renderer at a time. After `_remember`, which is
+        # what issues the ids a card's own offers rest on, so a row this turn legitimately
+        # showed keeps its ref and only a row pointing at nothing loses it.
+        _withhold_dead_refs(items, session)
     return items
 
 
@@ -1499,6 +1507,86 @@ def compact(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             seen_kinds.add(kind)
         out.append(item)
     return out
+
+
+#: Where a row that OFFERS a record puts its destination, per card type. The tablet's deck
+#: handler turns `ref` + `kind` into `open.entity`, so these are the lists a §18 sweep has to
+#: walk. A card not named here offers nothing by row.
+_ROWS_THAT_OFFER: dict[str, tuple[str, ...]] = {
+    "ranking": ("rows",),
+    "table": ("rows",),
+    "customer_list": ("customers",),
+    "inventory": ("rows", "variants"),
+}
+
+
+def _withhold_dead_refs(items: list[dict[str, Any]], session: Session) -> None:
+    """A row whose destination the Mac could not open loses its destination (§18).
+
+    D-6 is one row of one card: a product in the best-sellers ranking posted `open.entity`,
+    was refused `not_held`, and the half drew `half_empty` with no word about why. The fix
+    for the WORKSPACE rows was to decide openability before drawing them
+    (`app/workspace.py:_open`). The analytic cards had no such rule, because they are built
+    in `app/analytics/present.py`, which is handed a read result and no session and therefore
+    cannot ask the question at all: `ranking` takes `ref`/`kind` straight off the aggregate's
+    GROUP KEY, so every product the aggregate grouped by got a tappable row whether or not
+    the Mac had ever read that product.
+
+    Two things a per-renderer fix would not have given, which is why this is a sweep:
+
+    * it closes the CLASS. §33's gate step `no_control_carries_unheld_ref` takes every
+      `[data-ref]` on the glass and tries to open it, and after this there is one place that
+      has to be right for all of them rather than one per card.
+    * it runs where the session is, which is the only place the question can be answered.
+      `may_open` is the permission half and the entity cache is the holding half, and the tap
+      needs both — exactly the pair `app/families/compose.py:_held_record` and
+      `app/routes/command.py` check when it actually arrives, asked here with the same keys
+      before anything is drawn.
+
+    A row that loses its ref is still DRAWN, with every figure on it: the ranking is the
+    answer to "what sold best", and the only false thing about it was the promise that you
+    could tap through to the product. `known: False` goes beside it so the renderer shows it
+    flat rather than pretending it is pressable.
+    """
+    from app.commands import may_open
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    class _Ctx:                       # `may_open` wants a ctx; it reads only the session
+        __slots__ = ("session",)
+
+        def __init__(self, value: Session) -> None:
+            self.session = value
+
+    ctx = _Ctx(session)
+    cache = memory()
+
+    def openable(kind: str, ref: str) -> bool:
+        if not kind or not ref:
+            return False
+        try:
+            if not may_open(ctx, kind, ref):
+                return False
+            held = cache.get(ENTITY, f"{kind}:{ref}", allow_stale=True)
+            return isinstance(getattr(held, "value", None), dict)
+        except Exception:  # noqa: BLE001 — an unanswerable question is "not openable"
+            return False
+
+    for item in items:
+        keys = _ROWS_THAT_OFFER.get(str(item.get("type") or ""))
+        if not keys or not isinstance(item.get("data"), dict):
+            continue
+        for key in keys:
+            rows = item["data"].get(key)
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if not isinstance(row, dict) or not row.get("ref"):
+                    continue
+                if openable(str(row.get("kind") or ""), str(row["ref"])):
+                    continue
+                row["ref"], row["kind"] = "", ""
+                row["known"] = False
 
 
 def _remember(items: list[dict[str, Any]], session: Session) -> None:
