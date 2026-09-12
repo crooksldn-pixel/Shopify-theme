@@ -39,6 +39,18 @@ def test_the_renderer_under_node():
 
 
 @needs_node
+def test_the_composed_workspaces_under_node():
+    """The surfaces of §3/§12: a section drawn from its own state, and a row that is a control
+    only where the Mac said it can be opened (tests/web/workspaces.test.js)."""
+    result = subprocess.run(
+        [NODE, "--test", str(ROOT / "tests" / "web" / "workspaces.test.js")],
+        capture_output=True, text=True, timeout=120, cwd=ROOT,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-2000:]
+    assert "# fail 0" in result.stdout
+
+
+@needs_node
 def test_progressive_disclosure_under_node():
     """The fold that keeps a compound answer on one screen (brief section 22)."""
     result = subprocess.run(

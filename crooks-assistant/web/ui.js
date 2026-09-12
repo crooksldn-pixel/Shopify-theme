@@ -2549,12 +2549,242 @@
     return node;
   }
 
+  // ----------------------------------------------------- the composed workspaces (§3, §12)
+  //
+  // One record, composed. Not another card per read: the Mac folds every read of one record
+  // into one canonical entity (app/entities.py) and composes the TASK's surface over it
+  // (app/workspace.py), and this draws it.
+  //
+  // The whole payload is bounded and whitelisted on the Mac before it gets here, and these
+  // two functions add nothing to it: every string arrives as textContent, every list is
+  // capped again on the way in, and a section is drawn from its own `state` rather than from
+  // whether its rows happen to be empty — because "the inbox is empty" and "nobody has looked
+  // in the inbox" are different claims and §27 says so.
+  //
+  // §18 is drawn here as well as decided on the Mac: `data-ref`/`data-kind` — the pair the
+  // deck's click handler turns into `open.entity` — go on a row only when the Mac has said
+  // `open: true`, which it says only once the ref has passed the gate's shape check and been
+  // issued to this conversation. A row it could not open is drawn, and drawn flat, with the
+  // reason on it. There is no path here that makes a control out of a ref the Mac withheld.
+  const WS_ROWS = 8;
+  const WS_FACTS = 8;
+  const WS_TONE = { ready: '', empty: 'quiet', unread: 'quiet', loading: 'quiet', error: 'bad' };
+
+  // The header: WHAT IS THIS, WHAT MATTERS, WHAT CAN I DO, in that order and above the tabs
+  // (§26). The live session's customer card answered none of the three — it opened on an
+  // empty Email panel with a name and two numbers behind it.
+  function wsHead(d, kindLabel, lead) {
+    // `stat` and `stats counts`, not classes of this card's own: the auto-fit grid the
+    // analytic cards already use fits three or four facts at 601 px, and web/style.css's
+    // layering belongs to another workstream this pass. (`ws-fact` is taken, and taken by a
+    // dl/dt/dd shape that is not this one.)
+    const facts = list(d.header, WS_FACTS).map((f) => h('div', { class: 'stat' }, [
+      h('div', { class: 'stat-v', text: text(f.value, '—') }),
+      h('div', { class: 'stat-k', text: text(f.key) }),
+    ]));
+    const status = text(d.status);
+    return [
+      h('div', { class: 'card-head profile' }, [
+        lead,
+        h('div', {}, [
+          kicker(kindLabel),
+          h('h2', { class: 'card-title', text: text(d.title, kindLabel) }),
+          text(d.subtitle) ? h('p', { class: 'card-sub', text: text(d.subtitle) }) : null,
+        ]),
+        status ? h('div', { class: 'badges' }, [badge(status)]) : null,
+      ]),
+      facts.length ? h('div', { class: 'stats counts' }, facts) : null,
+      wsAttention(d),
+      wsActions(d),
+    ];
+  }
+
+  // What matters, where it is not a number: the one or two lines the Mac judged worth the
+  // owner's attention. Absent where there is nothing — a badge that is always there is
+  // furniture, and §12 asks for attention only where it is meaningful.
+  function wsAttention(d) {
+    const rows = list(d.attention, 3);
+    if (!rows.length) return null;
+    return h('ul', { class: 'rows compact' }, rows.map((a) => h('li', { class: 'row' }, [
+      h('span', { class: 'row-main', text: text(a.title, '—') }),
+      text(a.detail) ? h('span', { class: 'row-sub', text: text(a.detail) }) : null,
+      h('span', { class: 'row-side' }, [badge(text(a.kind).replace(/_/g, ' '), text(a.level) === 'red' ? 'bad' : 'warn')]),
+    ])));
+  }
+
+  // WHAT CAN I DO. Every offer is an `open.entity` the Mac has already made good: it named
+  // the kind and the ref and issued the ref, so the button cannot be the dead control of D-6.
+  // An offer the Mac marked disabled is drawn as disabled with its reason, never as a button.
+  function wsActions(d) {
+    const offers = list(d.actions, 4);
+    if (!offers.length) return null;
+    return h('div', { class: 'row-btns', role: 'group', 'aria-label': 'What you can do here' },
+      offers.map((a) => {
+        const ref = text(a.ref);
+        const kind = text(a.kind);
+        const live = a.enabled === true && ref && kind;
+        // Disabled for real, not styled to look it: a control the Mac cannot stand behind
+        // must not be pressable at all, and the reason is on the face of it rather than in a
+        // tooltip a finger cannot reach.
+        return h('button', {
+          class: 'btn', type: 'button',
+          disabled: live ? null : true,
+          'aria-disabled': live ? null : 'true',
+          data: live ? { ref, kind } : {},
+        }, [
+          h('span', { text: text(a.label, 'Open') }),
+          live ? null : h('span', { class: 'card-meta', text: ` — ${text(a.reason, 'not available')}` }),
+        ]);
+      }));
+  }
+
+  // One section, from its own state. `ready` draws its facts and its rows; everything else
+  // draws the Mac's own note and nothing that could be read as a value.
+  function wsSection(sec, rowFn, opts) {
+    const state = text(sec.state, 'unread');
+    const children = [];
+    if (state === 'ready') {
+      const facts = kv(list(sec.facts, WS_FACTS).map((f) => [text(f.key), text(f.value)]));
+      if (facts) children.push(facts);
+      const rows = list(sec.rows, WS_ROWS);
+      if (rows.length) children.push(h('ul', { class: 'rows' }, rows.map((r) => rowFn(r, opts))));
+      if (sec.truncated === true) children.push(h('p', { class: 'card-note', text: 'More than shown.' }));
+    } else {
+      children.push(h('p', {
+        class: `card-note ws-note is-${state}`,
+        text: text(sec.note, state === 'loading' ? 'Reading…' : 'Nothing here.'),
+      }));
+    }
+    return h('div', { class: `ws-sec is-${state}`, data: { section: text(sec.name), state } }, children);
+  }
+
+  // The tab bar, built from the sections the Mac composed and in its order. The count and the
+  // state ride on the tab, so a tab with nothing behind it looks like one before it is tapped
+  // — which is the other half of D-2: the owner should not have to open a panel to find out
+  // it is empty.
+  function wsPanels(d, rowFns, opts) {
+    const out = [];
+    const sections = d.sections && typeof d.sections === 'object' && !Array.isArray(d.sections) ? d.sections : {};
+    for (const tab of list(d.tabs, 8)) {
+      const name = text(tab.name);
+      const sec = sections[name];
+      if (!name || !sec || typeof sec !== 'object') continue;
+      const count = num(sec.count);
+      out.push({
+        name,
+        label: count !== null && count > 0 ? `${text(tab.label, name)} ${count}` : text(tab.label, name),
+        node: [wsSection(Object.assign({ name }, sec), rowFns[name] || wsPlainRow, opts)],
+      });
+    }
+    return out;
+  }
+
+  // A row the Mac said may be opened carries the pair the deck posts; one it did not carries
+  // the reason instead. The two branches are the whole of §18 in the renderer.
+  function wsRow(row, kindOfRow, children) {
+    const live = row.open === true && text(row.order_id || row.thread_id || row.customer_id);
+    const ref = text(row.order_id || row.thread_id || row.customer_id);
+    return h('li', {
+      class: live ? 'row tappable' : 'row is-closed',
+      role: live ? 'button' : null,
+      tabindex: live ? '0' : null,
+      data: live ? { ref, kind: kindOfRow } : {},
+    }, children.concat([
+      live ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '›' })
+           : (text(row.open_note) ? h('span', { class: 'row-sub', text: text(row.open_note) }) : null),
+    ]));
+  }
+
+  function wsOrderRow(row) {
+    return wsRow(row, 'order', [
+      h('span', { class: 'row-main' }, [h('strong', { text: text(row.order_number, 'Order') }), ' ', text(row.items_brief)]),
+      h('span', { class: 'row-sub', text: text(row.when) }),
+      h('span', { class: 'row-side' }, [h('span', { class: 'amount', text: text(row.total) }), badge(row.fulfilment)]),
+    ]);
+  }
+
+  function wsThreadRow(row) {
+    return wsRow(row, 'email_thread', [
+      h('span', { class: 'row-main' }, [h('strong', { text: text(row.subject, '(no subject)') })]),
+      h('span', { class: 'row-sub', text: [text(row.from), text(row.snippet)].filter(Boolean).join(' · ') }),
+      h('span', { class: 'row-side' }, [
+        h('span', { class: 'card-meta', text: text(row.when) }),
+        row.needs_reply === true ? badge('Needs reply', 'warn') : null,
+      ]),
+    ]);
+  }
+
+  function wsCustomerRow(row) {
+    return wsRow(row, 'customer', [
+      h('span', { class: 'row-main' }, [h('strong', { text: text(row.name, '—') })]),
+      h('span', { class: 'row-sub', text: text(row.subtitle) }),
+    ]);
+  }
+
+  // Items and shipments name no record of their own: a line on an order is not somewhere to
+  // go, so these are rows and never controls.
+  function wsPlainRow(row) {
+    return h('li', { class: 'row' }, [
+      h('span', { class: 'row-main', text: text(row.title || row.what, '—') }),
+      h('span', { class: 'row-sub', text: [text(row.variant), text(row.sku) ? `SKU ${text(row.sku)}` : ''].filter(Boolean).join(' · ') }),
+      h('span', { class: 'row-side' }, [
+        h('span', { class: 'amount', text: [num(row.quantity) !== null && row.quantity > 1 ? `× ${row.quantity}` : '', text(row.total)].filter(Boolean).join('  ') }),
+        text(row.when) ? h('span', { class: 'card-meta', text: text(row.when) }) : null,
+        text(row.detail) ? h('span', { class: 'card-meta', text: text(row.detail) }) : null,
+      ]),
+    ]);
+  }
+
+  const WS_CUSTOMER_ROWS = { orders: wsOrderRow, inbox: wsThreadRow };
+  const WS_ORDER_ROWS = { email: wsThreadRow, customer: wsCustomerRow };
+
+  // Which tab opens: the Mac's `tab`, which is the tab the TASK implied unless that one has
+  // nothing behind it. `opts.tab` — the tab the owner last chose — still wins, because a
+  // choice he made outranks one the system inferred; where it names a tab this workspace does
+  // not have, `tabs()` falls back to the composed one rather than to whatever is first.
+  function wsWhichTab(d, opts) {
+    const chosen = opts && opts.tab ? text(opts.tab) : '';
+    const sections = d.sections && typeof d.sections === 'object' ? d.sections : {};
+    if (chosen && sections[chosen]) return chosen;
+    return text(d.tab) || 'overview';
+  }
+
+  function renderCustomerWorkspace(d, opts) {
+    const settings = opts || {};
+    const panels = wsPanels(d, WS_CUSTOMER_ROWS, settings);
+    const node = card('customer_workspace', wsHead(d, 'Customer', avatar(d.title, 'lg')).concat([
+      tabs(panels, {
+        initial: wsWhichTab(d, settings),
+        onChange: settings.onTab ? (name, label) => settings.onTab('customer', name, label) : null,
+      }),
+    ]), settings);
+    node.dataset.ref = text(d.ref);
+    node.dataset.workspace = 'customer';
+    return node;
+  }
+
+  function renderOrderWorkspace(d, opts) {
+    const settings = opts || {};
+    const panels = wsPanels(d, WS_ORDER_ROWS, settings);
+    const node = card('order_workspace', wsHead(d, 'Order', null).concat([
+      tabs(panels, {
+        initial: wsWhichTab(d, settings),
+        onChange: settings.onTab ? (name, label) => settings.onTab('order', name, label) : null,
+      }),
+    ]), settings);
+    node.dataset.ref = text(d.ref);
+    node.dataset.workspace = 'order';
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
     order_list: renderOrderList,
     customer: renderCustomer,
     customer_list: renderCustomerList,
+    customer_workspace: renderCustomerWorkspace,
+    order_workspace: renderOrderWorkspace,
     product: renderProduct,
     inventory: renderInventory,
     sales_summary: renderSales,
@@ -2581,7 +2811,7 @@
     workspace: renderWorkspace,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
-  const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
+  const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'customer_workspace', 'order_workspace', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
     'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result', 'capability'];
 
   function isValid(item) {
@@ -2648,6 +2878,8 @@
     order_list: ['set_id', 'title', 'query'],
     customer: ['customer_id', 'email'],
     customer_list: ['title', 'query'],
+    customer_workspace: ['ref'],
+    order_workspace: ['ref'],
     product: ['product_id', 'query'],
     inventory: ['query'],
     sales_summary: ['title', 'since'],
