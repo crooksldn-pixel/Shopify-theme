@@ -92,10 +92,16 @@ _KIND_PREFIX = {"Customer": "cust", "Order": "order", "Product": "prod", "Produc
 
 
 def scrub_ref(ref: str) -> str:
-    """`gid://shopify/Customer/11410640896343` -> `cust-6343`. Last four digits, nothing else.
+    """A Shopify gid becomes its last four digits and nothing else: `cust-6343`.
 
     Four digits is what the forensics document uses to prove the seven cards were seven
     different customers, and four digits of a Shopify id identify nobody.
+
+    No example id is written out here on purpose. The first draft of this docstring showed the
+    transformation with a real gid off the timeline, and `assert_clean` — run over this very
+    file by `tests/test_live_replay.py` — caught it. The check is over the module as well as
+    the JSON for exactly that reason: a customer can reach a committed file through a comment
+    as easily as through a fixture.
     """
     text = str(ref or "")
     if not text:
