@@ -419,3 +419,87 @@ The report's headline is "successful 24 · partial 6 · failed 14" over both. Si
 most of the successes; sitting two is a man who cannot tell whether the thing is alive. **The
 second sitting is the one this pass has to answer**, and §42 is its standard: *the owner should
 be able to hand the tablet to somebody with no explanation.*
+
+---
+
+# TWO DEFECTS FOUND LAST, AND THE FIRST IS THE WORST IN THE SESSION
+
+## D-14 · P0 · It answered about the wrong customer, out loud, as fact — and scored SUCCESSFUL
+
+```
+20:15:26  ASKED:   "Um, what has [customer A] ordered in his lifetime?"
+          tools:   shopify_order_detail, shopify_customer_history
+20:15:28  SPOKEN:  "[customer B]: 1 order, 60.0 GBP in total.
+                    The last was CROOKS-1965, £60.00 on 2026-09-11."
+```
+
+He named one customer. It spoke another customer's order history at him as a statement of fact.
+
+He asked again a minute later, and that time it was right:
+
+```
+20:16:32  ASKED:   "Show me [customer A]'s orders in his lifetime"
+          tools:   shopify_find_customer, shopify_customer_history
+          SPOKEN:  "[customer A], [email] — two orders, both today, sixty pounds each…"
+```
+
+**The difference is the first tool.** The failing turn ran `shopify_order_detail` — it hydrated
+from the order already in FOCUS (`gid://…7655`, per the owner-feedback records of the minute
+before) and then read the customer history of *that order's* customer. The succeeding turn ran
+`shopify_find_customer` first, resolving the NAME he actually said.
+
+**Root cause: when a request names an entity, the held entity still won.** Context is meant to
+resolve "him", "that one", "the same customer". On a turn whose words name a *different* person,
+the focus must lose. It did not.
+
+**Why nobody caught it.** The report scores `turn_58991e7b6537` as
+`backend = READ_OK / visible = DRAWN / experience = SUCCESSFUL`. Both tools returned 200. A card
+was drawn. Every gate the programme has was satisfied by a turn that told the owner a false
+thing about his own business, and the only reason we know is that he repeated the question.
+
+It also explains a row the report files as a curiosity: "the same request said again" lists this
+pair. He was not repeating himself because the transcript failed. He was repeating himself
+because the answer was about somebody else.
+
+**This is the most serious defect in the session** — worse than every interaction defect above,
+because a UI that fights you is visibly broken and a confident wrong answer is not. Every other
+defect in this document costs the owner time. This one costs him trust in the answers, which is
+the whole product.
+
+**Fix (§3, §6):** entity resolution precedes context. A named entity in the request outranks the
+entity in focus; the workspace is composed for the entity the words RESOLVE TO; and when the two
+disagree the answer must say which it used. A turn that names an entity and answers about
+another is a failure regardless of what the tools returned.
+
+**Regression test:** hold order X (belonging to customer B) in focus, ask "what has customer A
+ordered in his lifetime", assert the answer names customer A — and assert the failing shape
+(`order_detail` on the held order driving a customer answer) cannot recur. Must fail on the
+current tree.
+
+## D-15 · P1 · The timeline's own redaction is incomplete
+
+The invariant every proposal is held to says: *"no customer detail in the ledger, the timeline
+or a proposal beyond what the owner said aloud."* The timeline breaks it.
+
+Measured over the 1,365 events:
+
+| Field | Redacted? |
+|---|---|
+| `turn_finished.question` | yes — 8 events carry `[name]` |
+| `turn_finished.answer` | yes — 7 events carry `[name]` |
+| `tts.text` | **no — raw name and raw email address** |
+| `model.answer` | **no — raw email address** |
+| `prediction.key` | **no — raw email address** |
+
+Three real customer email addresses sit in the session file in fields the redactor does not
+cover. The redaction was applied to the turn record and not to the speech record of the same
+sentence — so the sentence is scrubbed where it is written down as an answer and intact where it
+is written down as something spoken.
+
+`logs/test-sessions/` is gitignored, so nothing has leaked to the repository. But a timeline is
+exported, read, pasted into reports and handed to engineering agents — this very pass received
+three real addresses that way — and the invariant exists precisely because of that.
+
+**Fix:** one redaction seam, applied where events are WRITTEN rather than at each call site, so a
+new event kind cannot arrive unredacted. Then a test that walks a whole fixture timeline and
+asserts no field of any event matches an email pattern.
