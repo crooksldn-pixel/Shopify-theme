@@ -19,11 +19,13 @@
  * in one function (`tabFor`):
  *
  *   1. the tab THIS card is open on right now — a patch never moves the owner's reading;
- *   2. the tab the TASK implies, named by the Mac for THIS card (`data.tab`);
- *   3. the tab the owner left THIS record on (`opts.tabOf`, by render identity);
+ *   2. the tab the owner left THIS record on (`opts.tabOf`, by render identity) — his own
+ *      choice about a record outranks the one composed for him;
+ *   3. the tab the TASK implies, composed by the Mac for THIS card (`data.tab`);
  *   4. nothing: the card's first panel.
  *
- * Never, at any step, a tab tapped on a different record.
+ * The first of those the card actually HAS is the one that opens, and never, at any step, is
+ * it a tab tapped on a different record.
  */
 'use strict';
 
@@ -121,7 +123,11 @@ test('seven freshly rendered customers open on the tab the task implies', () => 
     item.data.tab = 'orders';                       // what the task implies, from the Mac
     return openTab(UI.renderItem(item, opts));
   });
-  assert.deepEqual(opened, ids.map(() => 'Orders'), `seven cards opened on ${opened.join(', ')}`);
+  // The brief's two rules at once. The six he had never opened open on the tab the task
+  // implies; the one he had chosen a tab on comes back on HIS tab, because his own choice
+  // about a record outranks the one composed for him.
+  assert.deepEqual(opened.slice(1), ids.slice(1).map(() => 'Orders'), `six cards opened on ${opened.slice(1).join(', ')}`);
+  assert.equal(opened[0], 'Email', 'the customer he had left on Email came back on something else');
 });
 
 test('returning to a card the owner left on a tab restores THAT card\'s tab', () => {
@@ -159,6 +165,34 @@ test('an order card and a customer card do not share a tab either', () => {
   assert.equal(openTab(UI.renderItem(customer('gid://shopify/Customer/6343', 'Ada'), opts)), 'Overview');
   // And the order itself comes back on Shipping.
   assert.equal(openTab(UI.renderItem(order, opts)), 'Shipping');
+});
+
+test('a remembered tab the card does not have falls through to the composed one', () => {
+  // A customer left on Email, drawn later from a read that found no email at all: there is
+  // no Email panel to open. The answer falls through to the tab the task composed rather
+  // than to nothing — the workspace cards of app/presentation.py behave the same way, and
+  // this is the one rule that lets the two kinds of card agree.
+  const opts = { tabOf: () => 'email', onTab: () => {} };
+  const item = customer('gid://shopify/Customer/6343', 'Ada');
+  delete item.data.related_email;                  // no inbox this time
+  item.data.tab = 'orders';
+  const node = UI.renderItem(item, opts);
+  assert.deepEqual(node.querySelectorAll('[role="tab"]').map((t) => t.textContent.trim()), ['Overview', 'Orders']);
+  assert.equal(openTab(node), 'Orders');
+});
+
+test('the owner\'s own choice reaches a renderer as one value, per card', () => {
+  // The contract a card with tabs reads (`opts.tab`): resolved by `renderItem` BEFORE the
+  // renderer is called, so the one value it sees is about the record being drawn. There is
+  // no deck-wide tab left for a renderer to take by accident.
+  const opts = { tabOf: (id) => (id === 'order:g1' ? 'shipping' : ''), onTab: () => {} };
+  const order = (id, number) => ({ type: 'order', data: { order_id: id, order_number: number, detail: true, items: [{ title: 'Hoodie', quantity: 1 }] } });
+  assert.equal(UI.renderItem(order('g1', '#1938'), opts).querySelector('.tabbed').dataset.tab, 'shipping');
+  assert.equal(UI.renderItem(order('g2', '#1939'), opts).querySelector('.tabbed').dataset.tab, 'overview',
+    'the order beside it took the tab remembered for the other one');
+  // And a skeleton is nobody's record: it takes no tab and asks for none.
+  const shell = UI.renderItem({ type: 'order', data: { shell: true, loading: true, title: 'Order', placeholder: 4 } }, opts);
+  assert.equal(shell.querySelector('.tabbed'), null);
 });
 
 // --------------------------------------------------------------------- the patch path

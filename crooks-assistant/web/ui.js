@@ -266,28 +266,39 @@
   // active on 23 rendered cards, usually over an empty panel.
   //
   // So a tab belongs to a RECORD, and this is the only place that decides which one a card
-  // opens on. In order:
+  // opens on. It returns the candidates IN ORDER, and `tabs()` opens the first of them the
+  // card actually has — a tab named for a workspace that does not have it falls through to
+  // the next answer rather than to nothing:
   //
   //   1. `opts.tabNow` — the tab THIS card is open on at this moment. A patch that landed
   //      while the owner was reading Orders does not move him to Email (applyPatches).
-  //   2. `d.tab` — the tab the TASK implies, named by the Mac on this card and no other
-  //      (app/presentation.py; `tab` is visual state in app/render.py, so naming it does not
-  //      redraw the card). A request naming orders opens Orders.
-  //   3. `opts.tabOf(id)` — the tab the owner left THIS record on, by render identity
+  //   2. `opts.tabOf(id)` — the tab the owner left THIS record on, by render identity
   //      (web/app.js `cardTabs`, the Mac's copy in `branch.tabs`). Returning to a card he
-  //      had left on a tab still restores that card's tab.
+  //      had left on a tab restores that card's tab, and his own choice about a record
+  //      outranks the one composed for him.
+  //   3. `d.tab` — the tab the TASK implies, composed by the Mac for THIS card and no other
+  //      (app/presentation.py; `tab` is visual state in app/render.py, so naming it does not
+  //      redraw the card). A request naming orders opens Orders on a record he has never
+  //      opened.
   //   4. nothing: the card's own first panel.
   //
-  // At no step is it a tab tapped on a different record.
+  // At no step is it a tab tapped on a different record. `opts.tab` is the same answer as a
+  // single value, resolved PER CARD by `renderItem` before a renderer is called, so a
+  // renderer that reads it cannot get a deck-wide value: there is no longer one to get.
   function tabFor(kind, d, opts) {
     const settings = opts || {};
+    const wanted = [text(settings.tabNow), ownerTab(kind, d, settings), text(d && d.tab)];
+    return wanted.filter(Boolean);
+  }
+
+  // The owner's own choice about this record, and nothing else — what `opts.tab` carries for
+  // a renderer that asks for one value (the workspace cards of app/presentation.py let it
+  // outrank the tab they composed, and fall back to that when it names a tab they lack).
+  function ownerTab(kind, d, opts) {
+    const settings = opts || {};
     if (text(settings.tabNow)) return text(settings.tabNow);
-    if (text(d && d.tab)) return text(d.tab);
-    if (typeof settings.tabOf === 'function') {
-      const found = settings.tabOf(surfaceId({ type: kind, data: d || {} }), kind);
-      if (text(found)) return text(found);
-    }
-    return '';
+    if (typeof settings.tabOf !== 'function') return '';
+    return text(settings.tabOf(surfaceId({ type: kind, data: d || {} }), kind));
   }
 
   // Report a tap to whoever is keeping the record's tab, naming the RECORD it was on — the
@@ -311,9 +322,13 @@
     const wrap = h('div', { class: 'tabbed' });
     if (!kept.length) return wrap;
     let open = 0;
-    if (settings.initial) {
-      const found = kept.findIndex ? kept.findIndex((p) => p.name === settings.initial) : -1;
-      if (found >= 0) open = found;
+    // `initial` is one name or, from `tabFor`, the candidates in order: the first one this
+    // card actually HAS is the one that opens. A tab named for a record whose card does not
+    // carry it — an order left on Shipping, drawn later without a shipping panel — falls
+    // through to the next answer rather than silently to the first panel.
+    for (const name of [].concat(settings.initial || [])) {
+      const found = text(name) && kept.findIndex ? kept.findIndex((p) => p.name === text(name)) : -1;
+      if (found >= 0) { open = found; break; }
     }
     const bar = h('div', { class: 'tabs', role: 'tablist' });
     const bodies = [];
@@ -2688,12 +2703,19 @@
   function renderItem(item, opts) {
     if (!isValid(item) || !RENDERERS[item.type]) return null;
     try {
+      // Which tab THIS card's owner is on, resolved before the renderer is called (D-2). It
+      // is handed down as `opts.tab` — the name every renderer with tabs already reads — so
+      // that value is now about one record instead of the whole branch, and a renderer
+      // cannot take a deck-wide tab because there is no longer one to take.
+      const settings = opts || {};
+      const mine = item.data.shell === true ? '' : ownerTab(item.type, item.data, settings);
+      const drawWith = mine ? Object.assign({}, settings, { tab: mine }) : settings;
       // A card the Mac has promised but not yet read: one bounded placeholder, for every
       // type, from the same data shape. The renderer for the type is not called at all —
       // nothing on a skeleton comes from a payload that does not exist yet.
       const node = item.data.shell === true
-        ? skeletonCard(item.type, item.data, opts || {})
-        : RENDERERS[item.type](item.data, opts || {}) || null;
+        ? skeletonCard(item.type, item.data, drawWith)
+        : RENDERERS[item.type](item.data, drawWith) || null;
       if (node && node.dataset && !node.dataset.render) node.dataset.render = surfaceId(item);
       return node;
     } catch (error) {

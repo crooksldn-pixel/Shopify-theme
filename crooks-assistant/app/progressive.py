@@ -414,6 +414,17 @@ class Workspace:
                 section.value = "" if count is None else str(count)
                 section.note = ""
 
+    def in_flight(self) -> list[str]:
+        """The sections whose reads have not landed, in the order they were planned.
+
+        The join with the workspace composition (`app/presentation.py present(pending=…)`,
+        which draws a section whose read is still running as loading): WHEN a section is
+        in flight is known here and nowhere else, and WHAT goes in it is composed there. A
+        section that has already landed, found nothing, or failed is not in flight — it has
+        an answer, and `pending` is not the word for an answer.
+        """
+        return [s.name for s in self.sections.values() if s.state in (WAITING, LOADING)]
+
     def _settle_sections(self, at_ms: float) -> list[Patch]:
         """The sections this turn never got to, at the end of it.
 
@@ -728,6 +739,23 @@ def planning(session: Any, tools: list[str] | tuple[str, ...]) -> None:
             workspace.plan(kinds=seen)
     except Exception as exc:  # noqa: BLE001 — bookkeeping must not break a read plan
         log.debug("progressive plan failed: %s", type(exc).__name__)
+
+
+def in_flight(session: Any) -> list[str]:
+    """Which sections of this half's workspace are still being read.
+
+    For the workspace composition to draw a section as loading rather than as absent
+    (`app/presentation.py present(pending=…)`): the states live here, the cards live there,
+    and this is the whole of what has to cross between them. Never raises and never invents —
+    an empty list means nothing is in flight, which is also what it says when there is no
+    workspace at all.
+    """
+    try:
+        workspace = _workspace_for(session)
+        return [] if workspace is None else workspace.in_flight()
+    except Exception as exc:  # noqa: BLE001 — bookkeeping must not break a presentation
+        log.debug("progressive in-flight sections failed: %s", type(exc).__name__)
+        return []
 
 
 def failed(session: Any, tool: str, why: str = "") -> None:

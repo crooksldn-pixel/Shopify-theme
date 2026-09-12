@@ -412,6 +412,31 @@ def test_a_failed_read_takes_down_its_own_skeleton_and_nothing_else():
     assert [p.type for p in removed] == ["email_list"], "a skeleton was left reading for a read that failed"
 
 
+def test_the_sections_still_being_read_are_the_ones_a_card_should_draw_as_loading():
+    """The join with the workspace composition: WHEN a section is in flight is known here,
+    WHAT goes in it is composed in app/presentation.py, and this is all that crosses.
+
+    A section that has landed, found nothing, or failed is not in flight: it has an answer,
+    and a card that drew it as "loading…" would be saying the Mac was still working when it
+    had stopped — the live session's "Checking the inbox…" standing 34.8 s after the asking.
+    """
+    class FakeSession:
+        session_id = "s1"
+        focused_branch = ""
+
+    workspace = progressive.begin("s1", turn_id="t1")
+    workspace.plan("Today's activity", ("order_list", "email_list"))
+    assert workspace.in_flight() == ["orders", "inbox"]
+    assert progressive.in_flight(FakeSession()) == ["orders", "inbox"]
+    workspace.facts([orders(7)])
+    assert workspace.in_flight() == ["inbox"]
+    workspace.failed("gmail_search", "Gmail did not answer")
+    assert workspace.in_flight() == [], "a section that failed is not still being read"
+    # And a session with no workspace at all says so rather than raising.
+    progressive.reset()
+    assert progressive.in_flight(FakeSession()) == []
+
+
 def test_the_workspace_state_is_reported_with_the_turns_numbers():
     clock = Clock()
     workspace = progressive.begin("s1", turn_id="t1", clock=clock)
