@@ -1258,6 +1258,14 @@
       "do": "refusal_carries_words"
      },
      {
+      "do": "offers_withheld",
+      "expect_rows_at_least": 3
+     },
+     {
+      "do": "ask",
+      "text": "show me today's orders"
+     },
+     {
       "do": "no_control_carries_unheld_ref"
      }
     ]

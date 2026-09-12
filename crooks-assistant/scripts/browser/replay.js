@@ -167,7 +167,7 @@ async function one(browser, state) {
   try {
     if (state.replay) await replay(page, state, fx, gate);
     if (state.drive) await drive(page, state, fx, gate, posts, owned);
-    if (state.ask) await ask(page, state, gate, owned);
+    if (state.ask) await ask(page, state, fx, gate, owned);
     check(fx('no script error while replaying it'), errors.length === 0, errors.slice(0, 3).join(' | '));
   } catch (e) {
     check(fx('the replay ran'), false, String((e && e.message) || e).slice(0, 400));
@@ -258,7 +258,12 @@ async function replay(page, state, fx, gate) {
 
 /* ---- the asked states: the owner's own sentence, to the real backend --------------------- */
 
-async function ask(page, state, gate, owned) {
+/* `fx` as well as `gate`, since the `routes_to_model` branch reports a FIXTURE limitation
+   rather than a gate verdict and the two prefixes mean different things in the report. It was
+   added to the branch and not to the signature, and the whole state then failed as
+   "the replay ran :: fx is not defined" — one undefined name taking eight checks with it,
+   which is why `no script error while replaying it` is asserted beside every state. */
+async function ask(page, state, fx, gate, owned) {
   const spec = state.ask;
   const turn = await page.evaluate(async (text) => {
     const id = localStorage.getItem('crooks.session') || `replay-${Date.now()}`;
@@ -594,6 +599,40 @@ async function drive(page, state, fx, gate, posts, owned) {
         check(gate('the refusal carries a sentence the owner can act on, not just a code') + owned,
           said.length > 20 && /[a-z]/.test(said),
           `code=${lastRefusal.code || 'none'} detail="${said}"`);
+        break;
+      }
+      case 'offers_withheld': {
+        /* The OTHER direction of the §18 sweep, and the reason it needs its own step.
+           `no_control_carries_unheld_ref` asks "does every offer on screen work?", and it
+           refuses to pass when there are no offers at all — rightly, because a gate that
+           goes green on an empty deck is how Phase 4's suite stayed green. But after
+           `app/presentation.py:_withhold_dead_refs` a ranking of products the Mac has never
+           read correctly offers NOTHING, so that check became unmeasurable on this state
+           and said so.
+
+           Unmeasurable is not the same as satisfied, so this is the positive claim for that
+           deck: rows were drawn, none of them carries a destination, and every one of them
+           still carries its figures. The last part matters — the ranking IS the answer to
+           "what sold best", and the only false thing about it was the promise that you could
+           tap through to the product. Withholding the ref must not cost the answer. */
+        const seen = await page.evaluate(() => {
+          const rows = Array.from(document.querySelectorAll('#cards .rank, #cards .row, #cards li[data-ref], #cards li'));
+          const drawn = rows.filter((r) => (r.textContent || '').trim().length > 2);
+          return {
+            rows: drawn.length,
+            withRef: drawn.filter((r) => (r.dataset && r.dataset.ref) || r.querySelector('[data-ref]')).length,
+            withFigures: drawn.filter((r) => /[0-9]/.test(r.textContent || '')).length,
+            sample: drawn.slice(0, 3).map((r) => (r.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40)),
+          };
+        });
+        check(gate(`${step.expect_rows_at_least || 1}+ rows are drawn, so there is something to measure`) + owned,
+          seen.rows >= (step.expect_rows_at_least || 1), JSON.stringify(seen));
+        check(gate('and not one of them offers a record the Mac could not open') + owned,
+          seen.withRef === 0, `${seen.withRef} of ${seen.rows} still carry a destination`);
+        check(gate('and withholding the destination did not cost the answer') + owned,
+          seen.rows > 0 && seen.withFigures === seen.rows,
+          `${seen.withFigures} of ${seen.rows} rows still carry their figures — ${JSON.stringify(seen.sample)}`);
+        await shot(page, `replay-${state.id}-withheld`);
         break;
       }
       case 'no_control_carries_unheld_ref': {

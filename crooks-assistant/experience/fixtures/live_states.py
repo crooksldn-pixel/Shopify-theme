@@ -713,6 +713,21 @@ AUTHORED: dict[str, dict[str, Any]] = {
              "args": {"ref": "gid://shopify/Product/0", "kind": "product"},
              "expect_ok": False, "expect_code": "not_held"},
             {"do": "refusal_carries_words"},
+            # BOTH directions of the §18 sweep, on two decks, because one deck cannot show
+            # both and `__replayDraw` replaces the deck rather than appending to it.
+            #
+            # First the ranking that is still on screen: its rows are products the Mac has
+            # never read, so after `app/presentation.py:_withhold_dead_refs` not one of them
+            # carries a destination — and every one still carries its figures, which is the
+            # half that would be easy to lose. `no_control_carries_unheld_ref` cannot measure
+            # this deck at all any more and says so ("0 offered ... so §18 could not be
+            # measured"), which is correct of it: a gate that goes green on an empty deck is
+            # how the Phase 4 suite stayed green.
+            {"do": "offers_withheld", "expect_rows_at_least": 3},
+            # Then a deck whose offers the Mac DOES hold, so the sweep is shown not to strip
+            # the good ones with the dead. Without this the sweep could withhold every ref
+            # on the product and nothing here would notice.
+            {"do": "ask", "text": "show me today's orders"},
             {"do": "no_control_carries_unheld_ref"},
         ]},
     },
