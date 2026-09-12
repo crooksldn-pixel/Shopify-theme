@@ -624,13 +624,13 @@
    "replay": {
     "expect": {
      "card_count": 1,
-     "deck_height_min": 800,
+     "deck_height_min": 900,
      "types": [
       "capability"
      ]
     },
     "mode": "context",
-    "tab": "The shop",
+    "tab": "shop",
     "ui": [
      {
       "data": {
@@ -644,25 +644,71 @@
         "what is running out?",
         "who has not replied?",
         "how are sales this week?",
-        "tag everything unfulfilled"
+        "tag everything unfulfilled",
+        "what did we sell most of last month?"
        ],
        "groups": [
         {
          "area": "shop",
          "items": [
           {
+           "detail": "by number, by customer, or today's",
            "label": "Look up an order",
            "name": "orders",
            "state": "ready"
           },
           {
+           "detail": "their orders, their spend, their email",
            "label": "Look up a customer",
            "name": "customers",
            "state": "ready"
           },
           {
+           "detail": "staged for you to apply",
            "label": "Change a delivery address",
            "name": "address",
+           "state": "ready"
+          },
+          {
+           "detail": "with or without tracking",
+           "label": "Mark an order as shipped",
+           "name": "fulfil",
+           "state": "ready"
+          },
+          {
+           "detail": "staged for you to apply",
+           "label": "Cancel and refund an order",
+           "name": "cancel",
+           "state": "ready"
+          },
+          {
+           "detail": "appended, never replaced",
+           "label": "Add a note to an order",
+           "name": "note",
+           "state": "ready"
+          },
+          {
+           "detail": "percentage, fixed or free delivery",
+           "label": "Create a discount code",
+           "name": "discount",
+           "state": "ready"
+          },
+          {
+           "detail": "nothing is charged",
+           "label": "Start a draft order",
+           "name": "draft",
+           "state": "ready"
+          },
+          {
+           "detail": "per variant, per location",
+           "label": "Set a stock level",
+           "name": "inventory",
+           "state": "ready"
+          },
+          {
+           "detail": "staged for you to apply",
+           "label": "Refund an order",
+           "name": "refund",
            "state": "ready"
           }
          ],
@@ -679,6 +725,11 @@
           {
            "label": "Reply to a thread",
            "name": "reply",
+           "state": "ready"
+          },
+          {
+           "label": "Archive a thread",
+           "name": "archive",
            "state": "ready"
           }
          ],
@@ -712,6 +763,7 @@
          "label": "Bulk changes"
         }
        ],
+       "note": "Every capability, and where it stands on this Mac right now.",
        "title": "What this can do",
        "writes_enabled": true
       },
@@ -1090,6 +1142,13 @@
       "durations_from": "observed.ms",
       "expect_no_post": "/turn",
       "expect_no_recording": true,
+      "near": "#branch-bar [data-action=\"split\"]"
+     },
+     {
+      "do": "tap_burst",
+      "durations_from": "observed.ms",
+      "expect_no_post": "/turn",
+      "expect_no_recording": true,
       "near": ".dock-btn"
      }
     ]
@@ -1143,7 +1202,8 @@
    "drive": {
     "steps": [
      {
-      "do": "idle"
+      "do": "ask",
+      "text": "what are the best sellers this month?"
      },
      {
       "args": {
@@ -1156,7 +1216,7 @@
       "expect_ok": false
      },
      {
-      "do": "expect_visible_reason"
+      "do": "refusal_carries_words"
      },
      {
       "do": "no_control_carries_unheld_ref"

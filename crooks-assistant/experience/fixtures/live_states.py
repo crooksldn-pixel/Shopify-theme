@@ -465,20 +465,32 @@ AUTHORED: dict[str, dict[str, Any]] = {
         "gate": "§4/§5 · \"can you\" is not a capability question when an entity and an operation follow it",
         "owned_by": "workstream C — families and presentation",
         "replay": {
-            "mode": "context", "tab": "The shop",
+            "mode": "context", "tab": "shop",   # the panel NAME behind the label the telemetry recorded
             "ui": [{"type": "capability", "data": {
                 "title": "What this can do",
                 "counts": {"reads": 23, "changes": 9, "bulk": 5},
                 "writes_enabled": True,
+                # The four tabs the telemetry names, and enough behind the open one to reach the
+                # 1,014 px the tablet measured. The height is the whole point of this fixture:
+                # a thousand pixels of "what I can do" on an 889 px screen, in answer to a
+                # question about one customer.
                 "groups": [
                     {"area": "shop", "label": "The shop", "items": [
-                        {"name": "orders", "label": "Look up an order", "state": "ready"},
-                        {"name": "customers", "label": "Look up a customer", "state": "ready"},
-                        {"name": "address", "label": "Change a delivery address", "state": "ready"},
+                        {"name": "orders", "label": "Look up an order", "state": "ready", "detail": "by number, by customer, or today's"},
+                        {"name": "customers", "label": "Look up a customer", "state": "ready", "detail": "their orders, their spend, their email"},
+                        {"name": "address", "label": "Change a delivery address", "state": "ready", "detail": "staged for you to apply"},
+                        {"name": "fulfil", "label": "Mark an order as shipped", "state": "ready", "detail": "with or without tracking"},
+                        {"name": "cancel", "label": "Cancel and refund an order", "state": "ready", "detail": "staged for you to apply"},
+                        {"name": "note", "label": "Add a note to an order", "state": "ready", "detail": "appended, never replaced"},
+                        {"name": "discount", "label": "Create a discount code", "state": "ready", "detail": "percentage, fixed or free delivery"},
+                        {"name": "draft", "label": "Start a draft order", "state": "ready", "detail": "nothing is charged"},
+                        {"name": "inventory", "label": "Set a stock level", "state": "ready", "detail": "per variant, per location"},
+                        {"name": "refund", "label": "Refund an order", "state": "ready", "detail": "staged for you to apply"},
                     ]},
                     {"area": "inbox", "label": "The inbox", "items": [
                         {"name": "search", "label": "Search the inbox", "state": "ready"},
                         {"name": "reply", "label": "Reply to a thread", "state": "ready"},
+                        {"name": "archive", "label": "Archive a thread", "state": "ready"},
                     ]},
                     {"area": "sales", "label": "Sales and stock", "items": [
                         {"name": "sales", "label": "Sales for a period", "state": "ready"},
@@ -491,9 +503,11 @@ AUTHORED: dict[str, dict[str, Any]] = {
                 "examples": [
                     "show me today's orders", "what is running out?", "who has not replied?",
                     "how are sales this week?", "tag everything unfulfilled",
+                    "what did we sell most of last month?",
                 ],
+                "note": "Every capability, and where it stands on this Mac right now.",
             }}],
-            "expect": {"card_count": 1, "types": ["capability"], "deck_height_min": 800},
+            "expect": {"card_count": 1, "types": ["capability"], "deck_height_min": 900},
         },
         "ask": {
             "text": "can you expand Mia Jones's customer page?",
@@ -574,6 +588,15 @@ AUTHORED: dict[str, dict[str, Any]] = {
         "owned_by": "workstream A — the touch-ownership state machine",
         "drive": {"steps": [
             {"do": "idle"},
+            # Aimed at the control he was aiming at. The touch layer reported `target: dock`
+            # for 131 of the session's 132 hold starts because `#talk` IS the dock/hold
+            # region and it covers the whole idle screen — so a tap on the Split chip is
+            # recorded as a tap on the dock, which is the entire defect.
+            {"do": "tap_burst", "durations_from": "observed.ms",
+             "near": "#branch-bar [data-action=\"split\"]",
+             "expect_no_post": "/turn", "expect_no_recording": True},
+            # And the dock's own buttons, which must go on working: the fix is ownership, not
+            # a bigger dead zone.
             {"do": "tap_burst", "durations_from": "observed.ms", "near": ".dock-btn",
              "expect_no_post": "/turn", "expect_no_recording": True},
         ]},
@@ -589,11 +612,13 @@ AUTHORED: dict[str, dict[str, Any]] = {
                 "refusal is visible rather than an empty half",
         "owned_by": "workstream D — offers and held facts",
         "drive": {"steps": [
-            {"do": "idle"},
+            # The products landing, which is the surface the live refusal came off: he tapped
+            # a row in it and `open.entity` came back `not_held`.
+            {"do": "ask", "text": "what are the best sellers this month?"},
             {"do": "post_command", "command": "open.entity",
              "args": {"ref": "gid://shopify/Product/0", "kind": "product"},
              "expect_ok": False, "expect_code": "not_held"},
-            {"do": "expect_visible_reason"},
+            {"do": "refusal_carries_words"},
             {"do": "no_control_carries_unheld_ref"},
         ]},
     },
