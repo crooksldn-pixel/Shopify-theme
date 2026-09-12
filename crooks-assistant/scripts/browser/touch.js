@@ -271,27 +271,39 @@ async function atSize(browser, size) {
   });
 
   /* A row of controls that is WIDER THAN ITS OWN CONTAINER. `#context-nav` is
-     `overflow-x:auto`, so its last chip is simply cut off at the right edge — drawn, reported
-     as present by every gate, and unreachable without a horizontal scroll nobody knows is
-     there. It is not an overlap, so collision.js cannot see it; it is not off the VIEWPORT, so
-     an `onScreen` test cannot either. It is measured here, at both sizes. */
+     `overflow-x:auto`, so a chip past its right edge is simply cut off — drawn, reported as
+     present by every gate, and unreachable without a horizontal scroll nobody knows is there.
+     It is not an overlap, so collision.js cannot see it; it is not off the VIEWPORT, so an
+     `onScreen` test cannot either. That is how the second half's chip came to be cut in half
+     at 601 CSS px.
+     What is measured is the FIXED controls: the landing, the trail step, the list steps and
+     the Split chip. `#stack` is deliberately exempt — it is the context TRAIL, it grows with
+     the conversation, and the stylesheet has a fade mask for exactly that
+     (`.context-nav[data-overflow="1"]`). A trail that scrolls is a design; a control that is
+     cut off is a defect, and the difference is whether its position depends on how long the
+     conversation has been going. */
   async function railFits(where) {
     const rail = await page.evaluate(() => {
       const nav = document.querySelector('#context-nav');
       if (!nav) return null;
-      const shown = Array.from(nav.children).filter((c) => c.getBoundingClientRect().width > 0);
-      const last = shown[shown.length - 1];
+      const pad = 8;                      // `.context-nav` is padded 4px each side
+      const fixed = Array.from(nav.children)
+        .filter((c) => c.id !== 'stack' && c.getBoundingClientRect().width > 0);
+      const width = fixed.reduce((sum, c) => sum + c.getBoundingClientRect().width, 0)
+        + Math.max(0, fixed.length - 1) * 6;      // the row's gap
+      const last = fixed[fixed.length - 1];
       const box = last ? last.getBoundingClientRect() : null;
       return {
-        scroll: Math.round(nav.scrollWidth), client: Math.round(nav.clientWidth),
-        controls: shown.length,
-        labels: shown.map((c) => (c.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 12)),
+        fixedWidth: Math.round(width + pad), client: Math.round(nav.clientWidth),
+        controls: fixed.length,
+        labels: fixed.map((c) => (c.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 12)),
         lastRight: box ? Math.round(box.right) : 0,
         navRight: Math.round(nav.getBoundingClientRect().right),
+        trail: nav.scrollWidth > nav.clientWidth + 1,
       };
     });
-    check(at(`the navigation row fits its own container ${where}`),
-          Boolean(rail && rail.scroll <= rail.client + 1 && rail.lastRight <= rail.navRight + 1),
+    check(at(`the navigation row's own controls fit it ${where}`),
+          Boolean(rail && rail.fixedWidth <= rail.client && rail.lastRight <= rail.navRight + 1),
           JSON.stringify(rail));
   }
 
@@ -501,6 +513,11 @@ async function atSize(browser, size) {
   check(at('and the spread divided the orb, which is what the pair is for'),
         (await branchesNow()).count === 2, JSON.stringify(await branchesNow()));
   await shot('05-two-finger-split');
+
+  /* And once more here, late: the trail is long by now (a customer, an order, a customer
+     again) and the fixed controls must STILL fit. This is the state the screenshots are taken
+     in, and the one the row was cut off in. */
+  await railFits('late in a long conversation');
 
   // ================================================================== voice still works
   /* The other half of the gate. A hold on a deliberate voice target, long enough to be a
