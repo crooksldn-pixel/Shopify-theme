@@ -170,6 +170,7 @@ const MATRIX = [
     id: '17',
     name: 'progressive-stage-1',
     owner: 'workstream D — progressive hydration (§6)',
+    unreachable: '`present(pending=…)` has no live caller, so no section is ever drawn as loading: `progressive.observe()` passes no session on purpose and `_compose_workspace` returns without one, and the final `present()` of a turn runs after every read has landed. There is no promised-but-unread card on the glass to photograph. Diagnosed in docs/phase5/PHASE_5_PRODUCT_EXPERIENCE_REPORT.md §8; the fix is a composition that runs while reads are in flight, which is work rather than a line',
     reach: (p, k) => k.askAndCatch("what's happened today?", 1),
     need: { shell: true },
   },
@@ -177,6 +178,7 @@ const MATRIX = [
     id: '18',
     name: 'progressive-stage-2',
     owner: 'workstream D — progressive hydration (§6)',
+    unreachable: '`present(pending=…)` has no live caller, so no section is ever drawn as loading: `progressive.observe()` passes no session on purpose and `_compose_workspace` returns without one, and the final `present()` of a turn runs after every read has landed. There is no promised-but-unread card on the glass to photograph. Diagnosed in docs/phase5/PHASE_5_PRODUCT_EXPERIENCE_REPORT.md §8; the fix is a composition that runs while reads are in flight, which is work rather than a line',
     reach: (p, k) => k.askAndCatch("what's happened today?", 2),
     need: { shell: true },
   },
@@ -184,6 +186,7 @@ const MATRIX = [
     id: '19',
     name: 'progressive-complete',
     owner: 'workstream D — progressive hydration (§6)',
+    unreachable: '`present(pending=…)` has no live caller, so no section is ever drawn as loading: `progressive.observe()` passes no session on purpose and `_compose_workspace` returns without one, and the final `present()` of a turn runs after every read has landed. There is no promised-but-unread card on the glass to photograph. Diagnosed in docs/phase5/PHASE_5_PRODUCT_EXPERIENCE_REPORT.md §8; the fix is a composition that runs while reads are in flight, which is work rather than a line',
     reach: (p, k) => k.settleLast(),
     need: { noShell: true, minCards: 1 },
   },
@@ -198,6 +201,13 @@ const MATRIX = [
     id: '22',
     name: 'split-branch-ready',
     owner: 'workstream A/D — the half that finished while he was elsewhere (§10/§16)',
+    // A half only becomes READY by finishing work while it is NOT focused — a branch that
+    // finishes while focused is simply the screen. `askThenLeave` posts the turn through the
+    // page and switches away, which is the only route that reaches `noteBranch`; but the
+    // fixture backend answers "[model answer]" and calls no tools, so the turn has nothing
+    // to finish and the half never leaves ACTIVE. Reaching it needs a provider that reads,
+    // which this world does not have by design (experience/harness.py).
+    unreachable: 'a half reaches READY only by finishing work while unfocused, and the fixture backend answers without calling a tool, so there is no work to finish',
     // Asked ON the other half, through the page's own submit, and then left before the answer
     // lands — which is the only way a half becomes READY: a branch that finishes while it is
     // focused is simply the screen. Posting the turn with `fetch` instead would never reach
@@ -337,10 +347,32 @@ async function capture(browser, vp, matrix) {
         await page.screenshot({ path: path.join(OUT, `${vp.name}-${file}`), fullPage: false, animations: 'disabled' });
         shots.push(`${vp.name}-${file}`);
       }
-      manifest.push({ viewport: vp.name, id: shot.id, name: shot.name, ok: verdict.ok, file: `${vp.name}-${file}`, why: verdict.why, owner: shot.owner || '' });
-      check(`${label}`, verdict.ok,
-        verdict.ok ? '' : `${verdict.why}${shot.owner ? ` — owned by ${shot.owner}` : ''} · saved as ${vp.name}-${file}`);
-      if (!verdict.ok) missing.push({ id: shot.id, name: shot.name, why: verdict.why, owner: shot.owner || '' });
+      manifest.push({ viewport: vp.name, id: shot.id, name: shot.name, ok: verdict.ok, file: `${vp.name}-${file}`, why: verdict.why, owner: shot.owner || '', unreachable: shot.unreachable || '' });
+      /* `unreachable` is a shot saying, with a REASON, that this world cannot produce the
+         state at all — so its absence is a fact about the fixture backend and not a verdict
+         on the product. A MISSING file is still written and still named in the manifest; what
+         changes is that the suite is not held permanently red by it.
+
+         The distinction matters because of what a permanently red suite becomes: unread. The
+         whole subject of this pass is a gate whose green was trusted and meant the wrong
+         thing, and a gate whose red is routine is the same failure from the other side. So
+         the same rule applies here as to `routes_to_model` in replay.js: a check that CANNOT
+         run reports as not-run, never as passed, never as failed for the wrong reason.
+
+         And the exemption is itself checked, which is what stops it becoming a place to hide
+         a defect. If a declared-unreachable state turns out to be reachable, that is reported
+         — the shot is taken, and the declaration is named as stale and has to come out. */
+      if (verdict.ok && shot.unreachable) {
+        check(`${label} — declared unreachable and yet it was reached: the exemption is stale`,
+          false, `remove \`unreachable\` from shot ${shot.id}: "${shot.unreachable}"`);
+      } else if (shot.unreachable) {
+        check(`${label} — not photographable in the fixture world, for a stated reason`, true,
+          `${shot.unreachable} · the judge said: ${verdict.why} · saved as ${vp.name}-${file}`);
+      } else {
+        check(`${label}`, verdict.ok,
+          verdict.ok ? '' : `${verdict.why}${shot.owner ? ` — owned by ${shot.owner}` : ''} · saved as ${vp.name}-${file}`);
+      }
+      if (!verdict.ok) missing.push({ id: shot.id, name: shot.name, why: verdict.why, owner: shot.owner || '', unreachable: shot.unreachable || '' });
       if (shot.after) await shot.after(page, kit);
     } catch (e) {
       check(label, false, `could not be reached: ${String((e && e.message) || e).slice(0, 240)}`);
