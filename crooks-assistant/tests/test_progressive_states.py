@@ -218,6 +218,36 @@ def test_a_compound_task_says_what_the_workspace_is_before_any_fact_arrives():
     assert workspace.timings()["time_to_first_meaningful_fact"] is None
 
 
+def test_the_read_plan_is_what_names_the_sections_and_a_predicted_one_names_nothing():
+    """The production call site: `app/reads/scheduler.py` hands the plan's tools over before
+    it runs the first read of it, which is the earliest moment anything is known.
+
+    And a read NOBODY ASKED FOR promises nothing. D-4 is what happens when anticipation is
+    allowed to spend the foreground's room; a workspace header for a question the owner did
+    not ask would be the same defect with a title on it.
+    """
+    class FakeSession:
+        session_id = "s1"
+        focused_branch = ""
+
+    workspace = progressive.begin("s1", turn_id="t1")
+    with progressive.background():
+        progressive.planning(FakeSession(), ["shopify_list_orders", "gmail_search"])
+    assert workspace.patches == [], "a predicted plan put a workspace on the glass"
+
+    progressive.planning(FakeSession(), ["shopify_list_orders", "gmail_search", "gmail_read_thread"])
+    plan = [p for p in workspace.patches if p.type == progressive.PLAN_TYPE]
+    assert len(plan) == 1, [p.type for p in workspace.patches]
+    # Two reads of one section are one section, and the order they were planned in is kept.
+    assert [s["label"] for s in plan[0].item["data"]["sections"]] == ["Orders", "Inbox"]
+    assert all(s["state"] == progressive.WAITING for s in plan[0].item["data"]["sections"])
+    # A plan of one kind is not a workspace with a header over it.
+    progressive.reset()
+    alone = progressive.begin("s2", turn_id="t2")
+    progressive.planning(FakeSession(), ["shopify_list_orders"])
+    assert [p.type for p in alone.patches] == []
+
+
 def test_a_section_is_patched_in_place_and_the_workspace_is_not_replaced():
     """§15's rules, as patches: patch sections in place, never replace the workspace, never
     duplicate a card, never reorder what is already there."""
