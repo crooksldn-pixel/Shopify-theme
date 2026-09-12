@@ -38,6 +38,12 @@ class RowAction:
     detail: str = ""
 
     def public(self) -> dict[str, Any]:
+        # `priority` is the weight a row action carries when it is the ONE thing its own row
+        # offers — beside the row, full weight, because there is nothing to compete with. On a
+        # RAIL it is re-weighed by position against everything else on that card
+        # (`available.weigh` / `available_email_actions`), and that is the only place the
+        # answer to "how loud is this" is decided. §25: a rail is not a menu, and a weight
+        # decided in two files is a weight decided in neither.
         return {"id": self.id, "label": self.label, "operation": self.tool, "risk": self.risk,
                 "enabled": True, "reason": "", "detail": self.detail, "mode": "stage",
                 # A row action posts its own id and its row's ref, never a command of its own.

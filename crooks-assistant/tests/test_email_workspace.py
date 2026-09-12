@@ -150,25 +150,33 @@ def test_every_disabled_chip_carries_a_reason_and_never_the_first_weight(order):
         assert action["priority"] == "secondary", "a dead chip must not sit beside a live one"
 
 
-def test_the_note_chip_is_no_longer_the_first_thing_on_every_order():
-    """Note was rendered on every order card, first, and used nought times out of five. It is
-    a fallback, so it goes behind the disclosure and what the order NEEDS leads."""
+def test_the_note_chip_is_not_on_the_order_card_at_all():
+    """PHASE 5 · §25. Phase 4 demoted Note to half weight behind the disclosure; it is now
+    removed. The session's numbers: five renders, nought taps, first chip on every order card
+    whatever the order was. It is not what an order needs, it is what is left to offer when
+    the order needs nothing — and "add a note to order 1938" is unchanged by voice, while
+    `owner_feedback` answers "make a note" with no order open at all.
+
+    The assertion about what LEADS is unchanged and is now also an assertion about how many
+    lead: one."""
     actions = available_actions(OPEN_ORDER, ORDER_CAPS)
-    by_id = {a["id"]: a for a in actions}
-    assert by_id["note"]["priority"] == "secondary"
+    assert "note" not in [a["id"] for a in actions], "removed, not demoted"
     primary = [a["id"] for a in actions if a["enabled"] and a["priority"] == "primary"]
-    assert primary and primary[0] == "fulfil", f"an unfulfilled paid order needs shipping: {primary}"
-    assert len(primary) <= 2, f"two chips at full weight, not a menu: {primary}"
+    assert primary == ["fulfil"], f"an unfulfilled paid order needs shipping, and only that loudly: {primary}"
 
 
-def test_a_customer_asking_for_a_refund_makes_refund_and_email_the_primary_pair():
+def test_a_customer_asking_for_a_refund_puts_the_refund_first_and_the_reply_behind_it():
+    """PHASE 5 · §25/§26: MAX_PRIMARY is 1, so the pair becomes an order — the refund leads
+    and the reply is the one behind it. What is being tested is unchanged and is the part that
+    matters: the order's own CONTEXT decides which control leads, never the model and never
+    the tablet. Two chips of equal loudness were the Phase 4 compromise, not the goal."""
     asking = dict(SHIPPED_ORDER, email={"threads": [{
         "thread_id": THREAD_ID, "sender_match": True, "subject": "Refund please",
         "snippet": "I would like a refund for this.",
     }]})
-    primary = [a["id"] for a in available_actions(asking, ORDER_CAPS)
-               if a["enabled"] and a["priority"] == "primary"]
-    assert primary == ["refund", "email"], primary
+    actions = available_actions(asking, ORDER_CAPS)
+    assert [a["id"] for a in actions if a["enabled"]] == ["refund", "email"]
+    assert [a["priority"] for a in actions if a["enabled"]] == ["primary", "secondary"]
 
 
 def test_a_shipped_order_does_not_show_a_dead_fulfil_beside_a_live_refund():
