@@ -36,25 +36,32 @@ import json
 from pathlib import Path
 from typing import Any
 
-T0 = 1_800_000_000.0
+# The session clock. Chosen so the tablet's own millisecond clock (`t`, which is this times a
+# thousand, and which every touch rule reads) stays under thirteen digits: the project's PII
+# gate — `experience/fixtures/live_states.py::assert_clean`, built by the gate workstream and
+# the one gate there is — refuses any run of thirteen or more digits in a committed fixture,
+# because an invented fourteen-digit id cannot be told from a real one by looking. Every rule
+# here reads DELTAS, so the absolute value carries no meaning and there is no reason for this
+# file to be the exception to that gate.
+T0 = 900_000_000.0
 SESSION = "ts-20260911-201129-phase-5-fixture"
 
 # Invented ids, in the shape the real ones have. Seven customers for the seven-profile deck.
 CUSTOMERS = [
-    "gid://shopify/Customer/70000000000001",
-    "gid://shopify/Customer/70000000000002",
-    "gid://shopify/Customer/70000000000003",
-    "gid://shopify/Customer/70000000000004",
-    "gid://shopify/Customer/70000000000005",
-    "gid://shopify/Customer/70000000000006",
-    "gid://shopify/Customer/70000000000007",
+    "gid://shopify/Customer/7001",
+    "gid://shopify/Customer/7002",
+    "gid://shopify/Customer/7003",
+    "gid://shopify/Customer/7004",
+    "gid://shopify/Customer/7005",
+    "gid://shopify/Customer/7006",
+    "gid://shopify/Customer/7007",
 ]
 # The two people the wrong-entity turn confuses. Invented names, invented ids.
 ASKED_ABOUT = "Rowan Mitcham"          # who the owner named
-ASKED_ABOUT_ID = "gid://shopify/Customer/70000000000003"
+ASKED_ABOUT_ID = "gid://shopify/Customer/7003"
 HELD_INSTEAD = "Tessa Bramley"         # whose history it spoke
-HELD_INSTEAD_ID = "gid://shopify/Customer/70000000000001"
-HELD_ORDER = "gid://shopify/Order/70000000000901"
+HELD_INSTEAD_ID = "gid://shopify/Customer/7001"
+HELD_ORDER = "gid://shopify/Order/7901"
 
 
 class Tape:
