@@ -67,6 +67,34 @@ def test_no_customer_and_no_address_reached_the_committed_fixtures():
     assert all(" " in name for name in live_states.INVENTED), "a first name and a surname"
 
 
+def test_the_seven_are_seven_different_people():
+    """D-4's whole point, in the fixture as well as in the ids.
+
+    The analyser filed turn_be1b384ca420 as `DUPLICATE_RENDER` — "the same customer card drawn
+    7 times" — and the forensics had to correct it: seven cards for seven DIFFERENT customers.
+    The first version of `invented_name` took the id's last four digits modulo a twelve-name
+    list, and on these seven ids that lands on two values, so the fixture meant to disprove a
+    duplicate render drew two people seven times. It was visible in the screenshot before it
+    was visible anywhere else.
+
+    So the mapping is asserted, not trusted.
+    """
+    names = [live_states.invented_name(ref) for ref in live_states.SEVEN]
+    assert len(set(names)) == len(live_states.SEVEN), (
+        f"{len(set(names))} people across {len(live_states.SEVEN)} records: "
+        f"{dict(zip(live_states.SEVEN, names, strict=True))}"
+    )
+    emails = [live_states.invented_email(ref) for ref in live_states.SEVEN]
+    assert len(set(emails)) == len(live_states.SEVEN)
+    # And stable: the same id is the same person on the next call, in the next process, on
+    # another machine. `hash()` is salted per process and would not be.
+    assert names == [live_states.invented_name(ref) for ref in live_states.SEVEN]
+    # Which the committed fixture has to agree with, or the JSON was built before this changed.
+    drawn = [item["data"]["name"] for item in
+             live_states.state("returning_customers_seven_cards")["replay"]["ui"]]
+    assert drawn == names, f"the committed fixture draws {drawn}"
+
+
 def test_the_ten_states_the_brief_lists_are_all_there():
     fixture = live_states.load()
     assert fixture["source"] == live_states.SOURCE_SESSION

@@ -169,7 +169,7 @@
      {
       "data": {
        "customer_id": "cust-6343",
-       "email": "esme.calloway@example.com",
+       "email": "freya.mackintosh@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -189,7 +189,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Esme Calloway",
+       "name": "Freya Mackintosh",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -203,7 +203,7 @@
      {
       "data": {
        "customer_id": "cust-4807",
-       "email": "esme.calloway@example.com",
+       "email": "priya.raman@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -223,7 +223,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Esme Calloway",
+       "name": "Priya Raman",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -237,7 +237,7 @@
      {
       "data": {
        "customer_id": "cust-5015",
-       "email": "bartek.nowak@example.com",
+       "email": "mateo.silva@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -257,7 +257,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Bartek Nowak",
+       "name": "Mateo Silva",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -271,7 +271,7 @@
      {
       "data": {
        "customer_id": "cust-4055",
-       "email": "bartek.nowak@example.com",
+       "email": "casper.lund@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -291,7 +291,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Bartek Nowak",
+       "name": "Casper Lund",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -305,7 +305,7 @@
      {
       "data": {
        "customer_id": "cust-7975",
-       "email": "esme.calloway@example.com",
+       "email": "jonas.halvorsen@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -325,7 +325,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Esme Calloway",
+       "name": "Jonas Halvorsen",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -339,7 +339,7 @@
      {
       "data": {
        "customer_id": "cust-2855",
-       "email": "bartek.nowak@example.com",
+       "email": "rowan.pike@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -359,7 +359,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Bartek Nowak",
+       "name": "Rowan Pike",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -373,7 +373,7 @@
      {
       "data": {
        "customer_id": "cust-8887",
-       "email": "esme.calloway@example.com",
+       "email": "otto.brennan@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -393,7 +393,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Esme Calloway",
+       "name": "Otto Brennan",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -470,8 +470,8 @@
      {
       "data": {
        "customer_id": "cust-5015",
-       "email": "bartek.nowak@example.com",
-       "name": "Bartek Nowak",
+       "email": "mateo.silva@example.com",
+       "name": "Mateo Silva",
        "orders": 1,
        "spent": "\u00a360.00",
        "standing": "returning"
@@ -481,7 +481,7 @@
      {
       "data": {
        "customer_id": "cust-5015",
-       "email": "bartek.nowak@example.com",
+       "email": "mateo.silva@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -501,7 +501,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Bartek Nowak",
+       "name": "Mateo Silva",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -921,7 +921,7 @@
      {
       "data": {
        "customer_id": "cust-6343",
-       "email": "esme.calloway@example.com",
+       "email": "freya.mackintosh@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -941,7 +941,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Esme Calloway",
+       "name": "Freya Mackintosh",
        "orders": 1,
        "related_email": {
         "available": true,
@@ -955,7 +955,7 @@
      {
       "data": {
        "customer_id": "cust-4807",
-       "email": "esme.calloway@example.com",
+       "email": "priya.raman@example.com",
        "history": {
         "available": true,
         "first_order_at": "2026-03-04T10:00:00Z",
@@ -975,7 +975,7 @@
         "spent": "\u00a360.00",
         "standing": "returning"
        },
-       "name": "Esme Calloway",
+       "name": "Priya Raman",
        "orders": 1,
        "related_email": {
         "available": true,

@@ -208,24 +208,26 @@ const MATRIX = [
     need: { types: ['email_compose'], shortViewport: true },
     after: (p, k) => k.keyboardAway(),
   },
-  { id: '25', name: 'long-customer-name', reach: (p, k) => k.draw([{ type: 'order', data: order({ customer_name: LONG_NAME }) }]), need: { types: ['order'] } },
-  { id: '26', name: 'long-address', reach: (p, k) => k.draw([{ type: 'order', data: order({ shipping_address: LONG_ADDRESS, ships_to: 'Kingston upon Thames, United Kingdom' }) }]), need: { types: ['order'], tab: 'shipping' }, then: (p, k) => k.tab('shipping') },
-  { id: '27', name: 'long-product', reach: (p, k) => k.draw([{ type: 'order', data: order({ items: [{ title: LONG_TITLE, variant: 'W34 / L32 / Unwashed', sku: LONG_SKU, quantity: 2, total: BIG_MONEY, stock: { tracked: true, available: 0 } }] }) }]), need: { types: ['order'], tab: 'items' }, then: (p, k) => k.tab('items') },
-  { id: '28', name: 'error-section', reach: (p, k) => k.draw([{ type: 'error', data: ERROR_CARD }]), need: { types: ['error'] } },
+  { id: '25', fresh: true, name: 'long-customer-name', reach: (p, k) => k.draw([{ type: 'order', data: order({ customer_name: LONG_NAME }) }]), need: { types: ['order'] } },
+  { id: '26', fresh: true, name: 'long-address', reach: (p, k) => k.draw([{ type: 'order', data: order({ shipping_address: LONG_ADDRESS, ships_to: 'Kingston upon Thames, United Kingdom' }) }]), need: { types: ['order'], tab: 'shipping' }, then: (p, k) => k.tab('shipping') },
+  { id: '27', fresh: true, name: 'long-product', reach: (p, k) => k.draw([{ type: 'order', data: order({ items: [{ title: LONG_TITLE, variant: 'W34 / L32 / Unwashed', sku: LONG_SKU, quantity: 2, total: BIG_MONEY, stock: { tracked: true, available: 0 } }] }) }]), need: { types: ['order'], tab: 'items' }, then: (p, k) => k.tab('items') },
+  { id: '28', fresh: true, name: 'error-section', reach: (p, k) => k.draw([{ type: 'error', data: ERROR_CARD }]), need: { types: ['error'] } },
   {
     id: '29',
+    fresh: true,
     name: 'empty-email-section',
     // Straight off the live timeline: the customer card he was shown, open on an empty Email
     // tab. "I'm not seeing any UI here except email where there's nothing."
     reach: (p, k) => k.drawLive('empty_email_section'),
     need: { types: ['customer', 'customer'], tab: 'email' },
   },
-  { id: '30', name: 'notification-local', reach: (p, k) => k.notify('workspace'), need: { note: 'workspace' } },
-  { id: '31', name: 'global-offline', reach: (p, k) => k.notify('global'), need: { note: 'global' } },
-  { id: '32', name: 'action-proposal', reach: (p, k) => k.draw([{ type: 'confirmation', data: CONFIRMATION }]), need: { types: ['confirmation'] } },
-  { id: '33', name: 'action-verified', reach: (p, k) => k.draw([{ type: 'success', data: SUCCESS }]), need: { types: ['success'] } },
+  { id: '30', fresh: true, name: 'notification-local', reach: (p, k) => k.notify('workspace'), need: { note: 'workspace' } },
+  { id: '31', fresh: true, name: 'global-offline', reach: (p, k) => k.notify('global'), need: { note: 'global' } },
+  { id: '32', fresh: true, name: 'action-proposal', reach: (p, k) => k.draw([{ type: 'confirmation', data: CONFIRMATION }]), need: { types: ['confirmation'] } },
+  { id: '33', fresh: true, name: 'action-verified', reach: (p, k) => k.draw([{ type: 'success', data: SUCCESS }]), need: { types: ['success'] } },
   {
     id: '34',
+    fresh: true,
     name: 'stress-collision-fixture',
     reach: (p, k) => k.draw([
       { type: 'order', data: order({ customer_name: LONG_NAME, customer_email: 'alexandra.wilhelmina.featherstonehaugh@a-very-long-department.example.com', tags: ['vip', 'wholesale', 'repeat-return', 'fraud-checked', 'gift-wrap', 'pre-order', 'back-order', 'priority', 'staff-discount'], total: BIG_MONEY, shipping_address: LONG_ADDRESS, items: [{ title: LONG_TITLE, variant: 'W34 / L32', sku: LONG_SKU, quantity: 2, total: BIG_MONEY, stock: { tracked: true, available: 0 } }] }) },
@@ -278,25 +280,36 @@ async function capture(browser, vp, matrix) {
     osc.frequency.value = 220; osc.connect(gain); gain.connect(dest); osc.start();
     navigator.mediaDevices.getUserMedia = async () => { await ac.resume(); return dest.stream; };
   });
-  await page.goto(`${BASE}?dev=1`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1100);
-  await page.evaluate(() => { for (const b of document.querySelectorAll('.dev-banner')) b.remove(); });
-  await page.evaluate(() => {
-    window.__shotDraw = (items, opts) => {
-      const root = document.querySelector('#cards');
-      if (!root) return 0;
-      const out = window.CrooksUI.render(items, opts || {});
-      root.replaceChildren();
-      out.nodes.forEach((n) => root.appendChild(n));
-      document.body.dataset.mode = 'context';
-      return out.nodes.length;
-    };
-  });
+  // One page for the whole matrix, because most shots stand on the one before them: 05 is the
+  // Items tab of the order 04 opened. `arrive()` is the exception — a shot that hands a payload
+  // straight to the renderer wants the CHROME of a fresh screen, not the chrome left over from
+  // whatever walk reached the shot before it. Without it, 29 came out with "Replying to …"
+  // across the top from 13 and a branch header about an unrelated order from 20-23: a true
+  // picture of two cards, under a heading that was a lie.
+  const arrive = async () => {
+    await page.evaluate(() => { try { localStorage.clear(); } catch { /* private window */ } });
+    await page.goto(`${BASE}?dev=1`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1100);
+    await page.evaluate(() => { for (const b of document.querySelectorAll('.dev-banner')) b.remove(); });
+    await page.evaluate(() => {
+      window.__shotDraw = (items, opts) => {
+        const root = document.querySelector('#cards');
+        if (!root) return 0;
+        const out = window.CrooksUI.render(items, opts || {});
+        root.replaceChildren();
+        out.nodes.forEach((n) => root.appendChild(n));
+        document.body.dataset.mode = 'context';
+        return out.nodes.length;
+      };
+    });
+  };
+  await arrive();
   const kit = makeKit(page, context, vp);
 
   for (const shot of matrix) {
     const label = `${vp.name} · ${shot.id} ${shot.name.replace(/-/g, ' ')}`;
     try {
+      if (shot.fresh) await arrive();
       await shot.reach(page, kit);
       if (shot.then) await shot.then(page, kit);
       await page.waitForTimeout(420);

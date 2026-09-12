@@ -40,6 +40,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -53,12 +54,22 @@ RAW_DEFAULT = ROOT / "logs" / "test-sessions" / f"{SOURCE_SESSION}.jsonl"
 #: The tablet's own viewport, from every `tablet_render` in the session.
 VIEWPORT = {"w": 601, "h": 889, "dpr": 1.33}
 
-#: Invented people, in a fixed order. An id's last four digits pick one, so the same record is
-#: the same invented person in every fixture and in every run. None of these is a real customer.
+#: Invented people, in a fixed order. A scrubbed id picks one, so the same record is the same
+#: invented person in every fixture and in every run. None of these is a real customer, and
+#: `tests/test_live_replay.py` asserts that none of them appears in the timeline.
+#:
+#: Twenty-four, not twelve, and picked by CRC rather than by the id's own digits. The first
+#: version took `int(last four digits) % 12`, and on the seven ids of turn_be1b384ca420 that
+#: lands on only two values — 6343, 4807, 7975 and 8887 all give 7; 5015, 4055 and 2855 all
+#: give 11. So the fixture whose entire point is SEVEN DIFFERENT CUSTOMERS drew two people
+#: seven times, which is the mistake the analyser made about that turn and the forensics had
+#: to correct. `test_the_seven_are_seven_different_people` is the guard.
 INVENTED = (
     "Rowan Pike", "Marta Vasquez", "Dev Achari", "Nina Okafor", "Casper Lund",
     "Priya Raman", "Tobias Frei", "Esme Calloway", "Yusuf Demir", "Greta Lindqvist",
-    "Ines Moreau", "Bartek Nowak",
+    "Ines Moreau", "Bartek Nowak", "Salome Adeyemi", "Otto Brennan", "Hana Kowalczyk",
+    "Emeka Balogun", "Liv Sandberg", "Rafael Ortiz", "Freya Mackintosh", "Idris Chowdhury",
+    "Zora Petrova", "Mateo Silva", "Anneke de Vries", "Jonas Halvorsen",
 )
 
 
@@ -116,9 +127,13 @@ def scrub_ref(ref: str) -> str:
 
 
 def invented_name(scrubbed_ref: str) -> str:
-    """An invented person for a scrubbed id, stable across runs."""
-    digits = "".join(ch for ch in str(scrubbed_ref) if ch.isdigit()) or "0"
-    return INVENTED[int(digits) % len(INVENTED)]
+    """An invented person for a scrubbed id, stable across runs and across machines.
+
+    `zlib.crc32`, not `hash()`: Python's string hash is salted per process, so the seven cards
+    of the returning-customer fixture would be seven different people on every run and the
+    committed JSON would never match a rebuild. CRC is a fixed function of the bytes.
+    """
+    return INVENTED[zlib.crc32(str(scrubbed_ref).encode("utf-8")) % len(INVENTED)]
 
 
 def invented_email(scrubbed_ref: str) -> str:
