@@ -281,3 +281,141 @@ Worth stating, so this pass does not fix what is not broken:
 
 The whole of this evening's failure is presentation and interaction. The engine underneath it
 did its job.
+
+---
+
+# THE NINETY SECONDS THAT EXPLAIN THE PRODUCT
+
+The generated report has this window as five `STT_ERROR` rows and one unrouted "other" request.
+Reconstructed from the raw events it is the entire failure of the product in sequence.
+
+```
+23:07:41   RENDER []  mode=orb                ← the deck is EMPTY. Chrome only.
+
+23:08:27   HE SAID: "What is it? What... There is just bullshit Yo, uh, what,
+                     why is there bullshit on the screen right now?"
+
+23:08:28   hold 4526 ms → sent                ← a PROPER four-and-a-half-second hold
+23:08:28   hold  257 ms → sent
+23:08:28   tablet_notify {}                    ← a notification with no words
+
+23:08:30   IT ANSWERED: "Nothing's come from me — I haven't run anything yet,
+                         no card's up on my end. What do you want me to..."
+
+23:08:31   hold 104 88 81 118 88 82 97 92 ms   ← eight taps in ONE second
+23:08:34   hold 101 89 ms
+23:08:36   hold 119 89 81 39 90 118 ms
+23:08:37   IT ANSWERED: "I could not hear that clearly — a bit closer to the microphone."
+23:08:39   hold 1237 ms, then 58 79 103 55 79 96 81 115 ms
+23:08:39   tablet_notify {}                    ← another with no words
+23:08:41   hold 140 114 ms                     ← twenty-six taps, ten seconds
+23:08:46   IT ANSWERED: "I could not hear that clearly — a bit closer to the microphone."
+23:08:47   tablet_notify {}                    ← a third with no words
+
+23:08:56   HE SAID: "What is, what is it doing? Oh"
+23:08:58   IT ANSWERED: "Nothing running here, nothing pending on a card.
+                         Just say the request when you're ready."
+23:09:00   RENDER []  mode=orb                 ← still empty
+
+23:09:04   tablet_notify {}                    ← a fourth
+23:09:06   hold 87 82 70 ms
+23:09:10   hold 89 68 106 56 ms                ← seven more
+
+23:09:12   HE SAID: "Hi"                       ← checking whether it is alive at all
+23:09:14   IT ANSWERED: "Hi. What do you need?"
+```
+
+Every answer in that sequence is **technically correct and completely useless.** No card WAS up.
+Nothing WAS running. And he was looking at a screen he called bullshit, tapping it thirty-three
+times, and being told to speak closer to the microphone.
+
+Three defects fall out of this that appear nowhere in the generated report.
+
+## D-11 · P0 · The assistant has no model of what is on the glass
+
+Asked "why is there bullshit on the screen", it said **"no card's up on my end."** It was right
+about cards and wrong about the screen. With the deck empty and the orb divided, what he was
+looking at was chrome: the orb, the dock, two branch chips he could not press, and a
+"hold to speak" label over all of it.
+
+The assistant can enumerate the cards it sent. It cannot see the interface it is sitting in. So
+when the owner asks about the screen, it answers about its own outbox. §19 and §23: it must know
+its own UI — including that the screen can be *empty of cards and full of furniture*, which is
+its own reportable state.
+
+**Fix:** the UI-semantics manifest must answer "what is on this screen right now" from the
+tablet's actual render state, chrome included. "Nothing is on screen" is only true if nothing
+is on screen.
+
+## D-12 · P1 · A complaint only counted if he said the word "log"
+
+```
+20:16:48  "Logical error here. You just pulled up two [name] screens for no reason"
+              → NOT captured. Filed as an unrouted 'orders' request.
+20:17:04  "Log your error there. You just pulled up two in the same UI"
+              → captured.
+```
+
+He stated the defect plainly, was not recorded, and had to repeat it sixteen seconds later with
+the magic word in front. The feedback family keys on "log / record / note / broken". A tester
+saying *"logical error here, you just pulled up two screens for no reason"* is reporting a
+defect by any human standard.
+
+**Fix (§20):** recognise a defect report by its shape — a statement that the system did
+something wrong — not only by an imperative to log it. Conservative enough not to swallow
+ordinary conversation, and the test must include the negatives.
+
+## D-13 · P1 · A legitimate 4.5-second hold produced no audio, inside a tap burst
+
+At 23:08:28 he held for **4,526 ms** — a real, deliberate, properly-held question. The
+transcript came back empty and the answer was "I could not hear that clearly." Two more real
+holds in the same window (1,237 ms and 1,186 ms) went the same way.
+
+The report attributes this to speech quality and makes STT its #2 improvement candidate. These
+long holds sit *inside* the twenty-six-tap burst: his other finger was hitting the screen
+throughout, each tap starting and ending a competing recording on the same element.
+
+**This is gesture arbitration destroying real speech, not a recogniser failing to hear it.** It
+is the strongest argument for §22's ordering: fix touch ownership first, because until then
+every speech measurement is contaminated.
+
+---
+
+# THE ESCALATION, 20:14:02 → 20:14:35
+
+§4 proving itself:
+
+```
+20:14:02  "Can you expand [name]'s customer page?"      → a 1,014 px capability card
+20:14:09  "Expand [name]'s customer page"               → nothing visible        (7 s later)
+20:14:22  "No, bring up a UI for the customer's page"    → nothing visible       (13 s later)
+20:14:35  "Okay, can you make a note of what you just failed to do, please?"
+```
+
+Three attempts in twenty seconds. He drops the polite form, corrects it outright ("No,"), then
+abandons the request and asks it to record its own failure. By the third attempt he is
+**explicitly asking for a user interface** — *"bring up a UI"* — because the first two answered
+him with speech.
+
+A product does not get a clearer signal than a user escalating to the words "bring up a UI".
+
+---
+
+# THE TWO SITTINGS ARE DIFFERENT SESSIONS
+
+Worth separating, because averaging them hides both.
+
+**20:11–20:18, seven minutes.** Dense, competent, productive testing. Real business questions,
+correct spoken answers, six defects found and reported. Every owner-feedback record comes from
+here. This is a man using a tool.
+
+**23:00–23:12, twelve minutes.** A large ambitious request that errored ("Something went wrong
+while I was thinking") and was abandoned five seconds later — *"ignore all of that, ignore all
+of that"*. Then: "Are you, are you working right now?" · fragments from swallowed taps ("I
+actually like", "Broad", "White") · "Stop" · "why is there bullshit on the screen" · 33 taps ·
+"what is it doing?" · "Hi" · "Crooks OS". Not one business question in twelve minutes.
+
+The report's headline is "successful 24 · partial 6 · failed 14" over both. Sitting one earns
+most of the successes; sitting two is a man who cannot tell whether the thing is alive. **The
+second sitting is the one this pass has to answer**, and §42 is its standard: *the owner should
+be able to hand the tablet to somebody with no explanation.*
