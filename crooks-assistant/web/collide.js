@@ -61,7 +61,7 @@
     // Furniture a message must never cover, and the controls the brief names: the dock, the
     // orb, the halves, Back, Next, Split, the composer, the approval surfaces.
     chrome: [
-      '#talk', '#talk-label', '.dock-btn', '#orb-frame', '#branch-bar', '#branch-rail',
+      '#talk', '#talk-label', '.dock-btn', '#orb-frame', '#branch-zone', '#branch-bar',
       '.branch-chip', '.branch-act', '[data-action="split"]', '#home-btn', '#back-btn', '#next-btn',
       '.action-surface', '.compose-btn', '.field-input', '.variant-add', '.armed',
     ],

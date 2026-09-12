@@ -87,23 +87,42 @@
    * THE ORDER, bottom to top. Each name is a token below, and each token is used by exactly
    * the elements named:
    *
-   *   1  content        the orb, the deck, the cards            .orb-zone, .deck
+   *   1  content        the orb, the deck, the cards            .orb-zone (no z-index), .deck
    *   2  actions        workspace-local actions                 .context, .context-nav, .armed
-   *   3  navigation     the chrome that moves between places    .top, .bottom, .dock
+   *   3  navigation     the chrome that moves between places    .top, .bottom, .dock (3 + 1)
    *   4  branch         Split / the two halves / Merge / Close  .branch-zone
    *   5  voice          the hold-to-speak target                .talk
    *   20 emergency      the sheet, the system layer, the banner .sheet, .system, .dev-banner
    *
+   * Two of those entries carry a note, and both are deliberate. `.orb-zone` has NO z-index at
+   * all: it is the content layer by position in the document, and giving it a number is what
+   * made it a cap. The dock is half a step above the rest of navigation, because the footer
+   * comes later in the document and reaches into the dock's band on the idle screen; that is
+   * the `.bottom` defect, and `pointer-events` discipline on the footer is the other half of
+   * its fix.
+   *
    * THE RULE: no layer may VISUALLY COVER another INTERACTIVE layer without intentionally
    * disabling it. Voice sits at the top of the ladder and therefore has to be the zone that
-   * overlaps nothing — which is why it is bounded (see `.talk`) rather than `inset:0`, and why
-   * the branch chrome is a band of `.app` outside `.stage` where `#talk` cannot reach it. The
-   * rule is arithmetic in web/touch.js (`covering()`), asserted in tests/web/touch.test.js,
-   * and measured on the real page at 601x889 and 800x1280 by scripts/browser/touch.js.
+   * overlaps nothing. That is bought with GEOMETRY, not z-index:
+   *
+   *   orb mode      `.talk` is `inset:0` on `.stage` — which is one grid row of `.app`, and
+   *                 the branch band, the workspace messages and the footer are the rows below
+   *                 it. In that row there is the orb (itself a voice target) and five lines of
+   *                 text, and nothing a finger presses. The line that caused D-1 is the same
+   *                 line; what changed is what is inside the box it describes.
+   *   context mode  `.talk` is the hold pill's `--hold-w` slot in the middle of the dock band,
+   *                 not the full width of it. The dock's four icons sit either side.
    *
    * A layer may be covered when it has been switched off ON PURPOSE and says so: in orb mode
    * `.context` is `visibility:hidden; pointer-events:none`, and in context mode `.bottom` is
    * `opacity:0; pointer-events:none; height:0`. Those are the only two.
+   *
+   * The rule is arithmetic in web/touch.js (`covering()`), asserted in
+   * tests/web/touch.test.js, and measured on the real page at 601x889 and 800x1280 by
+   * scripts/browser/touch.js — which reads every zone's rectangle off the live document and
+   * puts the lot through `covering()`. On the pre-change tree that check reports
+   * `{over:"#talk", under:"#branch-bar", w:204, h:69}`, and asking what is on top of the
+   * middle of the Split chip answers `span#talk-label`. That is D-1, measured.
    *
    * The old names (--z-orb, --z-context, --z-talk, --z-chrome) are kept as aliases for one
    * reason: every rule that used them is listed above, so a stray one left behind would be a
@@ -674,7 +693,13 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
    room. That gap is the physical separation between NAVIGATION and VOICE at the bottom of the
    screen: neither needs to out-rank the other, because they do not overlap. */
 .dock{
-  position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);
+  /* Navigation, and half a step above the rest of it: the footer is later in the document and
+     on the orb screen its bottom padding reaches into this band, so at the same z-index the
+     footer painted over the dock's icons. That is the defect the comment above `.bottom`
+     records — "why can't I click orders unless you're already thinking" — and `pointer-events`
+     discipline on the footer is the other half of its fix. Still BELOW the voice layer, which
+     it never overlaps: `--hold-w` is the hole it leaves for the hold pill. */
+  position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--z-nav) + 1);
   display:flex;align-items:center;justify-content:center;gap:10px;
   height:var(--dock);padding:0 14px env(safe-area-inset-bottom);pointer-events:none;
 }
@@ -1323,8 +1348,10 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
  * the test: a control whose reachability depends on winning a z-index comparison is a control
  * that will stop being reachable.
  *
- * In context mode the same chips are drawn into the nav rail (`#branch-rail`) instead, so
- * this band holds nothing and must not keep a row of space open for it.
+ * It is the SAME band in both modes, and that is the other half of the point. The chips used
+ * to move into the context nav rail when cards came up — six heterogeneous controls in one
+ * horizontal flex row, which at 601 CSS px ran off the right edge and cut the second half's
+ * chip in half. One home, one place a thumb learns, and no row to overflow.
  */
 .branch-zone{
   position:relative;z-index:var(--z-branch);
@@ -1410,7 +1437,9 @@ body[data-mode="context"] .branch-chip .branch-bare{display:none}
   background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
 /* What Split is for, on the screen with room for it. The owner asked out loud what the button
    did; a control explained only by a gesture nobody mentioned is not discoverable. */
-.branch-why{flex-basis:100%;text-align:center;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
+/* `flex:none`, not `flex-basis:100%`: the bar is a COLUMN now, so a basis of 100% was a
+   request for the full height of the band rather than the full width of a row. */
+.branch-why{flex:none;text-align:center;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
 
 /* ---- the capability card: what this build can do, grouped by the part of the shop.
    The kind ("Read", "Change", "Bulk") sits to the right of the sentence rather than after

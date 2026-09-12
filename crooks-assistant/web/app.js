@@ -3010,9 +3010,14 @@ function hitUnder(event) {
     scroll: Boolean(scroller),
   };
 }
+/* A node, named, for the telemetry line and nothing else. `className` on an SVG element is an
+   SVGAnimatedString rather than a string — the dock's four icons are SVG — so it is read
+   through `baseVal`, or the whole name came out "[object SVGAnimatedString]". */
 function selectorName(node) {
-  const classes = String(node.className || '').split(' ').filter(Boolean);
-  return `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${classes.length ? `.${classes[0]}` : ''}`;
+  const raw = typeof node.className === 'string' ? node.className
+    : (node.className && node.className.baseVal) || '';
+  const first = String(raw).split(' ').filter(Boolean)[0] || '';
+  return `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${first ? `.${first}` : ''}`;
 }
 
 /* Every pointer on the page is classified here, in CAPTURE, before any element's own handler
