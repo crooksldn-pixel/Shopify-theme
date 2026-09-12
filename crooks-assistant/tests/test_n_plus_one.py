@@ -289,6 +289,37 @@ async def test_the_answer_does_not_grow_a_read_when_the_shop_does(shop):
     assert fast.trace["count"] >= 25, fast.trace
 
 
+async def test_the_cursor_reaches_every_match_and_never_says_an_id(shop):
+    """A capped surface must not cap the list.
+
+    Twelve rows drawn of twenty-five matched, and "next" has to be able to reach the
+    twenty-fifth: a list that stops at twelve while its own headline says twenty-five is a
+    list that lies about its end (app/commands.py BOUND_WORDS). And every member needs a
+    LABEL, because `move_cursor` falls back to the ref — `ws.labels.get(ref) or ref` — so a
+    set labelled only for its drawn rows would eventually say a gid out loud (§26).
+    """
+    from app.analytics import sets as working_sets
+
+    many = list(NODES) + [
+        node(4000 + n, days_ago=0.05, items=[(*HOODIE, "Grey", "M", 1, 60.0)],
+             customer=(f"gid://shopify/Customer/{8100 + n}", f"Buyer {n}", 4, 400.0))
+        for n in range(25)
+    ]
+    shop.nodes = [dict(x) for x in many]
+    fast, session = await turn("any returning customers today")
+    surface = fast.surfaces[0]
+    assert surface.data["count"] >= 25 and len(surface.data["rows"]) == 12, surface.data["count"]
+
+    held = working_sets.get(session, surface.data.get("set_id") or fast.calls[-1].result.get("set_id"))
+    assert held is not None, "the summary published no set for its cursor to walk"
+    assert held.count == surface.data["count"], (
+        f"the set holds {held.count} of {surface.data['count']} matches"
+    )
+    assert set(held.labels) == set(held.members), "a member with no label would be said as its id"
+    for ref, label in held.labels.items():
+        assert label and "gid://" not in label, f"{ref} is labelled {label!r}"
+
+
 async def test_two_summary_questions_in_a_row_read_the_shop_once(shop):
     """§36: the second question is answered from the view the first took.
 

@@ -46,7 +46,14 @@ from app.fastpath.library import _open_workflow, period_from
 from app.fastpath.models import Ctx, FastAnswer
 from app.fastpath.recipes import CACHE_ANALYTICS, Recipe, register
 from app.reads.scheduler import Read, ReadPlan, ReadResult
-from app.summaries import attention_rows, freshness_of, order_rows, returning_customers
+from app.summaries import (
+    attention_rows,
+    customer_words,
+    freshness_of,
+    order_rows,
+    order_words,
+    returning_customers,
+)
 from app.tools.context import current_session
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, tool
@@ -75,6 +82,15 @@ TASKS: dict[str, str] = {
 LOOKBACK_DAYS: dict[str, int] = {"returning_customers": 90, "orders_attention": 90, "order_list": 0}
 
 MAX_ROWS = 25
+
+
+def _without_members(result: Any) -> Any:
+    """What the MODEL is told. Never the membership list: it is the Mac's to hold, it can be
+    five hundred long, and the model has the set's id if it wants to act on the whole of it —
+    the same line app/tools/analytics_tools.py `_model_view` draws for `member_ids`."""
+    if not isinstance(result, dict):
+        return result
+    return {k: v for k, v in result.items() if k != "members"}
 
 
 def _period_of(period: Any, now, zone):
@@ -106,6 +122,7 @@ def _period_of(period: Any, now, zone):
         "required": ["task"],
     },
     tier=Tier.GREEN,
+    model_view=_without_members,
 )
 async def commerce_summary(task: str, period: Any = None, limit: int = 12) -> dict:
     """One cache view, one pass of pure aggregation, no per-entity read.
@@ -134,16 +151,16 @@ async def commerce_summary(task: str, period: Any = None, limit: int = 12) -> di
     rows = view.rows
     if task == "returning_customers":
         found = summarise.returning_customers(rows, start=start, end=end, zone=zone, limit=limit)
-        kind, ids = "customers", [r["customer_id"] for r in found["rows"]]
+        kind = "customers"
     elif task == "orders_attention":
         found = summarise.orders_needing_attention(
             summarise.in_window(rows, start=start, end=end) if period else rows,
             now=now.timestamp(), zone=zone, limit=limit,
         )
-        kind, ids = "orders", [r["order_id"] for r in found["rows"]]
+        kind = "orders"
     else:
         found = summarise.order_rows(rows, start=start, end=end, now=now.timestamp(), zone=zone, limit=limit)
-        kind, ids = "orders", [r["order_id"] for r in found["rows"]]
+        kind = "orders"
 
     found.update({
         "task": task,
@@ -161,27 +178,36 @@ async def commerce_summary(task: str, period: Any = None, limit: int = 12) -> di
     })
     if view.note:
         found["note"] = (str(found.get("note") or "") + " " + view.note).strip()
-    # The rows as a set, so "next", "the third one" and a tap on the third row are one cursor
-    # on one list. The Mac owns membership; the tablet only ever names an id back.
+    # EVERY match as a set, so "next", "the third one" and a tap on a row are one cursor on
+    # one list and the cursor can reach the last of twenty-five while the surface shows
+    # twelve. The Mac owns membership; the tablet only ever names an id back.
     session = current_session()
-    if session is not None and ids:
+    members = [m for m in (found.get("members") or []) if m.get("ref")]
+    if session is not None and members:
         made = working_sets.create(
-            session, kind=kind, members=[str(i) for i in ids if i],
+            session, kind=kind, members=[str(m["ref"]) for m in members],
             label=f"{TASKS[task]}, {window.label}"[:80],
             provenance={"tool": READ_TOOL, "step": "query", "query": {"task": task, "period": window.label}},
-            sample=[], totals={}, labels=_labels_for(task, found),
+            sample=[], totals={}, labels=_labels_for(task, members),
         )
         found["set_id"] = made.set_id
     return found
 
 
-def _labels_for(task: str, found: dict[str, Any]) -> dict[str, str]:
-    """How a person names each member, for the batch card and the cursor's words."""
+def _labels_for(task: str, members: list[dict[str, Any]]) -> dict[str, str]:
+    """How a person names each member, for the batch card and for the cursor's words.
+
+    EVERY member, not only the drawn ones. `app/commands.py::move_cursor` falls back to the
+    ref when a member has no label — `ws.labels.get(ref) or ref` — so a set with labels for
+    twelve of twenty-five members would eventually say a `gid://` out loud and draw it (§26).
+    The words come from the same helpers the rows use, so the cursor and the row agree about
+    what each one is called.
+    """
     if task == "returning_customers":
-        return {str(r["customer_id"]): str(r.get("name") or r.get("email") or "")
-                for r in found["rows"] if r.get("customer_id")}
-    return {str(r["order_id"]): str(r.get("order_number") or "")
-            for r in found["rows"] if r.get("order_id")}
+        return {str(m["ref"]): customer_words(m.get("name"), m.get("email"), m.get("order_number"))
+                for m in members}
+    return {str(m["ref"]): (order_words(m.get("order_number")) or "an order")
+            for m in members}
 
 
 # --------------------------------------------------------------------------- the recipes

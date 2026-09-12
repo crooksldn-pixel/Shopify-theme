@@ -131,7 +131,7 @@ def plural(count: int, one: str, many: str = "") -> str:
     return one if count == 1 else (many or f"{one}s")
 
 
-def _customer_words(name: Any, email: Any, order_number: Any) -> str:
+def customer_words(name: Any, email: Any, order_number: Any) -> str:
     """Who a row is about, in words. Never an id, and never blank.
 
     A guest checkout or a customer record with no display name used to leave a row labelled
@@ -349,7 +349,7 @@ def returning_customers(found: dict[str, Any], *, session: Any = None, period: s
             {"label": plural(lifetime_orders, "Order"), "value": str(lifetime_orders)},
         ]
         rows.append(Row(
-            label=_customer_words(r.get("name"), r.get("email"), r.get("order_number")),
+            label=customer_words(r.get("name"), r.get("email"), r.get("order_number")),
             sub=f"Order {order_words(r.get('order_number'))}" if order_words(r.get("order_number")) else "",
             lines=[line for line in lines if line["value"]],
             badge="Returning", tone="good",
@@ -461,7 +461,7 @@ def order_rows(found: dict[str, Any], *, session: Any = None, period: str = "tod
         shipped = str(r.get("fulfillment") or "").upper() == "FULFILLED"
         rows.append(Row(
             label=order_words(r.get("order_number")) or "An order with no number on record",
-            sub=_customer_words(r.get("customer_name"), "", r.get("order_number")),
+            sub=customer_words(r.get("customer_name"), "", r.get("order_number")),
             lines=[line for line in (
                 {"label": "Placed", "value": day_words(r.get("placed_at"))},
                 {"label": "Total", "value": money_words(r.get("total"), currency)},

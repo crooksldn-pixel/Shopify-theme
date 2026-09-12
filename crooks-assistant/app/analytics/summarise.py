@@ -36,6 +36,14 @@ from zoneinfo import ZoneInfo
 # listing has its own surface with its own cursor.
 MAX_ROWS = 25
 
+# Every match, for the working set the cursor walks — as distinct from `rows`, which is what
+# the surface SHOWS. They are different numbers on purpose: "twenty-five returning customers"
+# shows twelve and "next" must still be able to reach the twenty-fifth, because a list that
+# stops at twelve while its own headline says twenty-five is a list that lies about its end
+# (app/commands.py BOUND_WORDS). The cap is the working sets' own
+# (app/analytics/sets.py MAX_MEMBERS), written here so this file imports nothing.
+MAX_MEMBERS = 500
+
 # What counts as "bought before": the customer's lifetime order count, as Shopify counts it,
 # is more than the one they placed in the period. Two orders in the window is also returning —
 # `lifetime_orders` covers both, because Shopify counts every order they have ever placed.
@@ -145,6 +153,11 @@ def returning_customers(
     out.sort(key=lambda r: (-float(r["lifetime_spent"]), str(r["name"] or r["email"])))
     return {
         "rows": out[: max(1, int(limit))],
+        # Every match, so the cursor can reach the last one however few are drawn. Names
+        # rather than ids alone: whoever labels the set has to be able to say who each one is
+        # without a second read, and the cursor's words must never fall back to a gid.
+        "members": [{"ref": r["customer_id"], "name": r["name"], "email": r["email"],
+                     "order_number": r["order_number"]} for r in out[:MAX_MEMBERS]],
         "count": len(out),
         "truncated": len(out) > max(1, int(limit)),
         "buyers": len(by_customer) + guests,
@@ -234,6 +247,8 @@ def orders_needing_attention(
     capped = max(1, int(limit))
     return {
         "rows": found[:capped],
+        "members": [{"ref": r["order_id"], "order_number": r["order_number"]}
+                    for r in found[:MAX_MEMBERS]],
         "count": len(found),
         "truncated": len(found) > capped,
         "red": sum(1 for r in found if r["level"] == "red"),
@@ -275,6 +290,8 @@ def order_rows(
         })
     return {
         "rows": out,
+        "members": [{"ref": str(r.get("order_id") or ""), "order_number": str(r.get("order_number") or "")}
+                    for r in window[:MAX_MEMBERS] if r.get("order_id")],
         "count": len(window),
         "truncated": len(window) > capped,
         "to_ship": sum(1 for r in window if str(r.get("fulfillment") or "").upper() != "FULFILLED"),
