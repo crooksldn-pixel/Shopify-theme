@@ -295,11 +295,20 @@ async function one(browser, vp) {
   await measure('split_mode');
   await shot(page, `collide-${vp.width}-split`);
 
-  // ---- three notifications at once, through whatever the page provides
+  // ---- the most notifications the policy allows at once, through whatever the page provides
+  //
+  // THREE, and no arrangement of calls produces a fourth: two that will leave on their own
+  // (MAX_TRANSIENT), of which one may be a success (MAX_GOOD), plus a failure, which waits to
+  // be dismissed and is counted by neither cap. So this is the worst case the geometry has to
+  // survive, and it is the worst case by construction rather than by choice.
+  //
+  // `draft_saved` used to be the first of these and is now REFUSED by name: §10 puts that
+  // outcome on the Save draft control, not in a message (docs/phase5/NOTIFICATION_POLICY.md).
+  // A fixture that draws a message the product would never draw measures nothing.
   const noted = await page.evaluate(() => {
     if (window.CrooksNotify && typeof window.CrooksNotify.show === 'function') {
-      window.CrooksNotify.show({ text: 'Draft saved in Gmail drafts.', class: 'workspace', tone: 'good', code: 'draft_saved' });
-      window.CrooksNotify.show({ text: 'Archive verified on the Mac.', class: 'workspace', tone: 'good', code: 'archive_verified' });
+      window.CrooksNotify.show({ text: 'The refund was proved on the store.', class: 'workspace', tone: 'good', code: 'refund_proved' });
+      window.CrooksNotify.show({ text: '2 changes came back still waiting for you.', class: 'workspace', tone: 'warn', code: 'merge_waiting' });
       window.CrooksNotify.show({ text: 'The Mac cannot be reached. Nothing is lost; it will answer when it is back.', class: 'global', tone: 'bad', code: 'backend_down', machine: true });
       return 'notify';
     }
