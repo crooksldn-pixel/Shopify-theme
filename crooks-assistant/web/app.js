@@ -2268,7 +2268,7 @@ async function primeAction(action, chip) {
     // A card is waiting for a gesture: a new ask would withdraw it. Say so instead of
     // silently replacing what the owner may be about to apply.
     //
-    // Through the toast, not through #state-sub: that element is `display:none` in context
+    // BESIDE THE CHIP, not through #state-sub: that element is `display:none` in context
     // mode (web/style.css), and a card waiting for a gesture is ALWAYS context mode — so this
     // sentence, and the one below it, were written to an invisible element in every state
     // where they could occur. Measured shown:false in every context-mode sample.
