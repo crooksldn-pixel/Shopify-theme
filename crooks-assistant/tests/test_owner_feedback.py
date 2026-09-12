@@ -336,3 +336,53 @@ def test_the_family_is_silent_outside_a_test_session():
     timeline.install(timeline.NullTimeline())
     assert resolve(SPLIT_BUG).family != "owner_feedback"
     assert resolve("the back button is broken").family != "owner_feedback"
+
+
+def test_the_acceptance_script_s_step_nine_both_halves(recording):
+    """§39 step 9, end to end through the router and the family, not just the rule.
+
+    The script asks him to find something he does not like and say it PLAINLY — *"that's
+    wrong, it's showing me two of the same thing"* — and requires the system to confirm it
+    recorded that without him using the word log, record or note. Then it asks him to say
+    something conversational that is not a defect — *"that's quite good actually"* — and
+    requires that NOT to be filed.
+
+    Last time the first sentence was not recorded at all; he had to repeat it sixteen seconds
+    later starting with "log" (D-12).
+    """
+    from app.families import load_all
+    from app.fastpath.intent import resolve
+    from app.fastpath.models import Ctx
+    from app.fastpath.recipes import RECIPES
+    from app.reads.scheduler import ReadResult
+
+    load_all()
+    line, store, session = recording
+    plainly = "that's wrong, it's showing me two of the same thing"
+    complimentary = "that's quite good actually"
+
+    assert resolve(plainly).family == "owner_feedback", "the router must take it without the word"
+    assert resolve(complimentary).family != "owner_feedback", "approval is not a defect report"
+
+    class FakeSession:
+        session_id = "s1"
+        turn_id = "turn_step_nine"
+
+    ctx = Ctx(runtime=None, session=FakeSession(), branch=FakeBranch(),
+              intent=resolve(plainly), text=plainly)
+    answer = RECIPES["owner_feedback"].render(ctx, ReadResult())
+    assert not answer.deferred, answer.defer
+    assert "Logged" in answer.answer, answer.answer
+    line.flush()
+    written = [e for e in _events(store, session) if e["kind"] == "owner_feedback"]
+    assert written, "the defect he stated plainly must be on the timeline"
+    assert written[-1]["text"] == plainly, written[-1]
+    assert written[-1]["shape"] == "wrong", written[-1]
+
+    # And the compliment reaches the family not at all; asked directly, it declines.
+    said_nicely = Ctx(runtime=None, session=FakeSession(), branch=FakeBranch(),
+                      intent=resolve(complimentary), text=complimentary)
+    declined = RECIPES["owner_feedback"].render(said_nicely, ReadResult())
+    assert declined.deferred, declined.answer
+    line.flush()
+    assert len([e for e in _events(store, session) if e["kind"] == "owner_feedback"]) == 1
