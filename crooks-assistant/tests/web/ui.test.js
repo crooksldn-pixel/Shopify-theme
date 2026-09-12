@@ -31,6 +31,9 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     // The composed surfaces of §3/§12 — one record, not a card per read. Drawn by
     // renderCustomerWorkspace / renderOrderWorkspace; behaviour in workspaces.test.js.
     'customer_workspace', 'order_workspace',
+    // The workspace's own header while it fills in (§15): its name and one line per section,
+    // each in one of §27's five states. Staged by app/progressive.py, never by present().
+    'workspace_plan',
   ]));
 });
 
@@ -935,8 +938,16 @@ test('an order is five tabs with one open, and the tab it opens on is the Mac\'s
   };
   const first = UI.renderItem({ type: 'order', data });
   assert.equal(first.querySelector('.tabbed').dataset.tab, 'overview');
-  const restored = UI.renderItem({ type: 'order', data }, { tab: 'shipping' });
+  // Changed in Phase 5, for D-2. This used to pass `{ tab: 'shipping' }` — ONE value for the
+  // whole branch, which is the defect: it put every later card on the tab tapped on one
+  // record. The rule it was written for is intact and is now about a RECORD: the tab is
+  // looked up by the card's own render identity, so a card comes back on the tab IT was left
+  // on and a card for another record does not.
+  const restored = UI.renderItem({ type: 'order', data }, { tabOf: (id) => (id === 'order:gid://shopify/Order/9' ? 'shipping' : '') });
   assert.equal(restored.querySelector('.tabbed').dataset.tab, 'shipping', 'a card comes back on the tab it was left on');
+  const other = UI.renderItem({ type: 'order', data: Object.assign({}, data, { order_id: 'gid://shopify/Order/10', order_number: '#1939' }) },
+    { tabOf: (id) => (id === 'order:gid://shopify/Order/9' ? 'shipping' : '') });
+  assert.equal(other.querySelector('.tabbed').dataset.tab, 'overview', 'and another order does not take its tab');
   const open = restored.querySelectorAll('.panel').filter((p) => !p.hidden);
   assert.equal(open.length, 1);
   assert.equal(open[0].dataset.panel, 'shipping');
@@ -946,10 +957,12 @@ test('moving between tabs tells the Mac, and only ever names the tab', () => {
   const told = [];
   const node = UI.renderItem({ type: 'order', data: {
     order_id: 'o1', order_number: '#1', detail: true, items: [], pending: [],
-  } }, { onTab: (kind, name, label) => told.push([kind, name, label]) });
+  } }, { onTab: (id, name, label, kind) => told.push([id, name, label, kind]) });
   const email = node.querySelectorAll('.tab').find((t) => t.dataset.tab === 'email');
   email.dispatch('click');
-  assert.deepEqual(told, [['order', 'email', 'Email']]);
+  // Changed in Phase 5, for D-2: a tap now names the RECORD it was on, by render identity,
+  // because a tab that belongs to nothing in particular ends up belonging to everything.
+  assert.deepEqual(told, [['order:o1', 'email', 'Email', 'order']]);
   assert.equal(node.querySelector('.tabbed').dataset.tab, 'email');
 });
 

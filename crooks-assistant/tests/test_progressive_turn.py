@@ -104,15 +104,35 @@ async def test_a_card_the_owner_can_read_arrives_while_the_turn_is_still_running
 async def test_the_turn_reports_the_four_numbers_the_brief_asks_for(slow):
     body = (await slow.post("/turn", json={"text": "show me order 1938", "session_id": "prog"})).json()
     performance = body["performance"]
-    for name in ("time_to_shell", "time_to_first_fact", "time_to_first_useful_workspace", "time_to_complete_workspace"):
+    # §15's four, renamed in Phase 5 to say what they measure (app/progressive.py TIMINGS).
+    # Read from that tuple rather than repeated here, so a later rename cannot leave a turn
+    # reporting one set of numbers and its own test asserting another.
+    for name in progressive.TIMINGS:
         assert isinstance(performance[name], (int, float)), f"{name} was not measured"
     # The three the Mac already measured are still there, and still mean what they meant.
     for name in ("facts_ms", "workspace_ms", "prose_wait_ms"):
         assert name in performance
-    assert performance["time_to_shell"] <= performance["time_to_first_fact"]
-    assert performance["time_to_first_fact"] <= performance["time_to_complete_workspace"]
+    assert performance["time_to_visible_shell"] <= performance["time_to_first_meaningful_fact"]
+    assert performance["time_to_first_meaningful_fact"] <= performance["time_to_complete_workspace"]
     # The screen was useful well before it was complete: this turn's customer read is slow.
-    assert performance["time_to_first_useful_workspace"] < performance["time_to_complete_workspace"]
+    assert performance["time_to_first_actionable_surface"] < performance["time_to_complete_workspace"]
+
+
+async def test_the_four_numbers_are_held_and_not_merely_reported(slow):
+    """§15: instrument AND HOLD. A number nobody asserts on is a number that drifts.
+
+    Measured on this turn, whose customer read is deliberately half a second: the identity
+    must be on the glass within a few milliseconds of the question — it costs no read — and
+    something the owner can act on must exist in well under half the turn.
+    """
+    body = (await slow.post("/turn", json={"text": "show me order 1938", "session_id": "prog"})).json()
+    performance = body["performance"]
+    assert performance["time_to_visible_shell"] <= 50.0, performance
+    assert performance["time_to_first_actionable_surface"] <= performance["time_to_complete_workspace"] / 2, performance
+    # And the workspace the tablet is polling says the same, in §27's words.
+    state = (await slow.get("/state/prog")).json()["workspace"]
+    assert state["state"] in progressive.STATES
+    assert state["timings_ms"]["time_to_visible_shell"] == performance["time_to_visible_shell"]
 
 
 async def test_the_identical_card_is_not_drawn_twice_and_the_repeat_is_counted(slow):
@@ -157,7 +177,7 @@ async def test_the_turn_log_keeps_the_shape_of_the_patches_and_not_their_content
     assert any("item" in p for p in body["workspace"]["patches"])
     logged = json.loads(slow.runtime.turnlog.path.read_text(encoding="utf-8").strip().splitlines()[-1])["workspace"]
     assert all(isinstance(p, str) and ":" in p for p in logged["patches"]), logged["patches"]
-    assert logged["renders"]["suppressed"] >= 1 and logged["timings_ms"]["time_to_shell"] is not None
+    assert logged["renders"]["suppressed"] >= 1 and logged["timings_ms"]["time_to_visible_shell"] is not None
     # And nothing a card said reaches the file through this key.
     assert "order_number" not in json.dumps(logged)
 

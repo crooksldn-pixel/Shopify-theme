@@ -73,6 +73,11 @@ UI_TYPES = frozenset({
     # lifetime value and drew an email list. Each section carries its own state, so a new
     # read enriches the workspace and an empty or failed one cannot destroy it (§27).
     "customer_workspace", "order_workspace",
+    # the workspace's own header, while it fills in (§15, §27 — app/progressive.py): its name
+    # and one line per section, each in one of five states. The only card in this vocabulary
+    # that `present()` never builds — it is staged by the progressive layer, from the reads
+    # the turn has planned and landed, and patched in place as each section arrives.
+    "workspace_plan",
 })
 MAX_BATCH_ROWS = 50
 ANALYTIC_TOOLS = frozenset({"commerce_aggregate", "commerce_query", "inventory_query", "email_query"})

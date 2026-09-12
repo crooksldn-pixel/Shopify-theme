@@ -254,7 +254,21 @@ class Branch:
     workflow: Workflow | None = None
     nav: list[NavEntry] = field(default_factory=list)
     nav_index: int = -1
+    # Which tab the screen is on NOW, and which tab each RECORD was left on.
+    #
+    # D-2, and the difference between the two lines is the whole of it. `tab` alone was the
+    # branch's tab, and the tablet handed it to every card that had tabs: the owner tapped
+    # Email once, on one customer, early in the live session, and from that moment every
+    # customer card on this half opened on Email — including seven cards drawn for seven
+    # customers he had never opened. He asked for a customer's orders and history and got an
+    # empty inbox, with his orders one tab away on the same card.
+    #
+    # So `tabs` keeps it per record, keyed by RENDER IDENTITY (`kind:ref` — the same name the
+    # patch protocol and web/ui.js address a card by), and `tab` stays as what it always
+    # honestly was: where this half's screen is, for the stop on the trail and for the
+    # spoken "show me the shipping". Bounded, newest kept.
     tab: str = ""
+    tabs: dict[str, str] = field(default_factory=dict)
     scroll: int = 0
     # Which of the dock's places this half is in, and therefore where "back to the assistant"
     # goes. Branch state like every other position: the right half working in the inbox goes
@@ -483,6 +497,10 @@ class Branch:
         self._push(entry)
         self.entity = dict(entry.entity or {})
         self.tab = tab
+        if tab:
+            # A stop that arrives ON a tab ("show me the shipping on 1912", a Back) belongs to
+            # the record it arrived at — never to whatever the branch draws next (D-2).
+            self.remember_tab(self.tab_key(kind, str(ref)), tab)
         self.scroll = 0
         self.expanded = []
         self.remember_entity(kind, ref, label)
@@ -641,11 +659,50 @@ class Branch:
                 "expanded": list(self.expanded), "from": None,
                 "entity": dict(self.entity) if self.entity else None}
 
+    # How many records' tabs one half remembers. A tab is two words about a record the owner
+    # has looked at; the oldest goes when the room runs out.
+    MAX_TABS = 24
+
+    def tab_key(self, kind: str, ref: str) -> str:
+        """A record's name in the tab map: the render identity the glass draws it by."""
+        kind, ref = str(kind or "").strip(), str(ref or "").strip()
+        if not kind:
+            return ""
+        return f"{kind}:{ref}" if ref else kind
+
+    def tab_for(self, kind: str, ref: str = "") -> str:
+        """The tab THIS record was left on, or nothing. Never another record's tab (D-2).
+
+        Takes a kind and a reference, or a whole render identity as the first argument —
+        whichever the caller has, since the tablet works in identities and the Mac's own
+        navigation works in kind-and-ref.
+        """
+        key = self.tab_key(kind, ref) if ref else str(kind or "").strip()
+        return str(self.tabs.get(key) or "")
+
+    def remember_tab(self, key: str, tab: str) -> None:
+        """One record, one tab, most recent first."""
+        key, tab = str(key or "").strip()[:160], str(tab or "").strip()[:40]
+        if not key or not tab:
+            return
+        self.tabs.pop(key, None)
+        self.tabs[key] = tab
+        while len(self.tabs) > self.MAX_TABS:
+            self.tabs.pop(next(iter(self.tabs)))
+
     def mark(self, *, tab: str | None = None, scroll: int | None = None,
-             expanded: list[str] | None = None) -> None:
-        """The screen moved. Kept on the current stack entry so going back restores it."""
+             expanded: list[str] | None = None, of: str = "") -> None:
+        """The screen moved. Kept on the current stack entry so going back restores it.
+
+        `of` is the RECORD a tab belongs to, as a render identity ("customer:cus_1"). The
+        tablet sends it with the tap; when nothing says, the tab belongs to the record this
+        half is standing on — which is what the spoken "show me the shipping" means, and what
+        `surface.tab` passes through. It is never applied to a record nobody named.
+        """
         if tab is not None:
             self.tab = str(tab)[:40]
+            entity = self.entity or {}
+            self.remember_tab(str(of or "") or self.tab_key(str(entity.get("kind") or ""), str(entity.get("ref") or "")), self.tab)
         if scroll is not None:
             self.scroll = max(0, int(scroll))
         if expanded is not None:
@@ -751,6 +808,10 @@ class Branch:
             "label": self.label, "entity": self.entity, "set_id": self.set_id or None,
             "workflow": self.workflow.public() if self.workflow else None,
             "tab": self.tab or None, "scroll": self.scroll, "expanded": list(self.expanded),
+            # Which tab each RECORD was left on, by render identity, so the tablet can put a
+            # card back on ITS tab after a reload or a switch of halves — and can put a card
+            # for a record he has never opened on the tab the task implies instead (D-2).
+            "tabs": dict(self.tabs) or None,
             # What the tablet should show as the target of the next thing said, when a tapped
             # control is waiting for words.
             # The prompt and the deadline travel with it: the tablet draws a band naming what
@@ -814,6 +875,9 @@ def fork_from(parent: Branch, *, label: str = "") -> Branch:
         label=str(label or "").strip()[:40] or "second",
         entity=dict(parent.entity) if parent.entity else None,
         set_id=parent.set_id, tab=parent.tab,
+        # A tab the owner chose on a record is context, like the record itself: it crosses,
+        # and from here the two halves move apart.
+        tabs=dict(parent.tabs),
         # Where the new half's "back to the assistant" goes. The half starts where the old one
         # is, and the PLACE it is in is part of what it holds; without this a half forked out
         # of the inbox went home to orders. A value, not the stack: its own one-stop trail is

@@ -513,15 +513,15 @@ def _performance(timings: dict, *, lane: str, recipe_id: str, branch, calls, par
         "facts_ms": facts_ms,
         "workspace_ms": workspace_ms,
         "prose_wait_ms": waited_ms,
-        # And section 7's four, which are the same turn seen from the GLASS. The three above
-        # say when the MAC held the data and had built the cards; these say when the owner
-        # had a screen, a fact on it, something he could use, and everything. A turn where
-        # `time_to_first_useful_workspace` is most of `time_to_complete_workspace` is D-5
-        # happening again, and the report can see it without being told.
-        "time_to_shell": (glass or {}).get("time_to_shell"),
-        "time_to_first_fact": (glass or {}).get("time_to_first_fact"),
-        "time_to_first_useful_workspace": (glass or {}).get("time_to_first_useful_workspace"),
-        "time_to_complete_workspace": (glass or {}).get("time_to_complete_workspace"),
+        # And §15's four, which are the same turn seen from the GLASS. The three above say
+        # when the MAC held the data and had built the cards; these say when the owner had a
+        # screen that said what it was, a fact on it, something he could act on, and
+        # everything. A turn where `time_to_first_actionable_surface` is most of
+        # `time_to_complete_workspace` is D-5 happening again, and the report can see it
+        # without being told. Named in app/progressive.py, so a rename cannot leave this
+        # behind: Phase 4's `time_to_shell` counted a shell with nothing on it, which §15
+        # says is not progress, and the four names now say what each one measures.
+        **{name: (glass or {}).get(name) for name in progressive.TIMINGS},
         # Section 25: what was drawn, what was patched, and the identical renders that were
         # NOT drawn. `suppressed` is D-13's five identical order cards, as a number.
         "renders": (glass or {}).get("renders") or None,
@@ -1401,7 +1401,7 @@ async def _answer(
             "complete": True,
             "patches": glass.get("patches") or [],
             "renders": glass.get("renders"),
-            "timings_ms": {k: glass.get(k) for k in ("time_to_shell", "time_to_first_fact", "time_to_first_useful_workspace", "time_to_complete_workspace")},
+            "timings_ms": {k: glass.get(k) for k in progressive.TIMINGS},
         } if glass else None,
     }
     # The cards repeat what the tools returned, which the log already has in redacted form;

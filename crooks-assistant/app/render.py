@@ -72,6 +72,10 @@ KEY_OF: dict[str, tuple[str, ...]] = {
     # it — which is what §6 asks for and what D-3's deck did not do.
     "customer_workspace": ("ref",),
     "order_workspace": ("ref",),
+    # The workspace's own header: what this screen IS and what state each of its sections is
+    # in (§15, §27 — app/progressive.py). One per turn, patched in place for the life of it,
+    # which is what makes "patch the sections, never replace the workspace" possible at all.
+    "workspace_plan": ("workspace_id",),
 }
 
 # A product or an inventory card is about a product, and the query that found it is not its
@@ -286,6 +290,26 @@ class RenderLedger:
             patches.append(Patch(identity, REMOVED, kind, None, "", self.seq, at_ms))
         self.shells.clear()
         return patches
+
+    def drop_shell(self, kind: str, *, at_ms: float | None = None) -> list[Patch]:
+        """ONE kind's skeleton, taken down because its read failed (§27).
+
+        `drop_shells` is the end of the turn; this is one read of it going wrong, and the
+        difference matters: a failed inbox read must take down the inbox placeholder and
+        leave every other section of the workspace exactly as it was.
+        """
+        identity = self.shells.pop(kind, "")
+        if not identity or not self.known(identity):
+            return []
+        return self.drop(identity, kind, at_ms=at_ms)
+
+    def drop(self, identity: str, kind: str = "", *, at_ms: float | None = None) -> list[Patch]:
+        """One card, removed by identity. Nothing else on the glass is touched."""
+        if not identity or not self.known(identity):
+            return []
+        self._forget(identity)
+        self.seq += 1
+        return [Patch(identity, REMOVED, kind or identity.split(":", 1)[0], None, "", self.seq, at_ms)]
 
     def _forget(self, identity: str) -> None:
         self.data_print.pop(identity, None)
