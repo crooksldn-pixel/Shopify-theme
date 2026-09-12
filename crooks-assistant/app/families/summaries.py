@@ -189,7 +189,16 @@ def _labels_for(task: str, found: dict[str, Any]) -> dict[str, str]:
 
 def _plan_for(task: str):
     def plan(ctx: Ctx) -> ReadPlan | None:
-        period = period_from(ctx.intent.signals.words) or ("today" if task != "orders_attention" else "")
+        # The attention task takes NO period, ever, whatever the sentence says. "Which orders
+        # need my attention today" carries the word "today" and does not mean "orders placed
+        # today": the twenty-day-old unpaid order is precisely what needs attention today,
+        # and narrowing to the day would leave it out and say so confidently. The word is an
+        # adverb of the asking, not a filter on the orders, and reading it as a filter is the
+        # §13 mistake in a different direction — the right shape of answer to a question
+        # nobody asked. The surface says what it did look at ("read from the 9 orders the Mac
+        # holds"), and a genuine "orders placed yesterday that need attention" is a compound
+        # question the model can still put to the tool, which does accept a period.
+        period = "" if task == "orders_attention" else (period_from(ctx.intent.signals.words) or "today")
         args: dict[str, Any] = {"task": task, "limit": 12}
         if period:
             args["period"] = period

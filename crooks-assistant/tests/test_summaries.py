@@ -235,6 +235,23 @@ async def test_the_attention_question_draws_attention_rows_not_a_days_listing(sh
     assert any("Waiting to go out" in row["sub"] or "Not paid" in row["sub"] for row in data["rows"]), data["rows"]
     # And the title does not claim a period nobody named.
     assert data["title"] == "Orders that need attention", data["title"]
+    # The twenty-day-old unpaid order is in it, which is the point of the previous line: the
+    # attention question is never narrowed to a day, even when the sentence carries one.
+    assert "#1900" in [row["label"] for row in data["rows"]], data["rows"]
+
+
+async def test_today_in_an_attention_question_is_not_a_filter_on_the_orders(shop):
+    """"Which orders need my attention TODAY" does not mean orders placed today.
+
+    The twenty-day-old unpaid order is exactly what needs attention today, and narrowing to
+    the day would leave it out and be confident about it — the §13 mistake in the other
+    direction: the right shape of answer to a question nobody asked.
+    """
+    _fast, ui, _session, _branch = await answer_for("which orders need my attention today")
+    data = ui[0]["data"]
+    assert data["task"] == "orders_attention", data["task"]
+    assert "#1900" in [row["label"] for row in data["rows"]], data["rows"]
+    assert data["title"] == "Orders that need attention", data["title"]
 
 
 @pytest.mark.parametrize("text", [
