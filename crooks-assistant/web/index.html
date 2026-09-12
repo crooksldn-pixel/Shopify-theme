@@ -166,8 +166,9 @@
 
        It is a band of the APP, a sibling of the stage and the footer, and that placement is
        the fix for D-1 rather than a tidy-up. It used to be the last child of
-       <section id="orb-zone">, which is `position:relative; z-index:1` — a stacking context —
-       while #talk was its sibling at z-index 3 and, on the idle screen, `inset:0`. No z-index
+       <section id="orb-zone">, which WAS `position:relative; z-index:1` — a stacking context,
+       and it carries no z-index at all now — while #talk was its sibling at a higher layer
+       and, on the idle screen, `inset:0` over the whole stage. No z-index
        on a chip could escape its parent's cap, so the transparent voice target was painted and
        hit-tested over Split, Merge and Close, and 63 taps on them in one evening became
        recordings. Out here there is no cap to escape and nothing above it: #talk is positioned
