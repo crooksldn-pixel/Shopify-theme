@@ -38,6 +38,11 @@ SURFACE_TYPES = frozenset({
     "analytics", "email_list", "email_thread", "email_draft", "email_queue", "work_queue",
     "capability", "attention", "confirmation", "batch", "result", "error", "context",
     "assistant",
+    # the answer to a SUMMARY question (app/summaries.py): a count and one compact row each,
+    # with a tap on the row that opens the full workspace. D-4: "has anyone bought today that
+    # has bought before" was answered with seven full customer profiles, which is the
+    # drilldown surface for a question nobody asked.
+    "summary",
     # who is waiting on whom in one thread (app/families/order_email.py)
     "reply_state",
     # which variant the owner means, before anything is staged (app/families/order_edit.py):

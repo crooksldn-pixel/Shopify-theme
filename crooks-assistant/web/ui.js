@@ -542,12 +542,38 @@
   }
 
   // ---- the customer's history, beside their order or on their own card.
-  function historyBlock(hist) {
+  // Where a customer id may be tapped from: the shape, checked here because the renderer
+  // cannot ask the Mac anything. The PERMISSION half is the Mac's — app/presentation.py
+  // issues an order's customer id when it draws the order, which is what makes this control
+  // resolvable rather than a `not_held` refusal (§18).
+  const CUSTOMER_REF = /^gid:\/\/shopify\/Customer\/\d+$/;
+
+  // The one control that walks from an ORDER to its CUSTOMER.
+  //
+  // The click-path audit found path 1 dead at step 4 of 8: an order card with its Customer
+  // tab open offered nothing that opened the customer. Everything tappable in that tab went
+  // to another ORDER. So the tab that is about a person now starts with a door to them, in
+  // the same shape the email thread's card already uses for the same hop (`link-customer`).
+  function customerDoor(who) {
+    const ref = text((who || {}).customer_id);
+    if (!CUSTOMER_REF.test(ref)) return null;
+    return h('button', {
+      class: 'link-chip link-customer', type: 'button', data: { ref, kind: 'customer' },
+    }, [
+      h('span', { class: 'link-chip-label', text: text((who || {}).customer_name, 'Open the customer') }),
+      h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }),
+    ]);
+  }
+
+  function historyBlock(hist, who) {
+    const door = customerDoor(who);
     // Not found, and could not be read, are different facts and get different sentences. The
     // Phase 2 live test found a failed read printed as "No customer on this order." under a
     // header naming the customer — infrastructure turned into business truth.
-    if (!hist || typeof hist !== 'object') return [h('p', { class: 'card-note', text: 'No customer is attached to this order.' })];
-    if (hist.available === false) return [h('p', { class: 'card-note unread-line', text: 'I couldn’t load the customer this time. Say “what else has this customer ordered?” to try again.' })];
+    if (!hist || typeof hist !== 'object') return [door, h('p', { class: 'card-note', text: 'No customer is attached to this order.' })];
+    // And the door stands even here — this is the case where it is worth most: the history
+    // could not be read and the customer can still be opened.
+    if (hist.available === false) return [door, h('p', { class: 'card-note unread-line', text: 'I couldn’t load the customer this time. Say “what else has this customer ordered?” to try again.' })];
     const orders = num(hist.orders);
     const stats = h('div', { class: 'stats three' }, [
       h('div', { class: 'stat' }, [h('div', { class: 'stat-v', text: orders === null ? '—' : String(orders) }), h('div', { class: 'stat-k', text: orders === 1 ? 'Order' : 'Orders' })]),
@@ -576,7 +602,7 @@
         ref ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
       ]);
     })) : null;
-    return [stats, lines.length ? h('ul', { class: 'hist-lines' }, lines) : null, rows];
+    return [door, stats, lines.length ? h('ul', { class: 'hist-lines' }, lines) : null, rows];
   }
 
   // ---- email that is about this order, with how sure that is on every line.
@@ -805,7 +831,13 @@
       return brief;
     }
     const pending = Array.isArray(d.pending) ? d.pending.map((x) => text(x)) : [];
-    const historyBody = pending.indexOf('history') !== -1 ? [pendingLine('Reading their history…')] : historyBlock(d.history);
+    const who = { customer_id: d.customer_id, customer_name: d.customer_name };
+    const historyBody = pending.indexOf('history') !== -1
+      // Even while the history is still being read, the door is there: who the order belongs
+      // to is on the order, and waiting for a read to finish before offering the hop is how
+      // step 4 of the click path came to be dead.
+      ? [customerDoor(who), pendingLine('Reading their history…')]
+      : historyBlock(d.history, who);
     const emailBody = pending.indexOf('email') !== -1 ? [pendingLine('Checking the inbox…')] : relatedEmailBlock(d.email);
     const standing = d.history && typeof d.history === 'object' ? text(d.history.standing) : '';
     // Five tabs, one open. The September session drew order cards 7,524 pixels tall against
@@ -839,6 +871,12 @@
     ], opts);
     full.dataset.ref = text(d.order_id);
     full.dataset.pending = pending.join(' ');
+    // Kept on the node because /context/order redraws this region later and its payload is
+    // about the ORDER's regions, not about who it belongs to (app/presentation.py
+    // `present_extension`) — so the door would have been dropped by the very read it was
+    // waiting for.
+    full.dataset.customer = text(d.customer_id);
+    full.dataset.customerName = text(d.customer_name);
     return full;
   }
 
@@ -857,7 +895,9 @@
       append(sec, body);
     };
     if (pending.indexOf('history') === -1 && Object.prototype.hasOwnProperty.call(ext, 'history')) {
-      fill('history', historyBlock(ext.history));
+      fill('history', historyBlock(ext.history, {
+        customer_id: node.dataset.customer, customer_name: node.dataset.customerName,
+      }));
       const k = node.querySelector('.sec-history') && node.querySelector('.sec-history').querySelector('.sec-kicker');
       const standing = ext.history && typeof ext.history === 'object' ? text(ext.history.standing) : '';
       if (k && standing && !k.querySelector('.badge')) k.appendChild(badge(standing, 'quiet'));
@@ -2910,6 +2950,74 @@
     return node;
   }
 
+  // ---- the compact summary surface (§13; app/summaries.py).
+  //
+  // D-4: "has anyone bought today that has bought before, a returning customer?" was answered
+  // — correctly, with "one" — by drawing SEVEN full customer cards, 265 px each, 1,949 px of
+  // deck. A full card is the DRILLDOWN surface; a summary question wants the count and one
+  // row each. This is that row.
+  //
+  // Two things this renderer will not do. It never prints `row.ref`: an id is how the tablet
+  // names a record back to the Mac and is not something the owner reads (§26), so it lands in
+  // a data attribute and nowhere else. And it offers a tap only where the Mac said the row
+  // has somewhere to go — `row.tap`, decided by app/summaries.py `destination_for` against
+  // the same rule `open.entity` will apply (§18). D-6 was a control drawn before its
+  // destination was known to exist, refused `not_held`, with an empty half underneath it.
+
+  function summaryRow(r) {
+    const tap = r.tap === true && Boolean(text(r.ref)) && Boolean(text(r.kind));
+    const lines = list(r.lines, 4);
+    const tone = ['red', 'amber', 'good'].indexOf(text(r.tone)) === -1 ? '' : text(r.tone);
+    return h('li', {
+      // The list vocabulary the tablet already has — `.row`, `.row-main`, `.row-sub`,
+      // `.row-side`, `.row-go`, `.hist-lines` — so a compact summary row looks and presses
+      // exactly like a row on an order list, and this component needs no styling of its own.
+      class: `row${tap ? ' tappable' : ''}`,
+      role: tap ? 'button' : null,
+      tabindex: tap ? '0' : null,
+      data: tap ? { ref: text(r.ref), kind: text(r.kind) } : null,
+    }, [
+      h('span', { class: 'row-main' }, [h('strong', { text: text(r.label, '—') })]),
+      text(r.sub) ? h('span', { class: 'row-sub', text: text(r.sub) }) : null,
+      lines.length ? h('ul', { class: 'hist-lines' }, lines.map((l) => h('li', {
+        class: `hist-line${tone === 'red' ? ' warn' : ''}`,
+        text: text(l.label) ? `${text(l.label)}: ${text(l.value, '—')}` : text(l.value, '—'),
+      }))) : null,
+      h('span', { class: 'row-side' }, [
+        text(r.badge) ? badge(r.badge, tone === 'red' ? 'bad' : tone === 'amber' ? 'warn' : tone === 'good' ? 'ok' : 'quiet') : null,
+      ]),
+      tap ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '\u203a' }) : null,
+    ]);
+  }
+
+  function renderSummaryList(d, opts) {
+    const rows = list(d.rows, 12);
+    const count = num(d.count);
+    // The headline the brief asks for: "RETURNING CUSTOMERS TODAY · 1". The count is the
+    // WHOLE count even when the rows are capped, which is why it is not rows.length.
+    const head = h('div', { class: 'card-head' }, [h('div', {}, [
+      kicker(text(d.kicker, text(d.title, 'Summary'))),
+      h('h2', { class: 'card-title' }, [
+        h('span', { text: text(d.title, 'Summary') }),
+        count === null ? null : h('span', { text: ` \u00b7 ${count}` }),
+      ]),
+      text(d.subtitle) ? h('p', { class: 'card-meta', text: text(d.subtitle) }) : null,
+    ])]);
+    const node = card('summary_list', [
+      head,
+      // Nothing found is an ANSWER and gets a card (D-15), in the Mac's own sentence: "no
+      // returning customers" and "nothing needs attention" are different sentences, and the
+      // second is not "no orders" — there were plenty of orders.
+      rows.length ? h('ul', { class: 'rows tight' }, rows.map(summaryRow))
+        : h('p', { class: 'card-note', text: text(d.empty_words, `No ${text(d.count_label, 'results')}.`) }),
+      d.truncated ? h('p', { class: 'card-note', text: `Showing ${rows.length} of ${count === null ? rows.length : count}.` }) : null,
+      text(d.note) ? h('p', { class: 'card-note', text: text(d.note) }) : null,
+    ], opts);
+    node.dataset.task = text(d.task);
+    if (text(d.set_id)) node.dataset.set = text(d.set_id);
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -2937,6 +3045,7 @@
     working_set: renderWorkingSet,
     batch_action: renderBatchAction,
     capability: renderCapability,
+    summary_list: renderSummaryList,
     batch_result: renderBatchResult,
     reply_state: renderReplyState,
     variant_picker: renderVariantPicker,
@@ -2945,8 +3054,11 @@
     workspace_plan: renderWorkspacePlan,
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
+  // Both Phase 5 workstreams added to this list and the merge produced two declarations of
+  // it: B's composed workspaces and D's compact summary. Every one of them is a surface the
+  // owner can navigate back to, so the two lists are unioned rather than chosen between.
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'customer_workspace', 'order_workspace', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
-    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result', 'capability'];
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result', 'capability', 'summary_list'];
 
   function isValid(item) {
     return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'
@@ -3041,6 +3153,7 @@
     trend: ['title', 'metric'],
     working_set: ['set_id'],
     capability: ['build'],
+    summary_list: ['task', 'title'],
     reply_state: ['thread_id'],
     variant_picker: ['order_id'],
     email_compose: ['compose_id'],

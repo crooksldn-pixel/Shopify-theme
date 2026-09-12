@@ -35,6 +35,7 @@ from app.analytics.query import (
     shop_country_from,
 )
 from app.observability import timeline
+from app.reads import fanout
 from app.tools.context import current_session
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, tool
@@ -43,7 +44,12 @@ log = logging.getLogger("crooks.analytics")
 
 _cache: OrderCache | None = None
 READ_TIMEOUT_S = 6.0
-PLANNED = frozenset({"commerce_aggregate", "commerce_query", "inventory_query"})
+# The reads a unit of work may compose several of, within its bounds, and never the same
+# one twice — app/analytics/plan.py hands back the earlier answer instead. A summary is
+# one of them (app/families/summaries.py): it reads the same cache view a listing does,
+# and the model asking the same summary question twice in one turn should cost one read.
+PLANNED = frozenset({"commerce_aggregate", "commerce_query", "inventory_query",
+                     "commerce_summary"})
 # What the model reads of a result: never the membership lists the Mac keeps for itself.
 _MODEL_HIDDEN = ("member_ids", "variant_ids")
 
@@ -381,7 +387,9 @@ EMAIL_CACHE_S = 300.0
 # "who has emailed → a draft to the rest" must not break at the size a batch allows.
 EMAIL_MAX_CUSTOMERS = 50
 EMAIL_VIEW_DAYS = 90
-EMAIL_CONCURRENCY = 4
+# How many of these inbox reads run at once is NOT decided here: it is
+# app/reads/budget.py SOURCE_SLOTS["gmail"], read through app/reads/fanout.py, so that this
+# tool and the read scheduler cannot disagree about how much of Gmail there is.
 EMAIL_TIMEOUT_S = 7.0
 EMAIL_THREADS_PER_CUSTOMER = 3
 
@@ -581,7 +589,6 @@ def _fold_reply_states(states: list[dict[str, Any]]) -> dict[str, Any]:
     issued_id_args=("set_id",),
 )
 async def email_query(set_id: str, days: int = 30) -> dict:
-    import asyncio
 
     session = current_session()
     ws = working_sets.get(session, set_id) if session is not None else None
@@ -617,21 +624,36 @@ async def email_query(set_id: str, days: int = 30) -> dict:
     if len(by_customer) > EMAIL_MAX_CUSTOMERS:
         raise ToolError(f"That set has {len(by_customer)} customers; the inbox is checked for at most {EMAIL_MAX_CUSTOMERS} at a time. Narrow the set first.")
     clock = cache().clock
-    semaphore = asyncio.Semaphore(EMAIL_CONCURRENCY)
     started = time.perf_counter()
 
-    async def look(entry: dict[str, Any]) -> None:
-        async with semaphore:
-            if not entry.get("email"):
-                entry["mail"] = {"available": True, "threads": [], "count": 0, "replied": None, "reason": "no email address"}
-                return
-            terms = [str(n).rsplit("-", 1)[-1].lstrip("#") for n in entry["orders"] if n]
-            try:
-                entry["mail"] = await asyncio.wait_for(_customer_threads(entry["email"], terms[:3], days, clock=clock), timeout=EMAIL_TIMEOUT_S)
-            except Exception as exc:  # noqa: BLE001
-                entry["mail"] = {"available": False, "threads": [], "count": 0, "replied": None, "reason": f"{type(exc).__name__}"}
+    async def look(entry: dict[str, Any]) -> dict[str, Any]:
+        if not entry.get("email"):
+            return {"available": True, "threads": [], "count": 0, "replied": None, "reason": "no email address"}
+        terms = [str(n).rsplit("-", 1)[-1].lstrip("#") for n in entry["orders"] if n]
+        return await _customer_threads(entry["email"], terms[:3], days, clock=clock)
 
-    await asyncio.gather(*(look(e) for e in by_customer.values()))
+    # §14. This read really IS one per customer — Gmail has no query that answers "which of
+    # these people have written to us" in one — so what is bounded is the concurrency, and it
+    # is bounded by the SOURCE's own slots (app/reads/budget.py SOURCE_SLOTS["gmail"]) through
+    # the global throttle, not by a semaphore of its own beside this call.
+    #
+    # It had one: `asyncio.Semaphore(EMAIL_CONCURRENCY)`, four, while SOURCE_SLOTS said three
+    # — so this tool could hold four Gmail slots while the read scheduler believed three was
+    # the whole of Gmail, and two bounds on one thing is how they come to disagree. One table,
+    # read in one place (app/reads/fanout.py), which also reports what did not come back
+    # instead of each entry catching its own exception into a reason string.
+    entries = list(by_customer.values())
+    landed, unreachable = await fanout.gather_with_failures(
+        range(len(entries)), lambda index: look(entries[index]),
+        source="gmail", timeout_s=EMAIL_TIMEOUT_S, limit=EMAIL_MAX_CUSTOMERS,
+    )
+    for index, entry in enumerate(entries):
+        mail = landed[index] if index < len(landed) else None
+        if isinstance(mail, dict):
+            entry["mail"] = mail
+        else:
+            entry["mail"] = {"available": False, "threads": [], "count": 0, "replied": None,
+                             "reason": str(unreachable.get(index) or "the inbox could not be checked")[:160]}
     rows = []
     contacted: list[str] = []
     not_contacted: list[str] = []
@@ -735,6 +757,25 @@ def catalogue() -> dict[str, Any]:
         # What this Mac cannot answer, said once, here, so it is not discovered a query at a
         # time. `commerce_capabilities` is the answer to "can you?", and this is part of it.
         "not_available": {"delivery_status": TRACKING_UNAVAILABLE},
+        # The summary read, and the read pattern it replaces. It lives here rather than in
+        # `commerce_summary`'s own description because this file's byte budget
+        # (tests/test_registry.py) says the detail belongs in the tool that is called on
+        # demand, and because this is where a model that is about to compose a listing plus a
+        # read per row will be looking. The numbers are measured in tests/test_n_plus_one.py.
+        "summaries": {
+            "tool": "commerce_summary",
+            "tasks": {
+                "returning_customers": "who bought in the period having bought before it, with each one's previous order, lifetime orders and lifetime spend",
+                "orders_attention": "the orders that need something doing, worst first, with what is wrong with each",
+                "order_list": "the period's orders as rows",
+            },
+            "instead_of": (
+                "listing the period and then reading each customer's or each order's record. "
+                "Every order row the Mac holds already carries that customer's lifetime order "
+                "count and lifetime spend, so 'has this buyer bought before' is a comparison "
+                "and not a lookup: one call in place of one plus one per row."
+            ),
+        },
         "group_by": list(GROUPS), "metrics": list(METRICS), "views": list(VIEWS),
         "bounds": {"limit": MAX_LIMIT, "group_by": 2, "cost_per_query": MAX_COST, "cost_per_turn": TURN_COST},
         "examples": [
@@ -757,6 +798,13 @@ def cost_of(name: str, args: dict[str, Any]) -> int:
         spec = dict(args)
         if name == "inventory_query":
             spec = {"entity": "variants", "period": spec.get("period") or "last_7_days", "metrics": ["days_cover"], "limit": spec.get("limit", 10)}
-        return parse(spec, default_entity="orders" if name == "commerce_query" else "order_line_items").cost
+        elif name == "commerce_summary":
+            # A summary's arguments are not the query language's — it takes a task and a
+            # period — so they are priced as what it actually reads: the period's orders,
+            # which is the same view a listing takes. Falling through to `parse` would raise
+            # on `task` and charge one point for a ninety-day view.
+            spec = {"entity": "orders", "period": spec.get("period") or "today",
+                    "limit": spec.get("limit", 12)}
+        return parse(spec, default_entity="orders" if name in ("commerce_query", "commerce_summary") else "order_line_items").cost
     except QueryError:
         return 1

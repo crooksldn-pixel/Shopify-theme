@@ -234,10 +234,42 @@ def test_the_tool_block_offered_to_the_model_stays_within_its_budget():
     # the Mac from the Mac's own copy of the workspace, so it costs the model nothing to read
     # and nothing to get wrong. A creation family whose write tool listed its own arguments
     # would have cost several times this and moved the write boundary as well.
-    assert total <= 31_200, f"the tool block is {total} bytes"
+    #
+    # 31_840 covers ONE tool, and the reason the ceiling moves rather than the description
+    # being cut to nothing is the whole of D-4 (docs/phase5/LIVE_SESSION_FORENSICS.md):
+    #
+    #   the summary read (app/families/summaries.py)          640
+    #       commerce_summary   640   a task, a period, a row limit, and one sentence: "never
+    #                                read each customer or order on a list to answer one of
+    #                                these". turn_be1b384ca420 answered "has anyone bought
+    #                                today that has bought before" — correctly, with "one" —
+    #                                by listing the day and then making seven
+    #                                shopify_customer_history calls, 12,116 ms of it in the
+    #                                model, and drawing seven full profile cards. Measured in
+    #                                tests/test_n_plus_one.py: 8 requests and 7 per-entity
+    #                                reads become 2 and 0, and 4,928 ms become 1,234 ms at
+    #                                the live session's own measured cost of a read.
+    #
+    #                                The ACCOUNT of that — which tasks there are, and what
+    #                                read pattern this replaces — is in
+    #                                `commerce_capabilities` under "summaries", because the
+    #                                rule the read layer's own budget below states is that
+    #                                the detail belongs in the tool called on demand.
+    #
+    # 640 bytes on the model path, once per turn, against seven reads and twelve seconds on
+    # the turns this tool takes — and it takes them WITHOUT the model, so a turn that reaches
+    # its recipe pays none of the block at all. That is the trade, and it is the only reason
+    # to move this number: 31,840 rather than a round number above it, because a hundred
+    # bytes of headroom is still a tool description somebody has to justify.
+    assert total <= 31_840, f"the tool block is {total} bytes"
     batch = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith("batch_"))
     # 2,300 covers the fifth batch tool — the same campaign as batch_email_drafts, sent
     # rather than saved — which shares its schema object and adds two lines of description.
     assert batch <= 2_300, f"the batch tools' schemas are {batch} bytes; the rules belong in the prompt"
     analytic = sum(len(json.dumps({"name": s.name, "description": s.description, "input_schema": s.input_schema})) for s in offered if s.name.startswith(("commerce_", "inventory_query")))
-    assert analytic <= 5_000, f"the read layer's schemas are {analytic} bytes; the detail belongs in commerce_capabilities"
+    # 5,000 held the four query-language tools. The fifth, `commerce_summary`, is 640 bytes
+    # and is not query-language detail: it takes a task from a closed set of three, a period
+    # and a row limit, and its account of itself is in `commerce_capabilities` where this
+    # rule says detail belongs. 5,650 is that, with the same hundred-odd bytes of headroom
+    # the whole block keeps.
+    assert analytic <= 5_650, f"the read layer's schemas are {analytic} bytes; the detail belongs in commerce_capabilities"

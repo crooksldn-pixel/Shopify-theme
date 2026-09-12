@@ -44,6 +44,10 @@ UI_TYPES = frozenset({
     # what this build can do, grouped (app/capabilities/surface.py). Built by a recipe rather
     # than from a tool result: the manifest is read from the registry, not from the shop.
     "capability",
+    # the answer to a summary question, as compact rows (app/summaries.py): "returning
+    # customers today · 1", one row per person, a tap that opens the full workspace. §13 —
+    # D-4 answered exactly that question with seven full customer profiles.
+    "summary_list",
     # who is waiting on whom in one thread (app/families/order_email.py): "Waiting since 5h
     # ago · last from Mia · no reply from us". Built by the recipe from the thread's own
     # reply state, never from the prose.
@@ -1504,6 +1508,16 @@ def _remember(items: list[dict[str, Any]], session: Session) -> None:
         kind, data = item["type"], item["data"]
         if kind == "order":
             session.remember_context("order", data.get("order_number") or "", data.get("order_id") or "", limit=MAX_CONTEXT)
+            if data.get("customer_id"):
+                # ISSUED, because the card offers a way to the customer and `open.entity`
+                # refuses a ref this conversation was never shown. The same two lines, for the
+                # same reason, as the email thread's order strip below: a REPLAYED order card
+                # — Back, Next, a tap on a list row — is rebuilt from the entity cache rather
+                # than from a tool result, so `_harvest_ids` never saw it and nothing else
+                # issued it. The click-path audit found that as path 1 dead at step 4 of 8:
+                # an order card with its Customer tab open and no way to the customer. The
+                # card shows them; that is the showing (§18).
+                session.issue(str(data["customer_id"]))
             if data.get("customer_name") and data.get("customer_id"):
                 session.remember_context("customer", data["customer_name"], data["customer_id"], limit=MAX_CONTEXT)
         elif kind == "customer":

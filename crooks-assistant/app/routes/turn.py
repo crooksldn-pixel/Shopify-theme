@@ -772,6 +772,12 @@ _CARRIES_ITS_OWN_SUBJECT = frozenset({
     # the person it is about; tap Add a note on #1938 and say it, and the customer's page is
     # what should open, not a note containing the sentence.
     "customer_workspace",
+    # And the summary families (app/families/summaries.py), on the same rule. "Any returning
+    # customers today", "which orders need attention" and "what came in yesterday" each name
+    # the period and the question they are about. Tap Add a note on #1938 and ask any of
+    # them, and it is the summary that should be answered — not a note containing the words.
+    "returning_customers", "returning_customers_before", "orders_attention",
+    "order_list_summary",
 })
 
 

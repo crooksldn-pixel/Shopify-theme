@@ -34,6 +34,11 @@ test('the vocabulary is exactly the presentation layer\'s', () => {
     // The workspace's own header while it fills in (§15): its name and one line per section,
     // each in one of §27's five states. Staged by app/progressive.py, never by present().
     'workspace_plan',
+    // The compact summary surface (§13, app/summaries.py). Added, not changed: a summary
+    // question — "has anyone bought today who bought before" — was answered with seven
+    // full customer profiles (D-4), and a count with one row each is a different component
+    // from a profile, not a smaller one.
+    'summary_list',
   ]));
 });
 
@@ -1560,4 +1565,243 @@ test('a workspace the Mac sent nothing on still renders', () => {
   assert.equal(bare.querySelectorAll('.field-input').length, 0);
   assert.equal(bare.querySelectorAll('.compose-btn').length, 0, 'no actions, no buttons');
   assert.ok(textOf(bare).includes('Nothing is created until you authorise'));
+});
+
+// ---- the compact summary surface (§13). D-4: "has anyone bought today that has bought
+// before" was answered, correctly, with seven full customer profile cards. These tests hold
+// the two things that make a compact row a row: it reads as a line, and its tap target is an
+// attribute and never something the owner can read (§26).
+
+const RETURNING = {
+  task: 'returning_customers',
+  title: 'Returning customers today',
+  kicker: 'Returning customers',
+  count: 1,
+  count_label: 'returning customer',
+  subtitle: '7 buyers · 7 orders today',
+  rows: [{
+    label: 'Cy Cole',
+    sub: 'Order #1962',
+    lines: [
+      { label: 'Previous order', value: '31 Aug' },
+      { label: 'Lifetime', value: '£120.00' },
+      { label: 'Orders', value: '2' },
+    ],
+    badge: 'Returning',
+    tone: 'good',
+    tap: true,
+    ref: 'gid://shopify/Customer/5015',
+    kind: 'customer',
+    command: 'open.entity',
+  }],
+  note: '',
+  truncated: false,
+  empty: false,
+  tappable: 1,
+};
+
+// What web/app.js treats as a tap: an element carrying BOTH a ref and a kind. The DOM shim
+// only understands single-attribute selectors, so the pair is counted here.
+function tapTargets(node) {
+  const out = [];
+  (function walk(el) {
+    for (const c of el.children) {
+      if (c.dataset && c.dataset.ref && c.dataset.kind) out.push(c);
+      walk(c);
+    }
+  })(node);
+  return out;
+}
+
+function summaryNode(over) {
+  return UI.renderItem({ type: 'summary_list', data: Object.assign({}, RETURNING, over || {}) }, {});
+}
+
+test('the summary surface draws the headline count and one row per person', () => {
+  const node = summaryNode();
+  assert.ok(node, 'the summary surface did not render');
+  assert.equal(node.dataset.type, 'summary_list');
+  assert.equal(node.dataset.task, 'returning_customers');
+  const said = textOf(node);
+  assert.ok(said.includes('Returning customers today'), said);
+  assert.ok(said.includes('· 1'), 'the headline count is missing: ' + said);
+  assert.equal(node.querySelectorAll('.row').length, 1);
+  // The row's own words, in the shape the brief asks for.
+  assert.ok(said.includes('Cy Cole') && said.includes('Order #1962'), said);
+  assert.ok(said.includes('Previous order') && said.includes('31 Aug'), said);
+  assert.ok(said.includes('Lifetime') && said.includes('£120.00'), said);
+  assert.ok(said.includes('Orders') && said.includes('2'), said);
+});
+
+test('a compact row never shows an id, and carries its ref as an attribute', () => {
+  const node = summaryNode();
+  const said = textOf(node);
+  assert.ok(!said.includes('gid://'), 'an id reached something the owner can read: ' + said);
+  assert.ok(!said.includes('5015'), 'the tail of a gid is not a name');
+  // The ref is how the tablet names the record back to the Mac, and lives only here.
+  const row = node.querySelectorAll('.row')[0];
+  assert.equal(row.dataset.ref, 'gid://shopify/Customer/5015');
+  assert.equal(row.dataset.kind, 'customer');
+});
+
+test('a row the Mac said has nowhere to go is not a button', () => {
+  // §18. D-6 drew a control, posted it, and was refused `not_held` — a dead control with an
+  // empty half underneath it. A row whose destination did not resolve is a line, not a tap.
+  const node = summaryNode({
+    rows: [
+      RETURNING.rows[0],
+      { label: 'Never shown', sub: 'Order #1963', lines: [], badge: '', tone: '', tap: false },
+    ],
+  });
+  const rows = node.querySelectorAll('.row');
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].getAttribute('role'), 'button');
+  assert.equal(rows[1].getAttribute('role'), null, 'a row with no destination offered a tap');
+  assert.equal(rows[1].dataset.ref, undefined);
+  assert.ok(!String(rows[1].className).includes('tappable'));
+  // And the tap-target convention the page dispatches on — web/app.js finds a tap with
+  // `closest('[data-ref][data-kind]')` — is present on the one row that has a destination.
+  assert.equal(tapTargets(node).length, 1);
+});
+
+test('nothing found is still an answer, in the Mac\'s own words', () => {
+  // D-15, and the reason the sentence is the Mac's and not the renderer's: "nothing needs
+  // attention" is not "no orders" — there were plenty of orders.
+  const node = summaryNode({ count: 0, rows: [], empty: true, count_label: 'returning customers',
+                             empty_words: 'Nobody who bought today had bought before.' });
+  assert.ok(node, 'an empty summary drew nothing at all');
+  const said = textOf(node);
+  assert.ok(said.includes('Nobody who bought today had bought before.'), said);
+  assert.ok(said.includes('· 0'), said);
+  // And with no sentence sent, it still says something rather than nothing.
+  const bare = summaryNode({ count: 0, rows: [], empty: true, count_label: 'orders', empty_words: '' });
+  assert.ok(textOf(bare).includes('No orders'), textOf(bare));
+});
+
+test('a capped summary says how many it is showing of how many there are', () => {
+  const many = [];
+  for (let n = 0; n < 12; n += 1) {
+    many.push({ label: 'Buyer ' + n, sub: '', lines: [], badge: '', tone: '', tap: false });
+  }
+  const node = summaryNode({ count: 25, rows: many, truncated: true });
+  assert.equal(node.querySelectorAll('.row').length, 12);
+  assert.ok(textOf(node).includes('Showing 12 of 25'), textOf(node));
+});
+
+test('a hostile value lands on a compact row as text, never as markup', () => {
+  const node = summaryNode({
+    title: HOSTILE, kicker: HOSTILE, subtitle: HOSTILE, note: HOSTILE,
+    rows: [{ label: HOSTILE, sub: HOSTILE, badge: HOSTILE, tone: HOSTILE, tap: false,
+             lines: [{ label: HOSTILE, value: HOSTILE }] }],
+  });
+  assert.ok(textOf(node).includes(HOSTILE));
+  const tags = new Set();
+  (function walk(el) { for (const c of el.children) { tags.add(c.tagName); walk(c); } })(node);
+  assert.ok(!tags.has('IMG') && !tags.has('SCRIPT'));
+  (function walk(el) {
+    for (const [k, v] of Object.entries(el.attributes)) {
+      if (k === 'aria-label' || k === 'placeholder') continue;
+      assert.ok(!String(v).includes('<'), el.tagName + '[' + k + '] carries markup');
+    }
+    for (const c of el.children) walk(c);
+  })(node);
+  // A tone the Mac did not choose is not a class the page has styling for.
+  assert.ok(!String(node.querySelectorAll('.row')[0].className).includes('<'));
+});
+
+test('the attention summary tones its rows and keeps its rows rows', () => {
+  const node = UI.renderItem({ type: 'summary_list', data: {
+    task: 'orders_attention', title: 'Orders that need attention', kicker: 'Needs attention',
+    count: 2, count_label: 'orders', subtitle: '1 urgent · 1 worth a look',
+    rows: [
+      { label: '#1900', sub: 'Not paid for · 20 days old and still owing',
+        lines: [{ label: 'Placed', value: '20 Aug' }, { label: 'Value', value: '£90.00' }],
+        badge: 'Hal Hood', tone: 'red', tap: true, ref: 'gid://shopify/Order/1900', kind: 'order' },
+      { label: '#1901', sub: 'Waiting to go out · 6 days old',
+        lines: [{ label: 'Placed', value: '3 Sep' }], badge: 'Ivy Ives', tone: 'amber',
+        tap: true, ref: 'gid://shopify/Order/1901', kind: 'order' },
+    ],
+    note: '', truncated: false, empty: false, tappable: 2,
+  } }, {});
+  const rows = node.querySelectorAll('.row');
+  assert.equal(rows.length, 2);
+  assert.ok(String(rows[0].querySelectorAll('.hist-line')[0].className).includes('warn'), 'the urgent row is not marked');
+  assert.ok(String(rows[1].querySelectorAll('.badge')[0].className).includes('warn'), 'the amber row is not marked');
+  assert.equal(tapTargets(node).length, 2);
+  assert.ok(!textOf(node).includes('gid://'));
+});
+
+
+// ---- the hop from an order to its customer (the click-path audit's path 1, step 4 of 8).
+
+function orderWithCustomer(over) {
+  return UI.renderItem({ type: 'order', data: Object.assign({
+    order_id: 'gid://shopify/Order/1938', order_number: '#1938', detail: true,
+    customer_name: 'Mia Jones', customer_id: 'gid://shopify/Customer/7001',
+    customer_email: 'mia@example.com', total: '£84.00', fulfillment: 'unfulfilled',
+    payment: 'paid', items: [], pending: [],
+    history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] },
+  }, over || {}) }, {});
+}
+
+test('an order card offers a control that opens its customer', () => {
+  // The click-path audit found path 1 dead here: an order card with its Customer tab open
+  // offered nothing that opened the customer — everything tappable in that tab went to
+  // another ORDER. Order to customer was not walkable at all.
+  const node = orderWithCustomer();
+  const doors = node.querySelectorAll('.link-customer');
+  assert.equal(doors.length, 1, 'the order card offers no way to its customer');
+  assert.equal(doors[0].dataset.ref, 'gid://shopify/Customer/7001');
+  assert.equal(doors[0].dataset.kind, 'customer');
+  assert.ok(textOf(doors[0]).includes('Mia Jones'), textOf(doors[0]));
+  assert.ok(!textOf(node).includes('gid://'), 'an id reached something readable');
+});
+
+test('the door to the customer stands while the history is still being read', () => {
+  // Who the order belongs to is on the ORDER. Waiting for the history read to land before
+  // offering the hop is how step 4 came to be dead in the first place.
+  const node = orderWithCustomer({ pending: ['history'], history: null });
+  assert.equal(node.querySelectorAll('.link-customer').length, 1);
+  assert.ok(textOf(node).includes('Reading their history'), textOf(node));
+});
+
+test('the door stands when the history could not be read at all', () => {
+  const node = orderWithCustomer({ history: { available: false } });
+  assert.equal(node.querySelectorAll('.link-customer').length, 1);
+  assert.ok(textOf(node).includes('couldn’t load the customer'), textOf(node));
+});
+
+test('a guest order offers no door, because there is nobody behind it', () => {
+  // §18 the other way round: no customer, no control. A button that posts an empty ref is
+  // the dead control this rule exists to stop.
+  const node = orderWithCustomer({ customer_id: '', customer_name: '', history: null });
+  assert.equal(node.querySelectorAll('.link-customer').length, 0);
+  assert.ok(textOf(node).includes('No customer is attached'), textOf(node));
+});
+
+test('a customer ref of the wrong shape is not offered as a door', () => {
+  for (const bad of ['7001', 'gid://shopify/Order/1938', 'gid://shopify/Customer/abc', '../../etc']) {
+    const node = orderWithCustomer({ customer_id: bad });
+    assert.equal(node.querySelectorAll('.link-customer').length, 0, bad);
+  }
+});
+
+test('the late history fill keeps the door', () => {
+  // /context/order redraws that region and its payload is about the ORDER's regions, not
+  // about who it belongs to — so the door would have been dropped by the very read it was
+  // waiting for.
+  const node = orderWithCustomer({ pending: ['history'], history: null });
+  UI.hydrateOrder(node, { order_id: 'gid://shopify/Order/1938', pending: [],
+                          history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] } });
+  const doors = node.querySelectorAll('.link-customer');
+  assert.equal(doors.length, 1, 'the hop was lost when the history landed');
+  assert.equal(doors[0].dataset.ref, 'gid://shopify/Customer/7001');
+});
+
+test('the customer card does not offer a door to itself', () => {
+  const node = UI.renderItem({ type: 'customer', data: {
+    customer_id: 'gid://shopify/Customer/7001', name: 'Mia Jones', orders: 3, spent: '£410.00',
+    history: { orders: 3, spent: '£410.00', standing: 'returning', recent: [] },
+  } }, {});
+  assert.equal(node.querySelectorAll('.link-customer').length, 0);
 });
