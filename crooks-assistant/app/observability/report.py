@@ -826,7 +826,7 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str], list[str]]:
     # times in twenty seconds: a 1,014 px capability card, then nothing, then nothing, the
     # third prefixed "No," and asking outright to "bring up a UI". None was filed, because the
     # old rule needed the answer to decline in words first.
-    if kind == contract_mod.UI_INTENT and not _workspace_appeared(turn):
+    if kind == contract_mod.UI_INTENT and not _workspace_appeared(turn) and not _is_feedback(question):
         classes.append("UI_INTENT_UNFULFILLED")
         signals.append(
             "asked for something on the screen and no visible workspace appeared: "
@@ -1178,6 +1178,20 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None,
         turn.outcome = "failed"
     if defects in (["MISSING_CAPABILITY"], ["FALSE_UNSUPPORTED"]) and not ok_tools:
         turn.outcome = "failed"
+
+
+def _is_feedback(question: str) -> bool:
+    """Whether this sentence is the owner telling the product about itself.
+
+    Used as a guard, not a class: "why is there bullshit on the screen right now?" names the
+    screen, so `contract_of` reads it as a UI request — and it is not a request for a
+    workspace, it is a complaint about the one he has. Filing it UI_INTENT_UNFULFILLED would be
+    a second, wrong diagnosis of a turn that already has the right one
+    (OWNER_FEEDBACK_IGNORED), which is the habit this whole workstream exists to break.
+    """
+    from app.observability import feedback as feedback_mod
+
+    return feedback_mod.recognise(question) is not None
 
 
 def _recorded_feedback(turn: Turn) -> str:
