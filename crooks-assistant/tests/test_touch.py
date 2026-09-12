@@ -244,6 +244,21 @@ def test_the_two_halves_are_only_ever_drawn_in_their_own_band():
     assert ".branch-zone:has(> [hidden]){min-height:0;padding:0}" in STYLE
 
 
+def test_the_header_band_never_outlives_the_second_half():
+    """Found in a screenshot: the band still read "half 1 of 2" over a conversation that had
+    one half. A merge or a close comes back through `applyBranches`, which redraws the bar —
+    and the bar returned on the one-half path before the band was touched. `drawBranchHead`
+    hides itself when there is nothing to tell apart; it just has to be asked, on both paths.
+    """
+    body = APP_JS[APP_JS.index("function drawBranchBar()"):]
+    body = body[:body.index("\n}\n")]
+    one_half = body[body.index("if (branches.length < 2) {"):body.index("// Two halves, divided visibly")]
+    assert "drawBranchHead();" in one_half, "the header band is left standing when a half goes"
+    head = APP_JS[APP_JS.index("function drawBranchHead()"):]
+    head = head[:head.index("\n}\n")]
+    assert "if (branches.length < 2 || !head) { node.textContent = ''; node.hidden = true;" in head
+
+
 def test_merge_is_only_drawn_when_there_is_something_to_merge():
     """§18. A Merge over a half that has answered nothing, holds no record, no set and nothing
     half-written is a control that cannot succeed — which is D-6's defect class."""

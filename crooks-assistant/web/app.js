@@ -1904,6 +1904,12 @@ function drawBranchBar() {
       why.textContent = 'Work on two things at once';
       host.appendChild(why);
     }
+    // And the header band goes with them. It used to be left standing: a merge or a close
+    // came back through `applyBranches`, which redraws the bar, and the bar returned here
+    // before the band was touched — so the screen went on saying "half 1 of 2" over a
+    // conversation that had one half. `drawBranchHead` hides itself when there is nothing to
+    // tell apart; it just has to be asked.
+    drawBranchHead();
     return;
   }
   // Two halves, divided visibly: a column each, a rule between them, and neither column able
