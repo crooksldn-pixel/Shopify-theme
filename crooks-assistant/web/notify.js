@@ -30,6 +30,52 @@
  *   - a message is never a way to get anywhere. The only control a row may carry is Dismiss.
  *
  * Text reaches the page through textContent, like everything else the owner did not type.
+ *
+ * ---------------------------------------------------------------------------------------
+ * D-10, AND THE POLICY THAT IS NOW ENFORCED HERE RATHER THAN HOPED FOR
+ *
+ * Phase 4 built the three classes above. It did not build a policy, so the live tablet
+ * session of 11 September emitted SIXTEEN notifications and every one of them was noise:
+ *
+ *   - ELEVEN carried no `code` at all. `toast(words)` called `show()` with nothing but a
+ *     sentence, so the recorded event was `{name:"workspace", tone:"info"}` and nothing
+ *     else. Eleven messages the system could not name, cannot deduplicate reliably, cannot
+ *     test, and nobody can be held to. A notification with no words is not a notification;
+ *     neither is one with no name.
+ *   - FIVE carried text, and it was `divided`, `merged`, `divided`, `merged`, `divided` —
+ *     state changes the screen itself had just made. The orb visibly dividing IS the
+ *     notification.
+ *
+ * So four refusals, applied to every message before it is drawn (`check`, and the same
+ * function is exported so a call site can ask):
+ *
+ *   NO WORDS      nothing to read, or nothing with a letter or a digit in it. A row holding
+ *                 a dash is the empty notification with a character in it.
+ *   NO NAME       every message carries a `code` — lower_snake_case, stable, its own. This
+ *                 is the one that makes the other three enforceable.
+ *   SCREEN SHOWS  the state change is already visible where the state lives: divided,
+ *                 merged, opened, the tab that changed, the screen that was navigated to.
+ *                 §10 — a state change updates THE PLACE THE STATE ALREADY LIVES.
+ *   CONTROL SHOWS the control carries its own outcome: Save draft becomes Saved, an action
+ *                 surface goes to `executed` (web/action-state.js). A message repeating it
+ *                 is a second claim about one event, in a worse place.
+ *
+ * And two caps, because "usually update the place the state lives" still leaves room for a
+ * run of messages to take the screen:
+ *
+ *   MAX_TRANSIENT  at most two messages that will leave on their own may be live at once,
+ *                  across ALL THREE hosts. Two rows is 88px of a ~700px workbench screen;
+ *                  three is 132px and starts costing a card, and nobody tracks three lines
+ *                  that are all disappearing. The newest wins; the oldest transient goes.
+ *   MAX_GOOD       at most ONE of those may be a success. "never stack done/ready/success/
+ *                  opened for one event" — one event, one line, and the newest is the truth.
+ *
+ * A failure is not transient (ttl 0) and is not capped by either: it is capped per host at
+ * MAX_PER_HOST and waits to be dismissed.
+ *
+ * Every refusal is RECORDED — `notify_refused`, with the reason and the code and never the
+ * words. The eleven nameless messages of the live session were invisible because dropping a
+ * message silently is the same as not having a policy.
  */
 (function (root) {
   'use strict';
@@ -41,8 +87,39 @@
   const TTL_MS = { info: 4000, good: 4000, warn: 9000, bad: 0 };   // 0 = until dismissed
   // Per host, so a run of failures cannot push the deck off the screen. The oldest goes.
   const MAX_PER_HOST = 3;
+  // And across ALL hosts, for the messages that will leave on their own. See the header.
+  const MAX_TRANSIENT = 2;
+  // Of those, at most one may be a success: one event, one "done".
+  const MAX_GOOD = 1;
   // Same message, said again, inside this window: one row, with a count.
   const REPEAT_MS = 20000;
+
+  // Every message is named, in the same shape as every other name on this tablet.
+  const CODE_RE = /^[a-z][a-z0-9_]*$/;
+  // And says something. A row whose only content is punctuation is the empty notification
+  // with a character in it.
+  const WORDS_RE = /[\p{L}\p{N}]/u;
+
+  /* THE PLACE THE STATE ALREADY LIVES (§10). A code in either list is refused: the state is
+     already on the glass, and a message about it is a second, worse claim on the same event.
+     Both lists are policy, not implementation — they are exported, and the reason a code is
+     in one of them is written beside it. */
+
+  // The screen itself changed. The orb divided; the halves merged; a card opened; the tab
+  // moved; a screen was navigated to. All five of the live session's texted notifications
+  // are in here.
+  const SCREEN_SHOWS = [
+    'divided', 'merged', 'split', 'closed', 'half_closed', 'forked',
+    'opened', 'order_opened', 'card_opened', 'workspace_opened',
+    'tab', 'tab_changed', 'panel_changed',
+    'navigated', 'home', 'back', 'next', 'focused', 'branch_focused', 'mode',
+  ];
+  // The control carries its own outcome: Save draft becomes Saved, an action surface goes to
+  // `executed`, a branch chip says READY (web/action-state.js, web/app.js drawBranchBar).
+  const CONTROL_SHOWS = [
+    'draft_saved', 'saved', 'sent', 'archived', 'applied', 'staged', 'armed', 'primed',
+    'done', 'ready', 'success', 'verified', 'committed',
+  ];
 
   let doc = null;
   let hosts = { global: null, orbWorkspace: null, deckWorkspace: null };
@@ -78,6 +155,60 @@
 
   function keyOf(entry) {
     return `${entry.class}:${entry.code || ''}:${entry.text}:${entry.branch || ''}`;
+  }
+
+  /* THE POLICY, as one pure function.
+   *
+   * Exported, so a call site or a test can ask "would this be drawn?" without drawing it,
+   * and so the reason a message is refused is a word rather than a silence. Returns
+   * `{ ok: true }` or `{ ok: false, reason }`, where reason is controlled vocabulary:
+   *
+   *   no_words  · no_code · bad_code · screen_shows · control_shows
+   *
+   * `nowhere` is not decided here: whether a host exists is the page's business, not the
+   * message's, and it is reported by `show` when it happens.
+   */
+  function check(message) {
+    const m = message || {};
+    const words = String(m.text === undefined || m.text === null ? '' : m.text).trim();
+    if (!words) return { ok: false, reason: 'no_words' };
+    if (!WORDS_RE.test(words)) return { ok: false, reason: 'no_words' };
+    const code = String(m.code || '').trim();
+    if (!code) return { ok: false, reason: 'no_code' };
+    if (!CODE_RE.test(code)) return { ok: false, reason: 'bad_code' };
+    if (SCREEN_SHOWS.indexOf(code) !== -1) return { ok: false, reason: 'screen_shows' };
+    if (CONTROL_SHOWS.indexOf(code) !== -1) return { ok: false, reason: 'control_shows' };
+    return { ok: true, reason: '' };
+  }
+
+  /* A refusal is an event, not a silence. The live session's eleven nameless messages were
+     invisible for exactly this reason. The words are never recorded; the reason and the code
+     are, which is what a policy needs to be held to. */
+  function refuse(reason, message) {
+    if (onRecord) {
+      onRecord('notify_refused', {
+        reason,
+        code: String((message || {}).code || '').slice(0, 40) || undefined,
+        name: String((message || {}).class || '') || undefined,
+      });
+    }
+    return null;
+  }
+
+  /* The two caps. Called with the new entry NOT YET in `live`, so what it counts is what is
+     already on screen. Transient means "will leave on its own": a failure waits to be read
+     and is counted by neither cap. The OLDEST goes, so the order of what is left holds. */
+  function makeRoom(entry) {
+    if (!entry.ttl) return;
+    const transient = () => live.filter((e) => e.ttl);
+    if (entry.tone === 'good') {
+      // One event, one "done". A second success replaces the first rather than stacking on
+      // it: two lines both saying a thing worked is one thing the owner has to read twice.
+      let goods = transient().filter((e) => e.tone === 'good');
+      while (goods.length >= MAX_GOOD) { remove(goods[0]); goods = transient().filter((e) => e.tone === 'good'); }
+    }
+    let room = transient();
+    while (room.length >= MAX_TRANSIENT) { remove(room[0]); room = transient(); }
   }
 
   // ---- drawing -------------------------------------------------------------------------
@@ -183,7 +314,9 @@
    *   text     the words
    *   class    'control' | 'workspace' | 'global'
    *   tone     'info' | 'good' | 'warn' | 'bad'   (bad persists; info and good go)
-   *   code     a short stable name for this kind of message, for deduplication and telemetry
+   *   code     REQUIRED. A short stable lower_snake_case name for this kind of message, for
+   *            deduplication, for telemetry, and so the policy above can be applied to it at
+   *            all. A message the system cannot name is refused — that is the eleven.
    *   branch   the half this is about, if it is about one
    *   host     control-local only: the element to draw inside
    *   after    control-local only: the control to sit directly after
@@ -191,8 +324,13 @@
    */
   function show(message) {
     const m = message || {};
-    const words = String(m.text || '').trim();
-    if (!doc || !words) return null;
+    const words = String(m.text === undefined || m.text === null ? '' : m.text).trim();
+    // THE POLICY, before anything is built. A message that fails it is refused and the
+    // refusal is recorded: the eleven nameless messages of the live session were invisible
+    // because a dropped message left no trace at all.
+    const verdict = check(m);
+    if (!verdict.ok) return refuse(verdict.reason, m);
+    if (!doc) return refuse('nowhere', m);
     const entry = {
       id: `note_${++seq}`,
       class: CLASSES.indexOf(String(m.class)) === -1 ? 'workspace' : String(m.class),
@@ -225,8 +363,9 @@
       return same;
     }
 
+    makeRoom(entry);
     live.push(entry);
-    if (!attach(entry)) { live.pop(); return null; }
+    if (!attach(entry)) { live.pop(); return refuse('nowhere', m); }
     if (entry.ttl) entry.timer = setTimeout(() => remove(entry), entry.ttl);
     if (onRecord) {
       onRecord('notify', {
@@ -290,7 +429,11 @@
     hosts = { global: null, orbWorkspace: null, deckWorkspace: null };
   }
 
-  const api = { CLASSES, TONES, TTL_MS, MAX_PER_HOST, REPEAT_MS, init, show, dismiss, focusBranch, remode, list, clear, reset };
+  const api = {
+    CLASSES, TONES, TTL_MS, MAX_PER_HOST, MAX_TRANSIENT, MAX_GOOD, REPEAT_MS,
+    SCREEN_SHOWS, CONTROL_SHOWS, CODE_RE,
+    check, init, show, dismiss, focusBranch, remode, list, clear, reset,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.CrooksNotify = api;
 })(typeof window !== 'undefined' ? window : globalThis);
