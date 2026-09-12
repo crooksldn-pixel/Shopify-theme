@@ -35,6 +35,7 @@ from app.analytics.query import (
     shop_country_from,
 )
 from app.observability import timeline
+from app.reads import fanout
 from app.tools.context import current_session
 from app.tools.gate import Tier
 from app.tools.registry import ToolError, tool
@@ -381,7 +382,9 @@ EMAIL_CACHE_S = 300.0
 # "who has emailed → a draft to the rest" must not break at the size a batch allows.
 EMAIL_MAX_CUSTOMERS = 50
 EMAIL_VIEW_DAYS = 90
-EMAIL_CONCURRENCY = 4
+# How many of these inbox reads run at once is NOT decided here: it is
+# app/reads/budget.py SOURCE_SLOTS["gmail"], read through app/reads/fanout.py, so that this
+# tool and the read scheduler cannot disagree about how much of Gmail there is.
 EMAIL_TIMEOUT_S = 7.0
 EMAIL_THREADS_PER_CUSTOMER = 3
 
@@ -581,7 +584,6 @@ def _fold_reply_states(states: list[dict[str, Any]]) -> dict[str, Any]:
     issued_id_args=("set_id",),
 )
 async def email_query(set_id: str, days: int = 30) -> dict:
-    import asyncio
 
     session = current_session()
     ws = working_sets.get(session, set_id) if session is not None else None
@@ -617,21 +619,36 @@ async def email_query(set_id: str, days: int = 30) -> dict:
     if len(by_customer) > EMAIL_MAX_CUSTOMERS:
         raise ToolError(f"That set has {len(by_customer)} customers; the inbox is checked for at most {EMAIL_MAX_CUSTOMERS} at a time. Narrow the set first.")
     clock = cache().clock
-    semaphore = asyncio.Semaphore(EMAIL_CONCURRENCY)
     started = time.perf_counter()
 
-    async def look(entry: dict[str, Any]) -> None:
-        async with semaphore:
-            if not entry.get("email"):
-                entry["mail"] = {"available": True, "threads": [], "count": 0, "replied": None, "reason": "no email address"}
-                return
-            terms = [str(n).rsplit("-", 1)[-1].lstrip("#") for n in entry["orders"] if n]
-            try:
-                entry["mail"] = await asyncio.wait_for(_customer_threads(entry["email"], terms[:3], days, clock=clock), timeout=EMAIL_TIMEOUT_S)
-            except Exception as exc:  # noqa: BLE001
-                entry["mail"] = {"available": False, "threads": [], "count": 0, "replied": None, "reason": f"{type(exc).__name__}"}
+    async def look(entry: dict[str, Any]) -> dict[str, Any]:
+        if not entry.get("email"):
+            return {"available": True, "threads": [], "count": 0, "replied": None, "reason": "no email address"}
+        terms = [str(n).rsplit("-", 1)[-1].lstrip("#") for n in entry["orders"] if n]
+        return await _customer_threads(entry["email"], terms[:3], days, clock=clock)
 
-    await asyncio.gather(*(look(e) for e in by_customer.values()))
+    # §14. This read really IS one per customer — Gmail has no query that answers "which of
+    # these people have written to us" in one — so what is bounded is the concurrency, and it
+    # is bounded by the SOURCE's own slots (app/reads/budget.py SOURCE_SLOTS["gmail"]) through
+    # the global throttle, not by a semaphore of its own beside this call.
+    #
+    # It had one: `asyncio.Semaphore(EMAIL_CONCURRENCY)`, four, while SOURCE_SLOTS said three
+    # — so this tool could hold four Gmail slots while the read scheduler believed three was
+    # the whole of Gmail, and two bounds on one thing is how they come to disagree. One table,
+    # read in one place (app/reads/fanout.py), which also reports what did not come back
+    # instead of each entry catching its own exception into a reason string.
+    entries = list(by_customer.values())
+    landed, unreachable = await fanout.gather_with_failures(
+        range(len(entries)), lambda index: look(entries[index]),
+        source="gmail", timeout_s=EMAIL_TIMEOUT_S, limit=EMAIL_MAX_CUSTOMERS,
+    )
+    for index, entry in enumerate(entries):
+        mail = landed[index] if index < len(landed) else None
+        if isinstance(mail, dict):
+            entry["mail"] = mail
+        else:
+            entry["mail"] = {"available": False, "threads": [], "count": 0, "replied": None,
+                             "reason": str(unreachable.get(index) or "the inbox could not be checked")[:160]}
     rows = []
     contacted: list[str] = []
     not_contacted: list[str] = []
