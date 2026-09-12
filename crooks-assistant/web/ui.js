@@ -408,7 +408,12 @@
     const ref = text(o.order_id);
     return h('li', {
       class: ref ? 'row tappable' : 'row', role: ref ? 'button' : null, tabindex: ref ? '0' : null,
-      data: Object.assign({ state: orderState(o) }, ref ? { ref, kind: 'order' } : {}),
+      /* `label` is what this record will be CALLED once it is opened: on the half chip, in
+         the band above the cards and on the trail. Said here, where the number and the name
+         are known, so the tap does not have to infer one from the row's text — which is how
+         "#1927 Fionn Doherty28 Aug, 23:00£83.0…" reached the glass (web/app.js labelOf). */
+      data: Object.assign({ state: orderState(o) },
+        ref ? { ref, kind: 'order', label: `${text(o.order_number, '—')} ${text(o.customer_name)}`.trim() } : {}),
     }, [
       h('span', { class: 'row-main' }, [h('strong', { text: text(o.order_number, '—') }), ' ', text(o.customer_name)]),
       h('span', { class: 'row-sub', text: formatDate(o.placed_at) }),
@@ -1044,9 +1049,20 @@
       }
       const visible = expanded ? shown : Math.min(shown, ROWS_BEFORE_FOLD);
       const total = count === null ? orders.length : count;
-      position.textContent = visible >= total && filter === 'all'
-        ? `${total} order${total === 1 ? '' : 's'}`
+      /* §26 · one statement per fact. When everything is on screen and nothing is filtered
+         this line said "3 orders" — which is what the stat tile forty pixels below it says,
+         in larger type, as `3 / ORDERS`. The visual pass photographed both, plus the same
+         number again on the set chip. So the line speaks only when it has something the tile
+         cannot give: which SUBSET is on screen. That is the case it was written for, and the
+         one where the tile's total is not the answer.
+
+         Emptied rather than removed: `position` is in the card head and `draw()` runs again
+         on every filter tap, so the node has to stay for the next state to fill. */
+      const all = visible >= total && filter === 'all';
+      position.textContent = all
+        ? ''
         : `Showing ${visible} of ${filter === 'all' ? total : shown}${d.truncated ? ` · ${total} in the window` : ''}`;
+      position.hidden = all;
       if (more) {
         more.hidden = shown <= ROWS_BEFORE_FOLD;
         more.textContent = expanded ? 'Fewer' : `All ${shown}`;
@@ -2115,7 +2131,11 @@
   // over the set, so that is what is left: a strip of totals under the list they belong to.
   function renderWorkingSet(d, opts) {
     const lines = list(d.lines, 3);
-    const where = d.step === 'filter' ? 'Narrowed' : d.step === 'correlate' ? 'Cross-referenced' : 'These';
+    // Was 'These'. The three words on this strip say HOW the set came to be, and for a set
+    // that was simply listed the answer was a demonstrative pronoun with nothing after it:
+    // THESE · 3 orders. §26 asks for human words, and 'This list' is one — same axis as
+    // Narrowed and Cross-referenced, and a phrase rather than a dangling 'these'.
+    const where = d.step === 'filter' ? 'Narrowed' : d.step === 'correlate' ? 'Cross-referenced' : 'This list';
     const node = card('working_set', [
       h('p', { class: 'set-strip-head' }, [
         h('span', { class: 'set-strip-kicker', text: where }),
@@ -2841,6 +2861,20 @@
         const ref = text(a.ref);
         const kind = text(a.kind);
         const live = a.enabled === true && ref && kind;
+        /* Two shapes of offer, because the workspace now carries a write as well as its
+           doors (§12). `open.entity` is the deck's own vocabulary — `data-ref` + `data-kind`,
+           which the delegated click handler turns into an open — and anything else is a
+           named command with its arguments, the same `data-command` + `data-args` pair every
+           other Mac-built control on the page uses. The Mac decides which; this only draws
+           it, and a name the page does not know is refused on the Mac.
+
+           `Email <name>` is the first control of the second shape: the owner asked for "an
+           email write box" on a customer card and there was no route to one from a
+           workspace at all. */
+        const command = text(a.command);
+        const opens = !command || command === 'open.entity';
+        const args = command === 'compose.to_person' ? `customer_id=${encodeURIComponent(ref)}`
+          : text(a.args);
         // Disabled for real, not styled to look it: a control the Mac cannot stand behind
         // must not be pressable at all, and the reason is on the face of it rather than in a
         // tooltip a finger cannot reach.
@@ -2848,7 +2882,7 @@
           class: 'btn', type: 'button',
           disabled: live ? null : true,
           'aria-disabled': live ? null : 'true',
-          data: live ? { ref, kind } : {},
+          data: live ? (opens ? { ref, kind } : { command, args }) : {},
         }, [
           h('span', { text: text(a.label, 'Open') }),
           live ? null : h('span', { class: 'card-meta', text: ` — ${text(a.reason, 'not available')}` }),

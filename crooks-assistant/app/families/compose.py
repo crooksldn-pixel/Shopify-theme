@@ -887,6 +887,51 @@ def _compose_to_customer(ctx: CommandCtx) -> Outcome:
                    changed={"compose_id": compose_id, "order_id": order_id, "kind": "new"})
 
 
+def _compose_to_person(ctx: CommandCtx) -> Outcome:
+    """Email, tapped on a CUSTOMER. Opens a new email to the person the workspace is about.
+
+    The owner asked for this in as many words, looking at a customer card that had his orders
+    and his inbox and no way to write to him:
+
+        "I want to also be seeing his orders and his history and like an email write box"
+
+    §12's rich workspace is not only what is on the screen; it is whether the thing the
+    screen is about can be acted on from there. Without this the customer workspace was a
+    reading surface with two doors out of it and no way to do the one thing a person looking
+    at a customer usually wants to do.
+
+    The same shape as the order's Email and for the same reasons: the tablet posts the
+    CUSTOMER, the address is read off the Mac's own copy of that record, and nothing is
+    staged — a composer is a draft on the screen until a gesture says otherwise. The
+    recipient IS editable here, because a new email to a person may be about anything, so it
+    goes through `check_address` on every keystroke like any other typed address.
+    """
+    customer_id = ctx.arg("customer_id") or ctx.arg("ref")
+    customer, refused = _held_record(ctx, "customer", customer_id)
+    if refused is not None:
+        return refused
+    assert customer is not None
+    address = str(customer.get("email") or customer.get("customer_email") or "").strip()
+    if not address or not EMAIL_ADDRESS.match(address):
+        return Outcome.refused(
+            "no_address", "I do not have an email address for them, so I have not opened one.")
+    name = str(customer.get("name") or customer.get("customer_name") or "").strip()
+    compose_id = open_compose(
+        ctx.branch, kind="new", to=address, to_name=name,
+        subject="", body="",
+        about=f"an email to {_first_word(name) or 'them'}",
+        origin_text="",
+    )
+    compose = held(ctx.branch, compose_id) or {}
+    # From a record the shop served, not out of a microphone — same as the reply.
+    compose["to_status"], compose["to_hint"] = "ok", ""
+    ctx.session.issue(compose_id)
+    ctx.session.remember_pii(*[v for v in (compose.get("to"), compose.get("to_name")) if v])
+    _stand_on(ctx, "customer", customer_id, name[:80], tab="email")
+    return Outcome(answer=_spoken(compose), surfaces=[compose_surface(compose)],
+                   changed={"compose_id": compose_id, "customer_id": customer_id, "kind": "new"})
+
+
 def _first_word(who: str) -> str:
     word = str(who or "").strip().split(",")[0].strip().split(" ")[0].strip(" <>\"'")
     return word if word and "@" not in word else ""
@@ -1081,6 +1126,7 @@ extend([
 # opening a box to type in. Neither reads anything and neither can stage.
 register_command(Command("compose.reply", "Open a reply to this email thread", _compose_reply, voice=False))
 register_command(Command("compose.to_customer", "Open an email to this order's customer", _compose_to_customer, voice=False))
+register_command(Command("compose.to_person", "Open an email to this customer", _compose_to_person, voice=False))
 register_command(Command("compose.field", "Type into the email being written", _compose_field, voice=False))
 register_command(Command("compose.stage", "Save the email as a draft, or send it", _compose_stage, voice=False))
 register_command(Command("compose.discard", "Throw away the email being written", _compose_discard, voice=False))

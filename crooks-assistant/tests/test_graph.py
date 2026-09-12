@@ -441,9 +441,26 @@ def test_the_queue_rows_carry_the_related_orders_and_the_confidence():
     surface = _waiting_surface([MIA_ROW, PRIYA_ROW])
     mia, priya = surface.data["threads"]
     assert mia["related_orders"] == ["1938"] and mia["confidence"] == "confident"
-    assert mia["snippet"] == "#1938 · confident", "the thread's own order, not the customer's whole history"
     assert priya["related_orders"] == [] and priya["confidence"] == "possible"
-    assert priya["snippet"] == "#1940 · possible", "no number in the thread: the recent orders stand in, and the row says it is only possible"
+    # The confidence is CARRIED, which is what this test is named for and what has not
+    # changed: both rows still hold it, and the renderer and any later consumer can read it.
+    #
+    # What changed is the SNIPPET, which is the line on the glass. It read "#1938 ·
+    # confident" and "#1940 · possible" — `confident` and `possible` are how
+    # app/families/order_email.py grades a link, and the Phase 5 visual pass photographed one
+    # of them on the tablet. Neither is a thing a person says, which puts them in the same
+    # class as EMPTY and THESE: a machine word that reached the surface (§26).
+    #
+    # The old expectation was wrong on both rows, and differently on each. A CERTAIN link
+    # needs no adjective — the order number is the claim, and "confident" adds a word that
+    # only invites the question of what the uncertain case looks like. An UNCERTAIN one must
+    # be visibly uncertain, because the row is a decision to reply and a wrong link is a
+    # reply to the wrong question; "possible" as a trailing token is the weakest possible way
+    # to say that, sitting where a reader has already taken the number as fact.
+    assert mia["snippet"] == "#1938", "the thread's own order, and no adjective on a certain link"
+    assert priya["snippet"] == "maybe #1940", (
+        "no number in the thread: the recent orders stand in, and the doubt is said FIRST, "
+        "before the number a reader would otherwise take as fact")
 
 
 # ------------------------------------------------- order → email → draft (app/families/order_email.py)

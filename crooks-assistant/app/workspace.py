@@ -394,7 +394,15 @@ def _customer_workspace(plan: Plan, person: entities.Entity, graph: entities.Ent
     }
     header = _customer_header(person, count, last)
     attention = _customer_attention(person, orders, threads)
-    actions = _actions_for(session, last, threads[0] if threads else None)
+    # `customer=person` matters: without it the workspace ABOUT a person offered nothing
+    # about that person — only its two doors out, to their last order and their newest
+    # thread. That is what "the customer surface has no write" meant when the §32 matrix
+    # reported shot 10 MISSING, and what the owner meant by "I want to also be seeing his
+    # orders and his history and like an email write box". The `open.entity` offer for the
+    # customer is suppressed inside `_actions_for` when the workspace IS that customer's, so
+    # this adds the write without adding a door to the screen you are already on.
+    actions = _actions_for(session, last, threads[0] if threads else None, customer=person,
+                           about=("customer", _ref(person)))
     tab, tab_note = _resolve_tab(plan, sections)
     return {
         "workspace": "customer",
@@ -814,6 +822,28 @@ def _activity_rows(orders: list[entities.Entity], threads: list[entities.Entity]
 # ----------------------------------------------------------------------- §18, destinations
 
 
+def _still_held(kind: str, ref: str) -> bool:
+    """Whether the Mac's own COPY of the record is still there, not merely its permission.
+
+    `_open` answers a permission question and issues the ref, which is the right check for an
+    `open.entity` offer: that command re-reads. A WRITE does not re-read —
+    `compose.to_person` takes the address off the Mac's cached copy and refuses `no_address`
+    or `customer_not_held` when it has gone — so an offer resting on permission alone would
+    outlive the record it is about and become the refusal-under-a-finger §18 forbids.
+
+    So this asks the same store, with the same key, that the command will ask. Never raises:
+    an offer that cannot be proved good is not drawn, which is the safe direction.
+    """
+    try:
+        from app.memory import ENTITY
+        from app.memory import current as memory
+
+        held = memory().get(ENTITY, f"{kind}:{ref}", allow_stale=True)
+        return isinstance(getattr(held, "value", None), dict)
+    except Exception:  # noqa: BLE001 — a missing cache is "not held", not a broken workspace
+        return False
+
+
 def _open(session: Any, kind: str, ref: str) -> dict[str, Any]:
     """Whether this row may be shown as tappable — decided BEFORE it is shown.
 
@@ -860,12 +890,15 @@ def link_for(session: Any, kind: str, entity: entities.Entity | None) -> dict[st
 
 
 def _actions_for(session: Any, order: entities.Entity | None, thread: entities.Entity | None,
-                 *, customer: entities.Entity | None = None) -> list[dict[str, Any]]:
+                 *, customer: entities.Entity | None = None,
+                 about: tuple[str, str] | None = None) -> list[dict[str, Any]]:
     """WHAT CAN I DO, and every one of them a real destination.
 
-    Only `open.entity` offers, and only for refs this function has just issued: an offer whose
-    server side would refuse it is exactly the fake UI §18 forbids. A workspace with nothing
-    openable offers nothing, which is honest — it is not a reason to draw a button.
+    Two kinds of offer, and every one of them a real destination. `open.entity`, for refs
+    this function has just issued; and ONE write — an email to the person the workspace is
+    about — offered only where the Mac is holding an address for them. An offer whose server
+    side would refuse it is exactly the fake UI §18 forbids, and a workspace with nothing
+    openable offers nothing, which is honest: it is not a reason to draw a button.
     """
     out: list[dict[str, Any]] = []
     for kind, entity, label in (
@@ -875,11 +908,33 @@ def _actions_for(session: Any, order: entities.Entity | None, thread: entities.E
     ):
         if entity is None:
             continue
+        # A door to the screen you are already standing on is not a way forward (§25). The
+        # customer workspace passes its own person in so the WRITE can be offered, and this
+        # is what stops that also drawing "Open Daniel Sear" on Daniel Sear's own workspace.
+        if about is not None and about == (kind, _ref(entity)):
+            continue
         state = _open(session, kind, _ref(entity))
         if not state["open"]:
             continue
         out.append({"label": _text(label(entity), MAX_VALUE_CHARS), "command": "open.entity",
                     "kind": kind, "ref": _ref(entity), "enabled": True, "reason": ""})
+    # And the one thing to DO, which the owner asked for in as many words while looking at a
+    # customer card that had his orders and his inbox and no way to write to him:
+    #
+    #   "I want to also be seeing his orders and his history and like an email write box"
+    #
+    # §12's rich workspace is not only what is on the screen, it is whether the record the
+    # screen is about can be acted on from there. Offered only where the Mac HOLDS an address
+    # — `compose.to_person` reads it off its own copy and refuses `no_address` otherwise, so a
+    # button drawn without one would be §18's refusal under a finger.
+    if customer is not None and _ref(customer):
+        address = str(customer.get("email") or customer.get("customer_email") or "").strip()
+        if address and "@" in address and _open(session, "customer", _ref(customer))["open"] \
+                and _still_held("customer", _ref(customer)):
+            who = _text(customer.get("name"), 24)
+            out.append({"label": f"Email {who}".strip() if who else "Write an email",
+                        "command": "compose.to_person", "kind": "customer",
+                        "ref": _ref(customer), "enabled": True, "reason": ""})
     return out[:MAX_ACTIONS]
 
 

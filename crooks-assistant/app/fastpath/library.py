@@ -1285,9 +1285,16 @@ def _waiting_surface(waiting: list[dict[str, Any]], *, unchecked: int = 0):
             "from": str(row.get("customer_name") or row.get("customer_email") or "someone"),
             "subject": str(row.get("last_subject") or "(no subject)"),
             # What ties it to the shop, which is why this is one system and not two.
+            # §26: the confidence in words, not in the correlator's own token. This line
+            # read "#1938 · confident" on the glass — `confident` and `possible` are how
+            # app/families/order_email.py grades a link, and neither is a thing a person
+            # says. A certain link needs no adjective: the order number IS the claim. An
+            # uncertain one must be visibly uncertain, because the row is a decision to
+            # reply and a wrong link is a reply to the wrong question — so it says so.
             "snippet": " · ".join(filter(None, [
-                ", ".join(orders),
-                confidence if confidence in ("confident", "possible") else "",
+                (f"maybe {', '.join(orders)}" if confidence == "possible" and orders
+                 else ", ".join(orders)),
+                "not sure which order" if confidence == "possible" and not orders else "",
                 f"{count} threads" if count > 1 else "",
             ])),
             "date": _since(row.get("latest_inbound_at")),

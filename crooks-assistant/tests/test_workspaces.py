@@ -511,3 +511,83 @@ def _graph_with_history(sid: str) -> entities.EntityGraph:
     g = entities.graph_for(Session(session_id=sid))
     g.ingest("shopify_customer_history", HISTORY)
     return g
+
+
+# ------------------------------------------------------- §12, in the owner's own words
+
+
+def test_a_customer_workspace_offers_a_way_to_write_to_them():
+    """He was looking at a customer card that carried the orders and the inbox and said:
+
+        "I'm not seeing any UI here except email where there's nothing. I want to also be
+        seeing his orders and his history and like an email write box"
+
+    The orders and the history landed in this pass. The write box did not, and the §32
+    screenshot matrix said so precisely once its detector stopped naming card types by hand:
+    shot 10 came back `MISSING — the customer surface has no write`. A rich workspace is not
+    only what is ON the screen; it is whether the record the screen is ABOUT can be acted on
+    from there, and a reading surface with two doors out of it and no way to do the obvious
+    thing is the sparse half of §12.
+
+    §18 is the other half and is asserted below: the control is offered only where the Mac is
+    HOLDING an address, because `compose.to_person` reads the address off its own copy of the
+    record and refuses `no_address` otherwise — so a button drawn without one would be a
+    refusal under a finger.
+    """
+    from app import commands
+    from app.commands import Ctx
+    from app.families import compose as composer
+    from app.memory import ENTITY
+    from app.memory import current as memory
+
+    live = session(D3, "write")
+    items = present([ok("shopify_customer_history", HISTORY)], session=live)
+
+    # §18, the first half, asserted by its absence. The offer rests on the Mac's own COPY of
+    # the record and not merely on permission, because `compose.to_person` does not re-read:
+    # it takes the address off that copy. Before the record is in the cache there is nothing
+    # to write from, so there is no button — which is what the workspace draws here, and what
+    # `_still_held` is for.
+    assert not [a for a in (only(items, "customer_workspace").get("actions") or [])
+                if a.get("command") == "compose.to_person"], (
+        "a write was offered over a record the Mac is not holding")
+
+    # And now the record is held, exactly as a real read leaves it.
+    memory().put(ENTITY, f"customer:{HISTORY['customer_id']}", dict(HISTORY), source="shopify")
+    items = present([ok("shopify_customer_history", HISTORY)], session=live)
+    data = only(items, "customer_workspace")
+    actions = data.get("actions") or []
+    write = [a for a in actions if a.get("command") == "compose.to_person"]
+    assert write, f"no way to write to them: {[a.get('command') for a in actions]}"
+    offer = write[0]
+    assert offer["enabled"] is True and offer["ref"] and offer["kind"] == "customer", offer
+    # The label names the person, not the mechanism.
+    assert "Email" in offer["label"] and "compose" not in offer["label"].lower(), offer["label"]
+
+    # And the control works: a composer addressed to them, from the Mac's own copy of the
+    # record rather than from anything the tablet posted.
+    branch = live.branch()
+    out = commands.run("compose.to_person", Ctx(None, live, branch, {"customer_id": offer["ref"]}))
+    assert out.ok, out
+    drawn = out.surfaces[0].as_ui()
+    assert drawn["type"] == "email_compose" and drawn["data"]["kind"] == "new"
+    # `to` is a FIELD on the composer, not a bare string: a value, its status and whether it
+    # may be typed over. The address came off a record the shop served, so it is `ok` and not
+    # `uncertain` — which is what lets the composer be staged at all.
+    recipient = drawn["data"]["to"]
+    assert composer.EMAIL_ADDRESS.match(str(recipient["value"])), recipient
+    assert recipient["status"] == "ok", recipient
+    assert recipient["editable"] is True, "a new email to a person may be about anything"
+    assert branch.compose and branch.compose["compose_id"] == out.changed["compose_id"]
+
+    # And the other direction: a customer the Mac is not holding gets a refusal, not a
+    # composer. The offer and the command now read the same store with the same key, so the
+    # pair cannot drift into a control that is drawn and then refused.
+    refused = commands.run("compose.to_person", Ctx(None, live, branch, {"customer_id": "cust-0000"}))
+    assert not refused.ok, refused
+    # A record with no address on it is a different refusal, and also not a drawn button.
+    nameless = dict(HISTORY, customer_id="gid://shopify/Customer/8", email="")
+    memory().put(ENTITY, f"customer:{nameless['customer_id']}", nameless, source="shopify")
+    live.issue(nameless["customer_id"])
+    out2 = commands.run("compose.to_person", Ctx(None, live, branch, {"customer_id": nameless["customer_id"]}))
+    assert not out2.ok and out2.code == "no_address", out2

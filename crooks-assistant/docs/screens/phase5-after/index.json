@@ -89,9 +89,9 @@
    "viewport": "601x889",
    "id": "10",
    "name": "full-customer-rich-workspace",
-   "ok": false,
-   "file": "601x889-10-full-customer-rich-workspace.MISSING.png",
-   "why": "no customer surface with orders, email and a way to write",
+   "ok": true,
+   "file": "601x889-10-full-customer-rich-workspace.png",
+   "why": "",
    "owner": "workstream D — the customer workspace (§3/§6)"
   },
   {
@@ -143,9 +143,9 @@
    "viewport": "601x889",
    "id": "16",
    "name": "returning-customers-result",
-   "ok": false,
-   "file": "601x889-16-returning-customers-result.MISSING.png",
-   "why": "none of customer_list/table/metric_group/assistant on the glass (there is summary_list)",
+   "ok": true,
+   "file": "601x889-16-returning-customers-result.png",
+   "why": "",
    "owner": "workstream C — families and presentation (§13)"
   },
   {
@@ -260,18 +260,18 @@
    "viewport": "601x889",
    "id": "29",
    "name": "empty-email-section",
-   "ok": false,
-   "file": "601x889-29-empty-email-section.MISSING.png",
-   "why": "the open tab is overview,overview, not email",
+   "ok": true,
+   "file": "601x889-29-empty-email-section.png",
+   "why": "",
    "owner": ""
   },
   {
    "viewport": "601x889",
    "id": "30",
    "name": "notification-local",
-   "ok": false,
-   "file": "601x889-30-notification-local.MISSING.png",
-   "why": "no workspace message is on the glass",
+   "ok": true,
+   "file": "601x889-30-notification-local.png",
+   "why": "",
    "owner": ""
   },
   {

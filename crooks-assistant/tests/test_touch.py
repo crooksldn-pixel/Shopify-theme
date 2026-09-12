@@ -318,7 +318,26 @@ def test_a_way_out_of_a_half_either_works_or_says_why_it_cannot():
     # After the tap: the refusal settles the control the finger touched.
     assert "if (answered && answered.ok !== false) return;" in chip
     assert "button.classList.add('is-off');" in chip
-    assert "notifyControl(said, button);" in chip
+    # Was `notifyControl(said, button);`, and that line came out.
+    #
+    # The rule this test is named for is unchanged and is still asserted, one line below: the
+    # refused control stops being a control AND the Mac's own words end up beside it. What
+    # changed is that it does so ONCE. `why()` writes the sentence into the button, puts it
+    # in the title, and the button is disabled — so the notification was a second, worse
+    # claim on the same event, which is the whole of web/notify.js's CONTROL_SHOWS and what
+    # §10 forbids. It was also the only `notify` call site in the page carrying no `code`, so
+    # two identical refusals could not be deduped; the notification-policy suite caught it
+    # from that direction independently.
+    #
+    # Asserted as "the Mac's words reach the glass, by whatever route" rather than by naming
+    # the function, so the next change of route does not need a test change with it.
+    assert "why(said.slice(0, 60));" in chip, "the Mac's reason does not reach the control"
+    # Over the CODE, not over the comments: the comment above the change names the call it
+    # replaced, which is the point of it, and a substring search over the whole body would
+    # then be satisfied by the explanation of the removal.
+    code = "\n".join(line for line in chip.split("\n") if not line.lstrip().startswith(("//", "/*", "*")))
+    assert "notifyControl(" not in code, (
+        "a control that already carries its own reason must not also float one (\u00a710)")
     # Which needs both openers to report their outcome, rather than returning nothing.
     for opener in ("async function openEntity(kind, ref, label)", "async function openArea(area, fallback)"):
         body = APP_JS[APP_JS.index(opener):]

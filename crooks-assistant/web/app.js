@@ -640,7 +640,15 @@ function playAudio(blob, text, generation, isError, startAt = 0) {
 function faultLabel(checks) {
   const down = (k) => checks[k] && checks[k].ok === false;
   if (down('claude')) return 'Claude offline';
-  if (down('speech')) return 'Cannot hear you';
+  /* Was "Cannot hear you", and the visual pass was right about it: on the most prominent
+     band of the page, in amber, beside an amber diamond, that reads as the assistant
+     refusing to listen rather than as a service being down. §27's question is whether an
+     error state is really an error — and this one is: `checks.speech.ok === false` means the
+     recogniser is not there. So the amber stays and the WORDS change, to the shape its four
+     siblings already use. "Speech offline" names the thing that is down, points at the row
+     in the settings sheet that says what to do about it, and does not suggest he is being
+     ignored. The footer's own Voice dot says the same thing in the same breath. */
+  if (down('speech')) return 'Speech offline';
   if (down('shopify') && down('gmail')) return 'Shopify and Gmail offline';
   if (down('shopify')) return 'Shopify offline';
   if (down('gmail')) return 'Gmail offline';
@@ -1472,6 +1480,44 @@ const goPrevious = () => stepSet('workflow.previous', 'previous');
 // Open a record the current screen linked to. The same command the words reach, so a tap on
 // the third row and "open the third one" land in exactly the same place — and neither asks the
 // model to work out which record was meant.
+/* What to CALL the record a row names, for the Mac to print back at the owner.
+   This was `(link.textContent || '').trim().slice(0, 60)` — every word on the row, in DOM
+   order, with nothing between them, because adjacent spans have no separator in
+   `textContent`. The label travels to `open.entity`, is stored as the entity's label, and is
+   then printed on the half chip, in the band above the cards and on the trail. So a tap on
+   an order row put this on the glass:
+
+       #1927 Fionn Doherty28 Aug, 23:00£83.0…
+
+   — the number, the name, the date and the money run together and then cut off at 40
+   characters by `Branch.headline`. Four facts pretending to be a name.
+
+   A row's NAME is its primary line. The renderers say which that is (`data-label` where the
+   name is known; `.row-main` and its siblings otherwise), so nothing is guessed from a blob
+   of text. And the fallback joins with a separator rather than concatenating, so even a
+   shape this function has never seen cannot produce "Doherty28". */
+function labelOf(node) {
+  if (!node) return '';
+  const said = String(node.dataset && node.dataset.label ? node.dataset.label : '').trim();
+  if (said) return said.slice(0, 60);
+  // The primary line, in the vocabulary the renderers use for one.
+  const main = node.querySelector
+    ? node.querySelector('.row-main, .link-chip-label, .hist-main, .card-title, .sec-title')
+    : null;
+  const first = main ? String(main.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  if (first) return first.slice(0, 60);
+  // Nothing named itself. Join what is there with a separator, so the worst case is a label
+  // that says too much rather than one that says a wrong word.
+  const parts = [];
+  for (const kid of (node.children || [])) {
+    if (kid.getAttribute && kid.getAttribute('aria-hidden') === 'true') continue;
+    const words = String(kid.textContent || '').replace(/\s+/g, ' ').trim();
+    if (words) parts.push(words);
+  }
+  if (parts.length) return parts.join(' \u00b7 ').slice(0, 60);
+  return String(node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+}
+
 async function openEntity(kind, ref, label) {
   if (!kind || !ref) return;
   T.record('navigate', { nav: 'open_entity', name: kind, entity: ref });
@@ -3357,7 +3403,7 @@ el.cards.addEventListener('click', (event) => {
   // carries the kind and the id it was given on the card, so nothing is looked up again.
   const link = target && target.closest ? target.closest('[data-ref][data-kind]') : null;
   if (link && !busy) {
-    openEntity(link.dataset.kind, link.dataset.ref, (link.textContent || '').trim().slice(0, 60));
+    openEntity(link.dataset.kind, link.dataset.ref, labelOf(link));
     return;
   }
   // A chip carrying a question asks it. The capability card draws six of these and their
