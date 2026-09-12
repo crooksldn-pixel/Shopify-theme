@@ -149,8 +149,14 @@ async function main() {
   const toast = await page.evaluate(() => Array.from(document.querySelectorAll('#notes-global .note-words, #notes-orb .note-words, #notes-deck .note-words, #cards .note-control .note-words'))
     .filter((n) => !n.closest('.note').hidden)
     .map((n) => n.textContent.trim()).join(' · '));
+  // D-10 · §10. The claim under test is unchanged and is now made in the strongest way
+  // available: the page says NOTHING AT ALL. "Merged. N things it looked at came back." is
+  // gone — the orb becoming one orb and the deck gaining what came back are the notification,
+  // and two of the live session's five texted notifications were exactly this. What survived
+  // the subtraction is `merge_waiting`, a warn drawn ONLY when a change really did come back
+  // still waiting for a gesture, which is not this fixture (`still_waiting: []`).
   check('a merge with an undo offer outstanding does not claim a change is still waiting',
-    /Merged\./.test(toast) && !/still waiting/.test(toast), `toast="${toast}"`);
+    toast === '' && !/still waiting/.test(toast), `toast="${toast}"`);
   await page.unroute('**/branches/*/merge');
   await shot('03-merged');
 
