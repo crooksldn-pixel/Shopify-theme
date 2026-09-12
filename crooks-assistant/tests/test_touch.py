@@ -244,6 +244,20 @@ def test_the_two_halves_are_only_ever_drawn_in_their_own_band():
     assert ".branch-zone:has(> [hidden]){min-height:0;padding:0}" in STYLE
 
 
+def test_the_branch_band_yields_when_the_keyboard_takes_the_screen():
+    """`interactive-widget=resizes-content` shrinks the viewport rather than overlaying it, so
+    with the keyboard open the tablet is 601 x 418. The collision gate found the band lying
+    across the composer's own input there: `#branch-zone` was 108px of that 418px, with a chip
+    at [21,240 274x48] over the field at [33,284 535x46], and four of its rules fired at once.
+    A quarter of a 418px screen cannot be furniture \u2014 which is what the rest of that media
+    query already says about the dock, the orb and the notifications \u2014 so the band yields with
+    them. The halves are not what the owner is doing while he is typing into a field.
+    """
+    keyboard = STYLE[STYLE.index("@media (max-height:520px){"):]
+    keyboard = keyboard[:keyboard.index("\n}")]
+    assert 'body[data-mode="context"] .branch-zone{display:none}' in keyboard
+
+
 def test_the_header_band_never_outlives_the_second_half():
     """Found in a screenshot: the band still read "half 1 of 2" over a conversation that had
     one half. A merge or a close comes back through `applyBranches`, which redraws the bar —

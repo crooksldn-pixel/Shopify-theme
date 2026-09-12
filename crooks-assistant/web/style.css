@@ -828,6 +828,13 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
   .notes-workspace .note-words{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
   .notes-workspace .note-dismiss{min-height:32px;min-width:32px;padding:0 10px}
   .context-nav{margin-bottom:6px}
+  /* And the halves' band yields with everything else. The collision gate caught it lying
+     across the composer's own input at 601 x 418: `#branch-zone` was 108px of a 418px screen,
+     with a chip at [21,240 274x48] over the field at [33,284 535x46]. The owner is typing into
+     a field; the halves are not what he is doing, and the Split chip is a chip in the
+     navigation rail while there is one half anyway. He can still divide with the gesture, and
+     the band comes back the moment the keyboard does not need the screen. */
+  body[data-mode="context"] .branch-zone{display:none}
 }
 @media (orientation:landscape) and (max-height:820px){
   :root{--orb:260px}
