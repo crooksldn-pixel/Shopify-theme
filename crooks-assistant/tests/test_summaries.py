@@ -180,6 +180,9 @@ def row_labels(item) -> list[str]:
     "any returning customers today",
     "which customers today are returning customers",
     "how many returning customers today",
+    # The same question with no "returning" in it at all, which is `returning_customers_before`
+    # rather than `returning_customers` — two shapes, one procedure, one surface.
+    "has anyone bought today that has bought before",
 ])
 async def test_the_returning_customers_question_draws_one_compact_surface(text, shop):
     """ONE summary surface. Not seven customer profiles, not one profile, not a ranking.
@@ -514,8 +517,9 @@ def test_the_summary_recipes_read_only_and_call_no_model():
     from app.fastpath.recipes import RECIPES, assert_read_only
 
     mine = {k: v for k, v in RECIPES.items()
-            if k in ("returning_customers", "orders_attention", "order_list_summary")}
-    assert len(mine) == 3, sorted(RECIPES)
+            if k in ("returning_customers", "returning_customers_before",
+                     "orders_attention", "order_list_summary")}
+    assert len(mine) == 4, sorted(RECIPES)
     assert_read_only(mine)
     for recipe in mine.values():
         assert recipe.read_primitives == ("commerce_summary",), recipe.recipe_id

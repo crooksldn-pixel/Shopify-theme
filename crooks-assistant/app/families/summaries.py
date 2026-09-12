@@ -281,6 +281,16 @@ register(Recipe(
     cache_policy=CACHE_ANALYTICS, min_confidence=0.7, target_ms=900,
     plan=_plan_for("returning_customers"), render=_returning_render,
 ))
+# The same procedure under a second family name. `recipe_for` maps ONE family to ONE recipe,
+# and "who bought today that has bought before" and "any returning customers today" are
+# genuinely two shapes of the same question — so two families and two registrations rather
+# than one family with a condition in it.
+register(Recipe(
+    recipe_id="returning_customers_before", intent_family="returning_customers_before",
+    read_primitives=(READ_TOOL,), parallel_nodes=(("summary",),), ui="summary_list",
+    cache_policy=CACHE_ANALYTICS, min_confidence=0.7, target_ms=900,
+    plan=_plan_for("returning_customers"), render=_returning_render,
+))
 register(Recipe(
     recipe_id="orders_attention", intent_family="orders_attention",
     read_primitives=(READ_TOOL,), parallel_nodes=(("summary",),), ui="summary_list",
@@ -334,8 +344,17 @@ extend([
            base=0.72, floor=0.7, max_words=16),
     Family("returning_customers_before", needs=("bought", "before"),
            boosts=("customer", "period", "question", "returning"),
-           blocks=("mutation", "order_number", "email", "stock", "running_out", "ranking",
-                   "known_name", "possessive_name", "has_entity", "deixis"),
+           # `has_entity` and not `deixis`: "has anyone bought today that has bought before"
+           # carries a deixis word ("that") and is not about anything on screen, so blocking
+           # deixis left the owner's own shorter sentence unscored. What must not be taken is
+           # a sentence about the OPEN record — "what else has this customer ordered" —
+           # which is customer_history_lookup and requires an entity to be open.
+           # And it BLOCKS `returning`: with that word in the sentence the family above owns
+           # it. The two are one question and one procedure, so a collision between them is
+           # not an ambiguity to send to the model — it is one question scored twice, which
+           # is exactly what "too close to returning_customers_before" was.
+           blocks=("mutation", "returning", "order_number", "email", "stock", "running_out",
+                   "ranking", "known_name", "possessive_name", "has_entity"),
            base=0.72, floor=0.7, max_words=16),
     # "Which orders need attention?" — and NOT "show me today's orders", which is a listing.
     # `order_list_period` blocks nothing about attention, so without this family "which
@@ -348,11 +367,16 @@ extend([
            base=0.74, floor=0.7, max_words=14),
     # "What came in yesterday?" — a listing that names no noun. `order_list_period` needs the
     # word "order"; this takes the shapes that name the period and the arrival instead.
+    # It BLOCKS `order`, which is what keeps it out of `order_list_period`'s way: a sentence
+    # that names orders is that family's, and its `order_list` card is already a compact list
+    # of rows. Without the block, "show me the orders that came in yesterday" matched both
+    # and the collision sent a turn that used to be FAST to the model — a regression in the
+    # name of a surface it did not need.
     Family("order_list_summary", needs=("arrived", "period"),
-           boosts=("question", "listing", "order"),
-           blocks=("mutation", "order_number", "metric", "ranking", "running_out", "stock",
-                   "email", "delayed", "status", "address", "attention", "returning",
-                   "customer"),
+           boosts=("question", "listing"),
+           blocks=("mutation", "order", "order_number", "metric", "ranking", "running_out",
+                   "stock", "email", "delayed", "status", "address", "attention",
+                   "returning", "customer"),
            base=0.74, floor=0.7, max_words=12),
 ])
 
