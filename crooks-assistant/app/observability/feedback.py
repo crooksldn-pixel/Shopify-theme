@@ -27,6 +27,30 @@ and what it is not:
 * It is **test mode only**. `record` writes nothing when no test session is active, so a
   sentence like this on an ordinary day is answered by the assistant as it always was.
 
+D-12, found in the 11 September evening: **a complaint only counted if he said the word
+"log".** Sixteen seconds apart —
+
+    20:16:48  "Logical error here. You just pulled up two [name] screens for no reason"
+                  → NOT captured. Filed as an unrouted 'orders' request.
+    20:17:04  "Log your error there. You just pulled up two in the same UI"
+                  → captured.
+
+He stated the defect plainly, was not recorded, and had to repeat it with the magic word in
+front. There is a louder instance in the same session that was never captured at all —
+*"why is there bullshit on the screen right now?"*, the strongest negative signal of the
+evening, which exists in the report only as an unrouted "other" request with an STT_ERROR
+beside it.
+
+So a defect report is now recognised by its SHAPE as well as by an imperative to record one: a
+statement that the system did something wrong. "That's wrong." "Logical error here." "You just
+pulled up two of these." "Why is there X on the screen." "That's not what I asked for."
+
+And the shape rules are deliberately conservative, because the cost of over-reading is worse
+than the cost of under-reading: a tester whose approval is filed as a defect stops trusting the
+record. The same session's *"Is that not nice? It's actually like"* and *"I actually like"* are
+approval; *"Hi"*, *"Crooks OS"* and *"Are you working right now?"* are neither. Each of those
+is a NEGATIVE in `tests/test_owner_feedback.py`, and the rules are written to fail them.
+
 On what it holds. The rule for the timeline is ids, counts, tool names and milliseconds, and
 the one exception is what the OWNER said — the timeline already carries his question and the
 answer on every turn, because a session you cannot read back is not a record. His feedback is
@@ -52,7 +76,7 @@ MAX_NEARBY = 8
 # an instruction to RECORD something, or on a plain statement that something is broken — a
 # sentence that merely contains the word "log" ("the log says") is not one of these.
 KINDS: tuple[tuple[str, Any], ...] = (
-    ("log", re.compile(r"\b(?:please )?log(?: that| this| it)?\b(?!\s*(?:says?|file|in\b|out\b))", re.I)),
+    ("log", re.compile(r"\b(?:please )?log(?: that| this| it)?\b(?!\s*(?:says?|file|in\b|out\b|ical\b))", re.I)),
     ("note", re.compile(r"\b(?:note|make a note of|take a note of)\s+(?:that|this|the)\b|\bnote this bug\b", re.I)),
     ("record", re.compile(r"\brecord (?:that|this|it)\b|\bwrite (?:that|this) down\b|\bmake a note\b", re.I)),
     ("save_as_test", re.compile(r"\bsave (?:this|that|it) as a (?:test|case|regression)\b|\bturn (?:this|that) into a test\b", re.I)),
@@ -60,7 +84,51 @@ KINDS: tuple[tuple[str, Any], ...] = (
                           r"(?:broken|not working|buggy|stuck|frozen|dead|wrong|regressed)\b"
                           r"|\bdoes(?:n'?t| not) work(?: at all)?\b"
                           r"|\bthis is (?:a )?bug\b|\bthat'?s (?:a )?bug\b", re.I)),
+    # D-12. A defect stated plainly, with no instruction to write it down. Each of these is a
+    # sentence that asserts the SYSTEM did something wrong, and each is anchored tightly enough
+    # that ordinary conversation does not trip it.
+    ("wrong", re.compile(
+        # "that's wrong", "this is wrong", "that's not right" — about the thing on the glass.
+        r"\b(?:that'?s|thats|this is|it'?s|that is)\s+(?:just |completely |totally |all |quite |a bit )?"
+        r"(?:wrong|incorrect|not right|the wrong \w+|rubbish|nonsense|useless|broken)\b"
+        # "logical error", "that's an error", "your error there"
+        r"|\blogic(?:al)? error\b|\b(?:that'?s|this is) an error\b|\byour error\b"
+        # "that's not what I asked for" / "that's not what I wanted" / "I didn't ask for that"
+        r"|\bnot what i (?:asked|wanted|meant|said)\b|\bi did ?n'?t ask for\b"
+        r"|\bthat'?s not what i\b", re.I)),
+    ("did_the_wrong_thing", re.compile(
+        # "you just pulled up two screens", "you've opened the wrong one", "it showed me
+        # somebody else". A second person or the product itself, plus a mistake.
+        r"\b(?:you|it|you'?ve|you have|it'?s|it has)\s+(?:just |already )?"
+        r"(?:pulled up|opened|shown|showed|drew|drawn|gave|given|brought up|put up)\s+(?:me |us )?"
+        r"(?:the wrong|two|2|the same|somebody else|someone else|another)\b"
+        r"|\btwo of the same\b|\btwo (?:\w+ )?screens? for no reason\b"
+        r"|\bsame (?:thing|screen|card) twice\b", re.I)),
+    ("why_is_it", re.compile(
+        # "why is there X on the screen", "why can't I press anything", "why is nothing
+        # happening". A question in form and a complaint in substance.
+        r"\bwhy (?:is|are) there\b[^?]{0,60}\b(?:on (?:the|my) screen|here|up)\b"
+        r"|\bwhy (?:can'?t|cannot|won'?t) i\b"
+        r"|\bwhy (?:is|are)(?: there)? (?:nothing|no \w+|it) (?:happening|showing|working|there)\b"
+        r"|\bwhy (?:did|does) (?:it|you) (?:do|show|open|pull up) that\b"
+        r"|\bwhat is (?:it|this) doing\b", re.I)),
 )
+# The shapes that are a statement about the product rather than an instruction to record one.
+# Held by name so `recognise` can hold them to the extra tests below and the imperatives are
+# untouched — a man who says "log that" has already told us what he wants.
+_BY_SHAPE = frozenset({"broken", "wrong", "did_the_wrong_thing", "why_is_it"})
+# Approval, agreement and small talk. A defect report has to get past all of this, because a
+# tester whose compliments are filed as defects stops trusting the record. Every phrase here
+# is from the 11 September session.
+_NOT_A_COMPLAINT = re.compile(
+    r"\b(?:i (?:actually )?like|i like (?:that|this|it)|that'?s (?:quite )?(?:good|nice|great|better|lovely|class)"
+    r"|is that not (?:nice|good)|not bad|well done|perfect|brilliant|love (?:that|it|this)"
+    r"|that'?s (?:it|right|correct)|exactly|yes(?:,| )?(?:that|thank)|thank you|thanks"
+    r"|much better|spot on)\b", re.I)
+# Sentences that are not about the product at all: a greeting, its own name, a wake check.
+_NOT_ABOUT_THE_PRODUCT = re.compile(
+    r"^(?:hi|hey|hello|yo|morning|good morning|crooks(?: os)?|jarvis|are you (?:working|there|awake|on)"
+    r"|you there|can you hear me|test|testing)\b[\s,.!?]*$", re.I)
 # Words that make a "broken" sentence about the SHOP rather than about the product. "The
 # order is wrong" is a complaint about an order; "the back button is broken" is a defect.
 _ABOUT_THE_SHOP = re.compile(
@@ -84,8 +152,19 @@ def recognise(text: str) -> Recognition | None:
 
     An instruction to log, note, record or save is feedback whatever else is in it: "log that
     the split is broken" and "log that the refund did not go through" are both things the
-    owner wants written down. A bare statement that something is broken is feedback only when
-    it is not about the shop, because "the order is wrong" is a job, not a bug report.
+    owner wants written down.
+
+    A sentence that only STATES a defect — D-12's shapes — has three more tests to pass, and
+    all three exist to stop ordinary conversation being filed as a bug report:
+
+    * it must not be about the SHOP. "The order is wrong" is a job, not a defect; "the back
+      button is wrong" is a defect.
+    * it must not be approval. "That's quite good actually" contains no complaint, and the
+      acceptance script says so out loud in step 9.
+    * it must not be a greeting, the product's own name, or a check that it is awake.
+
+    An imperative skips all three, because a man who says "log that" has already said what he
+    wants done with it.
     """
     said = " ".join(str(text or "").split())
     if not said:
@@ -93,7 +172,11 @@ def recognise(text: str) -> Recognition | None:
     for kind, pattern in KINDS:
         if not pattern.search(said):
             continue
-        if kind == "broken" and _ABOUT_THE_SHOP.search(said):
+        if kind not in _BY_SHAPE:
+            return Recognition(kind=kind, text=said[:MAX_FEEDBACK_CHARS])
+        if _ABOUT_THE_SHOP.search(said) or _NOT_A_COMPLAINT.search(said):
+            return None
+        if _NOT_ABOUT_THE_PRODUCT.match(said):
             return None
         return Recognition(kind=kind, text=said[:MAX_FEEDBACK_CHARS])
     return None

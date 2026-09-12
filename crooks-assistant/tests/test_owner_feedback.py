@@ -105,6 +105,104 @@ def test_a_sentence_about_the_shop_is_not_a_bug_report(said):
     assert feedback.recognise(said) is None, said
 
 
+# ------------------------------------------------------- D-12: said plainly, without "log"
+
+
+@pytest.mark.parametrize(("said", "kind"), [
+    # The one that was missed, verbatim from 20:16:48. He said it plainly, was not recorded,
+    # and had to repeat it sixteen seconds later starting with the word "log".
+    ("Logical error here. You just pulled up two Rowan screens for no reason", "wrong"),
+    # The loudest negative signal of the evening, 23:08:27, which reached the report only as
+    # an unrouted "other" request with an STT_ERROR beside it.
+    ("What is it? What... There is just bullshit Yo, uh, what, why is there bullshit on the "
+     "screen right now?", "why_is_it"),
+    # What the acceptance script's step 9 asks him to say.
+    ("that's wrong, it's showing me two of the same thing", "wrong"),
+    ("that's not what I asked for", "wrong"),
+    ("You just pulled up two in the same UI", "did_the_wrong_thing"),
+    ("it showed me somebody else", "did_the_wrong_thing"),
+    ("why can't I press anything", "why_is_it"),
+    ("why is nothing happening", "why_is_it"),
+    ("what is it doing?", "why_is_it"),
+])
+def test_a_defect_stated_plainly_is_recorded_without_the_magic_word(said, kind):
+    """D-12. BEFORE: the family keyed on log / record / note / broken, so "logical error here,
+    you just pulled up two screens for no reason" was filed as an unrouted 'orders' request and
+    nothing wrote it down. He had to say it twice, the second time with the word "log" in
+    front.
+
+    NOW: a defect report is recognised by its shape — a statement that the system did something
+    wrong — and none of these contains an instruction to record anything.
+    """
+    got = feedback.recognise(said)
+    assert got is not None, said
+    assert got.kind == kind, (said, got.kind)
+    assert got.text, said
+
+
+@pytest.mark.parametrize("said", [
+    # Approval, from the same session. 23:11:44 and 23:06:34.
+    "Is that not nice? It's actually like",
+    "I actually like",
+    # What step 9 of the acceptance script asks him to say next, which must NOT be filed.
+    "that's quite good actually",
+    "that's better",
+    "perfect, thank you",
+    "yes, that's it",
+    # Not about the product at all, all from the same evening.
+    "Hi",
+    "Crooks OS",
+    "Are you working right now?",
+    "Stop",
+    "White",
+    "Broad",
+    # Ordinary work.
+    "Has anyone bought today that has bought before?",
+    "Pull up Rowan's orders",
+    "how many orders today?",
+    "ignore all of that, ignore all of that",
+    # A complaint about the SHOP, in the new shapes' own words.
+    "that's the wrong address",
+    "you sent the wrong order",
+])
+def test_conversation_and_approval_are_never_filed_as_defects(said):
+    """The bound on D-12, and the reason it is conservative. A tester whose compliments are
+    filed as bug reports stops trusting the record, so the shape rules have to fail every one
+    of these — and half of them are sentences the owner actually said on 11 September.
+
+    The three tests a stated defect has to pass, and an imperative does not: it must not be
+    about the shop, it must not be approval, and it must not be a greeting or a check that the
+    thing is awake.
+    """
+    assert feedback.recognise(said) is None, said
+
+
+def test_the_boundary_the_shop_test_draws_and_what_it_costs():
+    """Where the conservative rule is known to under-capture, written down rather than left to
+    be rediscovered.
+
+    "This is the wrong customer" is, in the 11 September session, a report of the worst defect
+    of the evening (D-14: it answered about somebody else). The shop test blocks it, because
+    the identical sentence about an order the shop got wrong is a job and not a bug. The shape
+    rules choose to miss this one rather than file every complaint about a parcel as a defect,
+    and one word from the owner — "log", "note", any imperative — recovers it.
+    """
+    assert feedback.recognise("this is the wrong customer") is None
+    assert feedback.recognise("log that this is the wrong customer") is not None
+    # And the same defect said about the SCREEN rather than about the record is captured.
+    assert feedback.recognise("you just pulled up the wrong one") is not None
+
+
+def test_an_imperative_still_skips_the_conservative_tests():
+    """The oracle that stops the rule above from swallowing real feedback: a man who says "log
+    that" has already said what he wants done with it, so none of the three extra tests applies
+    to him. "Log that the order is wrong" is about the shop AND is feedback."""
+    assert feedback.recognise("log that the refund did not go through") is not None
+    assert feedback.recognise("note that the address field is quite good but wrong") is not None
+    # And the same sentence WITHOUT the imperative is about the shop, so it is not filed.
+    assert feedback.recognise("the refund did not go through") is None
+
+
 # ------------------------------------------------------------------------ what is written
 
 
