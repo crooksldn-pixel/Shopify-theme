@@ -818,7 +818,7 @@ html[data-lite] .armed-dot{animation:none}
    the one thing on the glass the owner cannot work out from anything else on it. Two steps of
    opacity — no transform, no shadow, no compositing — because the 2019 panel drops frames on
    a scale before it drops them on anything.
-   ALL FIVE in-flight states, not just `committing`: the base rule below puts `sys-pulse` on
+   ALL FIVE in-flight states, not just `committing`: the base rule above puts `sys-pulse` on
    every one of them, and `data-lite` used to override only the first — so the old Samsung ran
    TWO continuous animations, a 1.2s opacity-and-scale pulse on four states and this one on
    the fifth. `animation:none` first so that whatever else the base rule ever grows is off
