@@ -547,3 +547,66 @@ async def test_a_bounded_fan_out_reports_what_failed_and_answers_anyway():
     )
     assert out == [0, 2, 4, None, 8], out
     assert list(failed) == [3] and "gmail said no" in failed[3]
+
+
+# ------------------------------------------------------------------ §36, this half of it
+
+
+async def test_a_summary_question_never_reaches_the_model(shop):
+    """turn_be1b384ca420 took 12,895 ms, of which 12,116 ms was the model, and then dumped
+    seven cards. §36: do not do that.
+
+    The recipe answers it. What that means precisely, and is asserted here: the turn takes
+    the FAST lane, the answer and the surface are both built by the recipe, and it hands the
+    model nothing to continue — `continuation` is the one channel a recipe has for saying
+    "and Claude must write the rest of this", and a summary has no rest.
+    """
+    from app.fastpath import choose_lane
+
+    text = "any returning customers today"
+    session = Session(session_id="p36")
+    session.turn_id = "turn_p36"
+    branch = Branch(branch_id="br_p36", session_id="p36")
+    intent = resolve(text, branch=branch)
+    recipe = recipe_for(intent.family)
+    lane, why = choose_lane(intent, recipe=recipe, text=text)
+    assert lane == "FAST", f"{text!r} took {lane}: {why}"
+    fast = await runner.run(recipe, Ctx(runtime=None, session=session, branch=branch,
+                                        intent=intent, text=text))
+    assert not fast.deferred, fast.defer
+    assert fast.continuation == "", "a summary asked the model to finish it"
+    assert fast.answer and fast.surfaces, "the recipe did not produce both halves itself"
+    assert len(fast.calls) == 1, [c.name for c in fast.calls]
+
+
+async def test_a_tap_on_a_row_the_mac_holds_costs_nothing_at_all(shop):
+    """§36: a known cached entity opens immediately.
+
+    Measured as what it means — zero requests to the shop — on the exact path a tap takes:
+    `open.entity` with the ref the row carried, replayed out of the entity cache. The number
+    that matters is the delta after the summary has been drawn. (`/command` reports
+    `model_calls: 0` for every tap by construction: app/routes/command.py never calls one.)
+    """
+    from app import commands
+    from app.memory import ENTITY
+    from app.memory import current as memory
+    from app.presentation import present
+
+    fast, session = await turn("any returning customers today")
+    row = fast.surfaces[0].data["rows"][0]
+    memory().put(ENTITY, f"customer:{row['ref']}", {
+        "customer_id": row["ref"], "name": "Cy Cole", "orders": 2, "spent": "120.00 GBP",
+        "standing": "returning", "recent": [],
+    }, source="shopify", query="test:n+1", provenance={"test": "n+1"})
+
+    before = shop.source_reads
+    branch = Branch(branch_id="br_tap", session_id=session.session_id)
+    opened = commands.run("open.entity", commands.Ctx(
+        runtime=None, session=session, branch=branch,
+        args={"kind": row["kind"], "ref": row["ref"], "label": row["label"]},
+    ))
+    assert opened.ok, f"{opened.code}: {opened.detail}"
+    assert shop.source_reads == before, f"the tap read the shop: {shop.by_query}"
+    assert "needs_read" not in opened.changed, opened.changed
+    drawn = present(list(opened.calls), session=session)
+    assert [item["type"] for item in drawn] == ["customer"], [item["type"] for item in drawn]
