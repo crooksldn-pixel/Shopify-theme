@@ -59,6 +59,28 @@ SPLIT_SCRIPT = ROOT / "scripts" / "browser" / "split.js"
 # proven out of the queue (§19, §20, §22). Its own file and its own run, because it walks one
 # long path rather than sampling many screens, and a failure in it has to name the step.
 EMAIL_SCRIPT = ROOT / "scripts" / "browser" / "email.js"
+# §30. The states the owner physically held on 11 September, put back on a screen: seven
+# customer profiles for a one-line answer, a customer card open on an empty Email tab, a
+# thousand-pixel capability card, the branch chips under a full-viewport voice target, the
+# twenty-six-tap burst with the durations the tablet recorded. Every one of them is DERIVED
+# from `logs/test-sessions/ts-20260911-201129-phase-4-live-tablet-test.jsonl` by
+# `experience/fixtures/live_states.py`; nothing in the committed fixture was invented and no
+# customer name or address from that file is in it. Phase 4's nineteen fixtures were all
+# invented and all green through that evening, which is the whole reason this file exists.
+REPLAY_SCRIPT = ROOT / "scripts" / "browser" / "replay.js"
+# §33. The four click paths, walked with a finger and judged on the VISIBLE destination. The
+# live session recorded eight `navigation.home` commands posted and eight accepted while the
+# owner pressed Home four times in three seconds: a 200 is not an arrival, and no check in
+# this suite had ever said so.
+CLICKPATH_SCRIPT = ROOT / "scripts" / "browser" / "clickpath.js"
+# §32. The thirty-four named surfaces. Every shot declares what must be on the glass for the
+# file to BE that shot, so a blank orb screen can never again be saved as a picture of the
+# customer workspace. Run with no output directory it writes nothing and still checks every
+# surface, which is why it belongs in the gate as well as in the capture.
+SCREENS_SCRIPT = ROOT / "scripts" / "browser" / "screens.js"
+#: Where §32's matrix is written. Its own directory, not the report gallery: these are named,
+#: numbered, and compared release to release by eye.
+SCREENS_OUT = ROOT / "docs" / "screens" / "phase5"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -175,7 +197,8 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # prefixes its own names (accept-, action-, collide-, density-, split-, tab-, e0...),
         # so nothing here overwrites anything else.
         for extra in (TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
-                      SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT):
+                      SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT, REPLAY_SCRIPT,
+                      CLICKPATH_SCRIPT):
             if not extra.exists():
                 continue
             await asyncio.to_thread(
@@ -207,6 +230,58 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         log.warning("browser checks failed")
     _ = only
     return sorted(out.glob("*.png"))
+
+
+async def capture_matrix(*, out: Path | None = None) -> dict[str, Any]:
+    """§32's thirty-four named surfaces, written where they can be compared by eye.
+
+    Its own entry point, separate from `capture_screens`, for two reasons. The files are NAMED
+    and NUMBERED — `10-full-customer-rich-workspace.png` — and a numbered set that shares a
+    directory with a gallery of `collide-601-*.png` cannot be read as a matrix. And a shot
+    whose surface does not exist is written as `…MISSING.png`, so a directory listing is
+    itself the report; mixing that convention into the report gallery would make every other
+    file there ambiguous.
+
+    Returns the script's own payload: checks, the files written, and `missing` — the shots
+    whose surface is not on the glass yet, each with the workstream that owns it.
+    """
+    ok, why = available()
+    if not ok:
+        return {"skipped": True, "why": why, "checks": [], "shots": [], "missing": []}
+    where = out or SCREENS_OUT
+    where.mkdir(parents=True, exist_ok=True)
+    # Stale pictures are worse than none: a shot that stopped being captured would otherwise
+    # keep its last good file and the matrix would claim a surface nobody had photographed.
+    for stale in where.glob("*.png"):
+        stale.unlink()
+    port = _free_port()
+    server, task, _store = await serve_fixture_world(port)
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            ["node", str(SCREENS_SCRIPT), f"http://127.0.0.1:{port}", str(where)],
+            cwd=ROOT, capture_output=True, text=True, timeout=1200,
+            env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
+        )
+    finally:
+        await _stop(server, task)
+    payload: dict[str, Any] = {}
+    for line in reversed((result.stdout or "").strip().splitlines()):
+        try:
+            payload = json.loads(line)
+            break
+        except ValueError:
+            continue
+    if not payload:
+        return {"skipped": False, "ok": False, "checks": [{
+            "name": "the screenshot matrix ran", "ok": False,
+            "detail": (result.stdout + result.stderr)[-400:],
+        }], "shots": [], "missing": []}
+    for entry in payload.get("checks") or []:
+        mark = "ok  " if entry.get("ok") else "MISSING"
+        print(f"    {mark} {entry.get('name')}"
+              + (f"  — {entry.get('detail')}" if not entry.get("ok") else ""), file=sys.stderr)
+    return payload
 
 
 def _start_gate_session(scratch: str):
@@ -246,6 +321,11 @@ async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, An
     exactly how accept.js came to be the only check that had ever seen the duplicate
     `replaceCard`. Keyword-only, so nobody narrows the default sweep by accident.
 
+    Phase 5 widened it by four and narrowed it by nothing. `density.js` was declared and
+    screenshotted but was not in this tuple, so between releases it proved nothing; the other
+    three are §30's live replay, §33's click paths and §32's matrix. The matrix runs here with
+    NO output directory, so it writes no files and still asks of every one of the thirty-four
+    surfaces whether it exists — which is the half of §32 that belongs in a gate.
     """
     ok, why = available()
     if not ok:
@@ -262,13 +342,21 @@ async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, An
     try:
         results = []
         for script in (scripts if scripts is not None else
-                       (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT, SPLIT_SCRIPT, EMAIL_SCRIPT)):
+                       (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
+                        SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT, REPLAY_SCRIPT,
+                        CLICKPATH_SCRIPT, SCREENS_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(
                 subprocess.run,
                 ["node", str(script), f"http://127.0.0.1:{port}", ""],
-                cwd=ROOT, capture_output=True, text=True, timeout=600,
+                cwd=ROOT, capture_output=True, text=True,
+                # `screens.js` walks to thirty-four surfaces at one size and twelve at another,
+                # through real reads on a real backend. It waits on the page rather than on the
+                # clock, so it is minutes rather than tens of minutes — but a 600s ceiling is
+                # close enough to its honest runtime that a slow machine would report a gate
+                # TIMEOUT as a gate failure, which is the worst kind of red.
+                timeout=1200 if script == SCREENS_SCRIPT else 600,
                 env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
             ))
     finally:

@@ -1,0 +1,1329 @@
+{
+ "derived_by": "experience/fixtures/live_states.py :: derive()",
+ "events": 1365,
+ "pii": "no customer names and no email addresses. ids are four digits; people are invented.",
+ "source": "ts-20260911-201129-phase-4-live-tablet-test",
+ "states": [
+  {
+   "ask": {
+    "max_cards_of_type": {
+     "customer": 1
+    },
+    "max_deck_height": 1200,
+    "require_any_type": [
+     "customer_list",
+     "table",
+     "metric_group",
+     "assistant",
+     "customer"
+    ],
+    "text": "has anyone bought today that has bought before, a returning customer?"
+   },
+   "forensics": "D-4 (and D-2: the tab)",
+   "gate": "\u00a713 \u00b7 a summary question is answered with a summary, not with entity profiles",
+   "id": "returning_customers_seven_cards",
+   "observed": {
+    "at": "20:13:44",
+    "cards": [
+     {
+      "height": 265,
+      "ref": "cust-6343",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-4807",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-5015",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-4055",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-7975",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-2855",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-8887",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     }
+    ],
+    "cards_height": 1949,
+    "cards_visible": 524,
+    "collisions": 0,
+    "customer_history_calls": 7,
+    "distinct_refs": 7,
+    "long_scroll": true,
+    "screen": "context",
+    "seq": 236,
+    "viewport": {
+     "dpr": 1.33,
+     "h": 889,
+     "w": 601
+    }
+   },
+   "owned_by": "workstream C \u2014 families and presentation",
+   "owner_words": "Has anyone bought today that has bought before, a returning customer?",
+   "replay": {
+    "expect": {
+     "card_count": 7,
+     "deck_height_min": 1700,
+     "distinct_refs": 7,
+     "every_card_open_on": "Email",
+     "types": [
+      "customer",
+      "customer",
+      "customer",
+      "customer",
+      "customer",
+      "customer",
+      "customer"
+     ]
+    },
+    "mode": "context",
+    "tab": "email",
+    "ui": [
+     {
+      "data": {
+       "customer_id": "cust-6343",
+       "email": "freya.mackintosh@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-6343",
+          "order_number": "#1943",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Freya Mackintosh",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-4807",
+       "email": "priya.raman@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-4807",
+          "order_number": "#1907",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Priya Raman",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-5015",
+       "email": "mateo.silva@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-5015",
+          "order_number": "#1915",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Mateo Silva",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-4055",
+       "email": "casper.lund@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-4055",
+          "order_number": "#1955",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Casper Lund",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-7975",
+       "email": "jonas.halvorsen@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-7975",
+          "order_number": "#1975",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Jonas Halvorsen",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-2855",
+       "email": "rowan.pike@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-2855",
+          "order_number": "#1955",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Rowan Pike",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-8887",
+       "email": "otto.brennan@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-8887",
+          "order_number": "#1987",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Otto Brennan",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     }
+    ]
+   },
+   "reproduces": "a one-line question answered with seven full customer profiles, 265 px each, 1,949 px of deck, seven different ids, every one open on Email"
+  },
+  {
+   "ask": {
+    "one_card_per_entity": true,
+    "text": "show me Mia Jones's orders in her lifetime"
+   },
+   "forensics": "owner, 20:17:05 \u2014 \"Log your error there. You just pulled up two in the same UI\"",
+   "gate": "\u00a713 \u00b7 one entity is one surface in a deck",
+   "id": "duplicate_customer_surface",
+   "observed": {
+    "at": "20:16:39",
+    "cards": [
+     {
+      "height": 232,
+      "ref": "cust-5015",
+      "type": "customer"
+     },
+     {
+      "height": 283,
+      "ref": "cust-5015",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Overview",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     }
+    ],
+    "cards_height": 547,
+    "cards_visible": 532,
+    "collisions": 0,
+    "long_scroll": true,
+    "same_ref_twice": true,
+    "screen": "context",
+    "seq": 647,
+    "viewport": {
+     "dpr": 1.33,
+     "h": 889,
+     "w": 601
+    }
+   },
+   "owned_by": "workstream C \u2014 families and presentation",
+   "owner_words": "You just pulled up two in the same UI",
+   "replay": {
+    "expect": {
+     "card_count": 2,
+     "distinct_refs": 1,
+     "types": [
+      "customer",
+      "customer"
+     ]
+    },
+    "mode": "context",
+    "tab": "",
+    "ui": [
+     {
+      "data": {
+       "customer_id": "cust-5015",
+       "email": "mateo.silva@example.com",
+       "name": "Mateo Silva",
+       "orders": 1,
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-5015",
+       "email": "mateo.silva@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-5015",
+          "order_number": "#1915",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Mateo Silva",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     }
+    ]
+   },
+   "reproduces": "two customer cards for the SAME customer in one deck, 232 px and 283 px, one of them without the tabs the other has"
+  },
+  {
+   "ask": {
+    "require_any_type": [
+     "customer"
+    ],
+    "text": "pull up the history of Mia Jones and her orders, see how many times she has ordered, see how much she spent in total, and see if she is in Gmail anywhere"
+   },
+   "forensics": "D-3 \u00b7 the turn's only new read was gmail_search; renders were [['email_list'],['email_list']]",
+   "gate": "\u00a73/\u00a76 \u00b7 a new read ENRICHES the workspace it belongs to; the last tool is not the screen",
+   "id": "customer_history_gmail_email_list_only",
+   "observed": {
+    "at": "20:17:44",
+    "cards": [
+     {
+      "height": 187,
+      "type": "email_list"
+     }
+    ],
+    "cards_height": 207,
+    "cards_visible": 207,
+    "collisions": 0,
+    "long_scroll": false,
+    "screen": "context",
+    "seq": 723,
+    "tools": [
+     "gmail_search"
+    ],
+    "viewport": {
+     "dpr": 1.33,
+     "h": 889,
+     "w": 601
+    }
+   },
+   "owned_by": "workstream D \u2014 workspace and progressive hydration",
+   "owner_words": "Pull up the history of [a customer] and his orders. See how many times he's ordered, see how much he spent in total, and see if he's in the inbox or for Gmail anywhere",
+   "replay": {
+    "expect": {
+     "card_count": 1,
+     "deck_height_max": 400,
+     "types": [
+      "email_list"
+     ]
+    },
+    "mode": "context",
+    "tab": "",
+    "ui": [
+     {
+      "data": {
+       "count": 0,
+       "empty": true,
+       "note": "Nothing from them in the inbox.",
+       "threads": [],
+       "title": "Email"
+      },
+      "type": "email_list"
+     }
+    ]
+   },
+   "reproduces": "a request for a customer's history, orders, spend AND their email, answered with one 187 px email_list and nothing else"
+  },
+  {
+   "ask": {
+    "forbid_types": [
+     "capability"
+    ],
+    "require_any_type": [
+     "customer"
+    ],
+    "text": "can you expand Mia Jones's customer page?"
+   },
+   "forensics": "D-5 \u00b7 family capability_summary at 0.70; the two further attempts drew nothing at all",
+   "gate": "\u00a74/\u00a75 \u00b7 \"can you\" is not a capability question when an entity and an operation follow it",
+   "id": "customer_page_expansion_capability",
+   "observed": {
+    "at": "20:14:03",
+    "cards": [
+     {
+      "height": 1014,
+      "sections": [
+       "Try asking"
+      ],
+      "tab_active": "The shop",
+      "tabs": [
+       "The shop",
+       "The inbox",
+       "Sales and stock",
+       "Bulk changes"
+      ],
+      "type": "capability"
+     }
+    ],
+    "cards_height": 1034,
+    "cards_visible": 524,
+    "collisions": 0,
+    "long_scroll": true,
+    "screen": "context",
+    "seq": 270,
+    "viewport": {
+     "dpr": 1.33,
+     "h": 889,
+     "w": 601
+    }
+   },
+   "owned_by": "workstream C \u2014 families and presentation",
+   "owner_words": "Can you expand [a customer]'s customer page?",
+   "replay": {
+    "expect": {
+     "card_count": 1,
+     "deck_height_min": 900,
+     "types": [
+      "capability"
+     ]
+    },
+    "mode": "context",
+    "tab": "shop",
+    "ui": [
+     {
+      "data": {
+       "counts": {
+        "bulk": 5,
+        "changes": 9,
+        "reads": 23
+       },
+       "examples": [
+        "show me today's orders",
+        "what is running out?",
+        "who has not replied?",
+        "how are sales this week?",
+        "tag everything unfulfilled",
+        "what did we sell most of last month?"
+       ],
+       "groups": [
+        {
+         "area": "shop",
+         "items": [
+          {
+           "detail": "by number, by customer, or today's",
+           "label": "Look up an order",
+           "name": "orders",
+           "state": "ready"
+          },
+          {
+           "detail": "their orders, their spend, their email",
+           "label": "Look up a customer",
+           "name": "customers",
+           "state": "ready"
+          },
+          {
+           "detail": "staged for you to apply",
+           "label": "Change a delivery address",
+           "name": "address",
+           "state": "ready"
+          },
+          {
+           "detail": "with or without tracking",
+           "label": "Mark an order as shipped",
+           "name": "fulfil",
+           "state": "ready"
+          },
+          {
+           "detail": "staged for you to apply",
+           "label": "Cancel and refund an order",
+           "name": "cancel",
+           "state": "ready"
+          },
+          {
+           "detail": "appended, never replaced",
+           "label": "Add a note to an order",
+           "name": "note",
+           "state": "ready"
+          },
+          {
+           "detail": "percentage, fixed or free delivery",
+           "label": "Create a discount code",
+           "name": "discount",
+           "state": "ready"
+          },
+          {
+           "detail": "nothing is charged",
+           "label": "Start a draft order",
+           "name": "draft",
+           "state": "ready"
+          },
+          {
+           "detail": "per variant, per location",
+           "label": "Set a stock level",
+           "name": "inventory",
+           "state": "ready"
+          },
+          {
+           "detail": "staged for you to apply",
+           "label": "Refund an order",
+           "name": "refund",
+           "state": "ready"
+          }
+         ],
+         "label": "The shop"
+        },
+        {
+         "area": "inbox",
+         "items": [
+          {
+           "label": "Search the inbox",
+           "name": "search",
+           "state": "ready"
+          },
+          {
+           "label": "Reply to a thread",
+           "name": "reply",
+           "state": "ready"
+          },
+          {
+           "label": "Archive a thread",
+           "name": "archive",
+           "state": "ready"
+          }
+         ],
+         "label": "The inbox"
+        },
+        {
+         "area": "sales",
+         "items": [
+          {
+           "label": "Sales for a period",
+           "name": "sales",
+           "state": "ready"
+          },
+          {
+           "label": "What is running out",
+           "name": "stock",
+           "state": "ready"
+          }
+         ],
+         "label": "Sales and stock"
+        },
+        {
+         "area": "bulk",
+         "items": [
+          {
+           "label": "Tag a whole set",
+           "name": "tags",
+           "state": "ready"
+          }
+         ],
+         "label": "Bulk changes"
+        }
+       ],
+       "note": "Every capability, and where it stands on this Mac right now.",
+       "title": "What this can do",
+       "writes_enabled": true
+      },
+      "type": "capability"
+     }
+    ]
+   },
+   "reproduces": "\"can you expand [a customer]'s customer page?\" answered with a 1,014 px capability card of four tabs listing what the system can do"
+  },
+  {
+   "forensics": "D-2 \u00b7 renderOpts().tab is one value per BRANCH, handed to every card that has tabs",
+   "gate": "\u00a73/\u00a712 \u00b7 a tab belongs to an ENTITY; a freshly-drawn card opens on the tab the task implies",
+   "id": "empty_email_section",
+   "observed": {
+    "at": "20:13:44",
+    "cards": [
+     {
+      "height": 265,
+      "ref": "cust-6343",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-4807",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-5015",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-4055",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-7975",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-2855",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     },
+     {
+      "height": 265,
+      "ref": "cust-8887",
+      "sections": [
+       "Orders",
+       "Email"
+      ],
+      "tab_active": "Email",
+      "tabs": [
+       "Overview",
+       "Orders",
+       "Email"
+      ],
+      "type": "customer"
+     }
+    ],
+    "cards_height": 1949,
+    "cards_visible": 524,
+    "collisions": 0,
+    "customer_cards_by_active_tab": {
+     "Email": 14,
+     "Orders": 4,
+     "Overview": 1
+    },
+    "email_tab_taps_on_a_customer": 0,
+    "long_scroll": true,
+    "screen": "context",
+    "seq": 237,
+    "viewport": {
+     "dpr": 1.33,
+     "h": 889,
+     "w": 601
+    }
+   },
+   "owned_by": "workstream B \u2014 the renderer's tab ownership",
+   "owner_words": "I'm not seeing any UI here except email where there's nothing. I want to also be seeing his orders and his history and like an email write box",
+   "replay": {
+    "expect": {
+     "card_count": 2,
+     "distinct_refs": 2,
+     "types": [
+      "customer",
+      "customer"
+     ]
+    },
+    "mode": "context",
+    "tab": "email",
+    "ui": [
+     {
+      "data": {
+       "customer_id": "cust-6343",
+       "email": "freya.mackintosh@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-6343",
+          "order_number": "#1943",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Freya Mackintosh",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     },
+     {
+      "data": {
+       "customer_id": "cust-4807",
+       "email": "priya.raman@example.com",
+       "history": {
+        "available": true,
+        "first_order_at": "2026-03-04T10:00:00Z",
+        "orders": 1,
+        "other_unfulfilled": [],
+        "recent": [
+         {
+          "fulfillment": "fulfilled",
+          "order_id": "order-4807",
+          "order_number": "#1907",
+          "placed_at": "2026-09-11T09:14:00Z",
+          "total": "\u00a360.00"
+         }
+        ],
+        "recent_truncated": false,
+        "since": "2026-03-04T10:00:00Z",
+        "spent": "\u00a360.00",
+        "standing": "returning"
+       },
+       "name": "Priya Raman",
+       "orders": 1,
+       "related_email": {
+        "available": true,
+        "threads": []
+       },
+       "spent": "\u00a360.00",
+       "standing": "returning"
+      },
+      "type": "customer"
+     }
+    ],
+    "verdict": {
+     "max_cards_open_on": {
+      "Email": 1
+     }
+    }
+   },
+   "reproduces": "a customer card opened on Email with nothing behind the tab \u2014 the state behind \"I'm not seeing any UI here except email where there's nothing\". 14 of the session's 19 tabbed customer cards were drawn like this, and the Email tab was never once tapped on a customer"
+  },
+  {
+   "drive": {
+    "steps": [
+     {
+      "do": "idle"
+     },
+     {
+      "do": "hit_test",
+      "selector": "#branch-bar [data-action=\"split\"]"
+     },
+     {
+      "do": "tap_selector",
+      "expect_no_post": "/turn",
+      "selector": "#branch-bar [data-action=\"split\"]"
+     },
+     {
+      "do": "hit_test",
+      "selector": "#branch-bar .branch-chip"
+     },
+     {
+      "do": "hit_test",
+      "selector": "#branch-bar [data-action=\"merge\"]"
+     },
+     {
+      "do": "hit_test",
+      "selector": "#branch-bar [data-action=\"cancel\"]"
+     },
+     {
+      "do": "collide",
+      "interactive_must_be": 0
+     }
+    ]
+   },
+   "forensics": "D-1 \u00b7 #branch-bar is a child of .orb-zone (position:relative, z-index:1), which caps it under #talk at z-index:3 with inset:0",
+   "gate": "\u00a79 \u00b7 zero collisions involving interactive elements, and every branch control hit-testable",
+   "id": "split_overlap_branch_under_voice",
+   "observed": {
+    "at": "23:11:39",
+    "cards": [],
+    "cards_height": 400,
+    "cards_visible": 400,
+    "collisions": 3,
+    "hold_targets": [
+     "dock",
+     "orb"
+    ],
+    "long_scroll": false,
+    "orb_renders_with_collisions": 20,
+    "screen": "orb",
+    "seq": 1272,
+    "two_halves_from": "23:10:55",
+    "two_halves_until": "23:11:46",
+    "viewport": {
+     "dpr": 1.33,
+     "h": 889,
+     "w": 601
+    },
+    "worst_collision_count": 4
+   },
+   "owned_by": "workstream A \u2014 DOM layering and z-index",
+   "owner_words": "the split button is actually rendering over the release to send button, and there's no actual way to click the split button",
+   "reproduces": "the idle screen with two halves: the branch bar's Split/Merge/Close chips painted and hit-tested UNDER a full-viewport voice target. The tablet measured collisions on 20 orb-screen renders, worst 4, while the gate was green"
+  },
+  {
+   "drive": {
+    "steps": [
+     {
+      "do": "idle"
+     },
+     {
+      "do": "tap_selector",
+      "expect_no_post": "/turn",
+      "selector": "#branch-bar [data-action=\"split\"]"
+     },
+     {
+      "count": 2,
+      "do": "expect_branches"
+     },
+     {
+      "do": "tap_selector",
+      "expect_no_post": "/turn",
+      "selector": "#branch-bar [data-action=\"merge\"]"
+     },
+     {
+      "count": 1,
+      "do": "expect_branches"
+     }
+    ]
+   },
+   "forensics": "D-1 \u00b7 owner: \"I cannot click the merge or close button or any of the other buttons for the two blobs\"",
+   "gate": "\u00a77/\u00a78 \u00b7 Merge and Close are reachable by tap, and a tap on them is never a recording",
+   "id": "merge_close_tap",
+   "observed": {
+    "at": "23:11:48",
+    "branch_navigations": [
+     {
+      "by": "gesture",
+      "nav": "split"
+     },
+     {
+      "by": "gesture",
+      "nav": "split"
+     },
+     {
+      "by": "gesture",
+      "nav": "merge"
+     },
+     {
+      "by": "gesture",
+      "nav": "split"
+     }
+    ],
+    "by_control": 0,
+    "by_gesture": 4,
+    "merge_status": 200,
+    "render_before": {
+     "at": "23:11:48",
+     "cards": [],
+     "cards_height": 602,
+     "cards_visible": 602,
+     "collisions": 4,
+     "long_scroll": false,
+     "screen": "orb",
+     "seq": 1292,
+     "viewport": {
+      "dpr": 1.33,
+      "h": 889,
+      "w": 601
+     }
+    },
+    "seq": 1293
+   },
+   "owned_by": "workstream A \u2014 touch ownership and layering",
+   "owner_words": "I cannot click the merge or close button or any of the other buttons for the two blobs, because wherever I press just leads to you listening",
+   "reproduces": "the merge the owner could only ever reach with a gesture. All four branch navigations in the session were `by: gesture`; not one was by a control, and the orb screen he was tapping measured 4 collisions"
+  },
+  {
+   "drive": {
+    "steps": [
+     {
+      "do": "idle"
+     },
+     {
+      "do": "tap_burst",
+      "durations_from": "observed.ms",
+      "expect_no_post": "/turn",
+      "expect_no_recording": true,
+      "near": "#branch-bar [data-action=\"split\"]"
+     },
+     {
+      "do": "tap_burst",
+      "durations_from": "observed.ms",
+      "expect_no_post": "/turn",
+      "expect_no_recording": true,
+      "near": ".dock-btn"
+     }
+    ]
+   },
+   "forensics": "D-1 \u00b7 63 sub-200 ms holds `sent` in 19 bursts; 63 `tablet_recording_too_short`; 131 of 132 hold starts report target `dock`",
+   "gate": "\u00a77 \u00b7 zero ordinary control taps may emit a recording event",
+   "id": "dock_touch_burst",
+   "observed": {
+    "every_one_sent_a_recording": true,
+    "from": "23:08:31",
+    "hold_starts": 132,
+    "hold_starts_on_dock": 131,
+    "ms": [
+     104,
+     88,
+     81,
+     118,
+     88,
+     82,
+     97,
+     92,
+     101,
+     89,
+     119,
+     89,
+     81,
+     39,
+     90,
+     118,
+     58,
+     79,
+     103,
+     55,
+     79,
+     96,
+     81,
+     115,
+     140,
+     114
+    ],
+    "recordings_too_short": 63,
+    "sent_under_200ms": 63,
+    "taps": 26,
+    "until": "23:08:41"
+   },
+   "owned_by": "workstream A \u2014 the touch-ownership state machine",
+   "owner_words": "wherever I press just leads to you listening",
+   "reproduces": "26 consecutive taps beside the dock in ten seconds, the exact durations the tablet recorded (39-140 ms), every one of which the voice layer turned into a recording"
+  },
+  {
+   "drive": {
+    "steps": [
+     {
+      "do": "ask",
+      "text": "what are the best sellers this month?"
+     },
+     {
+      "args": {
+       "kind": "product",
+       "ref": "gid://shopify/Product/0"
+      },
+      "command": "open.entity",
+      "do": "post_command",
+      "expect_code": "not_held",
+      "expect_ok": false
+     },
+     {
+      "do": "refusal_carries_words"
+     },
+     {
+      "do": "no_control_carries_unheld_ref"
+     }
+    ]
+   },
+   "forensics": "D-6 \u00b7 command open.entity ok=false code=not_held, then render items ['half_empty'] named offer_beside",
+   "gate": "\u00a718 \u00b7 a control is not drawn before its destination is known to exist, and a refusal is visible rather than an empty half",
+   "id": "refused_open_entity_half_empty",
+   "observed": {
+    "at": "23:12:30",
+    "code": "not_held",
+    "command": "open.entity",
+    "entity_kind": "product",
+    "entity_ref": "prod-4663",
+    "ok": false,
+    "seq": 1355,
+    "then_named": "offer_beside",
+    "then_rendered": [
+     "half_empty"
+    ]
+   },
+   "owned_by": "workstream D \u2014 offers and held facts",
+   "owner_words": "(no words \u2014 he tapped it and nothing arrived)",
+   "reproduces": "a control that posted `open.entity` for something the Mac was not holding: refused `not_held`, and the half then drew `half_empty` with no word about why"
+  },
+  {
+   "drive": {
+    "steps": [
+     {
+      "do": "ask",
+      "text": "show me order 1938"
+     },
+     {
+      "do": "press_home_repeatedly",
+      "times": 7,
+      "within_ms": 4000
+     }
+    ]
+   },
+   "forensics": "D-7 \u00b7 navigation.home 8 posted / 8 accepted / 0 refused; the render after the seventh press is the same 580 px order card and a 146 px attention card",
+   "gate": "\u00a716 \u00b7 navigation success is a VISIBLE workspace, not an accepted HTTP code",
+   "id": "home_back_no_arrival",
+   "observed": {
+    "commands_accepted": 8,
+    "commands_posted": 8,
+    "commands_refused": 0,
+    "from": "20:15:17",
+    "presses_in_session": 8,
+    "presses_in_window": 7,
+    "render_after": {
+     "at": "20:15:20",
+     "cards": [
+      {
+       "actions": [
+        "fulfil",
+        "address",
+        "cancel",
+        "note"
+       ],
+       "height": 580,
+       "ref": "order-7655",
+       "sections": [
+        "Money",
+        "Items \u00b7 1",
+        "Shipping",
+        "Customer",
+        "Email"
+       ],
+       "tab_active": "Overview",
+       "tabs": [
+        "Overview",
+        "Items \u00b7 1",
+        "Shipping",
+        "Customer",
+        "Email"
+       ],
+       "type": "order"
+      },
+      {
+       "height": 146,
+       "type": "attention"
+      }
+     ],
+     "cards_height": 758,
+     "cards_visible": 524,
+     "collisions": 0,
+     "long_scroll": true,
+     "screen": "context",
+     "seq": 477,
+     "viewport": {
+      "dpr": 1.33,
+      "h": 889,
+      "w": 601
+     }
+    },
+    "seq": 404,
+    "until": "20:15:20"
+   },
+   "owned_by": "workstream D \u2014 navigation destinations",
+   "owner_words": "(no words \u2014 he pressed it seven times)",
+   "reproduces": "seven presses of Home in four seconds, every one accepted (8 posted, 8 accepted, 0 refused all session) and the deck still showing the order card"
+  }
+ ],
+ "viewport": {
+  "dpr": 1.33,
+  "h": 889,
+  "w": 601
+ }
+}

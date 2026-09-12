@@ -1,0 +1,422 @@
+{
+ "viewports": [
+  "601x889",
+  "800x1280"
+ ],
+ "shots": [
+  {
+   "viewport": "601x889",
+   "id": "01",
+   "name": "idle",
+   "ok": true,
+   "file": "601x889-01-idle.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "02",
+   "name": "listening",
+   "ok": true,
+   "file": "601x889-02-listening.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "03",
+   "name": "orders-list",
+   "ok": true,
+   "file": "601x889-03-orders-list.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "04",
+   "name": "order-detail",
+   "ok": true,
+   "file": "601x889-04-order-detail.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "05",
+   "name": "order-items",
+   "ok": true,
+   "file": "601x889-05-order-items.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "06",
+   "name": "shipping",
+   "ok": true,
+   "file": "601x889-06-shipping.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "07",
+   "name": "customer-summary",
+   "ok": true,
+   "file": "601x889-07-customer-summary.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "08",
+   "name": "customer-orders",
+   "ok": true,
+   "file": "601x889-08-customer-orders.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "09",
+   "name": "customer-inbox",
+   "ok": true,
+   "file": "601x889-09-customer-inbox.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "10",
+   "name": "full-customer-rich-workspace",
+   "ok": false,
+   "file": "601x889-10-full-customer-rich-workspace.MISSING.png",
+   "why": "no customer surface with orders, email and a way to write",
+   "owner": "workstream D — the customer workspace (§3/§6)"
+  },
+  {
+   "viewport": "601x889",
+   "id": "11",
+   "name": "inbox-list",
+   "ok": true,
+   "file": "601x889-11-inbox-list.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "12",
+   "name": "email-thread",
+   "ok": true,
+   "file": "601x889-12-email-thread.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "13",
+   "name": "reply-composer",
+   "ok": true,
+   "file": "601x889-13-reply-composer.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "14",
+   "name": "sales-overview",
+   "ok": true,
+   "file": "601x889-14-sales-overview.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "15",
+   "name": "products-overview",
+   "ok": true,
+   "file": "601x889-15-products-overview.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "16",
+   "name": "returning-customers-result",
+   "ok": false,
+   "file": "601x889-16-returning-customers-result.MISSING.png",
+   "why": "none of customer_list/table/metric_group/assistant on the glass (there is nothing)",
+   "owner": "workstream C — families and presentation (§13)"
+  },
+  {
+   "viewport": "601x889",
+   "id": "17",
+   "name": "progressive-stage-1",
+   "ok": false,
+   "file": "601x889-17-progressive-stage-1.MISSING.png",
+   "why": "nothing on the glass is a promised-but-unread card, so there is no progressive stage to photograph",
+   "owner": "workstream D — progressive hydration (§6)"
+  },
+  {
+   "viewport": "601x889",
+   "id": "18",
+   "name": "progressive-stage-2",
+   "ok": false,
+   "file": "601x889-18-progressive-stage-2.MISSING.png",
+   "why": "nothing on the glass is a promised-but-unread card, so there is no progressive stage to photograph",
+   "owner": "workstream D — progressive hydration (§6)"
+  },
+  {
+   "viewport": "601x889",
+   "id": "19",
+   "name": "progressive-complete",
+   "ok": false,
+   "file": "601x889-19-progressive-complete.MISSING.png",
+   "why": "0 cards",
+   "owner": "workstream D — progressive hydration (§6)"
+  },
+  {
+   "viewport": "601x889",
+   "id": "20",
+   "name": "split-creation",
+   "ok": true,
+   "file": "601x889-20-split-creation.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "21",
+   "name": "split-independent-left-right",
+   "ok": true,
+   "file": "601x889-21-split-independent-left-right.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "22",
+   "name": "split-branch-ready",
+   "ok": false,
+   "file": "601x889-22-split-branch-ready.MISSING.png",
+   "why": "no half is showing as READY — the chips say [\"ORDER#1927 Fionn Doherty28\",\"ORDER#1940\"]",
+   "owner": "workstream A/D — the half that finished while he was elsewhere (§10/§16)"
+  },
+  {
+   "viewport": "601x889",
+   "id": "23",
+   "name": "merge",
+   "ok": true,
+   "file": "601x889-23-merge.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "24",
+   "name": "keyboard-open",
+   "ok": true,
+   "file": "601x889-24-keyboard-open.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "25",
+   "name": "long-customer-name",
+   "ok": true,
+   "file": "601x889-25-long-customer-name.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "26",
+   "name": "long-address",
+   "ok": true,
+   "file": "601x889-26-long-address.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "27",
+   "name": "long-product",
+   "ok": true,
+   "file": "601x889-27-long-product.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "28",
+   "name": "error-section",
+   "ok": true,
+   "file": "601x889-28-error-section.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "29",
+   "name": "empty-email-section",
+   "ok": true,
+   "file": "601x889-29-empty-email-section.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "30",
+   "name": "notification-local",
+   "ok": true,
+   "file": "601x889-30-notification-local.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "31",
+   "name": "global-offline",
+   "ok": true,
+   "file": "601x889-31-global-offline.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "32",
+   "name": "action-proposal",
+   "ok": true,
+   "file": "601x889-32-action-proposal.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "33",
+   "name": "action-verified",
+   "ok": true,
+   "file": "601x889-33-action-verified.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "601x889",
+   "id": "34",
+   "name": "stress-collision-fixture",
+   "ok": true,
+   "file": "601x889-34-stress-collision-fixture.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "01",
+   "name": "idle",
+   "ok": true,
+   "file": "800x1280-01-idle.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "03",
+   "name": "orders-list",
+   "ok": true,
+   "file": "800x1280-03-orders-list.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "04",
+   "name": "order-detail",
+   "ok": true,
+   "file": "800x1280-04-order-detail.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "07",
+   "name": "customer-summary",
+   "ok": true,
+   "file": "800x1280-07-customer-summary.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "11",
+   "name": "inbox-list",
+   "ok": true,
+   "file": "800x1280-11-inbox-list.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "12",
+   "name": "email-thread",
+   "ok": true,
+   "file": "800x1280-12-email-thread.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "13",
+   "name": "reply-composer",
+   "ok": true,
+   "file": "800x1280-13-reply-composer.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "20",
+   "name": "split-creation",
+   "ok": true,
+   "file": "800x1280-20-split-creation.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "21",
+   "name": "split-independent-left-right",
+   "ok": true,
+   "file": "800x1280-21-split-independent-left-right.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "24",
+   "name": "keyboard-open",
+   "ok": true,
+   "file": "800x1280-24-keyboard-open.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "31",
+   "name": "global-offline",
+   "ok": true,
+   "file": "800x1280-31-global-offline.png",
+   "why": "",
+   "owner": ""
+  },
+  {
+   "viewport": "800x1280",
+   "id": "34",
+   "name": "stress-collision-fixture",
+   "ok": true,
+   "file": "800x1280-34-stress-collision-fixture.png",
+   "why": "",
+   "owner": ""
+  }
+ ]
+}

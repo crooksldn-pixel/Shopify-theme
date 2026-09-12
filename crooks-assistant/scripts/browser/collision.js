@@ -13,13 +13,30 @@
  *   601 × 889 at DPR 1.33 — the Galaxy Tab A 8.0 in the owner's hand
  *   800 × 1280 at DPR 1   — the gate's own portrait
  *
- * Nineteen fixtures, every one a value a real shop has: a customer with a very long name, an
- * eighty-character email address, a four-line postal address, a long SKU, a long tracking
- * number, a product title that does not fit, a subject that does not fit, a note with five
- * paragraphs in it, a total in the millions, nine status chips, five actions, the split, the
- * keyboard open, three notifications at once. Every one of them is DATA, handed to the page's
- * own renderer (window.CrooksUI) — nothing here builds markup, and nothing here can, because
- * the renderer only draws the types it knows.
+ * The fixtures are every one a value a real shop has: a customer with a very long name and one
+ * with exactly fifty characters, an eighty-character email address, a four-line postal address,
+ * a long SKU, a long tracking number, a product title that does not fit, a subject that does
+ * not fit, a note with five paragraphs in it, a total in the millions, nine status chips, four
+ * actions and five, the keyboard open, three messages at once, four messages over a full deck,
+ * and the offline notice. Every one of them is DATA, handed to the page's own renderer
+ * (window.CrooksUI) — nothing here builds markup, and nothing here can, because the renderer
+ * only draws the types it knows.
+ *
+ * Two of the states are not payloads and were the hole in this file: the IDLE SCREEN, and the
+ * idle screen DIVIDED. Every Phase 4 fixture drew cards first, which puts the page into context
+ * mode — where `#talk` is a dock band and the branch controls move into `#branch-rail`. The
+ * defect the owner hit twenty-six times in ten seconds is on the ORB screen, where `.talk` is
+ * `inset:0` and the chips sit inside `.orb-zone`. Nothing here ever went there, which is most
+ * of why this suite was green all evening.
+ *
+ * PHASE 5 §9. The rule loop below used to be the whole verdict and it was a per-rule zero
+ * check; what it did not have was a line that fails the release. It has three now:
+ *
+ *   · a named verdict for each of the fourteen pairs the brief lists, from CrooksCollide.PAIRS,
+ *     so the gate cannot quietly stop asking one of them;
+ *   · ZERO collisions involving an interactive element, at BOTH viewports, as a hard failure —
+ *     "do not merely record it as telemetry";
+ *   · and the idle-screen states above, so the check has something real to fail on.
  *
  * Prints one JSON object: { ok, checks: [{name, ok, detail}], viewports, cases, shots }.
  */
@@ -46,6 +63,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // ---------------------------------------------------------------- the stress values
 
 const LONG_NAME = 'Alexandra Wilhelmina Constance Featherstonehaugh-Beauchamp';
+// §9 asks for a fifty-character name by name. The one above is 57 and has hyphens and spaces
+// to break on; this one is exactly 50 with two long unbreakable runs, which is the harder case
+// and the one a real wholesale account produces.
+const NAME_50 = 'Konstantinopoulos-Wetherspoonshire Partnership Ltd';
 const LONG_EMAIL = 'alexandra.wilhelmina.featherstonehaugh@a-very-long-department.example.com';
 const LONG_TITLE = 'Blue Wash Selvedge Yard Jeans — Relaxed Straight, Unwashed, Limited Workshop Run 2026';
 const LONG_SKU = 'CRK-YJ-BLUWASH-RELAXSTR-W34L32-SS26-LTD-000418-A';
@@ -60,6 +81,16 @@ const LONG_NOTE = 'Customer rang twice about this one.\n\nWants the exchange sen
 const BIG_MONEY = '£1,284,367.45';
 
 const CHIPS = ['vip', 'wholesale', 'repeat-return', 'fraud-checked', 'gift-wrap', 'pre-order', 'back-order', 'priority', 'staff-discount'];
+
+// The four the live session's order card actually carried, in its own order: the telemetry
+// records `actions: [fulfil, address, cancel, note]` on every render of it. §9 asks for "four
+// actions" because four is what the shop produces, and four wrap differently from five.
+const ACTIONS_FOUR = [
+  { id: 'fulfil', label: 'Mark as shipped', operation: 'fulfillment_create', risk: 'red', enabled: true, reason: '', instruction: 'Mark shipped', mode: 'ask' },
+  { id: 'address', label: 'Change the delivery address', operation: 'order_shipping_address_set', risk: 'red', enabled: true, reason: '', instruction: 'Change the address', mode: 'ask' },
+  { id: 'cancel', label: 'Cancel and refund the whole order', operation: 'order_cancel', risk: 'red', enabled: true, reason: '', instruction: 'Cancel', mode: 'ask' },
+  { id: 'note', label: 'Note', operation: 'order_note_append', risk: 'amber', enabled: true, reason: '', instruction: 'Add a note', mode: 'ask', family: 'order.add_note' },
+];
 
 const ACTIONS_FIVE = [
   { id: 'note', label: 'Note', operation: 'order_note_append', risk: 'amber', enabled: true, reason: '', instruction: 'Add a note', mode: 'ask', family: 'order.add_note' },
@@ -100,6 +131,19 @@ function confirmation(facts, extra) {
 // Every case is a name and a `ui` list. The renderer decides what any of it looks like.
 const CASES = [
   { id: 'long_customer_name', ui: [{ type: 'order', data: order({ customer_name: LONG_NAME, shipping_address: Object.assign({}, LONG_ADDRESS, { lines: ['12 Somewhere Street'] }) }) }] },
+  // §9's fifty-character name, on the two surfaces that print a name beside a control: the
+  // order header (beside the total and the badges) and the customer profile head.
+  { id: 'name_50_chars', ui: [
+    { type: 'order', data: order({ customer_name: NAME_50, actions: ACTIONS_FOUR }) },
+    { type: 'customer', data: {
+      customer_id: 'gid://shopify/Customer/0', name: NAME_50, email: LONG_EMAIL,
+      orders: 4, spent: BIG_MONEY, standing: 'regular',
+      history: { available: true, orders: 4, spent: BIG_MONEY, standing: 'regular', since: '2025-02-01T00:00:00Z', first_order_at: '2025-02-01T00:00:00Z', recent: [{ order_id: 'gid://shopify/Order/1', order_number: '#1912', total: '£60.00', placed_at: '2026-08-01T00:00:00Z', fulfillment: 'fulfilled' }], recent_truncated: false, other_unfulfilled: [] },
+      related_email: { available: true, threads: [] },
+    } },
+  ] },
+  // §9's "four actions", on the card the live session drew them on.
+  { id: 'four_actions', ui: [{ type: 'order', data: order({ customer_name: LONG_NAME, actions: ACTIONS_FOUR, tags: CHIPS.slice(0, 4) }) }] },
   { id: 'long_email_address', ui: [{ type: 'order', data: order({ customer_email: LONG_EMAIL, email: { available: true, threads: [{ thread_id: 't1', from: LONG_NAME, from_email: LONG_EMAIL, subject: 'Re: #1938', date: 'Tue, 8 Sep 2026 10:12:00 +0100', snippet: 'Where is it?', verified_sender: true, match: 'both', provenance: 'CUSTOMER_EMAIL' }] } }) }] },
   { id: 'long_postal_address', ui: [{ type: 'order', data: order({ shipping_address: LONG_ADDRESS, ships_to: 'Kingston upon Thames, United Kingdom' }) }] },
   { id: 'long_sku', ui: [{ type: 'order', data: order({ items: [{ title: 'Yard Jeans', variant: 'W34 / L32 / Unwashed', sku: LONG_SKU, quantity: 1, total: '£95.00', stock: { tracked: true, available: 3 } }] }) }] },
@@ -173,7 +217,8 @@ const CASES = [
 
 async function main() {
   const viewports = [];
-  const caseNames = CASES.map((c) => c.id).concat(['split_mode', 'keyboard_open', 'multiple_notifications']);
+  const caseNames = CASES.map((c) => c.id).concat(['idle_orb', 'idle_two_halves', 'nav_full_divided', 'split_mode', 'multiple_notifications',
+    'stacked_feedback', 'offline_notice', 'keyboard_open']);
   const browser = await chromium.launch({ executablePath: process.env.CROOKS_CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
   try {
     for (const vp of VIEWPORTS) {
@@ -228,11 +273,100 @@ async function one(browser, vp) {
   });
 
   const results = [];
-  const measure = async (id) => {
-    const scan = await page.evaluate(() => window.CrooksCollide.scan({}));
+  // `opts` reaches `scan` unchanged: the keyboard case says so, because nothing in the page
+  // can tell an open keyboard from a short screen — `interactive-widget=resizes-content`
+  // makes them identical.
+  const measure = async (id, opts) => {
+    const scan = await page.evaluate((o) => window.CrooksCollide.scan(o || {}), opts || null);
     results.push({ id, scan });
     return scan;
   };
+
+  // ---- the IDLE SCREEN, before anything is drawn, and then divided.
+  //
+  // This is the state the owner physically tapped twenty-six times in ten seconds, and no
+  // Phase 4 fixture ever reached it: every one of the nineteen drew cards first, which puts
+  // the page into context mode, where `#talk` is a dock band along the bottom and the branch
+  // controls move into `#branch-rail`. The defect is on the ORB screen, where `.talk` is
+  // `inset:0` and the chips are inside `.orb-zone`. Measured here, before the deck exists.
+  await measure('idle_orb');
+  await shot(page, `collide-${vp.width}-idle`);
+  const divided = await page.evaluate(() => {
+    const split = document.querySelector('#branch-bar [data-action="split"]');
+    if (!split) return 'no split control on the idle screen';
+    // A DOM click, deliberately: the point is to REACH the two-half state, not to prove a
+    // finger can. Whether a finger can is what `split_under_voice` measures once it is there.
+    split.click();
+    return 'clicked';
+  });
+  await sleep(1800);
+  const halves = await page.evaluate(() => ({
+    mode: document.body.dataset.mode,
+    chips: document.querySelectorAll('#branch-bar .branch-chip').length,
+    acts: Array.from(document.querySelectorAll('#branch-bar .branch-act')).map((b) => b.dataset.action || ''),
+  }));
+  check(`${vp.name} · the idle screen divides, so the state can be measured at all`,
+    divided === 'clicked' && halves.chips === 2 && halves.acts.indexOf('merge') !== -1,
+    `${divided} — ${JSON.stringify(halves)}`);
+  await measure('idle_two_halves');
+  await shot(page, `collide-${vp.width}-idle-divided`);
+
+  // ---- and the navigation row at its FULLEST: divided, with a list open, so Home, Back,
+  // Previous, Next, two branch chips, Merge and Close are all in the strip at once. Asked
+  // through the page's own dev input rather than drawn, because the row's contents are the
+  // app's decision and the whole point is to measure what the app builds.
+  //
+  // This is the state the coordinator found by eye on the before-shots. On this tree the strip
+  // is 571 px wide with 807 px in it, and Merge and Close are drawn at x=590 and x=664 on a
+  // 601 px screen — entirely off the glass. No two rectangles intersect and the document does
+  // not scroll sideways, so nothing before `control_clipped_by_container` could see it, and
+  // "I cannot click the merge or close button" had been true all along.
+  await page.evaluate(() => {
+    const sheet = document.querySelector('#settings'); const dev = document.querySelector('#dev');
+    if (dev) dev.hidden = false;
+    if (sheet && !sheet.open && sheet.showModal) sheet.showModal();
+  });
+  const asked = await page.evaluate(() => Boolean(document.querySelector('#dev-text')));
+  if (asked) {
+    await page.fill('#dev-text', "show me today's orders");
+    await page.press('#dev-text', 'Enter');
+    await sleep(2800);
+  }
+  await page.evaluate(() => { const s = document.querySelector('#settings'); if (s && s.open) s.close(); });
+  await sleep(500);
+  const strip = await page.evaluate(() => {
+    const nav = document.querySelector('#context-nav');
+    if (!nav) return null;
+    return {
+      mode: document.body.dataset.mode, width: nav.clientWidth, content: nav.scrollWidth,
+      controls: nav.querySelectorAll('button').length,
+      past: Array.from(nav.querySelectorAll('button'))
+        .filter((b) => b.getBoundingClientRect().right > innerWidth + 2).length,
+    };
+  });
+  check(`${vp.name} · the divided navigation row could be measured with a list open`,
+    Boolean(strip && strip.mode === 'context' && strip.controls >= 6), JSON.stringify(strip));
+  await measure('nav_full_divided');
+  await shot(page, `collide-${vp.width}-nav-divided`);
+
+  // ---- and back to ONE half before the payload fixtures.
+  //
+  // Not tidiness: attribution. The three states above are new in Phase 5, and leaving the orb
+  // divided would put two branch chips, Merge and Close into the navigation row for every one
+  // of the nineteen fixtures that follow — so `control_clipped_by_container` would fire on
+  // `long_customer_name` and name a fixture that has nothing to do with it. The nineteen are
+  // measured on the screen they have always been measured on, so a failure in one of them
+  // still means what it used to mean, and the new findings stay attached to the new states.
+  const merged = await page.evaluate(() => {
+    const m = document.querySelector('#branch-rail [data-action="merge"], #branch-bar [data-action="merge"]');
+    if (!m) return 'no merge control';
+    m.click();
+    return 'clicked';
+  });
+  await sleep(2000);
+  const halvesLeft = await page.evaluate(() => document.querySelectorAll('.branch-chip').length);
+  check(`${vp.name} · the halves merge back, so the stress fixtures are measured undivided`,
+    halvesLeft === 0, `${merged}; ${halvesLeft} chip(s) left`);
 
   // ---- the fixtures, one at a time
   const fake = [];
@@ -314,6 +448,41 @@ async function one(browser, vp) {
   await measure('multiple_notifications');
   await shot(page, `collide-${vp.width}-notifications`);
 
+  // ---- §9's "stacked feedback": the deck full of cards AND several messages at once, which
+  // is the state the live session was in when "Merged. 2 changes still waiting over there."
+  // floated over the half he was reading. Measured on the CONTEXT screen, because that is
+  // where the navigation row, the deck and the dock are all on the glass together.
+  await page.evaluate((items) => window.__collideDraw(items), CASES.find((c) => c.id === 'everything').ui);
+  await page.waitForTimeout(160);
+  await page.evaluate(() => {
+    if (!window.CrooksNotify || typeof window.CrooksNotify.show !== 'function') return;
+    window.CrooksNotify.show({ text: 'Draft saved in Gmail drafts.', class: 'workspace', tone: 'good', code: 'draft_saved' });
+    window.CrooksNotify.show({ text: 'Archive verified on the Mac.', class: 'workspace', tone: 'good', code: 'archive_verified' });
+    window.CrooksNotify.show({ text: 'Merged. 2 changes still waiting over there.', class: 'workspace', tone: '', code: 'merged' });
+    window.CrooksNotify.show({ text: 'This build must be updated before it can be used.', class: 'global', tone: 'bad', code: 'stale_build', machine: true });
+  });
+  await page.waitForTimeout(260);
+  await measure('stacked_feedback');
+  await shot(page, `collide-${vp.width}-stacked`);
+
+  // ---- §9's "offline notice": the one message the machine itself is allowed to put over
+  // every screen. It must take its own space above the wordmark rather than cover the dock,
+  // the orb, the halves or the composer — which is a geometry claim, so it is measured.
+  await page.evaluate(() => {
+    if (window.CrooksNotify && typeof window.CrooksNotify.clear === 'function') window.CrooksNotify.clear();
+    if (window.CrooksNotify && typeof window.CrooksNotify.show === 'function') {
+      window.CrooksNotify.show({
+        text: 'The Mac cannot be reached. Nothing is lost; it will answer when it is back.',
+        class: 'global', tone: 'bad', code: 'backend_down', machine: true,
+      });
+    }
+    const conn = document.querySelector('#conn');
+    if (conn) { conn.dataset.state = 'down'; const t = document.querySelector('#conn-text'); if (t) t.textContent = 'Offline'; }
+  });
+  await page.waitForTimeout(260);
+  await measure('offline_notice');
+  await shot(page, `collide-${vp.width}-offline`);
+
   // ---- the keyboard: `interactive-widget=resizes-content` shrinks the viewport, so this is
   // the same thing the tablet does when a finger lands in a field.
   await page.evaluate((items) => window.__collideDraw(items), CASES.find((c) => c.id === 'composer').ui);
@@ -322,7 +491,7 @@ async function one(browser, vp) {
   await page.waitForTimeout(220);
   await page.evaluate(() => { const f = document.querySelector('#cards .field-input'); if (f && f.focus) f.focus(); });
   await page.waitForTimeout(260);
-  await measure('keyboard_open');
+  await measure('keyboard_open', { keyboard: true });
   await shot(page, `collide-${vp.width}-keyboard`);
   await page.setViewportSize({ width: vp.width, height: vp.height });
   await page.waitForTimeout(160);
@@ -337,6 +506,19 @@ async function one(browser, vp) {
     document_overflow_x: 'nothing scrolls the page sideways by accident',
     folded_action: 'no action is folded away to nothing',
     content_under_chrome: 'nothing essential is hidden under the fixed furniture',
+    split_under_voice: 'the Split chip is not under the voice target',
+    branch_under_voice: 'no branch chip, Merge or Close is under the voice target',
+    button_over_input: 'no control overlaps a field',
+    button_over_navigation: 'no control overlaps Back, Next, Home or the dock',
+    toast_over_navigation: 'no message overlaps the navigation row',
+    toast_over_orb: 'no message overlaps the orb',
+    toast_over_approval: 'no message overlaps an approval surface',
+    floating_over_dock: 'no floating control overlaps the dock',
+    tabs_over_content: 'no tab strip overlaps the panel it switches',
+    name_over_action: 'no customer or product name overlaps an action',
+    chips_over_title: 'no status chip overlaps a card title',
+    keyboard_over_action: 'with the keyboard open, no action is under the fixed furniture',
+    control_clipped_by_container: 'no interactive control is cut off by the screen or by a container',
   };
   for (const rule of RULES) {
     const bad = results.filter((r) => (r.scan.counts || {})[rule]);
@@ -346,6 +528,43 @@ async function one(browser, vp) {
     }).join(' | ');
     check(`${vp.name} · ${WORDS[rule] || rule}`, bad.length === 0, detail);
   }
+
+  // ---- §9's own list, answered by name. The brief names fourteen pairs and asks for a
+  // verdict on each; `CrooksCollide.PAIRS` maps its words onto the rules that answer them, so
+  // this loop prints the brief's list and nothing is translated by hand. A pair with no rule
+  // behind it fails here — the gate cannot quietly stop asking one of the fourteen.
+  const PAIRS = await page.evaluate(() => window.CrooksCollide.PAIRS);
+  const REQUIRED_PAIRS = ['button-button', 'button-text', 'button-input', 'button-navigation',
+    'Split-voice', 'branch-voice', 'toast-navigation', 'toast-orb', 'toast-approval',
+    'floating-controls-dock', 'tabs-content', 'long-name-action', 'chips-title', 'keyboard-action'];
+  const missingPairs = REQUIRED_PAIRS.filter((label) => !PAIRS[label]);
+  check(`${vp.name} · §9 · every pair the brief names has a rule behind it`, missingPairs.length === 0,
+    missingPairs.join(', '));
+  for (const label of REQUIRED_PAIRS) {
+    const bad = results.filter((r) => ((r.scan.pairs || {})[label] || 0) > 0);
+    const detail = bad.map((r) => {
+      const rules = PAIRS[label] || [];
+      const hit = (r.scan.hits || []).find((x) => rules.indexOf(x.rule) !== -1) || {};
+      return `${r.id}: ${(r.scan.pairs || {})[label]}× ${hit.a || ''}[${hit.at || ''}]${hit.b ? ` / ${hit.b}[${hit.bt || ''}]` : ''}${hit.note ? ` (${hit.note})` : ''}`;
+    }).join(' | ');
+    check(`${vp.name} · §9 pair · ${label}`, bad.length === 0, detail);
+  }
+
+  // ---- §9's HARD GATE. "For the primary viewport (601×889, DPR ~1.33): zero collisions
+  // involving interactive elements. If an interactive collision is detected in browser
+  // acceptance, THE TEST FAILS — do not merely record it as telemetry."
+  //
+  // This is the line Phase 4 did not have. Its collision run measured, reported and passed:
+  // `overflow.collisions` was 1 to 4 on twenty of the live session's orb-screen renders while
+  // this suite was green, because no check anywhere turned a number into a verdict. One
+  // interactive overlap at either size now fails the release, and the failure names the
+  // fixture, the two selectors and the two rectangles.
+  const interactive = results.filter((r) => (r.scan.interactive || 0) > 0);
+  const worst = interactive.flatMap((r) => (r.scan.interactive_hits || []).slice(0, 2)
+    .map((h) => `${r.id}: ${h.rule} ${h.a}[${h.at}]${h.b ? ` / ${h.b}[${h.bt}]` : ''}${h.note ? ` (${h.note})` : ''}`));
+  check(`${vp.name} · §9 · ZERO collisions involving an interactive element`,
+    interactive.length === 0,
+    `${interactive.reduce((n, r) => n + r.scan.interactive, 0)} across ${interactive.length} fixture(s) — ${worst.slice(0, 8).join(' | ')}`);
 
   // ---- and the thumb (section 29), from the same rectangles
   const small = [];
@@ -357,8 +576,12 @@ async function one(browser, vp) {
   check(`${vp.name} · every control a finger uses is about 44px`, small.length === 0,
     small.map((s) => `${s.sel} ${s.w}×${s.h} (${s.id})`).join(', '));
 
-  check(`${vp.name} · every fixture was measured`, results.length === CASES.length + 3,
-    `${results.length} of ${CASES.length + 3}: ${results.map((r) => r.id).join(',')}`);
+  // The eight driven states are not payloads: the idle screen, the idle screen divided, the
+  // divided navigation row, the split in context mode, three messages, four over a full deck,
+  // the offline notice, and the keyboard.
+  const DRIVEN = 8;
+  check(`${vp.name} · every fixture was measured`, results.length === CASES.length + DRIVEN,
+    `${results.length} of ${CASES.length + DRIVEN}: ${results.map((r) => r.id).join(',')}`);
   check(`${vp.name} · the notification path is the one the page owns`, noted === 'notify', `via ${noted}`);
   check(`${vp.name} · no script error while measuring`, errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
