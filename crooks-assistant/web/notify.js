@@ -153,13 +153,26 @@
     return TONES.indexOf(word) === -1 ? 'info' : word;
   }
 
-  /* WHAT MAKES TWO MESSAGES THE SAME MESSAGE: the class, the NAME and the half. Not the
-     sentence. It used to include the text, so "1 change still waiting" and "2 changes still
-     waiting" were two rows about one recurring event — and every message that varies by a
-     count, a name or an amount defeated the deduplication by definition. One event is one
-     row; the newest words win, because they are the current ones. */
+  /* WHAT MAKES TWO MESSAGES THE SAME MESSAGE: the class, the NAME, the half — and, for a
+     control-local one, the control.
+
+     Not the sentence. It used to include the text, so "1 change still waiting" and "2 changes
+     still waiting" were two rows about one recurring event, and every message that varies by
+     a count, a name or an amount defeated the deduplication by definition. One event is one
+     row; the newest words win, because they are the current ones.
+
+     The control has to be part of it, though, and by reference rather than by name: two
+     fields the Mac refused are two refusals, one beside each field, even though both are
+     `field_refused`. Collapsing them would put one message beside the wrong control and
+     leave the other with none — which is the whole failure mode CONTROL-LOCAL exists to
+     avoid. `sameAs` is the comparison; `keyOf` is the part of it that is a string. */
   function keyOf(entry) {
     return `${entry.class}:${entry.code}:${entry.branch || ''}`;
+  }
+
+  function sameAs(entry) {
+    const key = keyOf(entry);
+    return (e) => keyOf(e) === key && (entry.class !== 'control' || e.host === entry.host);
   }
 
   /* THE POLICY, as one pure function.
@@ -353,8 +366,8 @@
     if (entry.class === 'global' && !m.machine) entry.class = 'workspace';
     entry.ttl = m.persist || entry.tone === 'bad' ? 0 : (typeof m.ttl === 'number' ? m.ttl : TTL_MS[entry.tone]);
 
-    const key = keyOf(entry);
-    const same = live.find((e) => keyOf(e) === key && entry.at - e.at < REPEAT_MS);
+    const alike = sameAs(entry);
+    const same = live.find((e) => alike(e) && entry.at - e.at < REPEAT_MS);
     if (same) {
       same.repeats += 1;
       same.at = entry.at;

@@ -375,6 +375,31 @@ test('two identical notifications in a row produce one', () => {
   assert.equal(N.list().length, 2);
 });
 
+test('two controls refused for the same reason are two messages, one beside each', () => {
+  /* The other edge of deduplicating by NAME. Two fields the Mac refused are two refusals
+     even though both are `field_refused`: collapsing them would put one message beside the
+     wrong control and leave the other with none, which is the exact failure CONTROL-LOCAL
+     exists to avoid. So the control is part of what makes a control-local message the same
+     message — by reference, not by name. */
+  const { doc } = screen('context');
+  const card = doc.createElement('article');
+  const one = doc.createElement('div');
+  const two = doc.createElement('div');
+  card.appendChild(one);
+  card.appendChild(two);
+  const said = 'That does not look like an email address.';
+  const a = N.show({ text: said, class: 'control', tone: 'bad', code: 'field_refused', host: one });
+  const b = N.show({ text: said, class: 'control', tone: 'bad', code: 'field_refused', host: two });
+  assert.ok(a && b && a !== b, 'two controls, two messages');
+  assert.equal(rows(one).length, 1);
+  assert.equal(rows(two).length, 1);
+  // And the SAME control, said twice, is still one row with a count.
+  const again = N.show({ text: said, class: 'control', tone: 'bad', code: 'field_refused', host: one });
+  assert.equal(again, a);
+  assert.equal(rows(one).length, 1);
+  assert.equal(N.list().length, 2);
+});
+
 test('more than MAX_TRANSIENT messages that leave on their own is impossible', () => {
   const { hosts } = screen('context');
   // Two rows is 88px of a ~700px workbench screen. Three is 132px and starts costing a card,
