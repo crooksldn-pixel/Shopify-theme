@@ -66,6 +66,8 @@ MAX_GRAPHS = 64
 # How many orders / threads one entity links to. Both are presentation lists in the end and
 # `app/workspace.py` caps them again for the screen; this is the memory bound.
 MAX_LINKS = 24
+# How many reads back the graph remembers what each one was ABOUT.
+MAX_SUBJECTS = 40
 
 
 def short_id(ref: Any) -> str:
@@ -154,11 +156,17 @@ class EntityGraph:
     new read is Gmail must still be able to compose the workspace the task asked for.
     """
 
-    __slots__ = ("session_id", "_by_key")
+    __slots__ = ("session_id", "_by_key", "_subjects")
 
     def __init__(self, session_id: str = "") -> None:
         self.session_id = str(session_id or "")
         self._by_key: OrderedDict[str, Entity] = OrderedDict()
+        # The SUBJECT of each read, newest last: the record the read was about, as opposed to
+        # the records it mentioned on the way. `shopify_customer_history` touches a customer
+        # and then his orders, and the orders are touched later — so "the most recently
+        # touched entity" answers "which record is this conversation on?" with the wrong one.
+        # The subject answers it with the right one, which is what "his orders" refers to.
+        self._subjects: list[str] = []
 
     # ------------------------------------------------------------------ reading it
 
@@ -284,7 +292,32 @@ class EntityGraph:
             return []
         touched: list[str] = []
         handler(self, str(name), result, touched)
+        if touched:
+            # Every handler adds its primary record first, which is what makes this the
+            # SUBJECT and not simply the first thing it happened to see.
+            self._subjects.append(touched[0])
+            del self._subjects[:-MAX_SUBJECTS]
         return touched
+
+    def subject_kind(self, kinds: tuple[str, ...]) -> str:
+        """The kind of the most recent read whose subject was one of these kinds.
+
+        What answers "which record is this conversation on?" across turns — and across a turn
+        whose only read was about something else, which is D-3: the Gmail search's subject is
+        a thread, and the conversation was still on the customer.
+        """
+        for entity_key in reversed(self._subjects):
+            entity = self._by_key.get(entity_key)
+            if entity is not None and entity.kind in kinds:
+                return entity.kind
+        return ""
+
+    def subject(self, kinds: tuple[str, ...]) -> Entity | None:
+        for entity_key in reversed(self._subjects):
+            entity = self._by_key.get(entity_key)
+            if entity is not None and entity.kind in kinds:
+                return entity
+        return None
 
 
 def _blank(value: Any) -> bool:

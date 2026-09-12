@@ -51,9 +51,10 @@ HISTORY = {
          "placed_at": "2026-08-02T10:00:00Z", "fulfillment": "FULFILLED", "payment": "PAID"},
     ],
 }
+THREAD_ID = "18f3a2b9c4d5e6f7"      # the shape Gmail actually returns, and the gate accepts
 THREADS = {
     "query": "daniel@example.com",
-    "threads": [{"thread_id": "t-1", "from": "Daniel Sear", "from_email": "daniel@example.com",
+    "threads": [{"thread_id": THREAD_ID, "from": "Daniel Sear", "from_email": "daniel@example.com",
                  "subject": "Where is my order", "date": "Mon", "snippet": "Any news?"}],
 }
 ORDER_DETAIL = {
@@ -145,7 +146,7 @@ def test_ten_reads_touching_one_customer_produce_one_customer_surface():
              "orders": 2, "spent": "120.00 GBP"}]}))
         calls.append(ok("shopify_customer_history", HISTORY))
     calls.append(ok("gmail_search", THREADS))
-    calls.append(ok("gmail_read_thread", {"thread_id": "t-1", "message_count": 1, "messages": [
+    calls.append(ok("gmail_read_thread", {"thread_id": THREAD_ID, "message_count": 1, "messages": [
         {"message_id": "m1", "from": "Daniel Sear", "from_email": "daniel@example.com",
          "subject": "Where is my order", "body": "Any news?", "date": "Mon"}]}))
     items = present(calls, session=session(D3, "ten"))
@@ -237,7 +238,7 @@ def test_an_order_first_viewport_leads_with_the_order_not_with_its_items():
     """§12's ORDER list: number, customer, value, payment, fulfilment, date, primary attention,
     primary next actions — before Items, Shipping, Customer or Email are opened."""
     items = present([ok("shopify_order_detail", ORDER_DETAIL)],
-                    session=session("Pull up order 1962", "order-vp"))
+                    session=session("Pull up order 1962 — what's on it, and where is it going?", "order-vp"))
     data = only(items, "order_workspace")
     assert data["title"] == "Order #1962"
     assert data["subtitle"] == "Daniel Sear"
@@ -309,18 +310,25 @@ def test_a_row_the_mac_cannot_open_is_drawn_disabled_with_a_reason():
     it is shown. `turn_dd093f86b92d` posted `open.entity`, was refused `not_held`, and drew an
     empty half. A row whose ref this conversation was never issued is not tappable."""
     live = session(D3, "fake-ui")
-    data = only(present([ok("shopify_customer_history", HISTORY)], session=live), "customer_workspace")
-    for row in data["sections"]["orders"]["rows"]:
+    data = only(present([ok("shopify_customer_history", HISTORY), ok("gmail_search", THREADS)],
+                        session=live), "customer_workspace")
+    for row in data["sections"]["orders"]["rows"] + data["sections"]["inbox"]["rows"]:
         assert row["open"] is True, row
-        # And the Mac issued the ref, so `open.entity` will not refuse it.
-        assert row["order_id"] in live.issued_ids
+        # And the Mac issued the ref, so `open.entity` cannot refuse it `not_held`.
+        assert (row.get("order_id") or row.get("thread_id")) in live.issued_ids
+    for action in data["actions"]:
+        assert action["ref"] in live.issued_ids, action
 
-    # A row whose ref is not a shape the gate accepts is shown, and shown as unopenable.
-    bare = {**HISTORY, "recent": [{**HISTORY["recent"][0], "order_id": ""}]}
-    data = only(present([ok("shopify_customer_history", bare)], session=session(D3, "fake-ui-2")),
-                "customer_workspace")
-    row = data["sections"]["orders"]["rows"][0]
+    # A thread id that is not a shape the gate accepts is still SHOWN — the message is real
+    # and hiding it would lose it — and shown as unopenable, with the reason on the row.
+    odd = {"query": "x", "threads": [{**THREADS["threads"][0], "thread_id": "t-1"}]}
+    live2 = session(D3, "fake-ui-2")
+    data = only(present([ok("shopify_customer_history", HISTORY), ok("gmail_search", odd)],
+                        session=live2), "customer_workspace")
+    row = data["sections"]["inbox"]["rows"][0]
+    assert row["subject"] == "Where is my order"
     assert row["open"] is False and row["open_note"], row
+    assert "t-1" not in live2.issued_ids, "a ref that cannot be opened was issued anyway"
 
 
 # ------------------------------------------------------- the tab the task implies (D-2)
@@ -352,9 +360,14 @@ def test_a_tab_with_nothing_behind_it_is_never_the_one_that_opens():
     assert plan.tab == "inbox"
     built = workspace.compose(plan, graph=_graph_with_history("tab-d"))
     data = built["data"]
-    assert data["sections"]["inbox"]["state"] == "empty"
+    # Nobody has looked in the inbox, which is `unread` and not `empty`: claiming a section is
+    # empty when no read has landed is a lie the owner acts on. Either way there is nothing
+    # behind the tab, so it is not the one that opens.
+    assert data["sections"]["inbox"]["state"] == "unread"
     assert data["tab"] != "inbox"
+    assert data["tab_intended"] == "inbox", "what the task asked for is still recorded"
     assert data["sections"][data["tab"]]["state"] == "ready", data["tab"]
+    assert data["tab_reason"], "a tab the system chose has to say why"
 
 
 # --------------------------------------------------------------------------- the bounds
