@@ -557,7 +557,11 @@ FAMILIES: tuple[Family, ...] = (
            entities=("customer", "order"), base=0.74, max_words=12),
     Family("order_status_lookup", needs=("status",), boosts=("order_number", "order", "has_entity", "deixis"), blocks=("mutation", "metric", "address", "possessive_name"), entities=("order",), base=0.72, max_words=14),
     Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email", "possessive_name"), entities=("order",), base=0.72, max_words=14),
-    Family("customer_purchase_lookup", needs=("known_name", "bought"), boosts=("customer", "question"), blocks=("mutation",), entities=("customer",), base=0.72, max_words=14),
+    # D-14: `names_a_person`, not `known_name`. "What has [customer A] ordered in his
+    # lifetime" names the person plainly and the branch had not resolved him, so this family
+    # — the one that resolves a name against the shop before it reads anything — could not
+    # take the turn, and the one that answers from the record in focus did.
+    Family("customer_purchase_lookup", needs=("names_a_person", "bought"), boosts=("customer", "question"), blocks=("mutation",), entities=("customer",), base=0.72, max_words=14),
     Family("best_sellers_period", needs=("ranking",), boosts=("period", "question", "metric"), blocks=("mutation", "email", "stock", "running_out", "order_number", "customer"), base=0.65, floor=0.72, max_words=14),
     # Blocks "customer" because "how many" is in _METRIC: without it "how many customers do we
     # have today" scored as the sales card and was answered "Today: £162.00, 3 orders" — a
@@ -833,7 +837,16 @@ def _slots(sig: Signals) -> dict[str, Any]:
     narrow it.
     """
     fixed = {c.family: c.value for c in sig.corrections}
-    slots: dict[str, Any] = {"order_numbers": list(sig.order_numbers), "name": sig.known_name}
+    # `name` is the person the request is ABOUT, and a name this conversation has never
+    # resolved is still the person it is about (D-14). Before this, the slot held only a name
+    # the branch had already learnt, so a recipe with a name in front of it had nothing to
+    # search for and fell back to the record in focus — which is how one customer's question
+    # was answered with another customer's history. The branch's own resolution is preferred
+    # when it has one, because it carries an id and the span carries only words.
+    slots: dict[str, Any] = {
+        "order_numbers": list(sig.order_numbers),
+        "name": sig.known_name or _ask().person_named(sig.raw or " ".join(sig.words)),
+    }
     if fixed:
         slots["corrected"] = fixed
     if fixed.get(correction.SIZE):
