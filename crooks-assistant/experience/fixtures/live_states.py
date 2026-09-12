@@ -573,8 +573,17 @@ AUTHORED: dict[str, dict[str, Any]] = {
             {"do": "hit_test", "selector": "#branch-bar [data-action=\"split\"]"},
             {"do": "tap_selector", "selector": "#branch-bar [data-action=\"split\"]", "expect_no_post": "/turn"},
             {"do": "hit_test", "selector": "#branch-bar .branch-chip"},
-            {"do": "hit_test", "selector": "#branch-bar [data-action=\"merge\"]"},
-            {"do": "hit_test", "selector": "#branch-bar [data-action=\"cancel\"]"},
+            # Was two `hit_test` steps, for Merge and for Close by name. Both halves of this
+            # state hold NOTHING (`observed.cards` is empty), and on such a screen Merge and
+            # Close are the same act, so only one control is drawn — see `holdsSomething` in
+            # web/app.js for why, and note that "Merge cannot succeed there" is NOT why: the
+            # session's own record has `merge_close_tap.observed.merge_status: 200` on an
+            # empty half. `undivide_controls` asserts the strip as a SET and then hit-tests
+            # every member, so it still fails if a control is unreachable — which is what
+            # this fixture is for — and additionally fails if the strip holds a control that
+            # has nothing to do, which two `hit_test`s by name could never notice.
+            {"do": "undivide_controls", "expect": ["cancel"],
+             "why": "neither half holds anything, so keeping and letting go are the same act"},
             {"do": "collide", "interactive_must_be": 0},
         ]},
     },
@@ -589,10 +598,30 @@ AUTHORED: dict[str, dict[str, Any]] = {
                        "the two blobs, because wherever I press just leads to you listening",
         "gate": "§7/§8 · Merge and Close are reachable by tap, and a tap on them is never a recording",
         "owned_by": "workstream A — touch ownership and layering",
+        # TWO LEGS, because the strip has two shapes and the owner's words name both controls.
+        #
+        # Leg 1 is the screen he was actually on at 23:11:48: divided, nothing on either
+        # half. There the un-divide strip holds one control, Close, and the gate's job is that
+        # a finger reaches it and the tap is not a recording.
+        #
+        # Leg 2 asks for something first, so the fork inherits a working set and the other
+        # half genuinely holds something to fold back. Only then does Merge exist to be
+        # tapped — which is the whole point of this fixture, and the reason the leg is here
+        # rather than the `merge` step simply being dropped. It is also the shape he had at
+        # 23:10:55, before the halves were emptied.
         "drive": {"steps": [
             {"do": "idle"},
             {"do": "tap_selector", "selector": "#branch-bar [data-action=\"split\"]", "expect_no_post": "/turn"},
             {"do": "expect_branches", "count": 2},
+            {"do": "undivide_controls", "expect": ["cancel"],
+             "why": "a fork of an empty half holds nothing, so there is one outcome"},
+            {"do": "tap_selector", "selector": "#branch-bar [data-action=\"cancel\"]", "expect_no_post": "/turn"},
+            {"do": "expect_branches", "count": 1},
+            {"do": "ask", "text": "show me today's orders"},
+            {"do": "tap_selector", "selector": "#branch-bar [data-action=\"split\"]", "expect_no_post": "/turn"},
+            {"do": "expect_branches", "count": 2},
+            {"do": "undivide_controls", "expect": ["merge", "cancel"],
+             "why": "the fork inherits the parent's working set, so keeping it and letting it go differ"},
             {"do": "tap_selector", "selector": "#branch-bar [data-action=\"merge\"]", "expect_no_post": "/turn"},
             {"do": "expect_branches", "count": 1},
         ]},

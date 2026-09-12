@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 # Two branches at most. The orb divides once; it does not become a window manager.
 MAX_BRANCHES = 2
@@ -375,12 +375,26 @@ class Branch:
             return "ACTIVE"
         return "WAITING" if named in ("WAITING", "QUEUED") else "WORKING"
 
+    #: The words the GLASS says for a token that is a STATE rather than a place. ORDERS,
+    #: INBOX, SALES and PRODUCTS are the shop's own words and pass through untouched; EMPTY
+    #: and WORKSPACE are database states, and the Phase 5 visual pass caught both of them on
+    #: screen — a chip reading "EMPTY To go out", and the band above the cards reading
+    #: "EMPTY Orders" over a focused empty half. The translation lives HERE, next to the
+    #: tokens, because `headline`'s promise is that both ends say the same thing: the tablet
+    #: keeps a copy only as the fallback for a Mac older than its own build.
+    SAID_ALOUD: ClassVar[dict[str, str]] = {"EMPTY": "Nothing yet", "WORKSPACE": "This half"}
+
     def headline(self) -> dict[str, str]:
         """What this half IS, in a line the tablet draws on it: "ORDER · #1957", "INBOX · READY".
 
         Never two indistinguishable halves — this is the difference the owner could not find.
         It is built here, on the Mac, from branch state, so both ends say the same thing and
         the tablet invents none of it.
+
+        Four keys, and the difference between them matters. `area`, `detail` and `state` are
+        the MACHINE's: tokens, asserted verbatim across the branch protocol and its tests,
+        and unchanged by this pass. `words` and `title` are the GLASS's — the same fact in
+        language, so that nothing has to translate a token downstream and get it half right.
         """
         entity = self.entity or {}
         area = AREA_OF_KIND.get(str(entity.get("kind") or ""), "") or self.area
@@ -393,7 +407,14 @@ class Branch:
         if not detail:
             detail = "nothing yet" if area == "EMPTY" and state == "ACTIVE" else state
         detail = detail[:40]
-        return {"area": area, "detail": detail, "state": state, "title": f"{area} · {detail}"}
+        # And the same line in language. A state token becomes the sentence a person would
+        # say, and it does NOT then also carry a detail: "Nothing yet · nothing yet" is the
+        # repetition §26 forbids, and "Nothing yet · Orders" — which is what the band drew —
+        # says at once that the half holds nothing and that it is about its parent's set.
+        said = self.SAID_ALOUD.get(area)
+        words = said if said else (f"{area} · {detail}" if detail else area)
+        return {"area": area, "detail": detail, "state": state, "words": words,
+                "title": f"{area} · {detail}"}
 
     def holds(self) -> dict[str, Any]:
         """What this half has to work with, said plainly.

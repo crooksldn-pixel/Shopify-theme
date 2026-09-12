@@ -61,8 +61,75 @@
   --ease-inout:cubic-bezier(.65,0,.25,1);
   /* touch */
   --tap:48px; --tap-lg:64px; --dock:112px;
-  /* layers */
-  --z-orb:1; --z-context:2; --z-talk:3; --z-chrome:4; --z-sheet:20;
+  /* The voice pill's slot in the dock band, and therefore the width of the VOICE zone in
+     context mode. One token, used by both `.dock-gap` and `.talk`, so the hold region and the
+     hole the dock leaves for it can never drift apart. */
+  --hold-w:252px;
+  /* The band the branch chrome owns on the idle screen. A zone, not a margin: see the layer
+     block below. */
+  --branch-band:64px;
+
+  /* ------------------------------------------------------------------ THE LAYERS
+   *
+   * WHY THIS BLOCK EXISTS. Phase 5, D-1: `#branch-bar` — Split, Merge, Close, the owner's
+   * "two blobs" — was the last child of `<section id="orb-zone">`, and `.orb-zone` is
+   * `position:relative; z-index:1`, which makes it a STACKING CONTEXT. `#talk` was its
+   * SIBLING at z-index 3 with `inset:0` on the idle screen: a transparent button the size of
+   * the viewport. No z-index on a chip can escape its parent's cap, so `--z-chrome:4` looked
+   * like it should save them and could not. The voice target was painted and hit-tested over
+   * every branch control on the page, and 63 taps on them in one evening — 26 of them in ten
+   * consecutive seconds — went to the speech recogniser instead. He reported it twice.
+   *
+   * The same bug class had already been found and fixed one element away, for `.bottom`
+   * ("why can't I click orders unless you're already thinking"). This is that fix, stated as
+   * an architecture rather than found again.
+   *
+   * THE ORDER, bottom to top. Each name is a token below, and each token is used by exactly
+   * the elements named:
+   *
+   *   1  content        the orb, the deck, the cards            .orb-zone (no z-index), .deck
+   *   2  actions        workspace-local actions                 .context, .context-nav, .armed
+   *   3  navigation     the chrome that moves between places    .top, .bottom, .dock (3 + 1)
+   *   4  branch         Split / the two halves / Merge / Close  .branch-zone
+   *   5  voice          the hold-to-speak target                .talk
+   *   20 emergency      the sheet, the system layer, the banner .sheet, .system, .dev-banner
+   *
+   * Two of those entries carry a note, and both are deliberate. `.orb-zone` has NO z-index at
+   * all: it is the content layer by position in the document, and giving it a number is what
+   * made it a cap. The dock is half a step above the rest of navigation, because the footer
+   * comes later in the document and reaches into the dock's band on the idle screen; that is
+   * the `.bottom` defect, and `pointer-events` discipline on the footer is the other half of
+   * its fix.
+   *
+   * THE RULE: no layer may VISUALLY COVER another INTERACTIVE layer without intentionally
+   * disabling it. Voice sits at the top of the ladder and therefore has to be the zone that
+   * overlaps nothing. That is bought with GEOMETRY, not z-index:
+   *
+   *   orb mode      `.talk` is `inset:0` on `.stage` — which is one grid row of `.app`, and
+   *                 the branch band, the workspace messages and the footer are the rows below
+   *                 it. In that row there is the orb (itself a voice target) and five lines of
+   *                 text, and nothing a finger presses. The line that caused D-1 is the same
+   *                 line; what changed is what is inside the box it describes.
+   *   context mode  `.talk` is the hold pill's `--hold-w` slot in the middle of the dock band,
+   *                 not the full width of it. The dock's four icons sit either side.
+   *
+   * A layer may be covered when it has been switched off ON PURPOSE and says so: in orb mode
+   * `.context` is `visibility:hidden; pointer-events:none`, and in context mode `.bottom` is
+   * `opacity:0; pointer-events:none; height:0`. Those are the only two.
+   *
+   * The rule is arithmetic in web/touch.js (`covering()`), asserted in
+   * tests/web/touch.test.js, and measured on the real page at 601x889 and 800x1280 by
+   * scripts/browser/touch.js — which reads every zone's rectangle off the live document and
+   * puts the lot through `covering()`. On the pre-change tree that check reports
+   * `{over:"#talk", under:"#branch-bar", w:204, h:69}`, and asking what is on top of the
+   * middle of the Split chip answers `span#talk-label`. That is D-1, measured.
+   *
+   * The old names (--z-orb, --z-context, --z-talk, --z-chrome) are kept as aliases for one
+   * reason: every rule that used them is listed above, so a stray one left behind would be a
+   * layer nobody had placed.
+   */
+  --z-content:1; --z-actions:2; --z-nav:3; --z-branch:4; --z-voice:5; --z-sheet:20;
+  --z-orb:var(--z-content); --z-context:var(--z-actions); --z-talk:var(--z-voice); --z-chrome:var(--z-nav);
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,"Roboto Mono",monospace;
   --orb:340px;          /* the drawn size of the orb; it is scaled, never re-rendered */
@@ -85,9 +152,26 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
 [hidden]{display:none!important}
 
 .app{
-  /* Four rows now: the global notification region, the wordmark, the stage, the footer. The
-     region is a row rather than a layer on purpose — see the notification block below. */
-  position:relative;height:100%;width:100%;overflow:hidden;display:grid;grid-template-rows:auto auto 1fr auto;grid-template-columns:minmax(0,1fr);
+  /* Six bands now, top to bottom: the global notification region, the wordmark, the stage,
+     the workspace messages, the branch chrome, the footer. Every one of them is a ROW rather
+     than a layer, which is the point: a row cannot be covered by the thing above it. The
+     notification region was already a row for that reason; D-1 made the branch chrome one
+     too — it was a child of the orb zone, under a voice target the size of the stage, and the
+     owner could not press Split, Merge or Close all evening. The two middle rows collapse to
+     nothing when they hold nothing, so the idle screen looks exactly as it did. */
+  position:relative;height:100%;width:100%;overflow:hidden;display:grid;
+  /* Named rows, and every band PLACED in its own by name.
+     Not a bare list of six row sizes matched to six children in document order: a grid item
+     that is `display:none` is not laid out and takes NO ROW, so with the global notification
+     region hidden — which is its normal state — every band moved up one. The stage landed on an
+     `auto` row and could not shrink below the orb's 340px; the branch band landed on the `1fr`
+     and came out 310px tall on the idle screen with its chips floating in the middle of it, and
+     0px tall beside the cards with its chips hanging out of the top. Placed by name, a hidden
+     band leaves an empty row of zero height and nothing else moves.
+     `minmax(0,1fr)` on the stage, not `1fr`, so it may also shrink BELOW its own min-content
+     rather than pushing a band off the screen. */
+  grid-template-areas:"notes" "top" "stage" "message" "halves" "foot";
+  grid-template-rows:auto auto minmax(0,1fr) auto auto auto;grid-template-columns:minmax(0,1fr);
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   /* The atmosphere the glass sits on. Not black: a dark diagonal with two large, static,
      very faint glows — one warm at the top-left where the light in the cards comes from, one
@@ -101,11 +185,20 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
     linear-gradient(160deg, #0b0b10 0%, var(--bg-0) 55%, #050507 100%);
 }
 
+/* The six bands, by name. This is the whole vertical architecture of the tablet in six lines,
+   and it is the order the layer block above documents from the side. */
+#notes-global{grid-area:notes}
+.top{grid-area:top}
+.stage{grid-area:stage}
+#notes-orb{grid-area:message}
+.branch-zone{grid-area:halves}
+.bottom{grid-area:foot}
+
 /* ------------------------------------------------------------------ top */
 /* 8 not 14: on a 1280px screen every band of chrome is content the owner cannot see, and the
    wordmark does not need a cushion. */
 .top{
-  position:relative;z-index:var(--z-chrome);display:flex;align-items:center;gap:var(--sp-3);
+  position:relative;z-index:var(--z-nav);display:flex;align-items:center;gap:var(--sp-3);
   padding:8px 18px 6px;
 }
 .wordmark{font-weight:800;letter-spacing:.32em;font-size:13px;color:var(--ink);padding-left:.32em}
@@ -129,8 +222,14 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
 /* ------------------------------------------------------------------ stage */
 .stage{position:relative;min-height:0;min-width:0;display:flex;flex-direction:column}
 
+/* LAYER 1 · content. NO z-index, on purpose: `z-index:var(--z-orb)` on a positioned element
+   made this a STACKING CONTEXT, and a stacking context is a cap — the branch chips inside it
+   could not be lifted above `#talk` by any z-index of their own, whatever `--z-chrome` said.
+   The chips have moved out to their own band of `.app`, and this is left unable to trap the
+   next thing anybody puts in it. `position:relative` stays: the orb's frame is measured
+   against it. */
 .orb-zone{
-  position:relative;z-index:var(--z-orb);display:flex;flex-direction:column;align-items:center;
+  position:relative;display:flex;flex-direction:column;align-items:center;
   flex:none;
   transition:height var(--t-3) var(--ease-inout),padding var(--t-3) var(--ease-inout);
 }
@@ -171,7 +270,11 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
 .errline .rec{color:var(--ink-3)}
 
 /* ---------- orb mode: big orb, centred, nothing else on screen */
-body[data-mode="orb"] .orb-zone{height:100%;justify-content:center;padding-bottom:6vh}
+/* `flex:1` rather than `height:100%`: the stage is shorter than it was (the branch band and
+   the workspace-message band are rows below it now), and the orb centres in what is left.
+   The 6vh of bottom padding was there to lift the orb clear of the fixed dock; the bands below
+   do that job, and keeping it as well pushed the orb visibly off-centre. */
+body[data-mode="orb"] .orb-zone{flex:1;min-height:0;justify-content:center;padding-bottom:0}
 body[data-mode="orb"] .context{
   position:absolute;inset:0;opacity:0;pointer-events:none;visibility:hidden;transform:translateY(24px);
   transition:opacity var(--t-3) var(--ease-out),transform var(--t-3) var(--ease-inout),visibility 0s var(--t-3);
@@ -194,15 +297,23 @@ body[data-mode="context"] .state-sub{display:none}
 body[data-mode="context"] .errline{display:none}
 
 .context{
-  position:relative;z-index:var(--z-context);flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;
+  position:relative;z-index:var(--z-actions);flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;
   visibility:visible;
   transition:opacity var(--t-3) var(--ease-out),transform var(--t-3) var(--ease-spring),visibility 0s;
 }
 /* Beside the cards, the bottom 112px of the screen belongs to the dock and the hold band,
-   both of them fixed. The workspace stops there. Anything drawn past this line is invisible
-   under the scrim and untouchable under `#talk`, which is the fault the collision suite found
-   on nine of fifteen fixtures. */
-body[data-mode="context"] .context{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}
+   both of them fixed, and the band above THEM belongs to the halves. The workspace stops at
+   the top of the branch band, and the branch band reserves the dock's 112px underneath itself
+   (`.branch-zone`) — so the reservation is made once, at the bottom of the column, instead of
+   twice. Anything drawn past this line is invisible under the scrim and untouchable under
+   `#talk`, which is the fault the collision suite found on nine of fifteen fixtures. */
+body[data-mode="context"] .context{padding-bottom:0}
+/* The dock and the hold band own the bottom 112px in context mode, and it is reserved HERE,
+   once, for every row of the column — so the workspace, the workspace messages and the branch
+   band all stop above it. It was reserved inside `.context` before, which is a row of the
+   stage and could say nothing about the bands beneath it: the halves' chips ended up inside
+   the dock's band, on top of its four icons, and the touch gate measures exactly that. */
+body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}
 /* The navigation is one glass object with lit spots, not a row of outlined words. The
    container carries the glass (this is one of the two places backdrop-filter is allowed);
    the chips inside are a faint step up from it at rest and a strong one when selected or
@@ -242,17 +353,22 @@ body[data-mode="context"] .context{padding-bottom:calc(var(--dock) + env(safe-ar
 .chip .chip-kind{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
 .chip .chip-label{max-width:180px;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;font-size:13px}
 .chip-home{color:var(--ink)}
-/* The list's own step back, beside the list's own step on. Narrower than the words beside it
-   because it carries a mark rather than a label — and still 44px tall, like everything a
-   thumb has to find on the 8-inch screen. */
-.chip-step{padding-left:14px;padding-right:14px;font-size:17px;line-height:1;color:var(--ink-2)}
+/* The list's own step back, beside the list's own step on. It used to carry a bare ‹ and
+   nothing else, which read as a control with no name — it says Previous now, at the same size
+   as Next, and is still 44px tall like everything a thumb has to find on the 8-inch screen. */
+.chip-step{padding-left:14px;padding-right:14px;color:var(--ink-2)}
+/* The INVITATION to divide can sit in this row — one chip, and only while there is one half.
+   The two halves and their Merge and Close never do: see `.branch-zone`. `display:contents`,
+   so the chip is a child of the rail's own flex row rather than a box inside a box. */
 .branch-rail{display:contents}
 .branch-rail:empty,.branch-rail[hidden]{display:none}
 .chip-split{color:var(--ink-2)}
 .chip-split::before{content:"";width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;
   background:linear-gradient(90deg,currentColor 50%,transparent 50%);opacity:.8}
-.chip-branch-act{color:var(--ink-3)}
-.branch-split{padding:8px 16px}
+.branch-split{padding:8px 18px}
+.branch-split::before{content:"";width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;
+  background:linear-gradient(90deg,currentColor 50%,transparent 50%);opacity:.8;margin-right:8px;display:inline-block;
+  vertical-align:-1px}
 .chip-home svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* What the next sentence will be applied to. Above the deck, at the deck's own type scale,
@@ -475,7 +591,7 @@ body[data-mode="context"] .context{padding-bottom:calc(var(--dock) + env(safe-ar
    owner reported: "why can't I click orders unless you're already thinking". The footer
    itself takes no touches; only its buttons and the status line do. */
 .bottom{
-  position:relative;z-index:var(--z-chrome);display:flex;flex-direction:column;gap:10px;
+  position:relative;z-index:var(--z-nav);display:flex;flex-direction:column;gap:10px;
   padding:0 18px 18px;transition:opacity var(--t-2),transform var(--t-3) var(--ease-inout);
   pointer-events:none;
 }
@@ -510,9 +626,27 @@ body[data-mode="context"] .bottom{opacity:0;pointer-events:none;transform:transl
 body[data-mode="context"] .stage[data-state="READY"] .state-label{display:none}
 .service[data-ok="false"]{color:var(--ink-3)}
 
-/* ------------------------------------------------------------------ hold to speak */
+/* ------------------------------------------------------- LAYER 5 · the VOICE zone
+ *
+ * The top of the ladder, and therefore the zone that is allowed to overlap NOTHING. D-1 was
+ * this element: `body[data-mode="orb"] .talk{inset:0}` made it a transparent button the size
+ * of the viewport, over branch controls capped inside the orb's stacking context, and 63 taps
+ * on Split, Merge and Close in one evening became recordings.
+ *
+ * It is bounded now, in both modes, and the boundaries are the physical separation §8 asks
+ * for rather than a z-index argument:
+ *
+ *   orb mode      the stage — the orb and five lines of text, and nothing a finger presses.
+ *                 The branch chrome and the workspace messages are bands of `.app` BELOW the
+ *                 stage, so this region cannot reach them however large it is.
+ *   context mode  the hold pill's own slot in the dock band, `--hold-w` wide, centred. NOT the
+ *                 full width of the band: the dock's four icons sit either side of it, and
+ *                 they are navigation chrome, which voice may not cover.
+ *
+ * The orb itself (`.orb-frame`) is the other voice target and the only other one.
+ */
 .talk{
-  position:absolute;z-index:var(--z-talk);border:0;background:transparent;cursor:pointer;
+  position:absolute;z-index:var(--z-voice);border:0;background:transparent;cursor:pointer;
   display:flex;align-items:flex-end;justify-content:center;
   touch-action:none;user-select:none;-webkit-user-select:none;   /* a stray scroll fires pointercancel and cuts the sentence */
   padding:0 0 14px;color:var(--ink-4);
@@ -522,11 +656,21 @@ body[data-mode="context"] .stage[data-state="READY"] .state-label{display:none}
   font-size:11px;letter-spacing:.3em;text-transform:uppercase;font-weight:600;
   padding:0 0 0 .3em;transition:color var(--t-2),opacity var(--t-2);
 }
+/* The stage, which in orb mode holds the orb and the caption and nothing else. `inset:0`
+   here is no longer "the whole screen": the stage is one grid row of `.app`, and the branch
+   chrome, the workspace messages and the footer are the rows under it. */
 body[data-mode="orb"] .talk{inset:0}
 body[data-mode="orb"] .talk-label{opacity:.75}
+/* The pill's slot, and only the pill's slot. `--hold-w` is the same token `.dock-gap` uses,
+   so the hole the dock leaves and the region that fills it cannot drift apart — and the four
+   dock icons, which are navigation chrome, are outside it by construction. */
 body[data-mode="context"] .talk{
-  position:fixed;left:0;right:0;bottom:0;height:var(--dock);align-items:center;
+  position:fixed;left:50%;transform:translateX(-50%);width:var(--hold-w);bottom:0;height:var(--dock);align-items:center;
   padding:0 0 env(safe-area-inset-bottom);
+}
+/* The scrim under the deck is the DOCK's, full width, and not the hold region's: a background
+   that had to be full-width was the reason the hold region was full-width. */
+body[data-mode="context"] .dock{
   background:linear-gradient(180deg,rgba(7,7,10,0),rgba(7,7,10,.92) 40%);
 }
 body[data-mode="context"] .talk-label{
@@ -550,12 +694,22 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
    The reference's dock is a floating glass column of icons with one lit; a column costs an
    8-inch portrait screen 12% of its width for good, so the same object is laid along the
    bottom, where the hand is. */
+/* LAYER 3 · navigation chrome. The container takes no touches at all (`pointer-events:none`);
+   only the four buttons do, and they sit either side of `--hold-w`, which is the voice zone's
+   room. That gap is the physical separation between NAVIGATION and VOICE at the bottom of the
+   screen: neither needs to out-rank the other, because they do not overlap. */
 .dock{
-  position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--z-chrome) + 1);
+  /* Navigation, and half a step above the rest of it: the footer is later in the document and
+     on the orb screen its bottom padding reaches into this band, so at the same z-index the
+     footer painted over the dock's icons. That is the defect the comment above `.bottom`
+     records — "why can't I click orders unless you're already thinking" — and `pointer-events`
+     discipline on the footer is the other half of its fix. Still BELOW the voice layer, which
+     it never overlaps: `--hold-w` is the hole it leaves for the hold pill. */
+  position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--z-nav) + 1);
   display:flex;align-items:center;justify-content:center;gap:10px;
   height:var(--dock);padding:0 14px env(safe-area-inset-bottom);pointer-events:none;
 }
-.dock-gap{flex:none;width:252px}          /* the hold pill's room: 240px + its border */
+.dock-gap{flex:none;width:var(--hold-w)}  /* the hold pill's room: 240px + its border */
 .dock-btn{
   pointer-events:auto;flex:none;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   width:64px;height:56px;border-radius:var(--radius-control);border:1px solid transparent;background:transparent;
@@ -574,10 +728,13 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
 .dock-btn[disabled]{opacity:var(--opacity-disabled);pointer-events:none}
 /* In orb mode the whole stage is the hold; its label lifts above the dock, and the footer's
    status line clears it. */
-body[data-mode="orb"] .talk{padding-bottom:calc(var(--dock) - 14px)}
+/* The label sits at the BOTTOM of the region it names, 24px clear of the branch band below
+   it, so the boundary between the voice zone and the branch zone is visible and not merely
+   true. It used to be 98px up, clearing a dock that is no longer the thing beneath it. */
+body[data-mode="orb"] .talk{padding-bottom:24px}
 body[data-mode="orb"] .bottom{padding-bottom:calc(var(--dock) - 8px)}
 body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgba(7,7,10,.8) 45%)}
-@media (max-width:560px){.dock-gap{width:200px}.dock-btn{width:52px}.dock-label{display:none}}
+@media (max-width:560px){:root{--hold-w:200px}.dock-btn{width:52px}.dock-label{display:none}}
 
 /* ------------------------------------------------------------------ settings sheet */
 .sheet{
@@ -650,8 +807,7 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
   .big{font-size:34px}
 }
 @media (max-height:640px){
-  :root{--orb:220px}
-  body[data-mode="orb"] .orb-zone{padding-bottom:0}
+  :root{--orb:220px;--branch-band:52px}
 }
 /* The keyboard is open (`interactive-widget=resizes-content` shrinks the viewport, it does
    not overlay it). A quarter of a 418px screen cannot be furniture. */
@@ -660,7 +816,7 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
   body[data-mode="context"] .talk-label{height:48px;min-width:180px}
   .dock-btn{height:48px}
   .dock-label{display:none}
-  .dock-gap{width:192px}
+  :root{--hold-w:192px}
   /* The orb keeps saying which state this is, at the size a 418px screen can spare. */
   body[data-mode="context"] .orb-zone{height:52px}
   body[data-mode="context"] .orb-frame{transform:scale(.13);margin:calc(var(--orb) * -.435)}
@@ -672,6 +828,13 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
   .notes-workspace .note-words{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
   .notes-workspace .note-dismiss{min-height:32px;min-width:32px;padding:0 10px}
   .context-nav{margin-bottom:6px}
+  /* And the halves' band yields with everything else. The collision gate caught it lying
+     across the composer's own input at 601 x 418: `#branch-zone` was 108px of a 418px screen,
+     with a chip at [21,240 274x48] over the field at [33,284 535x46]. The owner is typing into
+     a field; the halves are not what he is doing, and the Split chip is a chip in the
+     navigation rail while there is one half anyway. He can still divide with the gesture, and
+     the band comes back the moment the keyboard does not need the screen. */
+  body[data-mode="context"] .branch-zone{display:none}
 }
 @media (orientation:landscape) and (max-height:820px){
   :root{--orb:260px}
@@ -1187,18 +1350,84 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
 .unread-line{color:var(--warn)}
 
 
-/* The two halves. A chip each, the focused one lit; the background one says what it is
-   doing in words — queued, working, waiting, ready — and never in a percentage. */
-.branch-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+/* ------------------------------------------------------- LAYER 4 · the BRANCH zone
+ *
+ * Its own band of `.app`, between the stage and the footer, and that placement is the D-1
+ * fix. It used to be the last child of `<section id="orb-zone">` — a positioned element with
+ * `z-index:1`, and therefore a stacking context — while `#talk` was its sibling at a higher
+ * layer covering the whole stage. The chips could not be lifted out of that cap by any
+ * z-index of their own, so every tap on Split, Merge or Close was hit-tested by the voice
+ * target instead: 63 recordings in one evening, 26 of them in ten seconds.
+ *
+ * Out here the voice zone cannot reach it (it is positioned inside the stage), the footer
+ * cannot reach it (a row below), and it needs no z-index argument to be pressable — which is
+ * the test: a control whose reachability depends on winning a z-index comparison is a control
+ * that will stop being reachable.
+ *
+ * It is the SAME band in both modes, and that is the other half of the point. The chips used
+ * to move into the context nav rail when cards came up — six heterogeneous controls in one
+ * horizontal flex row, which at 601 CSS px ran off the right edge and cut the second half's
+ * chip in half. One home, one place a thumb learns, and no row to overflow.
+ */
+.branch-zone{
+  position:relative;z-index:var(--z-branch);
+  display:flex;align-items:center;justify-content:center;
+  min-height:var(--branch-band);padding:0 14px 4px;min-width:0;
+  transition:padding var(--t-3) var(--ease-inout);
+}
+/* Beside the cards the band is the same object, tighter: the deck needs the pixels and the
+   halves are already named on the screen itself (`#branch-head`). It is the SAME controls in
+   the SAME place in both modes, which is the point — a thumb learns one location.
+   The dock's own 112px is reserved by `.app` in context mode, not here: this is the last row
+   of the column there (`.bottom` collapses to nothing), and a reservation made as this band's
+   own padding put the band's BOX over the dock's four icons even though its chips sat above
+   them — and the branch layer paints above the navigation layer, so the icons stopped
+   answering. The touch gate measures exactly that, in both directions. */
+body[data-mode="context"] .branch-zone{min-height:0;padding:6px 14px 4px}
+/* And it takes NO space at all when it is holding nothing — which beside the cards is
+   whenever there is one half, because the Split chip is in the navigation rail then. A band
+   held open for one chip cost the first viewport 54px and took three density fixtures past the
+   screen-and-a-quarter ceiling; a zone has to be worth its pixels. */
+.branch-zone:has(> [hidden]){min-height:0;padding:0}
+body[data-mode="context"] .branch-why{display:none}
+body[data-mode="context"] .branch-chip .branch-bare{display:none}
+
+/* The two halves, DIVIDED VISIBLY (§17): a column each, a rule down the middle, and the
+   halves' own actions on a row of their own beneath them. Not a flex row of chips — that is
+   what it was, in the navigation rail, and at 601 CSS px the second half's chip was cut off by
+   the right edge of the screen. A grid of `minmax(0,1fr)` cannot do that: a long task label
+   ellipses inside its own column instead of pushing its neighbour off the glass. */
+.branch-bar{display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;min-width:0}
 .branch-bar[hidden]{display:none}
-.branch-chip{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border-radius:999px;
-  border:1px solid var(--border-rest);background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
+.branch-halves{
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:stretch;gap:0;width:100%;max-width:560px;min-width:0;
+}
+/* The division itself. One hairline, full height of the two chips: the orb divides above it
+   and this says the screen has too. */
+.branch-divide{width:1px;align-self:stretch;margin:4px 6px;background:var(--line-2)}
+.branch-acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;min-width:0}
+
+/* A half. Four facts, stacked, so the column can be narrow without any of them being cut:
+   which half it is, what it is about, what it is doing, and whether it has a screen at all. */
+.branch-chip{
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  min-height:var(--tap);padding:6px 12px;border-radius:var(--radius-control);
+  border:1px solid var(--border-rest);background:transparent;color:var(--ink-2);
+  font-size:13px;font-weight:600;text-align:left;min-width:0;width:100%;
+}
 .branch-chip[aria-pressed="true"]{background:var(--glass-control-active);color:var(--ink);border-color:var(--border-active);box-shadow:var(--shadow-active)}
-.branch-chip .branch-area{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+/* WHICH half, in the smallest type on the chip: it is the thing that never changes, so it
+   identifies without competing with what the half is about. */
+.branch-chip .branch-which{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-4);font-weight:700}
+.branch-chip[aria-pressed="true"] .branch-which{color:var(--ink-3)}
+.branch-chip .branch-area{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .branch-chip[aria-pressed="false"] .branch-area{color:var(--ink-2)}
-.branch-chip .branch-detail{font-weight:500;color:var(--ink-2);max-width:11ch;overflow:hidden;
+.branch-chip .branch-detail{font-weight:500;color:var(--ink-2);max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .branch-chip .branch-state{font-weight:500;color:var(--ink-3);text-transform:lowercase}
+.branch-chip .branch-bare{font-size:11px;color:var(--ink-4);font-weight:500}
 .branch-chip.is-ready .branch-state{color:var(--ok,#4f9d69)}
 .branch-chip.is-ready .branch-state::before{content:"\2713\00a0"}
 .branch-chip.is-failed .branch-state{color:var(--bad,#b4462f)}
@@ -1229,7 +1458,9 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
   background:transparent;color:var(--ink-2);font-size:13px;font-weight:600}
 /* What Split is for, on the screen with room for it. The owner asked out loud what the button
    did; a control explained only by a gesture nobody mentioned is not discoverable. */
-.branch-why{flex-basis:100%;text-align:center;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
+/* `flex:none`, not `flex-basis:100%`: the bar is a COLUMN now, so a basis of 100% was a
+   request for the full height of the band rather than the full width of a row. */
+.branch-why{flex:none;text-align:center;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
 
 /* ---- the capability card: what this build can do, grouped by the part of the shop.
    The kind ("Read", "Change", "Bulk") sits to the right of the sentence rather than after

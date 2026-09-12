@@ -162,8 +162,19 @@ async function atSize(browser, size) {
   const onSecond = await screen();
   check(at('tapping the other half redraws: the first half\'s cards are gone'),
         !onSecond.cards.some((c) => c.startsWith('order_list')), JSON.stringify(onSecond.cards));
+  /* Was `/EMPTY|ORDER/`, which asserted the Mac's TOKEN on the glass and so held the band to
+     printing a database state at the owner. The visual pass caught what that permitted:
+     "EMPTY Orders" over a focused empty half — nothing here, and it is about today's orders,
+     in one line. The Mac now sends `headline.words` beside its tokens
+     (app/session/branch.py SAID_ALOUD) and the band draws that.
+
+     Stricter, not looser, in two ways: the band must still name the half AND say which half
+     it is, and it must now carry NO state token at all — which the old regex actively
+     required. A place keeps its own word, so ORDER still passes as itself. */
   check(at('the fresh half says it is the fresh half'),
-        /EMPTY|ORDER/.test(onSecond.head) && /half 2 of 2/.test(onSecond.head), `head="${onSecond.head}"`);
+        /NOTHING YET|ORDER/i.test(onSecond.head) && /half 2 of 2/.test(onSecond.head), `head="${onSecond.head}"`);
+  check(at('and says it in words, not in the Mac\'s state tokens'),
+        !/\bEMPTY\b|\bWORKSPACE\b/.test(onSecond.head), `head="${onSecond.head}"`);
   check(at('and offers somewhere to go, as controls a thumb can hit'),
         onSecond.offers.length >= 4 && onSecond.offers.every((o) => o.h >= 40 && o.command),
         JSON.stringify(onSecond.offers));

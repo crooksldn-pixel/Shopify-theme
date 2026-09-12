@@ -81,6 +81,15 @@ SCREENS_SCRIPT = ROOT / "scripts" / "browser" / "screens.js"
 #: Where §32's matrix is written. Its own directory, not the report gallery: these are named,
 #: numbered, and compared release to release by eye.
 SCREENS_OUT = ROOT / "docs" / "screens" / "phase5"
+# And the P0 of Phase 5, with real fingers. Every other browser gate reaches into the DOM with
+# `element.click()`, which dispatches straight at the node and cannot be swallowed by anything
+# painted over it — so not one of them could see D-1, in which a transparent voice target the
+# size of the stage owned every touch on the idle screen and 63 taps on Split, Merge and Close
+# became recordings in one evening. This one dispatches CDP touch events at measured pixels and
+# counts what the tablet would have done with them: /turn posts, `recording_too_short`, the
+# voice layer's own hold-start, and the touch machine's submit count. All four must be ZERO for
+# every ordinary control tap, at both viewports — and two genuine holds must still send.
+TOUCH_SCRIPT = ROOT / "scripts" / "browser" / "touch.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -197,8 +206,8 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # prefixes its own names (accept-, action-, collide-, density-, split-, tab-, e0...),
         # so nothing here overwrites anything else.
         for extra in (TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
-                      SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT, REPLAY_SCRIPT,
-                      CLICKPATH_SCRIPT):
+                      SPLIT_SCRIPT, EMAIL_SCRIPT, TOUCH_SCRIPT, DENSITY_SCRIPT,
+                      REPLAY_SCRIPT, CLICKPATH_SCRIPT):
             if not extra.exists():
                 continue
             await asyncio.to_thread(
@@ -343,8 +352,8 @@ async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, An
         results = []
         for script in (scripts if scripts is not None else
                        (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
-                        SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT, REPLAY_SCRIPT,
-                        CLICKPATH_SCRIPT, SCREENS_SCRIPT)):
+                        SPLIT_SCRIPT, EMAIL_SCRIPT, TOUCH_SCRIPT, DENSITY_SCRIPT,
+                        REPLAY_SCRIPT, CLICKPATH_SCRIPT, SCREENS_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

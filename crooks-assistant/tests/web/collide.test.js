@@ -445,3 +445,55 @@ test('§31: tight is not broken — two controls six pixels apart are not a coll
   assert.equal(result.total, 0, JSON.stringify(result.hits));
   assert.equal(result.interactive, 0);
 });
+
+/* The false positive that the A/G merge produced, and the reason it is a rule and not a
+   fixture tweak. In context mode the footer is
+   `body[data-mode="context"] .bottom{opacity:0;height:0;overflow:hidden}` — it is folded
+   away, on purpose, with the dock taking its place. `#recent` inside it still ASKS for
+   48 px, and `opacity` does not inherit as a computed value, so the walker saw a fully
+   visible navigation control squeezed to nothing and reported
+   `control_clipped_by_container: 48px off the top or bottom — fixed furniture must fit the
+   screen`. Nothing inside a zero-opacity ancestor is on the glass. */
+test('a control inside a faded-away ancestor is not on the glass, and is not a squeezed control', () => {
+  const recent = node('BUTTON', 'recent', [0, 789, 601, 0]);
+  recent.id = 'recent';
+  // The real rule: the footer asks for nothing and hides what overflows. Its child asks for 48.
+  recent.getBoundingClientRect = () => ({ left: 0, top: 789, width: 601, height: 48, right: 601, bottom: 837 });
+  const footer = node('FOOTER', 'bottom', [0, 789, 601, 0],
+    { opacity: '0', overflowX: 'hidden', overflowY: 'hidden' }, [recent]);
+  const body = node('BODY', '', [0, 0, 601, 889], { overflowX: 'hidden', overflowY: 'hidden' }, [footer]);
+
+  const records = C.collect({ body }, { root: body, viewport: VIEW, styleOf: (n) => n._style });
+  const row = records.find((r) => r.sel === 'button#recent.recent');
+  assert.ok(row, 'the control is still collected — it exists, it is simply not shown');
+  assert.equal(row.invisible, true, 'its ancestor faded it out, so it is invisible too');
+  assert.equal(row.shown, false);
+  assert.equal(row.kinds.indexOf('control'), -1,
+    'and it is not a control: a control nobody can see is not a control this gate measures');
+
+  const result = C.check(records, { viewport: VIEW });
+  assert.equal(fired(result, 'control_clipped_by_container'), 0,
+    'the folded footer is the design, not a navigation strip that does not fit');
+  assert.equal(result.interactive, 0, 'and nothing interactive is involved, so §9 stays zero');
+});
+
+/* The same shape with the footer OPEN, so the rule above cannot be passing by simply never
+   firing. This is the genuine defect it must still catch: a navigation control the layout
+   has cut in half while the owner can see it. */
+test('and the same control, with its ancestor visible, is still reported when the layout cuts it', () => {
+  const recent = node('BUTTON', 'recent', [0, 0, 0, 0]);
+  recent.id = 'recent';
+  recent.getBoundingClientRect = () => ({ left: 0, top: 860, width: 601, height: 48, right: 601, bottom: 908 });
+  const footer = node('FOOTER', 'bottom', [0, 860, 601, 24],
+    { opacity: '1', overflowX: 'hidden', overflowY: 'hidden' }, [recent]);
+  const body = node('BODY', '', [0, 0, 601, 889], { overflowX: 'hidden', overflowY: 'hidden' }, [footer]);
+
+  const records = C.collect({ body }, { root: body, viewport: VIEW, styleOf: (n) => n._style });
+  const row = records.find((r) => r.sel === 'button#recent.recent');
+  assert.equal(row.invisible, false);
+  assert.ok(row.kinds.indexOf('control') !== -1, 'visible, so it is a control');
+
+  const result = C.check(records, { viewport: VIEW });
+  assert.equal(fired(result, 'control_clipped_by_container'), 1,
+    'a visible navigation control with 24 of its 48 pixels taken away is the real fault');
+});

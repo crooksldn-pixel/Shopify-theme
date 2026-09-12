@@ -305,8 +305,15 @@ async function one(browser, vp) {
     chips: document.querySelectorAll('#branch-bar .branch-chip').length,
     acts: Array.from(document.querySelectorAll('#branch-bar .branch-act')).map((b) => b.dataset.action || ''),
   }));
-  check(`${vp.name} · the idle screen divides, so the state can be measured at all`,
-    divided === 'clicked' && halves.chips === 2 && halves.acts.indexOf('merge') !== -1,
+  /* Asserted as the §25 rule rather than as "Merge is there", which is what this line said
+     first and which was wrong on a fresh fork. A fork of an EMPTY half holds nothing, so
+     keeping what it found and letting it go are the same act, and one control is drawn —
+     `holdsSomething` in web/app.js sets that out, including why §18 is not the reason. The
+     assertion is not weaker for saying so: it now pins the strip exactly, so a Merge that
+     came back over an empty half would fail here, and so would a missing Close. */
+  check(`${vp.name} · the idle screen divides, and its un-divide strip is Close alone`,
+    divided === 'clicked' && halves.chips === 2
+      && JSON.stringify(halves.acts.slice().sort()) === JSON.stringify(['cancel']),
     `${divided} — ${JSON.stringify(halves)}`);
   await measure('idle_two_halves');
   await shot(page, `collide-${vp.width}-idle-divided`);
@@ -334,18 +341,56 @@ async function one(browser, vp) {
   }
   await page.evaluate(() => { const s = document.querySelector('#settings'); if (s && s.open) s.close(); });
   await sleep(500);
+  /* WHAT THIS ASSERTS, and the two wrong versions before it.
+     v1 was `nav.querySelectorAll('button').length >= 6` — a count, which passed for any six
+     buttons. v2 named the parts but looked for all of them in `#context-nav`, and found no
+     branch chip there at all: `{chips: 0, undivide: []}`.
+
+     That is not a missing control, it is §8. The halves, their Merge and their Close are
+     drawn in their OWN band (`#branch-zone`) and are never put in the navigation row — see
+     the comment on `#branch-rail` in web/index.html. It is the answer to the finding this
+     very fixture produced: a 571 px strip carrying 807 px of controls, with Merge at x=590
+     and Close at x=664 on a 601 px screen. §25's answer to a strip that does not fit is to
+     remove a control; §8's is that VOICE, NAVIGATION and SPLIT-BRANCH do not share a row.
+     Both were done, and a check looking for the branch chrome in the navigation row was
+     asserting the defect.
+
+     So this asserts the ZONING, which is the claim actually being made: the navigation row
+     holds the trail and the list cursor and NOTHING of the halves; the branch band holds the
+     halves and their un-divide control; and the strip's contents fit the strip. The
+     `measure()` below is unchanged and still covers the whole page, so the geometry rules
+     see this state exactly as they did. */
   const strip = await page.evaluate(() => {
     const nav = document.querySelector('#context-nav');
+    const zone = document.querySelector('#branch-zone');
     if (!nav) return null;
+    const fits = (host) => (host
+      ? Array.from(host.querySelectorAll('button')).filter((b) => {
+        const r = b.getBoundingClientRect();
+        return r.width > 0 && (r.left < -2 || r.right > innerWidth + 2);
+      }).length
+      : 0);
     return {
       mode: document.body.dataset.mode, width: nav.clientWidth, content: nav.scrollWidth,
-      controls: nav.querySelectorAll('button').length,
-      past: Array.from(nav.querySelectorAll('button'))
-        .filter((b) => b.getBoundingClientRect().right > innerWidth + 2).length,
+      nav: {
+        controls: nav.querySelectorAll('button').length,
+        trail: Boolean(nav.querySelector('#home-btn, #back-btn, .chip-home, .chip-step')),
+        cursor: Boolean(nav.querySelector('#next-btn, #prev-btn')),
+        // §8: none of the two-half chrome may be in here.
+        branch: nav.querySelectorAll('.branch-chip, .branch-act').length,
+      },
+      zone: {
+        chips: zone ? zone.querySelectorAll('.branch-chip').length : -1,
+        undivide: zone ? Array.from(zone.querySelectorAll('.branch-act')).map((b) => b.dataset.action || '').sort() : [],
+      },
+      past: fits(nav) + fits(zone),
     };
   });
   check(`${vp.name} · the divided navigation row could be measured with a list open`,
-    Boolean(strip && strip.mode === 'context' && strip.controls >= 6), JSON.stringify(strip));
+    Boolean(strip && strip.mode === 'context' && strip.nav.trail && strip.nav.cursor
+      && strip.zone.chips === 2 && strip.zone.undivide.length >= 1), JSON.stringify(strip));
+  check(`${vp.name} · §8 · navigation and the two halves are in different bands, and both fit the glass`,
+    Boolean(strip && strip.nav.branch === 0 && strip.past === 0), JSON.stringify(strip));
   await measure('nav_full_divided');
   await shot(page, `collide-${vp.width}-nav-divided`);
 
@@ -357,15 +402,24 @@ async function one(browser, vp) {
   // `long_customer_name` and name a fixture that has nothing to do with it. The nineteen are
   // measured on the screen they have always been measured on, so a failure in one of them
   // still means what it used to mean, and the new findings stay attached to the new states.
+  /* Merge if there is a Merge, Close otherwise. What this needs is ONE half, and §25 means
+     the control that gives you one is not always called the same thing: the strip carries
+     one control per distinct outcome, so a half holding nothing offers Close alone
+     (`holdsSomething`, web/app.js). Naming `merge` only, as this did first, made the setup
+     for nineteen fixtures depend on a control the design is entitled not to draw.
+     The assertion itself has not moved a millimetre — `halvesLeft === 0`, and the detail
+     says which route was taken so a silent change of route is still visible in the log. */
   const merged = await page.evaluate(() => {
-    const m = document.querySelector('#branch-rail [data-action="merge"], #branch-bar [data-action="merge"]');
-    if (!m) return 'no merge control';
-    m.click();
-    return 'clicked';
+    const where = '#branch-rail, #branch-bar';
+    for (const verb of ['merge', 'cancel']) {
+      const control = document.querySelector(`${where.split(', ').map((h) => `${h} [data-action="${verb}"]`).join(', ')}`);
+      if (control) { control.click(); return `clicked ${verb}`; }
+    }
+    return 'no un-divide control at all';
   });
   await sleep(2000);
   const halvesLeft = await page.evaluate(() => document.querySelectorAll('.branch-chip').length);
-  check(`${vp.name} · the halves merge back, so the stress fixtures are measured undivided`,
+  check(`${vp.name} · the halves come back together, so the stress fixtures are measured undivided`,
     halvesLeft === 0, `${merged}; ${halvesLeft} chip(s) left`);
 
   // ---- the fixtures, one at a time

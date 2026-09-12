@@ -131,7 +131,7 @@
     // Furniture a message must never cover, and the controls the brief names: the dock, the
     // orb, the halves, Back, Next, Split, the composer, the approval surfaces.
     chrome: [
-      '#talk', '#talk-label', '.dock-btn', '#orb-frame', '#branch-bar', '#branch-rail',
+      '#talk', '#talk-label', '.dock-btn', '#orb-frame', '#branch-zone', '#branch-bar',
       '.branch-chip', '.branch-act', '[data-action="split"]', '#home-btn', '#back-btn', '#next-btn',
       '.action-surface', '.compose-btn', '.field-input', '.variant-add', '.armed',
     ],
@@ -494,7 +494,7 @@
     const seen = [];
     const screen = { left: 0, top: 0, right: view.w || 1e6, bottom: view.h || 1e6 };
 
-    const walk = (node, path, clip, scrollable) => {
+    const walk = (node, path, clip, scrollable, faded) => {
       if (!node || node.nodeType !== 1) return;
       const tag = String(node.tagName || '').toUpperCase();
       if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'SVG' || tag === 'TEMPLATE') return;
@@ -502,7 +502,25 @@
       const display = style.display || '';
       const gone = Boolean(node.hidden) || display === 'none';
       if (gone) return;   // and its children with it: nothing under display:none has a place
-      const invisible = style.visibility === 'hidden' || style.opacity === '0';
+      /* Invisibility is INHERITED, because `opacity` is not.
+         `visibility:hidden` does inherit, so a child of `.context` computes `hidden` and was
+         always caught. `opacity:0` does not: the footer is `body[data-mode="context"]
+         .bottom{opacity:0;height:0;overflow:hidden}`, and `#recent` inside it computes
+         `opacity:1` — so the walker read a fully visible 48 px navigation control that the
+         layout had squeezed to nothing, and `control_clipped_by_container` reported the
+         design as a defect ("48px off the top or bottom — fixed furniture must fit the
+         screen"). Nothing inside a zero-opacity ancestor is on the glass, so the flag goes
+         down the tree with the rest of the clip.
+
+         THE LIMIT, named because R-1 is what happens when one is not. A faded element is
+         still HIT-TESTABLE: `opacity:0` receives the touch, `visibility:hidden` does not.
+         So this flag settles whether something is ON THE GLASS, and geometry must not be
+         asked whether an invisible layer is swallowing taps — it cannot see that, and this
+         change makes it see it less. The instrument for that question is the `hit_test` step
+         in scripts/browser/replay.js, which asks `elementFromPoint` at the centre of a
+         control what the browser would hand the finger to, and which catches a transparent
+         overlay whatever its opacity. That is the D-1 instrument; this one measures layout. */
+      const invisible = faded || style.visibility === 'hidden' || style.opacity === '0';
       const inert = style.pointerEvents === 'none';
       const rect = node.getBoundingClientRect ? node.getBoundingClientRect() : null;
       // Fixed furniture is not inside anybody's scroller: the dock, the hold band and the
@@ -586,7 +604,7 @@
         }
       }
       const kids = node.children || [];
-      for (let i = 0; i < kids.length; i++) walk(kids[i], `${path}/${i}`, here, reveals);
+      for (let i = 0; i < kids.length; i++) walk(kids[i], `${path}/${i}`, here, reveals, invisible);
     };
     // The document itself is the outermost scroller. `body{overflow:hidden}` on this page
     // means it is usually neither, which is precisely why a clipped control is unreachable.
@@ -603,7 +621,7 @@
     };
     const atHtml = canScrollAway(doc.documentElement || scope);
     const atBody = canScrollAway(scope);
-    walk(scope, '', screen, { x: atHtml.x && atBody.x, y: atHtml.y && atBody.y });
+    walk(scope, '', screen, { x: atHtml.x && atBody.x, y: atHtml.y && atBody.y }, false);
 
     // The occlusion pass, which is the only honest way to ask "can he see it": take the
     // centre of each essential element and ask the browser what is on top there. Anything

@@ -59,6 +59,7 @@ const el = {
   deck: $('deck'), cards: $('cards'),
   attention: $('attention'), attentionCount: $('attention-count'), attentionText: $('attention-text'),
   recent: $('recent'), recentLabel: $('recent-label'), branchBar: $('branch-bar'), orbZone: $('orb-zone'),
+  branchZone: $('branch-zone'),
   branchHead: $('branch-head'),
   svc: { shopify: $('svc-shopify'), gmail: $('svc-gmail'), voice: $('svc-voice'), changes: $('svc-changes') },
   talk: $('talk'), talkLabel: $('talk-label'),
@@ -1451,6 +1452,9 @@ async function openEntity(kind, ref, label) {
     if (historyIndex >= 0) offerBeside(opened.answer || opened.detail || '', opened.changed);
     else drawEmptyHalf({ answer: opened.answer || opened.detail || '', changed: opened.changed });
   }
+  // Handed back so the control that was tapped can settle ITSELF (§6, D-6): a chip that has
+  // just been refused must stop being a live control, and must say why on itself.
+  return opened || null;
 }
 
 // One semantic command, posted the way the tablet posts everything else: which command, and
@@ -1748,16 +1752,163 @@ function applyBranches(shape) {
   T.record('branches', { count: branches.length, id: focusedBranch });
 }
 
-// The halves, named, and the way in. Drawn into the orb caption on the orb screen and into
-// the context rail beside Next when cards are up — the same chips, wherever the thumb is.
-// With one half there is one chip, Split: the feature must not depend on a secret gesture.
+/* The word the GLASS says for the Mac's own area token. ORDERS, INBOX, SALES and PRODUCTS are
+   the shop's own words and pass through untouched. EMPTY and WORKSPACE are not words: they are
+   database states that reached the glass, and the Phase 5 visual pass caught a chip reading
+   "EMPTY To go out" — a control saying at once that it holds nothing and that it is about its
+   parent's working set. The Mac keeps its tokens (they are what `branch.headline` is asserted
+   on); the chip says something a person would say. */
+const AREA_WORDS = { EMPTY: 'NOTHING YET', WORKSPACE: 'THIS HALF' };
+
+/* Is there anything on that half worth folding back into this one? Every field here is one
+   the Mac sends with the branch; none of it is inferred from the screen.
+
+   WHY THIS DECIDES WHETHER MERGE IS DRAWN, and why the first answer written here was wrong.
+   The first version of this said a Merge over an empty half is §18 fake UI — "a control that
+   cannot succeed". That is false, and the live session says so in its own record:
+   `merge_close_tap.observed.merge_status: 200`, on a half whose `cards` array was empty.
+   `POST /branches/{id}/merge` folds an empty half back perfectly well; it returns a summary
+   with nothing in it, which is the truth. So §18 is not the reason.
+
+   The reason is §25 and §26. Divided, the owner has at most two distinct outcomes: stop
+   having two halves AND KEEP what the other one found (Merge), or stop having two halves and
+   LET IT GO (Close). When the other half holds nothing those are not two outcomes, they are
+   one — there is nothing to keep or let go of — and §25 says a control that does not earn
+   its space comes off the glass. §26 says which of the two words survives: "Merge" over a
+   half with nothing in it describes a fold that does not happen, and "Close" is simply true.
+
+   That is also F's §25 finding answered where it belongs. The gate measured Merge at x=590
+   and Close at x=664 on a 601 px screen — a 571 px strip carrying 807 px of controls, two of
+   them off the glass. §25's answer to a strip that does not fit is to remove a control, not
+   to shrink four, and this is the control that had nothing to do on the screen where the
+   strip was worst: the idle divided one.
+
+   So the rule is COUNT THE OUTCOMES, and the gate asserts it in that form
+   (`undivide_controls` in scripts/browser/replay.js): one control per distinct outcome, each
+   one hit-testable. Which means this function must never make Merge disappear from a half
+   that holds something — that would be the opposite defect, and the merge_close_tap replay
+   is the fixture that would catch it. */
+function holdsSomething(half) {
+  if (!half || typeof half !== 'object') return false;
+  if (String(half.state || '').toUpperCase() === 'READY') return true;          // work that finished
+  return Boolean(half.has_workspace || half.entity || half.set_id
+    || half.building || half.compose || half.workflow);
+}
+
+/* One half, as §17 asks for it: which half it is, what it is about, what it is DOING, and
+   whether it holds a workspace at all. Four facts, all four from the Mac. */
+function branchChip(half, index) {
+  const head = half.headline && typeof half.headline === 'object' ? half.headline : {};
+  const state = String(half.state || '').toLowerCase();
+  const word = TASK_WORDS[state] || (half.status === 'BACKGROUND' ? 'aside' : '');
+  const token = String(head.area || half.label || (index === 0 ? 'FIRST' : 'SECOND'));
+  const area = AREA_WORDS[token.toUpperCase()] || token;
+  // A half the Mac describes with a STATE rather than a place holds nothing identifiable, and
+  // a half that holds nothing must not also carry a task label. The visual pass caught the
+  // chip saying both: "EMPTY To go out" — it holds nothing, AND it is about its parent's
+  // working set. A fork inherits its parent's set and trail (app/session/branch.py:fork_from,
+  // deliberately) so `headline.detail` falls back to that set's label; that is the right
+  // answer for a half that is working on it, and no answer at all for one that is not.
+  const bare = Object.prototype.hasOwnProperty.call(AREA_WORDS, token.toUpperCase());
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = `branch-chip${state === 'ready' ? ' is-ready' : ''}${state === 'failed' ? ' is-failed' : ''}`;
+  chip.setAttribute('aria-pressed', half.branch_id === focusedBranch ? 'true' : 'false');
+  // WHICH half, before anything else. The Phase 3 session recorded six taps between two halves
+  // in nine seconds looking for the difference; "HALF 1" is the difference that never depends
+  // on what either half happens to hold.
+  const which = document.createElement('span');
+  which.className = 'branch-which';
+  which.textContent = `HALF ${index + 1}`;
+  chip.appendChild(which);
+  const name = document.createElement('span');
+  name.className = 'branch-area';
+  name.textContent = area;
+  chip.appendChild(name);
+  // The task, and only when it is a task rather than the state said twice, or the identity
+  // said twice — "NOTHING YET · nothing yet" is the same contradiction in the other order.
+  const detail = String(head.detail || '');
+  const says = detail.toLowerCase();
+  if (!bare && detail && says !== state && says !== area.toLowerCase() && says !== 'nothing yet') {
+    const what = document.createElement('span');
+    what.className = 'branch-detail';
+    what.textContent = detail;
+    chip.appendChild(what);
+  }
+  if (word) {
+    const doing = document.createElement('span');
+    doing.className = 'branch-state';
+    doing.textContent = word;
+    chip.appendChild(doing);
+  }
+  // Whether there is a SCREEN on that half, which is a different question from what it is
+  // DOING, and the one the owner was asking when he tapped a half and saw nothing. Not said
+  // when the identity line is already saying it: "NOTHING YET / no screen yet" is the
+  // contradiction this chip exists to have stopped making, in the other direction.
+  if (!half.has_workspace && !bare) {
+    const nothing = document.createElement('span');
+    nothing.className = 'branch-bare';
+    nothing.textContent = 'no screen yet';
+    chip.appendChild(nothing);
+  }
+  chip.dataset.branch = half.branch_id;
+  chip.dataset.head = head.title || '';
+  chip.setAttribute('aria-label',
+    `Half ${index + 1} of 2, ${head.title || area}${word ? `, ${word}` : ''}${half.has_workspace ? '' : ', nothing on it yet'}`);
+  chip.addEventListener('click', () => focusBranch(half.branch_id));
+  return chip;
+}
+
+/* Merge and Close, each with its destination RESOLVED BEFORE IT IS DRAWN (§6). The id is
+   closed over here, not looked up in a click handler — a control whose target is worked out
+   when the thumb lands is a control that can silently do nothing, which is what
+   `branchCommand(undefined, 'merge')` did: it returned on its first line. */
+function branchAct(label, verb, branchId, why) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'branch-act';
+  button.dataset.action = verb;
+  button.dataset.branch = branchId;
+  button.textContent = label;
+  button.setAttribute('aria-label', why);
+  button.title = why;
+  button.addEventListener('click', () => branchCommand(branchId, verb));
+  return button;
+}
+
+/* The halves, named, and the way in. TWO HOMES, and which is which is the whole of the rule:
+ *
+ *   THE HALVES — both chips, Merge and Close — are ALWAYS in the branch band of `.app`
+ *   (`#branch-zone`), in both modes. That is D-1's fix: the band is a row of `.app`, outside
+ *   the stage `#talk` is positioned in, so the voice target cannot reach it and the chips need
+ *   no z-index argument to be pressable.
+ *
+ *   THE INVITATION — one Split chip, while there is one half — is in the band on the idle
+ *   screen, where there is room to say what it is for, and in the navigation rail beside Back
+ *   and Next when cards are up.
+ *
+ * Two defects set that division, and it is the only shape that answers both. Drawing the
+ * HALVES into the nav rail made it six heterogeneous controls wide — a landing, a trail step,
+ * a list step, a set cursor and two branch chips — which at 601 CSS px RAN OFF THE RIGHT EDGE
+ * and cut the second half's chip in half. (The collision gate cannot see that: it looks for
+ * overlapping rectangles, not for a flex row whose last child is clipped by its own
+ * container.) And holding the band open in context mode for the ONE chip cost the first
+ * viewport 54px, which took three density fixtures past the screen-and-a-quarter ceiling
+ * (tests/test_density.py) — a zone is not free, and this one is worth its space when there are
+ * two halves in it and not when there is one chip.
+ *
+ * With one half there is always a chip, wherever it is: the feature must not depend on a
+ * secret gesture.
+ */
 function drawBranchBar() {
-  const host = el.body.dataset.mode === 'context' && el.branchRail ? el.branchRail : el.branchBar;
+  const inRail = branches.length < 2 && el.body.dataset.mode === 'context' && el.branchRail;
+  const host = inRail ? el.branchRail : el.branchBar;
   if (!host) return;
-  for (const other of [el.branchBar, el.branchRail]) if (other && other !== host) { clear(other); other.hidden = true; }
+  for (const other of [el.branchBar, el.branchRail]) {
+    if (other && other !== host) { clear(other); other.hidden = true; }
+  }
   clear(host);
   host.hidden = false;
-  const inRail = host === el.branchRail;
   if (branches.length < 2) {
     const split = document.createElement('button');
     split.type = 'button';
@@ -1767,63 +1918,54 @@ function drawBranchBar() {
     split.setAttribute('aria-label', 'Divide the orb into two halves');
     split.addEventListener('click', () => splitOrb('button'));
     host.appendChild(split);
-    // On the orb screen there is room to say what it is for. "What does the split button do?"
-    // was asked out loud in the live session and answered "I don't know what that button is";
-    // a control whose only explanation is a gesture nobody was told about is not discoverable.
-    // In the rail beside Back and Next there is no room, and the chip stands alone.
+    // What it is FOR. "What does the split button do?" was asked out loud in the live session
+    // and answered "I don't know what that button is"; a control whose only explanation is a
+    // gesture nobody was told about is not discoverable. The band has room for the sentence;
+    // the rail, beside Back and Next, does not, and the chip stands alone there.
     if (!inRail) {
       const why = document.createElement('span');
       why.className = 'branch-why';
       why.textContent = 'Work on two things at once';
       host.appendChild(why);
     }
+    // And the header band goes with them. It used to be left standing: a merge or a close
+    // came back through `applyBranches`, which redraws the bar, and the bar returned here
+    // before the band was touched — so the screen went on saying "half 1 of 2" over a
+    // conversation that had one half. `drawBranchHead` hides itself when there is nothing to
+    // tell apart; it just has to be asked.
+    drawBranchHead();
     return;
   }
-  branches.forEach((b, i) => {
-    // What the half IS and what it is DOING, both from the Mac. A chip reading "First" beside
-    // one reading "Second" is not a difference a thumb can act on; "ORDERS · today" beside
-    // "INBOX · ready" is. Neither word is invented here.
-    const head = b.headline && typeof b.headline === 'object' ? b.headline : {};
-    const state = String(b.state || '').toLowerCase();
-    const word = TASK_WORDS[state] || (b.status === 'BACKGROUND' ? 'aside' : '');
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = `branch-chip${state === 'ready' ? ' is-ready' : ''}${state === 'failed' ? ' is-failed' : ''}`;
-    chip.setAttribute('aria-pressed', b.branch_id === focusedBranch ? 'true' : 'false');
-    const area = document.createElement('span');
-    area.className = 'branch-area';
-    area.textContent = head.area || b.label || (i === 0 ? 'FIRST' : 'SECOND');
-    chip.appendChild(area);
-    const detail = String(head.detail || '');
-    if (detail && detail.toLowerCase() !== state) {
-      const what = document.createElement('span');
-      what.className = 'branch-detail';
-      what.textContent = detail;
-      chip.appendChild(what);
+  // Two halves, divided visibly: a column each, a rule between them, and neither column able
+  // to push the other off the screen (`minmax(0,1fr)` in the stylesheet).
+  const halves = document.createElement('div');
+  halves.className = 'branch-halves';
+  branches.forEach((half, index) => {
+    if (index) {
+      const rule = document.createElement('span');
+      rule.className = 'branch-divide';
+      rule.setAttribute('aria-hidden', 'true');
+      halves.appendChild(rule);
     }
-    if (word) {
-      const says = document.createElement('span');
-      says.className = 'branch-state';
-      says.textContent = word;
-      chip.appendChild(says);
-    }
-    chip.dataset.branch = b.branch_id;
-    chip.dataset.head = head.title || '';
-    chip.setAttribute('aria-label', `${head.title || area.textContent}${word ? `, ${word}` : ''}`);
-    chip.addEventListener('click', () => focusBranch(b.branch_id));
-    host.appendChild(chip);
+    halves.appendChild(branchChip(half, index));
   });
-  for (const [label, verb] of [['Merge', 'merge'], ['Close', 'cancel']]) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = inRail ? 'chip chip-branch-act' : 'branch-act';
-    button.dataset.action = verb;
-    button.textContent = label;
-    // Merge folds the other half back into this one; Close lets the other half go.
-    const target = () => (branches.find((b) => b.branch_id !== focusedBranch) || {}).branch_id;
-    button.addEventListener('click', () => branchCommand(target(), verb));
-    host.appendChild(button);
+  host.appendChild(halves);
+
+  const other = branches.find((b) => b.branch_id !== focusedBranch) || null;
+  const otherId = other && other.branch_id ? other.branch_id : '';
+  const acts = document.createElement('div');
+  acts.className = 'branch-acts';
+  if (otherId) {
+    const name = ((other.headline || {}).area) || other.label || 'the other half';
+    // One control per distinct outcome (§25/§26 — the reasoning is above `holdsSomething`).
+    // Keep what the other half found, or let it go: two acts while it holds something, one
+    // act when it does not, and the word that is true either way is the one that is drawn.
+    if (holdsSomething(other)) {
+      acts.appendChild(branchAct('Merge', 'merge', otherId, `Fold ${name} back into this half`));
+    }
+    acts.appendChild(branchAct('Close', 'cancel', otherId, `Let ${name} go`));
   }
+  if (acts.childNodes.length) host.appendChild(acts);
   drawBranchHead();
 }
 
@@ -1838,11 +1980,26 @@ function drawBranchHead() {
   const head = half && half.headline && typeof half.headline === 'object' ? half.headline : null;
   if (branches.length < 2 || !head) { node.textContent = ''; node.hidden = true; node.dataset.state = ''; return; }
   clear(node);
+  /* The band says what the chip says, in the same words, from the same place. The Mac sends
+     `headline.words` for exactly this (app/session/branch.py SAID_ALOUD); AREA_WORDS below
+     is the fallback for a Mac older than this tablet build, and the two tables are held
+     equal by a test so they cannot drift.
+
+     A token that is a STATE rather than a place becomes one sentence and NO detail. This
+     band was drawing "EMPTY Orders" over a focused empty half — a line saying at once that
+     the half holds nothing and that it is about its parent's working set, which is the
+     §26 repetition and the §18 contradiction in six words. (A fork inherits its parent's
+     set and trail by design, app/session/branch.py fork_from, so `detail` falls back to
+     that set's label: the right answer for a half working on it, and no answer at all for
+     one that is not.) `.head-area` is uppercased by the stylesheet, so the Mac's sentence
+     case and this fallback's capitals render the same. */
+  const token = String(head.area || '');
+  const bare = Object.prototype.hasOwnProperty.call(AREA_WORDS, token.toUpperCase());
   const area = document.createElement('span');
   area.className = 'head-area';
-  area.textContent = head.area || '';
+  area.textContent = bare ? (head.words || AREA_WORDS[token.toUpperCase()]) : token;
   node.appendChild(area);
-  if (head.detail) {
+  if (head.detail && !bare) {
     const detail = document.createElement('span');
     detail.className = 'head-detail';
     detail.textContent = head.detail;
@@ -1855,6 +2012,73 @@ function drawBranchHead() {
   node.appendChild(side);
   node.dataset.state = String(head.state || '').toLowerCase();
   node.hidden = false;
+}
+
+/* One way out of a half, as a control that either WORKS or SAYS WHY IT CANNOT. §6/D-6:
+ * `turn_dd093f86b92d` posted `open.entity`, was refused `not_held`, and the half then drew
+ * `half_empty` — the control had been offered before its destination was known to exist, and
+ * pressing it produced a screen that said the half was empty. §18 puts it plainly: a control
+ * is drawn when its destination is resolved, or drawn disabled with the reason on it.
+ *
+ * Two halves, because there are two ways a destination can fail to be there:
+ *
+ *   BEFORE the tap   the offer carries no destination at all — an `open.entity` with no kind
+ *                    or no ref, an `open.area` with no area. Drawn disabled, saying so, rather
+ *                    than drawn live over nothing.
+ *   AFTER the tap    the Mac refuses. The chip is disabled THEN, with the Mac's own reason
+ *                    beside it, so the owner is not left pressing a control that has already
+ *                    told him no once. The refusal's own ways forward are drawn by
+ *                    `openEntity` as usual; this is about the control he touched.
+ */
+function offerChip(item) {
+  const command = String((item && item.command) || '');
+  /* The same shape the renderer draws a rail chip in (web/ui.js): a `.rail-label`, `is-off`
+     and `aria-disabled` when it cannot be used, and the reason in `.rail-why` beside the
+     label. The collision suite's "every control either works, or says why it cannot" sweep
+     reads exactly that, so an offer drawn here is held to the rule one drawn there is. */
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.offer = command;
+  const label = document.createElement('span');
+  label.className = 'rail-label';
+  label.textContent = String((item && item.words) || '—').slice(0, 40);
+  button.appendChild(label);
+  const why = (reason) => {
+    const said = document.createElement('span');
+    said.className = 'rail-why';
+    said.textContent = reason;
+    button.appendChild(said);
+    button.title = reason.slice(0, 120);
+  };
+  const missing = command === 'open.entity' ? (!item.kind || !item.ref)
+    : command === 'open.area' ? !item.area
+      : true;
+  if (missing) {
+    button.className = 'rail-chip is-off';
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    why(command === 'open.entity' ? 'the Mac did not say which record'
+      : command === 'open.area' ? 'the Mac did not say which place'
+        : 'this build does not know that command');
+    return button;
+  }
+  button.className = 'rail-chip';
+  button.setAttribute('aria-disabled', 'false');
+  button.addEventListener('click', async () => {
+    if (button.disabled) return;
+    const answered = command === 'open.entity'
+      ? await openEntity(item.kind, item.ref, item.label)
+      : await openArea(item.area, '');
+    if (answered && answered.ok !== false) return;
+    // Refused. It stops being a control, and it says why where the eye already is.
+    button.classList.add('is-off');
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+    const said = String((answered && (answered.answer || answered.detail)) || 'The Mac would not open that.');
+    why(said.slice(0, 60));
+    notifyControl(said, button);
+  });
+  return button;
 }
 
 // A way forward, as the Mac named it: what this half holds, said in a line, and each thing
@@ -1878,18 +2102,7 @@ function wayForward(words, changed) {
   if (offer.length) {
     const rail = document.createElement('div');
     rail.className = 'rail';
-    for (const item of offer) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'rail-chip';
-      button.textContent = String(item.words || '').slice(0, 40);
-      button.dataset.offer = String(item.command || '');
-      button.addEventListener('click', () => {
-        if (item.command === 'open.entity') openEntity(item.kind, item.ref, item.label);
-        else if (item.command === 'open.area') openArea(item.area, '');
-      });
-      rail.appendChild(button);
-    }
+    for (const item of offer) rail.appendChild(offerChip(item));
     panel.appendChild(rail);
   }
   return panel;
@@ -2811,58 +3024,127 @@ function sendAudio(blob) {
 
 /* ------------------------------------------------------------------ events */
 
-// The hold. Attached to the talk region (the whole stage in orb mode, the dock in context
-// mode) and to the orb itself, so the small orb still answers to a thumb when cards are up.
-// Two fingers on the hold surface are a gesture, never a sentence.
-//
-// This is the Phase 2 live-tablet failure: the first finger's pointerdown began a recording,
-// the second finger's pointerdown reached the SAME handler (the talk overlay covers the whole
-// stage, so it is the element under both fingers), and whichever finger lifted first stopped
-// the recording and sent whatever the room had said — six blank turns, each answered "I could
-// not hear that clearly". The two-finger handler, meanwhile, listened for touch events on the
-// orb zone, which the overlay is a sibling of and not a child, so it never fired at all: the
-// gesture could not divide the orb and could only ever be a hold.
-//
-// Arbitration, not delay: the first finger starts recording exactly as before — an ordinary
-// press costs nothing. The moment a second finger lands, the recording is discarded (no
-// /turn, no error, no "closer to the microphone"), and from then on the pair is measured for
-// a spread (divide) or a pinch (merge) until both lift.
-const touch = { points: new Map(), holdId: null, multi: false, from: 0, fired: false };
+/* The hold, and §7's answer to D-1: every pointer on this page has exactly ONE owner, and it
+ * is decided on the way down from what the finger actually landed on — CONTROL, SCROLL, VOICE,
+ * SPLIT_GESTURE, APPROVAL_GESTURE or nothing. The machine itself is web/touch.js, which is
+ * pure and unit-tested (tests/web/touch.test.js); everything here is the DOM half: what is
+ * under the finger, and what the page does about the answer.
+ *
+ * WHY. 11 September: 132 hold-starts, 131 of them reporting `target:"dock"` because nothing
+ * else on the page ever got a touch. `body[data-mode="orb"] .talk{inset:0}` made the voice
+ * target the size of the viewport, the branch chips were capped inside `.orb-zone`'s stacking
+ * context beneath it, and 63 taps on Split, Merge and Close became recordings — 26 of them in
+ * ten consecutive seconds, while he said "wherever I press just leads to you listening".
+ *
+ * The stylesheet and index.html fixed the geometry (§8: the voice zone overlaps nothing, and
+ * the branch chrome is a band of `.app` that `#talk` cannot reach). This is the belt to that
+ * braces: a pointer that begins on a control can never become a sentence even if the geometry
+ * is broken again by a future stylesheet, because CONTROL beats VOICE inside the machine.
+ *
+ * Two fingers are a gesture, never a sentence. The pending recording is discarded the moment
+ * the second finger lands — the machine cancels it BEFORE it returns, so there is no window in
+ * which a release could submit — and the pair is then measured for a spread (divide) or a
+ * pinch (merge) until every finger lifts.
+ */
 const SPLIT_TRAVEL = 70;   // CSS px of change in separation; about 9mm on the Tab A at its DPR
+const pointers = window.CrooksTouch.create({
+  splitTravel: SPLIT_TRAVEL,
+  // Reported by the machine the instant a pair forms, before anything else learns of it.
+  onCancelVoice: (why) => {
+    if (recording || pendingStart) stopRecording(true);
+    if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }
+    holding = false;
+    setState('READY');
+    haptic(HAPTIC.start);
+    T.record('hold', { phase: 'multitouch', fingers: pointers.count(), outcome: 'discarded', name: why });
+  },
+});
+// Read by scripts/browser/touch.js to prove the count it asserts on — downs by owner, and
+// submits. Nothing on the page reads it, and it carries no content of any kind.
+window.__crooksTouch = pointers;
 
-function spreadNow() {
-  const pts = Array.from(touch.points.values());
-  if (pts.length < 2) return 0;
-  return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+/* What the finger came down on, read off the DOM. The deepest node decides: `event.target`,
+   not the element the listener happens to be on. */
+function hitUnder(event) {
+  const node = event.target;
+  const close = (selector) => (node && node.closest ? node.closest(selector) : null);
+  const voice = Boolean(close('#talk, #orb-frame'));
+  const approval = close(window.CrooksTouch.APPROVAL_SELECTOR);
+  const control = approval ? null : close(window.CrooksTouch.CONTROL_SELECTOR);
+  // A scroll container, and the deck in particular: a thumb that starts on a card is scrolling
+  // it. `#cards` is the one that scrolls, and `.sheet-scroll` and `.tabs` are the others.
+  const scroller = close('#cards, .deck, .sheet-scroll, .tabs, .context-nav');
+  return {
+    pointerId: event.pointerId, x: event.clientX, y: event.clientY, button: event.button,
+    voice,
+    approval: approval ? selectorName(approval) : '',
+    control: control ? selectorName(control) : '',
+    scroll: Boolean(scroller),
+  };
+}
+/* A node, named, for the telemetry line and nothing else. `className` on an SVG element is an
+   SVGAnimatedString rather than a string — the dock's four icons are SVG — so it is read
+   through `baseVal`, or the whole name came out "[object SVGAnimatedString]". */
+function selectorName(node) {
+  const raw = typeof node.className === 'string' ? node.className
+    : (node.className && node.className.baseVal) || '';
+  const first = String(raw).split(' ').filter(Boolean)[0] || '';
+  return `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${first ? `.${first}` : ''}`;
+}
+
+/* Every pointer on the page is classified here, in CAPTURE, before any element's own handler
+   can act on it — so the owner is settled before anything can start a recording. It records
+   and nothing else: no preventDefault, no stopPropagation. A control keeps its click, a field
+   keeps its focus, a card keeps its scroll. */
+document.addEventListener('pointerdown', (event) => {
+  pointers.down(hitUnder(event));
+  /* And the lift, listened for ON THE NODE ITSELF, once. The document listener below catches
+     the ordinary case; this catches the one it cannot. A tap on a branch chip REDRAWS the
+     branch bar, which removes the chip from the document while the thumb is still on it — and
+     a pointerup dispatched at a node that is no longer in the tree never reaches `document`,
+     so the pointer stayed claimed in the machine for the rest of the session. A listener bound
+     to the node fires wherever the node has got to. The gate found this by counting the
+     pointers still down at the end of a run: it was never zero. */
+  for (const type of ['pointerup', 'pointercancel']) {
+    event.target.addEventListener(type, (lift) => {
+      // Never the voice's own pointers: the hold surfaces answer for those, and the orb's
+      // canvas is a DESCENDANT of one of them — this listener would run first and consume the
+      // claim, so the recording would never be stopped by the thumb that started it.
+      const owner = pointers.owner(lift.pointerId);
+      if (owner === window.CrooksTouch.OWNER.VOICE || owner === window.CrooksTouch.OWNER.SPLIT) return;
+      pointers.up({ pointerId: lift.pointerId, cancelled: lift.type === 'pointercancel' });
+    }, { once: true });
+  }
+}, true);
+// And released in the BUBBLE phase, after the hold surfaces have had their answer — a capture
+// listener here would consume the lift before `onHoldEnd` could ask who owned it.
+for (const type of ['pointerup', 'pointercancel']) {
+  document.addEventListener(type, (event) => {
+    pointers.up({ pointerId: event.pointerId, cancelled: event.type === 'pointercancel' });
+  }, false);
 }
 
 function onHoldStart(event) {
   if (event.button !== undefined && event.button !== 0) return;
-  event.preventDefault();
-  touch.points.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (touch.holdId !== null && event.pointerId !== touch.holdId) {
-    if (!touch.multi) {
-      touch.multi = true;
-      touch.from = spreadNow();
-      touch.fired = false;
-      if (recording || pendingStart) stopRecording(true);
-      if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }
-      setState('READY');
-      haptic(HAPTIC.start);
-      T.record('hold', { phase: 'multitouch', fingers: touch.points.size, target: event.currentTarget === el.orbFrame ? 'orb' : 'dock' });
-    }
+  // `down` is idempotent per pointer: the capture listener above has already classified this
+  // one, and this asks for the same answer back rather than assigning a second.
+  const claim = pointers.down(hitUnder(event));
+  if (claim.owner !== window.CrooksTouch.OWNER.VOICE) {
+    // A control, a scroll, an approval drag, or one of a pair. None of them is a question, and
+    // the ones that are somebody else's keep their own default behaviour.
+    if (claim.owner === window.CrooksTouch.OWNER.SPLIT) event.preventDefault();
     return;
   }
-  touch.holdId = event.pointerId;
-  touch.multi = false;
+  event.preventDefault();
   // Capture the pointer so pointerup reaches this element even if the thumb drifts off it —
-  // otherwise a slightly sliding thumb means the recording never stops.
+  // otherwise a slightly sliding thumb means the recording never stops. Deliberately only on
+  // the VOICE path: capturing a control's pointer would steal its click.
   try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* unsupported */ }
   holding = true;
   unlockSpeech();          // must be inside the gesture
   stopSpeaking();          // before anything else: the voice must not be recorded answering itself
   acquireWakeLock();
-  T.record('hold', { phase: 'start', state: busy ? 'busy' : 'ready', target: event.currentTarget === el.orbFrame ? 'orb' : 'dock' });
+  T.record('hold', { phase: 'start', state: busy ? 'busy' : 'ready', target: event.currentTarget === el.orbFrame ? 'orb' : 'talk' });
   if (busy) {
     // A turn is in flight. Say so; and if the hold goes on, take it as "forget that one".
     showBusyHint();
@@ -2902,38 +3184,53 @@ function cancelTurnAndListen() {
   setTimeout(() => { if (holding && !busy && !recording) { setState('LISTENING'); startRecording(); } }, 60);
 }
 
-// The fingers moving: only a pair is measured, and only once per pair.
+// The fingers moving. The machine measures a pair and reports the INTENT as a word; what a
+// spread or a pinch means depends on how many halves there are, which is the page's business.
 function onHoldMove(event) {
-  if (!touch.points.has(event.pointerId)) return;
-  touch.points.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (!touch.multi || touch.fired || touch.points.size < 2) return;
-  const travel = spreadNow() - touch.from;
-  if (travel > SPLIT_TRAVEL && branches.length < 2) { touch.fired = true; splitOrb('gesture'); }
-  else if (travel < -SPLIT_TRAVEL && branches.length > 1) { touch.fired = true; mergeOrb('gesture'); }
+  const moved = pointers.move({ pointerId: event.pointerId, x: event.clientX, y: event.clientY });
+  if (!moved) return;
+  if (moved.gesture === 'spread' && branches.length < 2) splitOrb('gesture');
+  else if (moved.gesture === 'pinch' && branches.length > 1) mergeOrb('gesture');
 }
 
 function onHoldEnd(event) {
-  event.preventDefault();
-  touch.points.delete(event.pointerId);
+  const done = pointers.up({ pointerId: event.pointerId, cancelled: event.type === 'pointercancel' });
   try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* noop */ }
-  if (touch.multi) {
-    // Discarded when the second finger arrived; nothing is sent whichever finger lifts first.
-    if (touch.points.size === 0) { touch.multi = false; touch.holdId = null; touch.from = 0; touch.fired = false; holding = false; }
+  // The hold surfaces sit inside the document, so this runs FIRST and the document's own
+  // release listener below gets `null` for the same pointer. A `null` here means the pointer
+  // was never ours: released already, or cleared by a mode change.
+  if (!done) return;
+  // A pair, or a control, or a scroll: nothing to send, whichever finger lifted first, and the
+  // machine has already counted it as submitting nothing.
+  if (done.owner !== window.CrooksTouch.OWNER.VOICE) {
+    if (done.owner === window.CrooksTouch.OWNER.SPLIT) {
+      event.preventDefault();
+      if (done.remaining === 0) holding = false;
+    }
     return;
   }
-  if (touch.holdId !== null && event.pointerId !== touch.holdId) return;
-  touch.holdId = null;
+  event.preventDefault();
   holding = false;
   if (cancelHoldTimer) { clearTimeout(cancelHoldTimer); cancelHoldTimer = null; }   // a tap, not a hold
-  stopRecording(event.type === 'pointercancel');
+  stopRecording(done.discard);
 }
 for (const target of [el.talk, el.orbFrame]) {
   target.addEventListener('pointerdown', onHoldStart);
   target.addEventListener('pointermove', onHoldMove);
   target.addEventListener('pointerup', onHoldEnd);
   target.addEventListener('pointercancel', onHoldEnd);
+  // The capture went away without a lift — the element was removed, or Android took the
+  // gesture. A pointer left down in the machine would pair with the next finger for the rest
+  // of the session, so the voice would simply stop working. It is released here instead.
+  target.addEventListener('lostpointercapture', (event) => {
+    const done = pointers.up({ pointerId: event.pointerId, cancelled: true });
+    if (done && done.owner === window.CrooksTouch.OWNER.VOICE) { holding = false; stopRecording(true); }
+  });
   target.addEventListener('contextmenu', (event) => event.preventDefault());
 }
+// The app went away with a thumb down: nothing is held, and nothing is sent.
+for (const type of ['blur', 'pagehide']) window.addEventListener(type, () => { pointers.clear(type); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pointers.clear('hidden'); });
 // What the owner touched on the cards, and what failed to load, for the test session.
 // Delegated, so the renderer stays free of it; captured, so an image's error (which does
 // not bubble) is seen. Nothing here reads the cards' text.
@@ -3084,11 +3381,13 @@ async function openArea(area, fallback) {
       el.heard.textContent = '';
       if (opened.answer) el.answer.textContent = opened.answer;
       T.record('render', { name: `dock:${area}`, items: opened.ui.map((i) => i && i.type), ms: opened.served_ms });
-      return;
+      return opened;
     }
   }
   T.record('chip_ask', { text: fallback.slice(0, 60), name: `dock:${area}:fallback`, detail: opened ? String(opened.code || opened.detail || '').slice(0, 80) : 'offline' });
-  if (fallback) { submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false); return; }
+  // A dock tap has a sentence to fall back on, so something DID happen: the caller is told so
+  // (§6) rather than being left to treat a working control as a refused one.
+  if (fallback) { submit({ text: fallback, session_id: sessionId, turns, speak: el.speakToggle.checked }, false); return { ok: true, fallback: true }; }
   // No sentence to fall back on — the tap came from a half's own way-forward rail rather than
   // from the dock. Say what happened, and leave the ways forward the refusal named on screen:
   // `landing_unavailable` reached the owner as one sentence he could not act on.
@@ -3097,6 +3396,8 @@ async function openArea(area, fallback) {
     if (historyIndex >= 0) offerBeside(opened.answer || opened.detail || '', opened.changed);
     else drawEmptyHalf({ answer: opened.answer || opened.detail || '', changed: opened.changed });
   }
+  // Handed back so the control that was tapped can settle itself (§6, D-6).
+  return opened || null;
 }
 el.backBtn.addEventListener('click', goBack);
 if (el.nextBtn) el.nextBtn.addEventListener('click', goNext);

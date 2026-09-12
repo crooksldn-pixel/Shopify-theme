@@ -1015,12 +1015,11 @@
       "selector": "#branch-bar .branch-chip"
      },
      {
-      "do": "hit_test",
-      "selector": "#branch-bar [data-action=\"merge\"]"
-     },
-     {
-      "do": "hit_test",
-      "selector": "#branch-bar [data-action=\"cancel\"]"
+      "do": "undivide_controls",
+      "expect": [
+       "cancel"
+      ],
+      "why": "neither half holds anything, so keeping and letting go are the same act"
      },
      {
       "do": "collide",
@@ -1072,6 +1071,43 @@
      {
       "count": 2,
       "do": "expect_branches"
+     },
+     {
+      "do": "undivide_controls",
+      "expect": [
+       "cancel"
+      ],
+      "why": "a fork of an empty half holds nothing, so there is one outcome"
+     },
+     {
+      "do": "tap_selector",
+      "expect_no_post": "/turn",
+      "selector": "#branch-bar [data-action=\"cancel\"]"
+     },
+     {
+      "count": 1,
+      "do": "expect_branches"
+     },
+     {
+      "do": "ask",
+      "text": "show me today's orders"
+     },
+     {
+      "do": "tap_selector",
+      "expect_no_post": "/turn",
+      "selector": "#branch-bar [data-action=\"split\"]"
+     },
+     {
+      "count": 2,
+      "do": "expect_branches"
+     },
+     {
+      "do": "undivide_controls",
+      "expect": [
+       "merge",
+       "cancel"
+      ],
+      "why": "the fork inherits the parent's working set, so keeping it and letting it go differ"
      },
      {
       "do": "tap_selector",

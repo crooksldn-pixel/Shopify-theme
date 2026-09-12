@@ -440,6 +440,53 @@ async function drive(page, state, fx, gate, posts, owned) {
         }
         break;
       }
+      case 'undivide_controls': {
+        /* §25/§26, and D-1 on whatever is actually there. The un-divide strip carries ONE
+           control per distinct outcome: with something on the other half, Merge (keep what
+           it found) and Close (let it go); with nothing on it, those are the same act and
+           only Close is drawn (web/app.js `holdsSomething` says why at length).
+
+           Asserted as a SET, not a count, and then every member hit-tested. That is what
+           makes it an instrument rather than a fixture tweak: it fails if Merge is missing
+           from a half that holds something, it fails if Merge is drawn over one that holds
+           nothing, and it fails if either is on the glass but the finger does not reach it —
+           which is the defect the owner actually hit ("I cannot click the merge or close
+           button ... because wherever I press just leads to you listening"). */
+        const strip = await page.evaluate(() => {
+          const host = document.querySelector('#branch-bar .branch-acts');
+          const acts = Array.from(host ? host.querySelectorAll('[data-action]') : []);
+          const name = (t) => (t ? `${t.tagName.toLowerCase()}${t.id ? `#${t.id}` : ''}${t.className && typeof t.className === 'string' ? `.${t.className.split(' ')[0]}` : ''}` : 'nothing');
+          return acts.map((el) => {
+            const b = el.getBoundingClientRect();
+            const x = Math.round(b.left + b.width / 2); const y = Math.round(b.top + b.height / 2);
+            const top = document.elementFromPoint(x, y);
+            return {
+              action: el.dataset.action || '',
+              words: (el.textContent || '').trim().slice(0, 12),
+              at: `${x},${y}`,
+              onScreen: b.left >= 0 && b.right <= innerWidth + 0.5 && b.top >= 0 && b.bottom <= innerHeight + 0.5,
+              reaches: top === el || el.contains(top),
+              top: name(top),
+            };
+          });
+        });
+        const want = (step.expect || []).slice().sort();
+        const got = strip.map((c) => c.action).sort();
+        check(gate(`the un-divide strip is exactly [${want.join(', ')}] — one control per outcome`) + owned,
+          JSON.stringify(want) === JSON.stringify(got),
+          `${step.why ? `${step.why}; ` : ''}drew [${got.join(', ') || 'nothing'}]`);
+        const lost = strip.filter((c) => !c.reaches);
+        const off = strip.filter((c) => !c.onScreen);
+        check(gate('and a finger reaches every control in it') + owned,
+          strip.length > 0 && lost.length === 0,
+          strip.length === 0 ? 'the strip is empty, so nothing could be hit-tested'
+            : lost.map((c) => `"${c.words}" at ${c.at} hands the touch to ${c.top}`).join(' | ')
+              || strip.map((c) => `${c.action} at ${c.at}`).join(', '));
+        check(gate('and every control in it is wholly on the glass') + owned,
+          strip.length > 0 && off.length === 0,
+          off.map((c) => `"${c.words}" at ${c.at}`).join(' | ') || `${strip.length} on screen`);
+        break;
+      }
       case 'expect_branches': {
         const now = await branchesNow(page);
         check(gate(`there ${step.count === 1 ? 'is 1 half' : `are ${step.count} halves`} afterwards`) + owned,

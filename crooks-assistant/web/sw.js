@@ -30,6 +30,7 @@ const SHELL = [
   '/static/action-state.js',
   '/static/telemetry.js',
   '/static/collide.js',
+  '/static/touch.js',
   '/static/notify.js',
   '/static/orb.js',
   '/static/audio-viz.js',

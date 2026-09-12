@@ -21,6 +21,9 @@ browser (scripts/browser/split.js), where fingers are.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
 
 from app import commands
@@ -185,16 +188,61 @@ def test_a_half_that_holds_nothing_says_so_and_says_what_to_do():
 
 
 def test_a_half_is_named_by_what_it_is_on():
+    """The MACHINE's three keys, unchanged, plus the GLASS's one.
+
+    `words` was added in Phase 5 and these expectations grew a key rather than changing one:
+    `area`, `detail`, `state` and `title` are all exactly what they were, and the branch
+    protocol and every other test that reads them are untouched. What is new is that the Mac
+    now also sends the line in language, because the tablet was translating the tokens itself
+    and getting it half right — the band above the cards read "EMPTY Orders" over a focused
+    empty half. See `Branch.SAID_ALOUD`.
+    """
     branch = Branch(branch_id="br_a", session_id="s1")
     assert branch.headline() == {"area": "EMPTY", "detail": "nothing yet", "state": "ACTIVE",
-                                "title": "EMPTY · nothing yet"}
+                                "words": "Nothing yet", "title": "EMPTY · nothing yet"}
     branch.visit("order", "o1", "#1957")
     assert branch.headline()["title"] == "ORDER · #1957"
+    assert branch.headline()["words"] == "ORDER · #1957", "a real place keeps its own word"
     branch.entity = None
     branch.shown([{"type": "email_list", "data": {}}], "4 threads.", "the inbox")
     branch.ready("there is an answer")
     assert branch.headline() == {"area": "INBOX", "detail": "READY", "state": "READY",
-                                "title": "INBOX · READY"}
+                                "words": "INBOX · READY", "title": "INBOX · READY"}
+
+
+def test_a_half_that_holds_nothing_says_so_once_and_not_in_two_ways():
+    """§26 · the band the visual pass caught: "EMPTY Orders".
+
+    A fork inherits its parent's working set and trail (`fork_from`, deliberately), so an
+    empty half's `detail` falls back to that set's label. On a half that is WORKING on the set
+    that is the right answer; on one that holds nothing it is a line saying at once that there
+    is nothing here and that this is about today's orders. `words` carries one or the other,
+    never both, and the tablet draws no detail beside a state word.
+    """
+    branch = Branch(branch_id="br_a", session_id="s1")
+    branch.set_id = "set_1"
+    branch.workflow = Workflow(workflow_id="wf_1", set_id="set_1", kind="order", label="Orders")
+    head = branch.headline()
+    assert head["area"] == "EMPTY", "the token is unchanged: the machine's half of the line"
+    assert head["detail"] == "Orders", "and so is the inherited label the trail needs"
+    assert head["words"] == "Nothing yet", "but the GLASS says one thing, not both"
+    assert "Orders" not in head["words"]
+
+
+def test_the_two_copies_of_the_state_words_cannot_drift():
+    """The tablet keeps a fallback copy of `SAID_ALOUD` for a Mac older than its own build.
+
+    Two copies of a translation is a defect waiting to happen, so they are held equal here:
+    the same keys, and the same words up to the stylesheet's uppercasing.
+    """
+    page = (Path(__file__).resolve().parents[1] / "web" / "app.js").read_text(encoding="utf-8")
+    found = re.search(r"const AREA_WORDS = \{([^}]*)\}", page)
+    assert found, "web/app.js no longer has an AREA_WORDS fallback"
+    tablet = dict(re.findall(r"(\w+): '([^']*)'", found.group(1)))
+    assert set(tablet) == set(Branch.SAID_ALOUD), (
+        f"the tablet says {sorted(tablet)}; the Mac says {sorted(Branch.SAID_ALOUD)}")
+    for token, said in Branch.SAID_ALOUD.items():
+        assert tablet[token].upper() == said.upper(), f"{token}: {tablet[token]!r} vs {said!r}"
 
 
 def test_the_headline_and_the_state_go_out_with_every_branch():
