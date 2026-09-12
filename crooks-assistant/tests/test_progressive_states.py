@@ -103,6 +103,26 @@ def test_the_tab_a_record_was_left_on_comes_back_with_that_record():
     assert render_id({"type": "customer", "data": {"customer_id": "cus_6343"}}) in branch.public()["tabs"]
 
 
+def test_the_tab_a_recipe_arrives_on_is_that_records_tab():
+    """The task-implied tab, from the lane that already knew it.
+
+    `app/fastpath/library.py` has always said which part of a record its recipes land on —
+    `_remember(ctx, "customer", ref, name, tab="orders")` for a customer history lookup,
+    `tab="shipping"` for an address lookup. That annotation reached `Branch.tab` and was then
+    handed to every card on the half; now it reaches the RECORD, which is what makes "see his
+    orders and his history" open on Orders for that customer and on nothing for any other.
+    """
+    branch = Branch(branch_id="br_1", session_id="s1")
+    branch.visit("customer", "cus_6343", "Ada", tab="orders")
+    assert branch.tab_for("customer", "cus_6343") == "orders"
+    branch.visit("order", "g1", "#1938", tab="shipping")
+    assert branch.tab_for("order", "g1") == "shipping"
+    # The customer is still on Orders: arriving at the order did not move him.
+    assert branch.tab_for("customer", "cus_6343") == "orders"
+    # And a record the turn never named has no tab at all.
+    assert branch.tab_for("customer", "cus_4807") == ""
+
+
 def test_the_record_a_tab_belongs_to_defaults_to_the_one_on_screen():
     """A tap reported without saying which record it was on — the spoken "show me the
     shipping", which goes through `surface.tab` — belongs to the record the branch is on."""
