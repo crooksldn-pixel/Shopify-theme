@@ -140,7 +140,19 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
      too — it was a child of the orb zone, under a voice target the size of the stage, and the
      owner could not press Split, Merge or Close all evening. The two middle rows collapse to
      nothing when they hold nothing, so the idle screen looks exactly as it did. */
-  position:relative;height:100%;width:100%;overflow:hidden;display:grid;grid-template-rows:auto auto 1fr auto auto auto;grid-template-columns:minmax(0,1fr);
+  position:relative;height:100%;width:100%;overflow:hidden;display:grid;
+  /* Named rows, and every band PLACED in its own by name.
+     Not a bare list of six row sizes matched to six children in document order: a grid item
+     that is `display:none` is not laid out and takes NO ROW, so with the global notification
+     region hidden — which is its normal state — every band moved up one. The stage landed on an
+     `auto` row and could not shrink below the orb's 340px; the branch band landed on the `1fr`
+     and came out 310px tall on the idle screen with its chips floating in the middle of it, and
+     0px tall beside the cards with its chips hanging out of the top. Placed by name, a hidden
+     band leaves an empty row of zero height and nothing else moves.
+     `minmax(0,1fr)` on the stage, not `1fr`, so it may also shrink BELOW its own min-content
+     rather than pushing a band off the screen. */
+  grid-template-areas:"notes" "top" "stage" "message" "halves" "foot";
+  grid-template-rows:auto auto minmax(0,1fr) auto auto auto;grid-template-columns:minmax(0,1fr);
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   /* The atmosphere the glass sits on. Not black: a dark diagonal with two large, static,
      very faint glows — one warm at the top-left where the light in the cards comes from, one
@@ -153,6 +165,15 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
     radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.03), transparent 60%),
     linear-gradient(160deg, #0b0b10 0%, var(--bg-0) 55%, #050507 100%);
 }
+
+/* The six bands, by name. This is the whole vertical architecture of the tablet in six lines,
+   and it is the order the layer block above documents from the side. */
+#notes-global{grid-area:notes}
+.top{grid-area:top}
+.stage{grid-area:stage}
+#notes-orb{grid-area:message}
+.branch-zone{grid-area:halves}
+.bottom{grid-area:foot}
 
 /* ------------------------------------------------------------------ top */
 /* 8 not 14: on a 1280px screen every band of chrome is content the owner cannot see, and the
@@ -262,10 +283,18 @@ body[data-mode="context"] .errline{display:none}
   transition:opacity var(--t-3) var(--ease-out),transform var(--t-3) var(--ease-spring),visibility 0s;
 }
 /* Beside the cards, the bottom 112px of the screen belongs to the dock and the hold band,
-   both of them fixed. The workspace stops there. Anything drawn past this line is invisible
-   under the scrim and untouchable under `#talk`, which is the fault the collision suite found
-   on nine of fifteen fixtures. */
-body[data-mode="context"] .context{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}
+   both of them fixed, and the band above THEM belongs to the halves. The workspace stops at
+   the top of the branch band, and the branch band reserves the dock's 112px underneath itself
+   (`.branch-zone`) — so the reservation is made once, at the bottom of the column, instead of
+   twice. Anything drawn past this line is invisible under the scrim and untouchable under
+   `#talk`, which is the fault the collision suite found on nine of fifteen fixtures. */
+body[data-mode="context"] .context{padding-bottom:0}
+/* The dock and the hold band own the bottom 112px in context mode, and it is reserved HERE,
+   once, for every row of the column — so the workspace, the workspace messages and the branch
+   band all stop above it. It was reserved inside `.context` before, which is a row of the
+   stage and could say nothing about the bands beneath it: the halves' chips ended up inside
+   the dock's band, on top of its four icons, and the touch gate measures exactly that. */
+body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}
 /* The navigation is one glass object with lit spots, not a row of outlined words. The
    container carries the glass (this is one of the two places backdrop-filter is allowed);
    the chips inside are a faint step up from it at rest and a strong one when selected or
@@ -1301,11 +1330,17 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
   position:relative;z-index:var(--z-branch);
   display:flex;align-items:center;justify-content:center;
   min-height:var(--branch-band);padding:0 14px 4px;min-width:0;
+  transition:padding var(--t-3) var(--ease-inout);
 }
 /* Beside the cards the band is the same object, tighter: the deck needs the pixels and the
    halves are already named on the screen itself (`#branch-head`). It is the SAME controls in
-   the SAME place in both modes, which is the point — a thumb learns one location. */
-body[data-mode="context"] .branch-zone{min-height:0;padding:0 14px 2px}
+   the SAME place in both modes, which is the point — a thumb learns one location.
+   The dock's own 112px is reserved by `.app` in context mode, not here: this is the last row
+   of the column there (`.bottom` collapses to nothing), and a reservation made as this band's
+   own padding put the band's BOX over the dock's four icons even though its chips sat above
+   them — and the branch layer paints above the navigation layer, so the icons stopped
+   answering. The touch gate measures exactly that, in both directions. */
+body[data-mode="context"] .branch-zone{min-height:0;padding:0 14px 4px}
 body[data-mode="context"] .branch-why{display:none}
 body[data-mode="context"] .branch-chip .branch-bare{display:none}
 

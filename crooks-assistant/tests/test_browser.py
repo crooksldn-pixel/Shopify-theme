@@ -51,3 +51,10 @@ async def test_the_page_works_in_a_real_browser():
                  "no notification overlaps the dock", "nothing essential is hidden under the fixed furniture",
                  "every control a finger uses is about 44px"):
         assert rule in names, f"the collision suite did not run: {rule}"
+    # And the touch gate's own, for the same reason (Phase 5, D-1): it presses controls with
+    # real CDP touch events at measured pixels, which is the only kind of check that could ever
+    # have seen a transparent voice target owning every tap on the idle screen.
+    for pressed in ("tap Split", "tap Merge", "tap Close", "tap Back", "tap Home",
+                    "the layer ladder holds on the idle screen",
+                    "ZERO recordings were too short across the whole run"):
+        assert pressed in names, f"the touch gate did not run: {pressed}"

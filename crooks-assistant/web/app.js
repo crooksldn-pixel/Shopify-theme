@@ -2960,7 +2960,26 @@ function selectorName(node) {
    can act on it — so the owner is settled before anything can start a recording. It records
    and nothing else: no preventDefault, no stopPropagation. A control keeps its click, a field
    keeps its focus, a card keeps its scroll. */
-document.addEventListener('pointerdown', (event) => { pointers.down(hitUnder(event)); }, true);
+document.addEventListener('pointerdown', (event) => {
+  pointers.down(hitUnder(event));
+  /* And the lift, listened for ON THE NODE ITSELF, once. The document listener below catches
+     the ordinary case; this catches the one it cannot. A tap on a branch chip REDRAWS the
+     branch bar, which removes the chip from the document while the thumb is still on it — and
+     a pointerup dispatched at a node that is no longer in the tree never reaches `document`,
+     so the pointer stayed claimed in the machine for the rest of the session. A listener bound
+     to the node fires wherever the node has got to. The gate found this by counting the
+     pointers still down at the end of a run: it was never zero. */
+  for (const type of ['pointerup', 'pointercancel']) {
+    event.target.addEventListener(type, (lift) => {
+      // Never the voice's own pointers: the hold surfaces answer for those, and the orb's
+      // canvas is a DESCENDANT of one of them — this listener would run first and consume the
+      // claim, so the recording would never be stopped by the thumb that started it.
+      const owner = pointers.owner(lift.pointerId);
+      if (owner === window.CrooksTouch.OWNER.VOICE || owner === window.CrooksTouch.OWNER.SPLIT) return;
+      pointers.up({ pointerId: lift.pointerId, cancelled: lift.type === 'pointercancel' });
+    }, { once: true });
+  }
+}, true);
 // And released in the BUBBLE phase, after the hold surfaces have had their answer — a capture
 // listener here would consume the lift before `onHoldEnd` could ask who owned it.
 for (const type of ['pointerup', 'pointercancel']) {
