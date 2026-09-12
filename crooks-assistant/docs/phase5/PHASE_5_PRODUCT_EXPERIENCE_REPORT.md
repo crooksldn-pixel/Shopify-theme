@@ -238,8 +238,21 @@ quietly absent, which is the §32 requirement.
 
 ## 9 · §38 — the final gate
 
-Recorded in the block at the end of this pass's final message, run from a clean head with
-nothing else on the machine.
+Run from a clean head, in one process, with nothing else on the machine — which matters: the
+parallel workstreams left 50+ Chromium processes on the box and a single-process run was
+SIGTERM-killed at ~14% three times during the pass. The numbers are in the block at the end
+of this pass's final message.
+
+What each gate line in that block actually measures, so it can be disagreed with:
+
+| Line | The measurement behind it |
+|---|---|
+| FULL TEST RESULT | `pytest -q` over the whole tree, one process, browser tests included inline |
+| LIVE-STATE REPLAY | `scripts/browser/replay.js` — the ten §30 fixtures derived from the raw timeline, driven in Chromium at 601×889 DPR 1.33, with `elementFromPoint` hit tests and real pointer presses at the durations the tablet recorded |
+| 601x889 COLLISIONS | `scripts/browser/collision.js` — the count of geometry hits naming an interactive element on either side, over 21 stress fixtures plus the three new divided states, at both viewports. NOT the total hit count: a sideways document scroll is a hit and is not a collision |
+| FAKE CONTROLS | The §18 sweep — every element a thumb would read as a control, on every fixture, at both viewports: it works, or it is visibly disabled with a reason. Since this pass it also asks whether the DESTINATION resolves, not only whether the attribute is well-formed, which is what R-2 was about |
+| CONTROL-TAP VOICE LEAKS | `scripts/browser/touch.js` — real pointer presses on real controls, counting recording events. The bar the brief sets is **zero**, not "better" |
+| P0 REMAINING | Defects from `LIVE_SESSION_FORENSICS.md` still unfixed at severity 6 |
 
 ## 10 · §42 — the honest answer
 
