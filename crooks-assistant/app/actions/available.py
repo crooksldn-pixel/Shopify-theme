@@ -25,23 +25,82 @@ fixed here rather than on the tablet:
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict, dataclass
 from typing import Any
 
 from app.context.order import order_digits
 
-# The most a card offers. More than three is a menu, and this is not a menu.
+# The most a card offers, and the most it offers at FULL weight.
+#
+# PHASE 5 · §25, AND WHAT THE AUDIT ACTUALLY FOUND. The live session's numbers are the
+# starting point, not the conclusion: the rail exposed `fulfil`, `address`, `cancel` and
+# `note` on EVERY order card — four enabled actions, four exposures each, sixteen
+# chip-exposures in one evening — and exactly one tap landed on any of them (`address`,
+# once). "Exposed but never used: cancel, fulfil, note."
+#
+# The obvious answer is to cut the rail to two chips with one at full weight. It was tried,
+# and it is WRONG, for reasons the browser gate and the golden scenarios state plainly:
+#
+#   * `note` is the only `ask`-mode chip on an order that carries a `family`. Tapping it is
+#     the ONLY WAY TO BIND THE MICROPHONE TO THIS ORDER BY TOUCH (§20 — voice is intent,
+#     touch is precision, and they are two controls; D-11 is the whole of that story).
+#     Deleting it deletes a capability, not a decoration. It stays, and it stays LAST and
+#     never at full weight — which is what its five renders and nought taps do justify.
+#   * on a real order — unfulfilled, paid, the customer has written in, and the address
+#     needs correcting — the card genuinely owes FOUR things: the reply the customer is
+#     waiting on, the shipping the order is waiting on, the address as something to type,
+#     and the microphone. Two slots cannot hold them, and `address` is the one chip the
+#     owner did use. Cutting to two dropped it (`scripts/browser/email.js`: "an order that
+#     has not shipped offers its address as something to type").
+#
+# So the number of chips is not the defect. Their WEIGHT and their RELEVANCE are:
+#
+#   MAX_ENABLED = 3   plus the note, which is always offered and never counted
+#   MAX_PRIMARY = 2   chosen by the order's own context — "the reply leads and the
+#                     fulfilment is beside it" — and everything else disclosed
+#
+# and the removal the evidence does support is one chip rather than a quota: see `cancel`
+# below. §25's five questions have five answers, and "remove it" is only one of them.
 MAX_ENABLED = 3
-# And the most it offers at FULL weight. Two, because the first viewport of an eight-inch
-# screen has to answer what am I looking at, what matters, and what can I do — and three
-# chips of equal loudness answer the last of those with a shrug.
 MAX_PRIMARY = 2
+
+# What the owner calls an order. Never an id: §26 — "Order #1962", never
+# `gid://shopify/Order/…`, and a technical id only on a debug surface. This is not
+# cosmetic — an `ask` chip's instruction is the sentence the owner is primed to SAY, and
+# "Fulfil order gid://shopify/Order/1938" is not a sentence anybody says.
+_HUMAN_NUMBER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9\-_ ]{0,15}$")
+
+def order_words(order: dict[str, Any]) -> str:
+    """The order as the office says it — "1938" — or nothing at all.
+
+    `order_digits` already answers this for every name Shopify produces. What was wrong was
+    the FALLBACK behind it: `order_number` was passed through raw, so a read model carrying
+    only the Shopify id put `gid://shopify/Order/1938` into four chip instructions, and one
+    carrying no number at all produced "Fulfil order " — a control primed with a sentence
+    that names no record. Both are refused here, and a chip that cannot name what it is
+    about is not offered at all (see `available_actions`).
+    """
+    digits = order_digits(order.get("order_number"))
+    if digits:
+        return digits
+    raw = str(order.get("order_number") or "").strip().lstrip("#").strip()
+    return raw if raw and "://" not in raw and _HUMAN_NUMBER.match(raw) else ""
+
+
+def order_phrase(order: dict[str, Any]) -> str:
+    """How a sentence refers to this order: "order 1938", or "this order" when the read model
+    has no human name for it. Never "order " with nothing after it — which is what four chip
+    instructions said on an order whose number had not been read yet."""
+    n = order_words(order)
+    return f"order {n}" if n else "this order"
+
 
 SHIPPED = frozenset({"FULFILLED"})
 PART_SHIPPED = frozenset({"PARTIALLY_FULFILLED"})
 PAID = frozenset({"PAID", "PARTIALLY_REFUNDED"})
-# What an order in each state needs first. The note is always offered and never counted.
+# What an order in each state needs first.
 _NEED_OPEN = ("fulfil", "address", "cancel", "refund", "email")
 _NEED_CANCELLED = ("refund", "email", "fulfil", "address", "cancel")
 _NEED_SHIPPED = ("refund", "email", "address", "fulfil", "cancel")
@@ -117,7 +176,8 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     not offered; one that is blocked is not offered either — the settings sheet says why."""
     caps = capabilities or {}
     f = order_facts(order)
-    n = f["digits"] or str(order.get("order_number") or "").lstrip("#")
+    n = order_words(order)
+    phrase = order_phrase(order)
     # The id the "open" chips carry, when the read model has one. A chip that cannot name its
     # record cannot post a command about it, and falls back to priming the words.
     order_id = str(order.get("order_id") or "")
@@ -128,10 +188,24 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         cap = caps.get(operation)
         if not isinstance(cap, dict) or cap.get("state") not in ("ready", "unknown"):
             return   # not built, switched off, or blocked: not a chip
+        if mode == "ask" and not n:
+            # An "ask" chip IS its instruction: the tap primes that sentence and nothing
+            # else. With no human name for the order the sentence cannot name the record, so
+            # there is no control to draw — §18, a control is not offered before what it
+            # acts on is known to exist. An "open" chip carries the id itself and is
+            # unaffected, because a tap on it reaches a screen rather than a microphone.
+            return
         candidates.append(AvailableAction(id_, label, operation, risk, ok, "" if ok else reason, instruction,
                                           family=family, mode=mode, command=command, args=args))
 
-    add("note", "Note", "order_note_append", "amber", True, "", f"Add a note to order {n}", family="order.add_note")
+    # NOTE. Five renders, nought taps, and it was the FIRST chip on every order card whatever
+    # the order was — so Phase 4 sent it last and behind the disclosure, and that is correct
+    # and stays. It is not REMOVED, and the §25 question it passes is "is there a better
+    # contextual location": there is not. It is the only chip on an order that both primes a
+    # sentence and names the spoken control it arms (`family`), which makes it the one way to
+    # bind the microphone to THIS order with a thumb. A chip nobody taps is still the only
+    # door to a capability.
+    add("note", "Note", "order_note_append", "amber", True, "", f"Add a note to {phrase}", family="order.add_note")
     if f["cancelled"]:
         cancel_reason = "already cancelled"
     elif f["shipped"]:
@@ -140,7 +214,7 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         cancel_reason = "partly shipped"
     else:
         cancel_reason = ""
-    add("cancel", "Cancel", "order_cancel", "red", not cancel_reason, cancel_reason, f"Cancel order {n}")
+    add("cancel", "Cancel", "order_cancel", "red", not cancel_reason, cancel_reason, f"Cancel {phrase}")
     if f["cancelled"]:
         address_reason = "cancelled"
     elif f["shipped"] or f["part_shipped"]:
@@ -155,7 +229,7 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     # until this chip opened something, correcting one was a sentence into a microphone that
     # had already produced four recordings under 150 ms. The spoken control rides along.
     add("address", "Address", "order_shipping_address_set", "red", not address_reason, address_reason,
-        f"Change the address on order {n}", family="order.change_address",
+        f"Change the address on {phrase}", family="order.change_address",
         mode="open" if order_id else "ask",
         command="address.open" if order_id else "",
         args=f"order_id={order_id}" if order_id else "")
@@ -165,7 +239,7 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         refund_reason = "nothing to refund" if f["payment"] in {"REFUNDED", "VOIDED"} or (f["payment"] in PAID and not f["refundable"]) else "not paid"
     else:
         refund_reason = ""
-    add("refund", "Refund", "refund_create", "red", not refund_reason, refund_reason, f"Refund order {n}")
+    add("refund", "Refund", "refund_create", "red", not refund_reason, refund_reason, f"Refund {phrase}")
     if f["cancelled"]:
         fulfil_reason = "cancelled"
     elif not f["unfulfilled"]:
@@ -174,7 +248,7 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
         fulfil_reason = "not paid"
     else:
         fulfil_reason = ""
-    add("fulfil", "Fulfil", "fulfillment_create", "red", not fulfil_reason, fulfil_reason, f"Fulfil order {n}")
+    add("fulfil", "Fulfil", "fulfillment_create", "red", not fulfil_reason, fulfil_reason, f"Fulfil {phrase}")
     # Email OPENS a composer addressed to the customer, so the owner can type or dictate it
     # (`compose.to_customer`). It was an "ask" chip that primed a sentence, rendered three
     # times in the live session and used nought — a chip named Email that produced a dock
@@ -182,7 +256,7 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     # is not on the chip: the command carries the ORDER, and the Mac reads the recipient off
     # its own copy of it.
     add("email", "Email", "gmail_draft_new", "amber", f["has_email"], "no email address",
-        f"Email the customer about order {n}",
+        f"Email the customer about {phrase}",
         mode="open" if order_id else "ask",
         command="compose.to_customer" if order_id else "",
         args=f"order_id={order_id}" if order_id else "")
@@ -192,15 +266,37 @@ def available_actions(order: dict[str, Any], capabilities: dict[str, dict[str, A
     # that has waited too long. Decided here from the read model, never by the model.
     first = context_rank(order, f)
     enabled_all = [a for a in candidates if a.enabled]
-    # Note goes LAST and never at full weight. It was the first chip on every order card in
-    # the live session — five renders, nought taps — because it is what is left to offer when
-    # the order needs nothing, not what the order needs.
+    # The note is always offered and never takes one of the three places (see above).
     note = [a for a in enabled_all if a.id == "note"]
-    rest = sorted((a for a in enabled_all if a.id != "note"), key=lambda a: (first.index(a.id) if a.id in first else len(first), order_of_need.index(a.id) if a.id in order_of_need else 99))
-    enabled = rest[:MAX_ENABLED] + note
+
+    # CANCEL GOES LAST UNLESS THE ORDER ITSELF ASKS FOR IT — and on any order with something
+    # else to offer, last means off the card. This is the removal §25's evidence supports:
+    # two renders, nought taps, and it is the reddest, least reversible thing on the rail.
+    # An order needs cancelling because a PERSON said so, which `context_rank` already reads
+    # out of the customer's own email; nothing about an order's state asks for it by itself.
+    #
+    # Ranked rather than filtered, deliberately: a Mac whose only granted write is the cancel
+    # still offers it (there is nothing else to offer), and a cancel that CANNOT be done is
+    # untouched by this and still appears with its one reason (§19 — the owner who would ask
+    # is told no).
+    def rank(a: AvailableAction) -> tuple[int, int, int]:
+        return (
+            first.index(a.id) if a.id in first else len(first),
+            1 if a.id == "cancel" and "cancel" not in first else 0,
+            order_of_need.index(a.id) if a.id in order_of_need else 99,
+        )
+
+    rest = sorted((a for a in enabled_all if a.id != "note"), key=rank)
     # A disabled chip is shown only where the owner would otherwise ask and be told no.
     disabled = [a for a in candidates if not a.enabled and a.id in ("cancel", "refund", "fulfil") and a.reason][:2]
-    return [a.public() for a in weigh(enabled) + [_secondary(a) for a in disabled]]
+    # THE NOTE IS WEIGHED SEPARATELY, and that is the fix rather than a detail: it used to be
+    # appended to `enabled` and then weighed by POSITION, so on an order with only one other
+    # thing to offer — a cancelled one, a fully refunded one — it landed at index 1 and was
+    # drawn at FULL WEIGHT. "Note first on every card" is the defect the live session counted,
+    # and the quietest version of it survived Phase 4 on exactly the orders that need nothing.
+    return [a.public() for a in weigh(rest[:MAX_ENABLED])
+            + [_secondary(a) for a in note]
+            + [_secondary(a) for a in disabled]]
 
 
 def _secondary(action: AvailableAction) -> AvailableAction:
@@ -265,6 +361,14 @@ def available_email_actions(thread: dict[str, Any], capabilities: dict[str, dict
         # without opening a keyboard first. §20's two halves as two controls — voice is
         # intent, touch is precision — with the precision one leading, because that is the
         # one the live session had no way to reach at all.
+        #
+        # PHASE 5 · §25 asked whether this earns its space, given that the composer Reply
+        # opens carries a Dictate of its own with the same family and the same ref. It does:
+        # that one only EXISTS once a composer is open, and this is the only way to bind the
+        # microphone to a thread before then — the difference between "dictate this reply"
+        # and "say something about this thread". Removing it was tried and it closed the
+        # only door (`scripts/browser/tablet.js` taps
+        # `.rail-chip[data-mode="ask"][data-family="email.reply"]` for exactly this reason).
         dictate = AvailableAction(
             "dictate", "Dictate", "gmail_draft_reply", "amber", True, "", "Reply to this email",
             family="email.reply", mode="ask", priority="secondary",

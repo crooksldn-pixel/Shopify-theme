@@ -668,13 +668,31 @@
   //            first of these: it was rendered twenty-four times in the live session and
   //            tapped nought, because tapping it produced a label rather than a reply.
   //
-  // And a rail is not a capability list. The Mac marks at most two chips `primary`; the rest
-  // — the fallbacks and every disabled one — go behind one disclosure that says how many.
+  // And a rail is not a capability list. The Mac marks ONE chip `primary` (§25 — primary
+  // action, secondary group, more); the rest — the fallbacks and every disabled one — go
+  // behind one disclosure that says how many.
+  //
+  // THREE WAYS A CHIP IS NOT DRAWN AT ALL (§25/§19, Phase 5). Each was a control that looked
+  // like a control and was not one:
+  //
+  //   no label      it was drawn as an em dash. A chip saying "—" does not explain itself,
+  //                 and there is no reading of it that helps a thumb decide.
+  //   nothing behind it   the Mac said `enabled`, and the page has no ref to stage against,
+  //                 no command to post, or no words to prime. That is D-6 exactly — "the
+  //                 control was drawn before its destination was known to exist" — and it
+  //                 used to render as a dead chip with no reason on it, because `reason` is
+  //                 empty precisely when the Mac thinks it is enabled.
+  //   disabled and mute   §19: a control that is disabled must say WHY, in the owner's words.
+  //                 One that cannot is removed instead, because a dead control that explains
+  //                 nothing is worse than no control.
   function railChip(a, opts, ref) {
     const staged = text(a.mode) === 'stage';
     const opened = text(a.mode) === 'open';
     const enabled = a.enabled === true
       && (staged ? Boolean(text(ref)) : opened ? Boolean(text(a.command)) : Boolean(text(a.instruction)));
+    if (!text(a.label)) return null;
+    if (a.enabled === true && !enabled) return null;
+    if (!enabled && !text(a.reason)) return null;
     const chip = h('button', {
       class: `rail-chip risk-${text(a.risk) === 'red' ? 'red' : 'amber'}${enabled ? '' : ' is-off'}`, type: 'button',
       'aria-disabled': enabled ? 'false' : 'true', title: staged ? text(a.detail) : null,
@@ -689,7 +707,7 @@
         args: enabled && opened ? text(a.args) : null,
       },
     }, [
-      h('span', { class: 'rail-label', text: text(a.label, '—') }),
+      h('span', { class: 'rail-label', text: text(a.label) }),
       !enabled && a.reason ? h('span', { class: 'rail-why', text: text(a.reason) }) : null,
     ]);
     if (enabled && staged) {
@@ -746,18 +764,39 @@
   function rail(actions, opts, ref) {
     const list_ = list(actions, 6);
     if (!list_.length) return null;
-    const primary = list_.filter((a) => text(a.priority) !== 'secondary');
+    const primary = list_.filter((a) => text(a.priority) === 'primary');
     const rest = list_.filter((a) => text(a.priority) === 'secondary');
+    // A rail the Mac did not weigh at all — an older payload, with no `priority` on anything
+    // — is drawn as it always was. One it DID weigh is drawn as it was weighed, and that
+    // includes the case where nothing was weighed primary: a rail of disabled chips used to
+    // be promoted to full weight wholesale by `primary.length ? primary : list_`, so the one
+    // rule the Mac is asked to guarantee — "a dead chip must not sit beside a live one" —
+    // was undone by the renderer whenever there was no live one.
+    const weighed = list_.some((a) => text(a.priority));
+    const lead = weighed ? primary : list_;
+    const behind = weighed ? rest : [];
+    const chips = (group) => group.map((a) => railChip(a, opts, ref)).filter(Boolean);
+    const front = chips(lead);
+    const back = chips(behind);
+    if (!front.length && !back.length) return null;   // nothing left that is a control
     const wrap = h('div', { class: 'rail', role: 'group', 'aria-label': 'Changes' });
-    // A rail the Mac did not weigh at all — an older payload — is drawn as it always was.
-    const lead = primary.length ? primary : list_;
-    const behind = primary.length ? rest : [];
-    wrap.appendChild(h('div', { class: 'rail-primary' }, lead.map((a) => railChip(a, opts, ref))));
-    if (!behind.length) return wrap;
-    const body = h('div', { class: 'rail-rest', hidden: true }, behind.map((a) => railChip(a, opts, ref)));
+    if (front.length) wrap.appendChild(h('div', { class: 'rail-primary' }, front));
+    if (!back.length) return wrap;
+    const behindCount = back.length;
+    const body = h('div', { class: 'rail-rest', hidden: true }, back);
+    // WHAT THE DISCLOSURE SAYS IT HOLDS. "2 more" reads correctly after a chip — more than
+    // the one you can see — and reads as a question when there is nothing above it, which is
+    // the case this pass created: an order that can no longer be cancelled, refunded or
+    // shipped has only dead chips, and they no longer get promoted to full weight. So when
+    // the rail leads with nothing, the control names what is behind it instead of counting
+    // past something that is not there (§26 — a control explains itself).
+    const allOff = back.every((c) => c.getAttribute('aria-disabled') === 'true');
+    const label = !front.length && allOff
+      ? `${behindCount} unavailable`
+      : `${behindCount} more`;
     const more = h('button', {
       class: 'rail-more', type: 'button', 'aria-expanded': 'false',
-    }, [h('span', { class: 'rail-more-label', text: `${behind.length} more` }),
+    }, [h('span', { class: 'rail-more-label', text: label }),
         h('span', { class: 'rail-more-mark', 'aria-hidden': 'true', text: '+' })]);
     more.addEventListener('click', (event) => {
       if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
@@ -1290,10 +1329,16 @@
     const ref = text(row && row.thread_id);
     if (!actions.length || !ref) return null;
     const onRow = opts && typeof opts.onRowAction === 'function' ? opts.onRowAction : null;
-    return h('span', { class: 'row-actions' }, actions.map((a) => {
+    // §25 · a row button the Mac did not name was drawn saying "Do". A control has to say
+    // what it does or it is not a control, and "Do" beside an email is not an answer to
+    // "what happens if I press this" — so an unnamed one is not drawn. Same rule as the
+    // rail's chips, one function along.
+    const named = actions.filter((a) => text(a && a.id) && text(a && a.label));
+    if (!named.length) return null;
+    return h('span', { class: 'row-actions' }, named.map((a) => {
       const id = text(a && a.id);
       const button = h('button', {
-        class: 'row-btn', type: 'button', text: text(a && a.label, 'Do'),
+        class: 'row-btn', type: 'button', text: text(a && a.label),
         title: text(a && a.detail), data: { action: id, ref },
         disabled: a && a.enabled === false ? 'disabled' : null,
       });
@@ -2598,7 +2643,7 @@
         // thread it is about. `data-args` is read by the page's delegated handler
         // (web/app.js); there is no path from here to the body of the email.
         data: { command, args, action: text(a.id) },
-      }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
+      }, [h('span', { class: 'compose-btn-label', text: text(a.label) })]);
     });
     // Which boxes have a keyboard. The Mac says so per field, and says no for a reply's
     // recipient and subject — both belong to the thread and both are re-read there when the
@@ -2693,7 +2738,7 @@
         class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${a.enabled === false ? ' quiet' : ''}`,
         type: 'button',
         data: { command: text(a.command), args: text(a.args), action: text(a.id) },
-      }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
+      }, [h('span', { class: 'compose-btn-label', text: text(a.label) })]);
       // The property, not an attribute: a disabled button dispatches no click, so "this
       // cannot be prepared yet" is enforced by the same flag the eye reads on the card, and
       // the delegated handler in web/app.js reads exactly this.

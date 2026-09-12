@@ -445,11 +445,12 @@ body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-i
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:radial-gradient(60% 40% at 12% 0%,rgba(255,240,220,.08),transparent 70%);
 }
-/* Cards arrive in order, 50ms apart, so a screen of three reads as a stack being laid down
-   rather than as one flash. */
-.cards .card:nth-child(2){animation-delay:50ms}
-.cards .card:nth-child(3){animation-delay:100ms}
-.cards .card:nth-child(n+4){animation-delay:140ms}
+/* THE STAGGER IS GONE (§28). The cards arrive together, so 50/100/140ms of delay did not
+   say they arrived in an order — it only kept the deck moving for another 140ms after the
+   answer had landed, on a screen the owner was already scrolling (26 scroll reports in one
+   session, the deepest 971px, and D-8's seven redraws of one turn each costing the scroll
+   position). `card-in` itself stays: a card fading up from 18px below says "this is new",
+   which is a thing the owner cannot see any other way. Its DELAY said nothing. */
 .card.is-fixture{border-color:var(--warn);border-style:dashed}
 @keyframes card-in{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
 .card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
@@ -578,8 +579,13 @@ body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-i
 .mark.ok{color:var(--ok);background:var(--ok-dim)}
 .mark.bad{color:var(--bad);background:var(--bad-dim)}
 .mark.warn{color:var(--warn);background:var(--warn-dim)}
-.card.success{animation:card-in var(--t-3) var(--ease-spring) both,settle 520ms var(--ease-spring)}
-@keyframes settle{0%{transform:scale(.97)}55%{transform:scale(1.012)}100%{transform:none}}
+/* THE SUCCESS BOUNCE IS GONE (§28 · "delete large bouncing UI"). `settle` scaled the whole
+   card from .97 to 1.012 and back over 520ms — the single largest movement on the tablet, and
+   the one most likely to drop frames on the 2019 panel. What it said, the card already says
+   twice and in words: the green edge, and the action surface's own state with a tick and the
+   word beside it (§19 — the mark is the word's own, green is the second signal and never the
+   only one). A card that changes size to tell you it worked is decoration. */
+.card.success{animation:card-in var(--t-3) var(--ease-spring) both}
 
 .stack{display:flex;gap:8px;padding:2px 0 6px;flex:none}
 .stack::-webkit-scrollbar{display:none}
@@ -970,7 +976,26 @@ html[data-lite] .branch-chip.is-ready{animation:none}
 html[data-lite] .armed-dot{animation:none}
 /* State, kept: a change being applied is the one thing on this screen that must be seen to
    be still happening. Opacity only — no scale, so nothing is re-laid out. */
-html[data-lite] .action-surface[data-state="committing"]{animation:lite-working 1.4s steps(2,end) infinite}
+/* THE ONE CONTINUOUS ANIMATION `data-lite` KEEPS, and the only one it is allowed (§28).
+   It is STATE, not decoration: the Mac has this change and has not come back yet, which is
+   the one thing on the glass the owner cannot work out from anything else on it. Two steps of
+   opacity — no transform, no shadow, no compositing — because the 2019 panel drops frames on
+   a scale before it drops them on anything.
+   ALL FIVE in-flight states, not just `committing`: the base rule above puts `sys-pulse` on
+   every one of them, and `data-lite` used to override only the first — so the old Samsung ran
+   TWO continuous animations, a 1.2s opacity-and-scale pulse on four states and this one on
+   the fifth. `animation:none` first so that whatever else the base rule ever grows is off
+   here too, then the one that is allowed. */
+html[data-lite] .action-surface[data-state="committing"],
+html[data-lite] .action-surface[data-state="executing"],
+html[data-lite] .action-surface[data-state="in_progress"],
+html[data-lite] .action-surface[data-state="verifying"],
+html[data-lite] .action-surface[data-state="executed"]{animation:none}
+html[data-lite] .action-surface[data-state="committing"],
+html[data-lite] .action-surface[data-state="executing"],
+html[data-lite] .action-surface[data-state="in_progress"],
+html[data-lite] .action-surface[data-state="verifying"],
+html[data-lite] .action-surface[data-state="executed"]{animation:lite-working 1.4s steps(2,end) infinite}
 @keyframes lite-working{0%,49%{opacity:1}50%,100%{opacity:.62}}
 /* Two of the four layers of atmosphere. The warm glow the cards catch their edge light from
    stays; the cool one and the wash do not. */
@@ -1696,19 +1721,28 @@ body[data-mode="context"] .branch-chip .branch-bare{display:none}
 .sk-body{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .sk-row{
   display:block;height:14px;border-radius:7px;background:var(--glass-2);
-  animation:sk-breathe 1.8s var(--ease-inout) infinite;
+  opacity:.6;
 }
-.sk-row:nth-child(2){width:82%;animation-delay:.2s}
-.sk-row:nth-child(3){width:64%;animation-delay:.4s}
-.sk-row:nth-child(n+4){width:72%;animation-delay:.6s}
-@keyframes sk-breathe{0%,100%{opacity:.5}50%{opacity:.85}}
-html[data-lite] .sk-row{animation:none;opacity:.6}
-@media (prefers-reduced-motion:reduce){.sk-row{animation:none;opacity:.6}}
+/* THE SHIMMER IS GONE (§28 names it first: "delete constant shimmer"). `sk-breathe` pulsed
+   every skeleton row, three to five at a time, on every progressive render — and it was
+   already switched off for `data-lite` and for prefers-reduced-motion, at `opacity:.6`, with
+   nobody the wiser. That is the whole argument: if the honest version of this surface is a
+   static grey row, then the pulse was never carrying the information. What says "not data
+   yet" is the row BEING a grey bar where a value belongs. The widths still vary, because
+   uneven bars read as text and even ones read as a table. */
+.sk-row:nth-child(2){width:82%}
+.sk-row:nth-child(3){width:64%}
+.sk-row:nth-child(n+4){width:72%}
 
 /* A card that was patched in place is the SAME card with new words in it. Playing the arrival
    animation over it would make an enrichment look like a new answer, which is the flicker the
    brief forbids and the thing the owner reads as "it redrew everything again". */
 .card[data-patched]{animation:none}
+/* And nothing INSIDE a patched card replays either. `.tabbed .panel` fades its content in on
+   every draw, which is right when the owner changed the tab and wrong when the Mac enriched
+   the card underneath him: §28 forbids an animation that restarts on every patch, and the
+   panel was the one still doing it. */
+.card[data-patched] .panel{animation:none}
 
 /* A read that found nothing, said in the card rather than nowhere at all (D-15). */
 .empty-line{color:var(--ink-2)}

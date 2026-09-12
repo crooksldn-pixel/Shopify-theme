@@ -152,10 +152,17 @@ def test_every_disabled_chip_carries_a_reason_and_never_the_first_weight(order):
 
 def test_the_note_chip_is_no_longer_the_first_thing_on_every_order():
     """Note was rendered on every order card, first, and used nought times out of five. It is
-    a fallback, so it goes behind the disclosure and what the order NEEDS leads."""
+    a fallback, so it goes behind the disclosure and what the order NEEDS leads.
+
+    PHASE 5 kept it there and did not remove it, and the reason is worth writing down because
+    the session's numbers argue the other way: it is the only chip on an order that carries a
+    `family`, so tapping it is the only way to bind the microphone to this order with a thumb
+    (§20, D-11, and `scripts/browser/experience.js`). Its numbers justify its weight; they do
+    not justify closing the only door to a capability."""
     actions = available_actions(OPEN_ORDER, ORDER_CAPS)
     by_id = {a["id"]: a for a in actions}
     assert by_id["note"]["priority"] == "secondary"
+    assert by_id["note"]["family"] == "order.add_note", "the door it is the only one to"
     primary = [a["id"] for a in actions if a["enabled"] and a["priority"] == "primary"]
     assert primary and primary[0] == "fulfil", f"an unfulfilled paid order needs shipping: {primary}"
     assert len(primary) <= 2, f"two chips at full weight, not a menu: {primary}"

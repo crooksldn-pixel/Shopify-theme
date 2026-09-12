@@ -130,7 +130,15 @@ async function main() {
   check('and sends no speech turn at all', !posts.includes('/turn'), `posted: ${posts.join(', ') || 'nothing'}`);
   check('and shows no hearing error', !afterSplit.errorCard && !/could not hear|cannot hear|closer to the microphone|not running/i.test(afterSplit.answer + ' ' + afterSplit.toast + ' ' + afterSplit.sub) && afterSplit.state !== 'ERROR',
     JSON.stringify({ state: afterSplit.state, answer: afterSplit.answer, toast: afterSplit.toast, sub: afterSplit.sub }));
-  check('and says so', /divided/i.test(afterSplit.toast), `toast="${afterSplit.toast}"`);
+  // D-10 · §10. This used to require a message saying "Divided". It is now required to say
+  // NOTHING: the orb has visibly become two halves, and the very next check reads the two
+  // named chips that appeared under it. "Divided. Tap a half to talk to it; the other keeps
+  // working." was said three times in the live tablet session over a screen that had just
+  // shown all of that — one of the sixteen notifications of D-10, and web/notify.js now
+  // refuses the code outright. A state change updates the place the state lives.
+  check('and says nothing, because the screen has already said it',
+    afterSplit.toast === '' && branchesAfter.count === 2,
+    `toast="${afterSplit.toast}" branches=${branchesAfter.count}`);
   await shot('03-divided');
 
   // ---- 3. the halves are named, and the other one can be tapped

@@ -357,6 +357,11 @@ def test_the_email_thread_carries_a_rail_of_its_own():
     actions = card["data"]["actions"]
     # Reply opens the reply and Archive prepares the change — the two at full weight — and
     # Dictate arms the microphone for the same thread from behind the rail's disclosure.
+    #
+    # PHASE 5 kept Dictate, having tried removing it: the composer Reply opens does carry a
+    # Dictate of its own, but it only exists ONCE A COMPOSER IS OPEN, and this chip is the
+    # only way to bind the microphone to a thread before that (§20; `scripts/browser/
+    # tablet.js` taps `.rail-chip[data-mode="ask"][data-family="email.reply"]`).
     assert [(a["id"], a["mode"]) for a in actions] == [("reply", "open"), ("email_archive", "stage"), ("dictate", "ask")]
     assert [a["priority"] for a in actions] == ["primary", "primary", "secondary"]
     assert actions[0]["family"] == "email.reply" and actions[0]["instruction"] == "Reply to this email"

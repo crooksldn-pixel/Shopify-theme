@@ -20,17 +20,29 @@ def ids(actions, *, enabled=None):
     return [a["id"] for a in actions if enabled is None or a["enabled"] is enabled]
 
 
-def test_an_open_paid_order_offers_what_it_needs_first_and_the_note_besides():
-    """A paid order waiting to ship needs shipping: fulfil leads, then the address, then the
-    cancel. The note is always there, never takes one of the three places, and — since the
-    live session counted five renders of it and nought taps — goes last and at half weight."""
+def test_an_open_paid_order_offers_what_it_needs_and_no_cancel_nobody_asked_for():
+    """A paid order waiting to ship needs shipping: fulfil leads, the address beside it.
+
+    CHANGED IN PHASE 5 (§25). The chip that moved is `cancel`: it was the third thing on
+    every open order card — two renders, nought taps, and the reddest and least reversible
+    thing on the rail — and an order needs cancelling because a PERSON said so, never
+    because of its own state. So it now ranks LAST unless the customer's own email asks for
+    it (`context_rank`), and on any order with something else to offer, last means off the
+    card. The refund takes the place it was holding.
+
+    Note stays, last and at half weight, and this test says why: it is the only chip that
+    both primes a sentence and names the spoken control it arms, which makes it the one way
+    to bind the microphone to THIS order with a thumb (§20, D-11). Five renders and nought
+    taps justify its WEIGHT, not its deletion.
+    """
     actions = available_actions(OPEN, ALL)
-    assert ids(actions, enabled=True) == ["fulfil", "address", "cancel", "note"]
+    assert ids(actions, enabled=True) == ["fulfil", "address", "refund", "note"]
     assert [a["priority"] for a in actions if a["enabled"]] == ["primary", "primary", "secondary", "secondary"]
-    assert all(a["mode"] == "ask" for a in actions if a["id"] != "email")
-    assert next(a for a in actions if a["id"] == "cancel")["instruction"] == "Cancel order 1938"
-    assert next(a for a in actions if a["id"] == "cancel")["risk"] == "red"
+    assert all(a["mode"] == "ask" for a in actions if a["id"] not in ("address", "email"))
+    assert "cancel" not in ids(actions), "nothing about this order asks to be cancelled"
+    assert next(a for a in actions if a["id"] == "note")["family"] == "order.add_note"
     assert next(a for a in actions if a["id"] == "fulfil")["instruction"] == "Fulfil order 1938"
+    assert next(a for a in actions if a["id"] == "fulfil")["risk"] == "red"
     assert "email" not in ids(actions), "three places, taken by what the order needs"
     off = {a["id"]: a["reason"] for a in actions if not a["enabled"]}
     assert off == {}
@@ -94,6 +106,7 @@ def test_the_context_ranks_the_rail_a_customers_email_first_and_an_old_order_to_
     assert ids(available_actions(wrote, ALL), enabled=True) == ["email", "fulfil", "address", "note"], "the reply leads; the cancel drops off the three"
     cancelling = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "Please cancel 1938", "snippet": "I ordered the wrong size"}]})
     assert context_rank(cancelling) == ["cancel", "email"]
+    # The one order that DOES offer a cancel: its own customer asked for one, in writing.
     assert ids(available_actions(cancelling, ALL), enabled=True) == ["cancel", "email", "fulfil", "note"]
     moving = dict(OPEN, email={"threads": [{"sender_match": True, "subject": "New address", "snippet": "can you send it to my work address instead"}]})
     assert context_rank(moving) == ["address", "email"]
