@@ -1500,10 +1500,18 @@ function labelOf(node) {
   if (!node) return '';
   const said = String(node.dataset && node.dataset.label ? node.dataset.label : '').trim();
   if (said) return said.slice(0, 60);
-  // The primary line, in the vocabulary the renderers use for one.
-  const main = node.querySelector
-    ? node.querySelector('.row-main, .link-chip-label, .hist-main, .card-title, .sec-title')
-    : null;
+  /* The primary line, in the vocabulary the renderers use for one — and ITS OWN, not a
+     descendant's. `querySelector` here would search the whole subtree, so a tap that
+     resolves to a card carrying both `data-ref` and `data-kind` would take the name off the
+     first row inside it: a different record's name, on this record's chip. Nearest first,
+     then the subtree, which is still bounded by `closest` having picked the nearest element
+     that names a record at all. */
+  const NAMES = '.row-main, .link-chip-label, .hist-main, .card-title, .sec-title';
+  let main = null;
+  for (const kid of (node.children || [])) {
+    if (kid.matches && kid.matches(NAMES)) { main = kid; break; }
+  }
+  if (!main && node.querySelector) main = node.querySelector(NAMES);
   const first = main ? String(main.textContent || '').replace(/\s+/g, ' ').trim() : '';
   if (first) return first.slice(0, 60);
   // Nothing named itself. Join what is there with a separator, so the worst case is a label
