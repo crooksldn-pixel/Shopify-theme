@@ -192,8 +192,16 @@ def _plan_for(task: str):
         if period:
             args["period"] = period
         # ONE read. `cost` is the cache view's, which is the same view a listing takes.
-        return ReadPlan([Read("summary", READ_TOOL, args, source="shopify", cost=120.0)],
+        plan = ReadPlan([Read("summary", READ_TOOL, args, source="shopify", cost=120.0)],
                         label=f"summary_{task}")
+        if len(plan.reads) > MAX_READS:
+            # D-4 was seven reads for a one-line answer. The bound is checked here rather
+            # than written in a comment, so a second read added to a summary later is a
+            # crash while the tests run and not a slower turn on the tablet.
+            raise AssertionError(
+                f"a summary plan may make {MAX_READS} read; {task} plans {len(plan.reads)}"
+            )
+        return plan
 
     return plan
 

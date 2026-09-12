@@ -41,7 +41,7 @@ Three rules hold through every builder here:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from app.surfaces import Entity, Freshness, Surface, SurfaceError
@@ -508,6 +508,3 @@ def freshness_of(coverage: Any, *, source: str = "shopify") -> Freshness:
     return Freshness(source=source, age_s=float(age) if isinstance(age, (int, float)) else None,
                      complete=complete, caveat=caveat)
 
-
-def now_utc() -> float:
-    return datetime.now(UTC).timestamp()

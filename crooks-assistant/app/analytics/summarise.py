@@ -28,7 +28,7 @@ asked that evening and got a deck of profiles for.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -48,7 +48,6 @@ RETURNING_AT = 2
 AGING_AMBER_DAYS = 2.0
 AGING_RED_DAYS = 5.0
 
-_PAID = frozenset({"PAID", "PARTIALLY_REFUNDED"})
 _UNPAID = frozenset({"PENDING", "AUTHORIZED", "PARTIALLY_PAID", "EXPIRED"})
 
 
@@ -330,8 +329,3 @@ def window_for(period: Any) -> tuple[float, float]:
         return start.timestamp(), end.timestamp()
     raise TypeError("a period with a start and an end is needed to summarise a window")
 
-
-def previous_day_window(period: Any) -> tuple[float, float]:
-    """The day before the period. Used only to say how far back the Mac looked."""
-    start, _end = window_for(period)
-    return start - timedelta(days=1).total_seconds(), start
