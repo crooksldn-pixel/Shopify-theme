@@ -171,6 +171,15 @@ class FixedDatetime(datetime):
         return NOW.astimezone(tz) if tz else NOW.replace(tzinfo=None)
 
 
+# What was bound before this file touched anything, so it can be put back exactly. Binding
+# the read tools to a fixture store and pinning `analytics_tools.datetime` are process-wide,
+# and a test that leaves either in place fails OTHER files — which is what happened: the
+# navigation and golden-scenario tests ran against a clock fixed at 9 September 2026 and a
+# Shopify client that was not theirs, and failed for a reason that had nothing to do with
+# them. `_bind` is therefore only ever called between `_unbind`-guarded boundaries.
+_WAS: dict[str, object] = {}
+
+
 def _bind(store) -> None:
     """The read tools against this store, with no inbox behind them.
 
@@ -180,23 +189,49 @@ def _bind(store) -> None:
     """
     from app.context.order import Hydrator
 
+    _WAS.setdefault("cache", analytics_tools._cache)
+    _WAS.setdefault("datetime", analytics_tools.datetime)
+    _WAS.setdefault("client", shopify_tools._client)
+    _WAS.setdefault("hydrator", shopify_tools._hydrator)
     analytics_tools.bind(OrderCache(lambda: store, clock=lambda: NOW.timestamp()))
     analytics_tools.datetime = FixedDatetime
     shopify_tools._client = store
     shopify_tools._hydrator = Hydrator(lambda: store, threads_for=None, clock=lambda: NOW.timestamp())
 
 
+def _unbind() -> None:
+    """Everything back as it was, whatever the test did in between."""
+    if not _WAS:
+        return
+    # `_bind` records all four together, but `test_the_inbox_correlation_...` records only
+    # the cache — so each key is put back only if it was taken, and `datetime` above all:
+    # overwriting the real `datetime` module with a KeyError's absence would break every
+    # file that runs after this one.
+    if "cache" in _WAS:
+        analytics_tools.bind(_WAS["cache"])
+    if "datetime" in _WAS:
+        analytics_tools.datetime = _WAS["datetime"]
+    if "client" in _WAS:
+        shopify_tools._client = _WAS["client"]
+    if "hydrator" in _WAS:
+        shopify_tools._hydrator = _WAS["hydrator"]
+    _WAS.clear()
+
+
+@pytest.fixture(autouse=True)
+def _restore():
+    """Every test in this file, bound or not, leaves the process as it found it."""
+    try:
+        yield
+    finally:
+        _unbind()
+
+
 @pytest.fixture()
-def shop(monkeypatch):
+def shop():
     store = Counting()
     _bind(store)
-    monkeypatch.setattr(analytics_tools, "datetime", FixedDatetime)
-    try:
-        yield store
-    finally:
-        analytics_tools.bind(None)
-        shopify_tools._client = None
-        shopify_tools._hydrator = None
+    return store
 
 
 async def turn(text: str, *, session: Session | None = None):
@@ -425,10 +460,6 @@ async def test_the_audit_table():
             measured[label] = (before_reads, after_reads, before_ms, after_ms,
                                store.entity_reads, store_after.entity_reads)
         rows.append((name, measured))
-    analytics_tools.bind(None)
-    shopify_tools._client = None
-    shopify_tools._hydrator = None
-
     print(f"\n§14 N+1 audit — one request to the shop costs {SESSION_MS_PER_READ:.0f} ms "
           f"(the live session's own average: 24,567 ms over 40 calls)\n")
     print(f"{'workflow':26} {'reads':>12}  {'ms (no latency)':>18}  {'ms (measured latency)':>22}  entity reads")
@@ -489,6 +520,7 @@ async def test_the_inbox_correlation_never_holds_more_of_gmail_than_gmail_has():
     ws = working_sets.create(session, kind="customers",
                              members=[f"gid://shopify/Customer/{7200 + n}" for n in range(10)],
                              label="today's buyers")
+    _WAS.setdefault("cache", analytics_tools._cache)
     analytics_tools._cache = _Cache()
     analytics_tools.bind_email(threads_for=threads_for)
     token = CURRENT_SESSION.set(session)
@@ -497,7 +529,6 @@ async def test_the_inbox_correlation_never_holds_more_of_gmail_than_gmail_has():
     finally:
         CURRENT_SESSION.reset(token)
         analytics_tools.bind_email(threads_for=None)
-        analytics_tools.bind(None)
     assert result["customers"] == 10, result["customers"]
     assert peak["max"] <= budget.SOURCE_SLOTS["gmail"], (
         f"{peak['max']} Gmail reads in flight; SOURCE_SLOTS says {budget.SOURCE_SLOTS['gmail']}"
@@ -547,6 +578,37 @@ async def test_a_bounded_fan_out_reports_what_failed_and_answers_anyway():
     )
     assert out == [0, 2, 4, None, 8], out
     assert list(failed) == [3] and "gmail said no" in failed[3]
+
+
+
+async def test_the_same_summary_asked_twice_in_one_turn_is_one_read(shop):
+    """§36, "cut tool duplication": the second call in a turn is answered from the first.
+
+    D-13's shape, in a new tool: `commerce_query` was called twice in one turn for two cards
+    over the same rows. The summary read is in `analytics_tools.PLANNED` for exactly that
+    reason, so a model that asks the same summary question twice spends one read — and the
+    answer it gets back says so rather than looking like a fresh one.
+    """
+    from app.tools.dispatch import dispatch
+
+    session = Session(session_id="dup")
+    session.turn_id = "turn_dup"
+    calls: list = []
+    await dispatch("commerce_summary", {"task": "returning_customers", "period": "today"},
+                   session=session, timeout_s=8.0, calls=calls)
+    first = shop.source_reads
+    assert calls and calls[-1].ok, calls
+    out = await dispatch("commerce_summary", {"task": "returning_customers", "period": "today"},
+                         session=session, timeout_s=8.0, calls=calls)
+    assert shop.source_reads == first, f"the duplicate read the shop: {shop.by_query}"
+    assert "the same query already ran this turn" in str(out), out
+    assert calls[-1].result == {"reused": True}, calls[-1].result
+    # A DIFFERENT summary of the same period is a different question and is answered — from
+    # the warm view, so it is also free.
+    await dispatch("commerce_summary", {"task": "orders_attention", "period": "today"},
+                   session=session, timeout_s=8.0, calls=calls)
+    assert shop.source_reads == first, shop.by_query
+    assert calls[-1].ok and calls[-1].result.get("task") == "orders_attention", calls[-1].result
 
 
 # ------------------------------------------------------------------ §36, this half of it

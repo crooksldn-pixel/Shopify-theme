@@ -86,20 +86,22 @@ def _period_of(period: Any, now, zone):
 
 @tool(
     name=READ_TOOL,
+    # Terse on purpose. The tool block is what every turn on the model path pays for
+    # (tests/test_registry.py), and that test's rule for the read layer is that the DETAIL
+    # belongs in `commerce_capabilities`, called on demand — so the account of why this beats
+    # a listing plus a read per row is there, under "summaries", and what stays here is the
+    # one sentence that changes what the model does.
     description=(
-        "Answer a SUMMARY question about a period in one call, from the orders the Mac holds: "
-        "who bought in the period having bought before (returning customers), which orders need "
-        "attention, or the period's orders as rows. Use this instead of listing a period and then "
-        "reading each customer's or each order's record: the lifetime order count and lifetime "
-        "spend are already on every order row here, so 'has this buyer bought before' costs no "
-        "further read."
+        "A period summarised in one call: returning_customers (bought in it, having bought "
+        "before), orders_attention, order_list. Never read each customer or order on a list "
+        "to answer one of these."
     ),
     input_schema={
         "type": "object",
         "properties": {
             "task": {"type": "string", "description": "returning_customers, orders_attention or order_list."},
-            "period": {"description": "today (default), yesterday, this_week, last_week, this_month, last_month, last_7_days, last_30_days."},
-            "limit": {"type": "integer", "description": f"rows on the surface, 1-{MAX_ROWS}, default 12. The COUNT is always the whole count."},
+            "period": {"description": "today (default), yesterday, this_week, last_week, this_month, last_month, last_7_days."},
+            "limit": {"type": "integer", "description": f"rows shown, 1-{MAX_ROWS}, default 12; the count is always the whole count."},
         },
         "required": ["task"],
     },

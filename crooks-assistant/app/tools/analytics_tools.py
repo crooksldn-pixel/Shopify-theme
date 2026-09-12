@@ -44,7 +44,12 @@ log = logging.getLogger("crooks.analytics")
 
 _cache: OrderCache | None = None
 READ_TIMEOUT_S = 6.0
-PLANNED = frozenset({"commerce_aggregate", "commerce_query", "inventory_query"})
+# The reads a unit of work may compose several of, within its bounds, and never the same
+# one twice — app/analytics/plan.py hands back the earlier answer instead. A summary is
+# one of them (app/families/summaries.py): it reads the same cache view a listing does,
+# and the model asking the same summary question twice in one turn should cost one read.
+PLANNED = frozenset({"commerce_aggregate", "commerce_query", "inventory_query",
+                     "commerce_summary"})
 # What the model reads of a result: never the membership lists the Mac keeps for itself.
 _MODEL_HIDDEN = ("member_ids", "variant_ids")
 
@@ -752,6 +757,25 @@ def catalogue() -> dict[str, Any]:
         # What this Mac cannot answer, said once, here, so it is not discovered a query at a
         # time. `commerce_capabilities` is the answer to "can you?", and this is part of it.
         "not_available": {"delivery_status": TRACKING_UNAVAILABLE},
+        # The summary read, and the read pattern it replaces. It lives here rather than in
+        # `commerce_summary`'s own description because this file's byte budget
+        # (tests/test_registry.py) says the detail belongs in the tool that is called on
+        # demand, and because this is where a model that is about to compose a listing plus a
+        # read per row will be looking. The numbers are measured in tests/test_n_plus_one.py.
+        "summaries": {
+            "tool": "commerce_summary",
+            "tasks": {
+                "returning_customers": "who bought in the period having bought before it, with each one's previous order, lifetime orders and lifetime spend",
+                "orders_attention": "the orders that need something doing, worst first, with what is wrong with each",
+                "order_list": "the period's orders as rows",
+            },
+            "instead_of": (
+                "listing the period and then reading each customer's or each order's record. "
+                "Every order row the Mac holds already carries that customer's lifetime order "
+                "count and lifetime spend, so 'has this buyer bought before' is a comparison "
+                "and not a lookup: one call in place of one plus one per row."
+            ),
+        },
         "group_by": list(GROUPS), "metrics": list(METRICS), "views": list(VIEWS),
         "bounds": {"limit": MAX_LIMIT, "group_by": 2, "cost_per_query": MAX_COST, "cost_per_turn": TURN_COST},
         "examples": [
@@ -774,6 +798,13 @@ def cost_of(name: str, args: dict[str, Any]) -> int:
         spec = dict(args)
         if name == "inventory_query":
             spec = {"entity": "variants", "period": spec.get("period") or "last_7_days", "metrics": ["days_cover"], "limit": spec.get("limit", 10)}
-        return parse(spec, default_entity="orders" if name == "commerce_query" else "order_line_items").cost
+        elif name == "commerce_summary":
+            # A summary's arguments are not the query language's — it takes a task and a
+            # period — so they are priced as what it actually reads: the period's orders,
+            # which is the same view a listing takes. Falling through to `parse` would raise
+            # on `task` and charge one point for a ninety-day view.
+            spec = {"entity": "orders", "period": spec.get("period") or "today",
+                    "limit": spec.get("limit", 12)}
+        return parse(spec, default_entity="orders" if name in ("commerce_query", "commerce_summary") else "order_line_items").cost
     except QueryError:
         return 1
