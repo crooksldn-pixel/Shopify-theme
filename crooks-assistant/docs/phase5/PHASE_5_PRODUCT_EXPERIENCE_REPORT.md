@@ -296,8 +296,38 @@ claim that now matters rather than being weakened — `no_card_open_on` is a rul
 
 Run from a clean head, in one process, with nothing else on the machine — which matters: the
 parallel workstreams left 50+ Chromium processes on the box and a single-process run was
-SIGTERM-killed at ~14% three times during the pass. The numbers are in the block at the end
-of this pass's final message.
+SIGTERM-killed at ~14% three times during the pass.
+
+```
+python   2814 passed, 2 skipped, 0 failed   (16m50s, one process, whole tree)
+ruff     All checks passed
+node     291 tests across 12 files, 0 failed
+browser  592 Chromium checks, 0 failed, 8 scripts, both viewports
+```
+
+Against the baseline this pass started from (`925e398`, recorded in REGRESSION_AUDIT.md):
+2,400 → 2,814 python, 229 → 592 browser checks, 203 → 291 node. The two skips are the same
+two as the baseline and are environment rather than code: no Gmail token and no Shopify
+Keychain entry on this machine.
+
+The §41 lines, each from the checks that measure it:
+
+| | checks | failed |
+|---|---|---|
+| §9 zero-collision gates (both viewports) | 8 | 0 |
+| Fake-control sweeps (every fixture, both viewports) | 2 | 0 |
+| Recording / voice-leak checks | 11 | 0 |
+| Live-state GATE checks (the fixes) | 47 | 0 |
+| Live-state FIXTURE checks (the reproductions) | 36 | 0 |
+| Hit tests (`elementFromPoint`) | 2 | 0 |
+| Un-divide strip checks | 5 | 0 |
+| Screenshot matrix | 13 | 0 |
+| Declared not-run, with a stated reason | 4 | 0 |
+
+And the three severity-6 classes of the re-scored session, each closed and tested:
+`CONTROL_TAP_MISROUTED_TO_VOICE` (D-1), `OWNER_FEEDBACK_IGNORED` (D-12) and
+`WRONG_ENTITY_ANSWERED` (D-14 — a named person now outranks the record in focus, and the
+name reaches the recipe as something to search for).
 
 What each gate line in that block actually measures, so it can be disagreed with:
 
