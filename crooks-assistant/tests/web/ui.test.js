@@ -1043,14 +1043,21 @@ test('an email thread carries a rail: Reply primes the hold, Archive asks the Ma
   assert.ok(chips[1].disabled, 'and Archive cannot be pressed twice while it is being prepared');
 });
 
-test('a staged chip with no record to act on is off, whatever the Mac said', () => {
+test('a staged chip with no record to act on is not drawn at all, whatever the Mac said', () => {
+  /* CHANGED IN PHASE 5 (§19/§25). It used to render, dimmed, with `aria-disabled="true"` —
+     and with NOTHING SAYING WHY, because `reason` is empty exactly when the Mac believes the
+     action is enabled. A dead control that explains nothing is worse than no control: §19
+     requires a disabled control to say why in the owner's words, and the honest answer here
+     ("the page has no record to act on") is not the owner's business. So it is removed, which
+     is D-6's own conclusion — the control was drawn before its destination was known to
+     exist. What the test asserted is unchanged and stronger: a tap can never reach
+     `onRowAction`, because there is nothing to tap. */
   const node = UI.renderItem({ type: 'email_thread', data: {
     subject: 's', messages: [{ from: 'M', body: 'b' }],
     actions: [{ id: 'email_archive', label: 'Archive', mode: 'stage', enabled: true }],
   } }, { onRowAction: () => { throw new Error('must not be asked'); } });
-  const chip = node.querySelector('.rail-chip');
-  assert.equal(chip.getAttribute('aria-disabled'), 'true');
-  assert.doesNotThrow(() => chip.dispatch('click', { stopPropagation() {} }));
+  assert.equal(node.querySelector('.rail-chip'), null, 'no chip, so no dead chip');
+  assert.equal(node.querySelectorAll('.rail').length, 0, 'and no empty rail around it');
 });
 
 test('a row action is inert when the page has nowhere to send it', () => {
