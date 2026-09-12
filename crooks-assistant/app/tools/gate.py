@@ -116,6 +116,10 @@ _KNOWN_TOOLS = frozenset({
     "shopify_discount_check", "shopify_discount_open",
     "shopify_abandoned_checkouts",
     "shopify_order_open", "shopify_store_credit",
+    # The summary read (app/families/summaries.py). One cache view and pure aggregation on
+    # the Mac: it reads no record individually, stages nothing, and returns a count with a
+    # few rows. Named here one by one like every other, because this is an allow-list.
+    "commerce_summary",
 })
 
 # Tools that may only be called with an id this session already handed to the assistant. Stops

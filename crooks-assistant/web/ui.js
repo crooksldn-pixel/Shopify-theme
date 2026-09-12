@@ -2549,6 +2549,71 @@
     return node;
   }
 
+  // ---- the compact summary surface (§13; app/summaries.py).
+  //
+  // D-4: "has anyone bought today that has bought before, a returning customer?" was answered
+  // — correctly, with "one" — by drawing SEVEN full customer cards, 265 px each, 1,949 px of
+  // deck. A full card is the DRILLDOWN surface; a summary question wants the count and one
+  // row each. This is that row.
+  //
+  // Two things this renderer will not do. It never prints `row.ref`: an id is how the tablet
+  // names a record back to the Mac and is not something the owner reads (§26), so it lands in
+  // a data attribute and nowhere else. And it offers a tap only where the Mac said the row
+  // has somewhere to go — `row.tap`, decided by app/summaries.py `destination_for` against
+  // the same rule `open.entity` will apply (§18). D-6 was a control drawn before its
+  // destination was known to exist, refused `not_held`, with an empty half underneath it.
+
+  function summaryRow(r) {
+    const tap = r.tap === true && Boolean(text(r.ref)) && Boolean(text(r.kind));
+    const lines = list(r.lines, 4);
+    const tone = ['red', 'amber', 'good'].indexOf(text(r.tone)) === -1 ? '' : text(r.tone);
+    return h('li', {
+      class: `sum-row${tap ? ' tappable' : ''}${tone ? ' tone-' + tone : ''}`,
+      role: tap ? 'button' : null,
+      tabindex: tap ? '0' : null,
+      data: tap ? { ref: text(r.ref), kind: text(r.kind) } : null,
+    }, [
+      h('div', { class: 'sum-main' }, [
+        h('span', { class: 'sum-label', text: text(r.label, '—') }),
+        text(r.sub) ? h('span', { class: 'sum-sub', text: text(r.sub) }) : null,
+        lines.length ? h('span', { class: 'sum-lines' }, lines.map((l) => h('span', { class: 'sum-line' }, [
+          h('span', { class: 'sum-line-k', text: text(l.label) }),
+          h('span', { class: 'sum-line-v', text: text(l.value, '—') }),
+        ]))) : null,
+      ]),
+      h('div', { class: 'sum-side' }, [
+        text(r.badge) ? badge(r.badge, tone === 'red' ? 'bad' : tone === 'amber' ? 'warn' : tone === 'good' ? 'good' : 'quiet') : null,
+        tap ? h('span', { class: 'row-go', 'aria-hidden': 'true', text: '›' }) : null,
+      ]),
+    ]);
+  }
+
+  function renderSummaryList(d, opts) {
+    const rows = list(d.rows, 12);
+    const count = num(d.count);
+    // The headline the brief asks for: "RETURNING CUSTOMERS TODAY · 1". The count is the
+    // WHOLE count even when the rows are capped, which is why it is not rows.length.
+    const head = h('div', { class: 'card-head' }, [h('div', {}, [
+      kicker(text(d.kicker, text(d.title, 'Summary'))),
+      h('h2', { class: 'card-title' }, [
+        h('span', { text: text(d.title, 'Summary') }),
+        count === null ? null : h('span', { class: 'sum-count', text: ` · ${count}` }),
+      ]),
+      text(d.subtitle) ? h('p', { class: 'card-meta', text: text(d.subtitle) }) : null,
+    ])]);
+    const node = card('summary_list', [
+      head,
+      // Nothing found is an ANSWER and gets a card (D-15), in the words the Mac chose.
+      rows.length ? h('ul', { class: 'sum-rows' }, rows.map(summaryRow))
+        : h('p', { class: 'card-note', text: `No ${text(d.count_label, 'results')}.` }),
+      d.truncated ? h('p', { class: 'card-note', text: `Showing ${rows.length} of ${count === null ? rows.length : count}.` }) : null,
+      text(d.note) ? h('p', { class: 'card-note', text: text(d.note) }) : null,
+    ], opts);
+    node.dataset.task = text(d.task);
+    if (text(d.set_id)) node.dataset.set = text(d.set_id);
+    return node;
+  }
+
   const RENDERERS = {
     assistant: renderAssistant,
     order: renderOrder,
@@ -2574,6 +2639,7 @@
     working_set: renderWorkingSet,
     batch_action: renderBatchAction,
     capability: renderCapability,
+    summary_list: renderSummaryList,
     batch_result: renderBatchResult,
     reply_state: renderReplyState,
     variant_picker: renderVariantPicker,
@@ -2582,7 +2648,7 @@
   };
   const TYPES = Object.keys(RENDERERS).concat(['context_stack']);
   const CONTEXT_TYPES = ['order', 'order_list', 'customer', 'customer_list', 'product', 'inventory', 'sales_summary', 'email_list', 'email_thread', 'email_draft', 'attention', 'confirmation', 'success', 'assistant',
-    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result', 'capability'];
+    'metric_group', 'ranking', 'table', 'comparison', 'variant_matrix', 'trend', 'working_set', 'batch_action', 'batch_result', 'capability', 'summary_list'];
 
   function isValid(item) {
     return Boolean(item) && typeof item === 'object' && typeof item.type === 'string'
@@ -2668,6 +2734,7 @@
     trend: ['title', 'metric'],
     working_set: ['set_id'],
     capability: ['build'],
+    summary_list: ['task', 'title'],
     reply_state: ['thread_id'],
     variant_picker: ['order_id'],
     email_compose: ['compose_id'],

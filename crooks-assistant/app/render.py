@@ -62,6 +62,10 @@ KEY_OF: dict[str, tuple[str, ...]] = {
     "trend": ("title", "metric"),
     "working_set": ("set_id",),
     "capability": ("build",),
+    # A summary is identified by the TASK it answers, not by its title: "Orders today" asked
+    # twice is one card, and the returning-customers summary is never the same card as the
+    # attention summary however the titles are worded (app/summaries.py).
+    "summary_list": ("task", "title"),
     "reply_state": ("thread_id",),
     "variant_picker": ("order_id",),
     "email_compose": ("compose_id",),

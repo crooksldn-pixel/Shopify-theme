@@ -44,6 +44,10 @@ UI_TYPES = frozenset({
     # what this build can do, grouped (app/capabilities/surface.py). Built by a recipe rather
     # than from a tool result: the manifest is read from the registry, not from the shop.
     "capability",
+    # the answer to a summary question, as compact rows (app/summaries.py): "returning
+    # customers today · 1", one row per person, a tap that opens the full workspace. §13 —
+    # D-4 answered exactly that question with seven full customer profiles.
+    "summary_list",
     # who is waiting on whom in one thread (app/families/order_email.py): "Waiting since 5h
     # ago · last from Mia · no reply from us". Built by the recipe from the thread's own
     # reply state, never from the prose.
