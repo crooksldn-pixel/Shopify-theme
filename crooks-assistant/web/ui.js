@@ -1146,10 +1146,16 @@
     const ref = text(row && row.thread_id);
     if (!actions.length || !ref) return null;
     const onRow = opts && typeof opts.onRowAction === 'function' ? opts.onRowAction : null;
-    return h('span', { class: 'row-actions' }, actions.map((a) => {
+    // §25 · a row button the Mac did not name was drawn saying "Do". A control has to say
+    // what it does or it is not a control, and "Do" beside an email is not an answer to
+    // "what happens if I press this" — so an unnamed one is not drawn. Same rule as the
+    // rail's chips, one function along.
+    const named = actions.filter((a) => text(a && a.id) && text(a && a.label));
+    if (!named.length) return null;
+    return h('span', { class: 'row-actions' }, named.map((a) => {
       const id = text(a && a.id);
       const button = h('button', {
-        class: 'row-btn', type: 'button', text: text(a && a.label, 'Do'),
+        class: 'row-btn', type: 'button', text: text(a && a.label),
         title: text(a && a.detail), data: { action: id, ref },
         disabled: a && a.enabled === false ? 'disabled' : null,
       });
@@ -2454,7 +2460,7 @@
         // thread it is about. `data-args` is read by the page's delegated handler
         // (web/app.js); there is no path from here to the body of the email.
         data: { command, args, action: text(a.id) },
-      }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
+      }, [h('span', { class: 'compose-btn-label', text: text(a.label) })]);
     });
     // Which boxes have a keyboard. The Mac says so per field, and says no for a reply's
     // recipient and subject — both belong to the thread and both are re-read there when the
@@ -2549,7 +2555,7 @@
         class: `compose-btn${text(a.risk) === 'red' ? ' risk-red' : ''}${a.enabled === false ? ' quiet' : ''}`,
         type: 'button',
         data: { command: text(a.command), args: text(a.args), action: text(a.id) },
-      }, [h('span', { class: 'compose-btn-label', text: text(a.label, '—') })]);
+      }, [h('span', { class: 'compose-btn-label', text: text(a.label) })]);
       // The property, not an attribute: a disabled button dispatches no click, so "this
       // cannot be prepared yet" is enforced by the same flag the eye reads on the card, and
       // the delegated handler in web/app.js reads exactly this.
