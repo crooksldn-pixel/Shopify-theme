@@ -43,6 +43,10 @@ GROUPS: tuple[tuple[str, str], ...] = (
     ("surface_state", "What a card is saying"),
     ("composer", "Typing instead of speaking"),
     ("branch_state", "What a half is doing"),
+    # What is on the glass right now, chrome included (D-11). Its entry is registered by
+    # app/families/self_knowledge.py through `extend`, because the answer is derived from live
+    # session state and this table holds only what is stable.
+    ("screen", "What is on the glass"),
 )
 
 
@@ -148,7 +152,7 @@ ENTRIES: tuple[Entry, ...] = (
         says=("go back", "back"),
         also=("home", "next", "return_here"),
         asks=_asks(r"\bgo back\b", r"\bback\b.{0,20}\bbutton\b", r"\bhow do i go back\b",
-                   r"\bwhat\b.{0,20}\bback\b.{0,10}\bdo\b"),
+                   r"\bwhat\b.{0,20}\bback\b.{0,10}\b(?:do|mean|means)\b"),
     ),
     Entry(
         key="home", control="Home", group="navigation",
@@ -158,7 +162,7 @@ ENTRIES: tuple[Entry, ...] = (
         command="navigation.home",
         says=("go home", "back to the start"),
         also=("back", "dock"),
-        asks=_asks(r"\bhome\b.{0,20}\bbutton\b", r"\bgo home\b", r"\bwhat\b.{0,20}\bhome\b.{0,10}\bdo\b",
+        asks=_asks(r"\bhome\b.{0,20}\bbutton\b", r"\bgo home\b", r"\bwhat\b.{0,20}\bhome\b.{0,10}\b(?:do|mean|means)\b",
                    r"\bback to (?:the )?(?:start|beginning)\b", r"\bback to assistant\b"),
     ),
     Entry(
@@ -170,7 +174,7 @@ ENTRIES: tuple[Entry, ...] = (
         command="workflow.next",
         says=("next", "the next one"),
         also=("previous", "back"),
-        asks=_asks(r"\bnext\b.{0,20}\bbutton\b", r"\bwhat\b.{0,20}\bnext\b.{0,10}\bdo\b",
+        asks=_asks(r"\bnext\b.{0,20}\bbutton\b", r"\bwhat\b.{0,20}\bnext\b.{0,10}\b(?:do|mean|means)\b",
                    r"\bhow do i (?:see|get to) the next\b"),
     ),
     Entry(
@@ -181,7 +185,7 @@ ENTRIES: tuple[Entry, ...] = (
         command="workflow.previous",
         says=("previous", "the one before"),
         also=("next", "back"),
-        asks=_asks(r"\bprevious\b.{0,20}\bbutton\b", r"\bwhat\b.{0,20}\bprevious\b.{0,10}\bdo\b"),
+        asks=_asks(r"\bprevious\b.{0,20}\bbutton\b", r"\bwhat\b.{0,20}\bprevious\b.{0,10}\b(?:do|mean|means)\b"),
     ),
     Entry(
         key="tabs", control="The tabs on a card", group="navigation",
@@ -361,6 +365,25 @@ def _registry() -> dict[str, str]:
         return {}
 
 
+# Entries a family adds from its own file, so two families never edit ENTRIES' same line —
+# the seam `app.fastpath.intent.extend` already gives the family table. Read wherever ENTRIES
+# is read; `check()` holds for these too.
+EXTRA_ENTRIES: list[Entry] = []
+
+
+def extend(entries: list[Entry] | tuple[Entry, ...]) -> None:
+    known = {e.key for e in ENTRIES} | {e.key for e in EXTRA_ENTRIES}
+    for entry in entries:
+        if entry.key in known:
+            raise ValueError(f"the manifest entry {entry.key!r} is already registered")
+        EXTRA_ENTRIES.append(entry)
+        known.add(entry.key)
+
+
+def all_entries() -> tuple[Entry, ...]:
+    return ENTRIES + tuple(EXTRA_ENTRIES)
+
+
 def manifest() -> tuple[Entry, ...]:
     """The entries, with the command registry's own words folded into each that has one.
 
@@ -369,7 +392,7 @@ def manifest() -> tuple[Entry, ...]:
     """
     known = _registry()
     out: list[Entry] = []
-    for entry in ENTRIES:
+    for entry in all_entries():
         out.append(Entry(
             key=entry.key, control=entry.control, group=entry.group,
             what=_filled(entry.what), where=_filled(entry.where), command=entry.command,
@@ -387,7 +410,7 @@ def check() -> list[str]:
     if not known:
         return []               # nothing to check against; not a failure of this table
     return [f"{e.key}: names the command {e.command!r}, which is not registered"
-            for e in ENTRIES if e.command and e.command not in known]
+            for e in all_entries() if e.command and e.command not in known]
 
 
 def get(key: str) -> Entry | None:
@@ -450,6 +473,10 @@ _UI_SUBJECT = re.compile(
     r"\b(?:button|buttons|control|controls|screen|tablet|card|cards|tab|tabs|orb|dock|landing|"
     r"gesture|compose|composer|keyboard|typing|type|half|halves|chip|chips|rail|"
     r"split|merge|merging|aside|applying|armed|arming|undo|"
+    # "Why is this HERE" and "what am i LOOKING at" name the interface with no noun of its own
+    # in them (D-11). Widening the subject cannot widen what is answered: a sentence still has
+    # to match one entry's own pattern, so these reach the table and no further.
+    r"here|looking|glass|display|"
     r"back|home|next|previous|forward)\b",
     re.I,
 )

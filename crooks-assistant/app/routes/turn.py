@@ -716,6 +716,10 @@ _NEVER_A_CONTINUATION = frozenset({
     # your split function is broken" is an instruction to write something down. Tap Add a note
     # on #1938 and say either of them, and a note containing it is the last thing wanted.
     "ui_semantics", "owner_feedback",
+    # And "what is on this screen" (D-11), which is the same kind of question as "what does
+    # the split button do" — about the machine, not about the record. Tap Add a note on #1938,
+    # ask what is on the screen, and a note containing the question is the last thing wanted.
+    "screen_state",
 })
 # And these are the ones that NAME THEIR OWN SUBJECT, which the glue would then overrule. Tap
 # Add a note on #1938, then ask "how many orders today", and the model was handed

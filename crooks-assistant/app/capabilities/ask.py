@@ -244,7 +244,7 @@ FILLER = frozenset({
     "them", "they", "their", "theirs", "you", "your", "yours", "who", "whos", "whose",
     "uh", "um", "er", "erm", "like", "mean", "meant", "means", "sorry", "actually",
     "can", "could", "would", "will", "shall", "should", "may", "might", "must", "do", "does",
-    "did", "done", "has", "have", "had", "is", "are", "was", "were", "am", "get", "got",
+    "did", "done", "has", "have", "had", "is", "are", "was", "were", "get", "got",
     "let", "lets", "say", "said", "says", "tell", "told", "want", "wants", "wanted", "need",
     "needs", "needed", "much", "many", "more", "most", "less", "least", "all", "any", "each",
     "every", "both", "either", "neither", "other", "another", "same", "next", "last", "first",
@@ -263,7 +263,7 @@ FILLER = frozenset({
     # Comparatives, prepositions and quantities. "Which customers have spent over two hundred
     # pounds" read "hundred pounds" as a person and sent a customer-ranking question down a
     # single-customer lookup, which asked the shop for a customer called Hundred Pounds.
-    "than", "over", "under", "above", "below", "between", "around", "near", "before", "after",
+    "under", "above", "below", "between", "around", "near", "before", "after",
     "since", "until", "till", "per", "within", "outside", "inside", "older", "newer", "bigger",
     "smaller", "larger", "higher", "lower", "longer", "shorter", "worth", "worst", "best",
     "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "fifteen",
