@@ -144,6 +144,7 @@ from app.actions.available import (
     MAX_PRIMARY,
     available_actions,
     available_email_actions,
+    context_rank,
     order_phrase,
     order_words,
 )
@@ -195,25 +196,46 @@ EVERY_STATE = [OPEN, SHIPPED, CANCELLED, UNPAID, ASKING]
 # =========================================================== §25 · the rail is not a menu
 
 
+# The chips whose own numbers say they must never be loud. §25's brief names five and says
+# "do not give Fulfil / Refund / Cancel / Address / Note equal visual weight on every order";
+# these are the two of the five that no order's state can justify shouting.
+#
+#   note    five renders, nought taps, and it is what is left to offer when the order needs
+#           nothing — so it is loudest exactly where it is least use.
+#   cancel  two renders, nought taps, red, and irreversible. An order needs cancelling
+#           because a PERSON said so, which `context_rank` reads out of the customer's own
+#           email; nothing about an order's own state asks for it.
+NEVER_LOUD_UNASKED = ("note", "cancel")
+
+
 @pytest.mark.parametrize("order", EVERY_STATE)
 def test_an_order_card_does_not_expose_four_equally_weighted_enabled_actions(order):
-    """The defect, stated as the session measured it.
+    """The defect, stated as the session measured it, in the two forms that were still real.
 
-    Four enabled chips at four exposures each, sixteen chip-exposures, one tap. What is
-    forbidden is four of them at the SAME weight, which is how the card answered "what can I
-    do" with a shrug: at most two are drawn at full weight, the context decides which two,
-    and every one of the rest sits behind one disclosure. And `cancel` — the reddest chip,
-    two renders, nought taps — is not on the card at all unless the order asks for it.
+    Four enabled chips at four exposures each, sixteen chip-exposures, one tap. Phase 4 had
+    already stopped drawing all four at one weight in the ordinary case — and left two ways
+    for it to happen anyway, both of which this asserts against:
+
+      * `note` was appended to the enabled list and weighed BY POSITION, so on an order with
+        only one other thing to offer — cancelled, fully refunded — it landed at index 1 and
+        was drawn at FULL WEIGHT. The quietest version of "Note first on every card",
+        surviving on exactly the orders that need nothing.
+      * `cancel` took a full-weight slot on any order whose state left few enabled chips —
+        an unpaid one, for instance — with nobody having asked to cancel anything.
+
+    The rest of the shape: at most two at full weight, whatever is left behind one
+    disclosure, and every disabled chip carrying its one short reason (§19).
     """
     actions = available_actions(order, CAPS)
     enabled = [a for a in actions if a["enabled"]]
     primary = [a for a in enabled if a["priority"] == "primary"]
+    asked = context_rank(order)
     assert len(primary) <= MAX_PRIMARY == 2, f"not a menu: {[a['id'] for a in primary]}"
     assert len(enabled) - len(primary) >= 1 or len(enabled) <= MAX_PRIMARY, \
         f"if there are more than two, the rest are disclosed: {[(a['id'], a['priority']) for a in enabled]}"
-    # Never four at one weight — which is the thing the session measured.
-    assert len(primary) < 4 and len([a for a in enabled if a["priority"] == "secondary"]) <= MAX_ENABLED, \
-        f"{[(a['id'], a['priority']) for a in enabled]}"
+    for action in primary:
+        assert not (action["id"] in NEVER_LOUD_UNASKED and action["id"] not in asked), \
+            f"{action['id']} is loud and nothing asked for it: {[(a['id'], a['priority']) for a in enabled]}"
     # A disabled chip never sits beside a live one, and never leads.
     for action in actions:
         if not action["enabled"]:
