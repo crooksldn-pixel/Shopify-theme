@@ -4,7 +4,7 @@ PY   := $(VENV)/bin/python
 PYTHON ?= $(shell command -v python3.12 || command -v python3.11 || command -v python3)
 PIP  := $(VENV)/bin/pip
 
-.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list matrix tool-matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch control control-app
+.PHONY: help doctor venv up install uninstall status restart logs dev bench test test-live experience experience-ui experience-live experience-list screens matrix tool-matrix lint chat acceptance accept write-check whisper-server secrets shopify gmail gmail-verify voice check test-session-start test-session-status test-session-stop test-session-report test-session-proposals record-start record-status record-stop record-list record-save-test bench-intelligence bench-lanes commands commands-remove update watch control control-app
 
 help:
 	@echo "The steps you take, in order. Every one is: open Terminal, cd into this folder, type the line."
@@ -40,6 +40,7 @@ help:
 	@echo "  make experience-ui   the same, and drives the page in Chromium for screenshots"
 	@echo "  make experience-live the same questions against the REAL shop and inbox, read-only"
 	@echo "  make experience-list what there is to run    (SCENARIO=back runs one)"
+	@echo "  make screens         §32's 34 named surfaces into docs/screens/phase5/ (a shot whose surface is missing is written .MISSING.png)"
 	@echo "  make matrix          which operations are reachable by voice, by touch, and tested"
 	@echo "  make tool-matrix     every tool and intent family audited; writes docs/phase4/TOOL_MATRIX.md"
 	@echo "  make dev             the backend alone, with auto-reload, for working on the code"
@@ -199,6 +200,12 @@ experience-live:
 
 experience-list:
 	@$(PY) scripts/experience.py --list
+
+# §32's screenshot matrix. Its own target rather than a flag on experience-ui: these files are
+# named and numbered and read as a set, and a shot whose surface does not exist yet is written
+# as `…MISSING.png` so a directory listing is itself the report.
+screens:
+	@$(PY) -c "import asyncio;from experience.browser import capture_matrix;p=asyncio.run(capture_matrix());m=p.get('missing') or [];print(f\"{len(p.get('shots') or [])} shots written, {len(m)} surface(s) missing\");[print('  MISSING '+x['id']+' '+x['name']+': '+x['why']+((' ['+x['owner']+']') if x.get('owner') else '')) for x in m]"
 
 matrix:
 	@$(PY) -c "import sys; sys.path.insert(0,'.'); from experience.matrix import markdown; print(markdown())"
