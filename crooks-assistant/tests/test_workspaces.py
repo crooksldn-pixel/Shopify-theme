@@ -411,6 +411,34 @@ def test_a_workspace_is_bounded():
         assert len(value) <= workspace.MAX_VALUE_CHARS, _where
 
 
+def test_no_section_claims_to_be_ready_with_nothing_in_it():
+    """§12's complaint about the live session is that the UI was sparse AND too tall at once.
+    A panel marked `ready` and holding neither a fact nor a row is the sparse half exactly —
+    measured on an order with no money breakdown and no note, the Overview came back
+    `ready(0 rows, 0 facts)`, which is a tab the owner opens for nothing.
+    """
+    live = session("Pull up order 1962 \u2014 what's on it, and where is it going?", "sparse")
+    data = only(present([ok("shopify_order_detail", ORDER_DETAIL)], session=live), "order_workspace")
+    for name, sec in data["sections"].items():
+        if sec["state"] == "ready":
+            assert sec["rows"] or sec["facts"], f"{name} is ready and empty"
+        else:
+            assert sec["note"], f"{name} is {sec['state']} and says nothing"
+
+    live2 = session(D3, "sparse-2")
+    data = only(present([ok("shopify_customer_history", HISTORY), ok("gmail_search", THREADS)],
+                        session=live2), "customer_workspace")
+    for name, sec in data["sections"].items():
+        if sec["state"] == "ready":
+            assert sec["rows"] or sec["facts"], f"{name} is ready and empty"
+        else:
+            assert sec["note"], f"{name} is {sec['state']} and says nothing"
+    # And the tab bar says which is which before a finger opens any of them.
+    assert {t["name"] for t in data["tabs"]} == set(workspace.SECTIONS["customer"])
+    for tab in data["tabs"]:
+        assert tab["state"] == data["sections"][tab["name"]]["state"]
+
+
 def test_a_workspace_needs_an_identity_before_it_is_drawn():
     """No identity, no workspace: the old cards are better than an empty header. A read that
     found nobody still says so, the way it always did."""

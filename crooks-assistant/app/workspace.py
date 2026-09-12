@@ -363,10 +363,11 @@ def _customer_workspace(plan: Plan, person: entities.Entity, graph: entities.Ent
     last = _last_order(orders, person, graph)
 
     sections = {
-        "overview": _section(
-            "overview", facts=_customer_facts(person, orders, threads, last),
-            state="ready" if (name or person.get("email")) else "unread",
-        ),
+        "overview": _rows_section(
+            "overview", [], facts=_customer_facts(person, orders, threads, last),
+            read=True, failed=False, pending=False,
+            empty_note="Nothing else is known about them yet.",
+            unread_note="", error_note=""),
         "orders": _rows_section(
             "orders", [_order_row(o, session) for o in orders], count=count,
             read=_hit(filled, "orders") or bool(person.get("history_read")),
@@ -495,7 +496,10 @@ def _order_workspace(plan: Plan, order: entities.Entity, graph: entities.EntityG
     detail = bool(order.get("detail_read"))
 
     sections = {
-        "overview": _section("overview", facts=_order_facts(order, person), state="ready"),
+        "overview": _rows_section(
+            "overview", [], facts=_order_facts(order, person), read=True, failed=False,
+            pending=False, empty_note="Nothing read about this order yet.",
+            unread_note="", error_note=""),
         "items": _rows_section(
             "items", [_item_row(i) for i in items],
             read=detail or _hit(filled, "items"), failed=_hit(failed, "items"),
@@ -558,20 +562,50 @@ def _order_header(order: entities.Entity) -> list[dict[str, Any]]:
 
 
 def _order_facts(order: entities.Entity, person: entities.Entity | None) -> list[dict[str, Any]]:
+    """The order's Overview panel.
+
+    It must never be blank. §12's complaint about the live session is that the UI was sparse
+    AND too tall at the same time, and a "ready" panel with nothing in it is the sparse half
+    exactly — measured on an order with no money breakdown and no note, this came back
+    `ready(0 rows, 0 facts)`. So the contents line is derived from the items where the shop
+    did not send one, and who placed it is a fact about the order rather than only a subtitle.
+    """
     facts: list[dict[str, Any]] = []
+    if person is not None and _text(person.get("name")):
+        facts.append({"key": "Customer", "value": _text(person.get("name"), MAX_VALUE_CHARS)})
+    elif _text(order.get("customer_name")):
+        facts.append({"key": "Customer", "value": _text(order.get("customer_name"), MAX_VALUE_CHARS)})
+    contents = _text(order.get("items_brief"), MAX_VALUE_CHARS) or _contents_of(order)
+    if contents:
+        facts.append({"key": "Contents", "value": contents})
     money = order.get("money") if isinstance(order.get("money"), dict) else {}
     for key, name in (("subtotal", "Subtotal"), ("shipping", "Shipping"), ("refunded", "Refunded"),
                       ("outstanding", "Outstanding")):
         value = _money(money.get(key)) if money else ""
         if value:
             facts.append({"key": name, "value": value})
-    if order.get("items_brief"):
-        facts.append({"key": "Contents", "value": _text(order.get("items_brief"), MAX_VALUE_CHARS)})
+    if order.get("ships_to"):
+        facts.append({"key": "Ships to", "value": _text(order.get("ships_to"), MAX_VALUE_CHARS)})
     if order.get("note"):
         facts.append({"key": "Note", "value": _text(order.get("note"), MAX_VALUE_CHARS)})
     if person is not None and _int(person.get("orders")) is not None:
         facts.append({"key": "Their orders", "value": str(_int(person.get("orders")))})
     return facts[:MAX_FACTS]
+
+
+def _contents_of(order: entities.Entity) -> str:
+    """"1 x Yard Jeans, 2 x Cap" — from the lines the order already holds, where the shop sent
+    no summary of its own. Three at most: this is the Overview, and the Items tab has them."""
+    parts: list[str] = []
+    for item in (order.get("items") or [])[:3]:
+        if not isinstance(item, dict):
+            continue
+        title = _text(item.get("title"), 40)
+        if not title:
+            continue
+        quantity = _int(item.get("quantity")) or 1
+        parts.append(f"{quantity} \u00d7 {title}" if quantity > 1 else title)
+    return ", ".join(parts)[:MAX_VALUE_CHARS]
 
 
 def _shipping_facts(order: entities.Entity) -> list[dict[str, Any]]:
