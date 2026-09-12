@@ -257,8 +257,15 @@ test('a control the deck really does draw in the dock band is a collision', () =
 
   const records = C.collect({ body }, { root: body, viewport: { w: 601, h: 418 }, styleOf: (n) => n._style });
   const result = C.check(records, { viewport: { w: 601, h: 418 } });
-  assert.equal(fired(result, 'control_over_control'), 1, JSON.stringify(result.hits));
+  // §9 asks for "button-navigation" as a verdict of its own, and a dock button IS the
+  // navigation: the hit is classified by the most specific pair that describes it, and
+  // counted exactly once so `total` stays the number the telemetry has been recording.
+  assert.equal(fired(result, 'button_over_navigation'), 1, JSON.stringify(result.hits));
+  assert.equal(fired(result, 'control_over_control'), 0, 'and not counted twice');
+  assert.equal(result.total, 1);
+  assert.equal(result.pairs['button-navigation'], 1);
   assert.equal(result.hits[0].b, 'button.dock-btn');
+  assert.equal(result.interactive, 1, 'and it is an interactive collision, which §9 fails on');
 });
 
 test('a control that cannot be touched is not counted as one', () => {
@@ -274,4 +281,167 @@ test('scan says nothing rather than throwing when there is no document to read',
   const empty = C.scan({ document: null });
   assert.equal(empty.total, 0);
   assert.deepEqual(empty.hits, []);
+});
+
+/* ---- Phase 5 §9: the fourteen named pairs, and the hard verdict ------------------------- */
+
+test('every pair §9 names by hand has a rule behind it', () => {
+  const REQUIRED = ['button-button', 'button-text', 'button-input', 'button-navigation',
+    'Split-voice', 'branch-voice', 'toast-navigation', 'toast-orb', 'toast-approval',
+    'floating-controls-dock', 'tabs-content', 'long-name-action', 'chips-title', 'keyboard-action'];
+  for (const label of REQUIRED) {
+    assert.ok(C.PAIRS[label], `§9 requires a verdict for ${label}`);
+    for (const rule of C.PAIRS[label]) {
+      assert.ok(C.RULES.indexOf(rule) !== -1, `${label} names an unknown rule ${rule}`);
+    }
+  }
+  // And a clean screen answers every one of them with a zero rather than with silence.
+  const clean = C.check([rec('button.a', '/0/0', ['control'], 10, 100, 120, 48)], { viewport: VIEW });
+  for (const label of REQUIRED) assert.equal(clean.pairs[label], 0, label);
+  assert.equal(clean.interactive, 0);
+});
+
+test('D-1: the Split chip under the voice target, by geometry and by hit test', () => {
+  // The live tree. `#talk` is `inset:0` in orb mode; the chip is drawn inside `.orb-zone`,
+  // which caps it. Geometry alone sees it...
+  const painted = C.check([
+    rec('button#talk.talk', '/0/0', ['chrome', 'voice'], 0, 62, 601, 525),
+    rec('button.branch-act', '/0/1/3', ['control', 'split', 'branch'], 271, 465, 58, 44),
+  ], { viewport: VIEW });
+  assert.equal(fired(painted, 'split_under_voice'), 1, JSON.stringify(painted.hits));
+  assert.equal(painted.pairs['Split-voice'], 1);
+  assert.equal(painted.interactive, 1, '§9 fails the release on this');
+
+  // ...and the hit test sees it even when the rectangles are nowhere near each other, which
+  // is the case that matters: a transparent parent can own the touch without covering the box.
+  const tested = C.check([
+    rec('button.branch-act', '/0/1/3', ['control', 'split', 'branch'], 271, 465, 58, 44,
+      { covered_by: 'span#talk-label.talk-label' }),
+  ], { viewport: VIEW });
+  assert.equal(fired(tested, 'split_under_voice'), 1, JSON.stringify(tested.hits));
+  assert.match(tested.hits[0].note, /hit test/);
+
+  // Merge and Close are the same defect under their own name, because the owner named them
+  // separately: "I cannot click the merge or close button".
+  const halves = C.check([
+    rec('button#talk.talk', '/0/0', ['chrome', 'voice'], 0, 62, 601, 525),
+    rec('button.branch-chip', '/0/1/1', ['control', 'branch'], 20, 465, 120, 44),
+    rec('button.branch-act', '/0/1/2', ['control', 'branch'], 150, 465, 80, 44),
+  ], { viewport: VIEW });
+  assert.equal(fired(halves, 'branch_under_voice'), 2, JSON.stringify(halves.hits));
+  assert.equal(halves.pairs['branch-voice'], 2);
+});
+
+test('a fixed voice target that does NOT reach the branch bar is not a collision', () => {
+  // The shape workstream A is building: the hold band is a dock, not the whole screen.
+  const fixed = C.check([
+    rec('button#talk.talk', '/0/0', ['chrome', 'voice'], 0, 700, 601, 120),
+    rec('button.branch-act', '/0/1/3', ['control', 'split', 'branch'], 271, 465, 58, 44),
+  ], { viewport: VIEW });
+  assert.equal(fired(fixed, 'split_under_voice'), 0);
+  assert.equal(fixed.interactive, 0, 'and the release gate is clear');
+});
+
+test('a message over the navigation, the orb and an approval are three different faults', () => {
+  const result = C.check([
+    rec('div.toast', '/0/0', ['notification'], 0, 100, 601, 60),
+    rec('nav#context-nav.context-nav', '/0/1', ['chrome', 'navigation'], 0, 110, 601, 48),
+    rec('div#orb-frame.orb-frame', '/0/2', ['chrome', 'orb'], 130, 120, 340, 340),
+    rec('button.action-surface', '/0/3', ['chrome', 'approval', 'control', 'action'], 33, 130, 535, 48),
+  ], { viewport: VIEW });
+  assert.equal(fired(result, 'toast_over_navigation'), 1, JSON.stringify(result.counts));
+  assert.equal(fired(result, 'toast_over_orb'), 1);
+  assert.equal(fired(result, 'toast_over_approval'), 1);
+  assert.equal(fired(result, 'notification_over_chrome'), 0, 'each one named, none counted twice');
+  assert.equal(result.pairs['toast-navigation'], 1);
+  assert.equal(result.pairs['toast-orb'], 1);
+  assert.equal(result.pairs['toast-approval'], 1);
+});
+
+test('a long name across an action, and chips across a title, are named separately', () => {
+  const result = C.check([
+    rec('p.card-sub', '/0/0/1', ['text', 'entityname'], 33, 200, 400, 22),
+    rec('button.rail-chip', '/0/0/2', ['control', 'action'], 300, 205, 120, 44),
+    rec('h2.card-title', '/0/1/1', ['text', 'title'], 33, 400, 300, 30),
+    rec('span.badge', '/0/1/2', ['control', 'chip'], 250, 405, 80, 24),
+  ], { viewport: VIEW });
+  assert.equal(fired(result, 'name_over_action'), 1, JSON.stringify(result.counts));
+  assert.equal(fired(result, 'chips_over_title'), 1);
+  assert.equal(fired(result, 'text_over_control'), 0, 'neither falls back to the generic rule');
+  assert.equal(result.pairs['long-name-action'], 1);
+  assert.equal(result.pairs['chips-title'], 1);
+  assert.equal(result.pairs['button-text'], 2, 'and "button-text" is their sum');
+});
+
+test('a control over a field, and a tab strip over its own panel', () => {
+  const result = C.check([
+    rec('button.compose-btn', '/0/0', ['control', 'action'], 33, 300, 200, 44),
+    rec('textarea.field-input', '/0/1', ['control', 'input'], 33, 310, 535, 120),
+    rec('div.tabs', '/0/2', ['control', 'tabstrip'], 33, 500, 535, 40),
+    rec('div.stats', '/0/3', ['control', 'panel'], 33, 520, 535, 200),
+  ], { viewport: VIEW });
+  assert.equal(fired(result, 'button_over_input'), 1, JSON.stringify(result.counts));
+  assert.equal(fired(result, 'tabs_over_content'), 1);
+  assert.equal(result.pairs['button-input'], 1);
+  assert.equal(result.pairs['tabs-content'], 1);
+});
+
+test('with the keyboard open, an action under the fixed furniture is its own verdict', () => {
+  const records = [
+    rec('button.compose-btn', '/0/0', ['control', 'action'], 33, 380, 200, 44),
+    rec('nav#dock.dock', '/0/1', ['chrome', 'navigation', 'dock'], 0, 370, 601, 76, { floating: true }),
+  ];
+  const shut = C.check(records, { viewport: { w: 601, h: 418 } });
+  const open = C.check(records, { viewport: { w: 601, h: 418 }, keyboard: true });
+  assert.equal(fired(open, 'keyboard_over_action'), 1, JSON.stringify(open.counts));
+  assert.equal(open.pairs['keyboard-action'], 1);
+  assert.equal(fired(shut, 'keyboard_over_action'), 0, 'the same geometry with the keyboard down is a different question');
+});
+
+/* The rule the coordinator's eye found on the before-shots, which nothing above can see: no
+   two rectangles intersect and the document does not scroll sideways, because the overflow is
+   CLIPPED by a container. An interactive control hangs off the edge of the glass and every
+   check is green. (docs/phase5/VISUAL_CRITIQUE_BEFORE.md) */
+test('a branch chip cut off by the right edge of the navigation strip fails', () => {
+  const chip = node('BUTTON', 'branch-chip', [470, 180, 170, 44]);
+  const nav = node('NAV', 'context-nav', [14, 174, 573, 56], { overflowX: 'auto', overflowY: 'hidden' }, [chip]);
+  const body = node('BODY', '', [0, 0, 601, 889], { overflowX: 'hidden', overflowY: 'hidden' }, [nav]);
+  const records = C.collect({ body }, { root: body, viewport: VIEW, styleOf: (n) => n._style });
+  const result = C.check(records, { viewport: VIEW });
+  assert.equal(fired(result, 'control_clipped_by_container'), 1, JSON.stringify(result.hits));
+  assert.match(result.hits[0].note, /off the side/);
+  assert.equal(result.interactive, 1, '§9 fails the release on this, the same as an overlap');
+  assert.equal(fired(result, 'document_overflow_x'), 0, 'and the old rule still cannot see it');
+});
+
+test('a card scrolled down a deck is not a clipped control, because the deck scrolls', () => {
+  // The false positive this rule must never produce: scrolling IS the interaction.
+  const button = node('BUTTON', 'rail-chip', [33, 900, 200, 44]);
+  const card = node('ARTICLE', 'card', [33, 200, 535, 900], { overflowX: 'hidden', overflowY: 'hidden' }, [button]);
+  const cards = node('DIV', 'cards', [14, 174, 573, 500], { overflowX: 'hidden', overflowY: 'auto', position: 'relative' }, [card]);
+  const body = node('BODY', '', [0, 0, 601, 889], { overflowX: 'hidden', overflowY: 'hidden' }, [cards]);
+  const records = C.collect({ body }, { root: body, viewport: VIEW, styleOf: (n) => n._style });
+  const result = C.check(records, { viewport: VIEW });
+  assert.equal(fired(result, 'control_clipped_by_container'), 0, JSON.stringify(result.hits));
+});
+
+test('and a control trapped behind overflow:hidden is reported even though it is not furniture', () => {
+  const button = node('BUTTON', 'rail-chip', [400, 300, 300, 44]);
+  const card = node('ARTICLE', 'card', [33, 200, 400, 400], { overflowX: 'hidden', overflowY: 'hidden' }, [button]);
+  const body = node('BODY', '', [0, 0, 601, 889], { overflowX: 'hidden', overflowY: 'hidden' }, [card]);
+  const records = C.collect({ body }, { root: body, viewport: VIEW, styleOf: (n) => n._style });
+  const result = C.check(records, { viewport: VIEW });
+  assert.equal(fired(result, 'control_clipped_by_container'), 1, JSON.stringify(result.hits));
+  assert.match(result.hits[0].note, /nothing scrolls on that axis/);
+});
+
+test('§31: tight is not broken — two controls six pixels apart are not a collision', () => {
+  // The coordinator's other note. A chevron beside a badge, not touching it, is a judgement
+  // about crowding and not a §9 fault, and a proximity rule here would fail every real screen.
+  const result = C.check([
+    rec('span.row-go', '/0/0', ['text'], 560, 300, 12, 20),
+    rec('span.badge', '/0/1', ['control', 'chip'], 490, 300, 64, 20),
+  ], { viewport: VIEW });
+  assert.equal(result.total, 0, JSON.stringify(result.hits));
+  assert.equal(result.interactive, 0);
 });
