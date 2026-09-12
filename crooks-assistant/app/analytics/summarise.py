@@ -170,11 +170,16 @@ def _attention_for_row(row: dict[str, Any], *, now: float) -> tuple[str, str, st
     fulfillment = str(row.get("fulfillment") or "").upper()
     refunded = float(row.get("refunded") or 0.0)
     outstanding = float(row.get("outstanding") or 0.0)
+    total = float(row.get("total") or 0.0)
     shipped = fulfillment == "FULFILLED"
 
     if row.get("cancelled"):
         return None
-    if payment in _UNPAID and outstanding > 0:
+    if payment in _UNPAID and (outstanding > 0 or total > refunded):
+        # Money still owing. `outstanding` is the better witness where Shopify populates it,
+        # but it is not always populated (an order read through a lean query, an older
+        # order), so the order's own total against what has been given back is the fallback
+        # rather than a silent "nothing owing".
         return ("red", "Not paid for", f"{_days_words(age_days)} old and still owing")
     if refunded > 0 and not shipped:
         return ("amber", "Refunded, not shipped", "money back on an order still here")
