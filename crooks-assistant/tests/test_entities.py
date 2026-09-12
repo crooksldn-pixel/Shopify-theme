@@ -47,6 +47,9 @@ GMAIL = {
 
 
 def graph() -> entities.EntityGraph:
+    """A fresh graph. The graph is deliberately per CONVERSATION and outlives a turn — that
+    is what D-3 turns on — so a test that wants an empty one says so."""
+    entities.forget("entities")
     return entities.graph_for(Session(session_id="entities"))
 
 
@@ -88,8 +91,12 @@ def test_three_reads_of_one_customer_leave_one_entity_with_all_three_findings():
     assert person.fields["name"] == "Daniel Sear"
     assert person.fields["orders"] == 2
     assert person.fields["spent"] == "120.00 GBP"
-    # The history read enriched the SAME entity's orders...
-    assert [o.fields["order_number"] for o in g.orders_of(person.key)] == ["#1962", "#1930"]
+    # The history read enriched the SAME entity's orders. The graph holds what the shop said
+    # — "CROOKS-1962" — because it is a record of reads and provenance has to mean something;
+    # "#1962" is a presentation decision and is made in app/workspace.py, once, where §26 is
+    # enforced for every surface rather than in each read's own fold.
+    assert [o.fields["order_number"] for o in g.orders_of(person.key)] == ["CROOKS-1962", "CROOKS-1930"]
+    assert [o.ident for o in g.orders_of(person.key)] == ["1962", "1930"]
     # ...and the Gmail read enriched the same entity's email, by the address the shop gave.
     assert [t.fields["subject"] for t in g.threads_of(person.key)] == ["Where is my order"]
 
