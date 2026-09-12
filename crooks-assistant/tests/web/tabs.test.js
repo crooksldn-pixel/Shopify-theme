@@ -270,6 +270,42 @@ test('an errored section does not kill its neighbours', () => {
   assert.equal(node.dataset.state, 'partial');
 });
 
+test('a section landing does not take the keyboard out of a half-typed field', () => {
+  // §15's rules are about what a patch must NOT do. The workspace is still filling while he
+  // types an address into the composer beside it; the section that lands patches the header
+  // and nothing else — not the field, not the caret, not the characters.
+  const host = deck();
+  const composer = {
+    type: 'email_compose',
+    data: {
+      compose_id: 'c1', kind: 'new', about: 'A reply',
+      to: { value: '', status: 'ok' }, subject: { value: 'Return address', status: 'ok' },
+      body: { value: 'Unit 4', status: 'uncertain' }, actions: [],
+    },
+  };
+  UI.applyPatches(host, [patch('add', PLAN), patch('add', composer)]);
+  const box = host.querySelectorAll('[data-field="body"]').filter((n) => n.tagName === 'TEXTAREA' || n.tagName === 'INPUT')[0];
+  box.value = 'Unit 4, Bermondsey Trading Est';
+  box.selectionStart = 7;
+  box.selectionEnd = 7;
+  box.focus();
+  host.scrollTop = 210;
+
+  const ready = JSON.parse(JSON.stringify(PLAN));
+  ready.data.state = 'ready';
+  ready.data.sections = [
+    { name: 'orders', label: 'Orders', state: 'ready', value: '7' },
+    { name: 'inbox', label: 'Inbox', state: 'ready', value: '4' },
+  ];
+  const out = UI.applyPatches(host, [patch('data', ready)]);
+  assert.equal(out.changed, 1);
+  assert.equal(host.children.length, 2, 'two cards before, two cards after');
+  assert.equal(host.scrollTop, 210, 'the scroller was left alone');
+  assert.equal(shim.document.activeElement, box, 'the keyboard stayed in the field he was typing in');
+  assert.equal(box.value, 'Unit 4, Bermondsey Trading Est');
+  assert.equal(box.selectionStart, 7);
+});
+
 test('the same workspace patched seven times is drawn once', () => {
   // D-8. `turn_f0628fcf7be5` drew order_list + working_set + folded SEVEN times, #2..#7 at
   // 0.0 s apart, and each redraw cost the scroll position while he was scrolling.

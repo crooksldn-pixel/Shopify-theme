@@ -358,7 +358,8 @@ class Workspace:
             self.title = str(title)[:60]
         for kind in list(kinds)[:6]:
             self.section(kind)
-        self.planned = True
+        if self.fact_ms is None:
+            self.planned = True
         return self._plan_now(self.at_ms())
 
     def _plan_now(self, at_ms: float) -> list[Patch]:
@@ -369,8 +370,14 @@ class Workspace:
         card is a second placeholder for the same thing. After that, every change to a
         section is a patch to this one card; a restage that changes nothing produces no patch
         at all, because the ledger sees to that (§25).
+
+        And it goes up BEFORE the facts or not at all. The header is identity: a header that
+        arrives after the cards it describes is a fifth wheel, and appending one under a
+        screen the owner is already reading is the late clutter D-8 is about. So a workspace
+        that learns of its second section only when that section's card lands keeps the cards
+        as its identity and draws no header.
         """
-        if not self.sections or (not self.planned and len(self.sections) < 2):
+        if not self.sections or (not self.planned and (len(self.sections) < 2 or self.fact_ms is not None)):
             return []
         self.planned = True
         return self._record(self.ledger.stage([self._plan_item()], at_ms=at_ms))

@@ -10,6 +10,13 @@ Every test here is one of the four defects the live session left behind:
 * **D-15** a turn produced records with no card. The tests assert that a read which returned
   rows, and a read which returned none, both produce a card the renderer can draw.
 * **§25** DATA UPDATED, VISUAL STATE UPDATED and NO VISIBLE CHANGE are three different things.
+
+Phase 5 renamed the four glass timings this file asserts on (§15, app/progressive.py): a shell
+that named nothing used to set `time_to_shell`, and §15 says an invisible empty shell is not
+progress — so it is `time_to_visible_shell` now and only a shell with IDENTITY sets it.
+`time_to_first_fact` and `time_to_first_useful_workspace` mean exactly what they meant and are
+called `time_to_first_meaningful_fact` and `time_to_first_actionable_surface`. Nothing about
+what these tests prove has been weakened; the keys say what they measure.
 """
 
 from __future__ import annotations
@@ -137,11 +144,16 @@ def test_the_shell_is_up_before_anything_has_been_read():
     clock = Clock()
     workspace = progressive.Workspace("s1", clock=clock)
     patches = workspace.shell(("order_list", "email_list"))
-    assert [p.type for p in patches] == ["order_list", "email_list"]
-    assert all(p.item["data"]["shell"] is True for p in patches)
-    assert workspace.timings()["time_to_shell"] == 0.0
+    # Changed in Phase 5 (§15): the FIRST thing on the glass is the workspace's identity —
+    # what this screen is and the two sections coming — and then the skeletons of the cards
+    # themselves. Phase 4 put up the skeletons alone, which is the "invisible empty shell"
+    # §15 says does not count as progress.
+    assert [p.type for p in patches] == ["workspace_plan", "order_list", "email_list"]
+    assert [s["label"] for s in patches[0].item["data"]["sections"]] == ["Orders", "Inbox"]
+    assert all(p.item["data"]["shell"] is True for p in patches[1:])
+    assert workspace.timings()["time_to_visible_shell"] == 0.0
     # A skeleton says what kind of thing is coming and nothing else.
-    assert set(patches[0].item["data"]) == {"shell", "loading", "title", "placeholder"}
+    assert set(patches[1].item["data"]) == {"shell", "loading", "title", "placeholder"}
 
 
 def test_a_read_landing_takes_its_skeletons_place_rather_than_appearing_below_it():
@@ -175,7 +187,7 @@ def test_a_started_read_puts_its_own_skeleton_up_when_the_family_did_not_know():
     workspace = progressive.Workspace("s1", clock=clock)
     clock.at(40)
     assert [p.type for p in workspace.starting("gmail_search")] == ["email_list"]
-    assert workspace.timings()["time_to_shell"] == 40.0
+    assert workspace.timings()["time_to_visible_shell"] == 40.0
     # The second read of the same kind does not stack a second skeleton.
     assert workspace.starting("gmail_search") == []
     # A tool whose card the Mac cannot predict promises nothing rather than promising wrong.
@@ -191,13 +203,13 @@ def test_a_useful_card_exists_well_before_the_final_one():
     the ordering and the timing, not on the end state, which was never the bug."""
     clock = Clock()
     workspace = progressive.begin("s1", turn_id="t1", family="order_list_period", clock=clock)
-    assert workspace.timings()["time_to_shell"] == 0.0
+    assert workspace.timings()["time_to_visible_shell"] == 0.0
 
     clock.at(300)
     orders = {"type": "order_list", "data": {"title": "Today", "count": 3, "orders": [{"order_number": "#1938"}]}}
     first = workspace.facts([orders])
     assert [p.op for p in first] == ["add"]
-    assert workspace.timings()["time_to_first_useful_workspace"] == 300.0
+    assert workspace.timings()["time_to_first_actionable_surface"] == 300.0
 
     clock.at(1100)
     mail = {"type": "email_list", "data": {"title": "Email", "count": 2, "threads": [{"thread_id": "t1", "subject": "Where is it?"}]}}
@@ -208,24 +220,27 @@ def test_a_useful_card_exists_well_before_the_final_one():
     times = workspace.timings()
     assert times["time_to_complete_workspace"] == 7975.0
     # The number the brief asks for: the screen was useful 7.6 seconds before it was finished.
-    assert times["time_to_first_useful_workspace"] < times["time_to_complete_workspace"] / 4
+    assert times["time_to_first_actionable_surface"] < times["time_to_complete_workspace"] / 4
     # And the two cards that were already right were NOT redrawn at the end.
     assert [p.op for p in final] == ["add"], "only the assistant's sentence was new"
     assert workspace.ledger.counts["suppressed"] == 2
 
 
-def test_the_first_fact_and_the_first_useful_workspace_are_not_the_same_moment():
+def test_the_first_meaningful_fact_and_the_first_actionable_surface_are_not_the_same_moment():
     """An error card is a fact about the world and not a workspace. Keeping them apart is
     what stops "we drew something" being reported as "he could use it"."""
     clock = Clock()
     workspace = progressive.Workspace("s1", clock=clock)
     clock.at(80)
     workspace.facts([{"type": "error", "data": {"service": "gmail", "kind": "tool_failed", "title": "Email unavailable"}}])
-    assert workspace.timings()["time_to_first_fact"] == 80.0
-    assert workspace.timings()["time_to_first_useful_workspace"] is None
+    assert workspace.timings()["time_to_first_meaningful_fact"] == 80.0
+    assert workspace.timings()["time_to_first_actionable_surface"] is None
+    # And an error is not IDENTITY either: a screen carrying only "Email unavailable" does not
+    # say what workspace this is, so §15's first number is still unanswered.
+    assert workspace.timings()["time_to_visible_shell"] is None
     clock.at(400)
     workspace.facts([order_card()])
-    assert workspace.timings()["time_to_first_useful_workspace"] == 400.0
+    assert workspace.timings()["time_to_first_actionable_surface"] == 400.0
 
 
 def test_the_patch_log_is_bounded_and_a_tablet_can_catch_up_from_a_cursor():
