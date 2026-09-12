@@ -231,6 +231,10 @@ def test_an_order_card_does_not_expose_four_equally_weighted_enabled_actions(ord
     primary = [a for a in enabled if a["priority"] == "primary"]
     asked = context_rank(order)
     assert len(primary) <= MAX_PRIMARY == 2, f"not a menu: {[a['id'] for a in primary]}"
+    # Three changes the order might need, plus the note, which is always offered and never
+    # counted (and never loud — see below).
+    assert len([a for a in enabled if a['id'] != 'note']) <= MAX_ENABLED == 3, \
+        f"{[a['id'] for a in enabled]}"
     assert len(enabled) - len(primary) >= 1 or len(enabled) <= MAX_PRIMARY, \
         f"if there are more than two, the rest are disclosed: {[(a['id'], a['priority']) for a in enabled]}"
     for action in primary:
