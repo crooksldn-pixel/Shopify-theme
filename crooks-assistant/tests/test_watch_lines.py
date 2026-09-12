@@ -250,3 +250,46 @@ def test_the_burst_threshold_is_the_analysers_own():
 
     assert watch.NAV_BURST == visible.NAV_BURST
     assert watch.NAV_WINDOW_S == visible.NAV_WINDOW_S
+
+
+# ------------------------------------------------ §21: a tap becoming a recording, live
+
+
+def _tap(ms, *, at: float = T0, outcome: str = "sent") -> dict[str, Any]:
+    """A hold-release, the way the tablet writes one."""
+    return _event("tablet_hold", phase="release", ms=ms, outcome=outcome, ts=at,
+                  source="tablet")
+
+
+def test_a_tap_that_became_a_recording_is_said_at_the_moment_the_finger_lifts():
+    """§21 and §39 step 1. On 11 September, 63 taps became recordings and nobody saw it
+    happen — the report found it twelve hours later and called it a precision-input failure.
+    The acceptance bar is ZERO, and a bar nobody can see being crossed is a bar nobody holds.
+    """
+    out = watch.Watch(colour=False).lines(_tap(70))
+    assert out, "a 70 ms touch that reached the recogniser must be said"
+    assert "TAP" in out[0] and "70 ms" in out[0], out
+    assert "no speech was in it" in out[0], out
+
+
+def test_a_proper_hold_and_a_touch_the_tablet_threw_away_are_silent():
+    """The oracle: the line above must not fire on everything. A hold long enough to carry
+    speech is ordinary use, and a touch the tablet discarded before recording never reached
+    the recogniser."""
+    assert watch.Watch(colour=False).lines(_tap(1_850)) == []
+    assert watch.Watch(colour=False).lines(_tap(70, outcome="discarded")) == []
+    assert watch.Watch(colour=False).lines(_tap("not a number")) == []
+
+
+def test_a_burst_is_said_once_and_names_the_cause():
+    """Twenty-six taps in ten seconds are one defect, not twenty-six warnings — and the line
+    names the file it is in, because the report's version of this sent an engineer to the
+    speech recogniser."""
+    watching = watch.Watch(colour=False)
+    said: list[str] = []
+    for n in range(watch.BURST_MIN + 2):
+        said.extend(watching.lines(_tap(80 + n, at=T0 + n * 0.4)))
+    swallowed = [line for line in said if "SWALLOWED" in line]
+    assert len(swallowed) == 1, said
+    assert "taps in" in swallowed[0] and "stacking context" in swallowed[0], swallowed
+    assert "the voice layer is over a control" in swallowed[0]

@@ -165,6 +165,9 @@ def rank(severity: float, sites: int, *, inferred: bool = False) -> float:
     return round(float(severity) * min(int(sites), RANK_CAP) * confidence, 2)
 
 
+# How many findings of ONE class the evidence table prints. §21: a report in which one class
+# can take sixty-two rows is a report that buries the other nine, whatever the counts say.
+EVIDENCE_PER_CLASS = 4
 ABANDON_S = 3.0        # a screen left this soon after it was rendered was not what was wanted
 SLOW_MS = {"stt": 3000.0, "claude": 8000.0, "total": 12000.0, "tts_first_byte": 2000.0, "context": 4000.0,
            # Section 25's two numbers, kept apart: waiting for a sentence about facts already
@@ -2128,6 +2131,38 @@ def render(rec: Reconstruction, *, tools_registered: list[str] | None = None,
     rows_actions = [e for e in rec.controls if str(e.get("kind") or "") == "row_action"]
     branch_moves = Counter(str(e.get("kind") or "") for e in rec.controls if str(e.get("kind") or "").startswith("branch_"))
     add(f"- Changes prepared by a tap (`command_stage`): {len(staged)} ({sum(1 for e in staged if e.get('ok') is False)} refused). Row actions: {len(rows_actions)}.")
+    add("")
+    add("### What each finger actually did")
+    add("")
+    add("§21. Four classes where the 11 September report had one bucket. It counted 62 "
+        "`recording_too_short` events as \"a value had to be exact and a voice could not make it "
+        "so\" and made the precision-input path its first improvement candidate and speech its "
+        "second. A short touch is one of four different things, and which one it was decides "
+        "which file the defect is in — `web/style.css`, `web/app.js`, `app/speech`, or the "
+        "composer. The rule and its false-positive risk are in `app/observability/touch.py`.")
+    add("")
+    from app.observability import touch as touch_mod
+
+    touches = touch_mod.classify(rec.events)
+    lines.extend(_table(["What the touch was", "Findings", "Touches", "How it is known", "Severity"], [
+        [name, sum(1 for t in touches if t.name == name), touch_mod.taps_in(touches, name),
+         ", ".join(f"{how} × {n}" for how, n in Counter(
+             t.basis for t in touches if t.name == name).most_common()) or "—",
+         SEVERITY[name]]
+        for name in touch_mod.CLASSES if any(t.name == name for t in touches)
+    ] or [["nothing swallowed a touch in this session", 0, 0, "—", "—"]]))
+    holds = touch_mod.holds(rec.events)
+    lengths = sorted(h.ms for h in holds if h.ms is not None)
+    if lengths:
+        add(f"- {len(holds)} hold(s) on the glass, "
+            f"{sum(1 for x in lengths if x < touch_mod.TAP_MS)} of them under "
+            f"{touch_mod.TAP_MS:.0f} ms; median {statistics.median(lengths):,.0f} ms. "
+            f"Targets the tablet recorded: "
+            + (", ".join(f"{name or 'none'} × {n}" for name, n in
+                         Counter(h.target for h in holds).most_common()) or "none")
+            + ". A file in which only the voice target is ever named is a file in which nothing "
+              "else ever received a touch.")
+    add("")
     by_collision = Counter(str(c["what"]) for c in rec.collisions)
     add(f"- Branch moves: {dict(branch_moves) or 'none'}. Gestures that could end a recording: {dict(by_collision) or 'none'}"
         + (f" — {'; '.join(sorted({str(c['detail']) for c in rec.collisions}))}." if rec.collisions else "."))
@@ -2246,11 +2281,27 @@ def _two_outcomes(rec: Reconstruction) -> list[str]:
              COMPONENT[name]]
             for name, n in sorted(counts.items(), key=lambda kv: (-SEVERITY[kv[0]], -kv[1], kv[0]))
         ]))
-        out.append("The evidence, finding by finding:")
+        out.append(f"The evidence, finding by finding, up to {EVIDENCE_PER_CLASS} per class — the "
+                   "counts above are complete and this is what was read. §21: the 11 September "
+                   "report gave one class sixty-two rows of its own and buried the other nine, "
+                   "so no class may take more of this table than any other.")
         out.append("")
-        out.extend(_table(["What the owner saw", "Turn", "About", "What was read"], [
-            [f.name, f.turn_id, f.subject or "—", f.signal] for f in experience.findings
-        ]))
+        shown: Counter = Counter()
+        rows: list[list[Any]] = []
+        for f in experience.findings:
+            shown[f.name] += 1
+            if shown[f.name] <= EVIDENCE_PER_CLASS:
+                rows.append([f.name, f.turn_id, f.subject or "—",
+                             f.signal + ("" if getattr(f, "basis", "direct") == "direct"
+                                         else f" [{f.basis}]")])
+        out.extend(_table(["What the owner saw", "Turn", "About", "What was read"], rows))
+        held_back = {name: n - EVIDENCE_PER_CLASS for name, n in shown.items()
+                     if n > EVIDENCE_PER_CLASS}
+        if held_back:
+            out.append("Not printed above, and counted in the table before it: "
+                       + ", ".join(f"{n} more {name}" for name, n in sorted(held_back.items()))
+                       + ".")
+            out.append("")
     else:
         out.append("_Nothing the owner could see went wrong in this session._")
         out.append("")
