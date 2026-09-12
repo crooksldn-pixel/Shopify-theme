@@ -130,8 +130,13 @@ _WANTS: dict[str, dict[str, tuple[str, ...]]] = {
 # "Expand his customer page", "bring up a UI for the customer's page", "everything about" —
 # an explicit request for the whole record. D-5 is three attempts at exactly this, and the
 # first produced a thousand-pixel list of what the system can do.
-_WHOLE = frozenset({"expand", "page", "workspace", "everything", "all", "full", "profile",
-                    "dashboard", "ui", "screen", "card", "detail", "details", "overview"})
+#
+# Kept to the words that can only mean the WHOLE record. "full", "all" and "details" were in
+# here and should not have been: "read me the full shipping address" is a request for one
+# part of one order, and taking it as a request for the whole record replaced the card that
+# carries the address with a workspace that summarises it. Measured — the golden scenario
+# `full_address` went red on exactly that.
+_WHOLE = frozenset({"expand", "page", "workspace", "everything", "profile", "dashboard", "ui"})
 
 # A question about a POPULATION rather than about one record. §13 is workstream D's and this
 # layer must not take its surfaces: "Has anyone bought today that has bought before?" is
@@ -570,11 +575,25 @@ def _order_facts(order: entities.Entity, person: entities.Entity | None) -> list
 
 
 def _shipping_facts(order: entities.Entity) -> list[dict[str, Any]]:
+    """Where it is going, in the shape the order card has always sent it: the town and the
+    country, then the address itself where the read supplied one — the same fields, so a
+    question about the address is answered the same way whichever surface it lands on."""
     facts: list[dict[str, Any]] = []
     if order.get("ships_to"):
-        # The town and the country, which is what the order card has always carried. The full
-        # street address is not an order fact the screen shows and never was.
         facts.append({"key": "Ships to", "value": _text(order.get("ships_to"), MAX_VALUE_CHARS)})
+    address = order.get("shipping_address")
+    if isinstance(address, dict):
+        lines = [_text(line, MAX_VALUE_CHARS) for line in (address.get("lines") or [])[:4]
+                 if isinstance(line, str)]
+        if lines:
+            facts.append({"key": "Address", "value": ", ".join([x for x in lines if x])})
+        for key, name in (("zip", "Postcode"), ("city", "City"), ("country", "Country"),
+                          ("name", "Addressed to"), ("phone", "Phone")):
+            value = _text(address.get(key), MAX_VALUE_CHARS)
+            if value and not (key in ("city", "country") and order.get("ships_to")):
+                facts.append({"key": name, "value": value})
+    if order.get("shipping_method"):
+        facts.append({"key": "Method", "value": _text(order.get("shipping_method"), MAX_VALUE_CHARS)})
     return facts[:MAX_FACTS]
 
 
