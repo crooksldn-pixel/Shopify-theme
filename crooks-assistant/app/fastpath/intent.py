@@ -292,6 +292,12 @@ class Signals:
     deixis: bool = False            # "that", "this", "it", "them", "these"
     # Branch state, folded in: what the conversation already has open.
     has_entity: bool = False
+    # Whether a customer has been open on this half at any point. "Bring up a UI for the
+    # customer's page" names a person without naming one, and the person it names is the one
+    # this conversation has been looking at — which is not always the record in focus, because
+    # a read of the inbox moves the focus off it (D-3). Without this the third of D-5's three
+    # attempts had nothing to resolve and fell to the model, which spoke.
+    has_recent_customer: bool = False
     has_set: bool = False
     has_workflow: bool = False
     known_name: str = ""
@@ -408,6 +414,10 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
             sig.direction = "previous"
     if branch is not None:
         sig.has_entity = bool(getattr(branch, "entity", None))
+        entity = getattr(branch, "entity", None) or {}
+        sig.has_recent_customer = entity.get("kind") == "customer" or any(
+            e.get("kind") == "customer" for e in (getattr(branch, "recent_entities", None) or [])
+        )
         sig.has_set = bool(getattr(branch, "set_id", ""))
         sig.has_workflow = getattr(branch, "workflow", None) is not None
         sig.known_name = _known_name(text or "", branch)
@@ -632,6 +642,7 @@ _LOOKUP = {
     "bought": lambda s: s.bought,
     "deixis": lambda s: s.deixis,
     "has_entity": lambda s: s.has_entity,
+    "has_recent_customer": lambda s: s.has_recent_customer,
     "has_set": lambda s: s.has_set,
     "has_workflow": lambda s: s.has_workflow,
     "known_name": lambda s: bool(s.known_name),
@@ -845,7 +856,7 @@ def _slots(sig: Signals) -> dict[str, Any]:
     # when it has one, because it carries an id and the span carries only words.
     slots: dict[str, Any] = {
         "order_numbers": list(sig.order_numbers),
-        "name": sig.known_name or _ask().person_named(sig.raw or " ".join(sig.words)),
+        "name": _ask().person_for(sig),
     }
     if fixed:
         slots["corrected"] = fixed

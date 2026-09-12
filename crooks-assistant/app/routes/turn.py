@@ -707,6 +707,10 @@ _NEVER_A_CONTINUATION = frozenset({
     # inbox", and the inbox is what should open.
     "landing_orders", "landing_inbox", "landing_sales", "landing_products",
     "order_tab_show", "branch_switch",
+    # And §4's two ways of saying it in words the router had no family for at all
+    # (app/families/ui_intent.py). "Take me to the inbox" said over a tapped Add a note is
+    # the inbox, not note text — the same rule the dock's four landings are here for.
+    "ui_area_workspace",
     # And the two that are about the machine rather than about the shop (§15, §16). "What does
     # the split button do" is a question to the assistant, like "what can you do"; "log that
     # your split function is broken" is an instruction to write something down. Tap Add a note
@@ -751,6 +755,10 @@ _CARRIES_ITS_OWN_SUBJECT = frozenset({
     # for a control tapped a moment ago — tap Add a note on #1938, ask what has been
     # abandoned, and it is the abandonment that should be answered.
     "abandoned_checkouts", "discount_code", "order_new", "order_new_line",
+    # §4's workspace family (app/families/ui_intent.py). "Expand David's customer page" names
+    # the person it is about; tap Add a note on #1938 and say it, and the customer's page is
+    # what should open, not a note containing the sentence.
+    "customer_workspace",
 })
 
 

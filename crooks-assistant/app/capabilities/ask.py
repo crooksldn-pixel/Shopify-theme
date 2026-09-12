@@ -260,6 +260,24 @@ FILLER = frozenset({
     "view", "viewing", "display", "displaying", "know", "knows", "knew", "think", "thinks",
     "hear", "heard", "speak", "speaking", "talk", "talking", "stop", "stops", "stopping",
     "wait", "waiting", "start", "starts", "starting", "try", "trying", "keep", "keeping",
+    # Comparatives, prepositions and quantities. "Which customers have spent over two hundred
+    # pounds" read "hundred pounds" as a person and sent a customer-ranking question down a
+    # single-customer lookup, which asked the shop for a customer called Hundred Pounds.
+    "than", "over", "under", "above", "below", "between", "around", "near", "before", "after",
+    "since", "until", "till", "per", "within", "outside", "inside", "older", "newer", "bigger",
+    "smaller", "larger", "higher", "lower", "longer", "shorter", "worth", "worst", "best",
+    "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "fifteen",
+    "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred",
+    "thousand", "million", "pound", "pounds", "quid", "pence", "penny", "dollar", "dollars",
+    "euro", "euros", "gbp", "usd", "eur",
+})
+
+# A plural of people is a GROUP, not a person. "Which customers have spent over two hundred
+# pounds" names nobody, and a family that resolves one name would answer a ranking question
+# with one profile — D-4's defect, arrived at from the other direction.
+PLURAL_PEOPLE = frozenset({
+    "customers", "buyers", "clients", "people", "everyone", "everybody", "anyone", "anybody",
+    "them", "they", "others", "shoppers",
 })
 
 _CAPITALISED = re.compile(r"\b([A-Z][a-z]{1,20})\b")
@@ -309,10 +327,12 @@ def person_named(text: str) -> str:
 # does not, and without this distinction every verb the router has no meaning for is read as a
 # customer. Two or more unknown words in a row need no introducer — that is a first and last
 # name, and nothing else in English looks like it.
-_INTRODUCES = frozenset({
-    "has", "had", "have", "did", "does", "is", "was", "for", "about", "from", "to", "of",
-    "on", "by", "with", "and", "or", "the",
-})
+#
+# DETERMINERS ARE DELIBERATELY ABSENT, and this is the whole reason the set is this short. With
+# "the" in it, "show me the items" named a customer called Items and "show me the latest order"
+# named one called Latest — both measured, both fast paths this router already had. A
+# determiner in front of a word means a common noun; a name does not take one.
+_INTRODUCES = frozenset({"has", "had", "have", "did", "does", "is", "was", "for", "about", "from"})
 
 
 def _unknown_run(lowered: str) -> str:
@@ -344,7 +364,25 @@ def names_a_person(sig: Any) -> bool:
     branch has never seen. The last is the one that matters: with it, the family that answers
     from the record in focus can no longer take a sentence that named somebody else.
     """
+    words = set(getattr(sig, "words", ()) or ())
+    if words & PLURAL_PEOPLE:
+        return False
     if getattr(sig, "known_name", "") or getattr(sig, "possessive_name", False):
         return True
-    said = str(getattr(sig, "raw", "") or "") or " ".join(getattr(sig, "words", ()) or ())
+    said = str(getattr(sig, "raw", "") or "") or " ".join(words)
     return bool(person_named(said))
+
+
+def person_for(sig: Any) -> str:
+    """The person this request is about, for the `name` slot a recipe searches with.
+
+    The branch's own resolution first, because it carries an id; then the span in the words.
+    Empty whenever `names_a_person` is false, so the slot and the signal cannot disagree — a
+    recipe must never be handed a name the router did not believe in.
+    """
+    if not names_a_person(sig):
+        return ""
+    known = str(getattr(sig, "known_name", "") or "")
+    if known:
+        return known
+    return person_named(str(getattr(sig, "raw", "") or "") or " ".join(getattr(sig, "words", ()) or ()))
