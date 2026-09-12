@@ -71,23 +71,39 @@ SCREEN = "screen"
 ASSISTANT = "assistant"
 UNKNOWN = ""
 
-# The surface types (app/surfaces.py SURFACE_TYPES) that ANSWER each subject.
+# The surfaces that ANSWER each subject.
+#
+# BOTH vocabularies, and this is not laziness. A card on the wire carries `surface` (what the
+# interface is FOR — app/surfaces.py SURFACE_TYPES) and `type` (which component draws it —
+# app/presentation.py UI_TYPES), and a card built before the envelope existed carries only the
+# second. The read layer's analytic cards are `metric_group`, `ranking`, `table`; the same
+# figures under an envelope are `analytics`. A contract that knew only one of the two would
+# call a drawn card undrawn, which is the mistake this module exists to stop making in the
+# other direction.
 SATISFIES: dict[str, frozenset[str]] = {
-    CUSTOMER: frozenset({"customer", "customer_list", "order_list", "order_detail",
-                         "email_list", "email_thread", "work_queue", "workspace"}),
-    ORDER: frozenset({"order_detail", "order_list", "work_queue", "email_thread", "workspace",
-                      "variant_picker"}),
+    CUSTOMER: frozenset({"customer", "customer_list", "order_list", "order", "order_detail",
+                         "email_list", "email_thread", "work_queue", "working_set", "workspace"}),
+    ORDER: frozenset({"order_detail", "order", "order_list", "work_queue", "working_set",
+                      "email_thread", "workspace", "variant_picker"}),
     EMAIL: frozenset({"email_list", "email_thread", "email_queue", "email_draft",
-                      "email_compose", "reply_state", "work_queue"}),
-    SALES: frozenset({"analytics", "order_list", "work_queue"}),
-    PRODUCTS: frozenset({"product", "inventory", "analytics", "order_list"}),
+                      "email_compose", "reply_state", "work_queue", "working_set"}),
+    SALES: frozenset({"analytics", "metric_group", "ranking", "table", "comparison", "trend",
+                      "sales_summary", "order_list", "work_queue", "working_set"}),
+    PRODUCTS: frozenset({"product", "inventory", "analytics", "ranking", "table",
+                         "variant_matrix", "order_list", "working_set"}),
     SCREEN: frozenset({"capability", "context", "assistant"}),
     ASSISTANT: frozenset({"capability", "assistant", "context"}),
 }
 # A demand whose subject this table cannot name is met by any surface that shows the shop or
-# the inbox. Deliberately excludes `capability` — that is the D-5 defect itself — and the two
+# the inbox. Deliberately excludes `capability` — that is the D-5 defect itself — and the
 # surfaces that report on the turn rather than on the work.
-NEVER_A_WORKSPACE = frozenset({"capability", "error", "confirmation", "assistant"})
+NEVER_A_WORKSPACE = frozenset({
+    "capability", "error", "confirmation", "assistant", "success",
+    # The context stack is bookkeeping the tablet keeps for itself. A turn whose entire
+    # visible output is the context stack has shown the owner nothing he asked for — which is
+    # `experience/harness.py`'s own rule (BOOKKEEPING), said here too.
+    "context_stack", "context",
+})
 
 # Which words say what the demand is about. Read in this order; the first that matches wins,
 # because "his customer page" is about the customer whatever else the sentence carries.
@@ -116,13 +132,14 @@ class Demand:
 
     @property
     def acceptable(self) -> frozenset[str]:
-        """The surface types that answer this demand."""
+        """The surfaces that answer this demand. Both vocabularies; see SATISFIES."""
+        from app.presentation import UI_TYPES
         from app.surfaces import SURFACE_TYPES
 
         named = SATISFIES.get(self.subject)
         if named is not None:
             return named
-        return frozenset(SURFACE_TYPES) - NEVER_A_WORKSPACE
+        return (frozenset(SURFACE_TYPES) | frozenset(UI_TYPES)) - NEVER_A_WORKSPACE
 
     def as_dict(self) -> dict[str, Any]:
         return {"phrase": self.words, "subject": self.subject or None,
@@ -135,13 +152,21 @@ def _tokens(text: str) -> tuple[str, ...]:
     return tokenise((text or "").lower())
 
 
-def subject_of(words: tuple[str, ...]) -> str:
+def subject_of(words: tuple[str, ...], *, said: str = "") -> str:
     """What the demand was about, from the words after it (and the whole sentence if the
-    demand phrase came last, which is how "pull that up" is said)."""
+    demand phrase came last, which is how "pull that up" is said).
+
+    A PERSON pointed at wins over the query noun, and that ordering is the point: "show me his
+    orders" is answered by his workspace with its Orders tab open, and calling it an ORDER
+    demand would have said a customer card did not answer it. "Show me today's orders" points
+    at no person and stays a list of orders.
+    """
     index = ask.demand_at(words)
     tail = set(words[index:]) if index >= 0 else set(words)
     if ask.about_the_assistant(words):
         return ASSISTANT
+    if (tail & ask.PERSON_PRONOUNS) or ask.person_named(said or " ".join(words)):
+        return CUSTOMER
     for subject, vocabulary in _SUBJECT_WORDS:
         if tail & vocabulary:
             return subject
@@ -159,7 +184,7 @@ def demand(text: str) -> Demand | None:
     phrase = ask.demand_phrase(words)
     if not phrase:
         return None
-    return Demand(phrase=phrase, subject=subject_of(words))
+    return Demand(phrase=phrase, subject=subject_of(words, said=str(text or "")))
 
 
 def surface_types(ui: Any) -> list[str]:
