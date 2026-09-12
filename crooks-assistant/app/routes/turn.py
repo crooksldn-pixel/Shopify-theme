@@ -651,6 +651,11 @@ def _route(text: str, branch):
 _SECONDARY_WORDS = {
     "capability_delta": "I'm back up and running.",
     "capability_summary": "I'm back up and running.",
+    # And the family that answers the health question itself (app/families/interaction.py).
+    # "Are you okay now?" used to reach `capability_delta` only because it carries the word
+    # "now" — the delta answers "what MORE can you do", which is not what was asked. With a
+    # family of its own for the status question, this is the clause that acknowledges it.
+    "assistant_status": "I'm running fine.",
 }
 
 
@@ -707,11 +712,23 @@ _NEVER_A_CONTINUATION = frozenset({
     # inbox", and the inbox is what should open.
     "landing_orders", "landing_inbox", "landing_sales", "landing_products",
     "order_tab_show", "branch_switch",
+    # And §4's two ways of saying it in words the router had no family for at all
+    # (app/families/ui_intent.py). "Take me to the inbox" said over a tapped Add a note is
+    # the inbox, not note text — the same rule the dock's four landings are here for.
+    "ui_area_workspace",
     # And the two that are about the machine rather than about the shop (§15, §16). "What does
     # the split button do" is a question to the assistant, like "what can you do"; "log that
     # your split function is broken" is an instruction to write something down. Tap Add a note
     # on #1938 and say either of them, and a note containing it is the last thing wanted.
     "ui_semantics", "owner_feedback",
+    # And "what is on this screen" (D-11), which is the same kind of question as "what does
+    # the split button do" — about the machine, not about the record. Tap Add a note on #1938,
+    # ask what is on the screen, and a note containing the question is the last thing wanted.
+    "screen_state",
+    # And §24's three (app/families/interaction.py). "Stop" said over a tapped Add a note is
+    # an interruption — it abandons the note, it does not become its text — and a hello or a
+    # "are you working?" is a word to the assistant, not dictation for the control.
+    "interaction_stop", "greeting", "assistant_status",
 })
 # And these are the ones that NAME THEIR OWN SUBJECT, which the glue would then overrule. Tap
 # Add a note on #1938, then ask "how many orders today", and the model was handed
@@ -751,6 +768,10 @@ _CARRIES_ITS_OWN_SUBJECT = frozenset({
     # for a control tapped a moment ago — tap Add a note on #1938, ask what has been
     # abandoned, and it is the abandonment that should be answered.
     "abandoned_checkouts", "discount_code", "order_new", "order_new_line",
+    # §4's workspace family (app/families/ui_intent.py). "Expand David's customer page" names
+    # the person it is about; tap Add a note on #1938 and say it, and the customer's page is
+    # what should open, not a note containing the sentence.
+    "customer_workspace",
 })
 
 

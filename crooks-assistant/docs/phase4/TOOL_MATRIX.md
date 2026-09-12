@@ -11,7 +11,7 @@ unit tests pass but which nothing calls by name is reported as untested. Nothing
 runs a tool, and nothing here can reach a mutation: the audit is a read of registries
 and of source text, so it is safe against a shop it may not touch.
 
-48 tools — 25 reads, 18 writes, 5 bulk — and 40 intent families.
+48 tools — 25 reads, 18 writes, 5 bulk — and 46 intent families.
 
 ## Tools
 
@@ -75,27 +75,27 @@ and of source text, so it is safe against a shop it may not touch.
 | `batch_email_send` | the model only | test_gaps.py, test_registry.py | — |
 | `batch_order_tags_add` | the model only | test_batch.py, test_claims.py, test_council_fixes.py, test_flows.py, test_memory.py, test_read_budget.py, test_reads.py | — |
 | `batch_order_tags_remove` | the model only | test_batch.py, test_claims.py | — |
-| `commerce_aggregate` | recipe:navigation_back, recipe:navigation_home, recipe:best_sellers_period, recipe:sales_breakdown_period, recipe:landing_sales, recipe:landing_products, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_council_fixes.py, test_experience_analyser.py, test_flows.py, test_progressive.py, test_read_budget.py, test_registry.py, test_working_sets.py | back, landing_products, landing_sales, nav_branch_isolation, nav_click_path, nav_home_landing |
+| `commerce_aggregate` | recipe:navigation_back, recipe:navigation_home, recipe:best_sellers_period, recipe:sales_breakdown_period, recipe:landing_sales, recipe:landing_products, recipe:ui_area_workspace, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_council_fixes.py, test_experience_analyser.py, test_flows.py, test_progressive.py, test_read_budget.py, test_registry.py, test_working_sets.py | back, landing_products, landing_sales, nav_branch_isolation, nav_click_path, nav_home_landing |
 | `commerce_capabilities` | family:capability_reads | test_analytics_tools.py, test_registry.py | — |
-| `commerce_query` | recipe:navigation_back, recipe:navigation_home, recipe:order_list_period, recipe:delayed_orders, recipe:needs_reply, recipe:landing_orders, recipe:landing_inbox, recipe:order_latest, recipe:unfulfilled_orders, recipe:international_waiting_orders, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_claims.py, test_council_fixes.py, test_flows.py, test_navigation.py, test_query_engine_p3.py, test_read_budget.py, test_read_dedupe.py, test_recorder.py, test_registry.py, test_working_sets.py | back, landing_inbox, landing_orders, nav_branch_isolation, nav_click_path, nav_home_landing, needs_reply, next_previous, query_international_waiting, query_language.py, query_undelivered, spoken_latest, today_orders |
-| `email_query` | recipe:navigation_back, recipe:navigation_home, recipe:needs_reply, recipe:landing_inbox, family:email_reads | test_claims.py, test_council_fixes.py, test_flows.py, test_graph.py, test_working_sets.py | back, landing_inbox, nav_branch_isolation, nav_click_path, nav_home_landing, needs_reply |
+| `commerce_query` | recipe:navigation_back, recipe:navigation_home, recipe:order_list_period, recipe:delayed_orders, recipe:needs_reply, recipe:landing_orders, recipe:landing_inbox, recipe:order_latest, recipe:unfulfilled_orders, recipe:international_waiting_orders, recipe:ui_area_workspace, family:analytics | test_analytics_present.py, test_analytics_tools.py, test_claims.py, test_council_fixes.py, test_flows.py, test_navigation.py, test_query_engine_p3.py, test_read_budget.py, test_read_dedupe.py, test_recorder.py, test_registry.py, test_working_sets.py | back, landing_inbox, landing_orders, nav_branch_isolation, nav_click_path, nav_home_landing, needs_reply, next_previous, query_international_waiting, query_language.py, query_undelivered, spoken_latest, today_orders |
+| `email_query` | recipe:navigation_back, recipe:navigation_home, recipe:needs_reply, recipe:landing_inbox, recipe:ui_area_workspace, family:email_reads | test_claims.py, test_council_fixes.py, test_flows.py, test_graph.py, test_working_sets.py | back, landing_inbox, nav_branch_isolation, nav_click_path, nav_home_landing, needs_reply |
 | `gmail_compose_fill` | family:email_compose | test_compose.py, test_gmail_tools.py, test_registry.py | — |
 | `gmail_compose_open` | family:email_compose | test_compose.py, test_gmail_tools.py, test_registry.py | — |
 | `gmail_draft_new` | command:a tapped control, family:email_compose | test_available.py, test_compose.py, test_email_workspace.py, test_fixture_wiring.py, test_gmail_tools.py, test_gmail_writes.py | compose.py |
 | `gmail_draft_reply` | command:a tapped control, family:email_drafts | test_action_state.py, test_actions_routes.py, test_analyser.py, test_compose.py, test_email_workspace.py, test_experience_analyser.py, test_gmail_tools.py, test_gmail_writes.py, test_graph.py, test_presentation.py, test_recorder.py, test_routes.py | graph.py |
 | `gmail_find_in_email` | family:email_reads | test_gaps.py, test_gmail_tools.py, test_registry.py | — |
 | `gmail_read_thread` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:order_email_reply, recipe:order_email_waiting, command:cursor:emails, family:email_reads | test_address.py, test_analyser.py, test_anticipation.py, test_branch_concurrency.py, test_email_workspace.py, test_entities.py, test_gate.py, test_gmail_tools.py, test_graph.py, test_presentation.py, test_recorder.py, test_registry.py, test_watch_lines.py, test_workspaces.py | back, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, nav_branch_isolation, nav_click_path, nav_next_position, next_previous |
-| `gmail_search` | recipe:navigation_back, recipe:navigation_home, recipe:inbox_state, recipe:landing_inbox, recipe:order_email_reply, recipe:order_email_waiting, family:email_reads | test_analyser.py, test_capabilities.py, test_entities.py, test_gate.py, test_gmail_tools.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_split.py, test_workspaces.py | back, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, landing_inbox, nav_branch_isolation, nav_click_path, nav_home_landing |
+| `gmail_search` | recipe:navigation_back, recipe:navigation_home, recipe:inbox_state, recipe:landing_inbox, recipe:order_email_reply, recipe:order_email_waiting, recipe:ui_area_workspace, family:email_reads | test_analyser.py, test_capabilities.py, test_entities.py, test_gate.py, test_gmail_tools.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_split.py, test_workspaces.py | back, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, landing_inbox, nav_branch_isolation, nav_click_path, nav_home_landing |
 | `gmail_send_new` | command:a tapped control, family:email_compose | test_compose.py, test_fixture_wiring.py, test_gaps.py, test_gmail_tools.py, test_gmail_writes.py, test_store_credit.py | — |
 | `gmail_send_reply` | command:a tapped control, family:email_sends | test_actions_routes.py, test_compose.py, test_email_workspace.py, test_experience_analyser.py, test_families.py, test_gmail_tools.py, test_gmail_writes.py, test_owner_feedback.py, test_watch_lines.py | — |
 | `gmail_thread_archive` | command:a tapped control, family:email_archive | test_action_state.py, test_council_fixes.py, test_email_workspace.py, test_experience_analyser.py, test_gaps.py, test_gmail_tools.py, test_gmail_writes.py, test_presentation.py | — |
-| `inventory_query` | recipe:navigation_back, recipe:navigation_home, recipe:stock_cover_analysis, recipe:landing_products, family:product_reads | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_flows.py, test_registry.py | back, landing_products, nav_branch_isolation, nav_click_path, nav_home_landing |
+| `inventory_query` | recipe:navigation_back, recipe:navigation_home, recipe:stock_cover_analysis, recipe:landing_products, recipe:ui_area_workspace, family:product_reads | test_analytics_present.py, test_analytics_tools.py, test_capabilities.py, test_claims.py, test_flows.py, test_registry.py | back, landing_products, nav_branch_isolation, nav_click_path, nav_home_landing |
 | `shopify_abandoned_checkouts` | recipe:abandoned_checkouts, family:abandoned_checkouts | test_abandoned.py, test_registry.py | abandoned_checkouts, abandoned_window |
-| `shopify_customer_history` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:customer_history_lookup, recipe:customer_purchase_lookup, command:cursor:customers, family:customer_reads | test_anticipation.py, test_branches.py, test_context.py, test_entities.py, test_observability.py, test_reads.py, test_workspaces.py | back, customer_history, nav_branch_isolation, nav_click_path, nav_next_position, next_previous |
+| `shopify_customer_history` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:customer_history_lookup, recipe:customer_purchase_lookup, recipe:customer_workspace, command:cursor:customers, family:customer_reads | test_anticipation.py, test_branches.py, test_context.py, test_entities.py, test_observability.py, test_reads.py, test_workspaces.py | back, customer_history, nav_branch_isolation, nav_click_path, nav_next_position, next_previous |
 | `shopify_discount_check` | recipe:discount_code, family:discount_create | test_registry.py | discount_code_taken, discount_new_code |
 | `shopify_discount_create` | command:a tapped control, family:discount_create | test_registry.py | discounts.py |
 | `shopify_discount_open` | family:discount_create | test_registry.py | — |
-| `shopify_find_customer` | recipe:customer_purchase_lookup, recipe:order_customer, family:customer_reads | test_entities.py, test_gate.py, test_observability.py, test_order_create.py, test_presentation.py, test_progressive.py, test_reads.py, test_registry.py, test_shopify_tools.py, test_workspaces.py | order_new, order_new_ambiguous |
+| `shopify_find_customer` | recipe:customer_purchase_lookup, recipe:order_customer, recipe:customer_workspace, family:customer_reads | test_capability_routing.py, test_entities.py, test_gate.py, test_observability.py, test_order_create.py, test_presentation.py, test_progressive.py, test_reads.py, test_registry.py, test_shopify_tools.py, test_ui_intent.py, test_workspaces.py | order_new, order_new_ambiguous |
 | `shopify_find_order` | recipe:order_lookup, recipe:order_status_lookup, recipe:order_address_lookup, family:order_reads | test_actions_routes.py, test_analyser.py, test_anticipation.py, test_context.py, test_entities.py, test_fastpath.py, test_gate.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_shopify_tools.py, test_write_walkthrough.py | enrichment, full_address, graph.py, order_lookup |
 | `shopify_fulfillment_tracking_set` | family:order_fulfil | test_tracking.py | — |
 | `shopify_inventory` | family:product_reads | test_observability.py, test_presentation.py, test_progressive.py, test_registry.py, test_shopify_tools.py | — |
@@ -105,7 +105,7 @@ and of source text, so it is safe against a shop it may not touch.
 | `shopify_order_address` | family:order_reads | test_gaps.py, test_operations.py, test_registry.py, test_watch_lines.py | — |
 | `shopify_order_cancel` | family:order_cancel | test_cancel.py, test_read_budget.py | — |
 | `shopify_order_create` | command:a tapped control, family:order_create | test_registry.py | commerce.py |
-| `shopify_order_detail` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:order_lookup, recipe:order_status_lookup, recipe:order_address_lookup, recipe:order_reopen, recipe:customer_history_lookup, recipe:order_tab_show, recipe:order_latest, recipe:order_email_reply, recipe:order_email_waiting, command:cursor:orders, family:order_reads | test_actions.py, test_analyser.py, test_anticipation.py, test_attention.py, test_branch_concurrency.py, test_context.py, test_entities.py, test_fastpath.py, test_gate.py, test_graph.py, test_memory.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_shopify_tools.py, test_workspaces.py | back, customer_history, enrichment, full_address, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, nav_branch_isolation, nav_click_path, nav_next_position, next_previous, order_lookup, repeat_order, spoken_latest, spoken_tab |
+| `shopify_order_detail` | recipe:navigation_back, recipe:working_set_next, recipe:working_set_previous, recipe:order_lookup, recipe:order_status_lookup, recipe:order_address_lookup, recipe:order_reopen, recipe:customer_history_lookup, recipe:order_tab_show, recipe:order_latest, recipe:order_email_reply, recipe:order_email_waiting, recipe:customer_workspace, command:cursor:orders, family:order_reads | test_actions.py, test_analyser.py, test_anticipation.py, test_attention.py, test_branch_concurrency.py, test_context.py, test_entities.py, test_fastpath.py, test_gate.py, test_graph.py, test_memory.py, test_observability.py, test_presentation.py, test_progressive.py, test_provider.py, test_read_dedupe.py, test_reads.py, test_registry.py, test_routes.py, test_shopify_tools.py, test_ui_intent.py, test_workspaces.py | back, customer_history, enrichment, full_address, graph.py, graph_compound_reply, graph_no_email_about_this_order, graph_order_to_email, nav_branch_isolation, nav_click_path, nav_next_position, next_previous, order_lookup, repeat_order, spoken_latest, spoken_tab |
 | `shopify_order_fulfil` | family:order_fulfil | test_fulfil.py | — |
 | `shopify_order_note_append` | family:order_notes | test_actions.py, test_analyser.py, test_anticipation.py, test_branches.py, test_engine_hooks.py, test_fastpath.py, test_kb.py, test_memory.py, test_observability.py, test_presentation.py, test_provider.py, test_read_budget.py, test_read_dedupe.py, test_reads.py, test_write_walkthrough.py | scenarios.py |
 | `shopify_order_open` | family:order_create | test_registry.py | — |
@@ -135,7 +135,7 @@ and of source text, so it is safe against a shop it may not touch.
 | `customer_history_lookup` | work | customer_history_lookup | `shopify_order_detail`, `shopify_customer_history` | — | yes | yes |
 | `order_status_lookup` | work | order_status_lookup | `shopify_find_order`, `shopify_order_detail` | — | yes | — |
 | `order_address_lookup` | work | order_address_lookup | `shopify_find_order`, `shopify_order_detail` | — | yes | yes |
-| `customer_purchase_lookup` | work | customer_purchase_lookup | `shopify_find_customer`, `shopify_customer_history` | — | — | — |
+| `customer_purchase_lookup` | work | customer_purchase_lookup | `shopify_find_customer`, `shopify_customer_history` | — | yes | — |
 | `best_sellers_period` | work | best_sellers_period | `commerce_aggregate` | — | yes | — |
 | `sales_breakdown_period` | work | sales_breakdown_period | `commerce_aggregate` | — | yes | — |
 | `delayed_orders` | work | delayed_orders | `commerce_query` | — | yes | yes |
@@ -147,6 +147,9 @@ and of source text, so it is safe against a shop it may not touch.
 | `draft_send_instead` | work | draft_send_instead | — | yes | yes | yes |
 | `compose_rewrite` | work | compose_rewrite | — | yes | yes | — |
 | `discount_code` | work | discount_code | `shopify_discount_check` | yes | yes | yes |
+| `interaction_stop` | status | interaction_stop | — | — | yes | — |
+| `greeting` | status | greeting | — | — | yes | — |
+| `assistant_status` | status | assistant_status | — | — | yes | — |
 | `landing_orders` | work | landing_orders | `commerce_query` | — | yes | yes |
 | `landing_inbox` | work | landing_inbox | `commerce_query`, `email_query`, `gmail_search` | — | yes | yes |
 | `landing_sales` | work | landing_sales | `commerce_aggregate` | — | — | yes |
@@ -163,6 +166,9 @@ and of source text, so it is safe against a shop it may not touch.
 | `unfulfilled_orders` | work | unfulfilled_orders | `commerce_query` | — | yes | yes |
 | `international_orders` | work | international_waiting_orders | `commerce_query` | — | yes | yes |
 | `ui_semantics` | work | ui_semantics | — | yes | yes | — |
+| `screen_state` | work | screen_state | — | yes | yes | — |
+| `customer_workspace` | work | customer_workspace | `shopify_find_customer`, `shopify_customer_history`, `shopify_order_detail` | — | yes | — |
+| `ui_area_workspace` | work | ui_area_workspace | `commerce_query`, `commerce_aggregate`, `inventory_query`, `email_query`, `gmail_search` | — | yes | — |
 
 ## What this matrix cannot vouch for
 
@@ -186,9 +192,9 @@ none
 
 `batch_email_archive`, `batch_email_drafts`, `batch_email_send`, `batch_order_tags_add`, `batch_order_tags_remove`, `commerce_aggregate`, `commerce_capabilities`, `commerce_query`, `email_query`, `inventory_query`
 
-**intent families with no scenario (10)**
+**intent families with no scenario (16)**
 
-`order_status_lookup`, `customer_purchase_lookup`, `best_sellers_period`, `sales_breakdown_period`, `stock_cover_analysis`, `inbox_state`, `compose_rewrite`, `order_new_line`, `owner_feedback`, `ui_semantics`
+`order_status_lookup`, `customer_purchase_lookup`, `best_sellers_period`, `sales_breakdown_period`, `stock_cover_analysis`, `inbox_state`, `compose_rewrite`, `interaction_stop`, `greeting`, `assistant_status`, `order_new_line`, `owner_feedback`, `ui_semantics`, `screen_state`, `customer_workspace`, `ui_area_workspace`
 
 ## The rules the audit itself keeps
 

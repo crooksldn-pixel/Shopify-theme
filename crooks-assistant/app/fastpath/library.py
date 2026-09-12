@@ -762,6 +762,12 @@ def _customer_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         return FastAnswer(answer="", defer="the customer did not resolve to exactly one record")
     name = str(history.get("name") or ctx.intent.slots.get("name") or "").strip()
     ref = str(history.get("customer_id") or "")
+    # D-14: which record this answer is about, when it is not the one on screen. The failing
+    # turn said "[customer B]: 1 order, 60.0 GBP in total" over a question about customer A,
+    # and nothing in the sentence said whose history it was reading. Naming the person the
+    # words named — and saying plainly when the screen was showing somebody else — is the
+    # difference between an answer and a false fact.
+    moved = _switched_record(ctx, ref)
     _remember(ctx, "customer", ref, name, tab="orders")
     if ctx.intent.slots.get("name"):
         ctx.branch.learn(ctx.intent.slots["name"], "customer", ref, name)
@@ -775,8 +781,25 @@ def _customer_render(ctx: Ctx, result: ReadResult) -> FastAnswer:
         if last.get("placed_at"):
             tail += f" on {str(last['placed_at'])[:10]}"
         tail += "."
-    return FastAnswer(answer=_customer_line(history, name) + tail, calls=list(result.calls),
-                      partial=result.partial, trace={"customer_id": ref})
+    return FastAnswer(answer=_customer_line(history, name) + tail + moved, calls=list(result.calls),
+                      partial=result.partial, trace={"customer_id": ref, "switched": bool(moved)})
+
+
+def _switched_record(ctx: Ctx, ref: str) -> str:
+    """One clause, when the record this answer is about is not the one that was on screen.
+
+    D-14's rule said out loud. The words named somebody; the screen was showing somebody
+    else; the answer is about the person the words named, and it says so rather than leaving
+    the owner to notice that the name changed.
+    """
+    if not ref:
+        return ""
+    held = getattr(ctx.branch, "entity", None) or {}
+    if not held.get("ref") or str(held.get("ref")) == str(ref):
+        return ""
+    label = str(held.get("label") or "").strip()
+    where = f" (you were on {label})" if label else ""
+    return f" That is who you named{where}."
 
 
 def _customer_history_plan(ctx: Ctx) -> ReadPlan | None:
@@ -786,7 +809,17 @@ def _customer_history_plan(ctx: Ctx) -> ReadPlan | None:
     Two shapes. With a customer open it is one read. With an ORDER open the customer is not
     known until the order has been read, so it is two waves — the same find-then-detail
     pattern the order recipes use, and the scheduler runs them in dependency order.
+
+    And ONE refusal, which is D-14. If the request NAMES a person, this plan must not run at
+    all. The live session asked what one customer had ordered in his lifetime; this plan read
+    the order that happened to be in focus, read that order's customer, and the turn spoke a
+    different person's order history as a statement of fact. The router blocks the sentence
+    now (`names_a_person`), and this is the same refusal said again where the read is actually
+    issued: a named person outranks the record in focus, always, and the shape that got it
+    wrong — order_detail on a held order driving a customer-history answer — cannot recur.
     """
+    if ctx.intent.slots.get("name"):
+        return None
     customer = ctx.entity("customer")
     if customer:
         return ReadPlan([Read("history", "shopify_customer_history", {"customer_id": customer},

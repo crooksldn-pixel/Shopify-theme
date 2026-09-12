@@ -103,6 +103,14 @@ async def speak(request: Request) -> Response:
             )
         stream = await voice.open_stream(spoken)
     except VoiceUnavailable as exc:
+        if exc.kind == "cancelled":
+            # §24: an EXPECTED interruption, not a provider failure. The owner said stop (or
+            # held the orb again), the prefetch was dropped on purpose, and there is nothing
+            # left to say. Filed as `ok` with `interrupted` set, so the report counts it as an
+            # interruption rather than as ElevenLabs failing — it was counted as a provider
+            # error before this, which put the owner's own Stop in the voice-failure column.
+            timeline.emit("tts", ok=True, interrupted=True, silent=True, ms=_ms(started), **trace)
+            return Response(status_code=204)
         # The text is not logged; its length is what makes a latency or truncation report
         # readable, and an answer read out in the office does not need repeating to disk.
         log.info("tts declined (%s) for %d chars — tablet falls back", exc.kind, len(spoken))

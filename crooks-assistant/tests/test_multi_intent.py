@@ -33,9 +33,28 @@ def _resolve(text: str):
 
 
 def test_the_restart_aside_does_not_hijack_the_request():
+    """The work takes the turn and the status question is kept as the aside.
+
+    The aside was `capability_delta` when this was written, and is `assistant_status` now
+    (Phase 5 §24, app/families/interaction.py). The expectation is CHANGED, not weakened, and
+    this is why: "are you okay now?" reached the delta family only because it carries the word
+    "now" — `meta_more` — and the delta answers "what MORE can you do since the last build",
+    which is a different question from the one he asked. There is now a family for the
+    question he actually asked, and it is the more specific of the two, so it wins the aside.
+
+    What must not change, and is asserted harder than before: the work still takes the turn,
+    the status half is still kept rather than dropped, the aside is still a STATUS or
+    CAPABILITY family rather than a second piece of work, and /turn still has a sentence to
+    acknowledge it with.
+    """
+    from app.fastpath.intent import CAPABILITY, KIND_RANK, WORK, kind_of
+    from app.routes.turn import _SECONDARY_WORDS
+
     intent = _resolve(RESTARTED)
     assert intent.family == "inbox_state", f"the turn went to {intent.family!r}"
-    assert intent.secondary == "capability_delta", "the status half was thrown away rather than kept"
+    assert intent.secondary == "assistant_status", "the status half was thrown away rather than kept"
+    assert KIND_RANK[WORK] < KIND_RANK[kind_of(intent.secondary)] <= KIND_RANK[CAPABILITY]
+    assert _SECONDARY_WORDS.get(intent.secondary), "the aside has no words, so it is silently dropped"
 
 
 def test_asking_to_be_shown_something_is_asking():

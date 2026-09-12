@@ -151,7 +151,14 @@ async def test_text_is_capped(client):
 
 
 async def test_turn_goes_through_the_provider_once(client):
-    body = (await client.post("/turn", json={"text": "hello", "session_id": "once"})).json()
+    # The transcript was "hello" until Phase 5 §24, and is a question about the shop now. Not
+    # a weakened expectation — a stronger one, of a different module: "hello" no longer
+    # reaches the model at all (app/families/interaction.py), because a greeting answered by a
+    # round trip to a language model was nine of the live session's unrouted turns. This test
+    # is about the PROVIDER path, so it needs a sentence that takes it; the sentence itself was
+    # always incidental.
+    said = "how much stock of the yard jeans"
+    body = (await client.post("/turn", json={"text": said, "session_id": "once"})).json()
     assert body["answer"].startswith("fake answer")
     (session_id, sent), = app.state.runtime.provider.turns
     assert session_id == "once"
@@ -160,8 +167,8 @@ async def test_turn_goes_through_the_provider_once(client):
     # own lines, each bracketed, so the question itself is still exactly what was said.
     clock, rest = sent.split("\n", 1)
     question = rest.split("\n\n[", 1)[0]
-    assert question == "hello" and clock.startswith("[Now: ") and clock.endswith("Europe/London]")
-    assert sent.count("hello") == 1
+    assert question == said and clock.startswith("[Now: ") and clock.endswith("Europe/London]")
+    assert sent.count(said) == 1
 
 
 async def test_a_spoken_order_number_is_looked_up_before_the_model_is_asked(client, monkeypatch):
@@ -276,7 +283,10 @@ async def test_tool_calls_carry_redacted_args(client):
         ])
 
     app.state.runtime.provider.turn = turn
-    body = (await client.post("/turn", json={"text": "hi", "session_id": "args"})).json()
+    # "hi" until Phase 5 §24, when a greeting stopped reaching the model at all
+    # (app/families/interaction.py). The redaction this test is about is unchanged; the
+    # transcript only has to be a sentence the provider still takes.
+    body = (await client.post("/turn", json={"text": "tell me about the shop", "session_id": "args"})).json()
     call = body["tool_calls"][0]
     assert call["args"]["days"] == "1"
     assert "jo@example.com" not in call["args"]["query"]
