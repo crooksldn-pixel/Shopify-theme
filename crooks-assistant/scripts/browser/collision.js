@@ -349,6 +349,25 @@ async function one(browser, vp) {
   await measure('nav_full_divided');
   await shot(page, `collide-${vp.width}-nav-divided`);
 
+  // ---- and back to ONE half before the payload fixtures.
+  //
+  // Not tidiness: attribution. The three states above are new in Phase 5, and leaving the orb
+  // divided would put two branch chips, Merge and Close into the navigation row for every one
+  // of the nineteen fixtures that follow — so `control_clipped_by_container` would fire on
+  // `long_customer_name` and name a fixture that has nothing to do with it. The nineteen are
+  // measured on the screen they have always been measured on, so a failure in one of them
+  // still means what it used to mean, and the new findings stay attached to the new states.
+  const merged = await page.evaluate(() => {
+    const m = document.querySelector('#branch-rail [data-action="merge"], #branch-bar [data-action="merge"]');
+    if (!m) return 'no merge control';
+    m.click();
+    return 'clicked';
+  });
+  await sleep(2000);
+  const halvesLeft = await page.evaluate(() => document.querySelectorAll('.branch-chip').length);
+  check(`${vp.name} · the halves merge back, so the stress fixtures are measured undivided`,
+    halvesLeft === 0, `${merged}; ${halvesLeft} chip(s) left`);
+
   // ---- the fixtures, one at a time
   const fake = [];
   for (const item of CASES) {

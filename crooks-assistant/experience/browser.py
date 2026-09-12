@@ -350,7 +350,13 @@ async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, An
             results.append(await asyncio.to_thread(
                 subprocess.run,
                 ["node", str(script), f"http://127.0.0.1:{port}", ""],
-                cwd=ROOT, capture_output=True, text=True, timeout=600,
+                cwd=ROOT, capture_output=True, text=True,
+                # `screens.js` walks to thirty-four surfaces at one size and twelve at another,
+                # through real reads on a real backend. It waits on the page rather than on the
+                # clock, so it is minutes rather than tens of minutes — but a 600s ceiling is
+                # close enough to its honest runtime that a slow machine would report a gate
+                # TIMEOUT as a gate failure, which is the worst kind of red.
+                timeout=1200 if script == SCREENS_SCRIPT else 600,
                 env={**os.environ, "CROOKS_CHROMIUM": CHROMIUM},
             ))
     finally:

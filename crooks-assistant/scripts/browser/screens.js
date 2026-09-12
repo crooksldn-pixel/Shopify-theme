@@ -412,6 +412,23 @@ async function judge(page, need, vp) {
 function makeKit(page, context, vp) {
   let cdp = null;
   const session = async () => { if (!cdp) cdp = await context.newCDPSession(page); return cdp; };
+  // What is on the glass, as a string, purely to tell "it changed" from "it has not yet".
+  const deckNow = () => page.evaluate(() => Array.from(document.querySelectorAll('#cards .card'))
+    .map((c) => `${c.dataset.type || ''}:${c.dataset.ref || ''}`).join('|')
+    + `#${document.querySelectorAll('.branch-chip').length}`
+    + `@${Array.from(document.querySelectorAll('#cards .tabbed')).map((t) => t.dataset.tab || '').join(',')}`);
+  // Wait on the PAGE, not on the clock. A flat `sleep(3200)` after every hop is what made this
+  // file take nine minutes: almost every redraw lands inside half a second and the rest of the
+  // wait was spent watching a finished screen. The ceiling is what the flat sleep used to be,
+  // so nothing that used to have time still has less.
+  const settle = async (was, ceiling) => {
+    const limit = ceiling || 3400;
+    for (let waited = 0; waited < limit; waited += 120) {
+      await sleep(120);
+      if (await deckNow() !== was) { await sleep(220); return true; }   // a beat for the animation
+    }
+    return false;
+  };
   const clickIn = async (finder, arg) => {
     const did = await page.evaluate(([f, a]) => {
       // eslint-disable-next-line no-new-func
@@ -423,14 +440,15 @@ function makeKit(page, context, vp) {
     }, [finder, arg]);
     return did;
   };
-  let lastAsk = null;
   return {
     dock: async (area) => {
+      const was = await deckNow();
       const did = await clickIn(`(a) => document.querySelector('.dock-btn[data-area="' + a + '"]')`, area);
       if (!did) throw new Error(`no dock button for ${area}`);
-      await sleep(3200);
+      await settle(was, 6000);   // a dock tap is a real read on the Mac
     },
     open: async (kind) => {
+      const was = await deckNow();
       const did = await clickIn(`(a) => {
         const cards = new Set(Array.from(document.querySelectorAll('#cards .card')).map((c) => c.dataset.ref || ''));
         return Array.from(document.querySelectorAll('#cards [data-ref][data-kind]')).find((el) => el.dataset.kind === a
@@ -438,36 +456,41 @@ function makeKit(page, context, vp) {
           && el.getBoundingClientRect().width > 2) || null;
       }`, kind);
       if (!did) throw new Error(`nothing on the glass opens a ${kind}`);
-      await sleep(2600);
+      await settle(was, 4000);
     },
     tab: async (name) => {
+      const was = await deckNow();
       const did = await clickIn(`(a) => Array.from(document.querySelectorAll('#cards [role="tab"]')).find((t) => t.dataset.tab === a) || null`, name);
       if (!did) throw new Error(`no ${name} tab on any card`);
-      await sleep(500);
+      await settle(was, 900);
     },
     rail: async (action) => {
+      const was = await deckNow();
       const did = await clickIn(`(a) => Array.from(document.querySelectorAll('#cards [data-action], #cards [data-command]')).find((el) => {
         if (el.disabled === true || el.getAttribute('aria-disabled') === 'true') return false;
         const n = el.dataset.action || el.dataset.command || '';
         return n === a || n.endsWith('.' + a) || n.startsWith(a + '.');
       }) || null`, action);
       if (!did) throw new Error(`no enabled ${action} action on any card`);
-      await sleep(2600);
+      await settle(was, 4000);
     },
     split: async () => {
+      const was = await deckNow();
       const did = await clickIn(`() => document.querySelector('#branch-rail [data-action="split"], #branch-bar [data-action="split"]')`);
       if (!did) throw new Error('no Split control');
-      await sleep(2000);
+      await settle(was, 3000);
     },
     merge: async () => {
+      const was = await deckNow();
       const did = await clickIn(`() => document.querySelector('#branch-rail [data-action="merge"], #branch-bar [data-action="merge"]')`);
       if (!did) throw new Error('no Merge control');
-      await sleep(2200);
+      await settle(was, 3000);
     },
     half: async (which) => {
+      const was = await deckNow();
       const did = await clickIn(`(a) => Array.from(document.querySelectorAll('.branch-chip'))[a] || null`, which);
       if (!did) throw new Error(`no ${which === 0 ? 'left' : 'right'} half to select`);
-      await sleep(1800);
+      await settle(was, 2600);
     },
     draw: async (items, opts) => {
       const n = await page.evaluate(([i, o]) => window.__shotDraw(i, o), [items, opts || {}]);
@@ -482,7 +505,7 @@ function makeKit(page, context, vp) {
       await sleep(320);
     },
     ask: async (text) => {
-      lastAsk = await page.evaluate(async (t) => {
+      await page.evaluate(async (t) => {
         const id = localStorage.getItem('crooks.session') || `shots-${Date.now()}`;
         localStorage.setItem('crooks.session', id);
         const r = await fetch('/turn', { method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify({ text: t, session_id: id }) });
