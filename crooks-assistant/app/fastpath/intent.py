@@ -177,6 +177,23 @@ _BOUGHT = frozenset({"bought", "buy", "buys", "ordered", "purchased", "spent", "
 # Complexity markers: a request with two clauses is not a fast path, whatever its words say.
 _JOIN = frozenset({"and", "then", "also", "plus", "after", "afterwards", "but", "however", "while", "whilst", "if", "unless", "because"})
 
+# ------------------------------------------------------------------ the whole vocabulary
+#
+# Every word above, in one set. Not used to route anything: used to recognise a word that is
+# NOT one of these, which is how a NAME is found in a sentence the branch has never resolved
+# (D-14). "What has David Randall ordered in his lifetime" carries two tokens this router has
+# no meaning for at all, and those two tokens are the person the owner named — the person the
+# turn answered about somebody else instead.
+#
+# Built from the sets rather than written out, so a word added to `_EMAIL` or `_BOUGHT` stops
+# being mistaken for a name the moment it is added.
+VOCABULARY: frozenset[str] = frozenset(
+    MUTATION | _OPENERS | _QUESTION | _NEXT | _PREV | _BACK | _HOME | _SELF | _ABLE | _MORE
+    | _PERIOD | _METRIC | _LISTING | _AGAIN | _RANKING | _STOCK | _RUNNING_OUT | _EMAIL
+    | _WAITING | _DELAY | _UNFULFILLED | _INTERNATIONAL | _ORDER | _CUSTOMER | _STATUS
+    | _ADDRESS | _BOUGHT | _JOIN | _TIME_POSSESSIVE
+)
+
 # ------------------------------------------------- appended for app/families/compose.py
 #
 # Four signals no family above reads, and each of them exists because the composer cannot be
@@ -242,6 +259,11 @@ def _send_instead(words: tuple[str, ...]) -> bool:
 @dataclass(slots=True)
 class Signals:
     words: tuple[str, ...] = ()
+    # The request as it was said, case and all. Held because CASE is evidence: a capitalised
+    # word the router has no meaning for is a person's name, and that is how a sentence that
+    # NAMES somebody is told from one that points at the record in focus (D-14). PRIVATE — it
+    # is the owner's own sentence, and telemetry carries ids, counts and controlled words.
+    raw: str = ""
     mutation: bool = False
     question: bool = False
     joins: int = 0
@@ -293,7 +315,7 @@ class Signals:
     # kind of thing: `has_address` says one was found and the span never leaves the Mac.
     # `corrections` carries the values themselves, so the record says which FAMILIES were
     # corrected and not to what.
-    PRIVATE = ("words", "known_name", "address_words", "corrections")
+    PRIVATE = ("words", "raw", "known_name", "address_words", "corrections")
 
     def as_dict(self) -> dict[str, Any]:
         out = {k: v for k, v in ((f, getattr(self, f)) for f in self.__slots__) if v and k not in self.PRIVATE}
@@ -326,6 +348,7 @@ def signals_for(text: str, *, branch: Any = None) -> Signals:
     have = set(words)
     sig = Signals(
         words=words,
+        raw=" ".join((text or "").split()),
         mutation=mutating(words),
         question=bool(have & _QUESTION) or lowered.strip().endswith("?"),
         joins=sum(1 for w in words if w in _JOIN),
@@ -495,7 +518,13 @@ FAMILIES: tuple[Family, ...] = (
     Family("navigation_back", needs=("direction_back",), blocks=("mutation",), base=0.85, max_words=5),
     Family("navigation_home", needs=("direction_home",), blocks=("mutation",), base=0.8, max_words=4),
     Family("capability_delta", needs=("meta_self", "meta_more"), blocks=("mutation",), base=0.75, max_words=16, kind=CAPABILITY),
-    Family("capability_summary", needs=("meta_self", "question"), blocks=("mutation", "meta_more"), base=0.7, max_words=12, kind=CAPABILITY),
+    # §5. `capability_question` is the whole of the fix for D-5: "can you" and "you" beside a
+    # word of ability were the only requirement, so every politely-phrased instruction — "can
+    # you expand his customer page", "can you open David Harding", "can you pull up his order
+    # history" — scored as a question about the assistant and was answered with a 1,014-pixel
+    # list of what the product can do. The two signals it had are KEPT and one is ADDED: this
+    # can only narrow what reaches the family, never widen it.
+    Family("capability_summary", needs=("meta_self", "question", "capability_question"), blocks=("mutation", "meta_more"), base=0.7, max_words=12, kind=CAPABILITY),
     Family("order_lookup", needs=("order_number",), boosts=("order", "question"), blocks=("mutation", "metric", "email", "status", "address"), entities=("order",), base=0.8, max_words=12),
     # "Show me today's orders" — a list, not a total. It needs an explicit ask to be shown,
     # so "how many orders today" stays a number and this stays a list.
@@ -516,9 +545,15 @@ FAMILIES: tuple[Family, ...] = (
     # from us before" is about Daniel whatever is on screen, and answering it from the open
     # order would report on whoever that order belongs to. customer_purchase_lookup takes
     # the named case; this one takes the pronoun.
+    # D-14: `names_a_person` replaces the pair `known_name`/`possessive_name` it contains.
+    # Those two blocked a name the branch had ALREADY resolved and a possessive — and so the
+    # live session's "what has [customer A] ordered in his lifetime", which named a person
+    # this conversation had never resolved, reached this family, read the ORDER in focus, and
+    # spoke a different customer's order history as a statement of fact. A named person
+    # outranks the record in focus, always; this family is the pronoun case only.
     Family("customer_history_lookup", needs=("bought", "has_entity", "deixis"), boosts=("customer", "question"),
            blocks=("mutation", "order_number", "metric", "email", "ranking", "period",
-                   "known_name", "possessive_name"),
+                   "names_a_person"),
            entities=("customer", "order"), base=0.74, max_words=12),
     Family("order_status_lookup", needs=("status",), boosts=("order_number", "order", "has_entity", "deixis"), blocks=("mutation", "metric", "address", "possessive_name"), entities=("order",), base=0.72, max_words=14),
     Family("order_address_lookup", needs=("address",), boosts=("order_number", "has_entity", "deixis"), blocks=("mutation", "metric", "email", "possessive_name"), entities=("order",), base=0.72, max_words=14),
@@ -601,7 +636,32 @@ _LOOKUP = {
     "send_instead": lambda s: s.send_instead,
     "has_compose": lambda s: s.has_compose,
     "rewrite": lambda s: s.rewrite,
+    # §5, §4 and D-14 (app/capabilities/ask.py). Core signals, not family-registered ones,
+    # because `capability_summary` is in the table above and must read them, and because a
+    # family cannot narrow a family it does not own.
+    #
+    #   capability_question  "can you" means a question about the assistant ONLY when the
+    #                        sentence names nothing to do. The operation, the entity or the
+    #                        task that follows dominates the opener, always (§5).
+    #   ui_demand            the words oblige a visible workspace: show, show me, open, pull
+    #                        up, bring up, expand, take me to, go to, view (§4).
+    #   goes_to              the two demand phrases the landings do not already own.
+    #   names_a_person       the sentence says WHO it is about, including a name this
+    #                        conversation has never resolved. A family that answers from the
+    #                        record in focus blocks on this (D-14).
+    "capability_question": lambda s: _ask().is_a_capability_question(s),
+    "ui_demand": lambda s: bool(_ask().demand_phrase(s.words)),
+    "goes_to": lambda s: _ask().goes_to(s.words),
+    "names_a_person": lambda s: _ask().names_a_person(s),
 }
+
+
+def _ask():
+    """app/capabilities/ask.py, imported on use. The module reads this one's VOCABULARY, so
+    importing it at the top of this file would be a cycle."""
+    from app.capabilities import ask
+
+    return ask
 
 
 @dataclass(frozen=True, slots=True)

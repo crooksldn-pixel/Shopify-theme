@@ -31,6 +31,7 @@ Nothing here touches the shop, the inbox, or the model: it is a reading of the w
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 # What a request turned out to be. Four kinds, and the order in which they beat each other:
@@ -204,3 +205,146 @@ def classify_text(text: str, *, branch: Any = None) -> str:
     from app.fastpath.intent import signals_for
 
     return classify(signals_for(text or "", branch=branch))
+
+
+# ------------------------------------------------------------ the person the words named
+#
+# D-14, and the gravest thing in the live session: the owner asked what ONE customer had
+# ordered in his lifetime and was told, as a statement of fact, a DIFFERENT customer's order
+# history. The recipe read the order already in focus and then read that order's customer.
+# A minute later the same question, phrased with a name the branch had by then resolved, was
+# answered correctly.
+#
+# The rule that was missing: **a person named in the request outranks the record in focus,
+# always.** Focus resolution is for "him", "that one", "the same customer" — never for a
+# sentence that says who it is about.
+#
+# So this has to find a name in a sentence the branch has never heard the name in. Two ways,
+# and either is enough, because the cost of finding one that is not there is a model call and
+# the cost of missing one is a false fact spoken aloud:
+#
+#   1. CAPITALISATION. A capitalised token the router has no meaning for, not at the head of
+#      the sentence (or at the head with another beside it) — "David Randall", as the
+#      recogniser transcribes it.
+#   2. AN UNKNOWN WORD. A token in none of the router's closed sets and none of the ordinary
+#      words below. This is what catches an all-lowercase transcript.
+
+# The ordinary words a request is made of that carry no signal and are not names. Bounded, and
+# every one of them measured against the sentences the live session actually contained: without
+# "lifetime" the question that exposed D-14 finds "lifetime" and calls it a person.
+FILLER = frozenset({
+    "a", "an", "the", "of", "in", "on", "at", "to", "for", "from", "with", "by", "about",
+    "into", "over", "up", "down", "out", "off", "as", "so", "than", "that", "this", "these",
+    "those", "there", "here", "it", "its", "im", "am", "be", "been", "being", "please",
+    "just", "still", "yet", "very", "really", "quite", "bit", "lot", "lots", "some", "no",
+    "not", "nope", "yes", "yeah", "yep", "okay", "ok", "right", "well", "now", "again",
+    "ever", "never", "always", "total", "totals", "altogether", "overall", "lifetime",
+    "lifetimes", "time", "times", "thing", "things", "one", "ones", "two", "three", "us",
+    "we", "our", "ours", "me", "my", "mine", "i", "he", "she", "his", "her", "hers", "him",
+    "them", "they", "their", "theirs", "you", "your", "yours", "who", "whos", "whose",
+    "uh", "um", "er", "erm", "like", "mean", "meant", "means", "sorry", "actually",
+    "can", "could", "would", "will", "shall", "should", "may", "might", "must", "do", "does",
+    "did", "done", "has", "have", "had", "is", "are", "was", "were", "am", "get", "got",
+    "let", "lets", "say", "said", "says", "tell", "told", "want", "wants", "wanted", "need",
+    "needs", "needed", "much", "many", "more", "most", "less", "least", "all", "any", "each",
+    "every", "both", "either", "neither", "other", "another", "same", "next", "last", "first",
+    "second", "back", "and", "or", "but", "if", "when", "where", "why", "how", "what", "whats",
+    "which", "while", "because", "then", "also", "too", "only", "even", "already", "else",
+    # The verbs a request is made with. Every one of them was read as a customer's name by the
+    # unknown-word rule before it was written down here: "can you ACCESS refunds" named a
+    # person called Access.
+    "access", "accessing", "handle", "handling", "manage", "managing", "support", "supports",
+    "deal", "dealing", "reach", "use", "using", "used", "run", "running", "ran", "work",
+    "works", "working", "worked", "help", "helps", "bring", "brings", "take", "takes", "go",
+    "goes", "going", "come", "comes", "expand", "expanding", "pull", "pulls", "pulling",
+    "view", "viewing", "display", "displaying", "know", "knows", "knew", "think", "thinks",
+    "hear", "heard", "speak", "speaking", "talk", "talking", "stop", "stops", "stopping",
+    "wait", "waiting", "start", "starts", "starting", "try", "trying", "keep", "keeping",
+})
+
+_CAPITALISED = re.compile(r"\b([A-Z][a-z]{1,20})\b")
+_SENTENCE_START = re.compile(r"(?:^|[.!?]\s+)([A-Z][a-z]{1,20})\b")
+
+
+def _known(word: str) -> bool:
+    """Whether the router already has a meaning for this word."""
+    from app.fastpath.intent import VOCABULARY
+
+    lowered = word.lower()
+    return lowered in VOCABULARY or lowered in FILLER or lowered in PAGE_WORDS or lowered in QUERY_NOUNS
+
+
+def person_named(text: str) -> str:
+    """The person this request names, as the owner said it — or "" when it names none.
+
+    Capitalisation first, because a recogniser gives names capitals and that is the strongest
+    evidence available without asking the shop. Then the unknown-word run, which holds for a
+    transcript that arrived in lower case.
+    """
+    said = " ".join(str(text or "").split())
+    if not said:
+        return ""
+    heads = {m.group(1) for m in _SENTENCE_START.finditer(said)}
+    run: list[str] = []
+    best: list[str] = []
+    for match in _CAPITALISED.finditer(said):
+        word = match.group(1)
+        if _known(word) or (word in heads and not run):
+            # A capitalised word the router knows is not a name; one at the head of a sentence
+            # is only a name when another follows it into the same run.
+            if len(run) > len(best):
+                best = run
+            run = []
+            continue
+        run.append(word)
+    if len(run) > len(best):
+        best = run
+    if best:
+        return " ".join(best)
+    return _unknown_run(said.lower())
+
+
+# The words that introduce the person a sentence is about. A single unknown word is only a
+# name when it sits in a noun slot: "what has DAVID ordered" does, "can you ACCESS refunds"
+# does not, and without this distinction every verb the router has no meaning for is read as a
+# customer. Two or more unknown words in a row need no introducer — that is a first and last
+# name, and nothing else in English looks like it.
+_INTRODUCES = frozenset({
+    "has", "had", "have", "did", "does", "is", "was", "for", "about", "from", "to", "of",
+    "on", "by", "with", "and", "or", "the",
+})
+
+
+def _unknown_run(lowered: str) -> str:
+    """The longest run of words the router has no meaning for, when it looks like a name."""
+    from app.fastpath.intent import _tokens
+
+    words = _tokens(lowered)
+    best = ""
+    index = 0
+    while index < len(words):
+        if words[index].isdigit() or _known(words[index]):
+            index += 1
+            continue
+        start = index
+        while index < len(words) and not (words[index].isdigit() or _known(words[index])):
+            index += 1
+        run = words[start:index]
+        if len(run) == 1 and not (start > 0 and words[start - 1] in _INTRODUCES):
+            continue
+        if len(" ".join(run)) > len(best):
+            best = " ".join(run)
+    return best
+
+
+def names_a_person(sig: Any) -> bool:
+    """The signal a family blocks on: this sentence says WHO it is about.
+
+    True for a name the branch has resolved, for a possessive ("David's"), and for a name the
+    branch has never seen. The last is the one that matters: with it, the family that answers
+    from the record in focus can no longer take a sentence that named somebody else.
+    """
+    if getattr(sig, "known_name", "") or getattr(sig, "possessive_name", False):
+        return True
+    said = str(getattr(sig, "raw", "") or "") or " ".join(getattr(sig, "words", ()) or ())
+    return bool(person_named(said))
