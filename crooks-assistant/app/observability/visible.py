@@ -48,15 +48,40 @@ The rules, and the evidence each needs:
     COLLISION                  two fingers on one control, or two controls in one place.
     FOCUS_LOST                 a render took away the owner's place: the keyboard's focus, a
                                field's contents, or the scroll position.
+    SUMMARY_ANSWERED_WITH_PROFILES
+                               a counting or summary question answered with one full entity
+                               profile per record read. §6/§13: seven different customers is
+                               not a duplicate render, it is the wrong surface for the
+                               question.
+    EMPTY_NOTIFICATION         a notification with no words in it. Eleven of the sixteen the
+                               11 September session raised carried no text at all, and a
+                               notification with nothing to say should be a finding rather
+                               than silence.
+    WRONG_ENTITY_ANSWERED      the request named an entity and the answer was about a
+                               different one. §21's sharpest case: every gate the programme
+                               has was satisfied by a turn that told the owner a false thing
+                               about his own business.
+
+And the four touch classes, which live in `app/observability/touch.py` because the heuristic
+that separates them needs its own page of reasoning:
+
+    CONTROL_TAP_MISROUTED_TO_VOICE  a short pointer interaction that began on or over an
+                                    interactive control and became a recording.
+    GESTURE_COLLISION               a second finger, a split or a fork ended the recording.
+    REAL_SHORT_VOICE_RECORDING      a genuine attempt to speak that was too short.
+    PRECISION_INPUT_REQUIRED        real evidence the owner was attempting exact entry.
 """
 
 from __future__ import annotations
 
+import difflib
 import logging
 import re
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
+
+from app.observability import touch
 
 log = logging.getLogger("crooks.observe")
 
@@ -68,6 +93,11 @@ CLASSES: tuple[str, ...] = (
     "STALE_PENDING_ACTION", "FOREGROUND_STARVED", "PROGRESSIVE_RENDER_MISSING",
     "DUPLICATE_RENDER", "NAV_SEMANTIC_MISMATCH", "FAKE_CONTROL", "DEAD_CONTROL",
     "SELF_UI_KNOWLEDGE_ERROR", "OWNER_FEEDBACK_IGNORED", "COLLISION", "FOCUS_LOST",
+    # §6 and §13: the class the 11 September report did not have, and filed as a duplicate
+    # render instead. Tested before DUPLICATE_RENDER's consequence and after its cause.
+    "WRONG_ENTITY_ANSWERED", "SUMMARY_ANSWERED_WITH_PROFILES", "EMPTY_NOTIFICATION",
+    # §21: what a finger actually did, four ways (app/observability/touch.py).
+    *touch.CLASSES,
 )
 SEVERITY: dict[str, int] = {
     "ACTION_UI_STUCK": 6, "OWNER_FEEDBACK_IGNORED": 6, "SELF_UI_KNOWLEDGE_ERROR": 5,
@@ -75,6 +105,11 @@ SEVERITY: dict[str, int] = {
     "FOREGROUND_STARVED": 5, "NAV_SEMANTIC_MISMATCH": 4, "STALE_PENDING_ACTION": 4,
     "FAKE_CONTROL": 4, "DEAD_CONTROL": 4, "PROGRESSIVE_RENDER_MISSING": 3,
     "FOCUS_LOST": 3, "DUPLICATE_RENDER": 2, "COLLISION": 2,
+    # The worst class in the file: a confident wrong answer about the owner's own business.
+    # A UI that fights him is visibly broken; this is not.
+    "WRONG_ENTITY_ANSWERED": 6,
+    "SUMMARY_ANSWERED_WITH_PROFILES": 3, "EMPTY_NOTIFICATION": 1,
+    **touch.SEVERITY,
 }
 COMPONENT: dict[str, str] = {
     "ACTION_UI_STUCK": "the action surface (web/app.js::settleProposals, web/ui.js): the server's terminal status must settle a card from ANY non-terminal state, `committing` included",
@@ -92,6 +127,10 @@ COMPONENT: dict[str, str] = {
     "OWNER_FEEDBACK_IGNORED": "owner feedback (app/observability/feedback.py, app/families/owner_feedback.py)",
     "COLLISION": "the tablet's touch targets (web/style.css, web/app.js): two fingers on one control, or two controls in one place",
     "FOCUS_LOST": "the renderer's patching (web/app.js): a background render must not take the keyboard or the scroll position",
+    "WRONG_ENTITY_ANSWERED": "entity resolution (app/context, app/routes/turn.py): a name in the request must outrank the record in focus",
+    "SUMMARY_ANSWERED_WITH_PROFILES": "the summary surfaces (app/analytics, app/reads, app/presentation.py): a counting question wants one answer surface, not one profile per record read",
+    "EMPTY_NOTIFICATION": "the notifications (web/app.js, app/presentation.py): a notification with no words should not be raised",
+    **touch.COMPONENT,
 }
 TASKS: dict[str, str] = {
     "ACTION_UI_STUCK": "the worst class on the screen: the change was made and the card never said so. One state machine with terminal states, the server authoritative, and a watchdog that asserts no surface stays EXECUTING after its proposal is terminal.",
@@ -109,6 +148,10 @@ TASKS: dict[str, str] = {
     "OWNER_FEEDBACK_IGNORED": "the owner narrated a defect and nothing recorded it. A test session must take it as an `owner_feedback` event and the report must print it verbatim.",
     "COLLISION": "separate the targets, or make the second touch a no-op rather than a different gesture.",
     "FOCUS_LOST": "patch in place; keep the field's focus, its contents and the scroll position across a background render.",
+    "WRONG_ENTITY_ANSWERED": "entity resolution precedes context: a named entity in the request outranks the entity in focus, the workspace is composed for the entity the words RESOLVE TO, and when the two disagree the answer says which it used. A turn that names one entity and answers about another is a failure whatever the tools returned.",
+    "SUMMARY_ANSWERED_WITH_PROFILES": "answer the question that was asked: a count, a comparison or a \"has anyone\" wants one summary surface naming the records behind it. Workstream D owns the fix; this class owns the finding.",
+    "EMPTY_NOTIFICATION": "a state change updates the place the state lives. If there is nothing to say, say nothing — do not raise a wordless notification.",
+    **touch.TASKS,
 }
 
 # What the SCREEN did, as one word per class. The vocabulary of the `visible` column.
@@ -120,6 +163,10 @@ VISIBLE_WORD: dict[str, str] = {
     "NAV_SEMANTIC_MISMATCH": "WENT_NOWHERE", "FAKE_CONTROL": "NOTHING_BEHIND_IT",
     "DEAD_CONTROL": "NO_RESPONSE", "SELF_UI_KNOWLEDGE_ERROR": "DISCLAIMED",
     "OWNER_FEEDBACK_IGNORED": "DISCARDED", "COLLISION": "COLLIDED", "FOCUS_LOST": "PLACE_LOST",
+    "WRONG_ENTITY_ANSWERED": "ABOUT_SOMEBODY_ELSE",
+    "SUMMARY_ANSWERED_WITH_PROFILES": "SEVEN_PROFILES_FOR_ONE_ANSWER",
+    "EMPTY_NOTIFICATION": "WORDLESS",
+    **touch.VISIBLE_WORD,
 }
 
 # ------------------------------------------------------------------------ the thresholds
@@ -130,6 +177,25 @@ STUCK_RECONCILES = 2
 REDRAW_S = 5.0
 # The same cards, again, inside this many seconds of the last time they were drawn.
 DUPLICATE_S = 5.0
+# Two render frames closer together than this are ONE paint reported twice, not a redraw the
+# owner saw happen. The 11 September file has the seven-customer deck arriving as two frames
+# 41 ms apart and an email list as two frames 11 ms apart; the redraw storm it also has runs
+# 131–982 ms between frames. A hundred milliseconds is about six display frames — below what a
+# person perceives as a second paint, and below the gap at which a redraw costs a visible
+# scroll jump. Under it there is nothing for the owner to have seen twice.
+FRAME_MS = 100.0
+# A summary or counting question answered with this many full entity profiles is answering a
+# different question. One profile is an answer; two is a comparison; seven is a deck.
+PROFILES_FOR_A_SUMMARY = 3
+# Two requests this alike are the same request said twice. The same number the report uses for
+# its own "said again" rule, held here so this module needs nothing from it.
+SAME_REQUEST_RATIO = 0.62
+# The reads that resolve a NAME into an id. A turn that ran one of these asked the store who
+# the owner meant; a turn that ran none took whoever it already had.
+RESOLVING_READS = ("find_customer", "find_order", "search", "lookup_customer", "customer_search")
+# What the redactor leaves behind where a customer's name or address was. Their presence in a
+# request is proof the request named somebody, on a timeline where the name itself is gone.
+REDACTED_MARK_RE = re.compile(r"\[(?:name|email|address|phone|postcode)\]")
 # Nothing on screen for this long, with no shell before it, is not progressive rendering.
 PROGRESSIVE_MS = 3_000.0
 # A burst of navigation this size inside this window is hunting, not moving.
@@ -185,10 +251,16 @@ class Finding:
     turn_id: str
     signal: str
     subject: str = ""          # the proposal's operation or the control's name, where there is one
+    # How the rule knows. `direct` — the timeline records the thing itself (a refusal code, a
+    # settled proposal, a pointer owner). `corroborated` — a reading of shape that the owner's
+    # own words confirm. `inferred` — a reading of shape and nothing else. The improvement
+    # ranking discounts an inference so it can never outrank a certainty of the same severity,
+    # which is how sixty-two inferred rows came to be the 11 September report's first priority.
+    basis: str = "direct"
 
     def as_dict(self) -> dict[str, Any]:
         return {"class": self.name, "turn_id": self.turn_id, "signal": self.signal,
-                "subject": self.subject or None}
+                "subject": self.subject or None, "basis": self.basis}
 
 
 @dataclass
@@ -250,6 +322,53 @@ def _signature(render: dict[str, Any]) -> tuple:
         (str(c.get("type") or ""), str(c.get("ref") or ""), str(c.get("tab_active") or ""))
         for c in (render.get("cards") or []) if isinstance(c, dict)
     )
+
+
+def identity(card: dict[str, Any]) -> str:
+    """The canonical IDENTITY of what a card draws: the record, not the kind of record.
+
+    §6. `gid://shopify/Customer/11410640896343` is an identity; `customer` is a type. The 11
+    September report compared types, found seven `customer` cards in one deck and reported
+    "the same customer card drawn 7 times" — for seven different people. A card with no ref
+    has no identity, and a rule that needs one is silent about it rather than guessing.
+    """
+    ref = str(card.get("ref") or card.get("id") or card.get("entity_id") or "")
+    if not ref:
+        return ""
+    kind = str(card.get("entity") or card.get("kind") or card.get("type") or "")
+    # A Shopify GID already names its own kind, so it is its own canonical form.
+    return ref if ref.startswith("gid://") else f"{kind}:{ref}"
+
+
+def _identities(render: dict[str, Any]) -> list[str]:
+    """Every identity this frame drew, in order, repeats included."""
+    return [i for i in (identity(c) for c in (render.get("cards") or []) if isinstance(c, dict)) if i]
+
+
+def _clock_ms(event: dict[str, Any]) -> float:
+    """The tablet's own millisecond clock for an event, else the session clock."""
+    t = event.get("t")
+    if isinstance(t, (int, float)):
+        return float(t)
+    return float(event.get("ts") or 0.0) * 1000.0
+
+
+def _frame_ms(render: dict[str, Any]) -> float:
+    """When the tablet painted, in milliseconds. `t` is the tablet's own clock; `ts` is when
+    the Mac received the batch and several hundred events can share one."""
+    t = render.get("t")
+    if isinstance(t, (int, float)):
+        return float(t)
+    return float(render.get("ts") or 0.0) * 1000.0
+
+
+# A question that wants a count, a comparison or a yes/no about a set — not a profile each.
+SUMMARY_QUESTION_RE = re.compile(
+    r"\bhas (?:anyone|anybody|any (?:one|customer|body))\b|\bhow many\b|\bhow much\b"
+    r"|\bwho (?:has|have|is|are|bought|ordered|spent)\b|\banyone (?:who|that)\b"
+    r"|\bwhich (?:of them|ones?|customers?|orders?)\b|\bcount\b|\btotal\b"
+    r"|\bany (?:returning|repeat)\b|\breturning customer\b|\bcompare\b|\baverage\b"
+    r"|\bbest (?:seller|selling)\b|\bmost\b", re.I)
 
 
 def _turn_at(rec: Any, ts: float) -> str:
@@ -411,25 +530,313 @@ def _wrong_branch(rec: Any) -> list[Finding]:
 
 
 def _duplicate_renders(rec: Any) -> list[Finding]:
-    """The same cards, drawn again within seconds. Every redraw costs the owner his place."""
+    """The same thing, drawn again within seconds. Every redraw costs the owner his place.
+
+    §6 — **identity, not type.** The 11 September report filed `DUPLICATE_RENDER` against
+    `turn_be1b384ca420` and described it as "the same customer card drawn 7 times". The seven
+    ids were all different (…6343, …4807, …5015, …4055, …7975, …2855, …8887): seven people,
+    one card each, in answer to "has anyone bought today that has bought before". Nothing was
+    drawn twice. The rule compared card TYPES and the signal it wrote enumerated them, so
+    seven profiles of seven customers read as one profile drawn seven times, and the fix it
+    proposed was to de-duplicate a renderer that was not duplicating.
+
+    So two rules, both over canonical identity:
+
+    * **the same record twice in ONE frame** — customer X drawn at index 0 and again at index
+      4 is a duplicate render, whatever else is in the deck. This is what the class is for.
+    * **the same record set painted again** — a later frame repeating the identities the last
+      one had, more than `FRAME_MS` after it, inside `DUPLICATE_S`. Two frames closer together
+      than `FRAME_MS` are one paint reported twice and the owner saw nothing happen twice.
+
+    A deck with no identities in it at all (an `order_list`, a `working_set`) still has a
+    comparable shape, so a redraw storm of surfaces that carry no ref is still caught — the 11
+    September file has one turn drawing `order_list + working_set + folded` seven times, 131 to
+    982 ms apart, and that is a real defect. What the class can no longer do is call seven
+    different people the same person.
+    """
     out: list[Finding] = []
-    seen: dict[tuple, tuple[float, int]] = {}
-    for render in sorted(_renders(rec), key=lambda r: float(r.get("ts") or 0.0)):
-        signature = _signature(render)
-        if not signature:
+    seen: dict[tuple, tuple[float, float, int]] = {}
+    for render in sorted(_renders(rec), key=lambda r: (float(r.get("ts") or 0.0), _frame_ms(r))):
+        cards = [c for c in (render.get("cards") or []) if isinstance(c, dict)]
+        if not cards:
             continue
         ts = float(render.get("ts") or 0.0)
-        last = seen.get(signature)
-        if last is not None and ts - last[0] <= DUPLICATE_S:
-            n = last[1] + 1
-            seen[signature] = (ts, n)
+        painted = _frame_ms(render)
+        turn_id = str(render.get("turn_id") or _turn_at(rec, ts))
+
+        # One frame, one record, twice.
+        repeats = Counter(_identities(render))
+        for ref, n in repeats.items():
+            if n < 2:
+                continue
             out.append(Finding(
-                "DUPLICATE_RENDER", str(render.get("turn_id") or _turn_at(rec, ts)),
-                f"the same {', '.join(t for t, _r, _tab in signature)} card(s) drawn again "
-                f"{ts - last[0]:.1f} s later (#{n} of this shape)",
+                "DUPLICATE_RENDER", turn_id,
+                f"{ref} was drawn {n} times in one render of {len(cards)} card(s): the same "
+                f"record, not the same kind of record",
+                subject=ref,
             ))
-        else:
-            seen[signature] = (ts, 1)
+
+        # The same identities again, in a later paint.
+        identities = sorted(repeats)
+        key = tuple(identities) if identities else tuple(
+            (str(c.get("type") or ""), str(c.get("tab_active") or "")) for c in cards)
+        last = seen.get(key)
+        if last is not None and ts - last[0] <= DUPLICATE_S and painted - last[1] > FRAME_MS:
+            n = last[2] + 1
+            seen[key] = (ts, painted, n)
+            what = (", ".join(identities[:3]) + (f" and {len(identities) - 3} more"
+                                                 if len(identities) > 3 else "")
+                    if identities else
+                    ", ".join(dict.fromkeys(str(c.get("type") or "") for c in cards)))
+            out.append(Finding(
+                "DUPLICATE_RENDER", turn_id,
+                f"the same {what} painted again {(painted - last[1]) / 1000:.1f} s later "
+                f"(#{n} of this shape)"
+                + ("" if identities else " — surfaces with no record id of their own"),
+                subject=identities[0] if identities else "",
+            ))
+        elif last is None or ts - last[0] > DUPLICATE_S:
+            seen[key] = (ts, painted, 1)
+    return out
+
+
+def _summary_answered_with_profiles(rec: Any) -> list[Finding]:
+    """A counting question answered with one full profile per record read (§6, §13).
+
+    This is what `turn_be1b384ca420` actually was. "Has anyone bought today that has bought
+    before, a returning customer?" — answered correctly, out loud, with **one**; and drawn as
+    **seven** full customer cards, 265 px each, 1,949 px of deck, one per customer the turn had
+    read. Seven `shopify_customer_history` calls to answer a one-line question.
+
+    The evidence is three counts and nothing else: the request is a summary question, the deck
+    holds `PROFILES_FOR_A_SUMMARY` or more entity profiles of one type with DIFFERENT
+    identities, and the spoken answer names fewer than it drew. Workstream D owns the fix; this
+    owns the class.
+    """
+    out: list[Finding] = []
+    for turn in rec.turns:
+        said = turn.question or turn.raw_text
+        if not said or not SUMMARY_QUESTION_RE.search(said):
+            continue
+        for render in turn.tablet_events("render"):
+            cards = [c for c in (render.get("cards") or []) if isinstance(c, dict)]
+            profiles: dict[str, set[str]] = {}
+            for card in cards:
+                ref = identity(card)
+                if ref:
+                    profiles.setdefault(str(card.get("type") or ""), set()).add(ref)
+            for kind, refs in profiles.items():
+                if len(refs) < PROFILES_FOR_A_SUMMARY:
+                    continue
+                height = sum(int(c.get("height") or 0) for c in cards
+                             if isinstance(c.get("height"), (int, float)))
+                out.append(Finding(
+                    "SUMMARY_ANSWERED_WITH_PROFILES", turn.turn_id,
+                    f"a summary question drew {len(refs)} different {kind} profiles"
+                    + (f", {height:,} px of deck" if height else "")
+                    + f" — the ids are all different ({', '.join(sorted(r[-4:] for r in refs))}), "
+                    f"so this is one profile each for every record read, not one answer to the "
+                    f"question asked",
+                    subject=kind,
+                ))
+                break
+            else:
+                continue
+            break
+    return out
+
+
+def _empty_notifications(rec: Any) -> list[Finding]:
+    """A notification with no words in it.
+
+    Sixteen `tablet_notify` events in the 11 September session; **eleven carry no text at
+    all**, and the five that do are `divided`, `merged`, `divided`, `merged`, `divided` — state
+    changes the screen itself shows. A notification is an interruption, and an interruption
+    with nothing to say is a defect rather than silence, which is how eleven of them went
+    unreported.
+    """
+    out: list[Finding] = []
+    for event in _events(rec, "tablet_notify"):
+        words = " ".join(str(event.get("text") or event.get("message") or event.get("code") or "").split())
+        if words:
+            continue
+        ts = float(event.get("ts") or 0.0)
+        out.append(Finding(
+            "EMPTY_NOTIFICATION", str(event.get("turn_id") or _turn_at(rec, ts)),
+            f"a {event.get('name') or 'notification'} was raised with no text, no code and "
+            f"nothing to read",
+            subject=str(event.get("name") or "notification"),
+        ))
+    return out
+
+
+def _resolved_entity(turn: Any) -> tuple[str, str]:
+    """The canonical identity the turn ANSWERED about, and how it got it.
+
+    The identity is read off what the turn put on the glass (`ui_entities`, then the render's
+    cards), because that is the record the owner was told about. The "how" is `by_name` when a
+    resolving read ran, `from_hand` when the first read was handed an id the session already
+    held, and `""` when neither can be said.
+    """
+    ref = ""
+    for entity in turn.ui_entities:
+        ref = identity({"ref": entity.get("ref"), "type": entity.get("type")})
+        if ref:
+            break
+    if not ref:
+        for render in turn.tablet_events("render"):
+            refs = _identities(render)
+            if refs:
+                ref = refs[0]
+                break
+    how = ""
+    if any(any(mark in record.tool for mark in RESOLVING_READS) for record in turn.tools):
+        how = "by_name"
+    elif turn.tools:
+        first = turn.tools[0]
+        ids = [str(v) for v in (first.args or {}).values() if str(v).startswith("gid://")]
+        if ids:
+            how = "from_hand"
+    return ref, how
+
+
+def _kind_of(ref: str) -> str:
+    """The kind of record an identity names: `Customer`, `Order`, else its own prefix."""
+    if ref.startswith("gid://"):
+        parts = ref.split("/")
+        return parts[3] if len(parts) > 4 else ref
+    return ref.split(":", 1)[0] if ":" in ref else ""
+
+
+def _named_queries(rec: Any) -> dict[str, str]:
+    """Every name the session resolved, and the identity it resolved to.
+
+    Read off the resolving reads themselves: `shopify_find_customer {query: "…"}` followed by
+    the customer the turn then drew. This is the only place a NAME is joined to an ID, and it
+    is what makes "he asked about A and was told about B" provable rather than suspected.
+    """
+    out: dict[str, str] = {}
+    for turn in rec.turns:
+        ref, how = _resolved_entity(turn)
+        if not ref or how != "by_name":
+            continue
+        for record in turn.tools:
+            if not any(mark in record.tool for mark in RESOLVING_READS):
+                continue
+            asked = str((record.args or {}).get("query") or (record.args or {}).get("name") or "").strip()
+            if len(asked) >= 3:
+                out.setdefault(asked.lower(), ref)
+    return out
+
+
+def _wrong_entity(rec: Any) -> list[Finding]:
+    """The request named one entity and the answer was about a different one (§3, §6, §21).
+
+    The 11 September session, sixty-six seconds apart:
+
+        20:15:26  "what has [A] ordered in his lifetime?"
+                  shopify_order_detail(order already in focus) → shopify_customer_history
+                  → spoke customer B's history, as fact.  answered about …6343
+        20:16:32  "Show me [A]'s orders in his lifetime"
+                  shopify_find_customer("[A]") → shopify_customer_history
+                  → spoke A's history.                     answered about …5015
+
+    The report scored the first `backend = READ_OK / visible = DRAWN / experience =
+    SUCCESSFUL`, because both tools returned 200 and a card was drawn. Every gate the
+    programme has was satisfied by a turn that told the owner a false thing about his own
+    business, and the only reason anybody knows is that he asked again.
+
+    Two ways to prove it, and both need a second reading of the same request:
+
+    * **the pair** · two requests alike enough to be the same request, answering about
+      different identities of the same kind, where one turn resolved a NAME and the other took
+      the record it already held. The one that took what it held is the failure. This works on
+      a redacted timeline, because it compares ids and similarity, never names.
+    * **the name** · the session resolved a name to an id somewhere, that name is in this
+      turn's own words, and this turn answered about a different id. Available only while the
+      names are still in the file.
+
+    It also re-reads a row the report files as a curiosity. Wherever a request was said again,
+    the first question is whether the first ANSWER was wrong rather than unheard.
+    """
+    out: list[Finding] = []
+    resolved: dict[str, tuple[str, str, str]] = {}
+    for turn in rec.turns:
+        said = " ".join((turn.question or turn.raw_text or "").split()).lower()
+        ref, how = _resolved_entity(turn)
+        if said and ref:
+            resolved[turn.turn_id] = (said, ref, how)
+
+    by_name = _named_queries(rec)
+    filed: set[str] = set()
+    for turn in rec.turns:
+        row = resolved.get(turn.turn_id)
+        if row is None:
+            continue
+        said, ref, how = row
+        if how == "by_name":
+            continue                      # it asked the store who was meant
+        # The pair: the same request, later, answered about somebody else.
+        for other in rec.turns:
+            if other.turn_id == turn.turn_id or other.started_at <= turn.started_at:
+                continue
+            theirs = resolved.get(other.turn_id)
+            if theirs is None:
+                continue
+            said_again, their_ref, their_how = theirs
+            if their_how != "by_name" or their_ref == ref:
+                continue
+            if _kind_of(their_ref) != _kind_of(ref):
+                continue
+            ratio = difflib.SequenceMatcher(None, said, said_again).ratio()
+            if ratio < SAME_REQUEST_RATIO:
+                continue
+            filed.add(turn.turn_id)
+            out.append(Finding(
+                "WRONG_ENTITY_ANSWERED", turn.turn_id,
+                f"answered about {ref}; the same request in {other.turn_id} "
+                f"({ratio:.0%} the same words) resolved the name the owner said and answered "
+                f"about {their_ref} instead. This turn ran no resolving read — "
+                + (", ".join(record.tool for record in turn.tools[:3]) or "no tool at all")
+                + " — so the record already in hand won over the one he named",
+                subject=ref,
+            ))
+            break
+        if turn.turn_id in filed:
+            continue
+        # The name: still in the file, and it points somewhere else.
+        for asked, their_ref in by_name.items():
+            if asked not in said or their_ref == ref or _kind_of(their_ref) != _kind_of(ref):
+                continue
+            out.append(Finding(
+                "WRONG_ENTITY_ANSWERED", turn.turn_id,
+                f"the request names somebody this session resolved to {their_ref}, and the "
+                f"turn answered about {ref}",
+                subject=ref,
+            ))
+            break
+    return out
+
+
+def _touches(rec: Any) -> list[Finding]:
+    """What every finger actually did (§21, app/observability/touch.py).
+
+    The single "recording too short" bucket became four classes, and this turns each touch the
+    classifier names into a finding on the turn it happened during. A burst arrives as ONE
+    touch record carrying its tap count, so twenty-six taps in ten seconds are one row.
+    """
+    out: list[Finding] = []
+    for found in touch.classify(rec.events):
+        out.append(Finding(
+            found.name, found.turn_id or _turn_at(rec, found.at), found.signal,
+            subject=found.target or found.owner or "", basis=found.basis,
+        ))
+    for turn in rec.turns:
+        for what, detail in touch.precision_evidence(turn):
+            out.append(Finding(
+                "PRECISION_INPUT_REQUIRED", turn.turn_id, f"{what}: {detail}",
+                subject="precision input",
+            ))
     return out
 
 
@@ -679,12 +1086,24 @@ def _collisions(rec: Any) -> list[Finding]:
     """
     out: list[Finding] = []
     gesture_turns = {t.turn_id for t in rec.turns if "GESTURE_COLLISION" in t.classes}
+    # The second fingers that ENDED a recording belong to GESTURE_COLLISION, which now files
+    # one per hold (app/observability/touch.py) and says how long the recording it killed was.
+    # A second finger that landed without ending anything is still this class's.
+    closed = [_clock_ms(e) for e in rec.events
+              if str(e.get("kind") or "") == "tablet_hold"
+              and str(e.get("phase") or "") == "release"]
+    ended_a_hold = {
+        id(event) for event in rec.events
+        if str(event.get("kind") or "") == "tablet_hold"
+        and str(event.get("phase") or "") == "multitouch"
+        and any(abs(at - _clock_ms(event)) <= touch.MULTITOUCH_NEAR_MS for at in closed)
+    }
     for event in rec.events:
         kind = str(event.get("kind") or "")
         ts = float(event.get("ts") or 0.0)
         turn_id = str(event.get("turn_id") or _turn_at(rec, ts))
         if kind == "tablet_hold" and str(event.get("phase") or "") == "multitouch":
-            if turn_id in gesture_turns:
+            if turn_id in gesture_turns or id(event) in ended_a_hold:
                 continue
             fingers = event.get("fingers") if isinstance(event.get("fingers"), int) else 2
             out.append(Finding(
@@ -764,7 +1183,8 @@ def _focus_lost(rec: Any) -> list[Finding]:
     return out
 
 
-RULES = (_action_ui_stuck, _split_findings, _wrong_branch, _duplicate_renders, _progressive,
+RULES = (_action_ui_stuck, _split_findings, _wrong_branch, _wrong_entity, _duplicate_renders,
+         _summary_answered_with_profiles, _empty_notifications, _touches, _progressive,
          _navigation, _controls, _stale_pending, _starved, _self_knowledge, _collisions,
          _focus_lost)
 

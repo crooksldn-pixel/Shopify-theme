@@ -35,6 +35,16 @@ from typing import Any
 from app.observability import claims, visible
 from app.observability.timeline import read_events
 
+# The classes this file tests on the speech, tool and contract paths, named once so the
+# vocabulary below can be assembled without repeating any of them.
+_SPOKEN_CLASSES = (
+    "GESTURE_COLLISION", "STT_ERROR", "TIMEOUT", "PERMISSION_ERROR", "MISSING_CAPABILITY",
+    "FALSE_UNSUPPORTED", "TOOL_ERROR", "VERIFICATION_ERROR", "FALSE_SUCCESS",
+    "UNFULFILLED_ACTION", "ACTION_MISMATCH", "UI_INTENT_UNFULFILLED", "UI_RELATION_MISSING",
+    "DATA_FIELD_UNAVAILABLE", "INTENT_DIVERGENCE", "PARTIAL_COVERAGE", "TOOL_SELECTION_ERROR",
+    "UI_RENDER_ERROR", "UI_NAVIGATION_PROBLEM", "CONTEXT_INCOMPLETE", "INTENT_ERROR",
+    "UNKNOWN", "OWNER_FEEDBACK",
+)
 # The classes a failed or partial turn is filed under, in the order they are tested.
 CLASSES = (
     # GESTURE_COLLISION is tested BEFORE STT_ERROR and displaces it: a second finger on the
@@ -45,10 +55,20 @@ CLASSES = (
     "FALSE_SUCCESS", "UNFULFILLED_ACTION", "ACTION_MISMATCH", "UI_INTENT_UNFULFILLED", "UI_RELATION_MISSING",
     "DATA_FIELD_UNAVAILABLE", "INTENT_DIVERGENCE", "PARTIAL_COVERAGE",
     "TOOL_SELECTION_ERROR", "UI_RENDER_ERROR", "UI_NAVIGATION_PROBLEM", "CONTEXT_INCOMPLETE", "INTENT_ERROR", "UNKNOWN",
+    # §20. Not a defect: the one thing that worked all evening. Held in the vocabulary because
+    # it must be able to WIN over a generic mutation match — three of the eight owner-feedback
+    # records of the 11 September session were filed UNFULFILLED_ACTION at severity 5/5, and
+    # the report's third-highest priority was the feature that was working.
+    "OWNER_FEEDBACK",
     # What the OWNER could see (app/observability/visible.py). Tested last and reported first:
-    # these are the classes that make a turn the backend called successful a failure.
-    *visible.CLASSES,
+    # these are the classes that make a turn the backend called successful a failure. Deduped
+    # against the names above: GESTURE_COLLISION is tested on the speech path AND filed by the
+    # touch classifier, and a vocabulary that held it twice would print it twice.
+    *(name for name in visible.CLASSES if name not in _SPOKEN_CLASSES),
 )
+# Classes that are not defects. They describe what the system did RIGHT, so they never make a
+# turn partial or failed, and they never take the `visible` column.
+NON_DEFECT = frozenset({"OWNER_FEEDBACK"})
 SEVERITY = {
     "FALSE_SUCCESS": 6, "ACTION_MISMATCH": 6,
     "VERIFICATION_ERROR": 5, "UNFULFILLED_ACTION": 5,
@@ -57,6 +77,7 @@ SEVERITY = {
     "UI_INTENT_UNFULFILLED": 3, "DATA_FIELD_UNAVAILABLE": 3, "INTENT_DIVERGENCE": 3, "PARTIAL_COVERAGE": 2,
     "STT_ERROR": 3, "MISSING_CAPABILITY": 3, "UNKNOWN": 3,
     "TOOL_SELECTION_ERROR": 2, "CONTEXT_INCOMPLETE": 2, "INTENT_ERROR": 2, "UI_NAVIGATION_PROBLEM": 2,
+    "OWNER_FEEDBACK": 0,
     **visible.SEVERITY,
 }
 COMPONENT = {
@@ -77,6 +98,7 @@ COMPONENT = {
     "UI_RENDER_ERROR": "the tablet renderer (web/ui.js, app/presentation.py)", "UI_NAVIGATION_PROBLEM": "the tablet's screens (web/app.js)",
     "CONTEXT_INCOMPLETE": "context hydration (app/context/order.py, /context route)", "INTENT_ERROR": "the model's reading of the request (system prompt, normaliser)",
     "UNKNOWN": "unclassified — read the turn's events",
+    "OWNER_FEEDBACK": "owner feedback (app/observability/feedback.py, app/families/owner_feedback.py): working, and the most valuable evidence in the session",
     **visible.COMPONENT,
 }
 PERMISSION_CODES = frozenset({
@@ -110,6 +132,39 @@ CAPABILITY_WORDS = {
     "tracking": "shopify_fulfillment_tracking_set", "stock": "shopify_inventory_adjust", "email": "gmail_draft_new", "reply": "gmail_draft_reply",
     "archive": "gmail_thread_archive",
 }
+# ------------------------------------------------------------------------- the ranking
+#
+# §21. The 11 September report ranked its improvement candidates by `severity × occurrences`
+# and printed the top twelve. The winner was "A value had to be exact and a voice could not
+# make it so" at 2 × 62 = 124 — a severity-2 guess multiplied by sixty-two rows of the same
+# swallowed tap. A raw count is not urgency: the sixty-third occurrence of one defect does not
+# make it worse than a defect that tells the owner a false thing about his own business.
+#
+# So the weight is `severity × min(sites, RANK_CAP) × confidence`, where
+#   * `sites` is the number of DISTINCT TURNS a class occurred in — not the number of events,
+#     because one burst of twenty-six taps is one defect;
+#   * `RANK_CAP` bounds how far frequency can carry a finding, so severity decides between a
+#     P0 seen four times and a P3 seen forty;
+#   * `confidence` is 1.0 when the evidence names the component outright and 0.6 when the class
+#     was inferred, so an inference can never outrank a certainty of the same severity.
+# Every row carries the three numbers it was ranked on, so a reader can disagree with the order
+# and see exactly what produced it.
+RANK_CAP = 8
+INFERRED_CONFIDENCE = 0.6
+# Classes whose evidence is a reading of shape rather than a record of the thing itself. Named
+# here rather than guessed: each is a class this file infers from counts and timings.
+INFERRED_CLASSES = frozenset({
+    "CONTROL_TAP_MISROUTED_TO_VOICE", "REAL_SHORT_VOICE_RECORDING", "INTENT_DIVERGENCE",
+    "PARTIAL_COVERAGE", "UNKNOWN", "SUMMARY_ANSWERED_WITH_PROFILES",
+})
+
+
+def rank(severity: float, sites: int, *, inferred: bool = False) -> float:
+    """What engineering should do first, as one number and three inputs."""
+    confidence = INFERRED_CONFIDENCE if inferred else 1.0
+    return round(float(severity) * min(int(sites), RANK_CAP) * confidence, 2)
+
+
 ABANDON_S = 3.0        # a screen left this soon after it was rendered was not what was wanted
 SLOW_MS = {"stt": 3000.0, "claude": 8000.0, "total": 12000.0, "tts_first_byte": 2000.0, "context": 4000.0,
            # Section 25's two numbers, kept apart: waiting for a sentence about facts already
@@ -641,9 +696,12 @@ def reconstruct(events: list[dict[str, Any]], *, capability_states: dict[str, di
             turns[p.turn_id].proposals.append(p)
     result = [turns[t] for t in order]
     collisions = _collisions(events)
+    # The tap bursts the voice layer swallowed, read once for the whole timeline: a long hold
+    # that produced nothing inside one of these was competing with a finger (D-13).
+    taps = _tap_bursts(events)
     for turn in result:
         turn.tools.sort(key=lambda t: t.requested_at or t.finished_at)
-        _classify(turn, collisions=collisions, capability_states=capability_states)
+        _classify(turn, collisions=collisions, taps=taps, capability_states=capability_states)
         turn.cluster = _cluster(turn)
     _mark_repeats(result)
     rec = Reconstruction(session=session, events=events, turns=result, proposals=proposals, orphans=orphans,
@@ -728,6 +786,19 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str], list[str]]:
     staged = [p for p in turn.proposals if p.proposal_id]
     settled = [p for p in staged if p.status in ("VERIFIED", "EXECUTED")]
 
+    # §20. OWNER_FEEDBACK precedes generic mutation matching, and takes the turn out of the
+    # write contract entirely. "Make a note of what you just failed to do", "log that I cannot
+    # click the merge button", "tag that" are mutation WORDS with no mutation behind them: the
+    # thing being changed is the test session's own record, `owner_feedback` already answered,
+    # and the change the words name was never asked of the shop. The 11 September report filed
+    # three of them UNFULFILLED_ACTION at severity 5/5 against "the write tools" and sent
+    # engineering looking for a write tool that is not missing.
+    recorded_feedback = _recorded_feedback(turn)
+    if recorded_feedback:
+        classes.append("OWNER_FEEDBACK")
+        signals.append(recorded_feedback)
+        return classes, signals, notes
+
     if kind == contract_mod.WRITE_INTENT:
         if contract_mod.reports_success(answer) and not settled:
             classes.append("FALSE_SUCCESS")
@@ -738,9 +809,19 @@ def _contract_classes(turn: Turn) -> tuple[list[str], list[str], list[str]]:
         limitation = contract_mod.limitation_for(question)
         if limitation is not None and contract_mod.reports_success(answer):
             notes.append(f"the request runs into a known limitation ({limitation['name']}) and was answered as done")
-    if kind == contract_mod.UI_INTENT and contract_mod.declines(answer) and not turn.ui:
+    # §5. "Show me", "open", "pull up", "bring up", "expand", "view" — a request for a visible
+    # workspace has not succeeded until one appears, whether or not the answer declined.
+    # `turn_0cce1678e014` / `turn_ddb733d15472` / `turn_9d59579ab03e` are the same request three
+    # times in twenty seconds: a 1,014 px capability card, then nothing, then nothing, the
+    # third prefixed "No," and asking outright to "bring up a UI". None was filed, because the
+    # old rule needed the answer to decline in words first.
+    if kind == contract_mod.UI_INTENT and not _workspace_appeared(turn):
         classes.append("UI_INTENT_UNFULFILLED")
-        signals.append("asked for something on the screen; the answer declined and no card carried it")
+        signals.append(
+            "asked for something on the screen and no visible workspace appeared: "
+            + (f"the answer declined ({_cell(answer, 60)})" if contract_mod.declines(answer)
+               else "the answer spoke instead")
+            + (f"; the cards drawn were {', '.join(turn.ui)}" if turn.ui else "; no card at all"))
     relation = _relation_gap(turn)
     if relation:
         classes.append("UI_RELATION_MISSING")
@@ -837,16 +918,51 @@ def _collisions(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _gesture_collision(turn: Turn, collisions: list[dict[str, Any]]) -> str:
-    """The gesture that explains this turn's empty recording, if one does."""
-    if not collisions:
-        return ""
+def _gesture_collision(turn: Turn, collisions: list[dict[str, Any]],
+                       taps: list[dict[str, Any]] | None = None) -> str:
+    """The gesture that explains this turn's empty recording, if one does.
+
+    §22 and D-13. At 23:08:28 the owner held for **4,526 ms** — a real, deliberate, properly
+    held question — and the transcript came back empty. Two more real holds in the same window
+    (1,237 ms and 1,186 ms) went the same way, and the 11 September report attributed all of it
+    to speech quality and made STT its number two improvement candidate.
+
+    Those long holds sit INSIDE the twenty-six-tap burst: his other finger was hitting the
+    screen throughout, each tap starting and ending a competing recording on the same element.
+    That is gesture arbitration destroying real speech, not a recogniser failing to hear it —
+    and until touch ownership is fixed every speech measurement in the session is contaminated.
+    So a tap burst overlapping the hold counts as a gesture here, exactly as a second finger
+    does, and the recogniser is not sent the bill for it.
+    """
     start = turn.started_at or 0.0
     end = turn.finished_at or start
-    near = [c for c in collisions if start - GESTURE_WINDOW_S <= c["ts"] <= max(end, start) + 0.5]
+    near = [c for c in (collisions or [])
+            if start - GESTURE_WINDOW_S <= c["ts"] <= max(end, start) + 0.5]
+    for burst in taps or []:
+        if burst["from"] - GESTURE_WINDOW_S <= max(end, start) and burst["to"] + GESTURE_WINDOW_S >= start:
+            near.append({"ts": burst["from"], "what": "tap burst", "detail": burst["detail"]})
     if not near:
         return ""
     return "; ".join(sorted({str(c["detail"]) for c in near}))
+
+
+def _tap_bursts(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The bursts of control taps the voice layer swallowed, as windows.
+
+    Read from `app/observability/touch.py`, which is the one place that decides what a touch
+    was. Each burst is a window on the session clock, so a hold that overlaps one can be said
+    to have been competing with a finger rather than mis-heard.
+    """
+    from app.observability import touch
+
+    out: list[dict[str, Any]] = []
+    for found in touch.classify(events):
+        if found.name != "CONTROL_TAP_MISROUTED_TO_VOICE" or found.taps < touch.BURST_MIN:
+            continue
+        out.append({"from": found.at, "to": found.at + touch.BURST_S,
+                    "detail": f"{found.taps} control taps on the {found.target or 'orb'} in the "
+                              f"same window, each starting and ending a competing recording"})
+    return out
 
 
 def _empty_speech(turn: Turn) -> bool:
@@ -909,6 +1025,7 @@ def _orders_in_hand(turn: Turn) -> set[str]:
 
 
 def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None,
+              taps: list[dict[str, Any]] | None = None,
               capability_states: dict[str, dict[str, Any]] | None = None) -> None:
     from app.observability import semantics
 
@@ -931,7 +1048,7 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None,
     tablet_failed = turn.tablet_events("turn_failed")
 
     if _empty_speech(turn):
-        gesture = _gesture_collision(turn, collisions or [])
+        gesture = _gesture_collision(turn, collisions or [], taps or [])
         if gesture:
             classes.append("GESTURE_COLLISION")
             signals.append(f"the recording was ended by a gesture, not mis-heard: {gesture}")
@@ -1037,14 +1154,63 @@ def _classify(turn: Turn, *, collisions: list[dict[str, Any]] | None = None,
     turn.classes = classes
     turn.signals = signals + notes
     cards = [u for u in turn.ui if u not in ("error", "context_stack", "assistant")]
-    if not classes:
+    # A class that describes what went RIGHT is not a reason to call a turn partial. §20:
+    # successful owner feedback is a success, and the old rule made it a failure twice over —
+    # once as UNFULFILLED_ACTION, and once because any class at all took the turn out of
+    # "successful".
+    defects = [c for c in classes if c not in NON_DEFECT]
+    if not defects:
         turn.outcome = "successful"
     elif ok_tools or any(p.status == "VERIFIED" for p in turn.proposals) or (cards and not error_kind):
         turn.outcome = "partial"
     else:
         turn.outcome = "failed"
-    if classes in (["MISSING_CAPABILITY"], ["FALSE_UNSUPPORTED"]) and not ok_tools:
+    if defects in (["MISSING_CAPABILITY"], ["FALSE_UNSUPPORTED"]) and not ok_tools:
         turn.outcome = "failed"
+
+
+def _recorded_feedback(turn: Turn) -> str:
+    """Whether this turn is the owner telling the product about itself, and it was written down.
+
+    Two things must both be true: the sentence reads as local development feedback
+    (`app/observability/feedback.py`, which is the same rule the router uses), and an
+    `owner_feedback` event exists for the turn. Feedback that nothing recorded is
+    OWNER_FEEDBACK_IGNORED and belongs to `app/observability/visible.py`; this is the other
+    half, and it is a success.
+    """
+    from app.observability import feedback as feedback_mod
+
+    if not turn.feedback:
+        return ""
+    recognition = feedback_mod.recognise(turn.question or turn.raw_text)
+    if recognition is None:
+        return ""
+    shapes = ", ".join(dict.fromkeys(str(e.get("shape") or recognition.kind) for e in turn.feedback))
+    return (f"the owner reported a defect ({shapes}) and it was recorded against this test "
+            f"session with the screen he was on — the words name a change and none was asked "
+            f"of the shop")
+
+
+# The words that ask for a workspace. §5: expand, bring up and show require something visible.
+_ASKED_TO_SEE_RE = re.compile(
+    r"\b(?:show|open|pull up|bring up|expand|view|display|put up|let me see|see)\b", re.I)
+# Cards that are not a workspace for anything the owner asked about: the assistant's own
+# chrome, an error, the context stack, and the capability list — which is what "can you expand
+# his customer page" produced, 1,014 px of what the system can do.
+_NOT_A_WORKSPACE = frozenset({"error", "context_stack", "assistant", "capability", "half_empty",
+                              "folded", "attention"})
+
+
+def _workspace_appeared(turn: Turn) -> bool:
+    """Whether anything the owner asked to SEE actually appeared.
+
+    Read off what the turn drew, never off what a tool returned. A capability card is not a
+    customer page; an error is not a workspace; the context stack is furniture.
+    """
+    drawn = {str(x) for x in turn.ui}
+    for render in turn.tablet_events("render"):
+        drawn |= {str(c.get("type") or "") for c in (render.get("cards") or []) if isinstance(c, dict)}
+    return bool(drawn - _NOT_A_WORKSPACE - {""})
 
 
 def _spoken_capability(turn: Turn, states: dict[str, dict[str, Any]] | None = None) -> dict[str, Any] | None:
@@ -1326,25 +1492,26 @@ def _corrections(turns: list[Turn]) -> list[tuple[str, str, str]]:
 
 
 def _precision_input(turns: list[Turn]) -> list[tuple[str, str, str]]:
-    """Where a value had to be got exactly right and a voice could not do it: a field typed
-    into the composer, a recording the tablet threw away as too short, a transcript the
-    normaliser had to correct before it was usable."""
+    """Where a value had to be got exactly right and a voice could not do it.
+
+    §21. This table had **62 rows** in the 11 September report, dominated the document and made
+    the precision-input path the number one improvement candidate. **61 of the 62 were
+    `recording_too_short` events** — ordinary taps on controls, 39–140 ms, swallowed by the
+    voice layer because the branch bar sits inside the orb's stacking context. Not one of them
+    was about a value needing to be exact. The one real row was a transcript the normaliser had
+    to correct.
+
+    So a short recording is no longer evidence of anything here. What a touch was is
+    `app/observability/touch.py`'s answer, in four classes; this table holds only POSITIVE
+    evidence of exact entry — a value typed, a keyboard opened, a transcript corrected, a
+    dimension the query language does not have.
+    """
+    from app.observability import touch
+
     out: list[tuple[str, str, str]] = []
     for turn in turns:
-        for event in turn.tablet_events("compose_field"):
-            out.append((turn.turn_id, f"a value was typed into the composer ({event.get('name') or event.get('label') or 'a field'})",
-                        f"{event.get('chars') or '?'} character(s)"))
-        for event in turn.tablet_events("recording_too_short"):
-            out.append((turn.turn_id, "the recording was too short to use", f"{event.get('ms') or '?'} ms"))
-        stt = turn.stt or {}
-        raw, text = str(stt.get("raw_text") or ""), str(stt.get("text") or "")
-        if raw and text and raw != text:
-            out.append((turn.turn_id, "the normaliser had to correct the transcript before it was usable",
-                        f"{len(raw)} → {len(text)} characters"))
-        for event in turn.rejected:
-            if event.get("unknown"):
-                out.append((turn.turn_id, "a query named a dimension the language does not have",
-                            ", ".join(str(x) for x in event["unknown"])))
+        for what, detail in touch.precision_evidence(turn):
+            out.append((turn.turn_id, what, detail))
     return out
 
 
@@ -2098,17 +2265,30 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
         "FALSE_SUCCESS": "the worst class there is: a change reported as made that nothing staged. Read the turn, then either build the named mutation or add the limitation to app/observability/contract.py so the assistant says what it cannot do.",
         "UNFULFILLED_ACTION": "a change was asked for and nothing happened, in either direction. Decide whether the write tool is missing or the request was misread, and make the answer say which.",
         "ACTION_MISMATCH": "a different change was staged from the one asked for; tighten the tool description or the entity resolution for that phrasing.",
-        "UI_INTENT_UNFULFILLED": "the owner asked for something on the screen. Add it to the card vocabulary (app/presentation.py, web/ui.js) or say plainly which surface carries it.",
+        "UI_INTENT_UNFULFILLED": "the owner asked for something on the screen and none appeared. Add it to the card vocabulary (app/presentation.py, web/ui.js); a spoken answer to \"bring up a UI\" is not a partial success.",
+        "OWNER_FEEDBACK": "nothing to do: the owner reported a defect and it was recorded. Read section 15 — his own words are the most valuable evidence in the session.",
         "DATA_FIELD_UNAVAILABLE": "the answer said a field is not available and a registered tool returns it: name the tool in the prompt, or in the tool's own description.",
         "INTENT_DIVERGENCE": "the answer addressed a mechanism the request never named. Read the pair; the misunderstanding is usually one word.",
         "PARTIAL_COVERAGE": "a read covered part of what was asked and the answer did not say so. Make the coverage line part of the answer, not the result.",
         # What the owner could SEE, and what to do about each (app/observability/visible.py).
         **visible.TASKS,
     }
+    experience = rec.experience
+    sure: set[str] = set()
+    if experience is not None:
+        sure = {f.name for f in experience.findings if getattr(f, "basis", "direct") != "inferred"}
     for cls, group in by_class.items():
+        if cls in NON_DEFECT:
+            continue          # a class that records what worked is not an improvement candidate
+        # A class is only discounted while every one of its findings was inferred. One burst
+        # the owner himself confirmed out loud settles the class for the whole session.
+        inferred = cls in INFERRED_CLASSES and cls not in sure
         out.append({
             "problem": cls, "frequency": f"{len(group)} of {len(turns)} turns", "severity": SEVERITY[cls],
-            "examples": [t.turn_id for t in group[:3]], "component": COMPONENT[cls], "task": tasks[cls], "weight": SEVERITY[cls] * len(group),
+            "examples": [t.turn_id for t in group[:3]], "component": COMPONENT[cls], "task": tasks[cls],
+            "weight": rank(SEVERITY[cls], len(group), inferred=inferred),
+            "basis": f"severity {SEVERITY[cls]} × {min(len(group), RANK_CAP)} turn(s)"
+                     + (f" × {INFERRED_CONFIDENCE} (inferred)" if inferred else ""),
         })
     for key, bound in SLOW_MS.items():
         slow = [t for t in turns if (t.latency(key) or 0) > bound]
@@ -2117,11 +2297,11 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
                         "examples": [t.turn_id for t in sorted(slow, key=lambda t: -(t.latency(key) or 0))[:3]], "component": {"stt": "speech", "claude": "the model / prompt size", "total": "the whole turn", "tts_first_byte": "ElevenLabs / prefetch", "context": "context hydration",
                                       "prose_wait": "the prompt and the lane: this is time spent after the facts were in hand",
                                       "facts": "the read layer: the data itself was slow to arrive"}[key],
-                        "task": "look at the slowest examples' step timings and cut the step that dominates.", "weight": 2 * len(slow)})
+                        "task": "look at the slowest examples' step timings and cut the step that dominates.", "weight": rank(2, len({t.turn_id for t in slow})), "basis": f"severity 2 × {min(len(slow), RANK_CAP)} turn(s)"})
     images = [e for t in turns for e in t.tablet_events("image_failed")]
     if images:
         out.append({"problem": "Images failed to load", "frequency": f"{len(images)} failure(s)", "severity": 2, "examples": sorted({t.turn_id for t in turns if t.tablet_events('image_failed')})[:3],
-                    "component": "the media proxy (app/media.py) and the thumbnail paths", "task": "fetch the failing paths on the Mac and see what the proxy answers.", "weight": 2 * len(images)})
+                    "component": "the media proxy (app/media.py) and the thumbnail paths", "task": "fetch the failing paths on the Mac and see what the proxy answers.", "weight": rank(2, len({t.turn_id for t in turns if t.tablet_events("image_failed")})), "basis": "severity 2 × the turns that failed an image"})
     exposed: Counter = Counter()
     used: Counter = Counter()
     for t in turns:
@@ -2135,53 +2315,61 @@ def _opportunities(rec: Reconstruction, turns: list[Turn], registered: list[str]
     unused = sorted(set(exposed) - set(used))
     if unused and len(turns) >= 5:
         out.append({"problem": "Rail actions exposed but never used", "frequency": f"{len(unused)} chip(s) ({', '.join(unused)}) across {len(turns)} turns", "severity": 1, "examples": [],
-                    "component": "the rail (app/actions/available.py, web/ui.js)", "task": "ask whether these chips earn their place, or whether their wording did not read as the thing the owner wanted.", "weight": len(unused)})
+                    "component": "the rail (app/actions/available.py, web/ui.js)", "task": "ask whether these chips earn their place, or whether their wording did not read as the thing the owner wanted.", "weight": rank(1, len(unused)), "basis": f"severity 1 × {min(len(unused), RANK_CAP)} chip(s)"})
     for name, n in Counter(x.missing_capability for t in turns for x in t.tools if x.missing_capability).items():
         out.append({"problem": f"Requested capability not built: {name}", "frequency": f"requested {n} time(s)", "severity": 3, "examples": [t.turn_id for t in turns if any(x.missing_capability == name for x in t.tools)][:3],
-                    "component": "the tool registry (app/tools)", "task": f"build `{name}` on the action engine, or teach the assistant the nearest existing capability ({_closest_capability(name, registered)}).", "weight": 3 * n})
+                    "component": "the tool registry (app/tools)", "task": f"build `{name}` on the action engine, or teach the assistant the nearest existing capability ({_closest_capability(name, registered)}).", "weight": rank(3, n), "basis": f"severity 3 × {min(n, RANK_CAP)} request(s)"})
     intel = intelligence(rec, registered, capability_states=capability_states)
     for key, n, ids, state, scope, what in intel["spoken_capabilities"]:
         if state == _no_family():
             out.append({"problem": f"Asked for out loud and not built: {what}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
                         "component": "the capability families (app/capabilities/families.py, app/families/)",
-                        "task": f"decide whether `{key}` becomes a family, or whether the assistant should say plainly what it can do instead.", "weight": 3 * n})
+                        "task": f"decide whether `{key}` becomes a family, or whether the assistant should say plainly what it can do instead.", "weight": rank(3, n), "basis": f"severity 3 × {min(n, RANK_CAP)} request(s)"})
         else:
             out.append({"problem": f"Asked for out loud and {state}: {what}", "frequency": f"{n} time(s)", "severity": 4, "examples": ids[:3],
                         "component": "the write boundary and the store's scopes",
-                        "task": f"the capability exists; grant {scope or 'the scope it names'} (or connect the provider) rather than building it again.", "weight": 4 * n})
+                        "task": f"the capability exists; grant {scope or 'the scope it names'} (or connect the provider) rather than building it again.", "weight": rank(4, n), "basis": f"severity 4 × {min(n, RANK_CAP)} request(s)"})
     for shape, n, ids, why in intel["new_read_families"]:
         if n >= 2:
             out.append({"problem": f"A read the router places in no family, asked {n} times: {shape}", "frequency": f"{n} time(s)", "severity": 2, "examples": ids[:3],
                         "component": "the intent families and the fast lane (app/families/, app/fastpath)",
-                        "task": f"a family and a recipe would answer this without the model ({why}).", "weight": 2 * n})
+                        "task": f"a family and a recipe would answer this without the model ({why}).", "weight": rank(2, n), "basis": f"severity 2 × {min(n, RANK_CAP)} request(s)"})
     if intel["branch_failures"]:
         out.append({"problem": "The split orb cost the owner something", "frequency": f"{len(intel['branch_failures'])} occurrence(s)", "severity": 3,
                     "examples": sorted({b for b, _w, _d in intel["branch_failures"]})[:3], "component": "the branches (app/routes/branches.py, web/app.js)",
-                    "task": "read the rows in section 13: a focus that redraws nothing, or a half put aside and never returned to, is a control the glass does not have.", "weight": 3 * len(intel["branch_failures"])})
+                    "task": "read the rows in section 13: a focus that redraws nothing, or a half put aside and never returned to, is a control the glass does not have.", "weight": rank(3, len(intel["branch_failures"])), "basis": f"severity 3 × {min(len(intel['branch_failures']), RANK_CAP)} occurrence(s)"})
     if len(intel["corrections"]) >= 2:
         out.append({"problem": "The same request said again", "frequency": f"{len(intel['corrections'])} pair(s) of turns", "severity": 2,
                     "examples": [tid for tid, _w, _s in intel["corrections"]][:3], "component": "speech, the normaliser and the answer's own wording",
-                    "task": "read each pair: the owner repeated himself because the first answer missed, or because the transcript did.", "weight": 2 * len(intel["corrections"])})
-    if len(intel["precision_input"]) >= 2:
-        out.append({"problem": "A value had to be exact and a voice could not make it so", "frequency": f"{len(intel['precision_input'])} occurrence(s)", "severity": 2,
-                    "examples": [tid for tid, _w, _d in intel["precision_input"]][:3], "component": "the precision-input path (the composer's fields, app/routes/command.py)",
-                    "task": "give the field a keyboard on the card rather than another attempt at saying it.", "weight": 2 * len(intel["precision_input"])})
+                    "task": "read each pair: the first question is whether the first ANSWER was wrong rather than unheard — see WRONG_ENTITY_ANSWERED, which is what one of these pairs turned out to be.", "weight": rank(2, len(intel["corrections"])), "basis": f"severity 2 × {min(len(intel['corrections']), RANK_CAP)} pair(s)"})
+    # §21. This row was the 11 September report's number one candidate at 2 × 62 = 124, and
+    # 61 of the 62 were control taps the voice layer swallowed. It is now ranked on the TURNS
+    # that hold real evidence of exact entry, so a tap burst can never buy it a priority again.
+    precision_turns = {tid for tid, _w, _d in intel["precision_input"]}
+    if len(precision_turns) >= 2:
+        out.append({"problem": "A value had to be exact and a voice could not make it so", "frequency": f"{len(intel['precision_input'])} occurrence(s) across {len(precision_turns)} turn(s)", "severity": 2,
+                    "examples": sorted(precision_turns)[:3], "component": "the precision-input path (the composer's fields, app/routes/command.py)",
+                    "task": "give the field a keyboard on the card rather than another attempt at saying it.",
+                    "weight": rank(2, len(precision_turns)), "basis": f"severity 2 × {min(len(precision_turns), RANK_CAP)} turn(s) of real exact-entry evidence"})
     for shape, n, ids in intel["cross_source_workflows"]:
         if n >= 2:
             out.append({"problem": f"A cross-source read repeated: {shape}", "frequency": f"{n} time(s)", "severity": 2, "examples": ids[:3],
-                        "component": "the read layer and the fast lane's recipes", "task": "one recipe would do this in one pass with the ids issued once.", "weight": 2 * n})
+                        "component": "the read layer and the fast lane's recipes", "task": "one recipe would do this in one pass with the ids issued once.", "weight": rank(2, n), "basis": f"severity 2 × {min(n, RANK_CAP)} time(s)"})
     for name, n, ids in intel["dimensions"]:
         out.append({"problem": f"Query dimension asked for and unknown: {name}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
-                    "component": "the query language (app/analytics/query.py)", "task": f"decide whether `{name}` is a filter, a group or a metric, and add it with a bound; or teach the prompt the nearest existing one.", "weight": 3 * n})
+                    "component": "the query language (app/analytics/query.py)", "task": f"decide whether `{name}` is a filter, a group or a metric, and add it with a bound; or teach the prompt the nearest existing one.", "weight": rank(3, n), "basis": f"severity 3 × {min(n, RANK_CAP)} time(s)"})
     for op, n, ids, served in intel["bulk"]:
         if not served:
             out.append({"problem": f"Bulk change asked for with no batch: {op}", "frequency": f"{n} time(s)", "severity": 3, "examples": ids[:3],
-                        "component": "the batch engine (app/actions/batch.py, app/tools/batch_tools.py)", "task": f"register a batch over the single `{op}` write once that change has proved itself; money and irreversible changes take a hold and a drag at any size.", "weight": 3 * n})
+                        "component": "the batch engine (app/actions/batch.py, app/tools/batch_tools.py)", "task": f"register a batch over the single `{op}` write once that change has proved itself; money and irreversible changes take a hold and a drag at any size.", "weight": rank(3, n), "basis": f"severity 3 × {min(n, RANK_CAP)} time(s)"})
     for shape, n, ids in intel["follow_ups"]:
         if n >= 3:
             out.append({"problem": f"Follow-up shape repeated: {shape}", "frequency": f"{n} time(s)", "severity": 1, "examples": ids[:3],
-                        "component": "the prompt's follow-up guidance (app/kb/loader.py)", "task": "check each follow-up re-ran the previous query with one thing changed; spell the case out in the prompt if any started over.", "weight": n})
-    out.sort(key=lambda o: (-o["weight"], o["problem"]))
+                        "component": "the prompt's follow-up guidance (app/kb/loader.py)", "task": "check each follow-up re-ran the previous query with one thing changed; spell the case out in the prompt if any started over.", "weight": rank(1, n), "basis": f"severity 1 × {min(n, RANK_CAP)} time(s)"})
+    # SEVERITY decides what engineering does first; frequency decides the order within a
+    # severity. The 11 September report sorted on frequency alone and put a severity-2 guess,
+    # multiplied by sixty-two swallowed taps, above every P0 in the session.
+    out.sort(key=lambda o: (-o["severity"], -o["weight"], o["problem"]))
     return out[:12]
 
 
