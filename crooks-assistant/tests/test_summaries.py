@@ -27,7 +27,6 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app import commands
-from app.analytics import summarise
 from app.analytics.cache import OrderCache
 from app.families import load_all
 from app.fastpath import choose_lane, recipe_for, resolve, runner
@@ -37,14 +36,6 @@ from app.memory import current as memory
 from app.presentation import compact, present
 from app.session.branch import Branch
 from app.session.models import Session
-from app.summaries import (
-    NotHuman,
-    Row,
-    assert_human,
-    destination_for,
-    returning_customers,
-    summary,
-)
 from app.tools import analytics_tools
 from tests.test_analytics import HOODIE, JEANS, JOGGERS, LONDON, NOW, node
 from tests.test_analytics_tools import Store
@@ -139,6 +130,20 @@ async def answer_for(text: str, session: Session | None = None, branch: Branch |
     if fast.surfaces:
         ui = [s.as_ui() if hasattr(s, "as_ui") else s for s in fast.surfaces] + ui
     return fast, compact(ui), session, branch
+
+
+def summaries():
+    """The surface builders this pass adds. Imported here and not at the top of the file so
+    that a tree without them fails on the assertion that describes the defect."""
+    import app.summaries as module
+
+    return module
+
+
+def aggregation():
+    from app.analytics import summarise
+
+    return summarise
 
 
 def kinds(ui) -> list[str]:
@@ -307,16 +312,16 @@ def test_a_row_whose_destination_does_not_resolve_is_drawn_without_a_tap():
     """
     session = Session(session_id="dest")
     session.issue("gid://shopify/Customer/5015")
-    assert destination_for(session, "customer", "gid://shopify/Customer/5015") == "open.entity"
-    assert destination_for(session, "customer", "gid://shopify/Customer/9999") == "", "never shown"
-    assert destination_for(session, "customer", "5015") == "", "not an id of that kind"
-    assert destination_for(session, "product", "gid://shopify/Product/1") == "", "nothing re-reads a product"
+    assert summaries().destination_for(session, "customer", "gid://shopify/Customer/5015") == "open.entity"
+    assert summaries().destination_for(session, "customer", "gid://shopify/Customer/9999") == "", "never shown"
+    assert summaries().destination_for(session, "customer", "5015") == "", "not an id of that kind"
+    assert summaries().destination_for(session, "product", "gid://shopify/Product/1") == "", "nothing re-reads a product"
 
-    built = summary(
+    built = summaries().summary(
         task="returning_customers", title="Returning customers today", count=2,
         count_label="returning customers", session=session,
-        rows=[Row(label="Shown", ref="gid://shopify/Customer/5015", kind="customer"),
-              Row(label="Never shown", ref="gid://shopify/Customer/9999", kind="customer")],
+        rows=[summaries().Row(label="Shown", ref="gid://shopify/Customer/5015", kind="customer"),
+              summaries().Row(label="Never shown", ref="gid://shopify/Customer/9999", kind="customer")],
     )
     shown, hidden = built.data["rows"]
     assert shown["tap"] is True and shown["ref"] == "gid://shopify/Customer/5015"
@@ -342,7 +347,7 @@ async def test_no_compact_surface_ever_shows_an_id(shop):
         for item in row_bearing(ui):
             if item["type"] == "summary_list":
                 # The guard the builder itself runs: every key except the declared ref keys.
-                assert_human(item)
+                summaries().assert_human(item)
             for row in item["data"].get("rows") or item["data"].get("orders") or []:
                 readable = {k: v for k, v in row.items()
                             if not k.endswith("_id") and k not in ("ref", "kind", "command")}
@@ -368,25 +373,25 @@ def test_a_nameless_customer_is_named_by_their_order_not_by_their_id():
         }],
     }
     session = Session(session_id="nameless")
-    built = returning_customers(found, session=session, period="today")
+    built = summaries().returning_customers(found, session=session, period="today")
     (row,) = built.data["rows"]
     assert row["label"] == "Whoever placed #1962", row["label"]
     assert "7975" not in row["label"] and "gid://" not in row["label"]
-    assert_human(built)
+    summaries().assert_human(built)
 
 
 def test_the_builder_refuses_to_ship_an_id_in_a_display_field():
     """The guard, tested directly: a later change that adds a field and forgets `_human` is a
     crash in this suite rather than a gid on the glass."""
-    with pytest.raises(NotHuman):
-        Row(label="gid://shopify/Customer/5015").as_dict(Session(session_id="x"))
-    with pytest.raises(NotHuman):
-        summary(task="t", title="T", count=0, count_label="none", rows=[],
+    with pytest.raises(summaries().NotHuman):
+        summaries().Row(label="gid://shopify/Customer/5015").as_dict(Session(session_id="x"))
+    with pytest.raises(summaries().NotHuman):
+        summaries().summary(task="t", title="T", count=0, count_label="none", rows=[],
                 subtitle="for gid://shopify/Customer/5015")
-    with pytest.raises(NotHuman):
-        assert_human({"data": {"rows": [{"label": "fine", "sub": "gid://shopify/Order/1"}]}})
+    with pytest.raises(summaries().NotHuman):
+        summaries().assert_human({"data": {"rows": [{"label": "fine", "sub": "gid://shopify/Order/1"}]}})
     # And the one key that may carry one does not trip it.
-    assert_human({"data": {"rows": [{"label": "fine", "ref": "gid://shopify/Order/1"}]}})
+    summaries().assert_human({"data": {"rows": [{"label": "fine", "ref": "gid://shopify/Order/1"}]}})
 
 
 # -------------------------------------------------------------- the aggregation itself
@@ -402,7 +407,7 @@ def test_the_aggregation_finds_exactly_the_one_who_had_bought_before():
     """Seven buyers, one returning — measured from the order rows the Mac already holds, with
     no per-customer read anywhere in it."""
     window = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
-    found = summarise.returning_customers(
+    found = aggregation().returning_customers(
         _rows(), start=window.timestamp(), end=NOW.timestamp(), zone=LONDON,
     )
     assert found["count"] == 1 and found["buyers"] == 7, found
@@ -424,12 +429,12 @@ def test_a_customer_whose_previous_order_is_outside_the_window_says_so():
 
     rows = [shape_order(n, read_at=NOW.timestamp()) for n in lone]
     window = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
-    found = summarise.returning_customers(rows, start=window.timestamp(), end=NOW.timestamp(), zone=LONDON)
+    found = aggregation().returning_customers(rows, start=window.timestamp(), end=NOW.timestamp(), zone=LONDON)
     (row,) = found["rows"]
     assert row["previous_known"] is False and row["previous_at"] == ""
     assert row["lifetime_orders"] == 4
 
-    built = returning_customers(found, session=Session(session_id="lone"), period="today")
+    built = summaries().returning_customers(found, session=Session(session_id="lone"), period="today")
     lines = {line["label"]: line["value"] for line in built.data["rows"][0]["lines"]}
     assert lines["Previous order"] == "before the Mac's window", lines
 
@@ -442,14 +447,14 @@ def test_a_cancelled_order_is_not_a_purchase():
 
     rows = [shape_order(n, read_at=NOW.timestamp()) for n in cancelled]
     window = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
-    found = summarise.returning_customers(rows, start=window.timestamp(), end=NOW.timestamp(), zone=LONDON)
+    found = aggregation().returning_customers(rows, start=window.timestamp(), end=NOW.timestamp(), zone=LONDON)
     assert found["count"] == 0 and found["buyers"] == 0, found
 
 
 def test_attention_is_read_from_the_row_and_ranks_the_worst_first():
     """Every fact on an attention row is already on the cache row, which is why the answer
     costs no per-order read. Unpaid outranks waiting; waiting long outranks waiting."""
-    found = summarise.orders_needing_attention(_rows(), now=NOW.timestamp(), zone=LONDON)
+    found = aggregation().orders_needing_attention(_rows(), now=NOW.timestamp(), zone=LONDON)
     numbers = [row["order_number"] for row in found["rows"]]
     assert numbers[0] == "CROOKS-1900", numbers
     assert found["rows"][0]["level"] == "red" and "Not paid for" in found["rows"][0]["headline"]
@@ -460,7 +465,7 @@ def test_attention_is_read_from_the_row_and_ranks_the_worst_first():
 
 def test_lifetime_metrics_for_several_customers_at_once_read_nothing():
     """§14's second named workflow: the values are on the rows, so N reads become none."""
-    held = summarise.customer_lifetime(_rows(), [c[0] for c in SEVEN] + ["gid://shopify/Customer/404"], zone=LONDON)
+    held = aggregation().customer_lifetime(_rows(), [c[0] for c in SEVEN] + ["gid://shopify/Customer/404"], zone=LONDON)
     assert held[RETURNING_ID]["lifetime_orders"] == 2
     assert held[RETURNING_ID]["first_order_number"] == "CROOKS-1930"
     assert held[RETURNING_ID]["last_order_number"] == "CROOKS-1962"
@@ -476,10 +481,10 @@ def test_a_summary_is_bounded_and_tells_the_truth_about_the_count():
 
     rows = [shape_order(n, read_at=NOW.timestamp()) for n in many]
     window = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
-    found = summarise.returning_customers(rows, start=window.timestamp(), end=NOW.timestamp(),
+    found = aggregation().returning_customers(rows, start=window.timestamp(), end=NOW.timestamp(),
                                           zone=LONDON, limit=12)
     assert found["count"] == 25 and len(found["rows"]) == 12 and found["truncated"] is True
-    built = returning_customers(found, session=Session(session_id="many"), period="today")
+    built = summaries().returning_customers(found, session=Session(session_id="many"), period="today")
     assert built.data["count"] == 25 and len(built.data["rows"]) == 12
     assert built.data["truncated"] is True
 
@@ -494,10 +499,10 @@ def test_the_period_the_summary_reports_is_the_period_it_was_asked_for():
 
     rows = [shape_order(n, read_at=NOW.timestamp()) for n in edge]
     rows[0]["ts"] = (midnight - timedelta(minutes=1)).timestamp()
-    today = summarise.order_rows(rows, start=midnight.timestamp(), end=NOW.timestamp(),
+    today = aggregation().order_rows(rows, start=midnight.timestamp(), end=NOW.timestamp(),
                                  now=NOW.timestamp(), zone=zone)
     assert today["count"] == 0, today
-    before = summarise.order_rows(rows, start=(midnight - timedelta(days=1)).timestamp(),
+    before = aggregation().order_rows(rows, start=(midnight - timedelta(days=1)).timestamp(),
                                   end=midnight.timestamp(), now=NOW.timestamp(), zone=zone)
     assert before["count"] == 1, before
 

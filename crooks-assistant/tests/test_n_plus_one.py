@@ -30,7 +30,6 @@ from datetime import datetime
 import pytest
 
 from app.analytics.cache import OrderCache
-from app.context.order import Hydrator
 from app.families import load_all
 from app.fastpath import recipe_for, resolve, runner
 from app.fastpath.models import Ctx
@@ -179,6 +178,8 @@ def _bind(store) -> None:
     for Gmail when it is not handed a correlation helper: these measurements are about
     Shopify reads and an inbox in the middle of them would be a second variable.
     """
+    from app.context.order import Hydrator
+
     analytics_tools.bind(OrderCache(lambda: store, clock=lambda: NOW.timestamp()))
     analytics_tools.datetime = FixedDatetime
     shopify_tools._client = store
