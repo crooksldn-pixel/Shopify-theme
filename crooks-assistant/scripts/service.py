@@ -113,26 +113,13 @@ class Subprocesses(Runner):
         return Ran(tuple(argv), out.returncode, out.stdout or "", out.stderr or "")
 
 
-class Scripted(Runner):
-    """The test double. `answers` maps a word that must appear in the command to what running
-    it says; everything else succeeds silently. Every call is recorded, because "which
-    commands would this have run on the Mac" is most of what can be checked from here."""
-
-    def __init__(self, answers: dict[str, Ran] | None = None, *, default: Ran | None = None) -> None:
-        self.answers = answers or {}
-        self.default = default
-        self.calls: list[list[str]] = []
-
-    def __call__(self, argv: list[str], *, timeout_s: float = 60.0) -> Ran:
-        argv = list(argv)
-        self.calls.append(argv)
-        for word, answer in self.answers.items():
-            if word in argv or any(word in part for part in argv):
-                return Ran(tuple(argv), answer.returncode, answer.stdout, answer.stderr)
-        return self.default or Ran(tuple(argv), 0, "", "")
-
-    def ran(self, word: str) -> list[list[str]]:
-        return [call for call in self.calls if any(word in part for part in call)]
+# There was a `Scripted(Runner)` here: a double whose default answer was "0, and nothing said".
+# It is gone, and its going is the point. A double that succeeds unconditionally cannot fail,
+# so every test built on it measured the double rather than the product — which is how Start
+# came to kickstart jobs launchd did not have loaded and nothing went red for it. The double
+# the tests use now is tests/fake_launchd.py, which holds launchd's own two facts (which
+# labels are loaded, which of those have a process) and enforces the rule that follows from
+# them: only bootstrap loads a job, and kickstart on a job that is not loaded FAILS.
 
 
 @dataclass
@@ -212,6 +199,14 @@ PROBLEMS: dict[str, tuple[str, str]] = {
         "CROOKS OS is still running.",
         "The Mac was asked to stop it and it has not. The detail below is what the Mac said.",
     ),
+    # Distinct from stop_refused on purpose. "It was asked and it has not" is a sentence about
+    # a manager that said no; 127 is a manager that was never reached, so nothing was asked of
+    # anything and nothing was changed. Telling the owner the first when the second happened
+    # sends him looking for a stuck service that does not exist.
+    "stop_supervisor_missing": (
+        "CROOKS OS could not be stopped. The Mac's login-service manager did not answer.",
+        "Nothing was changed and CROOKS OS is still running. Restarting the Mac is the first thing to try.",
+    ),
     "not_supervised": (
         "CROOKS OS is running in a Terminal window rather than as a login service.",
         "This cannot stop or restart it; the window it is running in can. Close that window, then press Start.",
@@ -281,7 +276,17 @@ class Launchd:
         return self.agent_dir / f"{label}.plist"
 
     def installed(self, label: str) -> bool:
+        """The plist FILE is on disk. This is "installed" and it is never "running": a
+        bootout unloads the job and leaves the file exactly where it was, so a Stop followed
+        by a Start finds this True with launchd holding nothing at all."""
         return self.plist_path(label).exists()
+
+    def loaded(self, label: str) -> bool:
+        """launchd has the job. The only thing that knows this is launchd, which is why it is
+        asked rather than inferred from the disk. `kickstart` on a job that is not loaded does
+        not start it — it exits 3, "Could not find service" — so this is the question that has
+        to be right before anything is kicked."""
+        return bool(self.state(label)["loaded"])
 
     def rendered(self, values: dict[str, str] | None = None) -> dict[str, str]:
         """The agents' plists with this checkout's paths filled in. One renderer, shared with
@@ -546,17 +551,32 @@ def start(machine: Machine, launchd: Launchd, *, port: int, wait_s: float = STAR
         stages.append(stage("clear", "ok" if cleared else "warn",
                             "the stuck copy was stopped" if cleared else "it is still holding the address; starting anyway"))
 
-    missing = [label for label in lc.AGENTS if not launchd.installed(label)]
-    if missing:
+    # WHETHER LAUNCHD HAS THE JOB, asked of launchd. Not whether the plist file exists: the
+    # file is written once and stays for ever, and `stop` boots the job out without touching
+    # it. Reading the file here is why Stop-then-Start — the single most ordinary sequence an
+    # owner performs — did nothing: the file was there, so this said "already registered",
+    # skipped the bootstrap, and kickstarted a job launchd had never heard of.
+    #
+    # Asked FRESH, after the stale-copy clearing above rather than from `before`, because that
+    # clearing boots the agents out and so changes the very answer being read.
+    unloaded = [label for label in lc.AGENTS if not launchd.loaded(label)]
+    if unloaded:
+        # write_agents boots each label out before rewriting it, so every label is unloaded by
+        # the time bootstrap runs and none of them is bootstrapped twice.
         launchd.write_agents()
         for label in lc.AGENTS:
             ran = launchd.bootstrap(label)
             if not ran.ok:
-                refused = problem("install_refused", f"{label}: {ran.said}")
+                # Which no it was, again. 127 is the manager not being there — a broken PATH —
+                # and "the Mac refused to register it" is a sentence about a launchd that had
+                # an opinion, which sends the owner looking for a permission problem.
+                refused = (problem("supervisor_missing", f"{label}: {ran.said}")
+                           if ran.returncode == 127
+                           else problem("install_refused", f"{label}: {ran.said}"))
                 stages.append(stage("install", "fail", label))
                 return _outcome(stages, lifecycle_after=lifecycle(machine, launchd, port=port),
                                 problem_=refused, next_="blocked", human=refused["human"], before=before)
-        stages.append(stage("install", "ok", f"{len(missing)} login service(s) registered"))
+        stages.append(stage("install", "ok", f"{len(unloaded)} login service(s) registered"))
     else:
         stages.append(stage("install", "skip", "already registered as a login service"))
 
@@ -624,11 +644,26 @@ def stop(machine: Machine, launchd: Launchd, *, port: int, wait_s: float = STOP_
         return _outcome(stages, lifecycle_after=before, problem_=refused, next_="blocked",
                         human=refused["human"], before=before, note=STOP_NOTE)
     said: list[str] = []
+    asked = 0
     for label in lc.AGENTS:
         ran = launchd.bootout(label)
-        if not ran.ok and ran.said:
+        if ran.returncode == 127:
+            # The manager is not there at all. Nothing was asked of anything, and this is
+            # known NOW — on the first command — rather than twenty seconds later when the
+            # port is found still held and the wrong sentence ("it was asked and it has not")
+            # gets printed over it. A launchctl that is not there is not a successful stop.
+            absent = problem("stop_supervisor_missing", f"{label}: {ran.said}")
+            stages.append(stage("stop", "fail", "the Mac's login-service manager did not answer"))
+            return _outcome(stages, lifecycle_after=lifecycle(machine, launchd, port=port),
+                            problem_=absent, next_="blocked", human=absent["human"],
+                            before=before, note=STOP_NOTE)
+        if ran.ok:
+            asked += 1
+        elif ran.said:
             said.append(f"{label}: {ran.said}")
-    stages.append(stage("stop", "ok", f"{len(lc.AGENTS)} service(s) asked to stop"))
+    # The number the owner reads is the number of services the Mac was really asked about. A
+    # bootout of a label launchd does not hold exits 3 and asks nothing.
+    stages.append(stage("stop", "ok" if asked else "warn", f"{asked} service(s) asked to stop"))
     went = wait_for_stop(machine, timeout_s=wait_s)
     after = lifecycle(machine, launchd, port=port)
     if not went:
@@ -663,7 +698,11 @@ def restart(machine: Machine, launchd: Launchd, *, port: int, wait_s: float = ST
         return _outcome([stage("check", "fail", "it is not running as a login service")],
                         lifecycle_after=before, problem_=refused, next_="blocked",
                         human=refused["human"], before=before)
-    if any(not launchd.installed(label) for label in lc.AGENTS):
+    # The same fact start() reads, and for the same reason: a restart of a job launchd does
+    # not have is a start, and kickstarting it would fail with "Could not find service". The
+    # agents were read a moment ago by lifecycle(), so they are read from there rather than
+    # asking launchd the same question twice.
+    if any(not row.get("loaded") for row in before["agents"]) or not before["agents"]:
         out = start(machine, launchd, port=port, wait_s=wait_s, route=route)
         out["stages"].insert(0, stage("check", "skip", "not registered as a login service yet, so this is a start"))
         out["before"] = before

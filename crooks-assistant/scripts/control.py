@@ -111,12 +111,36 @@ def git_ok(*args: str, cwd: Path | None = None) -> bool:
     return out.returncode == 0
 
 
+# A commit id, and nothing else, may be put on git's command line as a revision. Anything
+# beginning with '-' is read by git as an OPTION — and one of git's options names a program
+# for it to execute (`--upload-pack`) — so the value that comes off disk in
+# logs/known-good.json is checked against this before it is ever an argument.
+#
+# `--` does NOT solve this. `git checkout -- <sha>` tells git the argument is a PATHSPEC: it
+# exits 1 with "pathspec did not match any file" and checks nothing out, so the rollback would
+# quietly stop rolling back. The revision has to stay a revision; what makes it safe is that
+# it cannot be anything but hexadecimal.
+COMMIT_SHA = re.compile(r"[0-9a-f]{7,40}")
+NOT_A_COMMIT = "is not a commit id, so nothing was checked out"
+
+
+def is_commit_id(sha: str) -> bool:
+    return bool(COMMIT_SHA.fullmatch(str(sha or "")))
+
+
 def checkout(sha: str, cwd: Path | None = None) -> tuple[bool, str]:
     """The only git command here that moves anything, used by the rollback and nowhere else.
     A checkout of an existing commit cannot lose a commit; the rollback still refuses to run
     it while the tree is dirty, because carrying uncommitted work onto an older build is not
-    what the owner asked for."""
-    out = subprocess.run(["git", "checkout", sha], cwd=cwd or ROOT, capture_output=True, text=True, timeout=120)
+    what the owner asked for.
+
+    `--detach` states the intent the rollback document already describes in words, and the
+    trailing `--` says there is no pathspec — so the argument cannot be read as a file either.
+    """
+    if not is_commit_id(sha):
+        return False, f"{str(sha)[:40]!r} {NOT_A_COMMIT}"
+    out = subprocess.run(["git", "checkout", "--detach", sha, "--"], cwd=cwd or ROOT,
+                         capture_output=True, text=True, timeout=120)
     return out.returncode == 0, ((out.stderr or out.stdout) or "").strip()[:300]
 
 
@@ -225,6 +249,25 @@ def essentials_down(health: dict | None) -> list[str]:
 # --------------------------------------------------------------------------- is the tablet there
 
 
+def _number(raw: dict, *keys: str) -> float | None:
+    """The first of these keys that carries a number. Order is the point: the name the backend
+    really prints comes first, and the rest are compatibility, not choice."""
+    for key in keys:
+        try:
+            return float(raw[key])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return None
+
+
+def _text(raw: dict, *keys: str) -> str:
+    for key in keys:
+        value = raw.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return ""
+
+
 def pad_status(health: dict | None) -> dict:
     """Is CROOKS Pad actually alive? (§16.)
 
@@ -233,11 +276,31 @@ def pad_status(health: dict | None) -> dict:
     is off, asleep in a drawer, or showing a crashed page leaves the route exactly as it was.
     Only the tablet saying so answers it, and the backend is what hears it.
 
-    The field is read from /health under `pad`, then `tablet`, because the backend half of
-    Phase 6 and this half were written at the same time and the shape had to be agreed without
-    either waiting for the other. An age (`last_seen_s`, `age_s`, `seen_s_ago`) and an instant
-    (`last_seen_at`, `last_seen`) are both accepted, and an explicit `connected`/`alive` from
-    the backend outranks our arithmetic because the backend is the one holding the socket.
+    THE LAYERING, which is the whole of CONTRACT 1 as it touches this file:
+
+        the pad (Kotlin) -> the backend (POST /pad/heartbeat, PadRegistry)
+                         -> GET /health, the `pad` block   <- read HERE, by ITS names
+                         -> this function's own key names  <- read by CROOKS Control (Swift)
+
+    The backend's block is the authoritative wire shape and its spellings come FIRST:
+    `connected`, `last_seen_s`, `last_seen`, `app_version`, `stale_after_s`. The looser
+    spellings below them are kept only because the two halves of Phase 6 were written at the
+    same time and a Mac can be running a backend from either — they are fallbacks, not
+    alternatives, and nothing new should be added to them.
+
+    `app_version` is what fills `app`, and getting that wrong is not cosmetic: this layer read
+    `app` and then `client`, neither of which the backend has ever printed, so against every
+    real backend the line naming which CROOKS Pad is on the other end came out EMPTY — and an
+    empty one is indistinguishable from a pad that has not said.
+
+    An explicit `connected` outranks our arithmetic, and where the backend states its own
+    `stale_after_s` that number wins over PAD_STALE_S too: the backend is the one holding the
+    socket, and two sides keeping separate opinions about when a pad is stale is how the Mac
+    and the app come to draw different colours over the same tablet.
+
+    What this function prints is a FIXED set of eight keys — known, alive, age_s, app, version,
+    build, source, detail — the same whatever the backend said and the same when it said
+    nothing, because the Swift app decodes these and not the backend's.
 
     A build that reports none of it is reported as NOT KNOWN — never as a tablet that has gone
     away. An absent field is ignorance, and ignorance drawn as a red light is how a status
@@ -253,22 +316,22 @@ def pad_status(health: dict | None) -> dict:
         return {"known": False, "alive": None, "age_s": None, "app": "", "version": "", "build": "",
                 "source": source,
                 "detail": "this build does not say whether the tablet has been heard from; the route being open is not a heartbeat"}
-    age = None
-    for key in ("last_seen_s", "age_s", "seen_s_ago"):
-        try:
-            age = float(raw[key])
-            break
-        except (KeyError, TypeError, ValueError):
-            continue
+    # An AGE, in seconds. `last_seen_s` is the backend's name; the two after it are the older
+    # spellings this side accepted before the shape was settled.
+    age = _number(raw, "last_seen_s", "age_s", "seen_s_ago")
     if age is None:
-        for key in ("last_seen_at", "last_seen"):
-            try:
-                age = max(0.0, time.time() - float(raw[key]))
+        # An INSTANT, as epoch seconds. `last_seen` is the backend's; `last_seen_at` is older.
+        for key in ("last_seen", "last_seen_at"):
+            when = _number(raw, key)
+            if when is not None:
+                age = max(0.0, time.time() - when)
                 break
-            except (KeyError, TypeError, ValueError):
-                continue
+    # The backend's own staleness window, where it states one. Its number, not ours.
+    stale_after = _number(raw, "stale_after_s")
+    if stale_after is None or stale_after <= 0:
+        stale_after = PAD_STALE_S
     stated = raw.get("connected", raw.get("alive"))
-    alive = bool(stated) if isinstance(stated, bool) else (None if age is None else age <= PAD_STALE_S)
+    alive = bool(stated) if isinstance(stated, bool) else (None if age is None else age <= stale_after)
     if alive is None:
         detail = "the build reports the tablet but not when it was last heard from"
     elif alive:
@@ -276,8 +339,10 @@ def pad_status(health: dict | None) -> dict:
     else:
         detail = f"not heard from for {_hours(age)}" if age is not None else "the backend says it is not connected"
     return {"known": True, "alive": alive, "age_s": (round(age, 1) if age is not None else None),
-            "app": str(raw.get("app") or raw.get("client") or "")[:40],
-            "version": str(raw.get("version") or "")[:40], "build": str(raw.get("build") or "")[:60],
+            # `app_version` first: it is the only one of these the backend actually prints.
+            "app": _text(raw, "app_version", "app", "client")[:40],
+            "version": _text(raw, "version", "app_version")[:40],
+            "build": _text(raw, "build")[:60],
             "source": source, "detail": detail}
 
 
@@ -501,12 +566,19 @@ def rollback_decision(*, current: dict, good: dict | None, blocking: list[str], 
     if sha == str(current.get("sha") or ""):
         out["reason"] = "The build running here IS the last known-good one. There is nothing to go back to."
         return out
+    if not is_commit_id(sha):
+        # `git cat-file -e -x^{commit}` is read as a switch for exactly the reason the
+        # checkout was, so the record is refused here too rather than handed to git.
+        out["reason"] = (f"The recorded known-good build ({sha[:10]!r}) {NOT_A_COMMIT}. "
+                         "`crooks-control mark-good` records the build that is running now.")
+        return out
     if not git_ok("cat-file", "-e", f"{sha}^{{commit}}", cwd=repo):
         out["reason"] = (f"The last known-good commit ({sha[:10]}) is not in this checkout, so it cannot be gone back to. "
                          "`git fetch origin` may bring it back.")
         return out
     out["available"] = True
-    out["commands"] = [["git", "checkout", sha], ["make", "restart"]]
+    # What the document says can be typed is what this program actually runs.
+    out["commands"] = [["git", "checkout", "--detach", sha, "--"], ["make", "restart"]]
     out["note"] = (f"`git checkout {sha[:10]}` leaves this checkout on a detached HEAD, which is deliberate: nothing is "
                    f"moved and nothing is lost. `git checkout {current.get('branch') or '<branch>'}` comes forward again.")
     if blocking:
@@ -922,7 +994,12 @@ def rollback_document(*, yes: bool) -> dict:
     try:
         upd = update_module()
         upd.stage_restart(check_only=False, port=the_port)
-        stages.append({"stage": "restart", "state": "ok", "detail": "assistant and whisper-server kicked"})
+        # "kicked" was what this said when the restart was a kickstart and an exit code. The
+        # stage it calls now registers the agents where launchd does not have them and reads
+        # /health back, and raises if that does not answer — so reaching this line means the
+        # backend is up, and the detail says the fact rather than the verb.
+        stages.append({"stage": "restart", "state": "ok",
+                       "detail": "the assistant and whisper-server were restarted and answered"})
     except Exception as exc:  # noqa: BLE001 — a refused launchctl is a state, not a crash
         stages.append({"stage": "restart", "state": "fail", "detail": str(exc)[:300]})
         return envelope("rollback", ok=False, rollback=decision, build={"current": current_build(None), "last_known_good": good},

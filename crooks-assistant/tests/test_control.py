@@ -11,6 +11,7 @@ from this shape, the contract test below is what fails.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -18,6 +19,7 @@ from pathlib import Path
 import pytest
 
 from scripts import control, update
+from tests.fake_launchd import LaunchdDouble
 
 # The checkout these tests are part of, whatever directory pytest was started from.
 PROJECT = Path(__file__).resolve().parent.parent
@@ -270,6 +272,7 @@ def running(here, monkeypatch):
 
 
 PRINTED_RUNNING = "\tstate = running\n\tpid = 4242\n\tlast exit code = 0\n"
+LABELS = ("com.crooks.assistant", "com.crooks.whisper")
 
 
 @pytest.fixture()
@@ -286,7 +289,7 @@ def fake_mac(tmp_path, monkeypatch):
 
     agent_dir = tmp_path / "LaunchAgents"
     agent_dir.mkdir()
-    for label in ("com.crooks.assistant", "com.crooks.whisper"):
+    for label in LABELS:
         (agent_dir / f"{label}.plist").write_text("<plist/>", encoding="utf-8")
     root = tmp_path / "mac-checkout"
     (root / "app").mkdir(parents=True)
@@ -294,9 +297,13 @@ def fake_mac(tmp_path, monkeypatch):
     (root / ".venv" / "bin").mkdir(parents=True)
     (root / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
     clock = {"t": 0.0}
-    runner = service.Scripted({"print": service.Ran((), 0, PRINTED_RUNNING)})
+    # launchd, with the two facts launchd holds and the rule that goes with them: only
+    # bootstrap loads a job, and kickstart on a job that is not loaded fails. The double this
+    # replaced answered 0 to everything, which is why the Stop-then-Start defect could sit
+    # here green.
+    runner = LaunchdDouble(loaded=LABELS, running=LABELS)
     state = {"health": health_doc(), "port_open": True, "route": ("crooks.ts.net", ""),
-             "runner": runner, "agent_dir": agent_dir, "root": root, "clock": clock}
+             "runner": runner, "double": runner, "agent_dir": agent_dir, "root": root, "clock": clock}
 
     def sleep(seconds):
         clock["t"] += seconds
@@ -528,7 +535,8 @@ def test_the_rollback_picks_the_last_known_good_build(running, here):
     assert doc["build"]["current"]["sha"] != good
     assert doc["rollback"]["available"] is True and doc["rollback"]["safe"] is True
     assert doc["rollback"]["sha"] == good and doc["rollback"]["short"] == good[:10]
-    assert doc["rollback"]["commands"] == [["git", "checkout", good], ["make", "restart"]]
+    assert doc["rollback"]["commands"] == [["git", "checkout", "--detach", good, "--"], ["make", "restart"]], \
+        "what the document says can be typed is what control.checkout actually runs"
     assert "detached HEAD" in doc["rollback"]["note"]
 
 
@@ -1311,6 +1319,63 @@ def test_the_heartbeat_is_read_from_whichever_shape_the_backend_chose(field, ali
     assert control.pad_status({"pad": field})["alive"] is alive
 
 
+# CONTRACT 1: the `pad` block on GET /health, exactly as the backend's PadRegistry.status()
+# emits it. Every key below is one the backend really prints — nothing here is invented, which
+# is the only thing that makes this a contract test rather than a restatement of pad_status().
+B_PAD_BLOCK = {
+    "connected": True, "state": "connected", "detail": "heartbeat 3s ago",
+    "last_seen": 1_760_000_000.0, "last_seen_s": 3.0, "last_seen_text": "3 seconds ago",
+    "app_version": "1.4.0", "device_model": "SM-T290", "os_version": "Android 11",
+    "webview": "Chrome/120", "showing_crooks": True, "heartbeats": 412,
+    "clock_skew_s": 0.4, "interval_s": 20, "stale_after_s": 60,
+    "events": {"accepted": 12, "collapsed": 3, "rejected": 0, "rate_limited": 0},
+}
+
+
+def test_the_pad_block_the_backend_really_prints_is_read_by_its_real_names():
+    """CONTRACT 1, this side of it. The backend's PadRegistry.status() is the authoritative
+    wire shape and its key names are what this layer reads FIRST; the tolerant spellings
+    underneath were only ever there because the two halves of Phase 6 were written at once.
+
+    The one that was actually wrong: the backend calls the pad's version `app_version`, and
+    this read `app` and then `client`. Against every real backend the row that says which
+    CROOKS Pad is on the other end came out blank — and a blank is indistinguishable from a
+    pad that has not said.
+    """
+    out = control.pad_status({"pad": dict(B_PAD_BLOCK)})
+    assert out["known"] is True and out["alive"] is True
+    assert out["age_s"] == 3.0, "`last_seen_s` is the backend's name for the age"
+    assert out["app"] == "1.4.0", "`app_version` is what fills `app`"
+    assert out["source"] == "pad"
+    assert "3s ago" in out["detail"]
+
+
+def test_the_pad_status_this_layer_prints_invents_no_key_and_drops_none():
+    """The other half of the layering. B -> A -> D: the app decodes THIS function's key names
+    and not the backend's, so the set is fixed, it is the same whatever the backend said, and
+    `crooks-control contract` is where the app is told about it."""
+    seen = control.pad_status({"pad": dict(B_PAD_BLOCK)})
+    keys = {"known", "alive", "age_s", "app", "version", "build", "source", "detail"}
+    assert set(seen) == keys
+    assert set(control.pad_status(None)) == keys, "an absent pad has the same shape as a present one"
+    named = control.contract_document()["documents"]["status"]["pad"]
+    for key in sorted(keys):
+        assert key in named, f"the contract does not tell the app about `{key}`"
+
+
+def test_the_backends_own_staleness_window_wins_over_this_sides_guess():
+    """`stale_after_s` is the backend's number and the backend is the one holding the socket.
+    Where it says so, this side does not keep a second opinion about when a pad is stale — the
+    two disagreeing is how the Mac and the app end up drawing different colours."""
+    silent = dict(B_PAD_BLOCK, stale_after_s=60, last_seen_s=90.0)
+    silent.pop("connected")
+    assert control.pad_status({"pad": silent})["alive"] is False, "90s is stale at the backend's 60"
+    assert control.pad_status({"pad": dict(silent, stale_after_s=600)})["alive"] is True
+    # And with no number from the backend, this side's own window still applies.
+    assert control.pad_status({"pad": {"last_seen_s": 90.0}})["alive"] is True
+    assert control.pad_status({"pad": {"last_seen_s": 9999.0}})["alive"] is False
+
+
 def test_the_tablet_key_is_read_too_so_neither_side_had_to_wait_for_the_other():
     assert control.pad_status({"tablet": {"last_seen_s": 2}})["source"] == "tablet"
     assert control.pad_status({"pad": {"last_seen_s": 2}})["source"] == "pad"
@@ -1321,69 +1386,110 @@ def test_the_tablet_key_is_read_too_so_neither_side_had_to_wait_for_the_other():
 # --------------------------------------------------------- start, stop, restart
 
 
-def _recording(fn):
-    """A runner that records what it was asked to run and then answers however the test
-    wants — the seam that stands in for a Mac."""
-
-    class Recording:
-        def __init__(self):
-            self.calls = []
-
-        def __call__(self, argv, *, timeout_s=60.0):
-            self.calls.append(list(argv))
-            return fn(list(argv), timeout_s=timeout_s)
-
-    return Recording()
-
-
-PRINTED_STOPPED = "\tstate = not running\n\tlast exit code = 0\n"
-
-
 def test_start_is_a_document_the_app_can_draw(running, here, fake_mac):
-    from scripts import service
-
+    double = fake_mac["double"]
     fake_mac["health"] = None
     fake_mac["port_open"] = False
-    kicks = {"n": 0}
+    # Registered, and not a process until something kicks it. The two facts come apart, and
+    # the whole lifecycle verdict turns on which one is being read.
+    double.running.clear()
+    double.on_kickstart = lambda _label: fake_mac.update(health=health_doc(), port_open=True)
 
-    def run(argv, *, timeout_s=60.0):
-        if "kickstart" in argv:
-            kicks["n"] += 1
-            fake_mac["health"] = health_doc()
-        if "print" in argv:
-            # Registered, and not a process until something kicks it. The two facts come
-            # apart, and the whole lifecycle verdict turns on which one is being read.
-            return service.Ran(tuple(argv), 0, PRINTED_RUNNING if kicks["n"] else PRINTED_STOPPED)
-        return service.Ran(tuple(argv), 0, "")
-
-    fake_mac["machine"].runner = _recording(run)
     doc = control.start_document(wait_s=30.0)
     assert doc["command"] == "start" and doc["ok"] is True and doc["contract"] == control.CONTRACT
     assert doc["human"] == "CROOKS OS is running." and doc["problem"] is None
     assert doc["lifecycle"]["crooks_os"] == "running" and doc["lifecycle"]["supervised"] is True
     assert doc["before"]["crooks_os"] == "stopped"
-    assert kicks["n"] == 2, "the backend and whisper-server"
+    assert len(double.ran("kickstart")) == 2, "the backend and whisper-server"
 
 
 def test_stop_is_a_document_and_says_it_will_come_back_at_login(running, here, fake_mac):
-    from scripts import service
-
-    down = {"yet": False}
-
-    def run(argv, *, timeout_s=60.0):
-        if "bootout" in argv:
-            down["yet"] = True
-            fake_mac["health"] = None
-            fake_mac["port_open"] = False
-        if "print" in argv:
-            return service.Ran(tuple(argv), 0, PRINTED_STOPPED if down["yet"] else PRINTED_RUNNING)
-        return service.Ran(tuple(argv), 0, "")
-
-    fake_mac["machine"].runner = _recording(run)
+    fake_mac["double"].on_bootout = lambda _label: fake_mac.update(health=None, port_open=False)
     doc = control.stop_document()
     assert doc["command"] == "stop" and doc["ok"] is True and doc["next"] == "stopped"
     assert doc["lifecycle"]["crooks_os"] == "stopped"
     assert "starts again the next time this Mac is logged in" in doc["note"]
+
+
+# ------------------------------------------- the update's own restart (§5.2, no Terminal)
+
+
+@pytest.fixture()
+def update_mac(fake_mac, monkeypatch):
+    """`crooks-update`'s restart stage pointed at the same Mac the app's buttons use, so the
+    typed command and the button cannot take different paths through this."""
+    from scripts import service
+
+    machine = fake_mac["machine"]
+    launchd = service.Launchd(machine, agent_dir=fake_mac["agent_dir"], root=fake_mac["root"], uid=501)
+    monkeypatch.setattr(update, "mac_for", lambda _port: (machine, launchd))
+    return fake_mac
+
+
+def test_an_update_restarts_a_mac_whose_services_launchd_does_not_hold(running, here, update_mac):
+    """A3. The restart stage kickstarted the two agents directly. On a Mac where launchd does
+    not have them loaded — which is every Mac that has ever been stopped, and every Mac that
+    has never been installed — a kickstart does nothing at all and exits 3.
+
+    service.py can register and start them now, so the update does that rather than stopping
+    to tell the owner to open a Terminal.
+    """
+    double = update_mac["double"]
+    double.loaded.clear()
+    double.running.clear()
+    update_mac["health"] = None
+    update_mac["port_open"] = False
+    double.on_kickstart = lambda _label: update_mac.update(health=health_doc(), port_open=True)
+
+    update.stage_restart(check_only=False, port=8000)   # raises Stopped if it cannot
+
+    assert double.loaded == set(LABELS), "it registered them itself"
+    assert double.ran("kickstart"), "and then started them"
+    assert update_mac["health"] is not None, "and read the backend back up"
+
+
+def test_a_restart_the_update_cannot_do_names_a_button_and_never_a_command(running, here, update_mac):
+    """A3's sentence. `raise Stopped("… run `make install` once …")` is the whole of §5.2's
+    no-Terminal claim failing: the status screen was clean and the update was not, and the
+    update is exactly where an owner ends up with his code moved and his Mac not running.
+    """
+    double = update_mac["double"]
+    double.absent = True          # there is no launchctl on this Mac at all
+    update_mac["health"] = None
+    update_mac["port_open"] = False
+
+    with pytest.raises(update.Stopped) as refused:
+        update.stage_restart(check_only=False, port=8000)
+
+    said = str(refused.value)
+    for banned in ("make install", "make up", "make restart", "make venv", "Terminal", "launchctl "):
+        assert banned not in said, f"the update still tells the owner {banned!r}"
+    assert "CROOKS Control" in said, "it names what to press instead"
+    assert "Your code IS updated" in said, "and still says what state the Mac was left in"
+
+
+def test_no_stop_the_update_document_carries_tells_the_owner_to_type_anything(running, here, update_mac, monkeypatch):
+    """The same sentence where the app actually reads it: apply_document carries a Stopped
+    straight into `stop.reason`, which the app draws."""
+    good = head(here)
+    control.mark_good_document()
+    commit_upstream(here)
+    update_mac["double"].absent = True
+    update_mac["health"] = None
+    update_mac["port_open"] = False
+
+    doc = control.apply_document(yes=True, run_tests=False, recover=False)
+    assert doc["ok"] is False and doc["stop"]["stage"] == "restart"
+    for banned in ("make install", "make up", "make restart", "Terminal"):
+        assert banned not in json.dumps(doc), f"the apply document still says {banned!r}"
+    assert "CROOKS Control" in doc["stop"]["reason"]
+    assert good  # the known-good record is what the rollback button would use
+
+
+def test_the_updater_names_no_shell_command_for_a_failed_restart(running):
+    """Read as source, because the string that failed §5.2 was a literal in this file."""
+    source = (PROJECT / "scripts" / "update.py").read_text(encoding="utf-8")
+    assert "make install" not in source
 
 
 def test_restart_reports_a_verdict_rather_than_an_exit_code(running, here, fake_mac):
@@ -1415,10 +1521,9 @@ def test_the_lifecycle_of_a_running_mac_is_reported_on_every_status(running, her
 def test_a_backend_run_from_a_terminal_window_is_named_as_one_on_the_status(running, here, fake_mac):
     """And the difference is the one §5.3 asks for: this one DOES stop when its window is
     closed, and an owner told otherwise will close it and wonder why the tablet died."""
-    from scripts import service
-
-    fake_mac["machine"].runner = service.Scripted(
-        {"print": service.Ran((), 0, "\tstate = running\n\tlast exit code = 0\n")})
+    # Loaded, and no pid: `make up` ran it as a child of a Terminal, so nothing launchd holds
+    # is the process answering on the port.
+    fake_mac["double"].running.clear()
     doc = control.status_document()
     assert doc["lifecycle"]["state"] == "RUNNING_WINDOW" and doc["lifecycle"]["supervised"] is False
     assert "WILL stop it" in doc["lifecycle"]["human"]
@@ -1466,17 +1571,113 @@ def test_version_two_is_additive_and_took_nothing_away():
     assert control.CONTRACT == 2 and list(control.COMPATIBLE_CLIENTS) == [1, 2]
 
 
-def test_the_version_the_swift_app_declares_is_one_this_side_still_speaks():
-    """The handoff, checked rather than assumed. mac/CrooksControl compares the number for
-    EQUALITY, so the app as it stands will refuse a document marked 2 and has to be rebuilt
-    against this contract — a real integration step, written down here rather than discovered
-    on the Mac. What this test holds is the weaker, checkable half: the number the app
-    declares is one these documents are still compatible with."""
-    import re as _re
+# What the Swift side declares, located by content rather than by filename — the app's file
+# layout is the app's business and has already changed once.
+SWIFT_UNDERSTOOD = re.compile(r"static let understood\s*(?::\s*Int\s*)?=\s*(\d+)")
+SWIFT_READABLE = re.compile(r"static let readable\s*(?::[^=]+)?=\s*(?:Set\()?\[([0-9,\s]+)\]")
 
-    declared = _re.search(r"static let expected = (\d+)", swift_documents())
-    assert declared, "the app no longer declares a contract version"
-    assert int(declared.group(1)) in control.COMPATIBLE_CLIENTS
+
+def test_the_app_and_this_side_agree_on_the_document_version():
+    """A5, and CONTRACT 2 in one place. The test this replaces asserted
+
+        int(declared) in control.COMPATIBLE_CLIENTS
+
+    which is satisfied by an app declaring 1 — and an app declaring 1 REFUSES every document
+    this side prints, because the documents are marked 2. So the gate stayed green for the
+    whole time the product was unusable, which is the precise failure mode a contract test
+    exists to prevent: it measured a set membership instead of the agreement.
+
+    Both halves now, and neither is implied by the other:
+
+      (a) the version the app UNDERSTANDS is exactly the version this side PRINTS, so the
+          ordinary case — today's app reading today's script — is an agreement and not a
+          coincidence of ranges;
+      (b) every version the app is willing to READ is one this side promises to stay
+          compatible with, so the app cannot claim to read a 3 that nothing here has agreed
+          to keep printing.
+
+    Which document versions count as newer and which as older is the app's own rule and is
+    tested in Swift, where it can be executed. What cannot be checked here at all: that the
+    app compiles or that it decodes any of this. There is no SwiftUI on this machine.
+    """
+    source = swift_sources()
+
+    understood = SWIFT_UNDERSTOOD.search(source)
+    assert understood, "the app no longer declares which document version it understands"
+    assert int(understood.group(1)) == control.CONTRACT, (
+        f"the app understands version {understood.group(1)} and this side prints "
+        f"version {control.CONTRACT}; one of them has to move")
+
+    readable = SWIFT_READABLE.search(source)
+    assert readable, "the app no longer declares the SET of document versions it can read"
+    versions = {int(number) for number in readable.group(1).replace(",", " ").split()}
+    assert versions, "the app declares an empty readable set, so it can read nothing"
+    assert int(understood.group(1)) in versions, "the app cannot read its own version"
+    assert versions <= set(control.COMPATIBLE_CLIENTS), (
+        f"the app reads {sorted(versions - set(control.COMPATIBLE_CLIENTS))}, which this side "
+        f"does not promise; compatible_clients is {list(control.COMPATIBLE_CLIENTS)}")
+
+
+def test_the_app_no_longer_gates_on_the_version_being_equal():
+    """The other half of what made version 2 unusable: `answer.contract == Contract.expected`
+    refuses anything but one number, so an additive version bump breaks every install until
+    every app is rebuilt. A range is what makes a version additive at all."""
+    source = swift_sources()
+    assert "== Contract.expected" not in source and "static let expected" not in source, \
+        "the app still compares the document version for equality against a single number"
+
+
+# ----------------------------------------------------- the one git command that moves
+
+
+def test_a_sha_that_is_really_a_flag_never_reaches_git(here, monkeypatch):
+    """A6. `git checkout <sha>` reads an argument that begins with '-' as an OPTION, and one
+    of git's options names a program to run (`--upload-pack`). The sha comes off disk, out of
+    logs/known-good.json, so it is not this file's to trust.
+
+    Pinning it with a leading `--` — the obvious reflex — would be worse than the bug: it
+    tells git the argument is a PATHSPEC, and `git checkout -- <sha>` does not check the
+    commit out at all (it exits 1, "pathspec did not match any file"). The rollback would
+    stop working and say it had worked. So the argument is refused before git is reached,
+    and the revision is named as a revision.
+    """
+    ran = []
+
+    def spy(argv, **_kw):
+        ran.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(control.subprocess, "run", spy)
+    for pretend in ("--upload-pack=id", "-x", "--output=/tmp/x", "", "not-hex", "HEAD~1"):
+        moved, detail = control.checkout(pretend)
+        assert moved is False, f"{pretend!r} was accepted"
+        assert "not a commit" in detail
+    assert ran == [], "and git was never run at all"
+
+
+def test_a_real_sha_is_still_checked_out_and_still_detaches(repo, monkeypatch):
+    """The other half, against real git: the refusal above must not have cost the rollback the
+    only thing it does. This is what `git checkout -- <sha>` would have broken."""
+    monkeypatch.setattr(control, "ROOT", repo)
+    first = head(repo)
+    commit_upstream(repo)
+    subprocess.run(["git", "pull", "-q", "--ff-only"], cwd=repo, check=True)
+    assert head(repo) != first
+
+    moved, detail = control.checkout(first)
+    assert moved is True, detail
+    assert head(repo) == first, "the checkout really moved"
+    assert git(repo, "rev-parse", "--abbrev-ref", "HEAD") == "HEAD", "and left a detached HEAD"
+
+
+def test_a_known_good_record_that_is_not_a_commit_id_is_refused_by_the_decision(here):
+    """The same argument, one layer up. A rollback offered against a value that is not a
+    commit is a button that cannot work, and `git cat-file -e -x^{commit}` is read as a
+    switch exactly as the checkout was."""
+    decision = control.rollback_decision(
+        current={"sha": head(here)}, good={"sha": "--upload-pack=id"}, blocking=[])
+    assert decision["available"] is False and decision["safe"] is False
+    assert "not a commit" in decision["reason"]
 
 
 def _canned_backend(*_a, **_kw) -> dict:

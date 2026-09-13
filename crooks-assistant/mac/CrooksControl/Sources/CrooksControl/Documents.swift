@@ -6,9 +6,22 @@ import Foundation
 // One decoder for all of them: the Python side writes snake_case, this side reads camelCase.
 
 enum Contract {
-    /// The document version this build of the app understands. A newer script is refused with
-    /// one line rather than drawn with fields that have moved.
-    static let expected = 1
+    /// The document version this build of the app is written against — the number
+    /// scripts/control.py marks its documents with today.
+    static let understood = 2
+
+    /// Every version this build can actually READ, which is not the same thing. Version 2 only
+    /// ADDED fields; a client that ignores what it does not know renders a version-1 document
+    /// correctly and a version-2 one correctly. Comparing for equality against one number is
+    /// what made version 2 unusable: every install refused every document until every app had
+    /// been rebuilt, and the Python side's `compatible_clients` promise counted for nothing.
+    /// A document is too NEW only above this range and too OLD only below it.
+    static let readable: Set<Int> = [1, 2]
+
+    static func canRead(_ version: Int) -> Bool { readable.contains(version) }
+
+    static var newest: Int { readable.max() ?? understood }
+    static var oldest: Int { readable.min() ?? understood }
 
     static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()

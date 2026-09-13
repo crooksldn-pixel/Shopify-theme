@@ -6,7 +6,9 @@ with this checkout's paths filled in, loads them into your login session, makes 
 serve port 8000 over HTTPS in the background (which persists), and reads /health back.
 
     make install     install (or reinstall) and start now
-    make status      is it running, what does /health say, what is the address
+    make status      is it running AS A LOGIN SERVICE, what does /health say, what is the
+                     address. Exits 0 only when both are true — a backend answering from a
+                     Terminal window is not a supervised one, and the number says so
     make restart     restart both services (after `git pull`, say)
     make uninstall   stop and remove the agents
 
@@ -23,7 +25,6 @@ different states — and the launchd verbs have one place to be wrong in rather 
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 
@@ -36,9 +37,11 @@ import service as svc  # noqa: E402
 
 AGENT_DIR = Path.home() / "Library" / "LaunchAgents"
 
-
-def launchctl(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["launchctl", *args], capture_output=True, text=True, timeout=30)
+# There was a `launchctl(*args)` here: this file's own subprocess wrapper, from before the
+# verbs moved into scripts/service.py. Since that move nothing has called it, and a second,
+# unused route to the one external command this appliance runs is exactly the thing a reading
+# of the source has to be able to rule out. It is gone. Every launchctl invocation in this
+# program now goes through service.Runner, which is the one place it can be got wrong.
 
 
 def _machine(port: int) -> svc.Machine:
@@ -148,7 +151,13 @@ def status(port: int) -> int:
     print(f"  https  https://{host}/" if host else f"  https  {note}")
     print(f"  health {lc.summarise_health(health)}")
     print(f"  state  {life['human']}")
-    return 0 if life["healthy"] else 1
+    # ANSWERING and SUPERVISED are two different facts, and this code says the second one as
+    # well as the first. `make up` leaves a backend running as a child of a Terminal window:
+    # it answers /health perfectly and it dies when the window is closed. Exiting 0 over that
+    # told every script, monitor and person downstream that the Mac was installed and looked
+    # after, which is precisely what it was not. The sentence above already says which of the
+    # two was found; now the number agrees with it.
+    return 0 if (life["healthy"] and life["supervised"]) else 1
 
 
 def _port_or_default() -> int:
