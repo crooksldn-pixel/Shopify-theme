@@ -1387,6 +1387,28 @@ def test_the_pad_status_this_layer_prints_invents_no_key_and_drops_none():
         assert key in named, f"the contract does not tell the app about `{key}`"
 
 
+def test_the_backend_still_spells_the_names_this_layer_reads():
+    """CONTRACT 1's A->B seam, as far as one tree can close it.
+
+    B_PAD_BLOCK above is written from the settled contract, and a fixture written from a
+    document proves the document. The product claim underneath it is that the backend's
+    PadRegistry really prints these names — and that can only be checked where both halves
+    are in one tree. The moment app/observability/pad.py is in this checkout it is checked,
+    and until then this says out loud that it has not been, rather than passing quietly and
+    leaving the seam looking closed.
+
+    A name check and not an API call, deliberately: this side must not grow an opinion about
+    how the backend is constructed, only about what it is agreed to say.
+    """
+    backend = PROJECT / "app" / "observability" / "pad.py"
+    if not backend.exists():
+        pytest.skip("the backend half of Phase 6 is not in this checkout; this seam closes at the merge")
+    source = backend.read_text(encoding="utf-8")
+    for name in ("connected", "last_seen_s", "last_seen", "app_version", "stale_after_s"):
+        assert f'"{name}"' in source or f"'{name}'" in source, \
+            f"the backend no longer spells `{name}`, which scripts/control.py reads as a primary"
+
+
 def test_the_backends_own_staleness_window_wins_over_this_sides_guess():
     """`stale_after_s` is the backend's number and the backend is the one holding the socket.
     Where it says so, this side does not keep a second opinion about when a pad is stale — the
