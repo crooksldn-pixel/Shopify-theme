@@ -577,8 +577,13 @@ def rollback_decision(*, current: dict, good: dict | None, blocking: list[str], 
                          "`git fetch origin` may bring it back.")
         return out
     out["available"] = True
-    # What the document says can be typed is what this program actually runs.
-    out["commands"] = [["git", "checkout", "--detach", sha, "--"], ["make", "restart"]]
+    # What this document says is what this program actually runs — both of them. The second
+    # used to read `make restart`: a Makefile target, in a field the app draws, describing a
+    # step the rollback performs itself and has never asked the owner to perform. It is not
+    # even the right command any more, because the restart stage is service.restart() now —
+    # the same thing the app's Restart button is.
+    out["commands"] = [["git", "checkout", "--detach", sha, "--"],
+                       [str(ROOT / ".venv" / "bin" / "python"), str(HERE / "control.py"), "restart"]]
     out["note"] = (f"`git checkout {sha[:10]}` leaves this checkout on a detached HEAD, which is deliberate: nothing is "
                    f"moved and nothing is lost. `git checkout {current.get('branch') or '<branch>'}` comes forward again.")
     if blocking:

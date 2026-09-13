@@ -535,9 +535,26 @@ def test_the_rollback_picks_the_last_known_good_build(running, here):
     assert doc["build"]["current"]["sha"] != good
     assert doc["rollback"]["available"] is True and doc["rollback"]["safe"] is True
     assert doc["rollback"]["sha"] == good and doc["rollback"]["short"] == good[:10]
-    assert doc["rollback"]["commands"] == [["git", "checkout", "--detach", good, "--"], ["make", "restart"]], \
-        "what the document says can be typed is what control.checkout actually runs"
+    assert doc["rollback"]["commands"][0] == ["git", "checkout", "--detach", good, "--"], \
+        "what the document says is what control.checkout actually runs"
     assert "detached HEAD" in doc["rollback"]["note"]
+
+
+def test_the_rollback_names_the_restart_it_actually_performs(running, here):
+    """The rollback's second command said `make restart` — a Terminal line, in a field the app
+    draws, describing a step this program performs itself. It never was an instruction the
+    owner had to carry out, and since the restart stage became service.restart() it is not even
+    the right command: `make restart` is one line of a Makefile, and what runs is the same
+    thing the app's own Restart button runs.
+    """
+    control.mark_good_document()
+    subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "a build that turned out badly"], cwd=here, check=True)
+    commands = control.status_document()["rollback"]["commands"]
+    assert ["make", "restart"] not in commands, "a document the app draws still names a Makefile target"
+    restart = commands[1]
+    assert restart[-2:] == ["scripts/control.py", "restart"] or restart[-1] == "restart"
+    assert Path(restart[-2]).name == "control.py" and restart[-1] == "restart", \
+        "it names the same command the Restart button is"
 
 
 def test_the_running_build_being_the_good_one_is_not_a_rollback(running, here):
