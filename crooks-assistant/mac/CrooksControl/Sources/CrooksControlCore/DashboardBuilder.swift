@@ -142,21 +142,25 @@ public enum DashboardBuilder {
 
     static func padCard(_ status: StatusDocument?, now: Date) -> PadCard {
         guard let status else {
+            let unread = PadState(presence: .cannotTell(route: "", note: "CROOKS OS has not been read yet."),
+                                  surface: .notSaid)
             return PadCard(
-                presence: .cannotTell(route: "", note: "CROOKS OS has not been read yet."),
-                word: PadPresence.cannotTell(route: "", note: "").word,
+                state: unread,
+                word: unread.word,
                 detail: "Nothing has been read from CROOKS OS yet.",
                 health: .notReported,
                 address: ""
             )
         }
-        let presence = PadReading.read(status, now: now)
+        // Both facts, read together. Taking `word` and `health` off the presence alone is what
+        // put CONNECTED, in green, over a tablet whose WebView had crashed.
+        let state = PadReading.state(status, now: now)
         let address = status.tablet.url.isEmpty ? status.tablet.local : status.tablet.url
         return PadCard(
-            presence: presence,
-            word: presence.word,
-            detail: Redaction.scrub(PadReading.detail(presence, route: status.tablet, now: now)),
-            health: presence.health,
+            state: state,
+            word: state.word,
+            detail: Redaction.scrub(state.detail(route: status.tablet, now: now)),
+            health: state.health,
             address: address
         )
     }
@@ -411,7 +415,7 @@ public enum DashboardBuilder {
                 tone: .danger,
                 text: "CROOKS OS is not running, and the version in this folder has no START "
                     + "control, so this app cannot start it.",
-                fix: "Update CROOKS OS from Terminal — `make up` in its folder — then reopen this app."
+                fix: "Update CROOKS OS in this folder, then reopen CROOKS Control. Turn on Developer Mode for how."
             )
         }
         if let status = input.status, status.mutation.isReadOnly, input.machine.phase == .online {

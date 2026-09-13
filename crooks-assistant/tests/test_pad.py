@@ -141,7 +141,10 @@ async def test_a_fresh_heartbeat_reports_connected_with_what_the_pad_said_it_is(
     configure(client, logins="owner@example.com")
     answer = await client.post("/pad/heartbeat", headers=PROXIED, json={
         "app_version": "0.4.2", "device_model": "SM-T290", "os_version": "Android 11 (API 30)",
-        "boot_id": "b7f1", "at": 1_800_000_000.0,
+        # MILLISECONDS, which is what Heartbeat.kt puts on the wire. This literal used to be
+        # 1_800_000_000.0 — the same instant in SECONDS — and it passed, because the reader was
+        # not dividing either.
+        "boot_id": "b7f1", "at": 1_800_000_000_000,
     })
     assert answer.status_code == 200
     body = answer.json()
@@ -398,10 +401,74 @@ def test_the_webview_state_arrives_by_either_door(registry, recording):
 def test_the_pads_own_clock_is_recorded_as_a_skew_and_never_as_liveness(registry):
     """A clock is a number the pad chose. What proves the pad alive is that the call happened."""
     reg, clock = registry
-    reg.heartbeat(app_version="0.4.2", at=clock.now + 3600)
+    # An hour ahead, sent the way the tablet sends it: epoch MILLISECONDS.
+    reg.heartbeat(app_version="0.4.2", at=(clock.now + 3600) * 1000)
     assert reg.last_seen == clock.now, "the server's clock, not the pad's"
     assert reg.status()["clock_skew_s"] == 3600.0, "and the pad's wrong clock is reported, because it is a fault"
+    assert reg.status()["clock_note"] == "", "an hour out is a clock fault, not a unit error"
     assert reg.status()["connected"] is True
+
+
+def test_the_heartbeat_clock_is_milliseconds_on_both_sides_and_cannot_diverge_silently():
+    """The regression gate for the 56,642-year skew.
+
+    `at` is the one field on the wire whose unit cannot be inferred from its value, which makes
+    it the one field where the two halves of the appliance can disagree with nothing failing.
+    They did. Heartbeat.kt sends epoch MILLISECONDS and says so in the one place it could be
+    read; this backend subtracted that from a clock in SECONDS and published the difference as
+    seconds. 1.8e12 minus 1.8e9, called seconds, is about 56,642 years.
+
+    Every test in this file stayed green through it, because every test fed the reader SECONDS —
+    they had been written against the reader, so they agreed with the bug. A test that exercises
+    only the Python side can be made to agree with it again exactly the same way. So this one
+    reads what KOTLIN actually puts on the wire and holds the Python reader to that, and the two
+    cannot drift apart without one of these assertions failing.
+    """
+    android = Path(__file__).resolve().parents[1] / "android" / "core" / "src"
+    sender = (android / "main" / "kotlin" / "com" / "crooks" / "pad" / "core" / "Heartbeat.kt").read_text(encoding="utf-8")
+    assert "EPOCH MILLISECONDS" in sender, \
+        "the sender no longer states the unit of `at`, which is the only place it can be known"
+
+    # What the sender's own test pins on the wire: a 13-digit millisecond instant.
+    sent = (android / "test" / "kotlin" / "com" / "crooks" / "pad" / "core" / "HeartbeatTest.kt").read_text(encoding="utf-8")
+    assert "at = 1_700_000_000_000L" in sent, "the sender's pinned instant is no longer milliseconds"
+    assert '\\"at\\":1700000000000' in sent, "and the wire form it asserts is no longer milliseconds"
+
+    # And the reader, against that exact instant. A pad whose clock agrees with the Mac's is a
+    # pad with NO skew — the assertion the bug could never have passed.
+    assert pad_module.read_clock(1_700_000_000_000, 1_700_000_000.0) == (0.0, "")
+
+
+def test_a_clock_sent_in_seconds_is_refused_rather_than_drawn_as_millennia():
+    """The failure mode this is really about, kept out of the product rather than made tidy.
+
+    A value that could not be a millisecond instant is not a clock that is wrong, it is the two
+    sides disagreeing about the unit. Dividing until it looks reasonable, or clamping it to
+    something that fits the column, would turn a protocol error into a plausible number and lose
+    the only signal that anything is wrong. So it is refused, and the refusal is what is
+    reported.
+    """
+    skew, note = pad_module.read_clock(1_800_000_000.0, 1_800_000_000.0)
+    assert skew is None, "seconds are not silently accepted as milliseconds"
+    assert "epoch milliseconds" in note and "1800000000" in note, "and the raw value is named"
+
+    # Not knowing and being told nonsense are different facts, and the note is what separates
+    # them: no `at` at all leaves both empty.
+    assert pad_module.read_clock(None, 1_800_000_000.0) == (None, "")
+
+    # The number that started this. Whatever else happens, it must never reach a screen.
+    huge = 1_800_000_000_000.0 - 1_800_000_000.0
+    assert huge / (365.25 * 86400) > 56_000, "this is the skew the old reader published"
+    assert pad_module.read_clock(1_800_000_000_000, 1_800_000_000.0)[0] == 0.0, "and this is the truth"
+
+
+def test_a_tablet_whose_clock_is_genuinely_wrong_still_reports_the_real_size_of_it(registry):
+    """Checking the unit must not cost the fault. A clock a day out is a real fault at a real
+    size, and it stays one — only values that are not instants at all are refused."""
+    reg, clock = registry
+    reg.heartbeat(app_version="0.4.2", at=(clock.now - 86_400) * 1000)
+    assert reg.status()["clock_skew_s"] == -86_400.0
+    assert reg.status()["clock_note"] == ""
 
 
 # ------------------------------------------------------------------- appliance telemetry (§18)
@@ -692,7 +759,7 @@ async def test_the_pad_block_is_the_wire_shape_the_layers_above_read(client):
     assert set(block) == {
         "connected", "state", "detail", "last_seen", "last_seen_s", "last_seen_text",
         "app_version", "device_model", "os_version", "webview", "showing_crooks",
-        "heartbeats", "clock_skew_s", "interval_s", "stale_after_s", "events",
+        "heartbeats", "clock_skew_s", "clock_note", "interval_s", "stale_after_s", "events",
     }
     assert set(block["events"]) == {"accepted", "collapsed", "rejected", "rate_limited"}
     # `app_version` is the spelling, and it is the field the layer above fills its `app` from.

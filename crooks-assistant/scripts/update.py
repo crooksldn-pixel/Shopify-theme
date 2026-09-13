@@ -140,9 +140,11 @@ def blocking_changes(dirty: list[str]) -> list[str]:
 def stage_branch(wanted: str, dirty: list[str] | None = None) -> str:
     branch = git("rev-parse", "--abbrev-ref", "HEAD")
     if branch == "HEAD":
-        raise Stopped("This checkout is not on a branch (detached HEAD). `git checkout <branch>` first.")
+        raise Stopped("This Mac is running a build it was rolled back to, not the current one. "
+                      "Come forward to the current build before updating.")
     if wanted and branch != wanted:
-        raise Stopped(f"On {branch}, not {wanted}. `git checkout {wanted}` first — this command does not switch branches for you.")
+        raise Stopped(f"This Mac is set up to follow {wanted}, and is on {branch} instead. Updating will not "
+                      "switch it over, because that is a change to what this Mac runs and not an update of it.")
     dirty = dirty_paths() if dirty is None else dirty
     blocking = blocking_changes(dirty)
     if blocking:
@@ -197,7 +199,8 @@ def stage_deps(changed: list[str], *, check_only: bool) -> bool:
         return False
     pip = ROOT / ".venv" / "bin" / "pip"
     if not pip.exists():
-        raise Stopped("There is no .venv here. Run `make venv` once, then try again.")
+        raise Stopped("CROOKS OS has not finished being set up in this folder, so it cannot be updated yet. "
+                      "It needs its one-off setup first.")
     out = subprocess.run([str(pip), "install", "-q", "-e", ".[dev]"], cwd=ROOT, capture_output=True, text=True, timeout=900)
     if out.returncode != 0:
         raise Stopped("Installing the dependencies failed:\n" + (out.stderr or out.stdout)[-600:])
@@ -222,7 +225,8 @@ def stage_tests(*, check_only: bool, enabled: bool) -> bool:
         return False
     pytest_bin = ROOT / TEST_COMMAND[0]
     if not pytest_bin.exists():
-        raise Stopped(f"There is no {TEST_COMMAND[0]} here, so the suite cannot be run. `make venv` once, then try again.")
+        raise Stopped("CROOKS OS's own checks are not installed in this folder, so the new build cannot be "
+                      "tested before it is kept. It needs its one-off setup first.")
     out = subprocess.run([str(pytest_bin), *TEST_COMMAND[1:]], cwd=ROOT, capture_output=True, text=True, timeout=TEST_TIMEOUT_S)
     tail = (out.stdout or out.stderr or "").strip().splitlines()
     if out.returncode != 0:
@@ -289,7 +293,8 @@ def stage_verify(*, check_only: bool, port: int) -> dict | None:
         return None
     health = lc.wait_for_health(f"http://127.0.0.1:{port}/health", timeout_s=90)
     if not health:
-        raise Stopped("The backend did not come back healthy within 90 seconds. `make logs` shows why; nothing was undone.")
+        raise Stopped("CROOKS OS did not come back healthy within 90 seconds. Nothing was undone. "
+                      "Open the logs to see why.")
     say(OK, "verify", lc.summarise_health(health))
     return health
 

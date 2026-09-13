@@ -275,32 +275,75 @@ public struct ServiceReport: Decodable, Equatable {
     }
 }
 
-/// The CROOKS Pad's own check-in, when the control script reports one.
+/// The CROOKS Pad's own check-in, as `crooks-control status` actually prints it.
+///
+/// This struct used to decode `seen_at`, `agent` and `address` — three keys the control script
+/// has never emitted. Its own contract line says the block is
+/// `{known, alive, age_s, app, version, build, source, detail}`, and `pad_status()` prints
+/// exactly that. So `seenAt` was nil against every real document, `PadReading` fell to its
+/// `guard let seenAt` and answered NEVER CONNECTED for a tablet that was sitting there working.
+///
+/// It passed because `PadTests` built its own JSON — `{"seen_at": …, "agent": …}` — to match
+/// this struct rather than to match the script. A fixture written from the reader proves the
+/// reader; only a fixture written from the document proves the contract. Same lesson as the
+/// double that always returned success from `kickstart`, one layer up.
 public struct PadReport: Decodable, Equatable {
-    /// When the pad last spoke to the backend, as a unix time.
-    public let seenAt: Double?
-    /// What spoke — "crooks-pad 1.4.0 (SM-T290)", or a browser's user agent.
-    public let agent: String
-    /// Where from, for Developer Mode.
-    public let address: String
+    /// Whether this build of the control script reports a heartbeat at all. False is IGNORANCE
+    /// — the script is too old to ask — and is never drawn as a tablet that has gone away.
+    public let known: Bool
+    /// The script's verdict on liveness, made against the BACKEND's staleness window. nil means
+    /// it reports the pad but not whether it is alive. This side does not keep a second opinion
+    /// about when a pad is stale: two sides with separate windows is how the Mac and the app
+    /// come to draw different colours over the same tablet.
+    public let alive: Bool?
+    /// How long since the tablet was last heard from, in seconds.
+    public let ageS: Double?
+    /// Which CROOKS Pad is on the other end — the backend's `app_version`.
+    public let app: String
+    public let version: String
     /// Which build of the pad app, when it says.
     public let build: String
+    /// Which key the script found it under, for Developer Mode.
+    public let source: String
+    /// The script's own sentence about the tablet.
+    public let detail: String
+    /// THE PAD'S OWN ANSWER to whether CROOKS is on its screen — and a separate fact from
+    /// `alive`. nil means it has not said, which is not "no". See `PadSurface`.
+    public let showingCrooks: Bool?
+    /// `loaded`, `loading`, `error`, `crashed`, or "" when the pad has not said.
+    public let webview: String
 
-    public init(seenAt: Double? = nil, agent: String = "", address: String = "", build: String = "") {
-        self.seenAt = seenAt
-        self.agent = agent
-        self.address = address
+    public init(known: Bool = false, alive: Bool? = nil, ageS: Double? = nil, app: String = "",
+                version: String = "", build: String = "", source: String = "", detail: String = "",
+                showingCrooks: Bool? = nil, webview: String = "") {
+        self.known = known
+        self.alive = alive
+        self.ageS = ageS
+        self.app = app
+        self.version = version
         self.build = build
+        self.source = source
+        self.detail = detail
+        self.showingCrooks = showingCrooks
+        self.webview = webview
     }
 
-    enum CodingKeys: String, CodingKey { case seenAt, agent, address, build }
+    enum CodingKeys: String, CodingKey {
+        case known, alive, ageS, app, version, build, source, detail, showingCrooks, webview
+    }
 
     public init(from decoder: Decoder) throws {
         let box = try decoder.container(keyedBy: CodingKeys.self)
-        seenAt = box.maybe(.seenAt)
-        agent = box.value(.agent, or: "")
-        address = box.value(.address, or: "")
+        known = box.value(.known, or: false)
+        alive = box.maybe(.alive)
+        ageS = box.maybe(.ageS)
+        app = box.value(.app, or: "")
+        version = box.value(.version, or: "")
         build = box.value(.build, or: "")
+        source = box.value(.source, or: "")
+        detail = box.value(.detail, or: "")
+        showingCrooks = box.maybe(.showingCrooks)
+        webview = box.value(.webview, or: "")
     }
 }
 

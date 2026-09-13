@@ -192,12 +192,14 @@ public enum CommandGuard {
             switch self {
             case .empty:
                 return "This button has no command behind it, so there is nothing to run."
-            case .notAbsolute(let what):
-                return "This button asks to run `\(what)`, which is not a full path. "
-                    + "CROOKS Control only runs commands named by their full path."
-            case .isAShell(let what):
-                return "This button asks to run a shell (`\(what)`). CROOKS Control runs the "
-                    + "commands CROOKS OS names, one at a time, and never a shell."
+            case .notAbsolute:
+                // The path itself is the developer's business — `technicalDetail` carries the
+                // whole refusal. What the owner needs is why the button will not work.
+                return "This button's command is not one CROOKS Control will run, because it is "
+                    + "not named by its full path. Turn on Developer Mode to see what was asked for."
+            case .isAShell:
+                return "This button asks to run a shell. CROOKS Control runs the commands CROOKS OS "
+                    + "names, one at a time, and never a shell."
             }
         }
     }

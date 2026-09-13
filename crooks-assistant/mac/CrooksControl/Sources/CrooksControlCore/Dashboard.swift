@@ -47,15 +47,25 @@ public struct ServiceTile: Equatable, Identifiable {
 }
 
 public struct PadCard: Equatable {
-    public let presence: PadPresence
+    /// Both facts: the tablet, and what is on its screen. `PadState.word` is what makes
+    /// CONNECTED a claim about CROOKS rather than about the socket.
+    public let state: PadState
     public let word: String
     public let detail: String
     public let health: Health
     /// The address the pad uses, for Developer Mode and for the OPEN CROOKS PAD button.
     public let address: String
 
-    public init(presence: PadPresence, word: String, detail: String, health: Health, address: String) {
-        self.presence = presence
+    public var presence: PadPresence { state.presence }
+    public var surface: PadSurface { state.surface }
+    /// The tablet is there AND CROOKS is on it — the only state the front page may present as
+    /// everything being well.
+    public var isReady: Bool { state.isReady }
+    /// The tablet is there and the screen is blank. This is the one the old card could not say.
+    public var isBlank: Bool { state.isBlank }
+
+    public init(state: PadState, word: String, detail: String, health: Health, address: String) {
+        self.state = state
         self.word = word
         self.detail = detail
         self.health = health

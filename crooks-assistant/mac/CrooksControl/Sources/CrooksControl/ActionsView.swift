@@ -30,6 +30,44 @@ struct ActionsView: View {
                     }
                 }
             }
+            // INVARIANT 12, SAID OUT LOUD. A control the script cannot perform is not drawn —
+            // that part was already true, because the buttons are built from the document. But
+            // not drawing it silently leaves the owner in front of a panel with no START button
+            // and no reason, which is its own kind of dead end. MAC_CONTROL.md promises "there
+            // is no START button AND THE APP SAYS SO IN WORDS", and this is the words.
+            //
+            // The core has supplied this list all along and this view took it as a parameter and
+            // never read it — invariant 12 as decoration in the view layer, the same shape of
+            // defect as the missing-controls list that was declared, supplied and never read one
+            // layer down. The notice above surfaces at most ONE of these, and only when it
+            // outranks everything else competing for that slot; everything else went unsaid.
+            if !missing.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("NOT AVAILABLE")
+                        .font(.system(size: 10, weight: .bold)).tracking(1.2)
+                        .foregroundStyle(Signal.warn)
+                    Text(missing.joined(separator: " · "))
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(Ink.secondary)
+                    Text("CROOKS OS on this Mac does not offer "
+                         + (missing.count == 1 ? "this control" : "these controls")
+                         + ". Rebuild CROOKS Control from this checkout to get "
+                         + (missing.count == 1 ? "it" : "them") + " back.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Ink.quaternary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                        .fill(Signal.warn.opacity(0.10))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                        .strokeBorder(Signal.warn.opacity(0.35), lineWidth: 1)
+                )
+            }
         }
     }
 }

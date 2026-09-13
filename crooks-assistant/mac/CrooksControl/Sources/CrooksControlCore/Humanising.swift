@@ -47,7 +47,9 @@ public enum ControlFailure: Equatable {
         case .noCheckout:
             return "Click “Choose folder…” and pick the folder that holds CROOKS OS."
         case .noPython:
-            return "In that folder, run `make venv` once. It only has to be done again if the folder is replaced."
+            // The one-off repair really is a Terminal command, and Developer Mode is where it
+            // belongs. What the owner needs here is to know this is setup and not breakage.
+            return "CROOKS OS in that folder has not finished being set up. Turn on Developer Mode for the one-off repair it needs."
         case .exited, .emptyAnswer, .unreadableAnswer, .commandNotFound:
             return "Open the logs to see exactly what it said."
         case .timedOut:
@@ -115,9 +117,9 @@ public enum Humanising {
         ("timed out",
          "CROOKS OS took too long to answer."),
         ("modulenotfounderror",
-         "CROOKS OS is missing part of itself. In its folder, run `make venv` to put it back."),
+         "CROOKS OS is missing part of itself and cannot start until it is put back. Turn on Developer Mode for the repair."),
         ("no module named",
-         "CROOKS OS is missing part of itself. In its folder, run `make venv` to put it back."),
+         "CROOKS OS is missing part of itself and cannot start until it is put back. Turn on Developer Mode for the repair."),
         ("not a git repository",
          "The folder this app is pointed at is not a CROOKS OS checkout. Choose the right folder."),
         ("could not resolve host",

@@ -75,8 +75,8 @@ public enum ContractVerdict: Equatable {
             return nil
         case .scriptIsNewer(let version):
             return "CROOKS OS on this Mac is newer than this app (it speaks version \(version); "
-                + "this app reads version \(Contract.understood)). Build the app again from this "
-                + "checkout — `make control-app` — and they will match."
+                + "this app reads version \(Contract.understood)). Install CROOKS Control again "
+                + "from this CROOKS OS folder and the two will match."
         case .scriptIsOlder(let version):
             return "This app is newer than the CROOKS OS in the folder it is pointed at (the folder "
                 + "speaks version \(version); this app reads version \(Contract.understood)). Update "

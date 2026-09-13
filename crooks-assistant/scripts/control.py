@@ -246,6 +246,47 @@ def essentials_down(health: dict | None) -> list[str]:
     return [name for name in ESSENTIAL if name in checks and not checks[name].get("ok")]
 
 
+def _recorded_how(recorded_by: str | None) -> str:
+    """How a known-good build came to be recorded, in the owner's words.
+
+    `recorded_by` is a provenance stamp — "crooks-control mark-good" — written into
+    logs/last_known_good.json and kept as it is, because Developer Mode wants the real thing.
+    What it must not do is arrive on the front page, where the owner reads "recorded 2h ago by
+    crooks-control mark-good" and learns the name of a subcommand he is never going to type.
+    """
+    stamp = str(recorded_by or "")
+    if not stamp:
+        return ""
+    if stamp.endswith("apply"):
+        return " after an update"
+    if stamp.endswith("mark-good"):
+        return " by hand"
+    return ""
+
+
+def essentials_not_proven(health: dict | None) -> list[str]:
+    """Which of the three this build has NOT SHOWN to be working — including the ones it did not
+    report at all.
+
+    Deliberately different from `essentials_down()`, and the difference is the whole reason there
+    are two. That one answers "what is broken", and an essential the health document never
+    mentions is not known to be broken, so it stays out — otherwise a stopped Mac reports three
+    broken subsystems it was never able to ask about.
+
+    This one answers "what is PROVEN GOOD", where silence is not proof. It is the rule for the
+    single decision whose cost is paid later and by somebody else: a build recorded as known good
+    is what a rollback will choose, and a rollback is chosen at the moment everything else is
+    already going wrong. A "known good" that was never good is worse than none.
+
+    `apply` used to mark builds with `essentials_down()` while `mark-good` refused them with this
+    rule, under a comment saying the two agreed. They did not: a health document that omitted
+    `shopify` entirely — which is what a subsystem that failed to initialise looks like, because
+    it registers no check at all — was refused by hand and recorded automatically.
+    """
+    checks = checks_of(health or {})
+    return [name for name in ESSENTIAL if not (checks.get(name) or {}).get("ok", False)]
+
+
 # --------------------------------------------------------------------------- is the tablet there
 
 
@@ -266,6 +307,18 @@ def _text(raw: dict, *keys: str) -> str:
         if value not in (None, ""):
             return str(value)
     return ""
+
+
+def _tribool(raw: dict, *keys: str) -> bool | None:
+    """True, False, or None for "has not said" — and the third one is the whole reason this
+    exists. `bool(raw.get(key))` would fold "the pad has not told us what is on its screen" into
+    "the pad says CROOKS is not showing", and those are a question unanswered and a question
+    answered no. Only a real bool counts; anything else is silence."""
+    for key in keys:
+        value = raw.get(key)
+        if isinstance(value, bool):
+            return value
+    return None
 
 
 def pad_status(health: dict | None) -> dict:
@@ -301,9 +354,22 @@ def pad_status(health: dict | None) -> dict:
     socket, and two sides keeping separate opinions about when a pad is stale is how the Mac
     and the app come to draw different colours over the same tablet.
 
-    What this function prints is a FIXED set of eight keys — known, alive, age_s, app, version,
-    build, source, detail — the same whatever the backend said and the same when it said
-    nothing, because the Swift app decodes these and not the backend's.
+    What this function prints is a FIXED set of ten keys — known, alive, age_s, app, version,
+    build, source, detail, showing_crooks, webview — the same whatever the backend said and the
+    same when it said nothing, because the Swift app decodes these and not the backend's.
+
+    The last two are here because they were MISSING here, and that absence had a cost worth
+    naming. /health has always carried `showing_crooks`: the pad's own answer to "is CROOKS on
+    the screen", kept separate from "is the pad alive" precisely so that a tablet sitting there
+    displaying a white rectangle could be told apart from one that is working. This function
+    dropped it. Everything below this hop could therefore only know that the tablet had checked
+    in, so CROOKS Control drew CONNECTED — in green, with nothing beside it — over a pad whose
+    WebView had crashed. The fake green this whole layer exists to prevent, reintroduced by a
+    key that was simply not copied across.
+
+    They keep the backend's spellings deliberately. A field that is called `showing_crooks` on
+    one side of a hop and something else on the other is a field that can be dropped again
+    without a single grep noticing.
 
     A build that reports none of it is reported as NOT KNOWN — never as a tablet that has gone
     away. An absent field is ignorance, and ignorance drawn as a red light is how a status
@@ -317,7 +383,7 @@ def pad_status(health: dict | None) -> dict:
             break
     if raw is None:
         return {"known": False, "alive": None, "age_s": None, "app": "", "version": "", "build": "",
-                "source": source,
+                "source": source, "showing_crooks": None, "webview": "",
                 "detail": "this build does not say whether the tablet has been heard from; the route being open is not a heartbeat"}
     # An AGE, in seconds. `last_seen_s` is the backend's name; the two after it are the older
     # spellings this side accepted before the shape was settled.
@@ -346,7 +412,12 @@ def pad_status(health: dict | None) -> dict:
             "app": _text(raw, "app_version", "app", "client")[:40],
             "version": _text(raw, "version", "app_version")[:40],
             "build": _text(raw, "build")[:60],
-            "source": source, "detail": detail}
+            "source": source, "detail": detail,
+            # Carried, never derived. This layer must not decide that a pad which checked in is
+            # a pad showing CROOKS — that inference is the bug, and the pad is the only thing
+            # that can answer it.
+            "showing_crooks": _tribool(raw, "showing_crooks"),
+            "webview": _text(raw, "webview")[:20]}
 
 
 # --------------------------------------------------------------------------- the lifecycle seam
@@ -562,7 +633,7 @@ def rollback_decision(*, current: dict, good: dict | None, blocking: list[str], 
     }
     if not good:
         out["reason"] = ("No known-good build has been recorded on this Mac yet, so there is nothing to go back to. "
-                         "`crooks-control mark-good` records the build that is running now.")
+                         "Press MARK GOOD to record the build that is running now.")
         return out
     sha = str(good.get("sha") or "")
     out.update({"sha": sha, "short": sha[:10], "recorded_at": good.get("recorded_at"), "build": str(good.get("build") or "")})
@@ -573,11 +644,11 @@ def rollback_decision(*, current: dict, good: dict | None, blocking: list[str], 
         # `git cat-file -e -x^{commit}` is read as a switch for exactly the reason the
         # checkout was, so the record is refused here too rather than handed to git.
         out["reason"] = (f"The recorded known-good build ({sha[:10]!r}) {NOT_A_COMMIT}. "
-                         "`crooks-control mark-good` records the build that is running now.")
+                         "Press MARK GOOD to record the build that is running now.")
         return out
     if not git_ok("cat-file", "-e", f"{sha}^{{commit}}", cwd=repo):
         out["reason"] = (f"The last known-good commit ({sha[:10]}) is not in this checkout, so it cannot be gone back to. "
-                         "`git fetch origin` may bring it back.")
+                         "Press CHECK FOR UPDATE — that reaches the source, and may bring it back.")
         return out
     out["available"] = True
     # What this document says is what this program actually runs — both of them. The second
@@ -587,8 +658,9 @@ def rollback_decision(*, current: dict, good: dict | None, blocking: list[str], 
     # the same thing the app's Restart button is.
     out["commands"] = [["git", "checkout", "--detach", sha, "--"],
                        [str(ROOT / ".venv" / "bin" / "python"), str(HERE / "control.py"), "restart"]]
-    out["note"] = (f"`git checkout {sha[:10]}` leaves this checkout on a detached HEAD, which is deliberate: nothing is "
-                   f"moved and nothing is lost. `git checkout {current.get('branch') or '<branch>'}` comes forward again.")
+    # The argv stays in `commands`, which is Developer Mode's field. The note is the owner's.
+    out["note"] = ("Going back does not throw anything away: this Mac keeps the newer build and can come "
+                   "forward to it again once whatever went wrong is fixed.")
     if blocking:
         listed = ", ".join(blocking[:5])
         out["reason"] = (f"There are local changes here ({listed}). Going back would carry them onto an older build; "
@@ -659,11 +731,26 @@ def rows_for(health: dict | None, *, build: dict, good: dict | None, tablet: tup
         rows.append(_row("pad", "CROOKS Pad", STATE_OFF, "unknown", str(pad.get("detail") or "")))
     else:
         alive = pad.get("alive")
-        rows.append(_row("pad", "CROOKS Pad",
-                         STATE_OK if alive else (STATE_OFF if alive is None else STATE_BAD),
-                         ("here" if alive else ("unknown" if alive is None else "not here"))
-                         + (f" · {pad.get('app')}" if pad.get("app") else ""),
-                         str(pad.get("detail") or "")))
+        showing, surface = pad.get("showing_crooks"), str(pad.get("webview") or "")
+        if not alive:
+            state = STATE_OFF if alive is None else STATE_BAD
+            value = "unknown" if alive is None else "not here"
+        elif showing is False and surface in ("error", "crashed"):
+            # HERE AND BLANK. The tablet is switched on, checking in, and not showing CROOKS —
+            # which is the single state this row must never draw green. A pad drawn "here" over
+            # a white rectangle is the fake green §16 exists to prevent, and until `showing_crooks`
+            # was carried across this hop it was the only thing this row could draw.
+            state, value = STATE_BAD, "here · not showing CROOKS"
+        elif showing is False:
+            # Mid-load. Not showing yet, and not a fault — so neither a tick nor a cross.
+            state, value = STATE_OFF, "here · still loading"
+        else:
+            # Showing, or has not said. An unanswered question is not a failure, and this row
+            # does not invent an answer for it either way.
+            state, value = STATE_OK, "here"
+        if alive and pad.get("app"):
+            value += f" · {pad.get('app')}"
+        rows.append(_row("pad", "CROOKS Pad", state, value, str(pad.get("detail") or "")))
     rows.append(_row("mutation", "Changes", STATE_OK if mutation.get("state") == "ready" else STATE_OFF,
                      str(mutation.get("state") or "unknown").replace("_", " "), str(mutation.get("detail") or "")))
     rows.append(_row("session", "Test session", STATE_OK if session.get("active") else STATE_OFF,
@@ -674,10 +761,10 @@ def rows_for(health: dict | None, *, build: dict, good: dict | None, tablet: tup
     if good:
         rows.append(_row("known_good", "Known good", STATE_OK, str(good.get("short") or "")
                          + (f" · {good.get('build')}" if good.get("build") else ""),
-                         f"recorded {_ago(good.get('recorded_at'))}" + (f" by {good.get('recorded_by')}" if good.get("recorded_by") else "")))
+                         f"recorded {_ago(good.get('recorded_at'))}" + _recorded_how(good.get("recorded_by"))))
     else:
         rows.append(_row("known_good", "Known good", STATE_OFF, "none recorded",
-                         "crooks-control mark-good records the running build as the one to come back to"))
+                         "MARK GOOD records the running build as the one to come back to"))
     return rows
 
 
@@ -742,7 +829,7 @@ def status_document(*, fresh: bool = False) -> dict:
         rows=rows_for(health, build=build, good=good, tablet=tablet, session=session, mutation=mutation,
                       the_port=the_port, pad=pad, life=life),
         build={"current": build, "candidate": None, "last_known_good": good,
-               "note": "the candidate build is read by `plan`, which fetches; status never touches the network"},
+               "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"},
         tablet={"host": tablet[0] or "", "url": f"https://{tablet[0]}/" if tablet[0] else "", "note": tablet[1],
                 "local": f"http://127.0.0.1:{the_port}/"},
         pad=pad, lifecycle=life,
@@ -810,7 +897,7 @@ def apply_document(*, yes: bool, branch: str = "", run_tests: bool = True, recov
         plan = plan_document(branch)
         plan["command"] = "apply"
         plan["ok"] = False
-        plan["stop"] = {"stage": "click", "reason": "An update applies on a click. `crooks-control apply --yes`, or the app's Update button."}
+        plan["stop"] = {"stage": "click", "reason": "An update applies on a click. Press INSTALL UPDATE."}
         plan["next"] = "click_to_apply"
         return plan
     the_port = port()
@@ -878,12 +965,12 @@ def apply_document(*, yes: bool, branch: str = "", run_tests: bool = True, recov
     # the moment everything is already going wrong. `mark-good` refuses that case too, and
     # the two now agree on the rule that matters: a build with an essential down is not a
     # thing to come back to.
-    already = essentials_down(health)
+    unproven = essentials_not_proven(health)
     marked = None
-    if already:
+    if unproven:
         stages.append({"stage": "mark", "state": "skip",
-                       "detail": f"not recorded as known good: {', '.join(already)} " + ("is" if len(already) == 1 else "are")
-                       + " down here, and was before this update too"})
+                       "detail": f"not recorded as known good: {', '.join(unproven)} " + ("is" if len(unproven) == 1 else "are")
+                       + " not working on this build, so it is not a thing to come back to"})
     else:
         marked = _mark(build, health, why="apply")
         stages.append({"stage": "mark", "state": "ok", "detail": f"{build['short']} recorded as known good"})
@@ -964,7 +1051,7 @@ def mark_good_document() -> dict:
     if not health:
         return envelope("mark-good", ok=False, marked_good=None, build={"current": build},
                         stop={"stage": "health", "reason": f"Nothing is answering on 127.0.0.1:{the_port}, so this build is not known to be good."})
-    down = [name for name in ESSENTIAL if not (checks_of(health).get(name) or {}).get("ok", False)]
+    down = essentials_not_proven(health)
     if down:
         return envelope("mark-good", ok=False, marked_good=None, build={"current": build},
                         stop={"stage": "health", "reason": f"Not marked: {', '.join(down)} " + ("is" if len(down) == 1 else "are") + " down on this build."})
@@ -972,7 +1059,9 @@ def mark_good_document() -> dict:
         # Deliberate: after a rollback the checkout is detached, and marking THAT as good
         # would make the rollback target the build the owner just came back from.
         return envelope("mark-good", ok=False, marked_good=None, build={"current": build},
-                        stop={"stage": "branch", "reason": "This checkout is on a detached HEAD (a rollback leaves it that way). `git checkout <branch>` first."})
+                        stop={"stage": "branch", "reason": "This Mac is running a build it was rolled back to, not the current one. "
+                                                            "Come forward to the current build first; a build that was rolled back FROM "
+                                                            "is not one to come back to."})
     return envelope("mark-good", ok=True, marked_good=_mark(build, health, why="mark-good"), build={"current": build},
                     next="done")
 
@@ -991,7 +1080,7 @@ def rollback_document(*, yes: bool) -> dict:
                         stages=[], stop={"stage": "decide", "reason": decision["reason"]}, next="blocked")
     if not yes:
         return envelope("rollback", ok=False, rollback=decision, build={"current": build, "last_known_good": good},
-                        stages=[], stop={"stage": "click", "reason": "A rollback moves the build. `crooks-control rollback --yes`, or the app's button."},
+                        stages=[], stop={"stage": "click", "reason": "A rollback moves the build. Press ROLL BACK."},
                         next="click_to_apply")
     stages = []
     moved, detail = checkout(decision["sha"])
@@ -1133,7 +1222,7 @@ def actions_document() -> dict:
         {"id": "restart", "label": "Restart", "kind": "control", "group": "use",
          "command": [py, control_py, "restart"], "cwd": str(ROOT), "confirm": True,
          "confirm_text": "Restart the assistant and whisper-server? Anything mid-sentence on the tablet will stop.",
-         "why": "the same launchd agents `make restart` kicks, and then /health read back"},
+         "why": "stops and starts CROOKS OS's background services, then waits for it to answer"},
         {"id": "check", "label": "Check for update", "kind": "control", "group": "update",
          "command": [py, control_py, "plan"], "cwd": str(ROOT), "confirm": False,
          "why": "fetches, shows both SHAs, changes nothing"},
@@ -1147,7 +1236,7 @@ def actions_document() -> dict:
          "why": "only offered when a known-good build is recorded and the tree is clean"},
         {"id": "tests", "label": "Run tests", "kind": "shell", "group": "test",
          "command": [str(ROOT / ".venv" / "bin" / "pytest"), "-q", "-m", "not live"], "cwd": str(ROOT), "confirm": False,
-         "why": "the offline suite — the same as `make test`"},
+         "why": "runs CROOKS OS's own checks, without touching the store or the network"},
         {"id": "tests_ui", "label": "Run UI tests", "kind": "shell", "group": "test",
          "command": [py, str(HERE / "experience.py"), "--ui"], "cwd": str(ROOT), "confirm": False,
          "why": "the golden scenarios, and the page driven in Chromium — the same as crooks-test-ui"},
@@ -1198,8 +1287,11 @@ def contract_document() -> dict:
             "rows": "[{key,label,state:ok|off|bad,value,detail}] in the order the app draws them",
             "build": "{current:{sha,short,branch,detached,subject,build,version}, candidate:null, last_known_good, note}",
             "tablet": "{host,url,note,local} — the ROUTE, which is the door being open",
-            "pad": "{known,alive,age_s,app,version,build,source,detail} — the TABLET, which is whether anybody came "
-                   "through it. known:false means this build does not report a heartbeat, and is never drawn as absence",
+            "pad": "{known,alive,age_s,app,version,build,source,detail,showing_crooks,webview} — the TABLET, which is "
+                   "whether anybody came through it. known:false means this build does not report a heartbeat, and is "
+                   "never drawn as absence. showing_crooks is the pad's own answer to whether CROOKS is on the screen, "
+                   "and it is a THIRD thing: alive is the tablet, showing_crooks is the surface, and a tablet that is "
+                   "alive and not showing must never be drawn as connected. null means it has not said",
             "lifecycle": "{state,crooks_os,human,supervised,answering,healthy,agents[],port,window,logs} — running as a "
                          "login service, running in a window, starting, stuck, stopped or never installed. Closing the "
                          "app's window changes none of it, and nothing here is read from the app",

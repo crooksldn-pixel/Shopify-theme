@@ -80,6 +80,42 @@ MAX_IDENTITY_CHARS = 64
 # collapsing them would lose the ability to tell "the tablet is off" from "the tablet is on and
 # CROOKS is not".
 WEBVIEW_STATES = frozenset({"loaded", "loading", "error", "crashed"})
+
+# `at` on a heartbeat is EPOCH MILLISECONDS. That is what Heartbeat.kt sends and says it sends,
+# what `t` on every pad event carries, and what Date.now() gives web/telemetry.js. It is the one
+# field on the wire whose unit CANNOT be inferred from the value, which makes it the one field
+# that can diverge silently — and a divergence here is not a small error. An `at` in seconds
+# subtracted from a clock in seconds and then published as seconds is a skew of about 56,642
+# years, which is what this reader did: it never divided.
+#
+# So the unit is CHECKED, and never guessed. These bounds are what a millisecond instant looks
+# like for any date this appliance will run on. Epoch SECONDS for such a date is ~1.8e9, which
+# lands three orders of magnitude below the floor and is therefore CAUGHT rather than quietly
+# converted into a date in 1970.
+CLOCK_MS_FLOOR = 1_000_000_000_000.0    # 2001-09-09, in milliseconds
+CLOCK_MS_CEILING = 4_102_444_800_000.0  # 2100-01-01, in milliseconds
+
+
+def read_clock(at: Any, now: float) -> tuple[float | None, str]:
+    """The pad's own clock against ours. Returns (skew in SECONDS, what is wrong with it).
+
+    A tablet's clock may genuinely be wrong — by minutes, by hours, by a year if it has sat in a
+    drawer with a flat battery — and that is a fault worth reporting as one, at whatever size it
+    really is. What is NOT a clock fault is a value that could not be a millisecond instant at
+    all: that is the two sides having disagreed about the unit, and reporting it as a skew draws
+    a protocol error as a property of the tablet and puts 56,642 years on a status screen.
+
+    Neither case is clamped, corrected or hidden. A number that is not milliseconds does not
+    become milliseconds by being divided until it looks reasonable, so a value outside the
+    window is refused and the refusal is what gets reported.
+    """
+    if not isinstance(at, (int, float)) or isinstance(at, bool) or not at:
+        return None, ""
+    value = float(at)
+    if not CLOCK_MS_FLOOR <= value <= CLOCK_MS_CEILING:
+        return None, (f"the tablet sent its clock as {value:.0f}, which is not a millisecond "
+                      "instant; a heartbeat's `at` is epoch milliseconds")
+    return round(value / 1000.0 - now, 1), ""
 # What survives into a stored identity string. Everything the real values need — "SM-T290",
 # "0.3.1", "Android 11 (API 30)" — and nothing that could carry markup or a newline into a
 # report that gets pasted somewhere. Square brackets are in the set because the scrub runs
@@ -204,6 +240,9 @@ class PadRegistry:
         # is a real fault (certificates, scheduling, the timestamps in its own reports) and this
         # is the only place that would ever notice.
         self.clock_skew_s: float | None = None
+        # Why there is no skew, when there is a reason worth saying. Empty when the pad has not
+        # sent a clock at all, because an unanswered question is not a fault.
+        self.clock_note = ""
         # Per-channel: the last signature actually written, and when. Plus how many identical
         # reports have been folded away since.
         self._last: dict[str, tuple[str, float]] = {}
@@ -259,8 +298,7 @@ class PadRegistry:
         webview = str(fields.get("webview") or "").strip().lower()
         if webview in WEBVIEW_STATES:
             self.webview = webview
-        at = fields.get("at")
-        self.clock_skew_s = round(float(at) - now, 1) if isinstance(at, (int, float)) and not isinstance(at, bool) and at else None
+        self.clock_skew_s, self.clock_note = read_clock(fields.get("at"), now)
         if self.first_seen is None:
             self.first_seen = now
         self.last_seen = now
@@ -319,6 +357,10 @@ class PadRegistry:
             "showing_crooks": (self.webview == "loaded") if (self.webview and state == "connected") else None,
             "heartbeats": self.heartbeats,
             "clock_skew_s": self.clock_skew_s,
+            # Empty unless the clock could not be read at all. `clock_skew_s: None` with a note
+            # beside it is "the tablet sent something that is not a clock"; `None` with no note
+            # is "the tablet has not said" — and those are different facts.
+            "clock_note": self.clock_note,
             "interval_s": HEARTBEAT_INTERVAL_S,
             "stale_after_s": STALE_AFTER_S,
             "events": {

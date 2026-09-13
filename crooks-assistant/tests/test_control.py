@@ -11,6 +11,7 @@ from this shape, the contract test below is what fails.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import time
@@ -493,7 +494,7 @@ def test_there_is_no_known_good_build_until_something_records_one(running):
     assert doc["rollback"]["available"] is False and doc["rollback"]["safe"] is False
     assert "nothing to go back to" in doc["rollback"]["reason"]
     rows = {row["key"]: row for row in doc["rows"]}
-    assert rows["known_good"]["value"] == "none recorded" and "mark-good" in rows["known_good"]["detail"]
+    assert rows["known_good"]["value"] == "none recorded" and "MARK GOOD" in rows["known_good"]["detail"]
 
 
 def test_marking_the_running_build_good_writes_it_where_only_this_command_writes(running, here):
@@ -524,6 +525,41 @@ def test_a_build_with_an_essential_down_is_never_recorded_as_good(running):
     assert control.read_known_good() is None
 
 
+def test_an_essential_that_is_not_reported_at_all_is_never_recorded_as_good(running):
+    """Silence is not proof, and this is the case the two gates disagreed about.
+
+    A subsystem that failed to initialise registers NO CHECK — it is absent from the health
+    document rather than present and false. `essentials_down()` skips absent names on purpose
+    (a stopped Mac must not report three broken subsystems it could not ask about), and `apply`
+    marked builds good with that rule while `mark-good` refused them with the stricter one,
+    under a comment saying the two agreed on "the rule that matters".
+
+    They now share one function, so this holds for both.
+    """
+    running["health"]["checks"].pop("shopify")
+    assert control.essentials_down(running["health"]) == [], "still lenient where leniency is right"
+    assert control.essentials_not_proven(running["health"]) == ["shopify"], "and strict where it is not"
+
+    doc = control.mark_good_document()
+    assert doc["ok"] is False and "shopify" in doc["stop"]["reason"]
+    assert control.read_known_good() is None, "a rollback target that was never known good"
+
+
+def test_the_two_known_good_gates_cannot_drift_apart_again(running):
+    """Whatever `mark-good` refuses by hand, `apply` must refuse to record automatically. The
+    property, rather than the two call sites — a comment claiming they agree is what made the
+    divergence look deliberate for the whole of Phase 6."""
+    for broken in ("speech", "claude", "shopify"):
+        for how in ("false", "absent"):
+            health = json.loads(json.dumps(running["health"]))
+            if how == "absent":
+                health["checks"].pop(broken)
+            else:
+                health["checks"][broken] = check(False, "down")
+            assert control.essentials_not_proven(health) == [broken], \
+                f"{broken} {how} is not proven good, and that is the only rule either gate may use"
+
+
 # ------------------------------------------------------------------ the rollback decision
 
 
@@ -537,7 +573,10 @@ def test_the_rollback_picks_the_last_known_good_build(running, here):
     assert doc["rollback"]["sha"] == good and doc["rollback"]["short"] == good[:10]
     assert doc["rollback"]["commands"][0] == ["git", "checkout", "--detach", good, "--"], \
         "what the document says is what control.checkout actually runs"
-    assert "detached HEAD" in doc["rollback"]["note"]
+    # The argv is still there for Developer Mode; the NOTE is the owner's and no longer
+    # explains git to him.
+    assert "come forward" in doc["rollback"]["note"]
+    assert "detached" not in doc["rollback"]["note"] and "git" not in doc["rollback"]["note"]
 
 
 def test_the_rollback_names_the_restart_it_actually_performs(running, here):
@@ -588,7 +627,7 @@ def test_a_rollback_needs_the_click_even_when_it_is_safe(running, here):
     subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "later"], cwd=here, check=True)
     doc = control.rollback_document(yes=False)
     assert doc["ok"] is False and doc["next"] == "click_to_apply"
-    assert doc["rollback"]["safe"] is True and "rollback --yes" in doc["stop"]["reason"]
+    assert doc["rollback"]["safe"] is True and "Press ROLL BACK" in doc["stop"]["reason"]
     assert head(here) != good, "nothing moved without the click"
 
 
@@ -626,7 +665,7 @@ def test_the_detached_build_a_rollback_leaves_is_never_itself_marked_good(runnin
     monkeypatch.setattr(control.update_module(), "stage_restart", lambda **kw: None)
     assert control.rollback_document(yes=True)["ok"] is True
     doc = control.mark_good_document()
-    assert doc["ok"] is False and "detached HEAD" in doc["stop"]["reason"]
+    assert doc["ok"] is False and "rolled back to" in doc["stop"]["reason"]
 
 
 # ---------------------------------------------------------------- the update, on a click
@@ -1251,6 +1290,13 @@ def test_the_app_reads_every_document_field_from_the_contract_and_no_other(butto
         "marked_good", "last_known_good", "local_work", "test_session", "click", "update",
         "tablet", "mutation", "rollback", "check", "at",
     ))
+    # The pad block's own fields, taken from the function that PRINTS them rather than from a
+    # list someone has to remember to update. `forward` below used to carry
+    # `pad: "{seen_at, agent, address, build}"`, which is how a struct decoding three keys this
+    # script has never printed looked like a deliberate forward-compatibility decision for the
+    # whole of Phase 6 — and why this gate, which exists precisely to catch that, did not.
+    printed.update(camel(key) for key in control.pad_status({"pad": dict(B_PAD_BLOCK)}))
+
     source = swift_documents()
     # `let x: T` in a Decodable struct is a field the app expects to be there.
     #
@@ -1278,10 +1324,6 @@ def test_the_app_reads_every_document_field_from_the_contract_and_no_other(butto
         "managed": "part of `service`",
         "pid": "part of `service` — shown in Developer Mode and never read as 'it is up'",
         "healthy": "part of `service` — /health answered; the only part that decides anything",
-        "pad": "the CROOKS Pad's own check-in: {seen_at, agent, address, build}",
-        "seenAt": "part of `pad`",
-        "agent": "part of `pad`",
-        "address": "part of `pad`",
         "uptimeS": "uptime as a number; the `online` row carries it as prose and the app "
                    "will not parse a duration back out of an English sentence",
         "needsPlan": "`needs_plan`, which actions_document() already sends on the update "
@@ -1420,11 +1462,56 @@ def test_a_build_that_reports_no_heartbeat_is_not_a_tablet_that_has_gone_away(ru
     teaches its owner to stop reading it."""
     doc = control.status_document()
     assert doc["pad"] == {"known": False, "alive": None, "age_s": None, "app": "", "version": "",
-                          "build": "", "source": "absent",
+                          "build": "", "source": "absent", "showing_crooks": None, "webview": "",
                           "detail": "this build does not say whether the tablet has been heard from; the route being open is not a heartbeat"}
     assert doc["state"] == "GREEN" and "tablet" not in doc["degraded"]
     rows = {row["key"]: row for row in doc["rows"]}
     assert rows["pad"]["state"] == "off" and rows["pad"]["value"] == "unknown"
+
+
+def test_a_tablet_that_is_alive_and_blank_is_never_drawn_as_connected(running):
+    """CONNECTED is not the same claim as CROOKS OS IS SHOWING, and this is where the two used
+    to collapse into one.
+
+    The tablet is on. It is checking in. Its WebView has crashed, so what the owner is actually
+    looking at is a white rectangle. Every fact needed to say so has been in /health all along —
+    the pad reports `showing_crooks` precisely so that this case can be told from a working one —
+    but the hop into this layer printed eight keys and `showing_crooks` was not among them. So
+    this row could only read the heartbeat, and it drew "here", in green, over a blank screen.
+
+    Three separate things, and the row must keep them apart: the tablet is alive, the surface is
+    loaded, CROOKS is showing.
+    """
+    running["health"]["pad"] = {"last_seen_s": 4.0, "app_version": "CROOKS Pad 1.4.0",
+                                "webview": "crashed", "showing_crooks": False}
+    doc = control.status_document()
+    assert doc["pad"]["alive"] is True, "the tablet really is there — that part was never wrong"
+    assert doc["pad"]["showing_crooks"] is False, "and it survived the hop"
+    assert doc["pad"]["webview"] == "crashed"
+    rows = {row["key"]: row for row in doc["rows"]}
+    assert rows["pad"]["state"] == "bad", "alive and blank is not a green row"
+    assert "not showing CROOKS" in rows["pad"]["value"]
+
+
+def test_a_tablet_still_loading_is_neither_a_tick_nor_a_cross(running):
+    """Mid-load is not a fault. It is also not CROOKS showing, and it must not be drawn as
+    either — the transient state is the one most likely to teach an owner that red means
+    nothing."""
+    running["health"]["pad"] = {"last_seen_s": 2.0, "webview": "loading", "showing_crooks": False}
+    rows = {row["key"]: row for row in control.status_document()["rows"]}
+    assert rows["pad"]["state"] == "off" and "still loading" in rows["pad"]["value"]
+
+
+def test_a_pad_that_has_not_said_what_is_on_its_screen_is_not_accused_of_being_blank(running):
+    """The other direction, and the one that makes an unanswered question dangerous. A backend
+    that does not report `showing_crooks` leaves it null, and null must not become False on the
+    way through — a row that says NOT SHOWING CROOKS about a working tablet is as wrong as the
+    green one, and wrong in the direction that gets the row ignored."""
+    running["health"]["pad"] = {"last_seen_s": 4.0, "app_version": "CROOKS Pad 1.4.0"}
+    doc = control.status_document()
+    assert doc["pad"]["showing_crooks"] is None, "not False: it has not said"
+    rows = {row["key"]: row for row in doc["rows"]}
+    assert rows["pad"]["state"] == "ok" and rows["pad"]["value"] == "here · CROOKS Pad 1.4.0"
 
 
 def test_a_tablet_heard_from_a_moment_ago_is_here(running):
@@ -1484,7 +1571,11 @@ B_PAD_BLOCK = {
     "connected": True, "state": "connected", "detail": "heartbeat 3s ago",
     "last_seen": 1_760_000_000.0, "last_seen_s": 3.0, "last_seen_text": "3 seconds ago",
     "app_version": "1.4.0", "device_model": "SM-T290", "os_version": "Android 11",
-    "webview": "Chrome/120", "showing_crooks": True, "heartbeats": 412,
+    # `webview` is one of loaded|loading|error|crashed — a STATE, not a user agent. This
+    # fixture said "Chrome/120", which is not a value PadRegistry can produce, and a fixture
+    # "written from the settled contract" that names an impossible value proves nothing about
+    # the contract.
+    "webview": "loaded", "showing_crooks": True, "heartbeats": 412,
     "clock_skew_s": 0.4, "interval_s": 20, "stale_after_s": 60,
     "events": {"accepted": 12, "collapsed": 3, "rejected": 0, "rate_limited": 0},
 }
@@ -1513,8 +1604,14 @@ def test_the_pad_status_this_layer_prints_invents_no_key_and_drops_none():
     and not the backend's, so the set is fixed, it is the same whatever the backend said, and
     `crooks-control contract` is where the app is told about it."""
     seen = control.pad_status({"pad": dict(B_PAD_BLOCK)})
-    keys = {"known", "alive", "age_s", "app", "version", "build", "source", "detail"}
+    # `showing_crooks` and `webview` are in this set because they were NOT, and this test —
+    # whose name is "drops none" — is what made that look deliberate. /health carried the pad's
+    # own answer to "is CROOKS on the screen"; this hop dropped it; the app below could only
+    # know the tablet had checked in, and drew CONNECTED in green over a crashed WebView.
+    keys = {"known", "alive", "age_s", "app", "version", "build", "source", "detail",
+            "showing_crooks", "webview"}
     assert set(seen) == keys
+    assert seen["showing_crooks"] is True and seen["webview"] == "loaded", "carried, not re-derived"
     assert set(control.pad_status(None)) == keys, "an absent pad has the same shape as a present one"
     named = control.contract_document()["documents"]["status"]["pad"]
     for key in sorted(keys):
@@ -1538,9 +1635,49 @@ def test_the_backend_still_spells_the_names_this_layer_reads():
     if not backend.exists():
         pytest.skip("the backend half of Phase 6 is not in this checkout; this seam closes at the merge")
     source = backend.read_text(encoding="utf-8")
-    for name in ("connected", "last_seen_s", "last_seen", "app_version", "stale_after_s"):
+    for name in ("connected", "last_seen_s", "last_seen", "app_version", "stale_after_s",
+                 "showing_crooks", "webview"):
         assert f'"{name}"' in source or f"'{name}'" in source, \
             f"the backend no longer spells `{name}`, which scripts/control.py reads as a primary"
+
+
+def test_the_swift_app_decodes_the_pad_block_this_layer_actually_prints():
+    """The A->D seam, which was open for the whole of Phase 6 and which nothing could see.
+
+    `PadReport` in the Mac app decoded `seen_at`, `agent` and `address`. `pad_status()` has never
+    printed any of the three — its contract line says `{known, alive, age_s, app, version, build,
+    source, detail, ...}` and that is what it prints. So against every document the product can
+    actually produce, `PadReport.seenAt` was nil, `PadReading` fell to its `guard let seenAt`, and
+    CROOKS Control answered NEVER CONNECTED for a tablet sitting on the counter working.
+
+    Its own tests passed throughout, because `PadTests.withPad` built the JSON to match the
+    struct. A fixture written from the reader proves the reader.
+
+    Neither half can be run against the other here: there is no Swift toolchain on this machine
+    and the app has never been compiled anywhere. So this reads the names the Swift source
+    DECODES and holds them to the names this file PRINTS — which is a check that runs with no
+    toolchain at all, and is the one that would have caught it.
+    """
+    def camel(name: str) -> str:
+        head, *rest = name.split("_")
+        return head + "".join(part[:1].upper() + part[1:] for part in rest)
+
+    source = (SWIFT_DIR / "Sources" / "CrooksControlCore" / "StatusDocument.swift").read_text(encoding="utf-8")
+    start = source.index("public struct PadReport")
+    body = source[start:source.index("\n}", start)]
+    declared = set(re.findall(r"case\s+([A-Za-z0-9, ]+)", body[body.index("enum CodingKeys"):]))
+    decoded = {name.strip() for group in declared for name in group.split(",") if name.strip()}
+
+    printed = set(control.pad_status({"pad": dict(B_PAD_BLOCK)}))
+    missing = {key for key in printed if camel(key) not in decoded}
+    assert not missing, (
+        f"the Mac app does not decode {sorted(missing)}, which `crooks-control status` prints. "
+        "Swift's .convertFromSnakeCase maps age_s -> ageS and showing_crooks -> showingCrooks."
+    )
+    # And the other direction: a key the app decodes that nothing prints is a field that will be
+    # silently empty forever, which is how `seenAt` survived.
+    invented = {name for name in decoded if name not in {camel(key) for key in printed}}
+    assert not invented, f"the Mac app decodes {sorted(invented)}, which this layer never prints"
 
 
 def test_the_backends_own_staleness_window_wins_over_this_sides_guess():
@@ -1818,6 +1955,161 @@ def test_the_app_no_longer_gates_on_the_version_being_equal():
     # And the positive half: the check has to actually consult the range, or `readable` is a
     # declaration the code never reads — which is how invariant 12 ended up decorative.
     assert "canRead(" in contract, "the contract no longer asks whether a version is readable"
+
+
+# ----------------------------------------------------- no Terminal in the owner's words
+
+# The markers that mean a sentence has stopped being product language and started being a
+# shell. A backtick is the giveaway in this codebase: it is how every one of these was written.
+TERMINAL_MARKERS = ("`", "crooks-control ", "git checkout", "git clone", "make venv", "make up",
+                    "make restart", "make control-app", "launchctl", "sudo ", "chmod", "$(",
+                    "--yes", ".venv")
+# Naming the Terminal is not the same as sending somebody to one. CROOKS OS really can be running
+# inside a Terminal window — it is a state the app detects and offers to fix — and describing the
+# window the owner is looking at is product language. Telling him to go and type in one is not.
+DESCRIBES_RATHER_THAN_INSTRUCTS = ("in a Terminal window", "that Terminal window")
+# Keys whose contents are FOR the developer. The contract says so itself: "`human` and `fix` are
+# the owner's words and never carry an exit status or a path; `developer` is the expansion field
+# and is the only place they appear." `agents` is here because no view draws it — it is launchd
+# diagnostics — and `recorded_by` because it is a provenance stamp that `_recorded_how()`
+# translates before it reaches a row.
+DEVELOPER_KEYS = {"commands", "command", "argv", "cwd", "path", "developer", "stderr", "logs",
+                  "documents", "envelope_keys", "states", "agents", "recorded_by"}
+
+
+def _owner_strings(node, path=""):
+    """Every string in a document that the owner could end up reading, with where it came from."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in DEVELOPER_KEYS:
+                continue
+            yield from _owner_strings(value, f"{path}.{key}")
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from _owner_strings(value, f"{path}[{index}]")
+    elif isinstance(node, str):
+        yield path, node
+
+
+def test_no_document_the_owner_reads_tells_him_to_open_a_terminal(running, here):
+    """§19: the normal owner workflow requires ZERO Terminal commands, and a control panel that
+    answers a problem with a shell command has failed at exactly the thing it exists for.
+
+    This is not a style rule. Every one of these sentences was a dead end for the man holding the
+    Mac: a rollback that explained detached HEADs, an update that named `crooks-control apply
+    --yes` while an Update button sat above it, a missing known-good build answered with the name
+    of a subcommand.
+
+    Developer repair may still be a Terminal command. It belongs in the developer fields, which
+    is what this walk skips — the contract has said so all along.
+    """
+    control.mark_good_document()
+    documents = {
+        "status": control.status_document(),
+        "plan": control.plan_document(),
+        "actions": control.actions_document(),
+        "mark-good": control.mark_good_document(),
+        "rollback": control.rollback_document(yes=False),
+    }
+    leaks = []
+    for name, document in documents.items():
+        for where, text in _owner_strings(document):
+            if any(phrase in text for phrase in DESCRIBES_RATHER_THAN_INSTRUCTS):
+                continue
+            for marker in TERMINAL_MARKERS:
+                if marker in text:
+                    leaks.append(f"{name}{where}: {marker!r} in {text[:110]!r}")
+    assert not leaks, "the owner is being sent to a Terminal:\n" + "\n".join(leaks)
+
+
+def _swift_literals(source: str):
+    """String literals, with comments removed first so that prose ABOUT a command does not read
+    as a command shown to somebody."""
+    lines = []
+    for line in source.splitlines():
+        marker = line.find("//")
+        lines.append(line if marker < 0 else line[:marker])
+    return re.findall(r'"((?:[^"\\]|\\.)*)"', "\n".join(lines))
+
+
+def test_no_sentence_the_mac_app_shows_the_owner_tells_him_to_open_a_terminal():
+    """The same rule, on the side that writes the words rather than the side that sends them.
+
+    Scoped to the files that hold owner-facing prose. `Humanising.rawDetail` is deliberately not
+    among them: it is Developer Mode's field, and a command is exactly what belongs there.
+    """
+    owner_facing = ["Humanising.swift", "Contract.swift", "DashboardBuilder.swift", "ActionsDocument.swift"]
+    leaks = []
+    for name in owner_facing:
+        source = (SWIFT_DIR / "Sources" / "CrooksControlCore" / name).read_text(encoding="utf-8")
+        # Everything from `rawDetail` to the end of that function is the developer's.
+        cut = source.find("private var rawDetail")
+        if cut >= 0:
+            end = source.find("\n    }", cut)
+            source = source[:cut] + source[end:]
+        for literal in _swift_literals(source):
+            # Only sentences the owner could read. Identifiers and single words are not prose,
+            # and the lowercase fragments in `Humanising.translations` are NEEDLES matched
+            # against stderr — "not a git repository" is what is being looked FOR, not what is
+            # being said to anybody.
+            stripped = literal.strip()
+            if " " not in stripped or not stripped[:1].isupper():
+                continue
+            if any(phrase in literal for phrase in DESCRIBES_RATHER_THAN_INSTRUCTS):
+                continue
+            for marker in TERMINAL_MARKERS + ("Terminal",):
+                if marker in literal:
+                    leaks.append(f"{name}: {marker!r} in {literal[:110]!r}")
+    assert not leaks, "the Mac app is sending the owner to a Terminal:\n" + "\n".join(leaks)
+
+
+# ----------------------------------------------------- what verify.sh may claim
+
+
+def _stub_toolchain(tmp_path, *, ok: bool = True):
+    """A `swift` and a `swiftc` that do nothing and say so. The point is the EXIT CODE the
+    script settles on, not what a real compiler would have said."""
+    code = 0 if ok else 1
+    binaries = tmp_path / "bin"
+    binaries.mkdir(exist_ok=True)
+    for name in ("swift", "swiftc"):
+        path = binaries / name
+        path.write_text(f"#!/bin/sh\nexit {code}\n", encoding="utf-8")
+        path.chmod(0o755)
+    return binaries / "swift"
+
+
+def test_verify_sh_does_not_report_a_pass_for_a_check_it_could_not_run(tmp_path):
+    """§26, which is one rule: A CHECK THAT CANNOT MEASURE SOMETHING MUST NOT REPORT A PASS.
+
+    Off a Mac, `verify.sh` cannot compile CROOKS Control — SwiftUI and AppKit do not exist — and
+    it said so, in words, in the body of its output. Then it exited 0, which is the only part of
+    it CI reads. "The Mac app builds — NOT RUN", and a green tick.
+
+    Being unmeasured is not being broken either, so it is not 1. It is its own answer.
+    """
+    swift = _stub_toolchain(tmp_path)
+    out = subprocess.run(["sh", str(SWIFT_DIR / "verify.sh")], capture_output=True, text=True,
+                         env={**os.environ, "SWIFT": str(swift), "SWIFTC": str(swift.parent / "swiftc")})
+    assert out.returncode == 3, (
+        f"everything runnable passed and the Mac app was not compiled, which is INCOMPLETE and "
+        f"not a pass; got {out.returncode}\n{out.stdout}\n{out.stderr}")
+    assert "INCOMPLETE" in out.stdout
+    assert "NOT RUN" in out.stdout, "and it still says which check could not run"
+
+
+def test_verify_sh_still_fails_loudly_when_something_really_failed(tmp_path):
+    """Unmeasured and broken must stay one word apart, in both directions."""
+    swift = _stub_toolchain(tmp_path, ok=False)
+    out = subprocess.run(["sh", str(SWIFT_DIR / "verify.sh")], capture_output=True, text=True,
+                         env={**os.environ, "SWIFT": str(swift), "SWIFTC": str(swift.parent / "swiftc")})
+    assert out.returncode == 1, "a real failure is 1, never 3"
+
+
+def test_verify_sh_says_nothing_was_checked_when_there_is_no_toolchain(tmp_path):
+    out = subprocess.run(["sh", str(SWIFT_DIR / "verify.sh")], capture_output=True, text=True,
+                         env={**os.environ, "SWIFT": str(tmp_path / "nope"), "SWIFTC": str(tmp_path / "nope")})
+    assert out.returncode == 2 and "nothing here was checked" in out.stderr
 
 
 # ----------------------------------------------------- the one git command that moves
