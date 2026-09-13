@@ -289,9 +289,12 @@ def pad_status(health: dict | None) -> dict:
     alternatives, and nothing new should be added to them.
 
     `app_version` is what fills `app`, and getting that wrong is not cosmetic: this layer read
-    `app` and then `client`, neither of which the backend has ever printed, so against every
-    real backend the line naming which CROOKS Pad is on the other end came out EMPTY — and an
-    empty one is indistinguishable from a pad that has not said.
+    `app` and then `client`, and neither of those is in the settled shape at all — so the line
+    naming which CROOKS Pad is on the other end comes out EMPTY against a backend that keeps
+    to it, and an empty one is indistinguishable from a pad that has not said.
+
+    `last_seen` is read as epoch seconds. If it ever arrives as a formatted instant instead it
+    is ignored rather than misread, and `last_seen_s` — which is the primary — carries the age.
 
     An explicit `connected` outranks our arithmetic, and where the backend states its own
     `stale_after_s` that number wins over PAD_STALE_S too: the backend is the one holding the

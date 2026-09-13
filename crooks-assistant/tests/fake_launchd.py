@@ -27,7 +27,8 @@ from scripts.service import Ran
 
 # launchctl's own numbers, used because the layer under test reads them.
 #   3   there is no such service in this domain — what kickstart and bootout say about a job
-#       that is not loaded. It is the number that made A1 invisible.
+#       that is not loaded. It is the number the old double could never return, which is the
+#       whole reason A1 could sit in the product with the suite green.
 #   37  EALREADY: bootstrap on a job that is already loaded.
 #   127 there is no launchctl at all (not a Mac, or a broken PATH).
 NO_SUCH_SERVICE = 3
@@ -95,6 +96,9 @@ class LaunchdDouble:
 
     def _print(self, argv: list[str], label: str) -> Ran:
         if label not in self.loaded:
+            # Non-zero, which is the only thing the layer above reads. The exact number real
+            # launchctl uses for this is not known from a machine with no launchctl, so one is
+            # not invented here — the WORD it prints is what the layer quotes back.
             return Ran(tuple(argv), 1, "", f'Could not find service "{label}" in domain for gui')
         return Ran(tuple(argv), 0,
                    printed(running=label in self.running, last_exit_code=self.last_exit_code))
@@ -106,7 +110,11 @@ class LaunchdDouble:
         return Ran(tuple(argv), 0, "", "")
 
     def _load(self, argv: list[str], label: str) -> Ran:
-        # The legacy verb service.Launchd falls back to. Idempotent, as `load -w` is.
+        # The legacy verb service.Launchd falls back to on an older macOS. It loads a job that
+        # is not loaded and refuses one that is — it is NOT a second chance at the same job,
+        # and writing it as one would put an always-succeeds pocket back into this double.
+        if label in self.loaded:
+            return Ran(tuple(argv), ALREADY_LOADED, "", f"Load failed: {ALREADY_LOADED}: Operation already in progress")
         self.loaded.add(label)
         return Ran(tuple(argv), 0, "", "")
 

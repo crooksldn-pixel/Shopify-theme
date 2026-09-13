@@ -1336,9 +1336,16 @@ def test_the_heartbeat_is_read_from_whichever_shape_the_backend_chose(field, ali
     assert control.pad_status({"pad": field})["alive"] is alive
 
 
-# CONTRACT 1: the `pad` block on GET /health, exactly as the backend's PadRegistry.status()
-# emits it. Every key below is one the backend really prints — nothing here is invented, which
-# is the only thing that makes this a contract test rather than a restatement of pad_status().
+# CONTRACT 1: the `pad` block on GET /health, as the backend's PadRegistry.status() is settled
+# to emit it. Said exactly: this fixture is written from the SETTLED CONTRACT, because the
+# backend half of Phase 6 is not in this checkout — app/observability/pad.py is not here to be
+# read. So what it proves is that this layer reads the agreed names, not that the backend
+# sends them. It is still worth having: every key is one this layer must not have invented for
+# itself, and the old spellings it used instead (`app`, `client`) are not among them.
+#
+# The other half of that seam — that PadRegistry.status() really does print these — can only
+# be checked where both halves are in one tree, which is the merge. It is the one claim in
+# this file that this machine cannot close.
 B_PAD_BLOCK = {
     "connected": True, "state": "connected", "detail": "heartbeat 3s ago",
     "last_seen": 1_760_000_000.0, "last_seen_s": 3.0, "last_seen_text": "3 seconds ago",
