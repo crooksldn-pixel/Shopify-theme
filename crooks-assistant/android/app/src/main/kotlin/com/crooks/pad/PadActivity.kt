@@ -30,13 +30,17 @@ import com.crooks.pad.core.ConnectionMachine
 import com.crooks.pad.core.DeviceSnapshot
 import com.crooks.pad.core.DiagnosticsReport
 import com.crooks.pad.core.Event
+import com.crooks.pad.core.Heartbeat
 import com.crooks.pad.core.KioskCapability
+import com.crooks.pad.core.LoadDecision
 import com.crooks.pad.core.MicPermissionPolicy
 import com.crooks.pad.core.NavigationPolicy
 import com.crooks.pad.core.OsMicPermission
 import com.crooks.pad.core.PadConfig
 import com.crooks.pad.core.PadState
+import com.crooks.pad.core.PadBattery
 import com.crooks.pad.core.PadTelemetry
+import com.crooks.pad.core.PageLoadGuard
 import com.crooks.pad.core.PageOutcome
 import com.crooks.pad.core.PinHasher
 import com.crooks.pad.core.PinLockout
@@ -46,10 +50,12 @@ import com.crooks.pad.core.RecoveryAction
 import com.crooks.pad.core.RecoveryCards
 import com.crooks.pad.core.ShellLayer
 import com.crooks.pad.core.ShellVisibility
+import com.crooks.pad.core.hostOnly
 import com.crooks.pad.core.Transport
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 /**
  * CROOKS Pad — the shell.
@@ -78,6 +84,19 @@ class PadActivity : Activity(),
     private lateinit var probe: BackendProbe
     private lateinit var telemetry: PadTelemetry
     private lateinit var sink: TelemetrySink
+
+    /**
+     * CONTRACT 1 / §16. The appliance's own "I am here", and the only thing on this tablet that
+     * decides how often it says it — by not deciding, and reading `interval_s` off every answer.
+     */
+    private lateinit var heartbeat: Heartbeat
+
+    /**
+     * Fresh every launch, and deliberately nothing else. It lets the Mac tell one long uptime
+     * from six restarts this morning. Because it changes on every launch it is not a device
+     * identifier, which is exactly why it is safe to send.
+     */
+    private val bootId: String = UUID.randomUUID().toString()
     private lateinit var navigationPolicy: NavigationPolicy
     private lateinit var micPolicy: MicPermissionPolicy
 
@@ -100,8 +119,14 @@ class PadActivity : Activity(),
     private var lastPauseAt = 0L
     private var foreground = false
     private var readinessDeadlineAt = 0L
-    private var awaitingReadiness = false
-    private var workspaceLoading = false
+
+    /**
+     * §26. Which load is in flight and whether it may still be believed. Every rule about that
+     * lives in `:core` — see [PageLoadGuard], and the test that replays Chromium's real callback
+     * order for a 502 — because a rule about a WebView callback that lives in an Activity is a
+     * rule this build machine cannot run.
+     */
+    private val loadGuard = PageLoadGuard()
 
     /**
      * The state, mirrored for the bridge. `DeviceBridge.snapshot()` is called on the WebView's
@@ -148,9 +173,15 @@ class PadActivity : Activity(),
         navigationPolicy = NavigationPolicy(config.allowList)
         micPolicy = MicPermissionPolicy(config.allowList)
         probe = BackendProbe(config.origin.toString())
-        sink = TelemetrySink(probe)
+        sink = TelemetrySink()
         telemetry = PadTelemetry(sink = { sink.accept(it) })
         facts = DeviceFacts(this)
+        heartbeat = Heartbeat(
+            appVersion = BuildConfig.VERSION_NAME,
+            deviceModel = facts.deviceModel,
+            osVersion = "Android ${facts.androidRelease} (api ${facts.apiLevel})",
+            bootId = bootId,
+        )
 
         wireControls()
         createWebView()
@@ -171,7 +202,7 @@ class PadActivity : Activity(),
             ),
         )
         record("pad_version", mapOf("name" to BuildConfig.VERSION_NAME, "detail" to BuildConfig.VERSION_CODE.toString()))
-        record("pad_kiosk_stage", mapOf("mode" to KioskCapability.ENABLED_STAGE.name.lowercase(), "detail" to KioskCapability.assess(facts.kioskFacts()).note))
+        record("pad_kiosk_stage", mapOf("stage" to KioskCapability.ENABLED_STAGE.name.lowercase()))
 
         render()
         handler.post(tick)
@@ -186,7 +217,7 @@ class PadActivity : Activity(),
         web?.onResume()
         web?.resumeTimers()
         val away = if (lastPauseAt > 0) lastResumeAt - lastPauseAt else 0L
-        record("pad_foreground", mapOf("state" to "foreground", "elapsed_ms" to away))
+        record("pad_app_foreground", mapOf("state" to "foreground", "elapsed_ms" to away))
         // Coming back is one of the three "the world has just changed" events: the owner has
         // physically picked the tablet up, so the pad asks again immediately rather than
         // finishing whatever backoff it was in the middle of.
@@ -198,8 +229,10 @@ class PadActivity : Activity(),
         foreground = false
         lastPauseAt = now()
         if (!::config.isInitialized) return
-        record("pad_background", mapOf("state" to "background", "elapsed_ms" to (lastPauseAt - lastResumeAt)))
-        sink.flush()
+        record("pad_app_background", mapOf("state" to "background", "elapsed_ms" to (lastPauseAt - lastResumeAt)))
+        // One last beat on the way out, so the events of the session just ending are on the Mac
+        // rather than waiting in a queue on a tablet that may not come back for hours.
+        sendHeartbeat()
         apply(Event.Paused)
         // Timers are NOT paused and the WebView is NOT suspended here. The web layer may be
         // mid-turn with an answer arriving, and a shell that freezes the page because the
@@ -293,8 +326,7 @@ class PadActivity : Activity(),
     private fun loadWorkspace() {
         val view = web ?: return
         loadStartedAt = now()
-        awaitingReadiness = false
-        workspaceLoading = true
+        loadGuard.shellStartedLoad()
         view.loadUrl(config.startUrl)
     }
 
@@ -309,7 +341,7 @@ class PadActivity : Activity(),
      * up, and never when the workspace is already there.
      */
     private fun loadWorkspaceIfItIsTimeTo() {
-        if (workspaceLoading || awaitingReadiness) return
+        if (loadGuard.loadInFlight || loadGuard.awaitingReadiness) return
         when (machine.status.state) {
             PadState.ONLINE, PadState.CROOKS_OS_STARTING, PadState.APP_ERROR, PadState.UPDATE_REQUIRED -> return
             else -> loadWorkspace()
@@ -327,9 +359,15 @@ class PadActivity : Activity(),
     override fun onNavigationAllowed(url: String) = Unit
 
     override fun onNavigationBlocked(url: String, reason: String) {
-        // The address itself is deliberately not recorded: it is attacker-controlled text, and
-        // pad_navigation_blocked has no field for it. The reason names the rule that fired.
-        record("pad_navigation_blocked", mapOf("reason" to reason, "target" to "main_frame"))
+        // The HOST and nothing else — no scheme, no port, no path, no query — because the
+        // Mac's table names exactly one field for this event and because a blocked address is
+        // attacker-controlled text. [hostOnly] is the only route a value takes to get here, and
+        // an address the shell's own parser will not accept contributes no field at all.
+        // `reason` is offered and will be DROPPED: the Mac's table names `host` for this event
+        // and PadTelemetry builds the outgoing map from the declaration and nothing else. It is
+        // passed rather than deleted so that the call site still says what the shell knows, and
+        // so that it starts arriving by itself if the Mac's table ever admits it.
+        record("pad_navigation_blocked", mapOf("host" to hostOnly(url), "reason" to reason))
     }
 
     override fun onNavigationDeferred(url: String) {
@@ -342,68 +380,68 @@ class PadActivity : Activity(),
 
     override fun onPageFinished(url: String) {
         // §26, the second lie: onPageFinished fires for a 502's error body exactly as it fires
-        // for the real page. So the shell asks the document whether CROOKS is actually there
-        // before it will call itself ONLINE, and if the question cannot be answered it takes
-        // the weaker signal AND RECORDS THAT IT DID.
-        if (!config.allowList.allows(url)) return
-        awaitingReadiness = true
-        readinessDeadlineAt = now() + READINESS_DEADLINE_MS
-        askWhetherCrooksIsReallyThere()
+        // for the real page — AND CHROMIUM FIRES IT AFTER THE ERROR CALLBACK, so this used to
+        // be the line that handed a bad gateway back to the readiness probe and from there to
+        // ONLINE. The guard refuses a load that has already failed; see PageLoadGuard.
+        obey(loadGuard.pageFinished(config.allowList.allows(url)))
     }
 
     private fun askWhetherCrooksIsReallyThere() {
         val view = web ?: return
         view.evaluateJavascript(PadWebViewFactory.READINESS_EXPRESSION) { answer ->
-            if (!awaitingReadiness) return@evaluateJavascript
-            if (answer == "true") {
-                awaitingReadiness = false
-                finishLoad(PageOutcome.READY_CONFIRMED)
-            } else if (now() >= readinessDeadlineAt) {
-                awaitingReadiness = false
-                finishLoad(PageOutcome.READY_ASSUMED)
-            } else {
-                // The page may still be assembling itself. Ask again shortly.
-                handler.postDelayed({ askWhetherCrooksIsReallyThere() }, READINESS_POLL_MS)
+            obey(loadGuard.readinessAnswered(answer == "true", now() >= readinessDeadlineAt))
+        }
+    }
+
+    /**
+     * The shell's whole part in deciding how a load went: carry out what [PageLoadGuard] says.
+     * There is no `if` here about outcomes, error codes or readiness, because every one of
+     * those is a judgement and judgements live in `:core` where they can be run.
+     */
+    private fun obey(decision: LoadDecision) {
+        when (decision) {
+            LoadDecision.Ignore -> Unit
+            LoadDecision.AskWhetherCrooksIsThere -> {
+                readinessDeadlineAt = now() + READINESS_DEADLINE_MS
+                askWhetherCrooksIsReallyThere()
             }
+            // The page may still be assembling itself. Ask again shortly.
+            LoadDecision.AskAgainShortly ->
+                handler.postDelayed({ askWhetherCrooksIsReallyThere() }, READINESS_POLL_MS)
+            is LoadDecision.Settle -> finishLoad(decision.outcome)
         }
     }
 
     private fun finishLoad(outcome: PageOutcome) {
-        workspaceLoading = false
-        record(
-            "pad_webview_loaded",
-            mapOf(
-                "mode" to if (outcome == PageOutcome.READY_CONFIRMED) "confirmed" else "assumed",
-                "ms" to (now() - loadStartedAt),
-            ),
-        )
+        if (outcome == PageOutcome.READY_CONFIRMED || outcome == PageOutcome.READY_ASSUMED) {
+            record(
+                "pad_webview_loaded",
+                mapOf(
+                    "mode" to if (outcome == PageOutcome.READY_CONFIRMED) "confirmed" else "assumed",
+                    "ms" to (now() - loadStartedAt),
+                ),
+            )
+        }
         apply(Event.PageLoaded(outcome))
         prefs.lastConnectedAt = machine.status.lastConnectedAt
     }
 
     override fun onMainFrameHttpError(status: Int) {
-        awaitingReadiness = false
-        workspaceLoading = false
         record("pad_webview_error", mapOf("code" to status.toString(), "error_kind" to "http"))
-        apply(Event.PageLoaded(PageOutcome.HTTP_ERROR))
+        obey(loadGuard.mainFrameFailed(PageOutcome.HTTP_ERROR))
     }
 
     override fun onMainFrameTransportError(code: Int, description: String) {
-        awaitingReadiness = false
-        workspaceLoading = false
         record("pad_webview_error", mapOf("code" to code.toString(), "error_kind" to "transport"))
-        apply(Event.PageLoaded(PageOutcome.TRANSPORT_ERROR))
+        obey(loadGuard.mainFrameFailed(PageOutcome.TRANSPORT_ERROR))
     }
 
     override fun onCertificateError(primaryError: Int) {
-        awaitingReadiness = false
-        workspaceLoading = false
         record("pad_webview_error", mapOf("code" to primaryError.toString(), "error_kind" to "certificate"))
-        apply(Event.PageLoaded(PageOutcome.SSL_ERROR))
+        obey(loadGuard.mainFrameFailed(PageOutcome.SSL_ERROR))
     }
 
     override fun onRendererGone(didCrash: Boolean) {
-        workspaceLoading = false
         record("pad_renderer_crash", mapOf("reason" to if (didCrash) "crashed" else "reclaimed"))
         // A WebView whose renderer has gone is permanently dead: every method on it throws. The
         // only recovery is to throw it away and build another, which is what the web_host
@@ -465,6 +503,7 @@ class PadActivity : Activity(),
             micDenialToShow = null
             // The page's getUserMedia call has already failed by now, so the workspace is
             // reloaded to put it back in a state where voice will work on the next hold.
+            loadGuard.shellStartedLoad()
             web?.reload()
         }
         render()
@@ -479,7 +518,10 @@ class PadActivity : Activity(),
             // A navigation that was deferred because there was no network is taken now rather
             // than lost — §6.3's "never a Chromium error page" only works if the deferred load
             // actually happens afterwards.
-            webClient?.takeDeferredUrl()?.let { web?.loadUrl(it) }
+            webClient?.takeDeferredUrl()?.let { url ->
+                loadGuard.shellStartedLoad()
+                web?.loadUrl(url)
+            }
         }
     }
 
@@ -506,29 +548,35 @@ class PadActivity : Activity(),
             val due = machine.status.nextRetryAt
             if (due != null && now >= due && !probeInFlight) runProbe()
 
-            // A slow heartbeat while everything is working. NOT so the shell can second-guess
-            // the page — a failed heartbeat while ONLINE deliberately changes nothing, because
-            // the page has its own connection and its own opinion about it — but so that two
+            // A slow `/ping` while everything is working. NOT so the shell can second-guess
+            // the page — a failed ping while ONLINE deliberately changes nothing, because the
+            // page has its own connection and its own opinion about it — but so that two
             // things stay true: diagnostics knows the Mac's build and uptime when somebody
             // finally looks, and a Mac that has been RESTARTED is noticed, because its uptime
             // resets and the pad's session on the old process is gone.
-            if (machine.status.state == PadState.ONLINE && now - lastProbeAt > ONLINE_HEARTBEAT_MS && !probeInFlight) {
+            if (machine.status.state == PadState.ONLINE && now - lastProbeAt > ONLINE_PING_MS && !probeInFlight) {
                 runProbe()
             }
 
-            if (now - lastHealthCheckAt > HEALTH_INTERVAL_MS && machine.status.state == PadState.ONLINE) {
-                lastHealthCheckAt = now
-                askMacForTestSession()
-            }
+            // §16. The cadence is the Mac's, not this file's: `heartbeat.isDue` is the whole
+            // rule, and the number inside it came off the last answer.
+            if (heartbeat.isDue(now, lastBeatAt) && !beatInFlight) sendHeartbeat()
 
-            sink.flush()
             if (currentLayer() == ShellLayer.RECOVERY) renderCountdown()
         }
     }
 
     private var probeInFlight = false
     private var lastProbeAt = 0L
-    private var lastHealthCheckAt = 0L
+
+    private var beatInFlight = false
+
+    /**
+     * Zero, so the first tick after launch beats immediately. A pad that waited twenty seconds
+     * before announcing itself is a pad that is missing from the Control app for twenty seconds
+     * every time it is switched on, which is exactly the moment somebody is looking for it.
+     */
+    private var lastBeatAt = 0L
 
     private fun runProbe() {
         probeInFlight = true
@@ -561,16 +609,50 @@ class PadActivity : Activity(),
     }
 
     /**
-     * The Mac's `/health` carries `observability.test_session`, and the pad reads it for the
-     * same reason web/telemetry.js does: `POST /telemetry` keeps nothing unless a session is
-     * running. Asked every few minutes and only while ONLINE, because `/health` does real work
-     * on the Mac.
+     * §16, one beat.
+     *
+     * WHAT THIS IS NOT: it is not `/telemetry`. That endpoint is the web page's account of
+     * itself and is silent outside a test session; an appliance's liveness travelling on it
+     * would be invisible almost always. `POST /pad/heartbeat` exists for this, it answers with
+     * the cadence for the next beat, and the pad's queued pad_* events ride along with it.
+     *
+     * IT IS SENT IN EVERY STATE, including MAC_OFFLINE. A beat that fails is the most
+     * informative beat there is on the pad's side — it is how [Heartbeat.onBeatFailed] knows to
+     * stop claiming a test session — and the cost of trying is one socket on a tailnet.
+     *
+     * THE CADENCE IS NOT DECIDED HERE. Nothing in this method chooses when the next beat goes;
+     * [Heartbeat.isDue] does, using the `interval_s` the Mac put on the last answer.
      */
-    private fun askMacForTestSession() {
-        probe.get("/health") { json ->
-            val session = json?.optJSONObject("observability")?.optString("test_session")
-            handler.post { sink.testSessionId = session?.takeIf { it.isNotEmpty() && it != "null" } }
+    private fun sendHeartbeat() {
+        if (!::heartbeat.isInitialized) return
+        beatInFlight = true
+        lastBeatAt = now()
+        recordBattery()
+        val body = heartbeat.body(lastBeatAt, sink.drain())
+        heartbeat.beatSent()
+        probe.post(Heartbeat.PATH, body) { answer ->
+            handler.post {
+                beatInFlight = false
+                if (answer == null) {
+                    heartbeat.onBeatFailed()
+                    return@post
+                }
+                heartbeat.onAnswer(
+                    intervalS = answer.optInt(Heartbeat.KEY_INTERVAL_S, -1).takeIf { it > 0 },
+                    testSession = answer.optString(Heartbeat.KEY_TEST_SESSION, ""),
+                )
+            }
         }
+    }
+
+    /**
+     * §18's one battery event, offered once per beat and dropped by [PadTelemetry] unless the
+     * bucketed level or the charging flag has actually moved. The raw percentage never reaches
+     * an event: [PadBattery.bucket] is the only way in.
+     */
+    private fun recordBattery() {
+        val bucket = PadBattery.bucket(facts.batteryPercent) ?: return
+        record("pad_battery", mapOf("percent" to bucket, "charging" to facts.charging))
     }
 
     // ------------------------------------------------------------------ state and drawing
@@ -579,10 +661,11 @@ class PadActivity : Activity(),
         val before = machine.status.state
         val after = machine.on(event, now()).state
         stateForBridge = after.name
-        if (before != after) {
-            record("pad_state_changed", mapOf("from" to before.name, "to" to after.name, "count" to machine.status.attempt))
-            render()
-        }
+        // No `pad_state_changed` event. It was a second spelling of what the pad's own state
+        // already is — the Mac reads that from the heartbeat's `state`, and the transitions that
+        // matter each have an event of their own — and two spellings of one fact is how a
+        // timeline ends up with half a tablet's history under each.
+        if (before != after) render()
     }
 
     /**
@@ -852,7 +935,7 @@ class PadActivity : Activity(),
         findViewById<Button>(R.id.admin_exit).setOnClickListener {
             admin.onInteraction(now())
             record("pad_admin_exited", mapOf("via" to "exit_kiosk", "action" to "leave"))
-            sink.flush()
+            sendHeartbeat()
             // §13 stage 1: recoverable. Leaving is a real thing the owner can do, and it is
             // finish() rather than anything cleverer precisely so that nothing in this shell
             // can trap a tablet.
@@ -919,6 +1002,12 @@ class PadActivity : Activity(),
             telemetryEmitted = telemetry.emitted,
             telemetrySuppressed = telemetry.suppressed,
             telemetryRejected = telemetry.rejected,
+            telemetryQueued = sink.queued(),
+            telemetryDropped = sink.dropped,
+            heartbeatsSent = heartbeat.beatsSent,
+            heartbeatsAnswered = heartbeat.answersSeen,
+            heartbeatIntervalS = heartbeat.intervalS,
+            heartbeatCadenceFromBackend = heartbeat.cadenceCameFromBackend,
             recentEvents = sink.recent(),
         )
     }
@@ -948,8 +1037,12 @@ class PadActivity : Activity(),
             appendLine("kiosk      ${r.kiosk.note}")
             appendLine(
                 "telemetry  ${r.telemetryEmitted} emitted, ${r.telemetrySuppressed} suppressed, " +
-                    "${r.telemetryRejected} rejected; " +
-                    if (sink.testSessionId != null) "posting to the Mac" else "local only (no test session on the Mac)"
+                    "${r.telemetryRejected} rejected, ${r.telemetryQueued} queued, ${r.telemetryDropped} dropped"
+            )
+            appendLine(
+                "heartbeat  ${r.heartbeatsSent} sent, ${r.heartbeatsAnswered} answered, every " +
+                    "${r.heartbeatIntervalS}s " +
+                    if (r.heartbeatCadenceFromBackend) "(the Mac's number)" else "(built-in default, the Mac has not answered yet)"
             )
             appendLine()
             for (line in r.recentEvents) appendLine(line)
@@ -1003,6 +1096,7 @@ class PadActivity : Activity(),
         screenOn = true,
         msSinceResume = if (lastResumeAt > 0) now() - lastResumeAt else null,
         padState = stateForBridge,
+        testSession = if (::heartbeat.isInitialized) heartbeat.testSessionId else null,
     )
 
     private fun record(kind: String, fields: Map<String, Any?> = emptyMap()) {
@@ -1044,14 +1138,15 @@ class PadActivity : Activity(),
         const val READINESS_DEADLINE_MS = 6_000L
         const val READINESS_POLL_MS = 250L
 
-        /** `/health` does real work on the Mac. Rarely, and only while ONLINE. */
-        const val HEALTH_INTERVAL_MS = 180_000L
-
         /**
          * How often `/ping` is asked while the workspace is up and working. Thirty seconds:
          * a few hundred bytes on the same tailnet, which costs the Mac nothing measurable and
          * keeps the diagnostics screen from being a page of dashes at the moment it is needed.
+         *
+         * This is NOT the §16 heartbeat and must not be confused with it. `/ping` tells the
+         * shell about the Mac; the heartbeat tells the Mac about the pad, and its cadence is
+         * the Mac's to choose — see [Heartbeat].
          */
-        const val ONLINE_HEARTBEAT_MS = 30_000L
+        const val ONLINE_PING_MS = 30_000L
     }
 }

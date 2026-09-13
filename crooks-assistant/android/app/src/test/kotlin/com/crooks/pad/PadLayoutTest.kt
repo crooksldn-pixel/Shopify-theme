@@ -3,6 +3,7 @@ package com.crooks.pad
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import com.crooks.pad.core.PadEventSpec
 import org.junit.Test
 import org.w3c.dom.Element
 import org.w3c.dom.Node
@@ -205,6 +206,113 @@ class PadHardeningTest {
             "the release build type must set WEBVIEW_DEBUG false",
             release.contains("""buildConfigField("boolean", "WEBVIEW_DEBUG", "false")"""),
         )
+    }
+
+    /**
+     * §26 / C1, HELD AGAINST THE ACTIVITY ITSELF.
+     *
+     * `PageLoadGuard` in `:core` is where the rule lives that a main-frame failure poisons the
+     * load, and ConnectionMachineTest replays Chromium's real callback order against it. What
+     * that test cannot see is whether this module still ASKS. There is no emulator here, so the
+     * only available check is the source — but it is a real one: the four call sites below are
+     * the entire path from a WebView callback to a PageOutcome, and if somebody puts the
+     * decision back into the Activity, one of them goes missing and this goes red.
+     */
+    @Test fun `how a load went is decided by the guard in core, not by the Activity`() {
+        val activity = source("PadActivity.kt")
+        for (call in listOf(
+            "loadGuard.shellStartedLoad()",
+            "loadGuard.pageFinished(",
+            "loadGuard.mainFrameFailed(",
+            "loadGuard.readinessAnswered(",
+        )) {
+            assertTrue("PadActivity must reach the load guard through $call", activity.contains(call))
+        }
+
+        // THE DEFECT, NAMED. onPageFinished used to set this flag itself, which is how a load
+        // that had already reported a 502 was handed back to the readiness probe and from there
+        // to ONLINE. The flag now belongs to the guard and this module may not write it.
+        assertFalse(
+            "awaitingReadiness must not be assignable from the Activity: that assignment IS the " +
+                "bug in which a 502 reached ONLINE. Ask PageLoadGuard instead.",
+            Regex("""awaitingReadiness\s*=""").containsMatchIn(activity),
+        )
+        assertFalse(
+            "workspaceLoading was the other half of the same hand-rolled state; the guard owns it",
+            activity.contains("workspaceLoading"),
+        )
+    }
+
+    /**
+     * CONTRACT 1 / C2. pad_* events do not go to `/telemetry`, and the cadence is not here.
+     */
+    @Test fun `the appliance's liveness goes to the heartbeat and never to slash telemetry`() {
+        val all = allSource()
+        assertFalse(
+            "/telemetry is the WEB PAGE's account of itself and is silent outside a test " +
+                "session. An appliance's liveness must not travel on it; see Heartbeat.",
+            all.contains("\"/telemetry\""),
+        )
+        val activity = source("PadActivity.kt")
+        assertTrue("the beat must go to the path :core states", activity.contains("probe.post(Heartbeat.PATH"))
+        assertTrue("and its events must be the queued pad_* events", activity.contains("sink.drain()"))
+    }
+
+    @Test fun `the heartbeat cadence is read from the answer and is not a constant in this module`() {
+        val activity = source("PadActivity.kt")
+        assertTrue("the timer must ask :core whether a beat is due", activity.contains("heartbeat.isDue("))
+        assertTrue("and every answer must be read", activity.contains("heartbeat.onAnswer("))
+        assertTrue(
+            "the response field must be spelled once, in :core",
+            activity.contains("Heartbeat.KEY_INTERVAL_S"),
+        )
+        // And no constant in this module may quietly become the cadence again. ONLINE_PING_MS
+        // is a different thing — how often the shell asks the Mac about the MAC — and is named
+        // so that it cannot be mistaken for this one.
+        val cadenceConstant = Regex("""const val [A-Z_]*(HEARTBEAT|BEAT)[A-Z_]*""")
+        assertFalse(
+            "a cadence constant in the APK is a cadence nobody can change without a cable: " +
+                "the interval comes off interval_s on every beat",
+            cadenceConstant.containsMatchIn(allSource()),
+        )
+    }
+
+    /**
+     * CONTRACT 3, HELD AT THE CALL SITES.
+     *
+     * PadTelemetryTest proves the VOCABULARY matches the Mac's table. This proves the SHELL
+     * matches the vocabulary — by reading every `record("pad_…")` in the Activity, which is the
+     * only place the shell emits anything, and comparing the set for equality.
+     *
+     * Equality in both directions is the point. `containsAll` one way would let the shell emit
+     * a kind the Mac throws away; `containsAll` the other way would let a kind the Mac expects
+     * quietly stop being emitted, which is the failure that leaves a Control app drawing a
+     * tablet that looks healthy because the event that would have said otherwise was deleted.
+     */
+    @Test fun `the kinds this shell actually records are exactly the vocabulary`() {
+        val recorded = Regex("""record\(\s*"(pad_[a-z0-9_]+)"""")
+            .findAll(source("PadActivity.kt"))
+            .map { it.groupValues[1] }
+            .toSet()
+        assertEquals(
+            "every kind PadActivity records must be in the Mac's table, and every kind in the " +
+                "Mac's table must be recorded by PadActivity",
+            PadEventSpec.SPECS.keys,
+            recorded,
+        )
+    }
+
+    @Test fun `the duplicate and deleted event spellings appear nowhere in the shell`() {
+        val all = allSource()
+        for (gone in listOf(
+            "pad_foreground", "pad_background", "pad_state_changed", "pad_battery_changed",
+        )) {
+            assertFalse(
+                "$gone is a spelling CONTRACT 3 deletes; two spellings of one event put half " +
+                    "of a tablet's history under each",
+                Regex("""\"$gone\"""").containsMatchIn(all),
+            )
+        }
     }
 
     @Test fun `an SSL error is never proceeded past`() {

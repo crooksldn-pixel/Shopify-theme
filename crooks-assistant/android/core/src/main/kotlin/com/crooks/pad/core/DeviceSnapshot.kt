@@ -60,6 +60,20 @@ data class DeviceSnapshot(
     val msSinceResume: Long?,
     /** Which shell state the pad is in, so the page can tell a reload from a fresh start. */
     val padState: String,
+    /**
+     * The Mac's running observability session, straight off the last §16 heartbeat answer, or
+     * null when nothing is collecting.
+     *
+     * IT IS HERE SO THAT THE PAGE DOES NOT HAVE TO ASK. `POST /telemetry` keeps nothing unless
+     * a session is running, so web/telemetry.js has to know whether one is — and every pad
+     * polling `/health` on its own timer for a field the heartbeat was already fetching is a
+     * second clock, a second failure mode and real work on the Mac for an answer it just gave.
+     * Reading it here turns the page's telemetry on and off within one beat.
+     *
+     * It is not a secret and not an identifier: it is the name of a test session that the page
+     * already receives from `/health` today, and it changes whenever somebody starts one.
+     */
+    val testSession: String? = null,
 ) {
 
     /**
@@ -86,7 +100,8 @@ data class DeviceSnapshot(
         bool("foreground", foreground)
         bool("screen_on", screenOn)
         if (msSinceResume != null) num("ms_since_resume", msSinceResume) else nul("ms_since_resume")
-        str("pad_state", padState, last = true)
+        str("pad_state", padState)
+        if (testSession != null) str("test_session", testSession, last = true) else nul("test_session", last = true)
         append('}')
     }
 
@@ -103,8 +118,9 @@ data class DeviceSnapshot(
         append('"').append(key).append("\":").append(value).append(',')
     }
 
-    private fun StringBuilder.nul(key: String) {
-        append('"').append(key).append("\":null,")
+    private fun StringBuilder.nul(key: String, last: Boolean = false) {
+        append('"').append(key).append("\":null")
+        if (!last) append(',')
     }
 
     companion object {

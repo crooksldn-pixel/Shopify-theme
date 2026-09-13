@@ -46,7 +46,7 @@ class BackendProbe(private val origin: String) {
 
     /** Runs off the main thread; [onResult] is posted back by the caller's handler. */
     fun probe(onResult: (Result) -> Unit) {
-        executor.execute {
+        submit {
             val result = runCatching { probeBlocking() }.getOrElse { throwable ->
                 Result.Bad(Failure(ProbeFailure.UNREACHABLE, throwable.javaClass.simpleName, 0))
             }
@@ -54,33 +54,47 @@ class BackendProbe(private val origin: String) {
         }
     }
 
-    /** A one-off GET for the small extras: the test-session id from `/health`. Best-effort. */
-    fun get(path: String, onResult: (JSONObject?) -> Unit) {
-        executor.execute {
-            val body = runCatching { readJson(path, HEALTH_TIMEOUT_MS) }.getOrNull()
-            onResult(body)
-        }
-    }
-
-    fun post(path: String, body: String) {
-        executor.execute {
-            runCatching {
+    /**
+     * A POST whose ANSWER MATTERS. The §16 heartbeat's response carries the cadence for the
+     * next beat and the Mac's running test session, so unlike the old fire-and-forget telemetry
+     * post this one reads the body back and hands it to [onAnswer] — null when anything at all
+     * went wrong, which the caller must read as "no answer", never as "an empty answer".
+     *
+     * A failure is still never retried here. The next beat is the retry, and a shell that
+     * retried its own heartbeat would spend an outage talking about the outage.
+     */
+    fun post(path: String, body: String, onAnswer: (JSONObject?) -> Unit = {}) {
+        submit {
+            val answer = runCatching {
                 val connection = open(path, PROBE_TIMEOUT_MS)
-                connection.requestMethod = "POST"
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                connection.responseCode
-                connection.disconnect()
-            }
-            // Deliberately swallowed. Telemetry is an account of what happened, not a thing
-            // the pad waits on or reacts to; a shell that retried its own telemetry would
-            // spend an outage talking about the outage.
+                try {
+                    connection.requestMethod = "POST"
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    if (connection.responseCode != HttpURLConnection.HTTP_OK) null
+                    else JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                } finally {
+                    connection.disconnect()
+                }
+            }.getOrNull()
+            onAnswer(answer)
         }
     }
 
     fun shutdown() {
         executor.shutdownNow()
+    }
+
+    /**
+     * `execute` on a shut-down executor throws RejectedExecutionException, and the last thing
+     * this shell does on its way out — a final beat from onPause, or the admin Exit button — is
+     * exactly the moment that race is live. A crash there would put "CROOKS Pad has stopped" on
+     * a tablet whose only sin was being closed, so the submission is swallowed: nothing is
+     * waiting on it and the process is ending anyway.
+     */
+    private fun submit(work: () -> Unit) {
+        runCatching { executor.execute(work) }
     }
 
     private fun probeBlocking(): Result {
@@ -117,18 +131,6 @@ class BackendProbe(private val origin: String) {
         }
     }
 
-    private fun readJson(path: String, timeoutMs: Int): JSONObject? {
-        val connection = open(path, timeoutMs)
-        return try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) null
-            else JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-        } catch (e: Exception) {
-            null
-        } finally {
-            connection.disconnect()
-        }
-    }
-
     private fun open(path: String, timeoutMs: Int): HttpsURLConnection {
         // The origin has already been through the allow-list before this class is constructed,
         // so this cannot be pointed at http:// or at another host. The cast is safe for the
@@ -150,8 +152,5 @@ class BackendProbe(private val origin: String) {
          * sitting inside a fifteen-second socket timeout with a countdown that has run out.
          */
         const val PROBE_TIMEOUT_MS = 4_000
-
-        /** `/health` does real work on the Mac and is asked rarely, so it may take longer. */
-        const val HEALTH_TIMEOUT_MS = 10_000
     }
 }

@@ -113,5 +113,13 @@ data class DiagnosticsReport(
     val telemetryEmitted: Int,
     val telemetrySuppressed: Int,
     val telemetryRejected: Int,
+    /** Events waiting for the next §16 beat, and events the bounded queue had to drop. */
+    val telemetryQueued: Int,
+    val telemetryDropped: Int,
+    /** §16. How the appliance's own "I am here" is going, and whose number the cadence is. */
+    val heartbeatsSent: Long,
+    val heartbeatsAnswered: Long,
+    val heartbeatIntervalS: Int,
+    val heartbeatCadenceFromBackend: Boolean,
     val recentEvents: List<String>,
 )

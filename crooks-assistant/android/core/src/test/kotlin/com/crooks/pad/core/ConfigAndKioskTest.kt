@@ -283,6 +283,19 @@ class DeviceSnapshotTest {
         assertFalse("no raw newline may survive", json.contains("\n"))
     }
 
+    @Test fun `the snapshot carries the running test session, so the page need not poll health`() {
+        // CONTRACT 1: the heartbeat's answer carries the Mac's test session, and the page reads
+        // it from here. `POST /telemetry` keeps nothing unless a session is running, so the page
+        // has to know — and a second clock in the page asking /health for a field the beat just
+        // fetched is a second failure mode for no new information.
+        assertTrue(snapshot().copy(testSession = "session-2026-09-13").toJson()
+            .contains("\"test_session\":\"session-2026-09-13\""))
+        // Absent rather than omitted, like every other nullable field on this snapshot: a page
+        // reading `undefined` cannot tell "no session" from "old shell".
+        assertTrue(snapshot().toJson().contains("\"test_session\":null"))
+        assertFalse("no trailing comma", snapshot().toJson().contains(",}"))
+    }
+
     @Test fun `the snapshot carries nothing that identifies a person or a place`() {
         // §6.5 and invariant 10, held as a shape rather than as a promise: read the field
         // names of the encoded form and check that none of the forbidden ones is among them.

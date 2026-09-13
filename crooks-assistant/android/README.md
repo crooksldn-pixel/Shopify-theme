@@ -51,17 +51,39 @@ device. No screenshot of any native screen in this module exists. No button has 
 no microphone opened, no boot observed, no renderer crash seen, and the APK has never been
 installed.
 
-Two tests are worth knowing about because they check things people usually only assert:
+Four tests are worth knowing about because they check things people usually only assert:
 
-- **`PadTelemetryTest`** — `POST /telemetry` on the Mac silently drops any field not in its own
-  allow-list and answers 204 either way, so a pad can emit a perfectly good event and have the
-  one field that explained an outage thrown away at the door. The test holds every field of
-  every pad event against that vocabulary, so the build goes red here rather than the value
-  going quietly missing in production.
+- **`ConnectionMachineTest`, "a 502 is not a successful load, through the whole Chromium
+  callback sequence"** — replays the real order Chromium delivers for a main-frame 502:
+  `onPageStarted`, then `onReceivedHttpError`, **then `onPageFinished`**. That third callback is
+  the one an earlier version of this test never delivered, and it was the one through which a
+  reverse-proxy error page reached ONLINE while the owner's tablet showed a broken page. The
+  rule that a failed load is poisoned lives in `PageLoadGuard` in `:core`, where it can be run.
+- **`HeartbeatTest`, "the backend's interval_s becomes the cadence"** — the §16 heartbeat's
+  cadence is not a constant in this APK. The built-in number is used for the first beat and is
+  then replaced by whatever the Mac put on the answer, so a fleet's cadence can be changed
+  without a cable and a tablet in somebody's hand.
+- **`PadTelemetryTest`** — the Mac admits a fixed vocabulary of pad_* names and keeps only the
+  fields its table names, dropping the rest silently, so a pad can emit a perfectly good event
+  and have the one field that explained an outage thrown away at the door. The test holds the
+  set of kinds this shell can emit against a hand-written copy of that table, **for equality in
+  both directions**, and every field of every kind against the fields it keeps.
 - **`PadLayoutTest`** — parses `activity_pad.xml` and fails if any view above the WebView ships
   without `android:visibility="gone"`, or without an opaque background. That is Phase 4's
   63-taps-became-recordings defect, made unshippable in the one layer where JavaScript could
   not argue with it. It does **not** prove a button is tappable; only a finger can do that.
+
+## Where a pad_* event goes
+
+Not to `POST /telemetry`. That endpoint is the **web page's** account of itself and is silent
+unless a test session is running on the Mac, so an appliance whose liveness travelled on it
+would be invisible for almost all of its life. The pad posts `POST /pad/heartbeat` instead —
+`{app_version, device_model, os_version, at, boot_id, events?}` — and its queued events ride
+along. The answer carries `interval_s`, which is the cadence for the next beat, and
+`test_session`, which the pad hands to the page through the device bridge so that the page's own
+telemetry can be turned on and off within one beat instead of by a second clock polling
+`/health`. Everything else stays in a 200-event ring buffer on the tablet, which is the copy
+that still works when the Mac is the thing that is broken.
 
 ## Admin
 

@@ -54,12 +54,113 @@ class ConnectionMachineTest {
         assertTrue("the shell must remember that it assumed rather than confirmed", m.status.readinessAssumed)
     }
 
-    @Test fun `a 502 is not a successful load`() {
-        // §26: "app launched vs CROOKS loaded". onPageFinished fires for an error body too.
+    /**
+     * THE REPLAY. §26: "app launched vs CROOKS loaded".
+     *
+     * The old version of this test stopped one callback too early. It fed the machine
+     * `PageLoaded(HTTP_ERROR)` and asserted CROOKS_OS_UNHEALTHY — which the machine has always
+     * done correctly — and then stopped, because the ordering of Chromium's callbacks was not
+     * part of anything it modelled. Chromium does not stop there. For a main-frame 502 it fires
+     *
+     *     onPageStarted  ->  onReceivedHttpError(502)  ->  onPageFinished
+     *
+     * and the shell's `onPageFinished` path used to treat that third callback as the start of
+     * an ordinary successful load: arm the readiness probe, ask the 502's error body whether
+     * the CROOKS workspace is in it, get no for six seconds, take READY_ASSUMED — and reach
+     * ONLINE. A test that never delivers the third callback cannot see any of that, and this
+     * one delivers all three, in the order the tablet delivers them.
+     *
+     * The only thing this test does that the shell does not is the three-line `when` below,
+     * which maps a [LoadDecision] onto the machine. PadActivity has the same three lines, and
+     * PadHardeningTest reads its source to check that it still does.
+     */
+    @Test fun `a 502 is not a successful load, through the whole Chromium callback sequence`() {
         val m = machine()
+        val guard = PageLoadGuard()
         m.on(Event.ProbeSucceeded("abc", 5000.0), 1_000)
+
+        // loadWorkspace()
+        guard.shellStartedLoad()
+        // onPageStarted
+        m.on(Event.PageLoadStarted, 1_500)
+
+        // onReceivedHttpError(502) on the main frame.
+        val failure = guard.mainFrameFailed(PageOutcome.HTTP_ERROR)
+        assertEquals(LoadDecision.Settle(PageOutcome.HTTP_ERROR), failure)
         m.on(Event.PageLoaded(PageOutcome.HTTP_ERROR), 2_000)
         assertEquals(PadState.CROOKS_OS_UNHEALTHY, m.status.state)
+
+        // onPageFinished — fired by Chromium for the 502's error body exactly as for the real
+        // page. THIS is the callback the old test never delivered.
+        assertEquals(
+            "a load that has already reported a main-frame failure must be poisoned: " +
+                "onPageFinished must not be able to re-arm the readiness probe for it",
+            LoadDecision.Ignore,
+            guard.pageFinished(fromTrustedOrigin = true),
+        )
+
+        // And if the readiness probe is asked anyway, six seconds of a 502 body that does not
+        // contain the CROOKS marker must not become READY_ASSUMED.
+        assertEquals(
+            LoadDecision.Ignore,
+            guard.readinessAnswered(crooksIsThere = false, deadlinePassed = true),
+        )
+
+        // The pad is still telling the truth about the tablet in the owner's hands.
+        assertEquals(PadState.CROOKS_OS_UNHEALTHY, m.status.state)
+        assertFalse("a 502 must never leave the pad claiming to be showing the workspace", m.status.state.showsWorkspace)
+    }
+
+    @Test fun `the poison is scoped to the load, so the next load can still recover`() {
+        // The other half of the fix. Poisoning the WebView for ever would turn one bad gateway
+        // into a pad that never comes back until somebody restarts it by hand — a worse bug
+        // than the one being fixed, and the one that a careless version of this fix produces.
+        val m = machine()
+        val guard = PageLoadGuard()
+
+        guard.shellStartedLoad()
+        m.on(Event.PageLoadStarted, 1_000)
+        guard.mainFrameFailed(PageOutcome.HTTP_ERROR)
+        m.on(Event.PageLoaded(PageOutcome.HTTP_ERROR), 1_100)
+        guard.pageFinished(fromTrustedOrigin = true)
+        assertEquals(PadState.CROOKS_OS_UNHEALTHY, m.status.state)
+
+        // The Mac comes back, the shell loads the workspace again, and the page is really there.
+        guard.shellStartedLoad()
+        m.on(Event.PageLoadStarted, 30_000)
+        assertEquals(LoadDecision.AskWhetherCrooksIsThere, guard.pageFinished(fromTrustedOrigin = true))
+        assertEquals(
+            LoadDecision.Settle(PageOutcome.READY_CONFIRMED),
+            guard.readinessAnswered(crooksIsThere = true, deadlinePassed = false),
+        )
+        m.on(Event.PageLoaded(PageOutcome.READY_CONFIRMED), 31_000)
+        assertEquals(PadState.ONLINE, m.status.state)
+        assertFalse("a recovered load is confirmed, not assumed", m.status.readinessAssumed)
+    }
+
+    @Test fun `a transport failure that arrives while the readiness probe is running still poisons`() {
+        // The reverse ordering. Chromium is not contractually obliged to deliver the error
+        // before onPageFinished, and on a slow tailnet an ERR_CONNECTION_RESET for the main
+        // frame can land while the shell is already polling the document. The load is poisoned
+        // either way, so the poll cannot promote it afterwards.
+        val guard = PageLoadGuard()
+        guard.shellStartedLoad()
+        assertEquals(LoadDecision.AskWhetherCrooksIsThere, guard.pageFinished(fromTrustedOrigin = true))
+        assertEquals(LoadDecision.AskAgainShortly, guard.readinessAnswered(crooksIsThere = false, deadlinePassed = false))
+
+        guard.mainFrameFailed(PageOutcome.TRANSPORT_ERROR)
+
+        assertEquals(
+            "the readiness poll must not outlive the failure of the load it is polling",
+            LoadDecision.Ignore,
+            guard.readinessAnswered(crooksIsThere = false, deadlinePassed = true),
+        )
+    }
+
+    @Test fun `a page that finishes on an untrusted origin is never asked about readiness`() {
+        val guard = PageLoadGuard()
+        guard.shellStartedLoad()
+        assertEquals(LoadDecision.Ignore, guard.pageFinished(fromTrustedOrigin = false))
     }
 
     @Test fun `no network beats no Mac, because the thing to go and touch is different`() {

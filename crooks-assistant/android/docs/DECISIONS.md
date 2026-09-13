@@ -260,6 +260,70 @@ appears nowhere in the source and `PadHardeningTest` checks that it stays that w
 
 ---
 
+## A failed load poisons the load, not the WebView
+
+Chromium does not stop at the error callback. For a main-frame 502 it fires `onPageStarted`,
+then `onReceivedHttpError(502)`, **then `onPageFinished`** — the same `onPageFinished` it fires
+for a real page, because from the WebView's point of view a 502 is a document that arrived and
+parsed. The shell recorded the error, settled the connection at CROOKS OS UNHEALTHY, and then
+one callback later treated the page as a fresh successful load: it armed the readiness probe,
+asked the 502's error body whether the CROOKS workspace was in it, got no for six seconds, and
+took READY_ASSUMED — which reaches ONLINE. The owner's tablet showed a reverse-proxy error page
+while the Mac said the pad was fine. That is §26's lie in its purest form.
+
+**The fork.** The obvious fix is a boolean on the WebView: "this WebView has failed, stop
+believing it". That is worse than the bug. One bad gateway during a Mac restart would leave a
+pad that never comes back until somebody power-cycles it, and an appliance that needs a manual
+recovery from a transient error is not an appliance.
+
+**What was done instead.** `PageLoadGuard` in `:core` numbers each load the shell starts and
+poisons *that number*. `onPageFinished` for a poisoned load is ignored; so is a readiness answer
+that arrives for one, which also covers the reverse ordering, where the error lands while the
+poll is already running. `shellStartedLoad()` — and nothing else — lifts the poison, so the
+ordinary recovery path (probe succeeds, `loadWorkspace()`, page loads cleanly) reaches ONLINE
+exactly as before. `onPageStarted` deliberately does **not** lift it: Chromium fires that for
+the error page it substitutes after a failed navigation, so treating it as "a fresh load has
+begun" would hand the poison straight back to the sequence that created it.
+
+The rule lives in `:core` because a rule about a WebView callback that lives in an Activity is a
+rule this build machine cannot run — which is exactly how the defect survived review the first
+time. `ConnectionMachineTest` now replays all three callbacks in Chromium's order, and
+`PadHardeningTest` reads `PadActivity.kt` to check that the Activity still asks rather than
+deciding for itself.
+
+---
+
+## The heartbeat's cadence belongs to the Mac, not to the APK
+
+§16 asks the pad to say "I am here". The question was where, and how often.
+
+**Where.** Not `POST /telemetry`. That endpoint is the **web page's** account of itself and
+drops everything unless a test session is running on the Mac — by design, in
+`app/routes/observe.py`, which is inside Phase 6's non-regression boundary and cannot be bent to
+suit the pad. A pad whose liveness travelled on it would be invisible for the ninety-nine
+percent of its life when no session is running. So the pad posts `POST /pad/heartbeat`, and its
+pad_* events ride along with it.
+
+**How often.** The tempting answer is a constant: `const val BEAT_MS = 20_000`. On this product
+that constant is unreachable. The pad is sideloaded onto one tablet in a shop; changing the
+number means a build, a cable and somebody's afternoon. So the cadence is read from the
+response's `interval_s` on **every** beat, and the built-in default is used for the first beat
+and for nothing else. The Mac can quieten a pad or speed it up while somebody is watching the
+Control app, and the tablet needs no attention at all.
+
+The only judgement the shell keeps is a pair of rails — five seconds to an hour — because a
+backend bug that answered `interval_s: 0` should not turn an appliance into a packet storm, and
+one that answered `interval_s: 86400` should not turn it into a tablet nobody hears from. Both
+bounds are far outside any cadence anybody would choose on purpose, and
+`PadHardeningTest` fails the build if a constant with `BEAT` or `HEARTBEAT` in its name
+reappears in the Android module.
+
+The answer also carries `test_session`, which the pad puts on the device-bridge snapshot. That
+is how the page's own telemetry is turned on and off within one beat, instead of every pad
+running a second clock that polls `/health` for a field the beat had already fetched.
+
+---
+
 ## What this build machine could NOT verify
 
 There is no `/dev/kvm` on the build machine, so there is **no emulator**, and no SM-T290 is
@@ -286,6 +350,13 @@ attached, so there is **no device**. That means:
   for API 30 on this machine. Neither has been installed, launched, or run for one second.
 - **The release APK is unsigned.** There is no signing key in this repository and there should
   not be one.
+- **No heartbeat has ever reached a Mac.** `POST /pad/heartbeat` is implemented, its body and
+  its cadence rule are unit-tested in `:core`, and the Android side is a single `probe.post`
+  call. No beat has been sent over a network, no `interval_s` has been received from a running
+  backend, and the endpoint itself belongs to another workstream. The seam — that `at` is epoch
+  **milliseconds** and the Mac's `clock_skew_s` is in seconds, and that `test_session` is read
+  at the TOP LEVEL of the response rather than nested under `observability` — is asserted on
+  this side and has not been shaken hands on with the other.
 
 The APK building is a real result and is reported as one. Everything in the list above is not,
 and the physical checks belong in whoever owns the on-device scripts for this phase.
