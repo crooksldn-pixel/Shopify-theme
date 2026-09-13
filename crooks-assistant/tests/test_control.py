@@ -1801,10 +1801,23 @@ def test_the_app_and_this_side_agree_on_the_document_version():
 def test_the_app_no_longer_gates_on_the_version_being_equal():
     """The other half of what made version 2 unusable: `answer.contract == Contract.expected`
     refuses anything but one number, so an additive version bump breaks every install until
-    every app is rebuilt. A range is what makes a version additive at all."""
-    source = swift_sources()
-    assert "== Contract.expected" not in source and "static let expected" not in source, \
-        "the app still compares the document version for equality against a single number"
+    every app is rebuilt. A range is what makes a version additive at all.
+
+    SCOPED TO THE CONTRACT, deliberately. The first version of this test forbade the substring
+    `static let expected` anywhere in the Swift sources, and that is a word, not an identifier:
+    `ActionsDocument.expected` is the list of action ids whose ABSENCE the app reports, which is
+    invariant 12's machinery and has nothing to do with document versions. The broad form went
+    red against correct code the moment the two workstreams met. A gate that fires on unrelated
+    English teaches its owner to override it, and an overridden gate protects nothing.
+    """
+    contract = (SWIFT_DIR / "Sources" / "CrooksControlCore" / "Contract.swift").read_text(encoding="utf-8")
+    assert "static let expected" not in contract, \
+        "the contract declares a single `expected` version again instead of a readable range"
+    assert "== Contract.expected" not in swift_sources(), \
+        "something still compares the document version for equality against a single number"
+    # And the positive half: the check has to actually consult the range, or `readable` is a
+    # declaration the code never reads — which is how invariant 12 ended up decorative.
+    assert "canRead(" in contract, "the contract no longer asks whether a version is readable"
 
 
 # ----------------------------------------------------- the one git command that moves

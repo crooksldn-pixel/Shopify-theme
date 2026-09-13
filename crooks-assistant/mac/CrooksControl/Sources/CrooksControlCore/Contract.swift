@@ -6,7 +6,25 @@ import Foundation
 
 public enum Contract {
     /// The document version this build of the app understands. `CONTRACT` in control.py.
-    public static let understood = 1
+    public static let understood = 2
+
+    /// Every version this build can actually decode — NOT just the current one.
+    ///
+    /// The first version of this checked `version == understood`, and that is a deadlock with a
+    /// fuse on it. The control script grows additively: a workstream adds a field, bumps the
+    /// number, and every installed copy of this app refuses every document until each one has
+    /// been rebuilt. It happened here, for a day, between one workstream bumping CONTRACT to 2
+    /// and this side still declaring 1 — the app would have drawn nothing but a version error
+    /// against a perfectly healthy Mac.
+    ///
+    /// So the app declares a RANGE. `understood` is what it is built against and what the
+    /// parity test holds to control.py's CONTRACT exactly; `readable` is what it will accept,
+    /// and control.py's COMPATIBLE_CLIENTS promises to keep printing something each of these
+    /// can read.
+    public static let readable: Set<Int> = [1, 2]
+
+    /// Can this build decode a document stamped with this version?
+    public static func canRead(_ version: Int) -> Bool { readable.contains(version) }
 
     /// One decoder for every document. The Python side writes snake_case; this side reads
     /// camelCase, and the strategy does the conversion rather than a `CodingKeys` block per
@@ -30,8 +48,10 @@ public enum Contract {
         guard let probe = try? decoder.decode(Probe.self, from: data), let version = probe.contract else {
             return .notADocument
         }
-        if version == understood { return .understood }
-        return version > understood ? .scriptIsNewer(version) : .scriptIsOlder(version)
+        if canRead(version) { return .understood }
+        // Outside the range, and which way matters: a script AHEAD of everything this build can
+        // read is fixed by rebuilding the app; one BEHIND is fixed by updating the folder.
+        return version > (readable.max() ?? understood) ? .scriptIsNewer(version) : .scriptIsOlder(version)
     }
 }
 
