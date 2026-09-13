@@ -79,7 +79,7 @@ public enum DashboardBuilder {
 
         return Dashboard(
             lifecycle: phase,
-            headline: "CROOKS OS IS " + phase.word,
+            headline: phase.headline,
             explanation: Redaction.scrub(input.machine.explanation),
             accent: accent,
             services: serviceTiles(status),

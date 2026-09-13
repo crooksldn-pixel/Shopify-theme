@@ -159,6 +159,65 @@ final class LifecycleTests: XCTestCase {
         XCTAssertEqual(machine.phase, .online)
     }
 
+    // MARK: - An error that explains itself does not get quietly overwritten
+
+    func testAFailedStartStaysOnScreenInsteadOfTurningBackIntoAPlainOffline() throws {
+        // Press START, watch it fail, and fifteen seconds later the poll comes back saying the
+        // same thing the error already said: it is not running. Letting that overwrite the
+        // error leaves the owner looking at OFFLINE with no idea why, so he presses START
+        // again, and again.
+        var machine = LifecycleMachine()
+        machine.intend(.start, at: at(0))
+        machine.commandFinished(.start, failure: .exited(code: 1, stderr: "Permission denied"), at: at(2))
+        XCTAssertEqual(machine.phase, .error)
+        let said = machine.explanation
+
+        for second in [17.0, 32.0, 47.0] {
+            machine.observe(.status(try status(Fixture.offlineStatus)), at: at(second))
+            XCTAssertEqual(machine.phase, .error, "still an error at \(second)s")
+            XCTAssertEqual(machine.explanation, said, "and still saying why")
+        }
+
+        // It clears the moment something actually changes.
+        machine.observe(.status(try status(Fixture.onlineStatus)), at: at(60))
+        XCTAssertEqual(machine.phase, .online)
+        XCTAssertNil(machine.fault)
+    }
+
+    func testPressingStartAgainClearsTheError() throws {
+        var machine = LifecycleMachine()
+        machine.intend(.start, at: at(0))
+        machine.commandFinished(.start, failure: .noPython(path: "/x/.venv/bin/python"), at: at(1))
+        XCTAssertEqual(machine.phase, .error)
+        machine.intend(.start, at: at(30))
+        XCTAssertEqual(machine.phase, .starting, "the owner acted; the old failure is not the news")
+        XCTAssertNil(machine.fault)
+    }
+
+    func testAnUnreachableScriptClearsAsSoonAsAnyDocumentComesBack() throws {
+        // The other kind of error, and it must NOT be sticky: the problem was reaching CROOKS
+        // OS, and a document coming back is proof that it is over — even a document that says
+        // CROOKS OS is off.
+        var machine = LifecycleMachine()
+        machine.observe(.unreadable(.noCheckout), at: at(0))
+        XCTAssertEqual(machine.phase, .error)
+        XCTAssertEqual(machine.fault, .unreachable)
+        machine.observe(.status(try status(Fixture.offlineStatus)), at: at(15))
+        XCTAssertEqual(machine.phase, .offline)
+        XCTAssertNil(machine.fault)
+    }
+
+    func testAStartThatTimedOutIsAlsoStickyAndDoesNotFlickerToOffline() throws {
+        var machine = LifecycleMachine()
+        machine.intend(.start, at: at(0))
+        machine.observe(.status(try status(Fixture.offlineStatus)), at: at(130))
+        XCTAssertEqual(machine.phase, .error)
+        XCTAssertEqual(machine.fault, .didNotMove)
+        machine.observe(.status(try status(Fixture.offlineStatus)), at: at(145))
+        XCTAssertEqual(machine.phase, .error)
+        XCTAssertTrue(machine.explanation.contains("did not come up"), machine.explanation)
+    }
+
     // MARK: - The script itself failing is not the same as CROOKS OS being off
 
     func testAnUnreachableControlScriptIsAnErrorNotAnOffline() {

@@ -49,6 +49,20 @@ final class DashboardTests: XCTestCase {
                        "degraded is still running; the sentence under it carries the bad news")
     }
 
+    func testEveryHeadlineIsASentenceAndNotATemplateWithAWordDroppedIntoIt() {
+        // "CROOKS OS IS " + the state's word gives "CROOKS OS IS ERROR", which is the sort of
+        // thing that tells a man exactly what kind of software he is looking at.
+        for phase in Lifecycle.allCases {
+            let headline = phase.headline
+            XCTAssertFalse(headline.hasSuffix(" IS ERROR"), headline)
+            XCTAssertFalse(headline.hasSuffix(" IS CHECKING"), headline)
+            XCTAssertFalse(headline.isEmpty)
+            XCTAssertEqual(headline, headline.uppercased(), "the headline is set in caps: \(headline)")
+        }
+        XCTAssertEqual(Lifecycle.error.headline, "CROOKS OS HAS A PROBLEM")
+        XCTAssertEqual(Lifecycle.error.word, "ERROR", "the badge is still one word")
+    }
+
     func testTheColourFollowsTheSameOrderTheControlScriptUses() throws {
         XCTAssertEqual(try build(Fixture.onlineStatus).accent, .online)
         XCTAssertEqual(try build(Fixture.degradedStatus).accent, .caution)
