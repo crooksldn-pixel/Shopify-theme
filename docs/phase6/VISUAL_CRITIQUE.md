@@ -159,3 +159,72 @@ one surface it could see, everything that needs a finger rather than a rectangle
 browser at 601×889 measures geometry. It does not measure whether a control is reachable by a
 thumb on a tablet held one-handed, whether the dock is under a navigation bar, or whether a tap
 lands where the owner meant it to.
+
+---
+
+# Two things found by looking at the pictures rather than the pass/fail
+
+Both were invisible to every check that exists, both were found by opening the PNGs, and the
+second is the more serious.
+
+## 5. Phase 5's screenshot evidence is stale by 104 commits
+
+Phase 5's last capture recorded **"the same 6 MISSING, 46 files"**, stable across two runs. Two
+runs here, on a tree whose `web/` is byte-identical to `e43aecd`, both report **4**.
+
+Not flakiness — both of my runs agree with each other exactly, as both of Phase 5's did. The
+two that changed are `10-full-customer-rich-workspace` and `16-returning-customers-result`, and
+the reason is simply that **104 commits landed after that capture and the capture was never
+re-run** — among them `087725f Merge branch 'p5/surfaces' (a count is not seven profiles)`,
+which is the fix for shot 16 precisely.
+
+So Phase 5 shipped, as delivered evidence, two `…MISSING.png` placeholders naming workstreams C
+and D as owing surfaces that its own later commits had already built. Shot 16 renders
+**"Returning customers today · 2"** — a compact summary with two rows, which is exactly the
+answer that fix was for.
+
+This qualifies the praise in finding 4. The `…MISSING.png` convention is still the right
+pattern, but it is worth stating the obvious thing that was not stated: **a committed capture is
+a measurement with a date on it.** A directory listing that "is itself the report" is a report
+about whenever it was last run, and nothing in the repository says when that was or fails when
+it drifts. §33's rule — *do not quote test numbers from an older tree* — applies to pictures.
+
+Phase 5's committed screenshots are **left untouched**, as §3 requires; the four PNGs above are
+kept in `evidence/screens/` as Phase 6's own capture, not as a replacement for Phase 5's.
+
+## 6. The dock's answer lands where the owner cannot see it
+
+This is the one to act on.
+
+| shot | check | orb line | what is actually on the screen |
+|---|---|---|---|
+| `14-sales-overview` | **passes** | "Last 7 days: £268.00, 4 orders, £67.00 average…" — correct | **Mia Jones's customer workspace**, left from shot 10 |
+| `15-products-overview` | **passes** | "Best seller this month: Convict Hoodie, 4 units…" — correct | **Mia Jones's customer workspace**, still |
+| `16-returning-customers` | **passes** | best-seller line, *stale* | the returning-customers summary, correct |
+
+Shots 14 and 15 tap `SALES` and `PRODUCTS` in the dock. In both, the dock tab highlights, the
+spoken line is replaced with the right answer — and the card above the fold is a customer
+profile from two interactions ago.
+
+The checks pass because they are written as *"is a surface of one of these types on the
+glass"*. A sales surface **is** on the glass. It is simply not where the owner is looking. So:
+
+> **The check asserts the answer EXISTS. It does not assert the owner can SEE it.**
+
+That is §26's sentence with a picture attached, and it is the reason this phase was asked to
+open the files rather than read the tally.
+
+What it means on the tablet: the owner taps SALES, the line tells him the week's takings, and
+the screen still shows the customer he was reading about. He has to scroll to find what he
+asked for, on a device with no scrollbar, at arm's length, mid-job.
+
+**What I have not measured:** whether the page scrolls to the new card a moment after the
+screenshot. I think not — shot 15 is a whole separate interaction after 14 and shows the same
+stale card — but one frame cannot prove it, and I am not going to claim a timing I did not
+time. The measurement is: tap a dock destination, and record how long until the answer is the
+top thing on screen, if ever.
+
+**Owner and scope.** The web presentation layer, and §4 forbids rewriting it in this pass, so it
+is not fixed here. The smallest honest fix is that a new answer becomes the top of the
+workspace, and the smallest honest *test* fix is that these checks assert the surface is within
+the viewport rather than within the document — which would have caught this three phases ago.
