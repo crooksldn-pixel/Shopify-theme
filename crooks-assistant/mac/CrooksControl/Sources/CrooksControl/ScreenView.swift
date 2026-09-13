@@ -107,9 +107,11 @@ struct ScreenView: View {
                     .padding(.bottom, 9)
             }
             Text(screen.word)
-                .font(.system(size: screen.wordIsFigure ? 46 : 38,
-                              weight: .semibold, design: .default))
-                .monospacedDigit()
+                // Tabular figures come off the FONT, not from a `.monospacedDigit()` modifier
+                // chained after it: that one returns a view, and `.tracking` is a Text method, so
+                // the two cannot sit in the same chain. SF Pro's own numerals are fixed-width and
+                // better drawn than any monospaced face would be here.
+                .font(wordFont)
                 .tracking(screen.wordIsFigure ? -0.9 : -1.1)
                 .foregroundStyle(screen.attention == .failure ? Signal.bad : Ink.primary)
                 .lineLimit(1).minimumScaleFactor(0.7)
@@ -129,6 +131,11 @@ struct ScreenView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20).padding(.top, 26)
+    }
+
+    private var wordFont: Font {
+        let face = Font.system(size: screen.wordIsFigure ? 46 : 38, weight: .semibold)
+        return screen.wordIsFigure ? face.monospacedDigit() : face
     }
 
     // MARK: - The middle: at most the tablet, or what is in flight
