@@ -229,7 +229,11 @@ def checks_of(health: dict) -> dict[str, dict]:
 def test_session_of(health: dict) -> dict:
     observed = health.get("observability") if isinstance(health.get("observability"), dict) else {}
     ident = observed.get("test_session")
-    return {"active": bool(ident), "id": str(ident or ""), "name": str(observed.get("name") or "")}
+    started = observed.get("started_at")
+    return {"active": bool(ident), "id": str(ident or ""), "name": str(observed.get("name") or ""),
+            # Epoch SECONDS, like every other instant this layer prints — and unlike the pad's
+            # `at`, which is milliseconds and says so. The Mac shows a clock off this.
+            "started_at": float(started) if isinstance(started, (int, float)) and not isinstance(started, bool) else None}
 
 
 def essentials_down(health: dict | None) -> list[str]:
@@ -262,6 +266,45 @@ def _recorded_how(recorded_by: str | None) -> str:
     if stamp.endswith("mark-good"):
         return " by hand"
     return ""
+
+
+# What a check's detail says when the thing behind it is a stand-in rather than the real store,
+# the real inbox or the real model. Read from what the backend already prints; nothing new had
+# to be invented on the wire for this.
+_FIXTURE_WORDS = ("fixture", "stub", "sample data", "offline mode")
+
+
+def environment_of(health: dict | None) -> dict:
+    """Which environment this Mac is, and what stands in for what.
+
+    §10 exists because of this distinction and it is not cosmetic. There are five things a
+    subsystem can be, not two:
+
+        healthy · unhealthy · intentionally disconnected · not configured · not required here
+
+    A development Mac with a fixture Shopify is the third of those. Every essential is doing
+    exactly what it is supposed to do, so the appliance is READY — and a control panel that
+    shouts DEGRADED at a correctly-configured development machine has taught its owner, in one
+    move, that its loudest word means nothing. The environment is named instead, quietly, beside
+    the word rather than in place of it.
+
+    Derived rather than declared, so it cannot drift: the backend already prints "fixture
+    backend" in the detail of any check that is one. An explicit `environment` in /health wins
+    where a build states it.
+    """
+    if not health:
+        return {"name": "", "detail": "", "fixtures": []}
+    stated = str(health.get("environment") or "").strip().lower()
+    checks = checks_of(health)
+    fixtures = sorted(name for name, check in checks.items()
+                      if any(word in str(check.get("detail") or "").lower() for word in _FIXTURE_WORDS))
+    name = stated or ("development" if fixtures else "")
+    if not name:
+        return {"name": "", "detail": "", "fixtures": []}
+    # One stand-in is worth naming; several is just "the backend". The full list is in the
+    # document either way, for System Details to show.
+    detail = "" if not fixtures else (f"Fixture {fixtures[0]}" if len(fixtures) == 1 else "Fixture backend")
+    return {"name": name, "detail": detail, "fixtures": fixtures}
 
 
 def essentials_not_proven(health: dict | None) -> list[str]:
@@ -533,7 +576,7 @@ def roll_up(health: dict | None, *, tablet_host: str | None, session: dict, muta
     if session.get("active"):
         return {
             "state": "BLUE", "headline": "CROOKS — Testing",
-            "why": f"recording {session.get('id') or 'a test session'} — crooks-watch follows it",
+            "why": f"recording {session.get('id') or 'a test session'}",
             "issues": [], "degraded": down,
         }
     degraded = list(down)
@@ -547,28 +590,62 @@ def roll_up(health: dict | None, *, tablet_host: str | None, session: dict, muta
     pad_gone = bool(pad.get("known")) and pad.get("alive") is False
     if pad_gone:
         degraded.append("tablet")
+    # AND THE TABLET THAT IS THERE AND BLANK. Fixing the pad ROW was not enough: the row went
+    # red while this function, which decides the one colour the whole appliance is drawn in,
+    # still answered GREEN — because every input it looked at was about the Mac, and the Mac was
+    # perfectly well. What the owner is standing in front of is a tablet showing a white
+    # rectangle, and "everything answering, changes ready, tablet routed" is true and useless.
+    #
+    # AMBER and not RED, deliberately: CROOKS OS is working, and it is the surface on the
+    # tablet that is not. Red here would put the appliance's most serious colour on something
+    # the Mac can often fix by itself on the next load.
+    pad_blank = (bool(pad.get("known")) and pad.get("alive") is True
+                 and pad.get("showing_crooks") is False
+                 and str(pad.get("webview") or "") in ("error", "crashed"))
+    if pad_blank:
+        degraded.append("tablet screen")
     if degraded:
         read_only = mutation.get("state") in ("read_only", "blocked")
         return {
             "state": "AMBER",
             "headline": "CROOKS — Read only" if read_only and len(degraded) == 1 else "CROOKS — Degraded",
             "why": _sentence_for(checks, down, mutation=mutation if mutation.get("state") != "ready" else None,
-                                 tablet=not tablet_host, pad=pad if pad_gone else None),
+                                 tablet=not tablet_host, pad=pad if pad_gone else None,
+                                 blank=pad if pad_blank else None),
             "issues": [], "degraded": degraded,
         }
     return {"state": "GREEN", "headline": "CROOKS — Online", "why": "everything answering, changes ready, tablet routed",
             "issues": [], "degraded": []}
 
 
+# What each subsystem is CALLED on the owner's screen. `shopify` is a service; "the store" is the
+# thing he owns. A sentence reading "shopify: the store said 401" is half-translated — it names
+# the vendor, the transport and the status code, and none of those is what has gone wrong from
+# where he is standing.
+SERVICE_NAMES = {
+    "shopify": "The store", "gmail": "Email", "claude": "The assistant's model",
+    "speech": "Hearing", "tts": "The voice", "whisper": "Hearing (on this Mac)",
+    "knowledge_base": "The knowledge base", "terminology": "The word list",
+    "writes": "Making changes",
+}
+
+
+def service_name(key: str) -> str:
+    return SERVICE_NAMES.get(key, key.replace("_", " ").capitalize())
+
+
 def _sentence_for(checks: dict[str, dict], down: list[str], *, mutation: dict | None = None, tablet: bool = False,
-                  pad: dict | None = None) -> str:
-    parts = [f"{name}: {str(checks.get(name, {}).get('detail') or 'down')[:80]}" for name in down]
+                  pad: dict | None = None, blank: dict | None = None) -> str:
+    parts = [f"{service_name(name)} is not working — {str(checks.get(name, {}).get('detail') or 'no detail given')[:80]}"
+             for name in down]
     if mutation is not None:
         parts.append(str(mutation.get("detail") or "changes are off"))
     if tablet:
         parts.append("Tailscale is not serving the tablet's address")
     if pad is not None:
         parts.append(f"CROOKS Pad {str(pad.get('detail') or 'has not been heard from')}")
+    if blank is not None:
+        parts.append("CROOKS Pad is connected but CROOKS is not on its screen")
     return " · ".join(parts) or "everything answering"
 
 
@@ -813,6 +890,7 @@ def status_document(*, fresh: bool = False) -> dict:
     session = test_session_of(health or {})
     mutation = mutation_readiness(health or {})
     pad = pad_status(health)
+    environment = environment_of(health)
     build = current_build(health)
     good = read_known_good()
     # The lifecycle is asked even when /health answers, because "it is running" and "it is
@@ -832,7 +910,7 @@ def status_document(*, fresh: bool = False) -> dict:
                "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"},
         tablet={"host": tablet[0] or "", "url": f"https://{tablet[0]}/" if tablet[0] else "", "note": tablet[1],
                 "local": f"http://127.0.0.1:{the_port}/"},
-        pad=pad, lifecycle=life,
+        pad=pad, environment=environment, lifecycle=life,
         test_session=session, mutation=mutation,
         local_work={"dirty": dirty, "blocking": update_module().blocking_changes(dirty), "stops": bool(update_module().blocking_changes(dirty))},
         rollback=rollback_decision(current=build, good=good, blocking=update_module().blocking_changes(dirty)),
@@ -1287,6 +1365,9 @@ def contract_document() -> dict:
             "rows": "[{key,label,state:ok|off|bad,value,detail}] in the order the app draws them",
             "build": "{current:{sha,short,branch,detached,subject,build,version}, candidate:null, last_known_good, note}",
             "tablet": "{host,url,note,local} — the ROUTE, which is the door being open",
+            "environment": "{name,detail,fixtures[]} — development, or '' for the real thing. A fixture standing in "
+                           "for the real store is INTENTIONALLY DISCONNECTED and not a fault: the appliance is READY "
+                           "and this is named beside the word, never instead of it",
             "pad": "{known,alive,age_s,app,version,build,source,detail,showing_crooks,webview} — the TABLET, which is "
                    "whether anybody came through it. known:false means this build does not report a heartbeat, and is "
                    "never drawn as absence. showing_crooks is the pad's own answer to whether CROOKS is on the screen, "
@@ -1296,7 +1377,9 @@ def contract_document() -> dict:
                          "login service, running in a window, starting, stuck, stopped or never installed. Closing the "
                          "app's window changes none of it, and nothing here is read from the app",
             "mutation": "the capability families' verdict, from /health",
-            "test_session": "{active,id,name}", "local_work": "{dirty[],blocking[],stops}",
+            "test_session": "{active,id,name,started_at} — started_at is epoch SECONDS, and is what the running "
+                        "clock on the Mac counts from",
+        "local_work": "{dirty[],blocking[],stops}",
             "rollback": "{available,safe,sha,short,recorded_at,build,reason,commands,note}", "port": "the loopback port",
         },
         "start": lifecycle_fields, "stop": lifecycle_fields, "restart": lifecycle_fields,

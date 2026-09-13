@@ -68,6 +68,10 @@ public struct StatusDocument: Decodable, Equatable {
     // for why a Tailscale route is not evidence that a tablet is connected.
     public let service: ServiceReport?
     public let pad: PadReport?
+    /// Which machine this is. Absent on an older script, which reads as the real thing — the
+    /// right way round, because an unseen environment chip costs nothing and a wrongly-shown one
+    /// tells the owner his shop Mac is a development box.
+    public let environment: Environment
 
     /// Seconds the backend has been up, when the document says so as a number. The `online`
     /// row's detail carries it as prose ("up 4m · 2 session(s)") and that prose is shown as
@@ -156,27 +160,68 @@ public struct StatusDocument: Decodable, Equatable {
         public let active: Bool
         public let id: String
         public let name: String
+        /// When it began, as epoch SECONDS — and seconds is stated because the pad's `at` on the
+        /// same appliance is milliseconds, which is the one unit confusion that has already cost
+        /// this project a 56,642-year clock. nil on a build too old to send it, which costs the
+        /// clock and nothing else.
+        public let startedAt: Double?
 
-        public init(active: Bool = false, id: String = "", name: String = "") {
+        public init(active: Bool = false, id: String = "", name: String = "", startedAt: Double? = nil) {
             self.active = active
             self.id = id
             self.name = name
+            self.startedAt = startedAt
         }
 
-        enum CodingKeys: String, CodingKey { case active, id, name }
+        enum CodingKeys: String, CodingKey { case active, id, name, startedAt }
 
         public init(from decoder: Decoder) throws {
             let box = try decoder.container(keyedBy: CodingKeys.self)
             active = box.value(.active, or: false)
             id = box.value(.id, or: "")
             name = box.value(.name, or: "")
+            startedAt = box.maybe(.startedAt)
+        }
+
+        /// How long it has been running. nil when nothing is running, or when the script is too
+        /// old to say — and "too old to say" must not draw as 00:00, which is a lie about a test
+        /// that may have been going for an hour.
+        public func elapsed(now: Date) -> TimeInterval? {
+            guard active, let startedAt, startedAt > 0 else { return nil }
+            return max(0, now.timeIntervalSince1970 - startedAt)
+        }
+    }
+
+    /// WHICH MACHINE THIS IS. §10: a development Mac whose Shopify is a fixture is
+    /// INTENTIONALLY DISCONNECTED, not broken, and the difference has to survive to the screen.
+    /// Empty `name` means the real thing, where there is nothing to say and nothing is said.
+    public struct Environment: Decodable, Equatable {
+        public let name: String
+        public let detail: String
+        public let fixtures: [String]
+
+        public init(name: String = "", detail: String = "", fixtures: [String] = []) {
+            self.name = name
+            self.detail = detail
+            self.fixtures = fixtures
+        }
+
+        public var isReal: Bool { name.isEmpty }
+
+        enum CodingKeys: String, CodingKey { case name, detail, fixtures }
+
+        public init(from decoder: Decoder) throws {
+            let box = try decoder.container(keyedBy: CodingKeys.self)
+            name = box.value(.name, or: "")
+            detail = box.value(.detail, or: "")
+            fixtures = box.value(.fixtures, or: [])
         }
     }
 
     enum CodingKeys: String, CodingKey {
         case contract, command, ok, at
         case state, headline, why, issues, degraded, rows, build, tablet, mutation
-        case testSession, localWork, rollback, port, service, pad, uptimeS
+        case testSession, localWork, rollback, port, service, pad, uptimeS, environment
     }
 
     public init(from decoder: Decoder) throws {
@@ -205,6 +250,7 @@ public struct StatusDocument: Decodable, Equatable {
         port = box.maybe(.port)
         service = box.maybe(.service)
         pad = box.maybe(.pad)
+        environment = box.value(.environment, or: Environment())
         uptimeS = box.maybe(.uptimeS)
     }
 

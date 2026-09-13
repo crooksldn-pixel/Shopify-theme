@@ -17,8 +17,12 @@ struct CrooksControlApp: App {
         Window("CROOKS Control", id: Windows.control) {
             ControlCentreView(centre: centre)
         }
-        .defaultSize(width: 720, height: 760)
-        .windowResizability(.contentMinSize)
+        // 420 WIDE, AND AS TALL AS ITS CONTENT. The rejected build opened at 720x760 for a panel
+        // whose healthy state has four things on it, and the black left over read as a bug. This
+        // is sized to the fullest state it can be in (about 400pt) and shrinks below that when
+        // there is less to say.
+        .defaultSize(width: 420, height: 400)
+        .windowResizability(.contentSize)
 
         Window("CROOKS Output", id: Windows.output) {
             OutputView(log: centre.log)
@@ -72,82 +76,46 @@ struct ControlCentreView: View {
     @ObservedObject var centre: Centre
     @Environment(\.openWindow) private var openWindow
     @State private var showingDeveloper = false
+    @State private var showingDetails = false
 
     /// One second, and it does nothing but let the core's own patience expire. Without it a
     /// START that never comes back would sit on "Starting…" until the next poll, or forever if
     /// the script had stopped answering entirely.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    /// ONE SCREEN, composed in the core from the state. Everything the dashboard knows that is
+    /// not on it is still reachable — System Details, and Developer Mode behind that — and none
+    /// of it is drawn until it is asked for.
+    private var screen: Screen {
+        Presentation.screen(centre.dashboard, status: centre.status,
+                            finished: centre.finishedTest, now: Date())
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                DashboardView(dashboard: centre.dashboard) {
-                    Task { await centre.refresh(fresh: true) }
-                }
-                ActionsView(
-                    groups: centre.dashboard.groups,
-                    missing: centre.dashboard.missingControls
-                ) { button in
+        ScreenView(screen: screen) { action in
+            switch action.id {
+            case "details":
+                showingDetails = true
+            default:
+                // The operation layer is untouched: the id came OUT of the actions document, so
+                // it goes back into the same `perform` the old panel used. This view runs no
+                // command of its own and knows what none of them do.
+                if let button = centre.dashboard.groups.flatMap(\.buttons).first(where: { $0.id == action.id }) {
                     centre.perform(button) { openWindow(id: Windows.output) }
                 }
-                UpdateView(panel: centre.dashboard.update)
-                Footer(centre: centre, showingDeveloper: $showingDeveloper)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(minWidth: 620, minHeight: 560)
-        .background(
-            // The ground, warmed at the top by whatever the state is. This is the only place
-            // the accent is allowed to touch the whole window, and it is at four per cent.
-            ZStack(alignment: .top) {
-                Ground.base
-                LinearGradient(
-                    colors: [centre.accent.opacity(0.10), .clear],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 260)
-            }
-            .ignoresSafeArea()
-        )
-        .animation(Motion.settle, value: centre.dashboard.accent)
         .task { centre.begin() }
         .onReceive(clock) { _ in centre.tick() }
+        .sheet(isPresented: $showingDetails) {
+            DetailsView(centre: centre, showingDeveloper: $showingDeveloper) { showingDetails = false }
+        }
         .sheet(isPresented: $showingDeveloper) {
             if let panel = centre.dashboard.developer {
                 DeveloperView(panel: panel) { showingDeveloper = false }
             }
         }
         .preferredColorScheme(.dark)
-    }
-}
-
-struct Footer: View {
-    @ObservedObject var centre: Centre
-    @Binding var showingDeveloper: Bool
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Toggle("Developer Mode", isOn: $centre.developerMode)
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .font(.system(size: 11))
-                .foregroundStyle(Ink.tertiary)
-            if centre.developerMode {
-                Button("Open Developer Mode") { showingDeveloper = true }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11)).foregroundStyle(Ink.secondary)
-            }
-            Spacer()
-            Button("Output window") { openWindow(id: Windows.output) }
-                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Ink.tertiary)
-            Button("CROOKS OS folder…") { centre.chooseFolder() }
-                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Ink.tertiary)
-            Button("Quit") { NSApp.terminate(nil) }
-                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Ink.tertiary)
-        }
-        .padding(.top, 4)
     }
 }
 

@@ -23,7 +23,13 @@ final class Centre: ObservableObject {
     }
     @Published var log = CommandLog()
 
-    private var status: StatusDocument?
+    /// The last document read. `Presentation` needs it — the environment, the running test's
+    /// start time and the failure sentence are all on it and not on the dashboard — so it is
+    /// published rather than private now.
+    @Published private(set) var status: StatusDocument?
+    /// A test the owner has just stopped, and what it found. APP state: the Mac does not know he
+    /// pressed STOP a moment ago and is still reading the result. Cleared when he moves on.
+    @Published var finishedTest: FinishedTest?
     private var actions: [ActionsDocument.Action] = []
     private var actionsReadWhenRouteWas: String?
     private var plan: UpdateDocument?

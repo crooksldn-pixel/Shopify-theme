@@ -40,6 +40,19 @@ public enum Format {
 
     /// A list, in English. "a, b and c" — not "a, b, c", which reads as a column that lost
     /// its formatting.
+    /// A running clock: "08:42", and "1:04:11" once it has been going over an hour.
+    ///
+    /// Deliberately not `uptime()`. That answers "how long has this been up" in prose, for a row
+    /// somebody reads once; this is the figure on the front of the window while a physical test
+    /// is running, and it has to tick in a fixed width or the layout shifts under it every
+    /// second.
+    public static func clock(_ seconds: TimeInterval?) -> String {
+        let total = Int(max(0, seconds ?? 0).rounded())
+        let (hours, minutes, secs) = (total / 3600, (total % 3600) / 60, total % 60)
+        let pad = { (n: Int) in String(format: "%02d", n) }
+        return hours > 0 ? "\(hours):\(pad(minutes)):\(pad(secs))" : "\(pad(minutes)):\(pad(secs))"
+    }
+
     public static func list(_ items: [String]) -> String {
         switch items.count {
         case 0: return ""

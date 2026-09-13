@@ -175,7 +175,7 @@ def test_an_env_file_left_lying_about_does_not_stop_anything(repo, monkeypatch):
 
 def test_the_wrong_branch_stops_the_update(repo, monkeypatch):
     monkeypatch.setattr(update, "ROOT", repo)
-    with pytest.raises(update.Stopped, match="does not switch branches"):
+    with pytest.raises(update.Stopped, match="will not switch it over"):
         update.stage_branch("some-other-branch")
 
 

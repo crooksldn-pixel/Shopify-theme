@@ -154,13 +154,17 @@ async def test_the_session_is_controlled_from_the_mac_only_and_seen_by_every_pol
     status = (await client.get("/test-session/status")).json()
     assert status == {"active": False, "last": None}
     health = (await client.get("/health")).json()
-    assert health["observability"] == {"test_session": None, "name": None}
+    assert health["observability"] == {"test_session": None, "name": None, "started_at": None}
     started = (await client.post("/test-session/start", json={"name": "Route check"})).json()
     assert started["started"] and started["test_session_id"].endswith("-route-check") and started["path"].endswith(".jsonl")
     again = await client.post("/test-session/start", json={"name": "another"})
     assert again.status_code == 409 and again.json()["code"] == "already_active"
     health = (await client.get("/health")).json()
-    assert health["observability"] == {"test_session": started["test_session_id"], "name": "Route check"}, "the cached health answer still says what is on now"
+    observed = health["observability"]
+    assert observed["test_session"] == started["test_session_id"] and observed["name"] == "Route check", \
+        "the cached health answer still says what is on now"
+    # `started_at` is what the Mac's running clock counts from, so a live session must carry one.
+    assert isinstance(observed["started_at"], float) and observed["started_at"] > 0
     status = (await client.get("/test-session/status")).json()
     assert status["active"] and status["test_session_id"] == started["test_session_id"] and "events" in status
     stopped = (await client.post("/test-session/stop")).json()

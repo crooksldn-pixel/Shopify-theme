@@ -338,7 +338,9 @@ def test_blue_is_a_test_session_recording(running):
     doc = control.status_document()
     assert doc["state"] == "BLUE" and doc["headline"] == "CROOKS — Testing"
     assert "ts-20260910-1200-first-hour" in doc["why"]
-    assert doc["test_session"] == {"active": True, "id": "ts-20260910-1200-first-hour", "name": "first hour"}
+    assert doc["test_session"] == {"active": True, "id": "ts-20260910-1200-first-hour",
+                                   "name": "first hour", "started_at": None}, \
+        "started_at is None here because this fixture's /health predates the field; the shape is fixed either way"
 
 
 def test_amber_is_live_and_read_only(running):
@@ -558,6 +560,40 @@ def test_the_two_known_good_gates_cannot_drift_apart_again(running):
                 health["checks"][broken] = check(False, "down")
             assert control.essentials_not_proven(health) == [broken], \
                 f"{broken} {how} is not proven good, and that is the only rule either gate may use"
+
+
+def test_a_development_mac_with_fixtures_is_ready_and_says_which_environment_it_is(running):
+    """§10. Five things a subsystem can be, not two: healthy, unhealthy, INTENTIONALLY
+    DISCONNECTED, not configured, not required in this environment.
+
+    A development Mac whose Shopify is a fixture is the third. Everything required of that
+    machine is working, so the word is READY — and a panel that shouts DEGRADED at a correctly
+    configured development Mac has taught its owner in one move that its loudest word means
+    nothing. The environment is named BESIDE the word, never instead of it.
+    """
+    running["health"]["checks"]["shopify"] = check(True, "fixture backend")
+    running["health"]["checks"]["gmail"] = check(True, "fixture backend")
+    doc = control.status_document()
+    assert doc["state"] == "GREEN", "expected absence is not failure"
+    assert doc["degraded"] == [] and doc["issues"] == []
+    assert doc["environment"]["name"] == "development"
+    assert "gmail" in doc["environment"]["fixtures"] and "shopify" in doc["environment"]["fixtures"]
+    assert doc["environment"]["detail"] == "Fixture backend", "two stand-ins is just the backend"
+
+
+def test_a_real_mac_says_nothing_about_its_environment(running):
+    """The indicator is for the machine that is NOT the real thing. On the real one there is
+    nothing to say, so nothing is said — an environment chip on every screen forever is
+    furniture, and furniture is what the owner stops reading."""
+    assert control.status_document()["environment"] == {"name": "", "detail": "", "fixtures": []}
+
+
+def test_a_fixture_that_is_actually_broken_is_still_broken(running):
+    """Naming the environment must not become a way of excusing a failure in it. A fixture that
+    is down is down."""
+    running["health"]["checks"]["shopify"] = check(False, "fixture backend did not load")
+    doc = control.status_document()
+    assert doc["state"] == "RED" and doc["issues"] == ["shopify"]
 
 
 # ------------------------------------------------------------------ the rollback decision
@@ -1296,6 +1332,11 @@ def test_the_app_reads_every_document_field_from_the_contract_and_no_other(butto
     # script has never printed looked like a deliberate forward-compatibility decision for the
     # whole of Phase 6 — and why this gate, which exists precisely to catch that, did not.
     printed.update(camel(key) for key in control.pad_status({"pad": dict(B_PAD_BLOCK)}))
+    # Same treatment for the other two nested blocks, and for the same reason: their sub-keys are
+    # inside a description string in the contract rather than being keys of it, so a list here
+    # would be a list somebody has to remember to update.
+    printed.update(camel(key) for key in control.environment_of({"checks": {}}))
+    printed.update(camel(key) for key in control.test_session_of({}))
 
     source = swift_documents()
     # `let x: T` in a Decodable struct is a field the app expects to be there.
@@ -1491,6 +1532,35 @@ def test_a_tablet_that_is_alive_and_blank_is_never_drawn_as_connected(running):
     rows = {row["key"]: row for row in doc["rows"]}
     assert rows["pad"]["state"] == "bad", "alive and blank is not a green row"
     assert "not showing CROOKS" in rows["pad"]["value"]
+
+
+def test_a_blank_tablet_changes_the_colour_of_the_whole_appliance(running):
+    """Fixing the ROW was not enough, and this is the half that was left.
+
+    `roll_up()` decides the one colour CROOKS Control draws everything in, and every input it
+    looked at was about the Mac. The Mac is perfectly well: everything answering, changes ready,
+    tablet routed. So with the tablet sitting in the shop showing a white rectangle, the
+    appliance's own summary was GREEN and its sentence was "everything answering" — true, and
+    useless to the man looking at the white rectangle.
+
+    AMBER rather than RED on purpose: CROOKS OS is working and the surface on the tablet is not,
+    and the appliance's most serious colour should not go to something the next load often
+    fixes by itself.
+    """
+    running["health"]["pad"] = {"last_seen_s": 3.0, "webview": "crashed", "showing_crooks": False}
+    doc = control.status_document()
+    assert doc["state"] == "AMBER", "a tablet that is on and blank is not a green appliance"
+    assert "tablet screen" in doc["degraded"]
+    assert "not on its screen" in doc["why"]
+    # And the tablet being ROUTED is still true, and still says nothing about the screen.
+    assert "tablet route" not in doc["degraded"]
+
+
+def test_a_tablet_that_is_merely_loading_does_not_turn_the_appliance_amber(running):
+    """Only a screen that has actually failed counts. A beat that happens to catch the WebView
+    mid-load must not repaint the whole appliance for what will be over in a second."""
+    running["health"]["pad"] = {"last_seen_s": 2.0, "webview": "loading", "showing_crooks": False}
+    assert control.status_document()["state"] == "GREEN"
 
 
 def test_a_tablet_still_loading_is_neither_a_tick_nor_a_cross(running):
@@ -1961,7 +2031,7 @@ def test_the_app_no_longer_gates_on_the_version_being_equal():
 
 # The markers that mean a sentence has stopped being product language and started being a
 # shell. A backtick is the giveaway in this codebase: it is how every one of these was written.
-TERMINAL_MARKERS = ("`", "crooks-control ", "git checkout", "git clone", "make venv", "make up",
+TERMINAL_MARKERS = ("`", "crooks-control ", "crooks-watch", "git checkout", "git clone", "make venv", "make up",
                     "make restart", "make control-app", "launchctl", "sudo ", "chmod", "$(",
                     "--yes", ".venv")
 # Naming the Terminal is not the same as sending somebody to one. CROOKS OS really can be running
@@ -2061,6 +2131,50 @@ def test_no_sentence_the_mac_app_shows_the_owner_tells_him_to_open_a_terminal():
                 if marker in literal:
                     leaks.append(f"{name}: {marker!r} in {literal[:110]!r}")
     assert not leaks, "the Mac app is sending the owner to a Terminal:\n" + "\n".join(leaks)
+
+
+# ----------------------------------------------------- the front page names no control it lacks
+
+# Reachable in the app itself rather than through the control script: a disclosure, not a command.
+APP_INTERNAL_IDS = {"details"}
+
+
+def _quoted_ids(text: str, pattern: str) -> set[str]:
+    return {m.group(1) for m in re.finditer(pattern, text)}
+
+
+def test_the_front_page_offers_only_controls_the_script_really_has(running):
+    """INVARIANT 12, at the layer that decides which single button the owner sees.
+
+    The redesign shows ONE action per state, chosen by `Presentation.screen(...)` in the Swift
+    core and mirrored by the render harness. Choosing means naming an id — and an id this script
+    does not print is a button that does nothing, which is invariant 12 broken by the very file
+    that is supposed to enforce it. The first draft of both did exactly that, with a
+    `reload-pad` control for a tablet this Mac cannot reach.
+
+    Neither file can be executed here — one is Swift with no toolchain, one is a browser module —
+    so both are read, and the ids they name are held to the document this script really prints.
+    """
+    offered = {action["id"] for action in control.actions_document()["actions"]} | APP_INTERNAL_IDS
+
+    swift = (SWIFT_DIR / "Sources" / "CrooksControlCore" / "Presentation.swift").read_text(encoding="utf-8")
+    named = _quoted_ids(swift, r'pick\(dashboard,\s*"([a-zA-Z0-9_-]+)"')
+    named |= _quoted_ids(swift, r'ScreenAction\(id:\s*"([a-zA-Z0-9_-]+)"')
+    assert named, "the id scan found nothing — it has stopped measuring"
+    assert named <= offered, \
+        f"CROOKS Control would draw {sorted(named - offered)}, which `crooks-control actions` does not offer"
+
+    harness = (PROJECT.parent / "docs" / "phase6" / "tools" / "control_screen.js").read_text(encoding="utf-8")
+    rendered = _quoted_ids(harness, r'ACT\(\s*"([a-zA-Z0-9_-]+)"')
+    assert rendered, "the harness id scan found nothing"
+    assert rendered <= offered, \
+        f"the render harness draws {sorted(rendered - offered)}, which is not a control this Mac has"
+
+    # And the two must agree, or the twelve states that were critiqued are not the twelve states
+    # that ship.
+    assert rendered == named - APP_INTERNAL_IDS, (
+        f"the harness and the app disagree about which controls the front page offers: "
+        f"harness-only {sorted(rendered - named)}, app-only {sorted(named - rendered - APP_INTERNAL_IDS)}")
 
 
 # ----------------------------------------------------- what verify.sh may claim

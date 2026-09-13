@@ -1,0 +1,2950 @@
+{
+ "states": [
+  {
+   "key": "ready",
+   "title": "Ready / live",
+   "why": "Everything the appliance needs is working and the tablet is showing CROOKS. The state the owner sees most, so it is the one that must be quietest.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.625,
+    "state": "GREEN",
+    "headline": "CROOKS \u2014 Online",
+    "why": "everything answering, changes ready, tablet routed",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "development",
+   "title": "Development-ready",
+   "why": "A fixture backend, which is CORRECT for a development Mac. \u00a710: expected absence is not a failure, so this reads READY with the environment named rather than DEGRADED.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.639,
+    "state": "GREEN",
+    "headline": "CROOKS \u2014 Online",
+    "why": "everything answering, changes ready, tablet routed",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "fixture backend",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "fixture backend",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "development",
+     "detail": "Fixture backend",
+     "fixtures": [
+      "gmail",
+      "shopify"
+     ]
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "stopped",
+   "title": "Backend stopped",
+   "why": "Nothing is answering on the loopback port. One thing to do, and it is the only control on the screen.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": false,
+    "at": 1789303329.654,
+    "state": "RED",
+    "headline": "CROOKS \u2014 Offline",
+    "why": "nothing is answering on 127.0.0.1:8000. Press Start.",
+    "issues": [
+     "the assistant is not answering"
+    ],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "bad",
+      "value": "nothing answering on 127.0.0.1:8000",
+      "detail": "CROOKS OS is not set up on this Mac yet."
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "off",
+      "value": "?",
+      "detail": "version ?"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "bad",
+      "value": "not running",
+      "detail": ""
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "off",
+      "value": "unknown",
+      "detail": "this build does not report it"
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "off",
+      "value": "unknown",
+      "detail": "this build does not report it"
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "off",
+      "value": "unknown",
+      "detail": "this build does not report it"
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "off",
+      "value": "unknown",
+      "detail": "this build does not report it"
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "off",
+      "value": "unknown",
+      "detail": "this build does not report it"
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "off",
+      "value": "no route",
+      "detail": "Tailscale is not serving port 8000"
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "off",
+      "value": "unknown",
+      "detail": "this build does not say whether the tablet has been heard from; the route being open is not a heartbeat"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "off",
+      "value": "unknown",
+      "detail": "no capability table on this build"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "",
+      "version": ""
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "",
+     "url": "",
+     "note": "Tailscale is not serving port 8000",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": false,
+     "alive": null,
+     "age_s": null,
+     "app": "",
+     "version": "",
+     "build": "",
+     "source": "absent",
+     "showing_crooks": null,
+     "webview": "",
+     "detail": "this build does not say whether the tablet has been heard from; the route being open is not a heartbeat"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "NOT_INSTALLED",
+     "crooks_os": "stopped",
+     "human": "CROOKS OS is not set up on this Mac yet.",
+     "supervised": false,
+     "answering": false,
+     "healthy": false,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "unknown",
+     "detail": "no capability table on this build",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "degraded",
+   "title": "Actual failure",
+   "why": "CROOKS OS is up and cannot do its job: an essential is genuinely down. This is what the fixture case must NOT look like.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": false,
+    "at": 1789303329.668,
+    "state": "RED",
+    "headline": "CROOKS \u2014 Issue",
+    "why": "The store is not working \u2014 the access token was refused (401)",
+    "issues": [
+     "shopify"
+    ],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "bad",
+      "value": "the access token was refused (401)",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "UNHEALTHY",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but shopify is not working.",
+     "supervised": false,
+     "answering": true,
+     "healthy": false,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "pad-away",
+   "title": "Pad disconnected",
+   "why": "The Mac is well. The tablet has not checked in since this morning \u2014 a fact about the tablet, not about CROOKS OS, so the big word stays READY.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.682,
+    "state": "AMBER",
+    "headline": "CROOKS \u2014 Degraded",
+    "why": "CROOKS Pad not heard from for 5.7h",
+    "issues": [],
+    "degraded": [
+     "tablet"
+    ],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "bad",
+      "value": "not here",
+      "detail": "not heard from for 5.7h"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": false,
+     "age_s": 20400.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "not heard from for 5.7h",
+     "showing_crooks": null,
+     "webview": ""
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "pad-blank",
+   "title": "Pad connected, not showing",
+   "why": "The one the old build could not say. The tablet is on and checking in; its WebView has crashed, so the owner is looking at a white rectangle. CONNECTED would be a lie.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.696,
+    "state": "AMBER",
+    "headline": "CROOKS \u2014 Degraded",
+    "why": "CROOKS Pad is connected but CROOKS is not on its screen",
+    "issues": [],
+    "degraded": [
+     "tablet screen"
+    ],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "bad",
+      "value": "here \u00b7 not showing CROOKS \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": false,
+     "webview": "crashed"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "test-ready",
+   "title": "Physical test ready",
+   "why": "Healthy, tablet showing, nothing running. The primary action is the test.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.71,
+    "state": "GREEN",
+    "headline": "CROOKS \u2014 Online",
+    "why": "everything answering, changes ready, tablet routed",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {}
+  },
+  {
+   "key": "test-active",
+   "title": "Physical test active",
+   "why": "A session is running. While it is, it is the only thing on the screen worth reading.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.723,
+    "state": "BLUE",
+    "headline": "CROOKS \u2014 Testing",
+    "why": "recording s-4471",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "ok",
+      "value": "s-4471",
+      "detail": "Saturday counter"
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": true,
+     "id": "s-4471",
+     "name": "Saturday counter"
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {
+    "test": {
+     "active": true,
+     "id": "s-4471",
+     "name": "Saturday counter",
+     "elapsed_s": 522,
+     "interactions": 31
+    }
+   }
+  },
+  {
+   "key": "test-done",
+   "title": "Physical test complete",
+   "why": "It has just stopped. What was learned is the point, not the fact that it finished.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.736,
+    "state": "GREEN",
+    "headline": "CROOKS \u2014 Online",
+    "why": "everything answering, changes ready, tablet routed",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {
+    "report": {
+     "id": "s-4471",
+     "name": "Saturday counter",
+     "duration_s": 1284,
+     "interactions": 47,
+     "issues": 3
+    }
+   }
+  },
+  {
+   "key": "update-available",
+   "title": "Update available",
+   "why": "A newer CROOKS OS exists. Nothing is wrong, so this is an offer and not an alarm.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.749,
+    "state": "GREEN",
+    "headline": "CROOKS \u2014 Online",
+    "why": "everything answering, changes ready, tablet routed",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {
+    "update": {
+     "state": "available",
+     "version": "0.6.3",
+     "candidate": "9c1e77f2b4",
+     "behind": 4
+    }
+   }
+  },
+  {
+   "key": "updating",
+   "title": "Updating",
+   "why": "In flight. The stages are the content; there is nothing to press and nothing else to read.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": true,
+    "at": 1789303329.762,
+    "state": "GREEN",
+    "headline": "CROOKS \u2014 Online",
+    "why": "everything answering, changes ready, tablet routed",
+    "issues": [],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "ok",
+      "value": "5wn03t-nm.myshopify.com",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "RUNNING_WINDOW",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but in a Terminal window rather than as a login service. Closing that window WILL stop it.",
+     "supervised": false,
+     "answering": true,
+     "healthy": true,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {
+    "update": {
+     "state": "running",
+     "version": "0.6.3",
+     "stages": [
+      {
+       "stage": "Preparing",
+       "state": "ok"
+      },
+      {
+       "stage": "Testing",
+       "state": "ok"
+      },
+      {
+       "stage": "Restarting",
+       "state": "running"
+      },
+      {
+       "stage": "Verifying",
+       "state": "pending"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "key": "update-failed",
+   "title": "Update failure / rollback",
+   "why": "The update moved the build and CROOKS OS did not come back. The previous build has been restored. Unmistakable, and it says what was done.",
+   "status": {
+    "contract": 2,
+    "command": "status",
+    "ok": false,
+    "at": 1789303329.776,
+    "state": "RED",
+    "headline": "CROOKS \u2014 Issue",
+    "why": "The store is not working \u2014 the access token was refused (401)",
+    "issues": [
+     "shopify"
+    ],
+    "degraded": [],
+    "rows": [
+     {
+      "key": "online",
+      "label": "Online",
+      "state": "ok",
+      "value": "answering on 127.0.0.1:8000",
+      "detail": "ok \u00b7 up 7.6h \u00b7 1 session(s)"
+     },
+     {
+      "key": "build",
+      "label": "Build",
+      "state": "ok",
+      "value": "b-2026-09-12-a3f91c",
+      "detail": "version 0.6.2"
+     },
+     {
+      "key": "backend",
+      "label": "Assistant",
+      "state": "ok",
+      "value": "running",
+      "detail": "40 reads, 12 changes, 3 bulk (deadbeef)"
+     },
+     {
+      "key": "speech",
+      "label": "Voice/STT",
+      "state": "ok",
+      "value": "scribe_v2 \u00b7 scribe_v2 (primary)",
+      "detail": ""
+     },
+     {
+      "key": "speaks",
+      "label": "Speaks",
+      "state": "ok",
+      "value": "Derek",
+      "detail": ""
+     },
+     {
+      "key": "claude",
+      "label": "Claude",
+      "state": "ok",
+      "value": "sonnet, CLI",
+      "detail": ""
+     },
+     {
+      "key": "shopify",
+      "label": "Shopify",
+      "state": "bad",
+      "value": "the access token was refused (401)",
+      "detail": ""
+     },
+     {
+      "key": "gmail",
+      "label": "Gmail",
+      "state": "ok",
+      "value": "george@crooksldn.com",
+      "detail": ""
+     },
+     {
+      "key": "orders",
+      "label": "Order cache",
+      "state": "off",
+      "value": "cold",
+      "detail": "the first question about orders will read the store"
+     },
+     {
+      "key": "tablet",
+      "label": "Tablet",
+      "state": "ok",
+      "value": "https://crooks-mini.tail1234.ts.net/",
+      "detail": ""
+     },
+     {
+      "key": "pad",
+      "label": "CROOKS Pad",
+      "state": "ok",
+      "value": "here \u00b7 CROOKS Pad 0.6.2",
+      "detail": "last heard from 3s ago"
+     },
+     {
+      "key": "mutation",
+      "label": "Changes",
+      "state": "ok",
+      "value": "ready",
+      "detail": "ready"
+     },
+     {
+      "key": "session",
+      "label": "Test session",
+      "state": "off",
+      "value": "none",
+      "detail": ""
+     },
+     {
+      "key": "branch",
+      "label": "Branch",
+      "state": "ok",
+      "value": "claude/compassionate-johnson-lzl6dd \u00b7 d4396e29cc",
+      "detail": "Phase 6: four contract defects, and the gates that let each one pass"
+     },
+     {
+      "key": "known_good",
+      "label": "Known good",
+      "state": "off",
+      "value": "none recorded",
+      "detail": "MARK GOOD records the running build as the one to come back to"
+     }
+    ],
+    "build": {
+     "current": {
+      "sha": "d4396e29ccde06d4aebe3086ee6bebe2115cfa6e",
+      "short": "d4396e29cc",
+      "branch": "claude/compassionate-johnson-lzl6dd",
+      "detached": false,
+      "subject": "Phase 6: four contract defects, and the gates that let each one pass",
+      "committed_at": "2026-09-13T12:29:50+00:00",
+      "build": "b-2026-09-12-a3f91c",
+      "version": "0.6.2"
+     },
+     "candidate": null,
+     "last_known_good": null,
+     "note": "checking for a newer CROOKS OS needs the network, and this reading did not use it"
+    },
+    "tablet": {
+     "host": "crooks-mini.tail1234.ts.net",
+     "url": "https://crooks-mini.tail1234.ts.net/",
+     "note": "",
+     "local": "http://127.0.0.1:8000/"
+    },
+    "pad": {
+     "known": true,
+     "alive": true,
+     "age_s": 3.0,
+     "app": "CROOKS Pad 0.6.2",
+     "version": "CROOKS Pad 0.6.2",
+     "build": "",
+     "source": "pad",
+     "detail": "last heard from 3s ago",
+     "showing_crooks": true,
+     "webview": "loaded"
+    },
+    "environment": {
+     "name": "",
+     "detail": "",
+     "fixtures": []
+    },
+    "lifecycle": {
+     "state": "UNHEALTHY",
+     "crooks_os": "running",
+     "human": "CROOKS OS is running, but shopify is not working.",
+     "supervised": false,
+     "answering": true,
+     "healthy": false,
+     "agents": [
+      {
+       "label": "com.crooks.assistant",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      },
+      {
+       "label": "com.crooks.whisper",
+       "installed": false,
+       "loaded": false,
+       "pid": null,
+       "last_exit_code": null,
+       "detail": "launchctl: not found"
+      }
+     ],
+     "port": 8000,
+     "window": "Closing the CROOKS Control window does not stop CROOKS OS. CROOKS OS is a background service the Mac starts at login; the app is the dial, not the boiler. Every line above is read from the service itself \u2014 the port, /health and the Mac's login-service manager \u2014 and never from whether this app happens to be open.",
+     "logs": "/home/user/Shopify-theme/crooks-assistant/logs"
+    },
+    "test_session": {
+     "active": false,
+     "id": "",
+     "name": ""
+    },
+    "mutation": {
+     "state": "ready",
+     "detail": "ready",
+     "source": "writes",
+     "ready": [],
+     "read_only": [],
+     "missing_scope": [],
+     "unavailable": []
+    },
+    "local_work": {
+     "dirty": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "blocking": [
+      "crooks-assistant/scripts/control.py",
+      "crooks-assistant/tests/test_control.py",
+      "docs/phase6/evidence/control/",
+      "docs/phase6/tools/control_harness.html",
+      "docs/phase6/tools/control_screen.js",
+      "docs/phase6/tools/control_states.json",
+      "docs/phase6/tools/control_states.py",
+      "docs/phase6/tools/shoot_control.mjs"
+     ],
+     "stops": true
+    },
+    "rollback": {
+     "available": false,
+     "safe": false,
+     "sha": "",
+     "short": "",
+     "recorded_at": null,
+     "build": "",
+     "reason": "No known-good build has been recorded on this Mac yet, so there is nothing to go back to. Press MARK GOOD to record the build that is running now.",
+     "commands": [],
+     "note": ""
+    },
+    "port": 8000
+   },
+   "app": {
+    "update": {
+     "state": "failed",
+     "version": "0.6.3",
+     "restored": "a3f91c2d10",
+     "why": "CROOKS OS did not come back healthy within 90 seconds."
+    }
+   }
+  }
+ ]
+}

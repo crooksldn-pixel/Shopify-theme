@@ -3,15 +3,21 @@
 Turn the Mac on; this is open. Everything that has to be done to CROOKS OS is a button on it,
 and there is no Terminal in normal ownership.
 
-## The first viewport answers five questions and asks nothing
+## The first viewport answers THREE questions and asks nothing
 
 ```
-  IS CROOKS OS RUNNING?      ONLINE / STARTING / STOPPING / OFFLINE / ERROR — one word
-  IS THE TABLET CONNECTED?   CROOKS PAD, with when it was last heard from
-  ARE SERVICES HEALTHY?      backend · hearing · Claude · ElevenLabs · Shopify · Gmail · Tailscale
-  WHAT VERSION?              the running build, the checkout, the last known-good build
-  IS A TEST SESSION ACTIVE?  a band, while one is
+  IS CROOKS OS READY?        one word, and it is the largest thing on the screen
+  IS CROOKS PAD CONNECTED    and SHOWING CROOKS? — two facts, kept apart
+  WHAT CAN I DO NOW?         ONE action, or none when there is honestly nothing to press
 ```
+
+It used to answer five, and drew all seven integrations, both build ids and ten controls to do
+it. The owner rejected that on sight and was right to: a panel where everything is visible has
+told you nothing, loudly. Services, controls and build ids are all still there, one click away in
+**System Details**, and internals one further click into **Developer Mode**.
+
+See `CONTROL_REDESIGN.md` for what changed and why, and `evidence/control/` for the twelve
+states rendered.
 
 No scrolling. No login. No configuration on first run beyond pointing it at the folder, and it
 looks in the usual places first.
@@ -151,7 +157,11 @@ first. `sh mac/CrooksControl/build.sh --login` also has it open at login.
 
 ## What `verify.sh` does and does not prove
 
-`./verify.sh` builds the core, runs its tests, and parses the Mac app's sources.
+`./verify.sh` builds the core, runs its tests, and parses the Mac app's sources. It has four
+answers and "green" is not one of them off a Mac: **0** complete and passing, **1** something
+failed, **2** no toolchain so nothing was checked, **3** INCOMPLETE — what could run passed, and
+the Mac app was never compiled. It used to print "the Mac app builds — NOT RUN" and exit 0, which
+is the only part CI reads.
 
 `swiftc -parse` proves the SwiftUI files are **valid Swift and nothing more**. It does not
 type-check them and it does not resolve SwiftUI or AppKit, **so it will pass a view that calls

@@ -71,7 +71,12 @@ def _observability(runtime) -> dict:
     the tablet turns its own telemetry on and off from this, within one poll."""
     timeline = getattr(runtime, "timeline", None)
     session = timeline.active if timeline is not None else None
-    return {"test_session": session.test_session_id if session is not None else None, "name": session.name if session is not None else None}
+    # `started_at` is here so the Mac can show a running clock. Without it CROOKS Control can say
+    # that a test is happening and not for how long, which is the one number anybody watching a
+    # physical test actually wants.
+    return {"test_session": session.test_session_id if session is not None else None,
+            "name": session.name if session is not None else None,
+            "started_at": round(session.started_at, 3) if session is not None else None}
 
 
 async def _health(runtime) -> dict:

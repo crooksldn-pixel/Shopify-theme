@@ -19,3 +19,6 @@ node_modules/
 # (The rule above must be `.claude/*` and not `.claude/`: git cannot re-include anything
 # beneath a directory it has excluded outright, so the negation would silently do nothing.)
 !.claude/skills/
+
+# The Python environment the appliance's own Makefile builds.
+crooks-assistant/.venv/

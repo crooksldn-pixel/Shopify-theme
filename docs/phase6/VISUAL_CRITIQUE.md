@@ -8,7 +8,7 @@ exists so that nobody reads the critique below and believes more was seen than w
 | surface | rendered? | how |
 |---|---|---|
 | **the CROOKS web UI** (what CROOKS Pad shows) | **YES** | headless Chromium at 601×889, DPR 1.33 — the SM-T290's real portrait viewport |
-| **CROOKS Control** (macOS, SwiftUI) | **NO** | this machine has no macOS SDK. `swiftc -typecheck` fails at line 1 with "no such module SwiftUI". Not one pixel of this app has ever been drawn, by anyone, at any point in Phase 6. |
+| **CROOKS Control** (macOS, SwiftUI) | **PARTLY — as a harness, not as the app** | The SwiftUI has still never been compiled or drawn: this container has no Swift toolchain **at all** now, not merely no SwiftUI. What HAS been rendered is `tools/control_harness.html`, which makes the same decisions `Presentation.swift` makes, in the same palette, at the same window size, driven by the documents `scripts/control.py` really prints. Twelve states, in `evidence/control/`. That is enough to judge hierarchy, density and colour — and it is not evidence the app builds. See `CONTROL_REDESIGN.md`. |
 | **CROOKS Pad** (Android shell chrome — recovery cards, diagnostics, PIN sheet) | **NO** | no `/dev/kvm`, so no emulator; no SM-T290 attached. No screenshot of this app exists. |
 
 So of the three surfaces Phase 6 delivers, **one was seen and two were not.**

@@ -127,3 +127,23 @@ extension View {
         modifier(GlassCard(raised: raised))
     }
 }
+
+/// A status light. Filled when the state is known, hollow when it is "not reported" — because
+/// not knowing is not a fault, and an empty ring says so without spending a colour on it.
+///
+/// Lives here rather than in a view file because Developer Mode and the menu-bar glance both
+/// draw one, and the front page it used to live beside no longer exists.
+struct Pip: View {
+    let health: Health
+
+    var body: some View {
+        Group {
+            if health.isFilled {
+                Circle().fill(health.colour)
+            } else {
+                Circle().strokeBorder(health.colour, lineWidth: 1)
+            }
+        }
+        .frame(width: 8, height: 8)
+    }
+}

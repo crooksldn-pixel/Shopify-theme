@@ -1,0 +1,181 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>CROOKS Control — state harness</title>
+<style>
+  /* CROOKS CONTROL. Near-black, bone ink, one tight radius scale, signals used sparingly.
+     The palette is Theme.swift's, to the hex, so what is critiqued here is what ships. */
+  :root {
+    --base:#07070A; --one:#0D0D10; --two:#131317; --three:#191A1F;
+    --ink:#EBE8E0; --ink2:#B9B6AE; --ink3:#83827C; --ink4:#63635E;
+    --ok:#79C996; --warn:#DCB266; --bad:#DC7F6C; --busy:#9BB3D4;
+    --line:rgba(235,232,224,.08); --line2:rgba(235,232,224,.14);
+    --r:16px; --rin:11px;
+    --ease:cubic-bezier(.32,.72,0,1);
+    font-synthesis-weight:none;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  /* The app ships in SF Pro, which is the correct native face for a Mac app and is not on this
+     machine. Inter stands in for it here so that what is being judged is the design and not a
+     fallback's letterforms. Weights and tracking below are the ones the SwiftUI carries. */
+  body{background:#000;display:flex;flex-wrap:wrap;gap:28px;padding:28px;
+       font-family:"SF Pro Text",Inter,-apple-system,sans-serif;}
+
+  /* THE WINDOW. 420×560 — the rejected build opened far larger than its content, and dead
+     black is not minimalism. This is sized to what is actually on it. */
+  /* THE WINDOW IS AS TALL AS WHAT IT HAS TO SAY. A fixed height forces either a void under a
+     calm screen or a scroll under a busy one, and the first of those is what the previous build
+     was rejected for. The range across all twelve states is about 330-430px, which is a window
+     that changes size when the appliance changes state — not on every poll. */
+  .win{width:420px;min-height:288px;background:var(--base);border-radius:20px;
+       border:1px solid var(--line2);overflow:hidden;position:relative;
+       display:flex;flex-direction:column;
+       box-shadow:0 24px 60px -20px rgba(0,0,0,.9), inset 0 1px 0 rgba(235,232,224,.06);}
+  /* A single, very soft field behind the word — depth, not decoration. */
+  .win::before{content:"";position:absolute;inset:-28% -20% auto -20%;height:62%;
+    background:radial-gradient(60% 60% at 50% 45%, var(--glow,rgba(235,232,224,.055)), transparent 70%);
+    pointer-events:none;}
+
+  .bar{display:flex;align-items:center;justify-content:space-between;
+       padding:16px 20px 0;position:relative;z-index:1}
+  .brand{font-size:10.5px;font-weight:700;letter-spacing:.22em;color:var(--ink3);
+         display:flex;align-items:center;gap:9px}
+  .env{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;
+       background:rgba(220,178,102,.10);border:1px solid rgba(220,178,102,.28)}
+  .env b{font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--warn)}
+  .env i{font-style:normal;font-size:9px;color:var(--ink3)}
+
+  /* THE ANSWER. One word, and it is the largest thing on the screen by a long way. */
+  .head{padding:26px 20px 0;position:relative;z-index:1}
+  .eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.2em;color:var(--ink3);margin-bottom:9px}
+  .word{font-size:38px;line-height:.95;letter-spacing:-.03em;font-weight:600;color:var(--ink)}
+  /* Tabular figures rather than a monospaced face: SF Pro's numerals are already fixed-width
+     and far better drawn than any mono this would otherwise fall back to. */
+  .word.mono{font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:46px}
+  .word.bad{color:var(--bad)} .word.warn{color:var(--ink)} .word.busy{color:var(--ink)}
+  .pip{width:6.5px;height:6.5px;border-radius:50%;flex:none;background:var(--ink4)}
+  .pip.ok{background:var(--ok);box-shadow:0 0 0 3.5px rgba(121,201,150,.13)}
+  .pip.warn{background:var(--warn);box-shadow:0 0 0 4px rgba(220,178,102,.14)}
+  .pip.bad{background:var(--bad);box-shadow:0 0 0 4px rgba(220,127,108,.16)}
+  .pip.busy{background:var(--busy);box-shadow:0 0 0 4px rgba(155,179,212,.14)}
+  .line{margin-top:11px;font-size:12.5px;color:var(--ink3);letter-spacing:.005em}
+  .note{margin-top:9px;font-size:12px;line-height:1.45;color:var(--ink2);max-width:34ch}
+  .note.bad{color:var(--bad)}
+
+  /* TOP-ALIGNED, deliberately. Pinning this block to the bottom is what put 300px of black
+     down the middle of the first render — the same "enormous dead space" the previous build was
+     rejected for. Dead black is not minimalism; the space below the action is margin. */
+  .body{flex:1;padding:20px 20px 20px;position:relative;z-index:1;
+        display:flex;flex-direction:column;gap:14px}
+
+  /* Double-bezel: an outer tray with a hairline, an inner plate with its own top highlight. */
+  .tray{background:var(--one);border:1px solid var(--line);border-radius:var(--r);padding:4px}
+  .plate{background:var(--two);border-radius:var(--rin);padding:13px 14px;
+         box-shadow:inset 0 1px 0 rgba(235,232,224,.05)}
+
+  .padrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .padk{font-size:9.5px;font-weight:700;letter-spacing:.18em;color:var(--ink4)}
+  .padv{margin-top:5px;font-size:14px;font-weight:550;color:var(--ink);display:flex;align-items:center;gap:8px}
+  /* CONNECTED is drawn in ink, not green: a working tablet is the expected case and the
+     expected case should not be shouting. Colour is kept for the pip and for trouble. */
+  .padv.ok{color:var(--ink)} .padv.bad{color:var(--bad)} .padv.warn{color:var(--warn)}
+  .pip.quiet{background:var(--ink4)}
+  .padd{margin-top:4px;font-size:11px;color:var(--ink4)}
+
+  .timer{font-family:"SF Mono",ui-monospace,monospace;font-size:46px;letter-spacing:-.02em;
+         color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+  .facts{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .fact{font-size:11px;color:var(--ink3);background:var(--two);border:1px solid var(--line);
+        border-radius:999px;padding:4px 10px}
+
+  .stages{display:flex;flex-direction:column;gap:1px}
+  .stg{display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:12.5px;color:var(--ink4)}
+  .stg+.stg{border-top:1px solid var(--line)}
+  .stg.ok{text-decoration:none}
+  .stg.ok{color:var(--ink2)} .stg.running{color:var(--ink);font-weight:600}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--ink4);flex:none}
+  .stg.ok .dot{background:var(--ink3)}
+  .stg.running .dot{background:var(--busy);box-shadow:0 0 0 4px rgba(155,179,212,.22)}
+
+  /* THE ONE ACTION. Full width, tactile, and never a default macOS button. */
+  .cta{width:100%;border:none;border-radius:var(--r);padding:15px 18px;cursor:pointer;
+       font:inherit;font-size:13px;font-weight:650;letter-spacing:.075em;
+       display:flex;align-items:center;justify-content:space-between;
+       background:var(--three);color:var(--ink);border:1px solid var(--line2);
+       box-shadow:inset 0 1px 0 rgba(235,232,224,.07);
+       transition:transform .25s var(--ease), background .25s var(--ease);}
+  .cta:active{transform:scale(.985)}
+  .cta .chev{width:24px;height:24px;border-radius:50%;background:rgba(235,232,224,.07);
+             display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink2)}
+  .cta.ok{background:rgba(121,201,150,.12);border-color:rgba(121,201,150,.34);color:#CDEBD8}
+  .cta.ok .chev{background:rgba(121,201,150,.18);color:#CDEBD8}
+  .cta.warn{background:rgba(220,178,102,.13);border-color:rgba(220,178,102,.36);color:#F0DCB2}
+  .cta.warn .chev{background:rgba(220,178,102,.2);color:#F0DCB2}
+  .cta.bad{background:rgba(220,127,108,.14);border-color:rgba(220,127,108,.4);color:#F2C4B9}
+  .cta.solid{background:var(--ink);border-color:var(--ink);color:#0A0A0C}
+  .cta.solid .chev{background:rgba(7,7,10,.12);color:#0A0A0C}
+  .cta.bad .chev{background:rgba(220,127,108,.2);color:#F2C4B9}
+
+  /* EVERYTHING ELSE RECEDES. Named, reachable, and not competing. */
+  .foot{display:flex;align-items:center;justify-content:space-between;
+        padding:12px 20px;border-top:1px solid var(--line);
+        font-size:10.5px;color:var(--ink4);position:relative;z-index:1}
+  .foot .more{display:flex;gap:14px}
+  .foot a{color:var(--ink3);text-decoration:none}
+  .mono{font-family:"SF Mono",ui-monospace,monospace;letter-spacing:.01em}
+
+  .cap{width:420px;color:#5A5A55;font-size:10.5px;margin-top:-16px;letter-spacing:.06em}
+  .cap b{color:#8A8A83;font-weight:600}
+</style>
+<div id="root"></div>
+<script type="module">
+import { screen } from "./control_screen.js";
+const data = await (await fetch("./control_states.json")).json();
+const only = new URLSearchParams(location.search).get("state");
+const states = only ? data.states.filter(s => s.key === only) : data.states;
+
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const GLOW = { ok:"rgba(121,201,150,.07)", warn:"rgba(220,178,102,.08)", bad:"rgba(220,127,108,.09)",
+               busy:"rgba(155,179,212,.08)", quiet:"rgba(235,232,224,.05)" };
+
+function render(s) {
+  const v = screen(s);
+  const parts = [];
+  parts.push(`<div class="win" style="--glow:${GLOW[v.tone] || GLOW.quiet}">`);
+  parts.push(`<div class="bar"><div class="brand"><span class="pip ${v.tone}"></span>CROOKS</div>`);
+  if (v.env) parts.push(`<div class="env"><b>${esc(v.env.name)}</b><i>${esc(v.env.detail)}</i></div>`);
+  parts.push(`</div>`);
+
+  parts.push(`<div class="head">`);
+  if (v.eyebrow) parts.push(`<div class="eyebrow">${esc(v.eyebrow)}</div>`);
+  parts.push(`<div class="word ${v.tone}${v.mono ? " mono" : ""}">${esc(v.word)}</div>`);
+  if (v.line) parts.push(`<div class="line">${esc(v.line)}</div>`);
+  if (v.note) parts.push(`<div class="note ${v.tone === "bad" ? "bad" : ""}">${esc(v.note)}</div>`);
+  parts.push(`</div>`);
+
+  parts.push(`<div class="body">`);
+  if (v.stages) {
+    parts.push(`<div class="tray"><div class="plate" style="padding:4px 12px">`);
+    parts.push(v.stages.map(st => `<div class="stg ${st.state}"><span class="dot"></span>${esc(st.stage)}</div>`).join(""));
+    parts.push(`</div></div>`);
+  }
+  if (v.pad) {
+    parts.push(`<div class="tray"><div class="plate"><div class="padrow"><div>
+      <div class="padk">CROOKS PAD</div>
+      <div class="padv ${v.pad.tone}">${esc(v.pad.word)}</div>
+      <div class="padd">${esc(v.pad.detail)}</div></div>
+      <span class="pip ${v.pad.tone === "ok" ? "quiet" : v.pad.tone}"></span></div></div></div>`);
+  }
+  if (v.primary) {
+    parts.push(`<button class="cta ${v.primary.tone}">${esc(v.primary.label)}<span class="chev">&#8250;</span></button>`);
+  }
+  parts.push(`</div>`);
+
+  parts.push(`<div class="foot"><span class="mono">${esc(v.foot.version)}${v.foot.build ? " · " + esc(v.foot.build) : ""}</span>
+    <span class="more">${v.more.map(m => `<a href="#">${esc(m.label)}</a>`).join("")}</span></div>`);
+  parts.push(`</div>`);
+  parts.push(`<div class="cap"><b>${esc(s.title.toUpperCase())}</b> — ${esc(s.key)}</div>`);
+  return parts.join("");
+}
+document.getElementById("root").innerHTML = states.map(render).join("");
+document.body.dataset.ready = "1";
+</script>
