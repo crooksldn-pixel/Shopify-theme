@@ -195,30 +195,94 @@ def test_the_status_document_sends_nobody_to_terminal_when_nothing_is_running(co
 
 # -------------------------------------------------------------------------- static
 
-def _stop_literals(path: Path) -> list[tuple[int, str]]:
-    """Every literal string that becomes a `stop` an owner reads.
+# The keys whose values a person reads. `note` is on this list because leaving it off is how
+# the first version of this file missed four strings: `rollback_decision` puts its whole
+# explanation of what a rollback does — and how to come forward again — in `note`, and the gate
+# walked straight past it.
+OWNER_FACING_KEYS = ("reason", "detail", "why", "headline", "note", "summary", "message", "hint")
 
-    Two AST shapes: `raise Stopped("…")`, and a dict literal with a `reason` or `detail` key
-    under a `stop`. Only constant strings — a message built at runtime out of git's own stderr
-    is not something this test can or should police.
+
+def _strings_under(node: ast.AST) -> list[tuple[int, str]]:
+    return [(n.lineno, n.value) for n in ast.walk(node)
+            if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+
+
+def _stop_literals(path: Path) -> list[tuple[int, str]]:
+    """Every literal string that becomes text an owner reads.
+
+    THREE AST shapes, and the third one is the reason this comment is long.
+
+      1. `raise Stopped("…")`
+      2. a dict LITERAL with an owner-facing key: `{"reason": "…"}`
+      3. an assignment INTO one: `out["reason"] = "…"`
+
+    Shape 3 was missing from the first version of this gate, and it mattered: the whole of
+    `rollback_decision` builds its answer by assigning into a dict it made earlier, so every
+    sentence it can say to the owner was invisible to a scan that only knew shapes 1 and 2. A
+    gate that reads half the strings and reports a pass is the §26 failure in the gate itself,
+    which is worse than not having one, because it is believed.
+
+    Only constant strings. A message built at runtime out of git's own stderr is not something
+    this test can police, and pretending otherwise would be the opposite mistake.
     """
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: list[tuple[int, str]] = []
     for node in ast.walk(tree):
+        # 1. raise Stopped("…")
         if isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call):
             name = node.exc.func
             if isinstance(name, ast.Name) and name.id == "Stopped":
                 for arg in node.exc.args:
-                    for piece in ast.walk(arg):
-                        if isinstance(piece, ast.Constant) and isinstance(piece.value, str):
-                            found.append((piece.lineno, piece.value))
+                    found.extend(_strings_under(arg))
+        # 2. {"reason": "…"}
         if isinstance(node, ast.Dict):
             for key, value in zip(node.keys, node.values):
-                if isinstance(key, ast.Constant) and key.value in ("reason", "detail", "why", "headline"):
-                    for piece in ast.walk(value):
-                        if isinstance(piece, ast.Constant) and isinstance(piece.value, str):
-                            found.append((piece.lineno, piece.value))
+                if isinstance(key, ast.Constant) and key.value in OWNER_FACING_KEYS:
+                    found.extend(_strings_under(value))
+        # 3. out["reason"] = "…"  /  out.update({"reason": "…"}) is shape 2 already
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if (isinstance(target, ast.Subscript)
+                        and isinstance(target.slice, ast.Constant)
+                        and target.slice.value in OWNER_FACING_KEYS):
+                    found.extend(_strings_under(node.value))
     return found
+
+
+def test_the_scan_sees_all_three_shapes():
+    """The guard on the scanner itself.
+
+    Without this, widening `_stop_literals` later — or narrowing it by accident — changes what
+    the gate can see with no test noticing. Each shape below is written the way the product
+    writes it, and each must be found.
+    """
+    import tempfile
+
+    source = '''
+class Stopped(RuntimeError): pass
+
+def one():
+    raise Stopped("shape one: `make venv` first")
+
+def two():
+    return {"reason": "shape two: `make logs` shows why"}
+
+def three():
+    out = {}
+    out["note"] = "shape three: `git checkout main` comes forward again"
+    return out
+'''
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as handle:
+        handle.write(source)
+        probe = Path(handle.name)
+    try:
+        seen = [text for _, text in _stop_literals(probe)]
+        for shape in ("shape one", "shape two", "shape three"):
+            assert any(shape in text for text in seen), f"the scanner cannot see {shape}: {seen}"
+        # And each must be judged an offence, or seeing it bought nothing.
+        assert all(_offences(text) for text in seen if "shape" in text)
+    finally:
+        probe.unlink()
 
 
 @pytest.mark.parametrize("name", ["update.py", "control.py", "service.py"])
