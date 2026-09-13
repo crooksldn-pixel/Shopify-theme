@@ -117,9 +117,20 @@ public enum KnownAction {
         "stop", "restart", "update", "rollback", "pad_install", "pad_update", "reset",
     ]
 
-    /// The controls §5.2 says the owner must have. Anything on this list that the script does
-    /// not send is reported as missing rather than quietly left out — the owner is told the
-    /// control does not exist here, instead of wondering where it went.
+    /// Controls reported as MISSING when the script does not send them, so the owner is told
+    /// the control does not exist here rather than wondering where the button went.
+    ///
+    /// §5.2 asks for more than these seven — check health, start and stop a physical test,
+    /// stop and analyse, open the latest report, open diagnostics, install CROOKS Pad. They
+    /// are not on this list, and the omission is deliberate: this list is "ids this app is
+    /// certain of". Five of the seven are in the Phase 5 actions document already, and the
+    /// brief states that start and stop are being added under those exact ids. For the rest,
+    /// the id is a guess — CHECK HEALTH could reasonably be `health`, `doctor` or `check`,
+    /// and announcing "this CROOKS OS has no CHECK HEALTH control" about a script that has
+    /// one under a name we did not guess is a false alarm, which is worse than silence.
+    ///
+    /// Anything the script does send is drawn whether it is on this list or not. Adding an id
+    /// here only makes its ABSENCE speak.
     public static let expected: [(id: String, name: String)] = [
         ("start", "START"),
         ("stop", "STOP"),
