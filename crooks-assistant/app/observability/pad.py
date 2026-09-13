@@ -28,7 +28,8 @@ The appliance telemetry (§18)
 -----------------------------
 The native layer emits `pad_*` events — started, foregrounded, backgrounded, the WebView loaded
 or failed, the network changed, the backend became reachable or stopped being, the microphone
-permission, the renderer died, admin was entered or left, the version. They go onto the SAME
+permission, the renderer died, admin was entered or left, the version, the battery, the stage
+the kiosk lock reached and a navigation the shell refused. They go onto the SAME
 test-session timeline as everything else (`app/observability/timeline.py`), through the same
 `emit`, which means through the same scrub: withheld keys, credential shapes and contact-detail
 shapes are all already handled there and there is no second redactor here. A device model and an
@@ -81,8 +82,12 @@ MAX_IDENTITY_CHARS = 64
 WEBVIEW_STATES = frozenset({"loaded", "loading", "error", "crashed"})
 # What survives into a stored identity string. Everything the real values need — "SM-T290",
 # "0.3.1", "Android 11 (API 30)" — and nothing that could carry markup or a newline into a
-# report that gets pasted somewhere.
-_IDENTITY_SAFE = re.compile(r"[^A-Za-z0-9 ._\-+()/:]")
+# report that gets pasted somewhere. Square brackets are in the set because the scrub runs
+# BEFORE this filter now (see `_identity`), and the markers it leaves behind — "[email]",
+# "[secret]" — are the entire point of having run it: a filter that ate them would turn a
+# redaction back into a plausible-looking value. They are not new on this surface either;
+# "[secret]" is what `app_version` has said since the scrub was first wired in here.
+_IDENTITY_SAFE = re.compile(r"[^A-Za-z0-9 ._\-+()/:\[\]]")
 
 # The appliance's vocabulary. Each kind names the CHANNEL it speaks on — a set of mutually
 # exclusive states, of which only the current one is interesting — and the fields that make one
@@ -104,6 +109,16 @@ PAD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {
     "pad_admin_entered": ("admin", ()),
     "pad_admin_exited": ("admin", ()),
     "pad_version": ("version", ("version",)),
+    # Three appliance facts admitted on top of the original thirteen, because they are real and
+    # nothing else in this system can see them. A tablet that has been off its charger since
+    # lunchtime, a kiosk lock that did not actually take (so the next person to pick the pad up
+    # can leave CROOKS entirely), and a navigation the shell refused — a link out of the app
+    # that a finger found. Each is a channel of its own, and each signs on the fields that make
+    # one report on it different from the last: 84% charging and 19% on battery are two facts,
+    # not one repeated.
+    "pad_battery": ("battery", ("percent", "charging")),
+    "pad_kiosk_stage": ("kiosk", ("stage",)),
+    "pad_navigation_blocked": ("navigation", ("host",)),
 }
 # Emitted by this file rather than by the appliance: the moments the Mac's view of the pad
 # changed. A routine beat writes nothing at all.
@@ -118,6 +133,11 @@ ALLOWED_EVENT_FIELDS = frozenset({
     "at", "state", "to", "from", "code", "reason", "message", "detail", "version",
     "app_version", "ms", "ok", "reachable", "url", "phase", "count", "granted",
     "boot_id", "network", "attempt", "http_status",
+    # What the three admitted kinds sign on. A signature field that is not an allowed field is
+    # not a signature at all: it is dropped before the signature is built, every report on that
+    # channel then signs as the empty string, and the low battery is folded into the full one as
+    # a repeat. The table and this set are only correct together.
+    "percent", "charging", "stage", "host",
 })
 MAX_EVENT_STRING = 400
 MAX_EVENTS_PER_POST = 50
@@ -137,9 +157,20 @@ def _identity(value: Any) -> str:
     Scrubbed through `timeline.scrub` — the same seam every written event passes — rather than
     through a rule of its own, because /health is read by the Control app, pasted into reports
     and handed to engineers exactly as a timeline is.
+
+    The scrub goes FIRST, and that order is the safety rather than a detail of it. The scrub
+    finds personal data by SHAPE, and a shape needs its punctuation: filter an e-mail's '@' away
+    before the scrub looks and "george@crooks.example" arrives as "georgecrooks.example", which
+    matches no pattern, is replaced by nothing, and reaches /health as the owner's login spelled
+    out in full — while every assertion of the form "there is no '@' in it" goes on passing,
+    because the filter made an '@' impossible either way. So: scrub the original, then filter
+    the characters, then cap the length last of all, so that nothing is cut into or out of a
+    shape before the scrub has had sight of it.
     """
-    text = _IDENTITY_SAFE.sub("", str(value or "")).strip()[:MAX_IDENTITY_CHARS]
-    return str(timeline_module.scrub(text)) if text else ""
+    raw = str(value or "")
+    if not raw.strip():
+        return ""
+    return _IDENTITY_SAFE.sub("", str(timeline_module.scrub(raw))).strip()[:MAX_IDENTITY_CHARS]
 
 
 def _ago(seconds: float | None) -> str:
@@ -197,9 +228,34 @@ class PadRegistry:
         gap = None if self.last_seen is None else now - self.last_seen
         identity = {name: _identity(fields.get(name)) for name in IDENTITY_FIELDS}
         changed = [name for name in IDENTITY_FIELDS if identity[name] and identity[name] != getattr(self, name)]
+        # A pad that has REBOOTED — which is not the same as one whose boot_id we are learning
+        # for the first time (an appliance upgraded mid-shift starts carrying one on a beat that
+        # is otherwise the beat it was already sending) and not the same as one that has stopped
+        # carrying it. Neither of those is a new life and neither may throw anything away.
+        rebooted = bool(self.boot_id and identity["boot_id"] and identity["boot_id"] != self.boot_id)
         for name in IDENTITY_FIELDS:
             if identity[name]:
                 setattr(self, name, identity[name])
+        if rebooted:
+            # A new boot is a new screen. What the dead boot last said about its WebView
+            # describes a process that no longer exists, and carried over it answers for a
+            # screen nobody has seen: the pad that crashed its renderer and was restarted goes
+            # on reading "NOT SHOWING CROOKS (webview crashed)" while it sits there working, and
+            # — the same bug the dangerous way up — the pad that had loaded goes on reading
+            # `showing_crooks: true` through a new boot whose WebView never came back. So it
+            # returns to "has not said", which is the only true thing about it until this boot
+            # says otherwise. Cleared BEFORE this beat's own `webview` is read, so a beat that
+            # carries a new boot_id and a state together still sets the state.
+            self.webview = ""
+            # And the collapser's memory goes with it, for the same reason one layer down. It
+            # folds any report matching the last one written on its channel within
+            # RESTATE_AFTER_S — a quarter of an hour — so an appliance that crashed and came
+            # back inside that window would have the new life's "foregrounded" and "loaded"
+            # folded into the dead life's and never written at all, and section 17 of the report
+            # would then say the rebooted app did neither. The folded COUNTS are deliberately
+            # left alone: `_repeats` still rides onto the next accepted event on the channel, so
+            # nothing that was collapsed goes unaccounted for.
+            self._last.clear()
         webview = str(fields.get("webview") or "").strip().lower()
         if webview in WEBVIEW_STATES:
             self.webview = webview

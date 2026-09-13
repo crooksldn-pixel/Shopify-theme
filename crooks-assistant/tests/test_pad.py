@@ -243,9 +243,16 @@ def test_an_identity_cannot_smuggle_a_secret_or_an_address_onto_health(registry)
     )
     status = reg.status()
     assert status["app_version"] == "[secret]", "a credential shape is replaced by the timeline's scrub"
-    assert "@" not in status["device_model"] and "george@crooks.example" not in status["device_model"]
+    # The ORDER is the assertion. The scrub finds an e-mail by its SHAPE, and the shape needs
+    # its '@'; a character filter that ran first would strip the '@' and hand the scrub
+    # "georgecrooks.example" — the owner's login, legible, in a string that goes on /health, into
+    # the Control app and into pasted reports — with nothing left in it for the scrub to find.
+    # An assertion written as "'@' not in ..." cannot tell that apart from a working redactor,
+    # because the filter has already made an '@' impossible either way. So this asserts on what
+    # is LEFT: the address has to come out replaced, not merely punctured.
+    assert status["device_model"] == "SM-T290 scriptalert(1)/script [email]"
+    assert "george" not in status["device_model"] and "crooks.example" not in status["device_model"]
     assert "<" not in status["device_model"] and ">" not in status["device_model"]
-    assert status["device_model"].startswith("SM-T290 scriptalert(1)")
     assert len(status["os_version"]) == pad_module.MAX_IDENTITY_CHARS
 
     # There is no field for a device NAME, and inventing one does not create it: "George's Tab"
@@ -289,6 +296,82 @@ def test_a_pad_that_has_not_said_what_is_on_its_screen_is_not_assumed_to_be_fine
     # A value outside the vocabulary is not a value.
     reg.heartbeat(webview="probably fine honestly")
     assert reg.status()["showing_crooks"] is None
+
+
+def test_a_new_boot_does_not_inherit_the_last_boots_screen(registry):
+    """A new boot is a new screen.
+
+    The pad crashed its renderer, was rebooted, and has not yet loaded anything. What it last
+    said about its screen belonged to a process that no longer exists, and nothing in the new
+    life has said a word about the new one — so /health's `showing_crooks` must not inherit the
+    old answer. Before this was fixed the Control app went on printing "NOT SHOWING CROOKS
+    (webview crashed)" about a tablet that had been restarted and was sitting there perfectly
+    well, which is the same invented colour as the fake green this layer exists to prevent, just
+    the other way up. The inverse is worse and is the same bug: a boot that had reported
+    `loaded`, then rebooted into a WebView that never came back, would go on reporting
+    `showing_crooks: true` about a white rectangle.
+    """
+    reg, _clock = registry
+    reg.heartbeat(app_version="0.4.2", device_model="SM-T290", boot_id="boot-A", webview="loaded")
+    assert reg.status()["showing_crooks"] is True
+    reg.record([{"kind": "pad_renderer_crash", "reason": "oom"}])
+    assert reg.status()["webview"] == "crashed"
+
+    # Rebooted: same app, same tablet, a new life, and not a word yet about the screen.
+    reg.heartbeat(app_version="0.4.2", device_model="SM-T290", boot_id="boot-B")
+    status = reg.status()
+    assert status["webview"] == "", "the dead boot's screen is not this boot's screen"
+    assert status["showing_crooks"] is None, "which is not 'yes' and not 'no': it has not said"
+    assert "NOT SHOWING" not in status["detail"]
+
+    # A beat that carries the new boot AND a state still sets the state: the clearing happens
+    # before the beat's own word is read, not after it.
+    reg.heartbeat(app_version="0.4.2", boot_id="boot-C", webview="loaded")
+    assert reg.status()["showing_crooks"] is True
+    # And a beat repeating the boot it already knows is not a reboot.
+    reg.heartbeat(app_version="0.4.2", boot_id="boot-C")
+    assert reg.status()["showing_crooks"] is True
+
+
+def test_learning_a_boot_id_for_the_first_time_is_not_a_reboot(registry):
+    """An appliance upgraded mid-shift starts carrying `boot_id` on a beat that is otherwise the
+    beat it was already sending. Reading the arrival of the FIRST one as a change of boot would
+    throw away a screen state the pad had reported and had never stopped reporting."""
+    reg, _clock = registry
+    reg.heartbeat(app_version="0.4.2", webview="loaded")
+    assert reg.status()["showing_crooks"] is True
+    reg.heartbeat(app_version="0.5.0", boot_id="boot-A")
+    assert reg.status()["showing_crooks"] is True, "learning the boot_id is not rebooting"
+    # Nor is a beat that simply stops carrying it.
+    reg.heartbeat(app_version="0.5.0")
+    assert reg.status()["showing_crooks"] is True
+
+
+def test_a_new_boot_does_not_fold_its_first_events_into_the_dead_boots(registry, recording):
+    """The same carry-over, one layer down.
+
+    The collapser remembers the last signature written on each channel for RESTATE_AFTER_S — a
+    quarter of an hour — and an appliance that crashes and comes back inside that window says
+    exactly what it said before: foregrounded, loaded. Folded against the previous life those
+    reports vanish, and section 17 then says the rebooted app never came to the foreground and
+    never loaded the page, about a boot in which it did both.
+    """
+    timeline, path = recording
+    reg, _clock = registry
+    reg.heartbeat(app_version="0.4.2", boot_id="boot-A")
+    reg.record([{"kind": "pad_app_foreground"},
+                {"kind": "pad_webview_loaded", "url": "https://crooks.example/"}])
+
+    reg.heartbeat(app_version="0.4.2", boot_id="boot-B")
+    taken = reg.record([{"kind": "pad_app_foreground"},
+                        {"kind": "pad_webview_loaded", "url": "https://crooks.example/"}])
+    assert taken["accepted"] == 2 and taken["collapsed"] == 0, (
+        "a new boot's first word on a channel is a transition, whatever the dead boot said"
+    )
+    timeline.flush()
+    written = [e["kind"] for e in read_events(path) if e.get("source") == "pad"]
+    assert written.count("pad_app_foreground") == 2
+    assert written.count("pad_webview_loaded") == 2
 
 
 def test_the_webview_state_arrives_by_either_door(registry, recording):
@@ -436,6 +519,89 @@ def test_a_kind_this_backend_does_not_know_is_refused_at_the_door(registry, reco
     assert reg.status()["events"]["rejected"] == 4
 
 
+def test_the_appliance_vocabulary_is_exactly_the_sixteen_admitted_kinds():
+    """CONTRACT 3. The table in `app/observability/pad.py` is the canonical vocabulary, and it is
+    canonical only if it is written down somewhere that fails when it drifts.
+
+    Thirteen were already here. Three more are admitted because they are real appliance facts
+    the Control app benefits from and nothing else in the system can observe: what the battery is
+    doing, whether the kiosk lock actually took, and a navigation the shell refused. Every other
+    `pad_` spelling is dropped — in particular the duplicate `pad_foreground` / `pad_background`
+    and the three `pad_state*` / `pad_battery_changed` names, which say nothing the sixteen below
+    do not already say.
+    """
+    assert set(pad_module.PAD_KINDS) == {
+        "pad_app_started", "pad_app_foreground", "pad_app_background",
+        "pad_webview_loaded", "pad_webview_error", "pad_network_changed",
+        "pad_backend_reachable", "pad_backend_unreachable", "pad_mic_permission",
+        "pad_renderer_crash", "pad_admin_entered", "pad_admin_exited", "pad_version",
+        "pad_battery", "pad_kiosk_stage", "pad_navigation_blocked",
+    }
+    assert pad_module.PAD_KINDS["pad_battery"] == ("battery", ("percent", "charging"))
+    assert pad_module.PAD_KINDS["pad_kiosk_stage"] == ("kiosk", ("stage",))
+    assert pad_module.PAD_KINDS["pad_navigation_blocked"] == ("navigation", ("host",))
+
+    # A signature field that is not an allowed field is not a signature at all: it is filtered
+    # out before the signature is built, every report on that channel then signs as the empty
+    # string, and the second one onwards is folded away as a repeat. A table and a field list
+    # that disagree fail quietly and look like a working collapser, so they are checked together.
+    for kind, (_channel, signature_fields) in pad_module.PAD_KINDS.items():
+        for name in signature_fields:
+            assert name in pad_module.ALLOWED_EVENT_FIELDS, f"{kind} signs on {name!r}"
+
+
+def test_the_three_admitted_facts_reach_the_timeline_carrying_their_own_fields(registry, recording):
+    """CONTRACT 3, proved rather than declared: accepted, written, and told apart from each
+    other by the fields the contract names.
+
+    The telling-apart is the half that a table alone does not give you. A battery that is a
+    field the registry drops signs as the empty string, so 84% and 19% are the same report and
+    the low-battery one is folded away — which is precisely the event worth having.
+    """
+    timeline, path = recording
+    reg, _clock = registry
+    taken = reg.record([
+        {"kind": "pad_battery", "percent": 84, "charging": True},
+        {"kind": "pad_kiosk_stage", "stage": "pinned"},
+        {"kind": "pad_navigation_blocked", "host": "accounts.google.com"},
+        {"kind": "pad_battery", "percent": 84, "charging": True},    # the same fact again
+        {"kind": "pad_battery", "percent": 19, "charging": False},   # a different one
+    ])
+    assert taken == {"accepted": 4, "collapsed": 1, "rejected": 0, "rate_limited": 0}
+
+    timeline.flush()
+    written = [e for e in read_events(path) if e.get("source") == "pad"]
+    assert [e["kind"] for e in written] == [
+        "pad_battery", "pad_kiosk_stage", "pad_navigation_blocked", "pad_battery",
+    ]
+    assert written[0]["percent"] == 84 and written[0]["charging"] is True
+    assert written[1]["stage"] == "pinned"
+    assert written[2]["host"] == "accounts.google.com"
+    assert written[3]["percent"] == 19 and written[3]["charging"] is False
+    assert written[3]["repeats"] == 1, "and the fold is still counted onto the event that replaces it"
+
+
+def test_every_other_pad_spelling_is_still_refused_and_still_counted(registry, recording):
+    """The other half of CONTRACT 3, and the half that is easy to lose while adding to a table.
+
+    These are the spellings the appliance used to emit. They are duplicates of admitted kinds,
+    not gaps in the vocabulary, so they stay refused — and refused LOUDLY: the count is on
+    /health, because an appliance shouting a name this backend does not know is a version skew
+    somebody has to be able to see. Silence here would look exactly like a healthy pad.
+    """
+    timeline, path = recording
+    reg, _clock = registry
+    retired = ["pad_foreground", "pad_background", "pad_state", "pad_state_changed",
+               "pad_battery_changed", "pad_made_up", "pad_nonsense"]
+    taken = reg.record([{"kind": kind} for kind in retired])
+    assert taken == {"accepted": 0, "collapsed": 0, "rejected": len(retired), "rate_limited": 0}
+    assert reg.status()["events"]["rejected"] == len(retired), "counted, and visible on /health"
+    timeline.flush()
+    assert [e for e in read_events(path) if e.get("source") == "pad"] == [], (
+        "nothing outside the vocabulary reaches the timeline, whatever it is nearly called"
+    )
+
+
 def test_a_pad_event_obeys_the_existing_pii_scrubbing(registry, recording):
     """Not a second redactor — the same one. Everything a pad reports goes through
     `timeline.emit`, so the shapes Phase 5 learned to redact (D-15: three real customer email
@@ -497,6 +663,120 @@ async def test_a_heartbeat_is_taken_when_nothing_is_being_recorded(client):
     answer = await client.post("/pad/heartbeat", headers=PROXIED, json={"app_version": "0.4.2", "device_model": "SM-T290"})
     assert answer.status_code == 200 and answer.json()["recording"] is False
     assert (await client.get("/pad")).json()["connected"] is True
+
+
+async def test_the_pad_block_is_the_wire_shape_the_layers_above_read(client):
+    """CONTRACT 1: `PadRegistry.status()` — the `pad` block on GET /health — is the authoritative
+    shape, and two other pieces of software read it by name.
+
+    `scripts/control.py` reads THESE keys to build its own smaller answer, and the Control app
+    reads that one. A key quietly renamed here is a row that goes blank two layers away, on a
+    Mac, in a shop, with nobody in the loop to notice — the failure is silent at every step,
+    because a missing key reads as "unknown", and "unknown" is a word the Control app is
+    perfectly willing to print. So the names are written down here rather than left to be
+    inferred from whatever the last caller happened to need.
+    """
+    configure(client, logins="owner@example.com")
+    answer = await client.post("/pad/heartbeat", headers=PROXIED, json={
+        "app_version": "0.4.2", "device_model": "SM-T290", "os_version": "Android 11 (API 30)",
+        "boot_id": "boot-A", "webview": "loaded",
+    })
+    # What the appliance reads back. The cadence is the backend's number, not a Kotlin constant:
+    # the pad asks on every beat, so STALE_AFTER_S and the interval can never drift apart.
+    body = answer.json()
+    assert body["interval_s"] == pad_module.HEARTBEAT_INTERVAL_S
+    assert body["stale_after_s"] == pad_module.STALE_AFTER_S
+    assert body["recording"] is False, "and whether to turn its own telemetry on, within one beat"
+
+    block = (await client.get("/health")).json()["pad"]
+    assert set(block) == {
+        "connected", "state", "detail", "last_seen", "last_seen_s", "last_seen_text",
+        "app_version", "device_model", "os_version", "webview", "showing_crooks",
+        "heartbeats", "clock_skew_s", "interval_s", "stale_after_s", "events",
+    }
+    assert set(block["events"]) == {"accepted", "collapsed", "rejected", "rate_limited"}
+    # `app_version` is the spelling, and it is the field the layer above fills its `app` from.
+    assert block["app_version"] == "0.4.2" and block["device_model"] == "SM-T290"
+    assert block["os_version"] == "Android 11 (API 30)", "parentheses survive the identity filter"
+    assert block["interval_s"] == pad_module.HEARTBEAT_INTERVAL_S
+    assert block["stale_after_s"] == pad_module.STALE_AFTER_S
+    assert set((await client.get("/pad")).json()) == set(block), (
+        "and the route that serves it on its own serves the same shape"
+    )
+
+
+async def test_the_web_page_cannot_put_an_appliance_event_on_the_timeline(client):
+    """CONTRACT 1's boundary, enforced rather than merely written down.
+
+    /telemetry is the WEB PAGE's account of itself and the appliance's events ride the
+    heartbeat. But `app/routes/observe.py` re-prefixes every kind it accepts to `tablet_*`, and
+    nothing stopped a page — ours, or anything else the Mac's middleware admits — from POSTing a
+    `pad_` kind there. It would have landed as `tablet_pad_battery`: a name no producer emits,
+    which `reconstruct` files under the TABLET instead of the appliance because it matches the
+    tablet prefix first, which section 17 therefore never sees, and which the pad registry's
+    accepted / rejected counts know nothing about. One event, two doors, two different stories.
+    So the appliance's prefix is refused at this door.
+    """
+    configure(client, logins="owner@example.com")
+    started = (await client.post("/test-session/start", json={"name": "telemetry"})).json()
+    answer = await client.post("/telemetry", headers=PROXIED, json={"events": [
+        {"kind": "pad_battery", "state": "84"},
+        {"kind": "pad_heartbeat"},
+        {"kind": "render", "ms": 12},
+    ]})
+    assert answer.status_code == 204
+    assert answer.headers["X-Crooks-Telemetry"] == "1", "the page's own event, and only that"
+
+    await client.post("/test-session/stop")
+    client.runtime.timeline.flush()
+    kinds = [e["kind"] for e in read_events(Path(started["path"]))]
+    assert "tablet_render" in kinds
+    assert not [k for k in kinds if "pad" in k], kinds
+
+
+async def test_a_real_beat_and_its_events_reach_section_17_of_the_report(client):
+    """The whole §16/§18 path in one test: the pad posts, the timeline is written to disk, the
+    analyser reads that file back, and section 17 renders from it.
+
+    Every other analyser test in this file hands `reconstruct` a list written by hand, which
+    proves the report can read a shape but not that anything produces it. This one proves
+    `rec.appliance` is populated by the code that actually runs — that `registry.record` emits
+    the `pad_` names unchanged, that nothing between the appliance and the report renames them,
+    and that the three newly admitted kinds are read as this backend's own rather than reported
+    as kinds it cannot read.
+    """
+    configure(client, logins="owner@example.com")
+    await client.post("/test-session/start", json={"name": "appliance"})
+    answer = await client.post("/pad/heartbeat", headers=PROXIED, json={
+        "app_version": "0.4.2", "device_model": "SM-T290", "os_version": "Android 11 (API 30)",
+        "boot_id": "boot-A", "webview": "loaded",
+        "events": [
+            {"kind": "pad_app_started", "boot_id": "boot-A", "app_version": "0.4.2"},
+            {"kind": "pad_webview_loaded", "url": "https://crooks.example/", "ms": 812},
+            {"kind": "pad_battery", "percent": 41, "charging": False},
+            {"kind": "pad_kiosk_stage", "stage": "pinned"},
+            {"kind": "pad_navigation_blocked", "host": "accounts.google.com"},
+        ],
+    })
+    assert answer.status_code == 200
+    assert answer.json()["events"] == {"accepted": 5, "collapsed": 0, "rejected": 0, "rate_limited": 0}
+
+    stopped = (await client.post("/test-session/stop")).json()
+    client.runtime.timeline.flush()
+    rec = reconstruct(read_events(Path(stopped["path"])))
+    assert not rec.unknown_kinds, dict(rec.unknown_kinds)
+    assert [e["kind"] for e in rec.appliance] == [
+        "pad_heartbeat", "pad_app_started", "pad_webview_loaded",
+        "pad_battery", "pad_kiosk_stage", "pad_navigation_blocked",
+    ]
+    markdown = render(rec, tools_registered=[])
+    assert "## 17. The appliance" in markdown
+    assert "**SM-T290**" in markdown and "app **0.4.2**" in markdown
+    assert "pad_navigation_blocked" in markdown, "it is in the counts, whatever else is said"
+    assert "does not read line by line" not in markdown, (
+        "the three admitted kinds are in this backend's own vocabulary now, so section 17 files "
+        "them rather than announcing them as kinds it cannot read"
+    )
 
 
 # ------------------------------------------------------------------------------ the analyser
