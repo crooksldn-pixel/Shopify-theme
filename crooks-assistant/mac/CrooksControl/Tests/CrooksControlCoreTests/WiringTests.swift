@@ -107,6 +107,52 @@ final class WiringTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(button(try dashboard(list, plan: plan), "update")).enabled)
     }
 
+    func testTheUpdateButtonGoesBackToSleepOnceTheUpdateHasRun() throws {
+        // Press CHECK, press UPDATE, watch it succeed — and the plan that said "three commits
+        // to take" is still in hand, still saying UPDATE is available, on a Mac that has
+        // already taken them. A second press would be harmless, and that is exactly the
+        // problem: a button that lies about something harmless is the one that is not believed
+        // when it matters.
+        let list = [ActionsDocument.Action(id: "update", label: "Update", kind: "control",
+                                           group: "update", command: ["/usr/bin/true"],
+                                           confirm: true, needsPlan: true)]
+        let plan = try Contract.decoder.decode(UpdateDocument.self, from: Fixture.planAvailable)
+        let applied = try Contract.decoder.decode(UpdateDocument.self, from: Fixture.applySucceeded)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(applied.envelope.at), try XCTUnwrap(plan.envelope.at),
+                                    "the fixtures were captured in that order, which is the premise")
+
+        let document = try Contract.decoder.decode(StatusDocument.self, from: Fixture.onlineStatus)
+        var machine = LifecycleMachine()
+        machine.observe(.status(document), at: now)
+        let after = DashboardBuilder.build(DashboardInput(
+            status: document, actions: list, machine: machine, plan: plan, outcome: applied, now: now))
+        let update = try XCTUnwrap(button(after, "update"))
+        XCTAssertFalse(update.enabled)
+        XCTAssertEqual(update.disabledReason,
+                       "Press CHECK FOR UPDATE first, so you can see what would change.")
+    }
+
+    func testAPlanFetchedAfterTheLastRunIsNotStale() throws {
+        var raw = try XCTUnwrap(String(data: Fixture.planAvailable, encoding: .utf8))
+        let applied = try Contract.decoder.decode(UpdateDocument.self, from: Fixture.applySucceeded)
+        // The same plan, fetched a minute after the run that is on screen.
+        raw = raw.replacingOccurrences(
+            of: "\"at\": \(try XCTUnwrap(Contract.decoder.decode(UpdateDocument.self, from: Fixture.planAvailable).envelope.at))",
+            with: "\"at\": \(try XCTUnwrap(applied.envelope.at) + 60)")
+        let fresher = try Contract.decoder.decode(UpdateDocument.self, from: Data(raw.utf8))
+        XCTAssertGreaterThan(try XCTUnwrap(fresher.envelope.at), try XCTUnwrap(applied.envelope.at),
+                             "the edit landed")
+
+        let list = [ActionsDocument.Action(id: "update", label: "Update", kind: "control",
+                                           group: "update", command: ["/usr/bin/true"], needsPlan: true)]
+        let document = try Contract.decoder.decode(StatusDocument.self, from: Fixture.onlineStatus)
+        var machine = LifecycleMachine()
+        machine.observe(.status(document), at: now)
+        let after = DashboardBuilder.build(DashboardInput(
+            status: document, actions: list, machine: machine, plan: fresher, outcome: applied, now: now))
+        XCTAssertTrue(try XCTUnwrap(button(after, "update")).enabled)
+    }
+
     // MARK: - Odd documents
 
     func testAButtonWithNoGroupGetsAHeadingRatherThanAnEmptyOne() throws {

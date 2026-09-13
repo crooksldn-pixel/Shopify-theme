@@ -118,14 +118,16 @@ final class DashboardTests: XCTestCase {
     // MARK: - One notice, never five
 
     func testAtMostOneNoticeIsEverShown() throws {
-        // This document has several things worth saying at once: Gmail is down, a family is
-        // read-only, and the Phase 5 script has no start or stop. §5.8 says one.
-        let dashboard = try build(Fixture.degradedStatus)
-        XCTAssertNotNil(dashboard.notice)
-        // There is exactly one `notice` on the type, so this is really a test of the ordering:
-        // the most serious thing must be the one that survives.
-        XCTAssertTrue(dashboard.notice?.text.contains("START and STOP") == true,
-                      "a control that does not exist outranks a grumble: \(dashboard.notice!.text)")
+        // This document has three things worth saying at once: Gmail is down, one capability
+        // family is read-only, and the Phase 5 script has no start or stop. §5.8 says one.
+        //
+        // There is exactly one `notice` on the type, so this is really a test of the ordering,
+        // and the ordering is a product judgement: CROOKS OS is RUNNING here, so the thing the
+        // owner can act on now — it cannot make changes — beats a button he does not need this
+        // minute. The reverse order was written first and was wrong for exactly that reason.
+        let notice = try XCTUnwrap(try build(Fixture.degradedStatus).notice)
+        XCTAssertTrue(notice.text.contains("cannot make changes"), notice.text)
+        XCTAssertEqual(notice.tone, .caution)
     }
 
     func testAFailureOutranksEverything() throws {

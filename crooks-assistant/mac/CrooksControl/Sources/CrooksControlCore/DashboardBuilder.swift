@@ -321,7 +321,7 @@ public enum DashboardBuilder {
             // The rule is not conditional on the document's `needs_plan` flag — a script that
             // stopped sending that flag would otherwise quietly turn UPDATE into a one-click
             // action that moves the build before the owner has seen either SHA.
-            guard let plan = input.plan else {
+            guard let plan = input.plan, !planIsStale(input) else {
                 return (false, "Press CHECK FOR UPDATE first, so you can see what would change.")
             }
             if case .available = UpdateJudge.judgePlan(plan) { return (true, nil) }
@@ -352,6 +352,23 @@ public enum DashboardBuilder {
         }
     }
 
+    /// Has an update or a rollback happened SINCE the plan that is still on screen?
+    ///
+    /// It matters because of what a stale plan would leave enabled. Press CHECK, press UPDATE,
+    /// watch it succeed — and the plan that said "three commits to take" is still in hand,
+    /// still saying UPDATE is available, on a Mac that has already taken them. The second press
+    /// would be harmless (the script would answer "up to date") but the button was a lie, and a
+    /// button that lies about something harmless is the one that is not believed later.
+    ///
+    /// Every document carries `at`, so the two can simply be compared. A document without one
+    /// is treated as stale, because the safe reading of "I do not know which came first" is
+    /// "check again".
+    static func planIsStale(_ input: DashboardInput) -> Bool {
+        guard let outcome = input.outcome else { return false }
+        guard let planAt = input.plan?.envelope.at, let outcomeAt = outcome.envelope.at else { return true }
+        return outcomeAt >= planAt
+    }
+
     // MARK: - What this CROOKS OS cannot do
 
     /// §5.2 asks for a set of controls. The app must not draw one the script cannot perform —
@@ -367,8 +384,8 @@ public enum DashboardBuilder {
     // MARK: - One notice, or none
 
     static func notice(_ input: DashboardInput, missing: [String], update: UpdatePanel) -> Notice? {
-        // Ordered by what the owner would want interrupted for. Exactly one is returned,
-        // because a control panel that stacks five banners has told him nothing five times.
+        // Ordered by what the owner would want interrupted for, and exactly one is returned:
+        // a control panel that stacks five banners has told him nothing, five times.
         if let failure = input.failure {
             return Notice(tone: .danger, text: failure.sentence, fix: failure.advice)
         }
@@ -384,6 +401,25 @@ public enum DashboardBuilder {
                 fix: "Open the logs, then press RESTART."
             )
         }
+        // A missing control only outranks everything below it when the owner would be reaching
+        // for it THIS MINUTE. No START button on a Mac where CROOKS OS is not running is a dead
+        // end and he needs telling; no START button while it is happily running is a note for
+        // later, and putting it above "CROOKS OS cannot make changes" would bury the thing he
+        // can actually act on.
+        if missing.contains("START"), input.machine.phase == .offline || input.machine.phase == .error {
+            return Notice(
+                tone: .danger,
+                text: "CROOKS OS is not running, and the version in this folder has no START "
+                    + "control, so this app cannot start it.",
+                fix: "Update CROOKS OS from Terminal — `make up` in its folder — then reopen this app."
+            )
+        }
+        if let status = input.status, status.mutation.isReadOnly, input.machine.phase == .online {
+            return Notice(tone: .caution,
+                          text: "CROOKS OS is running but cannot make changes: "
+                            + Redaction.scrub(status.mutation.detail),
+                          fix: nil)
+        }
         if !missing.isEmpty {
             return Notice(
                 tone: .caution,
@@ -392,12 +428,6 @@ public enum DashboardBuilder {
                     + (missing.count == 1 ? "that button" : "those buttons") + ".",
                 fix: "Update CROOKS OS, then reopen this app."
             )
-        }
-        if let status = input.status, status.mutation.isReadOnly, input.machine.phase == .online {
-            return Notice(tone: .caution,
-                          text: "CROOKS OS is running but cannot make changes: "
-                            + Redaction.scrub(status.mutation.detail),
-                          fix: nil)
         }
         if let status = input.status, status.localWork.stops {
             return Notice(

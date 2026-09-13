@@ -80,7 +80,21 @@ final class ActionTests: XCTestCase {
         XCTAssertNil(button(dashboard, "stop"))
         XCTAssertEqual(dashboard.missingControls, ["START", "STOP"])
 
+        // And because CROOKS OS is not running, the missing START is the one thing he needs
+        // told: there is no button, and no way to make one appear from in here.
         let notice = try XCTUnwrap(dashboard.notice)
+        XCTAssertEqual(notice.tone, .danger)
+        XCTAssertTrue(notice.text.contains("no START"), notice.text)
+        XCTAssertTrue((notice.fix ?? "").contains("make up"),
+                      "a dead end has to come with the way out of it: \(notice.fix ?? "nil")")
+    }
+
+    func testTheSameMissingControlIsOnlyANoteWhileCrooksOsIsRunning() throws {
+        // It is still worth saying — but not above something he can act on. A banner shouting
+        // about a button he does not need this minute is how the one that matters gets ignored.
+        let dashboard = try dashboard(status: Fixture.onlineStatus, actions: actions())
+        let notice = try XCTUnwrap(dashboard.notice)
+        XCTAssertEqual(notice.tone, .caution)
         XCTAssertTrue(notice.text.contains("START and STOP"), notice.text)
         XCTAssertEqual(notice.fix, "Update CROOKS OS, then reopen this app.")
     }
