@@ -1051,12 +1051,31 @@ def test_nothing_in_crooks_os_calls_the_updater_or_the_control_command():
 
 
 def test_only_the_control_command_writes_the_known_good_build():
+    """Nothing but this script may WRITE logs/last_known_good.json.
+
+    This used to be checked by asserting that the string "last_known_good" appeared in no file
+    but this one and its test. That worked only by luck: the Swift side decoded the field under
+    Swift's camelCase spelling, so a grep for the snake_case name missed it.
+
+    Phase 6's Swift core has real tests, and its fixtures are documents captured from this very
+    script — which of course contain `"last_known_good": null`, because that is what this
+    script prints. Reading the key and naming it in a comment are not writing the file, and an
+    assertion that cannot tell the difference would forbid any client from ever mentioning the
+    field it is given. So the check is now on the writing: the two functions that touch the
+    file live here and nowhere else.
+    """
     import subprocess as sp
 
-    hits = sp.run(["grep", "-rln", "--include=*.py", "--include=*.swift", "--include=*.md",
-                    "last_known_good", "app", "config", "web", "scripts", "tests", "experience", "mac"],
-                  cwd=PROJECT, capture_output=True, text=True).stdout.split()
-    assert sorted(hits) == ["scripts/control.py", "tests/test_control.py"], hits
+    for writer in ("write_known_good", "known_good_path"):
+        hits = sp.run(["grep", "-rln", "--include=*.py", "--include=*.js", "--include=*.swift",
+                       writer, "app", "config", "web", "scripts", "tests", "experience", "mac"],
+                      cwd=PROJECT, capture_output=True, text=True).stdout.split()
+        assert sorted(hits) == ["scripts/control.py", "tests/test_control.py"], (writer, hits)
+    # And nothing inside CROOKS OS itself so much as names the record.
+    named = sp.run(["grep", "-rln", "--include=*.py", "--include=*.js", "--include=*.html",
+                    "last_known_good", "app", "config", "web", "experience"],
+                   cwd=PROJECT, capture_output=True, text=True).stdout.strip()
+    assert named == "", f"something inside CROOKS OS reads the known-good record:\n{named}"
 
 
 # --------------------------------------------------------- the Swift side, as text only
@@ -1066,25 +1085,59 @@ SWIFT_DIR = PROJECT / "mac" / "CrooksControl"
 
 
 def swift_sources() -> str:
-    files = sorted(SWIFT_DIR.rglob("*.swift"))
+    """The APP's own code: Sources/, not Tests/.
+
+    Phase 6 split this package into a Foundation-only core and a SwiftUI layer, and gave the
+    core real tests that run on any machine. Those tests contain, quite deliberately, the very
+    strings the scans below forbid the app from carrying: a fake `shpat_` token whose whole
+    purpose is to prove the redaction masks it, a `curl: (7) Connection refused` that the
+    humanising test turns into a sentence a shopkeeper can act on, and the real actions
+    document — captured from this script — with `pytest` in it. Scanning a test that proves a
+    token is hidden and calling it a leak is the assertion measuring the opposite of what it
+    means. These claims have always been about what the APP reaches for, so that is what is
+    scanned.
+    """
+    files = sorted((SWIFT_DIR / "Sources").rglob("*.swift"))
     assert files, "there are no Swift sources to check"
     return "\n".join(path.read_text(encoding="utf-8") for path in files)
 
 
 def swift_documents() -> str:
-    """The one file the JSON is decoded in. Every type the app reads is here, which is what
-    lets the field scan below mean something."""
-    return (SWIFT_DIR / "Sources" / "CrooksControl" / "Documents.swift").read_text(encoding="utf-8")
+    """The files the JSON is decoded in. Phase 5 had one, Documents.swift, beside the views;
+    Phase 6 has three, in the Foundation-only core where they can be tested."""
+    base = SWIFT_DIR / "Sources" / "CrooksControlCore"
+    names = ("StatusDocument.swift", "UpdateDocument.swift", "ActionsDocument.swift")
+    return "\n".join((base / name).read_text(encoding="utf-8") for name in names)
 
 
 def test_the_app_is_a_renderer_and_runs_no_command_of_its_own(buttons):
-    """It cannot be compiled here, so what CAN be checked is checked: the app knows the name
-    of this script and nothing else. No git, no launchctl, no pytest, no curl — every one of
-    those would be a second opinion about how to update or restart this Mac."""
+    """It cannot be compiled here, so what CAN be checked is checked: the app runs this script
+    and the commands this script names, and nothing of its own.
+
+    Phase 5 checked that by forbidding the words "git", "launchctl", "curl" and so on anywhere
+    in the Swift. That proxy stopped telling the truth the moment the app grew prose about why
+    it does NOT trust those things — "`launchctl kickstart` returns 0 the moment launchd
+    accepts the job" is the comment above the rule that stops STARTING becoming ONLINE — and a
+    table that turns "not a git repository" into a sentence. Both are the app refusing to have
+    an opinion of its own, and the old assertion called them the opposite.
+
+    So this now checks the thing the words were a proxy for: how many processes the app can
+    start at all, and what it is allowed to point them at.
+    """
+    import re
+
     source = swift_sources()
-    for forbidden in ("git ", "\"git\"", "launchctl", "pytest", "curl", "tailscale", "uvicorn", "rm -rf"):
-        assert forbidden not in source, f"the app reaches for {forbidden!r} itself"
+    assert source.count("Process()") == 2, \
+        "two, and only two: the control script, and a button the control script named"
+    launches = re.findall(r"executableURL = (.+)$", source, flags=re.MULTILINE)
+    assert launches == ["python", "URL(fileURLWithPath: first)"], launches
+    # `first` is argv[0] out of the actions document. CommandGuard refuses a shell there, so a
+    # tampered document cannot turn the renderer into an execution surface.
+    assert "CommandGuard.refuse" in source
     assert "control.py" in source and "crooks-control" in source
+    # No second opinion about how to update or restart this Mac, as a command.
+    for forbidden in ('"git"', '"launchctl"', '"pytest"', '"curl"', '"tailscale"', "rm -rf"):
+        assert forbidden not in source, f"the app reaches for {forbidden} itself"
 
 
 def test_the_app_renders_the_colours_and_rows_this_side_produces(buttons):
@@ -1097,19 +1150,42 @@ def test_the_app_renders_the_colours_and_rows_this_side_produces(buttons):
 
 
 def test_the_app_does_not_carry_a_credential_or_an_endpoint_of_its_own():
+    """Phase 5 forbade the literals "sk-ant" and "shpat_" anywhere in the Swift.
+
+    Phase 6's core redacts on its own side as well as trusting this one to — because the app
+    also shows text this script never saw, such as a button's stderr — and to redact a token
+    it has to know what a token's prefix looks like. Those are the same prefixes SECRET_SHAPES
+    uses, deliberately, so the two lists cannot drift apart. The old assertion would have made
+    the app unable to hide a credential in order to prove it was not carrying one.
+
+    So this asserts what was always meant: not the prefixes, but an actual credential-shaped
+    string — a prefix WITH a value after it. SECRET_SHAPES is the judge, so this side and that
+    side agree on the definition.
+    """
     source = swift_sources()
-    assert "sk-ant" not in source and "shpat_" not in source
+    found = control.SECRET_SHAPES.search(source)
+    assert found is None, f"the app carries something credential-shaped: {found and found.group(0)[:12]}…"
     assert "https://api." not in source, "the app talks to this Mac and to nothing else"
 
 
-def test_the_bundle_is_a_menu_bar_app_that_starts_no_window():
-    """LSUIElement is what makes it a menu-bar app rather than one with a Dock icon and a
-    window: the plist is checked here because nothing else on this machine can."""
+def test_the_bundle_is_a_control_centre_that_opens_a_window():
+    """Phase 5's app was a menu-bar accessory: LSUIElement, no Dock icon, no window, and this
+    test asserted exactly that.
+
+    §5 asks for a control centre whose first viewport answers five questions at a glance —
+    is CROOKS OS running, is the tablet connected, are services healthy, what version, is a
+    test session on. A panel hanging off the menu bar has neither the room for that nor the
+    permanence: it closes when you look away, and the whole product promise is that you turn
+    the Mac on and CROOKS Control is simply there. So Phase 6 made it a window that opens at
+    login, with a line in the menu bar for the glance when something else is in front of it.
+
+    The old expectation was right for the old product and wrong for this one.
+    """
     import plistlib
 
     with open(SWIFT_DIR / "Info.plist", "rb") as handle:
         plist = plistlib.load(handle)
-    assert plist["LSUIElement"] is True
+    assert "LSUIElement" not in plist, "a control centre has a window and a Dock icon"
     assert plist["CFBundleExecutable"] == "CrooksControl"
     assert plist["CFBundleIdentifier"] == "com.crooks.control"
     assert plist["LSMinimumSystemVersion"] == "13.0"
@@ -1131,10 +1207,21 @@ def plistless(text: str) -> bool:
 
 
 def test_the_package_declares_the_platform_the_app_needs():
+    """Phase 5 asserted `"dependencies" not in manifest`, meaning "it fetches nothing".
+
+    Phase 6 splits the package into a Foundation-only core — every decision the app makes,
+    with tests that run on any machine — and the SwiftUI layer that draws it. The SwiftUI
+    target therefore has a TARGET dependency on the core, which is local and fetches nothing,
+    and the word now appears in the manifest. The claim the old assertion was making is said
+    precisely instead: no remote packages.
+    """
     manifest = (SWIFT_DIR / "Package.swift").read_text(encoding="utf-8")
     assert "swift-tools-version:5.9" in manifest
     assert ".macOS(.v13)" in manifest, "MenuBarExtra is macOS 13"
-    assert "dependencies" not in manifest, "it depends on nothing it would have to fetch"
+    assert ".package(" not in manifest, "it depends on nothing it would have to fetch"
+    assert "CrooksControlCore" in manifest, "the decisions live in a target that builds anywhere"
+    assert "#if os(macOS)" in manifest, \
+        "the SwiftUI target is declared only where it can be built, so the core's tests run elsewhere"
 
 
 def test_the_app_reads_every_document_field_from_the_contract_and_no_other(buttons):
@@ -1166,9 +1253,56 @@ def test_the_app_reads_every_document_field_from_the_contract_and_no_other(butto
     ))
     source = swift_documents()
     # `let x: T` in a Decodable struct is a field the app expects to be there.
-    declared = set(re.findall(r"^\s*let ([a-z][A-Za-z0-9]*):", source, flags=re.MULTILINE))
-    unknown = {name for name in declared if name not in printed}
+    #
+    # The pattern used to be `^\s*let ` — no `public`. Phase 6 moved these types into a library
+    # target, where every field is `public let`, and the old pattern quietly matched NOTHING:
+    # the test went on passing while measuring an empty set. That is the worst way for a test
+    # to fail, so the count is asserted below as well.
+    declared = set(re.findall(r"^\s*(?:public )?let ([a-z][A-Za-z0-9]*):", source, flags=re.MULTILINE))
+    assert len(declared) > 40, f"the field scan found only {sorted(declared)} — it has stopped measuring"
+
+    # Named differently on the Swift side, via CodingKeys, and for a reason each.
+    renamed = {
+        "colour": "state, renamed because the app has its own `state` (the lifecycle) and two "
+                  "things called state in one file is how the wrong one gets drawn",
+        "health": "a row's state, same reason",
+        "envelope": "not a key at all: the {contract, command, ok, at} four, boxed into one "
+                    "value so every document carries them the same way",
+    }
+    # Fields the app reads that this script does not print YET. Each is optional on the Swift
+    # side and has an honest fallback, so a control script without them loses a line rather
+    # than blanking the app. They are listed here so that adding one to control.py is a
+    # deliberate act and not a surprise. See mac/CrooksControl/README.md.
+    forward = {
+        "service": "the process truth: {state, detail, managed, pid, healthy}",
+        "managed": "part of `service`",
+        "pid": "part of `service` — shown in Developer Mode and never read as 'it is up'",
+        "healthy": "part of `service` — /health answered; the only part that decides anything",
+        "pad": "the CROOKS Pad's own check-in: {seen_at, agent, address, build}",
+        "seenAt": "part of `pad`",
+        "agent": "part of `pad`",
+        "address": "part of `pad`",
+        "uptimeS": "uptime as a number; the `online` row carries it as prose and the app "
+                   "will not parse a duration back out of an English sentence",
+        "needsPlan": "`needs_plan`, which actions_document() already sends on the update "
+                     "button but contract_document() does not describe",
+    }
+    unknown = {name for name in declared if name not in printed and name not in renamed and name not in forward}
     assert unknown == set(), f"the app decodes {sorted(unknown)}, which crooks-control does not print"
+
+    # And the other half of the same promise, in the other direction: NO field this script
+    # prints may be required on the Swift side either. One renamed or dropped key in Python
+    # would otherwise leave a Mac drawing nothing at all and saying only that it could not read
+    # the answer — a worse failure than a missing line.
+    #
+    # The check is on the read, not on the type. `let agent: String` with a default is exactly
+    # as tolerant as `let agent: String?`, and reads better; what matters is that absence goes
+    # through the helpers rather than throwing.
+    exempt = {"contract"} | set(renamed)  # `contract` is required on purpose: a document
+    #                                       without a version is not this script's document.
+    for name in sorted(declared - exempt):
+        assert f"box.value(.{name}," in source or f"box.maybe(.{name})" in source, \
+            f"{name} is decoded strictly, so one absent key would blank the whole app"
 
 
 def test_a_quiet_run_does_not_silence_the_next_one(here, capsys):
