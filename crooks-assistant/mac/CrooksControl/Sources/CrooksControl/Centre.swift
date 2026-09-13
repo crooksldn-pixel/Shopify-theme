@@ -40,6 +40,17 @@ final class Centre: ObservableObject {
 
     var accent: Color { dashboard.accent.colour }
 
+    init() {
+        // The poll starts here rather than waiting for a view to appear.
+        //
+        // It used to start in the window's `.task`, which is fine while the window is open and
+        // wrong the moment it is not: macOS restores an app with its windows as they were left,
+        // so a Mac where the owner had closed the window would come up showing a menu-bar item
+        // that said CHECKING and went on saying it. Nothing would be read until he opened the
+        // window, which is the one thing the product promises he will not have to do.
+        begin()
+    }
+
     // MARK: - The poll
 
     func begin() {
