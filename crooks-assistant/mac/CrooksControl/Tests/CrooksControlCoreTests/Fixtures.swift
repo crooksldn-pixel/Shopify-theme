@@ -1282,7 +1282,7 @@ enum Fixture {
   "contract": 1,
   "command": "plan",
   "ok": true,
-  "at": 1789257024.705,
+  "at": 1789259505.275,
   "update": {
     "contract": 1,
     "command": "crooks-update",
@@ -1324,8 +1324,8 @@ enum Fixture {
       "short": "2b25230a5a",
       "branch": "main",
       "detached": false,
-      "subject": "Phase 6: what this machine can and cannot verify, written before the code",
-      "committed_at": "2026-09-12T21:51:56+00:00",
+      "subject": "Phase 6 D: start polling when the app starts, not when a window appears",
+      "committed_at": "2026-09-13T00:31:06+00:00",
       "build": "2026.09.12+9f31c22",
       "version": "5.4.1"
     },
@@ -1370,7 +1370,7 @@ enum Fixture {
   "contract": 1,
   "command": "plan",
   "ok": true,
-  "at": 1789257024.715,
+  "at": 1789259505.285,
   "update": {
     "contract": 1,
     "command": "crooks-update",
@@ -1410,8 +1410,8 @@ enum Fixture {
       "short": "2b25230a5a",
       "branch": "main",
       "detached": false,
-      "subject": "Phase 6: what this machine can and cannot verify, written before the code",
-      "committed_at": "2026-09-12T21:51:56+00:00",
+      "subject": "Phase 6 D: start polling when the app starts, not when a window appears",
+      "committed_at": "2026-09-13T00:31:06+00:00",
       "build": "2026.09.12+9f31c22",
       "version": "5.4.1"
     },
@@ -1456,7 +1456,7 @@ enum Fixture {
   "contract": 1,
   "command": "plan",
   "ok": false,
-  "at": 1789257024.724,
+  "at": 1789259505.294,
   "update": {
     "contract": 1,
     "command": "crooks-update",
@@ -1503,8 +1503,8 @@ enum Fixture {
       "short": "2b25230a5a",
       "branch": "main",
       "detached": false,
-      "subject": "Phase 6: what this machine can and cannot verify, written before the code",
-      "committed_at": "2026-09-12T21:51:56+00:00",
+      "subject": "Phase 6 D: start polling when the app starts, not when a window appears",
+      "committed_at": "2026-09-13T00:31:06+00:00",
       "build": "2026.09.12+9f31c22",
       "version": "5.4.1"
     },
@@ -1555,7 +1555,7 @@ enum Fixture {
   "contract": 1,
   "command": "apply",
   "ok": true,
-  "at": 1789257024.725,
+  "at": 1789259505.295,
   "update": {
     "contract": 1,
     "command": "crooks-update",
@@ -1564,8 +1564,8 @@ enum Fixture {
     "repo": "",
     "branch": "main",
     "current": {
-      "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
-      "short": "9f31c22b17"
+      "sha": "2b25230a5ae4df73c23c839ce5441058a54e26bb",
+      "short": "2b25230a5a"
     },
     "candidate": {
       "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
@@ -1618,8 +1618,8 @@ enum Fixture {
       "version": ""
     },
     "was": {
-      "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
-      "short": "9f31c22b17"
+      "sha": "2b25230a5ae4df73c23c839ce5441058a54e26bb",
+      "short": "2b25230a5a"
     },
     "candidate": {
       "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
@@ -1648,7 +1648,7 @@ enum Fixture {
   "contract": 1,
   "command": "apply",
   "ok": true,
-  "at": 1789257024.725,
+  "at": 1789259505.296,
   "update": {
     "contract": 1,
     "command": "crooks-update",
@@ -1657,8 +1657,8 @@ enum Fixture {
     "repo": "",
     "branch": "main",
     "current": {
-      "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
-      "short": "9f31c22b17"
+      "sha": "2b25230a5ae4df73c23c839ce5441058a54e26bb",
+      "short": "2b25230a5a"
     },
     "candidate": {
       "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
@@ -1707,7 +1707,7 @@ enum Fixture {
     "subject": "the candidate",
     "build": "2026.09.12+9f31c22",
     "status": "ok",
-    "recorded_at": 1789257024.725,
+    "recorded_at": 1789259505.296,
     "recorded_by": "crooks-control apply"
   },
   "build": {
@@ -1721,8 +1721,8 @@ enum Fixture {
       "version": "5.4.1"
     },
     "was": {
-      "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
-      "short": "9f31c22b17"
+      "sha": "2b25230a5ae4df73c23c839ce5441058a54e26bb",
+      "short": "2b25230a5a"
     },
     "candidate": {
       "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
@@ -1736,7 +1736,7 @@ enum Fixture {
       "subject": "the candidate",
       "build": "2026.09.12+9f31c22",
       "status": "ok",
-      "recorded_at": 1789257024.725,
+      "recorded_at": 1789259505.296,
       "recorded_by": "crooks-control apply"
     }
   },
@@ -1745,7 +1745,7 @@ enum Fixture {
     "safe": false,
     "sha": "9f31c22b17ad04b8c0e0d7f9b1d4a2c6e8f10a33",
     "short": "9f31c22b17",
-    "recorded_at": 1789257024.725,
+    "recorded_at": 1789259505.296,
     "build": "2026.09.12+9f31c22",
     "reason": "The build running here IS the last known-good one. There is nothing to go back to.",
     "commands": [],
@@ -1761,7 +1761,7 @@ enum Fixture {
   "contract": 1,
   "command": "apply",
   "ok": false,
-  "at": 1789257024.726,
+  "at": 1789259505.296,
   "update": {
     "contract": 1,
     "command": "crooks-update",

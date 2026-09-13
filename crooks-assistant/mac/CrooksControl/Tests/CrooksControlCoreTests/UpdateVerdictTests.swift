@@ -52,12 +52,16 @@ final class UpdateVerdictTests: XCTestCase {
         XCTAssertEqual(applied.next, "done")
         XCTAssertNotNil(applied.markedGood)
         let verdict = UpdateJudge.judge(applied)
-        guard case .installed(let build, _) = verdict else {
+        guard case .installed(let build, let from) = verdict else {
             return XCTFail("expected installed, got \(verdict)")
         }
         XCTAssertEqual(build, "9f31c22b17")
+        XCTAssertEqual(from, "2b25230a5a",
+                       "and where it came from: update.py reads HEAD before the pull and never "
+                        + "rewrites the sha, which is what makes that sentence possible")
         XCTAssertFalse(verdict.isFailure)
         XCTAssertTrue(verdict.sentence.contains("answering"), verdict.sentence)
+        XCTAssertTrue(verdict.sentence.contains("It was on 2b25230a5a."), verdict.sentence)
     }
 
     func testVerifiedWithoutARecordIsStillAFailure() throws {
