@@ -51,7 +51,7 @@ enum ControlError: LocalizedError {
         case .failed(let text):
             return text
         case .badContract(let version):
-            return "The project's crooks-control speaks version \(version); this app reads \(Contract.expected). Build the app again from this checkout."
+            return "The project's crooks-control speaks version \(version); this app reads version \(Contract.understood). Build the app again from this checkout."
         }
     }
 }
@@ -70,7 +70,9 @@ struct Control {
 
     func status() async throws -> StatusDocument {
         let answer: StatusDocument = try await document(["status"])
-        guard answer.contract == Contract.expected else { throw ControlError.badContract(answer.contract) }
+        // A RANGE, not an equality. See Contract.readable: an additive version bump must not
+        // break every installed app until every one of them has been rebuilt.
+        guard Contract.canRead(answer.contract) else { throw ControlError.badContract(answer.contract) }
         return answer
     }
 

@@ -235,24 +235,50 @@ def stage_tests(*, check_only: bool, enabled: bool) -> bool:
     return True
 
 
+def mac_for(port: int):
+    """The Mac this stage acts on: (machine, launchd). One function, so a test can hand the
+    restart stage a Mac that is not one without also replacing the decision under test."""
+    from scripts import service as svc
+
+    machine = svc.Machine.real(port)
+    return machine, svc.Launchd(machine, root=ROOT)
+
+
+# What the owner is told to do when the restart is the thing that failed. §5.2: the recovery
+# from a stopped appliance is a BUTTON. This stage used to end by telling him to open a
+# Terminal and run the installer once — printed at exactly the moment an owner has had his
+# code moved and his Mac left down, and carried verbatim into the `stop.reason` the app
+# draws. Since scripts/service.py can register and start the agents itself, there is nothing
+# left for a Terminal to do here, and nothing in this file names a shell command for it.
+PRESS_INSTEAD = (
+    "Your code IS updated; only the restart failed. In CROOKS Control, press Start; "
+    "if that does not bring it back, press Roll back."
+)
+
+
 def stage_restart(*, check_only: bool, port: int) -> None:
+    """Restart the backend and whisper-server — and REGISTER them first where launchd does not
+    have them, which is every Mac that has been stopped and every Mac that has never been set
+    up. This is service.restart(), the same code the Control app's Restart button runs, so the
+    typed command and the button cannot leave the Mac in two different states; and like that
+    button it succeeds only when /health answers, never because launchctl exited 0.
+    """
     if check_only:
         say(SKIP, "restart", "would restart the assistant and whisper-server")
         return
-    import launch_common as lc
+    from scripts import service as svc
 
-    domain = f"gui/{lc.uid()}"
-    failed = []
-    for label in lc.AGENTS:
-        out = subprocess.run(["launchctl", "kickstart", "-k", f"{domain}/{label}"], capture_output=True, text=True, timeout=60)
-        if out.returncode != 0:
-            failed.append(f"{label}: {(out.stderr or '').strip() or 'launchctl refused'}")
-    if failed:
+    machine, launchd = mac_for(port)
+    out = svc.restart(machine, launchd, port=port)
+    if not out["ok"]:
+        problem = out.get("problem") or {}
+        detail = str(problem.get("developer") or "")[:300]
         raise Stopped(
-            "The services would not restart:\n  " + "\n  ".join(failed)
-            + "\nIf they were never installed, run `make install` once. Your code IS updated; only the restart failed."
+            (problem.get("human") or out.get("human") or "The services would not restart.")
+            + (f"\n  {detail}" if detail else "")
+            + "\n" + PRESS_INSTEAD
         )
-    say(OK, "restart", "assistant and whisper-server kicked")
+    say(OK, "restart", out["human"])
 
 
 def stage_verify(*, check_only: bool, port: int) -> dict | None:
