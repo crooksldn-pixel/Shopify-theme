@@ -35,7 +35,7 @@ setup() {
     printf '0\n'        > "$STUB/claude_exit"
     # What Claude leaves behind in the bridge worktree: the one file it is allowed to write.
     printf ' M bridge/claude-outbox.md\n' > "$STUB/bridge_status"
-    : > "$STUB/claude_runs"; : > "$STUB/claude_args"; : > "$STUB/git_ops"
+    : > "$STUB/claude_runs"; : > "$STUB/claude_args"; : > "$STUB/claude_stdin"; : > "$STUB/git_ops"
 
     cat > "$BIN/gh" <<'GH'
 #!/usr/bin/env bash
@@ -56,6 +56,7 @@ GH
 #!/usr/bin/env bash
 date +%s%N >> "$STUB/claude_runs"
 printf '%s\n' "$*" >> "$STUB/claude_args"
+cat > "$STUB/claude_stdin"
 pwd -P > "$STUB/claude_cwd"
 [ -f "$STUB/claude_sleep" ] && sleep "$(cat "$STUB/claude_sleep")"
 [ -f "$STUB/claude_new_inbox" ] && cat "$STUB/claude_new_inbox" > "$STUB/inbox_sha"
@@ -488,15 +489,19 @@ t_the_unit_does_not_grant_write_access_to_production() {
 
 t_the_prompt_carries_the_safety_contract() {
     watch --once >/dev/null
-    local args; args="$(tr '\n' ' ' < "$STUB/claude_args" | tr -s ' ' | tr '[:upper:]' '[:lower:]')"
+    local args prompt
+    args="$(tr '\n' ' ' < "$STUB/claude_args" | tr -s ' ' | tr '[:upper:]' '[:lower:]')"
+    prompt="$(tr '\n' ' ' < "$STUB/claude_stdin" | tr -s ' ' | tr '[:upper:]' '[:lower:]')"
     for phrase in "never fabricate" "writes_enabled stays false" "127.0.0.1" "never its value" \
                   "stop at that point" "do not run git add, git commit or git push" \
                   "never edit, switch or reset" "do not widen your permissions"; do
-        contains "the prompt says: $phrase" "$args" "$phrase"
+        contains "the prompt says: $phrase" "$prompt" "$phrase"
     done
     contains "runs with acceptEdits" "$args" "--permission-mode acceptedits"
+    lacks "the prompt is not passed as a positional argument" "$args" "you have been started automatically"
     lacks "no bypassPermissions"     "$args" "bypasspermissions"
     lacks "no dangerous skip flag"   "$args" "dangerously"
+    contains "the prompt is delivered on stdin" "$prompt" "you have been started automatically"
 }
 
 # --------------------------------------------------------------------------- run
