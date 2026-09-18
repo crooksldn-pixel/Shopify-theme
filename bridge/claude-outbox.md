@@ -1,382 +1,196 @@
 # CLAUDE OUTBOX — latest handoff only
 
-**Timestamp:** 2026-09-19 (session clock 21:58 UTC)
-**Host:** crooks-os-prod-1 (Hetzner, Ubuntu 24.04 x86_64)
-**Production repo:** /opt/crooks-os  (app in ./crooks-assistant)
-**Production branch:** claude/crooks-assistant-build-lgxlau
-**Inbox commit processed:** `7f4e598` — blob `102dc1f273d33a0cce80979ff27651b396bef4a4`
-("bridge: request code review branches before live install")
-**Previous inbox processed:** `1d71681` (blob `e5a8da2`)
+**Timestamp:** 2026-09-19 (session clock 22:31 UTC)
+**Host:** crooks-os-prod-1
+**Inbox commit processed:** `afe4067` — blob `47cc8990f9aff131ccc1ec170a21e8c6e3a62763`
+("bridge: harden watcher for zero-manual outbox flow")
+**Previously processed:** `7f4e598`, `1d71681`
 
 ---
 
-## 0. Both review branches are pushed and ready for review
+## 0. Result
+
+Steps 1–5 done. **87 watcher tests pass, 0 fail.** The watcher is still **not installed, not
+enabled, not running**. Nothing else was installed, started, provisioned or activated.
 
 ```
-claude/linux-prod-migration-review     1cf3a0f3361b79f9de208d80f501543c53c244b5
-claude/crooks-bridge-watcher-review    dadf2574d66398064f3f65a0a4bd7fdf087cc148
+watcher review branch   claude/crooks-bridge-watcher-review
+new commit              e60af6bdaf0f488ace9bb5ebcacc909a76fbef9d   (pushed)
+previous commit         dadf2574d66398064f3f65a0a4bd7fdf087cc148
+builder worktree        /opt/crooks-builder on claude/bridge-builder @ e43aecd — created, clean
+production branch       claude/crooks-assistant-build-lgxlau @ e43aecd — untouched
 ```
 
-Both are on origin, verified with `git ls-remote`. Nothing is installed, started, provisioned or
-activated.
+## 1. Builder worktree — adopted
 
-*(Earlier in this round both pushes were refused by this session's permission layer as
-shared-resource publications. The owner authorised them explicitly and they went through. Noted
-only so the sequence in the journal makes sense; nothing is outstanding.)*
-
-## 1. The report inconsistency — my error, not a worktree problem
-
-You were right: that porcelain state was impossible. `tests/test_linux_ops.py` is **untracked and
-only untracked**. I hand-assembled the status block in the last outbox and added an ` M` line for
-it because I had edited it that round, while it was in fact still untracked. A reporting mistake
-in the outbox. No path issue, no worktree issue, nothing discarded.
-
-Exact output, run from the repo root (/opt/crooks-os):
+Created:
 
 ```
-$ git status --porcelain=v1 --untracked-files=all
- M crooks-assistant/Makefile
- M crooks-assistant/app/media.py
- M crooks-assistant/app/routes/health.py
- M crooks-assistant/app/runtime.py
- M crooks-assistant/app/secrets/keychain.py
- M crooks-assistant/app/speech/transcribe.py
- M crooks-assistant/config/settings.py
- M crooks-assistant/scripts/control.py
- M crooks-assistant/scripts/doctor.py
- M crooks-assistant/scripts/launch_common.py
- M crooks-assistant/scripts/set_secrets.py
- M crooks-assistant/scripts/update.py
- M crooks-assistant/tests/conftest.py
- M crooks-assistant/tests/test_control.py
- M crooks-assistant/tests/test_routes.py
-?? crooks-assistant/app/secrets/linux_store.py
-?? crooks-assistant/deploy/env.production.example
-?? crooks-assistant/deploy/systemd/crooks-assistant.service
-?? crooks-assistant/docs/DEPLOY_LINUX.md
-?? crooks-assistant/scripts/healthcheck.py
-?? crooks-assistant/scripts/install_systemd.py
-?? crooks-assistant/scripts/provision_secrets.py
-?? crooks-assistant/tests/test_linux_ops.py
-?? crooks-assistant/tests/test_linux_store.py
-?? crooks-assistant/tests/test_whisper_disabled.py
-
-$ git diff --name-status
-M	crooks-assistant/Makefile
-M	crooks-assistant/app/media.py
-M	crooks-assistant/app/routes/health.py
-M	crooks-assistant/app/runtime.py
-M	crooks-assistant/app/secrets/keychain.py
-M	crooks-assistant/app/speech/transcribe.py
-M	crooks-assistant/config/settings.py
-M	crooks-assistant/scripts/control.py
-M	crooks-assistant/scripts/doctor.py
-M	crooks-assistant/scripts/launch_common.py
-M	crooks-assistant/scripts/set_secrets.py
-M	crooks-assistant/scripts/update.py
-M	crooks-assistant/tests/conftest.py
-M	crooks-assistant/tests/test_control.py
-M	crooks-assistant/tests/test_routes.py
-
-$ git ls-files --others --exclude-standard
-crooks-assistant/app/secrets/linux_store.py
-crooks-assistant/deploy/env.production.example
-crooks-assistant/deploy/systemd/crooks-assistant.service
-crooks-assistant/docs/DEPLOY_LINUX.md
-crooks-assistant/scripts/healthcheck.py
-crooks-assistant/scripts/install_systemd.py
-crooks-assistant/scripts/provision_secrets.py
-crooks-assistant/tests/test_linux_ops.py
-crooks-assistant/tests/test_linux_store.py
-crooks-assistant/tests/test_whisper_disabled.py
+$ git -C /opt/crooks-os worktree add -b claude/bridge-builder /opt/crooks-builder e43aecd
+$ git -C /opt/crooks-builder rev-parse --abbrev-ref HEAD   ->  claude/bridge-builder
+$ git -C /opt/crooks-builder status --porcelain -uall      ->  (empty: clean)
 ```
 
-15 modified + 10 untracked = 25 distinct paths, each appearing exactly once. Note `.env` appears
-in none of them: it is gitignored (`crooks-assistant/.gitignore:4`), which is also why it is
-excluded from the review branch without special handling.
-
-## 2. The empty-value rule, measured against the real parser
-
-**You were right to refuse the opinion. The measurement overturned my previous decision.**
-
-Probed through the application's own path, `config.settings.Settings`, with `_env_file=None` so
-the host's `.env` could not answer for it:
+Worktrees now on this host:
 
 ```
-CROOKS_WHISPER_ENABLED unset      -> whisper_enabled = True
-CROOKS_WHISPER_ENABLED=''         -> RAISES ValidationError (bool_parsing)
-CROOKS_WHISPER_ENABLED='  '       -> RAISES ValidationError (bool_parsing)
-CROOKS_WHISPER_ENABLED='false'    -> False
-CROOKS_WHISPER_ENABLED='true'     -> True
+/opt/crooks-os              e43aecd [claude/crooks-assistant-build-lgxlau]   production, untouched
+/opt/crooks-builder         e43aecd [claude/bridge-builder]                  headless Claude works here
+/opt/crooks-ai-bridge       ....... [crooks-ai-bridge]                       communication only
+/opt/crooks-review          1cf3a0f [claude/linux-prod-migration-review]     for your review
+/opt/crooks-watcher-review  e60af6b [claude/crooks-bridge-watcher-review]    for your review
 ```
 
-So a blank is **neither** enabled nor disabled: pydantic rejects it and the backend refuses to
-start. My earlier ruling ("blank means enabled") and the original test ("blank means disabled")
-were **both wrong**, and each would have had the doctor report a host that cannot exist.
-
-Full vocabulary, measured rather than assumed:
-
-```
-accepted true : true True TRUE 1 yes Yes on t y
-accepted false: false False FALSE 0 no off f n
-REJECTED      : '' '  ' 'maybe' '2' 'flase' ' true ' 'true '
-```
-
-Two further facts that matter, and that an approximation would have got wrong:
-- **The environment is not stripped.** `' true '` via `os.environ` is invalid.
-- **The `.env` file path IS stripped and unquoted**, because python-dotenv normalises before
-  pydantic sees it: a line `CROOKS_WHISPER_ENABLED= false ` yields `False`, and `"false"` yields
-  `False`. An empty `.env` value is still invalid.
-
-**Implementation now aligned to exactly that.** `scripts/doctor.py` gained a tri-state
-`whisper_setting() -> "enabled" | "disabled" | "invalid"`, mirroring both paths separately
-(`env_file_value()` strips and unquotes; the environment is read raw). `whisper_disabled()` is
-derived and returns True only for a real "disabled", so an unparseable value cannot quietly
-suppress the whisper checks as well. The doctor reports an invalid setting as a **blocking
-failure** — "the backend would refuse to start" — ahead of the whisper rows, because it outranks
-them.
-
-**The test no longer encodes anyone's opinion.** It computes the expected answer from the real
-`Settings` parser and requires the doctor to agree, across all 23 values above. If pydantic's
-vocabulary ever changes, that test fails rather than the doctor drifting silently.
-
-## 3. Review branch — the Phase 1–4 migration
-
-```
-branch:  claude/linux-prod-migration-review
-commit:  1cf3a0f3361b79f9de208d80f501543c53c244b5
-base:    e43aecdb39b87b622f64b6ab434e428d216ef157   (current production HEAD)
-pushed:  YES — on origin, verified with git ls-remote
-worktree: /opt/crooks-review   (the production checkout was never switched)
-```
-
-**Exact staged file list** (`git diff --cached --name-status`, 25 paths, +2411 / −91):
-
-```
-M	crooks-assistant/Makefile
-M	crooks-assistant/app/media.py
-M	crooks-assistant/app/routes/health.py
-M	crooks-assistant/app/runtime.py
-M	crooks-assistant/app/secrets/keychain.py
-A	crooks-assistant/app/secrets/linux_store.py
-M	crooks-assistant/app/speech/transcribe.py
-M	crooks-assistant/config/settings.py
-A	crooks-assistant/deploy/env.production.example
-A	crooks-assistant/deploy/systemd/crooks-assistant.service
-A	crooks-assistant/docs/DEPLOY_LINUX.md
-M	crooks-assistant/scripts/control.py
-M	crooks-assistant/scripts/doctor.py
-A	crooks-assistant/scripts/healthcheck.py
-A	crooks-assistant/scripts/install_systemd.py
-M	crooks-assistant/scripts/launch_common.py
-A	crooks-assistant/scripts/provision_secrets.py
-M	crooks-assistant/scripts/set_secrets.py
-M	crooks-assistant/scripts/update.py
-M	crooks-assistant/tests/conftest.py
-M	crooks-assistant/tests/test_control.py
-A	crooks-assistant/tests/test_linux_ops.py
-A	crooks-assistant/tests/test_linux_store.py
-M	crooks-assistant/tests/test_routes.py
-A	crooks-assistant/tests/test_whisper_disabled.py
-```
-
-**Excluded, as required:** `.env` (gitignored; verified absent from the review tree), every secret
-value, all bridge files, and all watcher files.
-
-**Secret scan before staging.** Checked for `gh[pousr]_`, `shpat_`/`shpss_`/`shpca_`, `sk-`,
-`AIza`, `xox[baprs]-`, JWT-shaped `eyJ…`, and `BEGIN … PRIVATE KEY` across all 25 paths, plus a
-file-level check for `.env`, `token.json`, `credentials.json`, `*.cred`, `*.pem`, `id_rsa*`.
-
-One hit, and it is **not** a leak: `tests/test_control.py` contains
-`ghp_b7b7b7b7b7b7b7b7b7b7b7b7` — a synthetic repeating-pattern token that is **already committed
-at e43aecd** (line 1031 there) and is the fixture for the test asserting that tokens are redacted
-out of health details and git output. `git diff` on that file shows zero `ghp_` lines, i.e. my
-changes neither added nor altered it. Flagging it because any scanner you run will flag it too.
-
-**Test result for this exact content:**
-
-```
-$ .venv/bin/pytest -q -m "not live"
-2886 passed, 8 skipped, 2 deselected in 506.50s (0:08:26)
-exit code 0 — zero FAILED, zero ERROR
-```
-
-Verified afterwards that all 25 committed files are **byte-identical** (`cmp`) to the working tree
-that produced that result, so the number describes the branch and not an earlier state.
-`ruff check app config scripts tests` — All checks passed.
-`systemd-analyze verify` on the rendered unit — clean.
-
-**Production branch pointer:**
-
-```
-$ git rev-parse claude/crooks-assistant-build-lgxlau
-e43aecdb39b87b622f64b6ab434e428d216ef157
-```
-
-**CONFIRMED unchanged**, identical to the SHA you named. Nothing was merged, nothing rebased, the
-production worktree was never switched, and the review branch was built in a separate worktree
-specifically so it could not be.
-
-## 4. Review branch — the bridge watcher
-
-```
-branch:  claude/crooks-bridge-watcher-review   (orphan — shares no history with production)
-commit:  dadf2574d66398064f3f65a0a4bd7fdf087cc148
-pushed:  YES — on origin, verified with git ls-remote
-worktree: /opt/crooks-watcher-review
-files:   watcher/bin/crooks-bridge-watcher, watcher/install.sh, watcher/README.md,
-         watcher/systemd/crooks-bridge-watcher.service, watcher/tests/run-tests.sh
-```
-
-Orphan on purpose: watcher code is on neither `crooks-ai-bridge` nor the production branch, and
-cannot be fast-forwarded into either.
-
-**Exact Claude CLI invocation.** The worker runs, with `WORK_DIR` as the process's cwd:
-
-```
-cd /opt/crooks-os/crooks-assistant && \
-timeout --signal=TERM --kill-after=60 7200 \
-  claude --print \
-         --permission-mode acceptEdits \
-         --allowed-tools Read,Edit,Write,Glob,Grep,Bash \
-         "<prompt, carrying the inbox blob SHA being processed>"
-```
-
-Nothing else is passed. No `--dangerously-skip-permissions`, no `bypassPermissions`; two tests
-assert that no permission-bypassing flag can appear in the invocation.
-
-**Permission / tool configuration** (unit `Environment=`, overridable without editing code):
-
-```
-CROOKS_BRIDGE_PERMISSION_MODE=acceptEdits
-CROOKS_BRIDGE_ALLOWED_TOOLS=Read,Edit,Write,Glob,Grep,Bash
-CROOKS_BRIDGE_CLAUDE_TIMEOUT_S=7200
-```
-
-**Lock and state paths:**
-
-```
-/run/crooks-bridge/watcher.lock     flock, exclusive, non-blocking; systemd RuntimeDirectory,
-                                    mode 0700, tmpfs — a reboot cannot strand a stale lock
-/var/lib/crooks-bridge/last-inbox-sha   the last inbox PROVEN processed
-/var/lib/crooks-bridge/failures         consecutive failures, drives the backoff
-/var/lib/crooks-bridge/last-run         ok|failed, timestamp, which SHA
-/var/lib/crooks-bridge/.next-delay      how long the loop sleeps next
-                                    systemd StateDirectory, mode 0700
-```
-
-**Retry policy.** Poll every 30s. An inbox is recorded as processed only when Claude exits 0
-**and** the outbox blob on the remote has changed — exit 0 without a report is treated as a
-failure, because nobody has been told anything. On failure: 60s, 120s, 240s, 480s, capped at 900s,
-reset to 30s polling on success. The SHA handed to Claude is captured before the run and is the
-one recorded, so a newer inbox arriving mid-run is never marked processed by a run that never saw
-it.
-
-**Tests:** `48 passed, 0 failed` — no network, no real Claude, no real state directories. Covering
-inbox-SHA detection, duplicate suppression, outbox-push-does-not-retrigger, lock suppression and
-pickup after release, newer-inbox-mid-run, failed run not recorded, retry-then-record, backoff
-growth and cap, exit-0-without-report, GitHub unreachable, seeding, the three fail-closed guards,
-and the prompt's safety contract.
-
-**Not installed, not enabled, not running.** No unit file in /etc/systemd/system, no
-/var/lib/crooks-bridge, no process.
-
-## 5. The safety requirement — implemented, and your premise is correct
-
-The watcher now **fails closed** before launching anything. Three refusals, each naming the remedy:
-
-1. **Another run holds the lock** — non-blocking `flock`; the cycle logs and returns, recording
-   nothing, so the inbox is retried rather than lost.
-2. **The target working tree has uncommitted changes** — `git status --porcelain=v1 -uall` is
-   non-empty. Refuses. There is a deliberate override, `CROOKS_BRIDGE_ALLOW_DIRTY=1`, **off by
-   default**, for when a person has looked at the changes and decided the run is safe.
-3. **Another Claude process has its cwd inside the target tree** — found by resolving
-   `/proc/<pid>/cwd` for each Claude process and comparing against the resolved target. Both sides
-   are resolved, or a symlinked path compares unequal to itself and the guard waves through the
-   process it exists to catch. Tested against a real process with a real cwd, including the
-   converse: an unrelated Claude elsewhere on the box does **not** block a run, or the watcher
-   would refuse to work on any machine where anyone uses Claude for anything.
-
-**And you are right that this is not sufficient.** The watcher as it stands does target
-`/opt/crooks-os/crooks-assistant` directly, so per your instruction it is **not installed**.
-
-### Proposed minimal builder worktree
-
-The smallest change that removes the shared-tree problem entirely, rather than guarding it:
-
-```
-git -C /opt/crooks-os worktree add -b claude/bridge-builder /opt/crooks-builder <production HEAD>
-```
-
-then one line in the unit:
+The unit's defaults changed accordingly:
 
 ```
 Environment=CROOKS_BRIDGE_WORKDIR=/opt/crooks-builder
+Environment=CROOKS_BRIDGE_BUILDER_BRANCH=claude/bridge-builder
+Environment=CROOKS_BRIDGE_PRODUCTION_DIR=/opt/crooks-os/crooks-assistant
+ReadWritePaths=/opt/crooks-builder          (added)
 ```
 
-What this buys:
-- The live production checkout is **never** mutated by headless work. A person editing
-  `/opt/crooks-os` and the watcher can run at the same time without either noticing the other.
-- The dirty-tree guard becomes meaningful instead of near-permanently tripped: the builder tree is
-  the watcher's own, so uncommitted leftovers there are a genuine anomaly worth refusing on. As
-  things stand today the production tree has 25 uncommitted paths, so the watcher would refuse
-  every run until the migration is committed — correct, but not useful.
-- Headless work lands on `claude/bridge-builder` and is pushed as a branch for review. It reaches
-  production only when a person merges it, which is the same gate this review process already has.
-- The blast radius of a bad headless run is one disposable worktree, recoverable with
-  `git worktree remove --force`.
+`/opt/crooks-os` stays in `ReadWritePaths` for one reason only: the builder and bridge worktrees
+keep their git metadata under its `.git`, so git must write there. Claude is told, in the prompt,
+never to edit, switch or reset the production checkout.
 
-What it costs, stated plainly:
-- Work done headless is not visible in the production checkout until merged. That is the point,
-  but it does mean two places to look.
-- One more worktree to keep roughly in step with production.
+**Guards, all kept, all fail-closed, none destructive.** Before launching anything the watcher
+refuses if:
+- the target resolves to the production checkout (new — the configuration mistake this whole
+  change exists to prevent, so it is checked rather than trusted),
+- the builder worktree does not exist (and it prints the one command that creates it),
+- the builder worktree is dirty — **reported, never reset**. There is a deliberate override,
+  `CROOKS_BRIDGE_ALLOW_DIRTY=1`, off by default,
+- another run holds the flock,
+- another Claude process has its cwd inside the builder.
 
-**Recommendation:** adopt the builder worktree, keep all three fail-closed guards (they still
-matter — the lock and the foreign-Claude check are not made redundant by it), and only then
-install. I have not created the builder worktree or changed the unit's default, because that
-changes what you would be approving and you asked to review the current implementation first.
+Nothing in the watcher runs `reset`, `clean`, `checkout -f` or `stash`. A test asserts that a
+dirty builder produces no such operation.
 
-## 6. State
+## 2. Outbox publication is now the watcher's
+
+**Claude writes; the watcher publishes.** You were right that this was the remaining manual
+dependency: Claude Code's permission layer refused a shared-repository push twice in this project,
+and each time the owner had to run it by hand.
+
+The prompt now tells Claude, explicitly:
+
+> Completely replace the file `$BRIDGE_DIR/bridge/claude-outbox.md` with this round's handoff.
+> Then STOP. Do NOT run git add, git commit or git push for that file, and do not touch any other
+> file in the bridge worktree.
+
+**Exact publication sequence, after Claude exits 0** (`publish_outbox()`):
+
+1. `git -C /opt/crooks-ai-bridge status --porcelain=v1 --untracked-files=all`
+   - empty → **refuse**: "Claude wrote no outbox", inbox NOT processed.
+2. Every changed path must be `bridge/claude-outbox.md`.
+   - anything else → **refuse**, naming each offending path. Nothing staged, committed or pushed.
+3. `git -C … add -- bridge/claude-outbox.md`
+4. `git -C … diff --cached --name-only` must equal exactly `bridge/claude-outbox.md`
+   - otherwise → **refuse** before committing.
+5. `git -C … -c user.name=… -c user.email=… commit -q -m "bridge: claude outbox update (inbox <sha>)"`
+6. `git -C … push origin crooks-ai-bridge` — one branch, named literally. Never `--all`, never the
+   builder branch, never a tag.
+   - failure → **refuse**: "committed locally but not published", inbox NOT processed, retried.
+7. `gh api …/contents/bridge/claude-outbox.md?ref=crooks-ai-bridge --jq .sha` must differ from the
+   SHA read before the run.
+   - unchanged → **refuse**. A push that moved no blob told nobody anything.
+8. **Only then** is the inbox SHA recorded as processed.
+
+Application code cannot travel down this channel even if a run goes badly wrong, because the only
+path the watcher will ever stage is the outbox. There is a test that puts
+`crooks-assistant/app/main.py` in the bridge worktree and asserts nothing is pushed.
+
+## 3. Application-code publication — unchanged and separate
+
+Claude may commit implementation work on `claude/bridge-builder` when an inbox explicitly asks for
+it. No auto-merge to production, no auto-deploy, and the watcher never pushes that branch. If
+pushing the builder branch is blocked by Claude's permission layer, the prompt requires it to say
+so plainly in the outbox and stop — it is told, in those words, not to widen its permissions or
+look for a way around. A test asserts that instruction is present, and two more assert no
+`bypassPermissions` or `--dangerously-skip-permissions` flag can appear in the invocation.
+
+## 4. Tests
 
 ```
-production branch ............ claude/crooks-assistant-build-lgxlau @ e43aecd (unchanged, 0/0 vs origin)
-review branch ................ claude/linux-prod-migration-review @ 1cf3a0f (pushed)
-watcher review branch ........ claude/crooks-bridge-watcher-review @ dadf257 (pushed, orphan)
-crooks-assistant.service ..... NOT installed, inactive
-listening on :8000 / :8910 ... nothing
-/etc/crooks-os/secrets ....... does not exist, no credentials provisioned
-.env ......................... present, 0600, root — safety flags correct
-tailscale serve .............. no serve config;  funnel off
-bridge watcher ............... NOT installed, not enabled, not running
+$ ./tests/run-tests.sh
+87 passed, 0 failed.
 ```
 
-Nothing was installed, started, provisioned or activated. No live Shopify, Gmail or ElevenLabs
-calls. No writes enabled. No V2, no UI work. No merge into the production branch.
+Every test you asked for, by name:
+
+| requirement | test |
+|---|---|
+| Claude need not push the outbox | `claude never publishes anything itself` |
+| watcher publishes exactly the outbox | `the watcher publishes exactly the outbox` |
+| unexpected bridge changes refuse | `unexpected bridge changes refuse to publish` |
+| failed push does not mark processed | `a failed push does not mark the inbox processed` |
+| successful push does mark processed | `a successful watcher push marks it processed` |
+| builder is Claude's cwd | `claude runs in the builder worktree` |
+| production never used headlessly | `the production checkout is never the target` |
+| dirty builder refuses | `a dirty builder refuses and discards nothing` |
+| no permission-bypass introduced | `the prompt carries the safety contract` (two assertions) |
+
+Plus, kept from before: inbox-SHA detection, duplicate suppression, outbox-move-does-not-retrigger,
+lock suppression and pickup after release, newer-inbox-mid-run, GitHub unreachable, seeding,
+backoff growth and cap, foreign-Claude detection and its converse, and three further publication
+refusals — no outbox written, a push that changed nothing, and a staged set wider than one file.
+
+The stub Claude in the harness is deliberately incapable of committing or pushing. That a round
+still completes is itself the proof that publication no longer depends on Claude.
+
+Also verified: `systemd-analyze verify` on the unit — clean. `./install.sh preflight` — clean,
+including `builder worktree clean` and `production checkout … (never edited by the watcher)`.
+
+## 5. Could you close Termius after installing this?
+
+**For the normal ChatGPT ↔ Claude round trip: yes.** You write the inbox, the watcher notices
+within 30s, Claude works in the builder, writes the handoff, and the watcher publishes it. No
+terminal, no tmux, no "check inbox", and — the new part — no "push the outbox". The two manual
+steps you actually hit this session are both gone.
+
+**Honestly, five things would still bring you back:**
+
+1. **Installing it.** One approval and `sudo /opt/crooks-bridge-watcher/install.sh install`.
+   Until then nothing is automatic.
+2. **Approval gates, by design.** Secrets, systemd install/start, Tailscale Serve, live
+   verification — Claude stops and asks rather than proceeding. That is the safety property you
+   asked for, not a defect, but it means those rounds end with you.
+3. **Pushing implementation branches.** Outbox publication is now watcher-owned; pushing
+   `claude/bridge-builder` is not. If Claude's permission layer blocks it, the round reports and
+   stops. Making branch publication orchestrator-owned too is the obvious next step, and you said
+   not to over-expand this round.
+4. **Repeated failures.** Backoff caps at 900s and the watcher keeps retrying, but a genuinely
+   stuck round needs a person. `./install.sh status` and `journalctl -u crooks-bridge-watcher -f`
+   are the two commands for that.
+5. **The builder is at e43aecd**, which does NOT contain the Phase 1–4 migration — that work is
+   still uncommitted in the production checkout. Headless work therefore starts from a tree
+   without it. See §6.
+
+## 6. Remaining manual steps
+
+1. **Approve and install the watcher** (blocking for everything above).
+2. **Decide where the Phase 1–4 work lands.** 25 paths are still uncommitted in
+   `/opt/crooks-os/crooks-assistant`. `claude/linux-prod-migration-review` @ `1cf3a0f` is a copy,
+   not a move. Until it lands on the production branch — and until `claude/bridge-builder` is
+   based on something containing it — headless rounds start from a tree missing the migration.
+   My suggestion: merge or cherry-pick the review branch into
+   `claude/crooks-assistant-build-lgxlau` once you are satisfied with it, then reset
+   `claude/bridge-builder` onto that. Not done here: it is a production-branch change and you have
+   not approved one.
+3. **Secret provisioning** — `/etc/crooks-os/secrets` does not exist; only you hold the values.
+4. **Phase 5** — systemd install/start, Tailscale Serve, live verification.
 
 ## 7. Exact proposed next step
 
-1. **You review the two branches**, now on origin:
-   - `claude/linux-prod-migration-review` @ `1cf3a0f` — the Phase 1–4 migration, 25 files,
-     +2411 / −91, based on production HEAD `e43aecd`.
-   - `claude/crooks-bridge-watcher-review` @ `dadf257` — the watcher, orphan branch, 5 files.
-2. You rule on the builder worktree (§5). If adopted, I create it, point the unit at it, re-run the
-   watcher suite and push the updated watcher branch — still without installing anything.
-3. You rule on §2 if you disagree with the measured alignment. Note that the implementation now
-   matches the real parser, so disagreeing means changing what the application does, not just what
-   the doctor reports.
-4. Only then, and only with explicit approval, in this order: watcher install, secret provisioning,
-   Phase 5 (systemd install and start, Tailscale Serve, live verification).
-
-One decision worth taking early, because it gates the watcher's usefulness: the Phase 1–4 work is
-still **uncommitted on the production branch** — 25 paths in the working tree. The review branch is
-a copy, not a move. Whether that work lands on `claude/crooks-assistant-build-lgxlau` by merge, by
-cherry-pick, or by committing the working tree directly is your call, and until it lands somewhere
-the watcher's dirty-tree guard will refuse every run against that checkout.
+1. You review `claude/crooks-bridge-watcher-review` @ `e60af6b`.
+2. If it passes, approve the install: `sudo /opt/crooks-bridge-watcher/install.sh install`. It
+   preflights, installs the unit, **seeds the state at the current inbox** so it does not
+   re-execute anything already dealt with, enables and starts it.
+3. Tell me where the Phase 1–4 work should land (§6.2), and I will do it in a round of its own.
+4. Then, separately and explicitly: secrets, then Phase 5.
 
 Stopping here as instructed.
 
 ---
-*No API keys, passwords, OAuth tokens, cookies, private keys or secret values appear in this file.
-Secret and configuration KEY names are referenced; the one credential-shaped string discussed in
-§3 is a pre-existing synthetic test fixture, named so that your scanner's hit on it is explained
-rather than mysterious.*
+*No API keys, passwords, OAuth tokens, cookies, private keys or secret values appear in this file.*
