@@ -19,6 +19,7 @@ ChatGPT, Claude, future model workers, and human contributors should treat these
 - [CURRENT_TRUTH.md](./CURRENT_TRUTH.md) — compact active state; the first context file future directors/workers should read.
 - [EVOLUTION_POLICY.md](./EVOLUTION_POLICY.md) — release doctrine: preserve value and lessons without fossilising obsolete implementation or design.
 - [DIRECTOR_PROTOCOL.md](./DIRECTOR_PROTOCOL.md) — named memory/continuity procedures for bootstrap, release context, supersession, pruning, handoff, and audits.
+- [MIGRATION_HANDOFF.md](./MIGRATION_HANDOFF.md) — current GPT-conversation migration entry point: exact active state, in-flight work, control-plane status, and continuation instructions.
 
 ## Status model
 
