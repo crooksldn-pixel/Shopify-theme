@@ -41,6 +41,7 @@ Environment=PYTHONUNBUFFERED=1
 Environment=CROOKS_BRIDGE_WORKDIR=/opt/crooks-builder
 Environment=CROOKS_BRIDGE_BUILDER_BRANCH=claude/bridge-builder
 Environment=CROOKS_BRIDGE_PRODUCTION_DIR=/opt/crooks-os/crooks-assistant
+Environment=CROOKS_BRIDGE_PRODUCTION_REPO_ROOT=/opt/crooks-os
 
 Environment=CROOKS_BRIDGE_POLL_S=30
 Environment=CROOKS_BRIDGE_BACKOFF_BASE_S=60
@@ -83,16 +84,27 @@ RestrictRealtime=yes
 LockPersonality=yes
 # ProtectSystem=strict makes the hierarchy read-only, so everything Claude and git must write
 # is named here and nothing else is writable:
-#   /opt/crooks-builder     the builder worktree headless Claude works in
-#   /opt/crooks-os          NOT for Claude to edit — but the builder and bridge worktrees keep
-#                           their git metadata under its .git, so git needs to write there
-#   /opt/crooks-ai-bridge   the bridge worktree the WATCHER publishes the outbox from
+#   /opt/crooks-builder     the standalone builder clone headless Claude works in
+#   /opt/crooks-ai-bridge   the standalone bridge clone the WATCHER publishes the outbox from
 #   /root                   /root/.claude (Max login, refreshed in place) and gh's config
+#
+# /opt/crooks-os is NOT here, and that is the point. Both directories above are independent
+# clones with their own .git, so nothing this service does needs to write into the production
+# repository — and now nothing it does CAN. The prompt tells Claude not to touch production; this
+# line is what makes that true even if the prompt is ignored, misread or subverted.
+#
+# It only works because they are clones. A linked worktree keeps its metadata in the parent
+# repository's .git, so it would need /opt/crooks-os back in this list; the watcher checks for
+# that at startup and refuses rather than running half-isolated.
 ProtectHome=no
 ReadWritePaths=/opt/crooks-builder
-ReadWritePaths=/opt/crooks-os
 ReadWritePaths=/opt/crooks-ai-bridge
 ReadWritePaths=/root
+
+# Explicit, though ProtectSystem=strict already makes everything not named above read-only.
+# Stated because "production is read-only to this service" is a property worth being able to
+# point at in the unit rather than infer from an absence.
+ReadOnlyPaths=/opt/crooks-os
 
 [Install]
 WantedBy=multi-user.target

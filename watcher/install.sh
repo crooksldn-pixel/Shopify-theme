@@ -2,7 +2,11 @@
 #
 # Install, remove or inspect the CROOKS AI bridge watcher.
 #
-#   sudo ./install.sh install        preflight, install the unit, seed the state, enable, start
+#   sudo ./install.sh install        preflight, copy this reviewed tree into the runtime
+#                                   directory, verify it, install the unit, seed, enable, start
+#   ./install.sh verify              prove runtime == this source == installed unit
+#   ./install.sh stage               copy into the runtime directory only (no systemd, no root
+#                                   needed with CROOKS_BRIDGE_RUNTIME_DIR set)
 #   sudo ./install.sh install --no-start   everything except starting it
 #   sudo ./install.sh uninstall      stop, disable, remove the unit  (state is kept)
 #   sudo ./install.sh uninstall --purge    the same, and delete /var/lib/crooks-bridge
@@ -14,12 +18,100 @@
 
 set -euo pipefail
 
+# This script is the installer for the tree it lives in. THIS tree is the source of truth —
+# whatever you reviewed and checked out — and installing copies it into the canonical runtime
+# directory. That direction matters: the unit executes a fixed path, and if that path were also
+# the place people edit, "approve commit X" could silently install something else that happened
+# to be sitting there.
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WATCHER="$HERE/bin/crooks-bridge-watcher"
-UNIT_SRC="$HERE/systemd/crooks-bridge-watcher.service"
+SRC_WATCHER="$HERE/bin/crooks-bridge-watcher"
+SRC_UNIT="$HERE/systemd/crooks-bridge-watcher.service"
+SRC_README="$HERE/README.md"
+
+RUNTIME_DIR="${CROOKS_BRIDGE_RUNTIME_DIR:-/opt/crooks-bridge-watcher}"
+WATCHER="$RUNTIME_DIR/bin/crooks-bridge-watcher"
+UNIT_SRC="$RUNTIME_DIR/systemd/crooks-bridge-watcher.service"
+MANIFEST="$RUNTIME_DIR/MANIFEST.sha256"
+
 UNIT_DST="/etc/systemd/system/crooks-bridge-watcher.service"
 SERVICE="crooks-bridge-watcher.service"
 STATE_DIR="${CROOKS_BRIDGE_STATE_DIR:-/var/lib/crooks-bridge}"
+
+# What runtime consists of. Tests are NOT runtime: they exist to be run against the source before
+# you trust it, and shipping them into the executed path only widens what is on disk as root.
+payload() {
+    printf '%s\n' "bin/crooks-bridge-watcher 0755" \
+                   "systemd/crooks-bridge-watcher.service 0644" \
+                   "README.md 0644"
+}
+
+source_revision() {
+    git -C "$HERE" rev-parse HEAD 2>/dev/null || printf 'unknown (not a git checkout)'
+}
+
+stage() {
+    # Copy the source payload into the runtime directory, with explicit modes, and record what
+    # was installed. Safe to run repeatedly: every file is replaced, and the manifest is rewritten
+    # from what is actually on disk afterwards rather than from what we intended to put there.
+    local rel mode
+    mkdir -p "$RUNTIME_DIR/bin" "$RUNTIME_DIR/systemd"
+    while read -r rel mode; do
+        [ -f "$HERE/$rel" ] || { bad "missing from source: $rel"; return 1; }
+        install -D -m "$mode" "$HERE/$rel" "$RUNTIME_DIR/$rel" || return 1
+    done < <(payload)
+
+    {
+        printf '# CROOKS AI bridge watcher runtime manifest\n'
+        printf '# installed-from: %s\n' "$HERE"
+        printf '# source-revision: %s\n' "$(source_revision)"
+        printf '# installed-at: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+        while read -r rel mode; do
+            printf '%s  %s  %s\n' "$(sha256sum "$RUNTIME_DIR/$rel" | cut -d" " -f1)" "$mode" "$rel"
+        done < <(payload)
+    } > "$MANIFEST"
+    chmod 0644 "$MANIFEST"
+    ok "staged $(payload | wc -l) file(s) into $RUNTIME_DIR"
+    ok "manifest $MANIFEST"
+}
+
+verify() {
+    # Three things must agree: the source you reviewed, the runtime that will execute, and the
+    # unit systemd has loaded. Any drift between them is the failure mode this whole subcommand
+    # exists for — "approve commit X" must never install something else.
+    local rel mode problems=0 src_sum run_sum
+    [ -f "$MANIFEST" ] || { bad "no manifest at $MANIFEST — runtime was not installed by this script"; return 1; }
+
+    while read -r rel mode; do
+        if [ ! -f "$RUNTIME_DIR/$rel" ]; then
+            bad "missing from runtime: $rel"; problems=$((problems+1)); continue
+        fi
+        src_sum="$(sha256sum "$HERE/$rel" | cut -d' ' -f1)"
+        run_sum="$(sha256sum "$RUNTIME_DIR/$rel" | cut -d' ' -f1)"
+        if [ "$src_sum" = "$run_sum" ]; then
+            ok "matches source: $rel"
+        else
+            bad "DIFFERS from source: $rel"
+            printf '        source : %s\n        runtime: %s\n' "$src_sum" "$run_sum"
+            problems=$((problems+1))
+        fi
+        local actual; actual="$(stat -c '%a' "$RUNTIME_DIR/$rel")"
+        [ "$actual" = "${mode#0}" ] || [ "0$actual" = "$mode" ] || {
+            bad "wrong mode on $rel: expected $mode, found 0$actual"; problems=$((problems+1)); }
+    done < <(payload)
+
+    if [ -f "$UNIT_DST" ]; then
+        if cmp -s "$UNIT_DST" "$UNIT_SRC"; then ok "installed unit matches runtime"
+        else bad "installed unit DIFFERS from runtime — run: sudo $0 install"; problems=$((problems+1)); fi
+    else
+        warn "no unit installed at $UNIT_DST yet"
+    fi
+
+    grep -q '^# source-revision: ' "$MANIFEST" && printf '        %s\n' "$(grep '^# source-revision: ' "$MANIFEST")"
+
+    [ "$problems" -eq 0 ] && { printf '\nRuntime matches source.\n'; return 0; }
+    printf '\n%s mismatch(es).\n' "$problems" >&2
+    return 1
+}
 
 ok()   { printf '[  ok  ] %s\n' "$*"; }
 bad()  { printf '[ FAIL ] %s\n' "$*" >&2; }
@@ -28,8 +120,10 @@ warn() { printf '[ warn ] %s\n' "$*"; }
 preflight() {
     local problems=0
 
-    [ -x "$WATCHER" ] && ok "watcher script $WATCHER" || { bad "watcher script missing or not executable: $WATCHER"; problems=$((problems+1)); }
-    [ -f "$UNIT_SRC" ] && ok "unit template $UNIT_SRC" || { bad "unit template missing: $UNIT_SRC"; problems=$((problems+1)); }
+    [ -x "$SRC_WATCHER" ] && ok "source watcher $SRC_WATCHER" || { bad "source watcher missing or not executable: $SRC_WATCHER"; problems=$((problems+1)); }
+    [ -f "$SRC_UNIT" ] && ok "source unit $SRC_UNIT" || { bad "source unit missing: $SRC_UNIT"; problems=$((problems+1)); }
+    ok "runtime target $RUNTIME_DIR"
+    ok "source revision $(source_revision)"
 
     if command -v claude >/dev/null 2>&1; then ok "claude CLI $(command -v claude)"
     else bad "the claude CLI is not on PATH"; problems=$((problems+1)); fi
@@ -91,15 +185,19 @@ do_install() {
     require_root
     preflight || exit 1
 
+    stage || exit 1
+    verify >/dev/null || { bad "runtime does not match source after staging — refusing to continue"; exit 1; }
+    ok "runtime verified against source"
+
     install -m 0644 "$UNIT_SRC" "$UNIT_DST"
-    ok "installed $UNIT_DST"
+    ok "installed $UNIT_DST (from runtime, which matches source)"
     systemctl daemon-reload
     ok "systemd reloaded"
 
     # Seed BEFORE enabling, so the first thing the watcher does is not to re-execute an inbox
     # that has already been dealt with. From here on only a CHANGE starts a run.
     mkdir -p "$STATE_DIR"; chmod 700 "$STATE_DIR"
-    if "$WATCHER" seed; then ok "state seeded at the current inbox"
+    if "$SRC_WATCHER" seed; then ok "state seeded at the current inbox"
     else bad "could not seed the state — GitHub unreachable?"; exit 1; fi
 
     systemctl enable "$SERVICE" >/dev/null 2>&1
@@ -131,7 +229,7 @@ do_uninstall() {
 }
 
 do_status() {
-    "$WATCHER" status
+    if [ -x "$WATCHER" ]; then "$WATCHER" status; else "$SRC_WATCHER" status; fi
     if command -v systemctl >/dev/null 2>&1 && [ -f "$UNIT_DST" ]; then
         printf '\n--- systemctl ---\n'
         systemctl status "$SERVICE" --no-pager --lines=0 2>&1 | head -6 || true
@@ -145,5 +243,7 @@ case "${1:-status}" in
     uninstall) shift; do_uninstall "${1:-}" ;;
     status)    do_status ;;
     preflight) preflight ;;
-    *) printf 'usage: %s {install [--no-start]|uninstall [--purge]|status|preflight}\n' "$0" >&2; exit 2 ;;
+    stage)     stage ;;
+    verify)    verify ;;
+    *) printf 'usage: %s {install [--no-start]|uninstall [--purge]|status|preflight|stage|verify}\n' "$0" >&2; exit 2 ;;
 esac

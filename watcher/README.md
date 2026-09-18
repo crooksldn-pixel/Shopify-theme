@@ -58,18 +58,33 @@ capped at 15 minutes), so a broken run never silently swallows an instruction an
     bin/crooks-bridge-watcher                 the worker (loop | --once | status | seed)
     systemd/crooks-bridge-watcher.service     the unit
     install.sh                                install | uninstall | status | preflight
-    tests/run-tests.sh                        38 assertions, no network, no real Claude
+    tests/run-tests.sh                        the test suite (no network, no real Claude)
 
 ## Use
 
+    ./tests/run-tests.sh            run the suite; it prints its own pass/fail count
     sudo ./install.sh preflight     check prerequisites, change nothing
-    sudo ./install.sh install       install, seed, enable, start
+    sudo ./install.sh install       copy THIS reviewed tree into /opt/crooks-bridge-watcher,
+                                    verify it, install the unit, seed, enable, start
+    ./install.sh verify             prove runtime == this source == installed unit
     ./install.sh status             what it has processed, what is pending, is it running
     journalctl -u crooks-bridge-watcher -f
     sudo ./install.sh uninstall     stop, disable, remove   (--purge also deletes state)
 
 Install seeds the state with the inbox as it stands, so the watcher starts listening from now
 rather than re-executing instructions that have already been dealt with.
+
+## Installing what you reviewed
+
+The tree you check out and review is the source of truth. `install.sh` copies its own payload —
+the watcher, the unit, this README, and deliberately not the tests — into the canonical runtime
+directory `/opt/crooks-bridge-watcher` with explicit modes, records a `MANIFEST.sha256` naming the
+source revision it came from, and installs the unit from that runtime copy.
+
+This matters because the unit executes a fixed path. If that path were also where people edit,
+"approve commit X" could install whatever happened to be sitting there instead. `install.sh
+verify` exists to answer that question at any time: it compares source, runtime and the installed
+unit, and fails if any two disagree.
 
 ## State
 

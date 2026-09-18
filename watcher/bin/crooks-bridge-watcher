@@ -45,7 +45,10 @@ OUTBOX_PATH="${CROOKS_BRIDGE_OUTBOX:-bridge/claude-outbox.md}"
 BRIDGE_DIR="${CROOKS_BRIDGE_WORKTREE:-/opt/crooks-ai-bridge}"
 WORK_DIR="${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-builder}"
 BUILDER_BRANCH="${CROOKS_BRIDGE_BUILDER_BRANCH:-claude/bridge-builder}"
-# The live checkout, named only so the watcher can refuse to be pointed at it.
+# The live repository, named only so the watcher can refuse to be pointed anywhere inside it.
+# The ROOT, not the app subdirectory: /opt/crooks-os/crooks-assistant was the obvious mistake to
+# guard against, but /opt/crooks-os/anything-else is the same mistake wearing a different path.
+PRODUCTION_REPO_ROOT="${CROOKS_BRIDGE_PRODUCTION_REPO_ROOT:-/opt/crooks-os}"
 PRODUCTION_DIR="${CROOKS_BRIDGE_PRODUCTION_DIR:-/opt/crooks-os/crooks-assistant}"
 
 # Who the watcher's own bridge commits are authored by. The watcher publishes the outbox itself;
@@ -240,21 +243,42 @@ target_is_safe() {
     # Returns 0 when it is safe to start a run, 1 when it is not. Every refusal names what to do.
     local others resolved_target resolved_production
 
-    # The headless path must never be aimed at the live checkout, whatever the environment says.
+    # The headless path must never be aimed at the live repository, whatever the environment
+    # says. Equality is not enough: any path INSIDE the production repo is the same mistake.
     resolved_target="$(readlink -f "$WORK_DIR" 2>/dev/null || printf '%s' "$WORK_DIR")"
-    resolved_production="$(readlink -f "$PRODUCTION_DIR" 2>/dev/null || printf '%s' "$PRODUCTION_DIR")"
-    if [ "$resolved_target" = "$resolved_production" ]; then
-        warn "bridge: REFUSING to start — the target tree IS the production checkout ($PRODUCTION_DIR)."
-        warn "bridge: headless work belongs in the builder worktree. Point CROOKS_BRIDGE_WORKDIR"
-        warn "bridge: at $WORK_DIR (branch $BUILDER_BRANCH) and try again."
-        return 1
-    fi
+    resolved_production="$(readlink -f "$PRODUCTION_REPO_ROOT" 2>/dev/null || printf '%s' "$PRODUCTION_REPO_ROOT")"
+    case "$resolved_target" in
+        "$resolved_production"|"$resolved_production"/*)
+            warn "bridge: REFUSING to start — the target tree is inside the production repository"
+            warn "bridge: ($resolved_target is at or under $resolved_production)."
+            warn "bridge: headless work belongs in the standalone builder clone. Point"
+            warn "bridge: CROOKS_BRIDGE_WORKDIR at one, on branch $BUILDER_BRANCH, and try again."
+            return 1 ;;
+    esac
 
     if [ ! -d "$WORK_DIR" ]; then
         warn "bridge: REFUSING to start — the builder worktree $WORK_DIR does not exist."
         warn "bridge: create it once with:"
-        warn "bridge:   git -C /opt/crooks-os worktree add -b $BUILDER_BRANCH $WORK_DIR <production HEAD>"
+        warn "bridge:   git clone --no-hardlinks --single-branch --branch $BUILDER_BRANCH <repo> $WORK_DIR"
         return 1
+    fi
+
+    # A linked worktree keeps its metadata in the PARENT repository's .git, so writing to it means
+    # writing into the production repo — exactly the isolation this design removes. A standalone
+    # clone has its own. Checked rather than assumed, because the difference is invisible from the
+    # path alone and the sandbox is what is relying on it.
+    local common_dir
+    common_dir="$("$GIT_BIN" -C "$WORK_DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || printf '')"
+    if [ -n "$common_dir" ]; then
+        common_dir="$(readlink -f "$common_dir" 2>/dev/null || printf '%s' "$common_dir")"
+        case "$common_dir" in
+            "$resolved_production"|"$resolved_production"/*)
+                warn "bridge: REFUSING to start — $WORK_DIR is a LINKED WORKTREE of the production"
+                warn "bridge: repository (its git directory is $common_dir). Writing to it writes"
+                warn "bridge: into $resolved_production. Replace it with a standalone clone:"
+                warn "bridge:   git clone --no-hardlinks --single-branch --branch $BUILDER_BRANCH <repo> $WORK_DIR"
+                return 1 ;;
+        esac
     fi
 
     others="$(foreign_claude_pids)"

@@ -86,6 +86,9 @@ case "$sub" in
     printf 'push %s :: %s\n' "$dir" "${args[*]}" >> "$STUB/git_ops"
     [ -f "$STUB/push_fail" ] && exit 1
     [ -f "$STUB/push_noop" ] || printf 'outbox-%s\n' "$(date +%s%N)" > "$STUB/outbox_sha" ;;
+  rev-parse)
+    if [ -f "$STUB/linked_worktree" ]; then printf '%s/.git/worktrees/builder\n' "$PRODUCTION_T"
+    else printf '%s/.git\n' "$dir"; fi ;;
   fetch|merge) : ;;
 esac
 exit 0
@@ -98,12 +101,13 @@ GIT
 teardown() { [ -n "${SANDBOX:-}" ] && rm -rf "$SANDBOX"; }
 
 watch() {
-    PATH="$BIN:$PATH" STUB="$STUB" BRIDGE_T="$BRIDGE" \
+    PATH="$BIN:$PATH" STUB="$STUB" BRIDGE_T="$BRIDGE" PRODUCTION_T="$PRODUCTION" \
     CROOKS_BRIDGE_STATE_DIR="$STATE" \
     CROOKS_BRIDGE_LOCK="$LOCK" \
     CROOKS_BRIDGE_WORKTREE="$BRIDGE" \
     CROOKS_BRIDGE_WORKDIR="${WORKDIR_OVERRIDE:-$BUILDER}" \
     CROOKS_BRIDGE_PRODUCTION_DIR="$PRODUCTION" \
+    CROOKS_BRIDGE_PRODUCTION_REPO_ROOT="${PROD_ROOT_OVERRIDE:-$PRODUCTION}" \
     CROOKS_BRIDGE_POLL_S=1 \
     CROOKS_BRIDGE_BACKOFF_BASE_S=60 \
     CROOKS_BRIDGE_BACKOFF_MAX_S=900 \
@@ -203,13 +207,13 @@ t_the_production_checkout_is_never_the_target() {
     local out; out="$(WORKDIR_OVERRIDE="$PRODUCTION" watch --once)"
     check "aiming the watcher at production starts no Claude" "0" "$(runs)"
     check "  and records nothing" "" "$(recorded)"
-    contains "  and it says why" "$out" "the target tree IS the production checkout"
+    contains "  and it says why" "$out" "inside the production repository"
 }
 
 t_a_missing_builder_worktree_refuses() {
     local out; out="$(WORKDIR_OVERRIDE="$SANDBOX/not-there" watch --once)"
     check "a missing builder worktree starts no Claude" "0" "$(runs)"
-    contains "  and prints the one command that creates it" "$out" "worktree add -b"
+    contains "  and prints the one command that creates it" "$out" "git clone --no-hardlinks"
 }
 
 t_a_dirty_builder_refuses_and_discards_nothing() {
@@ -390,6 +394,98 @@ t_backoff_grows_then_caps() {
 
 # --------------------------------------------------------------- the contract with Claude
 
+t_anything_inside_the_production_repo_is_refused() {
+    # Not just the app subdirectory. The mistake wears many paths; the guard checks the root.
+    mkdir -p "$PRODUCTION/some/nested/dir"
+    local out; out="$(WORKDIR_OVERRIDE="$PRODUCTION/some/nested/dir" watch --once)"
+    check "a path nested inside the production repo is refused" "0" "$(runs)"
+    contains "  and it says it is inside production" "$out" "inside the production repository"
+    check "  and records nothing" "" "$(recorded)"
+}
+
+t_a_linked_worktree_of_production_is_refused() {
+    # A linked worktree keeps its metadata in production's .git, so writing to it writes into
+    # production — the isolation hole that standalone clones exist to close.
+    touch "$STUB/linked_worktree"
+    local out; out="$(watch --once)"
+    check "a linked worktree of production starts no Claude" "0" "$(runs)"
+    contains "  and it names the problem" "$out" "LINKED WORKTREE"
+    contains "  and gives the clone command" "$out" "git clone --no-hardlinks"
+    check "  and records nothing" "" "$(recorded)"
+}
+
+t_a_standalone_clone_is_accepted() {
+    # The converse, so the guard cannot pass by refusing everything.
+    rm -f "$STUB/linked_worktree"
+    watch --once >/dev/null
+    check "a standalone builder clone is accepted" "1" "$(runs)"
+}
+
+# --------------------------------------------------------------- packaging
+
+t_staging_installs_exactly_the_runtime_payload() {
+    local rt="$SANDBOX/runtime"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    check "the watcher is staged"        "1" "$(test -f "$rt/bin/crooks-bridge-watcher" && echo 1 || echo 0)"
+    check "  the unit is staged"         "1" "$(test -f "$rt/systemd/crooks-bridge-watcher.service" && echo 1 || echo 0)"
+    check "  a manifest is written"      "1" "$(test -f "$rt/MANIFEST.sha256" && echo 1 || echo 0)"
+    check "  the watcher is executable"  "755" "$(stat -c '%a' "$rt/bin/crooks-bridge-watcher")"
+    check "  the unit is not executable" "644" "$(stat -c '%a' "$rt/systemd/crooks-bridge-watcher.service")"
+    check "  tests are NOT shipped into runtime" "0" "$(test -e "$rt/tests" && echo 1 || echo 0)"
+}
+
+t_the_staged_runtime_is_byte_identical_to_source() {
+    local rt="$SANDBOX/runtime"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    check "the staged watcher is byte-identical to source" "same" \
+        "$(cmp -s "$HERE/../bin/crooks-bridge-watcher" "$rt/bin/crooks-bridge-watcher" && echo same || echo DIFFERENT)"
+    check "  and so is the unit" "same" \
+        "$(cmp -s "$HERE/../systemd/crooks-bridge-watcher.service" "$rt/systemd/crooks-bridge-watcher.service" && echo same || echo DIFFERENT)"
+}
+
+t_staging_is_safe_to_repeat() {
+    local rt="$SANDBOX/runtime" first second
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    first="$(sha256sum "$rt/bin/crooks-bridge-watcher" | cut -d' ' -f1)"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    local rc=$?
+    second="$(sha256sum "$rt/bin/crooks-bridge-watcher" | cut -d' ' -f1)"
+    check "installing twice is not an error" "0" "$rc"
+    check "  and leaves the same bytes"      "$first" "$second"
+}
+
+t_verify_detects_a_runtime_that_drifted_from_source() {
+    # The whole point: "approve commit X" must never install something else.
+    local rt="$SANDBOX/runtime"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" verify >/dev/null 2>&1
+    check "a freshly staged runtime verifies" "0" "$?"
+
+    printf '\n# tampered\n' >> "$rt/bin/crooks-bridge-watcher"
+    local out; out="$(CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" verify 2>&1)"
+    local rc=$?
+    check "  a drifted runtime fails verification" "1" "$rc"
+    contains "  and names the file that differs" "$out" "DIFFERS from source"
+}
+
+t_the_manifest_records_where_it_came_from() {
+    local rt="$SANDBOX/runtime"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    contains "the manifest records the source directory" "$(cat "$rt/MANIFEST.sha256")" "installed-from:"
+    contains "  and the source revision"                 "$(cat "$rt/MANIFEST.sha256")" "source-revision:"
+    contains "  and a checksum per file"                 "$(cat "$rt/MANIFEST.sha256")" "bin/crooks-bridge-watcher"
+}
+
+t_the_unit_does_not_grant_write_access_to_production() {
+    local unit; unit="$(cat "$HERE/../systemd/crooks-bridge-watcher.service")"
+    lacks "the unit does not make /opt/crooks-os writable" "$unit" "ReadWritePaths=/opt/crooks-os
+"
+    contains "  the builder clone is writable"  "$unit" "ReadWritePaths=/opt/crooks-builder"
+    contains "  the bridge clone is writable"   "$unit" "ReadWritePaths=/opt/crooks-ai-bridge"
+    contains "  production is explicitly read-only" "$unit" "ReadOnlyPaths=/opt/crooks-os"
+    contains "  and the filesystem is strict by default" "$unit" "ProtectSystem=strict"
+}
+
 t_the_prompt_carries_the_safety_contract() {
     watch --once >/dev/null
     local args; args="$(tr '\n' ' ' < "$STUB/claude_args" | tr -s ' ' | tr '[:upper:]' '[:lower:]')"
@@ -434,6 +530,15 @@ for t in \
     t_a_failed_run_is_not_recorded \
     t_a_failed_run_is_retried_next_cycle \
     t_backoff_grows_then_caps \
+    t_anything_inside_the_production_repo_is_refused \
+    t_a_linked_worktree_of_production_is_refused \
+    t_a_standalone_clone_is_accepted \
+    t_staging_installs_exactly_the_runtime_payload \
+    t_the_staged_runtime_is_byte_identical_to_source \
+    t_staging_is_safe_to_repeat \
+    t_verify_detects_a_runtime_that_drifted_from_source \
+    t_the_manifest_records_where_it_came_from \
+    t_the_unit_does_not_grant_write_access_to_production \
     t_the_prompt_carries_the_safety_contract
 do
     printf '\n%s\n' "${t#t_}" | tr '_' ' '
