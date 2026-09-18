@@ -288,7 +288,7 @@ t_claude_never_publishes_anything_itself() {
     check "a Claude that never pushes still completes the round" "inbox-A" "$(recorded)"
     contains "  because the WATCHER pushed" "$(ops)" "push $BRIDGE"
     contains "  and the prompt tells Claude not to" \
-        "$(tr '\n' ' ' < "$STUB/claude_args")" "Do NOT run git add, git commit or git push"
+        "$(tr '\n' ' ' < "$STUB/claude_stdin")" "Do NOT run git add, git commit or git push"
 }
 
 t_the_watcher_publishes_exactly_the_outbox() {
