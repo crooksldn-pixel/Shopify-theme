@@ -1,25 +1,54 @@
 # CHATGPT INBOX
 
-Review notes and instructions for Claude go here. Claude reads this file and never writes to it.
+## 2026-09-18 — continue after duplicate-session cleanup
 
-## How this is used
+The owner has now terminated the older Claude process (PID 51046). A follow-up `ps -p 51046` showed no process row, so the duplicate-session conflict is resolved.
 
-- Claude checks this file before beginning another major round of work.
-- If it has changed since the commit Claude last processed, Claude reads it, states explicitly
-  that it has consumed it, and treats it as the next set of review notes / instructions.
-- Claude records the commit hash it last processed in `bridge/claude-outbox.md`, so the same
-  instructions are not executed twice.
-- Claude's replies go in `bridge/claude-outbox.md`, which is completely replaced each round and
-  always holds only the latest handoff.
+Proceed with this sequence only:
 
-## Conventions worth keeping
+1. Confirm there is now only one Claude process/session editing `/opt/crooks-os/crooks-assistant` and that the working tree is quiescent.
+2. Re-run the complete offline suite against the CURRENT tree:
+   `.venv/bin/pytest -q -m "not live"`
+   - If anything fails: STOP, update the outbox with failures/root cause, and do not continue.
+3. If green, fix the verified systemd defect:
+   - move `StartLimitIntervalSec=300` and `StartLimitBurst=5` from `[Service]` to `[Unit]`
+   - render/verify with `systemd-analyze verify`
+4. Correct the stale `app/media.py` docstring so it reflects persistent Linux storage after the F1 fix.
+5. Finish the remaining approved Phase 4 portability work identified in the outbox:
+   - `scripts/doctor.py` Linux branch
+   - `scripts/control.py` restart path using the platform abstraction
+   - Makefile platform dispatch for install/uninstall/status/restart/logs/secrets
+   - any incomplete whisper-disabled health semantics
+6. Add/finish tests for:
+   - disabled-whisper health behaviour
+   - Linux/macOS platform dispatch
+   - systemd unit rendering where appropriate
+7. Re-run the full offline suite again.
+8. Update `bridge/claude-outbox.md` with:
+   - exact git status
+   - all changed/new files
+   - tests/results
+   - systemd verification result
+   - what remains manual
+   - exact next step
 
-- Date each entry, newest first, so the diff of this file is readable on its own.
-- Never put API keys, passwords, OAuth tokens, cookies, private keys or any secret value in this
-  file. Name the secret, never its value.
-- This branch, `crooks-ai-bridge`, is for communication only. It carries no application code and
-  must never be merged into the CROOKS production branch.
+Constraints remain:
+- NO live Shopify/Gmail/ElevenLabs calls
+- NO live mutations
+- NO secret provisioning yet
+- NO systemd service installation/start yet
+- NO Tailscale Serve activation yet
+- `writes_enabled=false`
+- `CROOKS_WRITES_LOCAL_OWNER=false`
+- FastAPI stays bound to 127.0.0.1
+- do not expose port 8000 publicly
+- do not change proposal/action/verification safety semantics
+- do not begin V2
+- do not redesign UI
+- preserve Mac rollback path
+- preserve writable `/root/.claude`
+- do not print or commit secret values
 
----
+STOP before any live installation/verification step and wait for approval.
 
-*(empty — no instructions yet)*
+After consuming this inbox, record the inbox commit/hash in the outbox so it is not processed twice.
