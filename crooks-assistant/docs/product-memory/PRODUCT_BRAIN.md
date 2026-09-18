@@ -183,6 +183,38 @@ If an idea, decision, safety rule, or architectural principle matters, it belong
 
 ChatGPT/Claude memory is useful but is not the canonical store.
 
+### 2.12 Continuity without ossification
+
+Previous releases should accelerate the next release by preserving lessons, evidence, active contracts, useful capabilities, and safety invariants.
+
+They must not become architectural gravity.
+
+Preserve **outcomes and current intent**, not obsolete forms.
+
+If a newer system fully subsumes an older component, that component may legitimately become null and be removed. If the product takes a new UI direction, old visual language is historical evidence rather than a permanent constraint. If an old test protects behaviour the product no longer wants, the contract should be deliberately superseded rather than preserved as archaeology.
+
+Use `EVOLUTION_POLICY.md` for the canonical release/supersession rules.
+
+### 2.13 Quality comes before model cost or elapsed time
+
+Engineering orchestration should use the strongest appropriate intelligence and enough independent review to protect product/code quality.
+
+Cost and speed may optimise waste, but they must not justify weaker architecture, weaker security, poorer UX, lower maintainability, or less reliable code.
+
+Parallelism exists to increase quality and throughput only where isolation is real.
+
+### 2.14 Engineering is multi-model by role, not one model pretending to be a company
+
+The long-term engineering organisation should combine complementary specialists:
+
+- GPT Director for decomposition, continuity and independent final review,
+- Claude Opus for architecture, security, difficult diagnosis, major refactors and high-scrutiny review,
+- Claude Sonnet for well-bounded implementation where quality is protected by proof/review,
+- Fable as a first-class Experience Director for substantial UX/interaction direction and post-build experience review,
+- specialist QA, performance, security and integration workers.
+
+Model routing should be dynamic and quality-first. Difficult or ambiguous work escalates rather than being forced through a cheaper/faster worker.
+
 ## 3. Product architecture direction
 
 ### 3.1 Durable kernel
