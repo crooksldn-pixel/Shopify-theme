@@ -2,6 +2,8 @@
 
 This directory is the canonical durable product memory for CROOKS OS.
 
+Current repository: `crooksldn-pixel/Shopify-theme`. Read these files from `claude/product-memory-foundation` by explicit ref; they are not assumed to exist on the repository's default theme branch or on the application baseline.
+
 The rule is simple:
 
 > If an idea, product principle, architecture decision, roadmap item, or self-improvement concept matters to CROOKS OS, it must not live only in an AI conversation.
@@ -20,6 +22,8 @@ ChatGPT, Claude, future model workers, and human contributors should treat these
 - [EVOLUTION_POLICY.md](./EVOLUTION_POLICY.md) — release doctrine: preserve value and lessons without fossilising obsolete implementation or design.
 - [DIRECTOR_PROTOCOL.md](./DIRECTOR_PROTOCOL.md) — named memory/continuity procedures for bootstrap, release context, supersession, pruning, handoff, and audits.
 - [MIGRATION_HANDOFF.md](./MIGRATION_HANDOFF.md) — current GPT-conversation migration entry point: exact active state, in-flight work, control-plane status, and continuation instructions.
+
+- [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md) — proposed Dev Team V1 contract: authority, lifecycle, context, isolation, evidence, review, integration and recovery; planning only.
 
 ## Status model
 

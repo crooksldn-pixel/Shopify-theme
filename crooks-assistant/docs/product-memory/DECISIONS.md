@@ -536,6 +536,23 @@ Versioned releases, exact artifact identity, health verification and rollback ar
 
 ---
 
+## DEC-046 — Dev Team planning can proceed now; implementation follows the current-product gates
+**Date:** 2026-09-19  
+**Status:** ACTIVE  
+**Source:** explicit owner migration continuation; consistent with CURRENT_TRUTH and MIGRATION_HANDOFF
+
+**Decision:** Plan Engineering Orchestrator / Dev Team V1 while the permanent Builder Environment round remains in flight. Preserve that round; do not duplicate or restart it without failure/stoppage evidence.
+
+Implementation order: Builder Environment review → controlled Linux migration/promotion → approved secrets → always-on runtime → private HTTPS when approved → real Samsung/iPhone/runtime verification → UI refinement → response/latency refinement → real-world sessions/evidence → Dev Team V1 → privileged infrastructure control → World/Event Ledger/Attention/expectations/automation/integrations.
+
+**Reason:** preserve the current reliability/deployment sequence while using waiting time for rigorous specification work.
+
+**Supersedes:** the contradictory Sequencing rule at the end of the previous ROADMAP, which placed World/automation expansion before the engineering organisation. Product goals and safety invariants remain active.
+
+**Consequences:** ENGINEERING_ORCHESTRATOR_V1.md records a PROPOSED detailed design. Its task-store choice, retry counts, concurrency limits and other new mechanics are not silently promoted to approved decisions. No runtime work or bridge instruction is authorised merely by the presence of that specification.
+
+---
+
 # How to add a decision
 
 Use:

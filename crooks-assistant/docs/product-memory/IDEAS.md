@@ -803,6 +803,27 @@ Represent available capabilities, scopes, risk, reversibility, verification, and
 
 ---
 
+## IDEA-051 — Dev Team V1 deterministic contracts and recovery
+**Date:** 2026-09-19  
+**Status:** CAPTURED — detailed design proposal under the approved Dev Team direction  
+**Theme:** engineering orchestration / verification
+
+Detailed proposal: [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md).
+
+Proposed mechanics:
+- a small deterministic kernel with durable task/attempt/candidate/review records;
+- curated, cited and versioned Active Context Packs;
+- isolated worker credentials/state as well as source workspaces;
+- immutable candidate/evidence identities and independent review;
+- fencing/recovery that rejects stale worker results;
+- publication retries that do not repeat successful builds;
+- integration verification and an explicit external Director gate;
+- bounded attempts and on-demand specialists rather than permanent manager layers.
+
+Capture is not implementation approval. These mechanics need architecture/security review and verified Fable/GPT/credential adapters at the appropriate roadmap stage.
+
+---
+
 # Capture policy
 
 New ideas should be appended with:

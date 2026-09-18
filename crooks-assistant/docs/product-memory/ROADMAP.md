@@ -5,6 +5,8 @@
 
 This roadmap is intentionally staged. “Later” ideas should not be used as an excuse to leave the current product unfinished.
 
+The final Sequencing rule and DEC-046 are authoritative for execution order. Engineering Orchestrator specification planning is active alongside N7; implementation waits until deployment, current-product quality and real-world evidence gates are satisfied.
+
 ---
 
 # NOW — make the current CROOKS product genuinely reliable
@@ -128,6 +130,140 @@ Build the reproducible engineering environment currently running through the aut
 - DEV_ENVIRONMENT manifest,
 - idempotent bootstrap/check,
 - no production deployment as part of this task.
+
+---
+
+# AFTER CURRENT BASELINE — engineering organisation and controlled infrastructure
+
+This foundation precedes major World/Attention/automation expansion. Detailed V1 mechanisms remain proposed until reviewed; this is not permission to start implementation during the current Builder/deployment sequence.
+
+## D1. Claude Dev Manager
+**Status:** CAPTURED
+
+Takes broad engineering objectives and decomposes them into specialist tasks.
+
+## D2. Specialist workers
+**Status:** CAPTURED
+
+Potential agents:
+
+- UI Engineer
+- UX Researcher
+- Debugger
+- Feature Engineer
+- QA/Test Engineer
+- Performance Engineer
+- Security/Actions Reviewer
+- Integration Engineer
+
+## D3. Specialist critics
+**Status:** CAPTURED
+
+Each worker has an independent “voice of reason” reviewer.
+
+Reviewer objective is to find why a change should **not** ship, not to agree by default.
+
+## D4. Parallel isolated worktrees
+**Status:** APPROVED DIRECTION
+
+Each worker gets:
+
+- own task
+- own branch
+- own worktree
+- narrow tools/context
+
+Never repeat the shared-working-tree collision experienced during Linux migration.
+
+## D5. GPT Director
+**Status:** CAPTURED
+
+GPT sits above Claude manager/team as an independent architecture/review layer.
+
+Reads:
+
+- actual diffs
+- tests
+- replay results
+- worker reports
+- product memory
+
+Can approve, reject, or send work back.
+
+## D6. Owner escalation
+**Status:** APPROVED DIRECTION
+
+Agents should escalate decisions that are fundamentally product/taste/strategy questions.
+
+The owner should not be used as a command courier.
+
+## D7. Engineering Orchestrator V1
+**Status:** APPROVED DIRECTION — specification planning active; implementation gated
+
+Detailed proposal: [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md). The organisation/direction is approved; new mechanism choices in the specification remain PROPOSED.
+
+Build the layer above the single-worker watcher:
+
+- task queue,
+- quality-first model/effort selection,
+- isolated worker workspace per task,
+- safe parallel execution,
+- dependency tracking,
+- result/evidence collection,
+- independent review routing,
+- integration gate,
+- bounded retries and escalation.
+
+Do not obtain concurrency by allowing several writers into the same checkout.
+
+## D8. Fable Experience Director
+**Status:** APPROVED DIRECTION
+
+Make Fable a first-class specialist for substantial UX/interaction work:
+
+- pre-implementation experience direction,
+- device/workflow evaluation,
+- post-implementation independent experience review.
+
+Fable complements DESIGN.md, browser evidence and technical review.
+
+## D9. Quality-first model routing
+**Status:** APPROVED DIRECTION
+
+Routing should use:
+- Opus for high-complexity/high-risk reasoning,
+- Sonnet for bounded implementation,
+- cheaper/faster models only for mechanical work,
+- automatic escalation on ambiguity/failure/risk.
+
+Cost and speed must not reduce code/product quality.
+
+## D10. Privileged Action Broker + Deployment/Infrastructure Controller
+**Status:** APPROVED DIRECTION
+
+Bootstrap a controlled privileged plane so approved backend/infrastructure changes no longer require routine owner shell commands.
+
+Requirements:
+- allowlisted structured privileged actions,
+- exact artifact/version identity,
+- owner approval gates where needed,
+- versioned installs,
+- health checks,
+- automatic rollback,
+- separation of duties for self-updating infrastructure,
+- SSH/Termius retained as break-glass recovery.
+
+## D11. Active Context / release evolution automation
+**Status:** APPROVED DIRECTION
+
+Automate the memory procedures in DIRECTOR_PROTOCOL:
+
+- bootstrap current truth,
+- generate Active Context Packs,
+- classify active vs historical/superseded constraints,
+- supersede/retire obsolete architecture explicitly,
+- audit memory drift,
+- keep future releases free to simplify/delete obsolete systems while preserving current outcomes and lessons.
 
 ---
 
@@ -462,136 +598,6 @@ High-risk areas remain approval-gated:
 
 ---
 
-# LATER — autonomous engineering organisation
-
-## D1. Claude Dev Manager
-**Status:** CAPTURED
-
-Takes broad engineering objectives and decomposes them into specialist tasks.
-
-## D2. Specialist workers
-**Status:** CAPTURED
-
-Potential agents:
-
-- UI Engineer
-- UX Researcher
-- Debugger
-- Feature Engineer
-- QA/Test Engineer
-- Performance Engineer
-- Security/Actions Reviewer
-- Integration Engineer
-
-## D3. Specialist critics
-**Status:** CAPTURED
-
-Each worker has an independent “voice of reason” reviewer.
-
-Reviewer objective is to find why a change should **not** ship, not to agree by default.
-
-## D4. Parallel isolated worktrees
-**Status:** APPROVED DIRECTION
-
-Each worker gets:
-
-- own task
-- own branch
-- own worktree
-- narrow tools/context
-
-Never repeat the shared-working-tree collision experienced during Linux migration.
-
-## D5. GPT Director
-**Status:** CAPTURED
-
-GPT sits above Claude manager/team as an independent architecture/review layer.
-
-Reads:
-
-- actual diffs
-- tests
-- replay results
-- worker reports
-- product memory
-
-Can approve, reject, or send work back.
-
-## D6. Owner escalation
-**Status:** APPROVED DIRECTION
-
-Agents should escalate decisions that are fundamentally product/taste/strategy questions.
-
-The owner should not be used as a command courier.
-
-## D7. Engineering Orchestrator V1
-**Status:** APPROVED DIRECTION
-
-Build the layer above the single-worker watcher:
-
-- task queue,
-- quality-first model/effort selection,
-- isolated worker workspace per task,
-- safe parallel execution,
-- dependency tracking,
-- result/evidence collection,
-- independent review routing,
-- integration gate,
-- bounded retries and escalation.
-
-Do not obtain concurrency by allowing several writers into the same checkout.
-
-## D8. Fable Experience Director
-**Status:** APPROVED DIRECTION
-
-Make Fable a first-class specialist for substantial UX/interaction work:
-
-- pre-implementation experience direction,
-- device/workflow evaluation,
-- post-implementation independent experience review.
-
-Fable complements DESIGN.md, browser evidence and technical review.
-
-## D9. Quality-first model routing
-**Status:** APPROVED DIRECTION
-
-Routing should use:
-- Opus for high-complexity/high-risk reasoning,
-- Sonnet for bounded implementation,
-- cheaper/faster models only for mechanical work,
-- automatic escalation on ambiguity/failure/risk.
-
-Cost and speed must not reduce code/product quality.
-
-## D10. Privileged Action Broker + Deployment/Infrastructure Controller
-**Status:** APPROVED DIRECTION
-
-Bootstrap a controlled privileged plane so approved backend/infrastructure changes no longer require routine owner shell commands.
-
-Requirements:
-- allowlisted structured privileged actions,
-- exact artifact/version identity,
-- owner approval gates where needed,
-- versioned installs,
-- health checks,
-- automatic rollback,
-- separation of duties for self-updating infrastructure,
-- SSH/Termius retained as break-glass recovery.
-
-## D11. Active Context / release evolution automation
-**Status:** APPROVED DIRECTION
-
-Automate the memory procedures in DIRECTOR_PROTOCOL:
-
-- bootstrap current truth,
-- generate Active Context Packs,
-- classify active vs historical/superseded constraints,
-- supersede/retire obsolete architecture explicitly,
-- audit memory drift,
-- keep future releases free to simplify/delete obsolete systems while preserving current outcomes and lessons.
-
----
-
 # SOMEDAY — CROOKS manages its own engineering
 
 ## Y1. Natural-language engineering requests
@@ -687,16 +693,24 @@ Not:
 
 Do not jump to Later/Someday because the concept is exciting.
 
-The current sequence remains:
+The current sequence, reaffirmed by the owner in the 2026-09-19 migration continuation (DEC-046), is:
 
-1. stable always-on deployment
-2. excellent UI/responses/reliability
-3. real-world evidence
-4. persistent World + attention + automation
-5. broader integrations
-6. self-improvement
-7. multi-agent dev organisation + privileged infrastructure control
-8. subscriber product expansion
+1. finish and review the permanent Builder Environment,
+2. complete controlled Linux production migration/promotion,
+3. provision runtime secrets through the approved process,
+4. establish the always-on server runtime,
+5. enable private Tailscale HTTPS when approved,
+6. verify real Samsung/iPhone/runtime behaviour,
+7. perfect current UI,
+8. perfect response behaviour and latency,
+9. conduct real-world CROOKS sessions and collect evidence,
+10. implement Engineering Orchestrator / Dev Team V1,
+11. bootstrap the privileged deployment/infrastructure control plane,
+12. expand World / Event Ledger / Attention / expectations / automation / integrations.
+
+Dev Team specification planning may proceed while the Builder round is in flight. Planning does not advance its implementation gate. DEC-046 records this ordering and resolves the older conflicting roadmap footer.
+
+This replaces the older footer that placed World/automation ahead of the engineering organisation. No active safety gate is removed.
 
 At every stage, apply EVOLUTION_POLICY: inherit value and evidence, not obsolete implementation form.
 
