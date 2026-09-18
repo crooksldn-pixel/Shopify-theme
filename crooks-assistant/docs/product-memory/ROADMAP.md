@@ -27,17 +27,20 @@ This roadmap is intentionally staged. “Later” ideas should not be used as an
 - later move service from temporary root execution to a dedicated `crooks` user
 
 ## N2. Install the Claude inbox watcher
-**Status:** BUILDING / REVIEW
+**Status:** SHIPPED
 
-- review watcher implementation
-- use dedicated builder worktree rather than shared dirty production checkout
+- standalone bridge and builder clones
 - poll inbox blob SHA, not branch HEAD
 - single-run lock
-- do not swallow failed instructions
-- backoff/retry
-- preserve Claude Max auth
+- failed instructions remain pending
+- bounded backoff/retry
+- Claude Max auth preserved
+- production checkout read-only to watcher
+- watcher owns outbox publication
+- stdin prompt delivery regression-tested
+- corrected watcher passed end-to-end automatic smoke test
 - no public webhook endpoint required
-- eliminate the manual “check inbox” step
+- normal GPT → Claude → outbox loop no longer requires the owner to relay messages
 
 ## N3. Perfect the current UI
 **Status:** PLANNED
@@ -96,7 +99,7 @@ Capture:
 - tool/action traces
 
 ## N6. Product-memory foundation
-**Status:** BUILDING
+**Status:** BUILDING / ACTIVE
 
 - PRODUCT_BRAIN
 - ROADMAP
@@ -104,8 +107,27 @@ Capture:
 - FEATURES
 - DECISIONS
 - SELF_IMPROVEMENT
+- CURRENT_TRUTH
+- EVOLUTION_POLICY
+- DIRECTOR_PROTOCOL
 
 All future meaningful ideas and architecture decisions should become durable entries.
+
+Active context must remain curated: Git stores history; current truth and active decisions drive new releases.
+
+## N7. Permanent Builder Environment
+**Status:** BUILDING
+
+Build the reproducible engineering environment currently running through the automated bridge:
+
+- security-gated project skills,
+- current DESIGN.md derived from CROOKS evidence,
+- browser/Playwright/accessibility tooling,
+- code-discovery/security/performance tools,
+- concise CLAUDE.md/rules/hooks,
+- DEV_ENVIRONMENT manifest,
+- idempotent bootstrap/check,
+- no production deployment as part of this task.
 
 ---
 
@@ -502,6 +524,72 @@ Agents should escalate decisions that are fundamentally product/taste/strategy q
 
 The owner should not be used as a command courier.
 
+## D7. Engineering Orchestrator V1
+**Status:** APPROVED DIRECTION
+
+Build the layer above the single-worker watcher:
+
+- task queue,
+- quality-first model/effort selection,
+- isolated worker workspace per task,
+- safe parallel execution,
+- dependency tracking,
+- result/evidence collection,
+- independent review routing,
+- integration gate,
+- bounded retries and escalation.
+
+Do not obtain concurrency by allowing several writers into the same checkout.
+
+## D8. Fable Experience Director
+**Status:** APPROVED DIRECTION
+
+Make Fable a first-class specialist for substantial UX/interaction work:
+
+- pre-implementation experience direction,
+- device/workflow evaluation,
+- post-implementation independent experience review.
+
+Fable complements DESIGN.md, browser evidence and technical review.
+
+## D9. Quality-first model routing
+**Status:** APPROVED DIRECTION
+
+Routing should use:
+- Opus for high-complexity/high-risk reasoning,
+- Sonnet for bounded implementation,
+- cheaper/faster models only for mechanical work,
+- automatic escalation on ambiguity/failure/risk.
+
+Cost and speed must not reduce code/product quality.
+
+## D10. Privileged Action Broker + Deployment/Infrastructure Controller
+**Status:** APPROVED DIRECTION
+
+Bootstrap a controlled privileged plane so approved backend/infrastructure changes no longer require routine owner shell commands.
+
+Requirements:
+- allowlisted structured privileged actions,
+- exact artifact/version identity,
+- owner approval gates where needed,
+- versioned installs,
+- health checks,
+- automatic rollback,
+- separation of duties for self-updating infrastructure,
+- SSH/Termius retained as break-glass recovery.
+
+## D11. Active Context / release evolution automation
+**Status:** APPROVED DIRECTION
+
+Automate the memory procedures in DIRECTOR_PROTOCOL:
+
+- bootstrap current truth,
+- generate Active Context Packs,
+- classify active vs historical/superseded constraints,
+- supersede/retire obsolete architecture explicitly,
+- audit memory drift,
+- keep future releases free to simplify/delete obsolete systems while preserving current outcomes and lessons.
+
 ---
 
 # SOMEDAY — CROOKS manages its own engineering
@@ -607,7 +695,9 @@ The current sequence remains:
 4. persistent World + attention + automation
 5. broader integrations
 6. self-improvement
-7. multi-agent dev organisation
+7. multi-agent dev organisation + privileged infrastructure control
 8. subscriber product expansion
+
+At every stage, apply EVOLUTION_POLICY: inherit value and evidence, not obsolete implementation form.
 
 The system should earn complexity only after the layer below it is reliable.
