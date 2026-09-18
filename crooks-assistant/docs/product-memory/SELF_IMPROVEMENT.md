@@ -663,3 +663,149 @@ The goal is not “more code changes.”
 The goal is:
 
 > fewer reasons for the owner to notice the software at all.
+
+---
+
+# 23. Quality-first model routing
+
+The engineering organisation must not optimise model spend or elapsed time at the expense of product quality.
+
+Routing principle:
+
+> use the strongest appropriate intelligence; optimise waste, not reasoning quality.
+
+Default direction:
+
+- **Claude Opus** — architecture, security boundaries, difficult diagnosis, major refactors, integration decisions, high-risk changes, final technical review.
+- **Claude Sonnet** — bounded implementation when scope is clear and objective proof/review are available.
+- **Faster/weaker models** — only genuinely mechanical work where reduced reasoning quality cannot materially change the product.
+- **GPT Director** — decomposition, continuity, independent review, reconciliation of worker conclusions.
+- **Fable** — specialist product-experience/interaction direction and review.
+
+Escalate automatically when:
+- implementation fails repeatedly,
+- root cause remains unclear,
+- architecture changes,
+- security/auth/action semantics are involved,
+- a task crosses multiple systems,
+- reviewers disagree,
+- new evidence contradicts the original plan.
+
+A worker's confidence is not proof.
+
+# 24. Fable Experience Director
+
+Fable is a first-class specialist for substantial UI/UX work.
+
+Primary responsibilities:
+- evaluate end-to-end interaction quality,
+- identify friction in real workflows,
+- reason about physical tablet/phone behaviour,
+- challenge density/hierarchy/navigation,
+- protect the speech-versus-screen interaction model,
+- review the implemented experience independently after the coding pass.
+
+Preferred substantial UI loop:
+
+Fable direction
+→ Opus architecture/constraints where needed
+→ implementation worker(s)
+→ browser/device/QA evidence
+→ Fable post-build review
+→ bounded correction
+→ technical review
+→ GPT Director review
+
+Fable is not the sole design authority.
+
+Current authority order remains:
+1. explicit owner request,
+2. current product-memory decisions/invariants,
+3. current DESIGN.md,
+4. current functional/safety behaviour,
+5. specialist design/experience tools.
+
+# 25. Engineering Orchestrator
+
+The bridge watcher is a reliable single-worker foundation, not the final multi-agent runtime.
+
+The next engineering layer should be an Orchestrator that can:
+
+- accept multiple queued tasks,
+- decompose broad objectives,
+- select model + effort under quality-first policy,
+- create isolated worker workspaces/branches,
+- run independent workers concurrently where scope is genuinely separable,
+- enforce per-task boundaries,
+- collect test/evidence artifacts,
+- route results to independent reviewers,
+- integrate successful candidates,
+- stop/escalate on disagreement or repeated failure.
+
+Rule:
+
+> one worker = one task = one mutable workspace = one candidate result.
+
+Do not obtain parallelism by weakening the existing watcher lock and running several writers in one checkout.
+
+# 26. Infrastructure self-maintenance
+
+Routine infrastructure changes should eventually stop requiring the owner to operate the shell.
+
+Target flow:
+
+candidate infrastructure change
+→ deterministic tests
+→ independent security/architecture review
+→ exact versioned artifact
+→ owner approval where required
+→ Privileged Action Broker / Infrastructure Controller
+→ versioned install
+→ health verification
+→ smoke test
+→ automatic rollback on failure
+→ update current truth
+
+This applies to:
+- bridge watcher,
+- Engineering Orchestrator,
+- worker manager,
+- model router,
+- deployment controller,
+- observability/control services,
+- CROOKS backend releases.
+
+No component should be able to give itself unrestricted new privilege, replace itself, and certify the result without an independent control plane.
+
+Termius/SSH should remain available as break-glass access, not a normal deployment path.
+
+# 27. Evolution without ossification
+
+Self-improvement must be allowed to remove obsolete structure, not only append more structure.
+
+A successful new system may make an old system unnecessary.
+
+Examples:
+- an event-driven capability can retire an old polling path,
+- a stronger World/Attention abstraction can eliminate an intermediate legacy layer,
+- a new product direction can replace an old UI language,
+- a consolidated specialist role can make another agent role redundant.
+
+The engineering organisation should explicitly search for deletion/simplification opportunities during major releases.
+
+Historical context is used to:
+- preserve lessons,
+- explain rationale,
+- prevent known regressions,
+- support migration.
+
+Historical context is **not** a requirement to reproduce historical form.
+
+Before a substantial release, create a curated Active Context Pack using `EVOLUTION_POLICY.md` and `DIRECTOR_PROTOCOL.md`.
+
+A future worker should be able to say:
+
+> “This old component no longer has a unique responsibility; its required outcomes are covered elsewhere; retire it.”
+
+and have deletion considered a legitimate improvement rather than an architectural failure.
+
