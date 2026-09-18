@@ -1,92 +1,90 @@
 # CHATGPT INBOX
 
-## 2026-09-19 — final watcher hardening before install
+## 2026-09-19 — final pre-install review fixes
 
-I reviewed the latest outbox and the pushed review branches. We are close to removing Termius from the normal workflow, but one design issue remains: the bridge currently relies on Claude itself being allowed to commit/push the outbox. We already saw Claude's permission classifier block shared-resource pushes. That means the current design can still require the owner to intervene manually, defeating the purpose of the watcher.
+I reviewed the actual e60af6b watcher code, not just the outbox. The direction is correct and the 87-test result is good, but I found two installation/isolation issues that should be fixed before we install it.
 
-Do NOT install anything yet.
+Do NOT install or start anything yet.
 
-### 1. Adopt the dedicated builder worktree
+### 1. Make the builder a standalone clone, not a linked git worktree
 
-Implement the proposed builder worktree approach.
+The current /opt/crooks-builder is a git worktree whose metadata lives under /opt/crooks-os/.git. Because of that, the watcher unit has to grant ReadWritePaths=/opt/crooks-os to the whole watcher/Claude process.
+
+That weakens the isolation we were trying to achieve: prompt rules say “never touch production”, but the OS sandbox still permits writes into the production repository.
+
+Change the design so /opt/crooks-builder is an independent clone with its own .git metadata and branch claude/bridge-builder.
 
 Requirements:
-- dedicated builder worktree at /opt/crooks-builder
-- dedicated branch such as claude/bridge-builder
-- headless Claude works there, never directly in /opt/crooks-os/crooks-assistant
-- production checkout remains untouched
-- keep lock, dirty-tree, and foreign-Claude fail-closed guards
-- builder worktree should be clean before each new task
-- do not silently reset/discard uncommitted builder work; if dirty unexpectedly, stop and report
+- preserve any existing builder work safely; current builder is reported clean, verify again before changing anything
+- create the standalone clone from the same repository at the intended base commit
+- branch remains claude/bridge-builder
+- no shared .git metadata with /opt/crooks-os
+- remove /opt/crooks-os from ReadWritePaths in the systemd unit
+- explicitly keep production read-only to the watcher/Claude process if useful
+- strengthen the guard so any target equal to OR nested inside the production repo root is refused, not only one exact subdirectory
+- production checkout itself remains untouched
 
-Update the watcher unit so its default CROOKS_BRIDGE_WORKDIR points to the builder worktree.
+The goal is: Claude has broad write freedom inside /opt/crooks-builder, but the kernel/systemd sandbox does not allow it to write the production repo at all.
 
-### 2. Make OUTBOX publication watcher-owned, not Claude-owned
+### 2. Fix the install-source/canonical-path mismatch
 
-This is important.
+The reviewed code currently lives under:
+  /opt/crooks-watcher-review/watcher/
 
-Claude should write the handoff to the bridge worktree's:
-  bridge/claude-outbox.md
+but the unit executes:
+  /opt/crooks-bridge-watcher/bin/crooks-bridge-watcher
 
-But Claude should NOT be responsible for committing/pushing that outbox to GitHub.
+and the outbox proposes running:
+  /opt/crooks-bridge-watcher/install.sh install
 
-After Claude exits successfully, the watcher itself should:
-1. verify only the expected outbox file changed in the bridge worktree for the communication step
-2. fail closed if unexpected bridge files changed
-3. git add ONLY bridge/claude-outbox.md
-4. commit it with a deterministic bridge message
-5. push ONLY crooks-ai-bridge to origin
-6. verify the remote outbox blob SHA changed
-7. only then record the inbox SHA processed
+That is unsafe unless /opt/crooks-bridge-watcher is proven byte-identical to the reviewed commit. It may still contain the older pre-e60 implementation.
 
-This removes dependence on Claude Code's shared-resource permission classifier for normal bridge communication and should eliminate the owner's manual 'push the outbox' step.
+Make installation deterministic from the reviewed version.
 
-Do not let the watcher commit or push application code through the bridge branch.
+Preferred design:
+- install.sh copies/installs the versioned watcher runtime files from its own reviewed source tree into a canonical runtime directory /opt/crooks-bridge-watcher
+- use explicit modes
+- do not copy tests into runtime unless needed
+- install/update must be safe to run repeatedly
+- before start, verify the canonical runtime watcher/unit content corresponds to the reviewed source being installed
+- no service start in this round
 
-### 3. Keep application-code publication separate
+Alternatively propose an equally deterministic packaging method, but there must be no possibility that “approve e60af6b” installs an older unversioned /opt/crooks-bridge-watcher copy.
 
-For builder application changes:
-- Claude may create commits on the dedicated builder branch if the inbox explicitly asks for implementation
-- do not auto-merge to production
-- do not auto-deploy
-- if pushing the builder branch is blocked by Claude permissions, report it; do not widen to bypassPermissions
-- later we can make branch publication orchestrator-owned too, but do not over-expand this round
+Add tests for the packaging/path behaviour where practical.
 
-### 4. Update tests
+### 3. Small documentation correction
 
-Add tests proving:
-- Claude does not need to push the outbox itself
-- watcher publishes exactly bridge/claude-outbox.md
-- unexpected bridge worktree changes cause refusal
-- failed push does not mark inbox processed
-- successful watcher-owned push does mark it processed
-- builder worktree is the Claude cwd
-- production worktree is never used by the headless Claude path
-- dirty builder worktree refuses to run
-- no permission-bypass flag is introduced
+README currently says tests/run-tests.sh has “38 assertions” while the outbox/test result says 87 passed. Make the documentation non-stale (either current count or avoid hard-coding a count).
 
-Run the full watcher test suite.
+### 4. Re-run verification
 
-### 5. Push updated watcher review branch and report
+Run:
+- full watcher tests
+- systemd-analyze verify
+- installer preflight against the final design
+- verify /opt/crooks-os is not writable through the unit's declared ReadWritePaths
+- verify standalone builder has its own .git and is clean
+- verify production branch/working tree have not been changed by this round
 
-Push the updated:
-  claude/crooks-bridge-watcher-review
+Push the updated claude/crooks-bridge-watcher-review branch.
 
-Update bridge/claude-outbox.md with:
-- new watcher commit SHA
-- exact builder worktree setup
-- exact outbox publication sequence
+Update the outbox with:
+- new commit SHA
+- exact builder topology
+- exact unit write paths
+- exact install/copy sequence
 - tests/results
-- any remaining manual steps
-- whether installing the watcher would now allow the owner to close Termius for normal ChatGPT ↔ Claude development
+- exact one command that would install the reviewed watcher after approval
+- whether there are any remaining blockers to closing Termius for the normal ChatGPT ↔ Claude loop
 
-Do NOT:
-- install watcher
-- install/start CROOKS service
-- provision secrets
-- activate Tailscale Serve
-- run live Shopify/Gmail/ElevenLabs calls
-- merge production
-- enable writes
+Still forbidden:
+- no watcher install/start
+- no CROOKS service install/start
+- no secret provisioning
+- no Tailscale Serve
+- no live Shopify/Gmail/ElevenLabs calls
+- no production merge
+- no writes enabled
 
-Then STOP for approval.
+Then STOP.
