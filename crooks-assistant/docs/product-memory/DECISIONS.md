@@ -419,6 +419,123 @@ Maintain:
 
 ---
 
+## DEC-037 — Previous releases accelerate; they do not constrain future releases
+**Date:** 2026-09-19  
+**Status:** ACTIVE
+
+Preserve current product intent, safety contracts, useful capabilities, validated evidence and lessons.
+
+Do not preserve obsolete implementation shape merely because it existed before.
+
+**Reason:** historical context should prevent repeated mistakes without turning CROOKS into an accumulation of legacy constraints.
+
+---
+
+## DEC-038 — Preserve outcomes, not mechanisms; deletion is a valid improvement
+**Date:** 2026-09-19  
+**Status:** ACTIVE
+
+If a new system fully subsumes an old component, abstraction, UI surface, compatibility path or agent role, the old element may be retired/deleted.
+
+A component becoming effectively null is valid when it has no remaining unique responsibility.
+
+**Reason:** avoiding deletion creates zombie architecture and forces future releases to accommodate obsolete structures.
+
+---
+
+## DEC-039 — Major releases use curated active context, not full historical context
+**Date:** 2026-09-19  
+**Status:** ACTIVE
+
+Future agents should start from `CURRENT_TRUTH.md`, active decisions, current product/design doctrine and relevant evidence.
+
+Superseded/history is retrieved only when relevant to migration, regression, rationale or a known failure.
+
+**Reason:** unlimited context accumulation causes old assumptions to masquerade as current requirements.
+
+---
+
+## DEC-040 — Engineering quality outranks model cost and speed
+**Date:** 2026-09-19  
+**Status:** ACTIVE
+
+Do not trade substantive code/product quality for lower model usage or shorter elapsed time.
+
+Use cheaper/faster models only where the work is genuinely mechanical and quality is not affected.
+
+**Reason:** the engineering system exists to improve CROOKS, not optimise token cost at the expense of the product.
+
+---
+
+## DEC-041 — Model routing is quality-first and supports automatic escalation
+**Date:** 2026-09-19  
+**Status:** APPROVED DIRECTION
+
+Use the strongest appropriate model/effort for the task.
+
+Direction:
+- Opus for architecture, security, difficult diagnosis, major refactors, integration decisions and high-scrutiny review,
+- Sonnet for bounded implementation with objective proof and independent review,
+- weaker/faster models only for genuinely mechanical work,
+- automatic escalation when uncertainty, repeated failure, novelty or risk increases.
+
+**Reason:** routing should remove wasted computation without reducing engineering quality.
+
+---
+
+## DEC-042 — Fable is a first-class Experience Director
+**Date:** 2026-09-19  
+**Status:** APPROVED DIRECTION
+
+For substantial UX/interaction work, Fable should participate as a specialist in:
+- experience/interaction direction before implementation,
+- physical-device behaviour and workflow quality,
+- post-implementation independent experience review.
+
+Fable complements rather than replaces DESIGN.md, Claude implementation, browser evidence, accessibility checks or technical review.
+
+**Reason:** product experience should have an independent specialist voice rather than being reduced to CSS implementation or generic design linting.
+
+---
+
+## DEC-043 — Parallel engineering requires isolated workers and an integration gate
+**Date:** 2026-09-19  
+**Status:** ACTIVE
+
+Parallel tasks may run only when workers have independent mutable workspaces/branches and genuinely separable scope.
+
+The Integrator is responsible for combining candidates and proving the integrated result.
+
+**Reason:** parallelism should increase quality/throughput, not reintroduce shared-checkout races.
+
+---
+
+## DEC-044 — Routine infrastructure maintenance should require approval, not terminal choreography
+**Date:** 2026-09-19  
+**Status:** APPROVED DIRECTION
+
+Watcher/orchestrator/backend/systemd/deployment updates should eventually be developed, reviewed, installed, verified and rolled back by controlled infrastructure tooling.
+
+The owner should approve sensitive changes in the product/chat flow rather than manually copying shell commands.
+
+Termius/SSH becomes break-glass recovery.
+
+---
+
+## DEC-045 — Privileged infrastructure needs separation of duties and automatic rollback
+**Date:** 2026-09-19  
+**Status:** APPROVED DIRECTION
+
+Build a Privileged Action Broker plus Deployment/Infrastructure Controller.
+
+A component may participate in building its replacement, but must not have unrestricted authority to rewrite itself and declare success.
+
+Versioned releases, exact artifact identity, health verification and rollback are required for infrastructure promotion.
+
+**Reason:** increased autonomy must not collapse the safety boundary that makes unattended operation trustworthy.
+
+---
+
 # How to add a decision
 
 Use:
