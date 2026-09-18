@@ -36,6 +36,12 @@ Environment=PYTHONUNBUFFERED=1
 
 # How often to ask GitHub, and how hard to retry a failed run. Overridable here rather than in
 # the script, so tuning the watcher never means editing code.
+# Headless Claude works in the BUILDER worktree, never the live production checkout. The
+# watcher refuses to start if these two ever resolve to the same directory.
+Environment=CROOKS_BRIDGE_WORKDIR=/opt/crooks-builder
+Environment=CROOKS_BRIDGE_BUILDER_BRANCH=claude/bridge-builder
+Environment=CROOKS_BRIDGE_PRODUCTION_DIR=/opt/crooks-os/crooks-assistant
+
 Environment=CROOKS_BRIDGE_POLL_S=30
 Environment=CROOKS_BRIDGE_BACKOFF_BASE_S=60
 Environment=CROOKS_BRIDGE_BACKOFF_MAX_S=900
@@ -77,10 +83,13 @@ RestrictRealtime=yes
 LockPersonality=yes
 # ProtectSystem=strict makes the hierarchy read-only, so everything Claude and git must write
 # is named here and nothing else is writable:
-#   /opt/crooks-os          the CROOKS checkout Claude works in
-#   /opt/crooks-ai-bridge   the bridge worktree it pushes the outbox from
+#   /opt/crooks-builder     the builder worktree headless Claude works in
+#   /opt/crooks-os          NOT for Claude to edit — but the builder and bridge worktrees keep
+#                           their git metadata under its .git, so git needs to write there
+#   /opt/crooks-ai-bridge   the bridge worktree the WATCHER publishes the outbox from
 #   /root                   /root/.claude (Max login, refreshed in place) and gh's config
 ProtectHome=no
+ReadWritePaths=/opt/crooks-builder
 ReadWritePaths=/opt/crooks-os
 ReadWritePaths=/opt/crooks-ai-bridge
 ReadWritePaths=/root

@@ -46,9 +46,28 @@ preflight() {
     [ -d "${CROOKS_BRIDGE_WORKTREE:-/opt/crooks-ai-bridge}" ] \
         && ok "bridge worktree ${CROOKS_BRIDGE_WORKTREE:-/opt/crooks-ai-bridge}" \
         || { bad "bridge worktree missing: ${CROOKS_BRIDGE_WORKTREE:-/opt/crooks-ai-bridge}"; problems=$((problems+1)); }
-    [ -d "${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-os/crooks-assistant}" ] \
-        && ok "CROOKS checkout ${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-os/crooks-assistant}" \
-        || { bad "CROOKS checkout missing: ${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-os/crooks-assistant}"; problems=$((problems+1)); }
+    local builder="${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-builder}"
+    local production="${CROOKS_BRIDGE_PRODUCTION_DIR:-/opt/crooks-os/crooks-assistant}"
+    if [ "$(readlink -f "$builder" 2>/dev/null)" = "$(readlink -f "$production" 2>/dev/null)" ]; then
+        bad "the builder worktree and the production checkout are the same directory"
+        problems=$((problems+1))
+    elif [ -d "$builder" ]; then
+        ok "builder worktree $builder"
+        # Clean before each task. Not enforced destructively: it is reported, never reset.
+        if [ -n "$(git -C "$builder" status --porcelain=v1 --untracked-files=all 2>/dev/null)" ]; then
+            warn "$builder has uncommitted changes — the watcher will REFUSE to run until they are"
+            warn "resolved. Nothing here will discard them; look at them and commit or remove them."
+        else
+            ok "builder worktree clean"
+        fi
+    else
+        bad "builder worktree missing: $builder"
+        printf '        create it once with:\n          git -C /opt/crooks-os worktree add -b %s %s <production HEAD>\n' \
+            "${CROOKS_BRIDGE_BUILDER_BRANCH:-claude/bridge-builder}" "$builder"
+        problems=$((problems+1))
+    fi
+    [ -d "$production" ] && ok "production checkout $production (never edited by the watcher)" || \
+        warn "production checkout not found at $production"
 
     # The Claude Max login must be writable — the CLI rewrites it when the token refreshes.
     local creds="${HOME:-/root}/.claude/.credentials.json"

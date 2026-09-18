@@ -35,9 +35,23 @@ BRANCH="${CROOKS_BRIDGE_BRANCH:-crooks-ai-bridge}"
 INBOX_PATH="${CROOKS_BRIDGE_INBOX:-bridge/chatgpt-inbox.md}"
 OUTBOX_PATH="${CROOKS_BRIDGE_OUTBOX:-bridge/claude-outbox.md}"
 
-# The bridge worktree (communication only) and the CROOKS checkout Claude actually works in.
+# The bridge worktree (communication only) and the tree Claude actually works in.
+#
+# WORK_DIR is the BUILDER worktree, never the live production checkout. A headless agent and a
+# person cannot share a working tree: whoever writes second wins, and neither of them knows it
+# happened. The builder is the watcher's own, on its own branch, so the guards below mean
+# something — uncommitted work there is a real anomaly rather than the normal state of a
+# checkout somebody is using.
 BRIDGE_DIR="${CROOKS_BRIDGE_WORKTREE:-/opt/crooks-ai-bridge}"
-WORK_DIR="${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-os/crooks-assistant}"
+WORK_DIR="${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-builder}"
+BUILDER_BRANCH="${CROOKS_BRIDGE_BUILDER_BRANCH:-claude/bridge-builder}"
+# The live checkout, named only so the watcher can refuse to be pointed at it.
+PRODUCTION_DIR="${CROOKS_BRIDGE_PRODUCTION_DIR:-/opt/crooks-os/crooks-assistant}"
+
+# Who the watcher's own bridge commits are authored by. The watcher publishes the outbox itself;
+# Claude never commits or pushes it.
+COMMIT_NAME="${CROOKS_BRIDGE_COMMIT_NAME:-CROOKS OS Bridge}"
+COMMIT_EMAIL="${CROOKS_BRIDGE_COMMIT_EMAIL:-threadsalliance@gmail.com}"
 
 STATE_DIR="${CROOKS_BRIDGE_STATE_DIR:-/var/lib/crooks-bridge}"
 LOCK_FILE="${CROOKS_BRIDGE_LOCK:-/run/crooks-bridge/watcher.lock}"
@@ -143,35 +157,48 @@ bridge/chatgpt-inbox.md on the $BRANCH branch has changed. Its blob SHA is now $
 
 Do this:
 
-1. Read the current ChatGPT inbox: bridge/chatgpt-inbox.md on the $BRANCH branch
-   (worktree: $BRIDGE_DIR). Treat it as the instructions for this round. State explicitly that
-   you have consumed it, and record the inbox blob SHA $sha in the outbox so the same
-   instructions are never executed twice.
-2. Before acting, inspect the current state of the CROOKS repository: branch, HEAD, git status,
-   what is modified or untracked, and what the last run left behind. Do not assume the tree is
-   where a previous session left it.
+1. Read the current ChatGPT inbox: $BRIDGE_DIR/$INBOX_PATH. Treat it as the instructions for this
+   round. State explicitly that you have consumed it, and record the inbox blob SHA $sha in the
+   outbox so the same instructions are never executed twice.
+2. Before acting, inspect the state of the builder checkout you are in: branch, HEAD, git status,
+   what is modified or untracked. Do not assume it is where a previous run left it.
 3. Carry out the inbox instructions, and only those.
-4. Preserve every existing safety constraint. Specifically: writes_enabled stays false,
-   CROOKS_WRITES_LOCAL_OWNER stays false, FastAPI stays bound to 127.0.0.1, port 8000 is not
-   exposed publicly, proposal/action/verification safety semantics are unchanged, no live
-   Shopify, Gmail or ElevenLabs calls and no live external mutations, V2 is not begun, the UI is
-   not redesigned, the Mac deployment and rollback path are preserved, /root/.claude stays
-   writable, and no secret value is ever printed or committed.
-5. Do not switch the CROOKS working tree off its current branch, and never merge
-   $BRANCH into it. The bridge branch carries communication only, never application code.
-6. When finished, completely replace bridge/claude-outbox.md with this round's handoff and push
-   it to origin/$BRANCH. It must contain: timestamp, what was asked, what you found, what you
-   changed, the production branch HEAD, git status, files changed, test results, service and
-   server state, errors, decisions or questions needing review, the inbox SHA you processed,
-   and the exact proposed next step — in enough detail that a senior engineer who never saw
-   this terminal can review it.
+4. You are working in a BUILDER worktree ($WORK_DIR, branch $BUILDER_BRANCH), not the live
+   production checkout. Never edit, switch or reset $PRODUCTION_DIR. If the inbox explicitly asks
+   for implementation work, you may commit it on $BUILDER_BRANCH. Never merge to the production
+   branch, never deploy, and never auto-merge anything.
+5. Preserve every existing safety constraint: writes_enabled stays false, CROOKS_WRITES_LOCAL_OWNER
+   stays false, FastAPI stays bound to 127.0.0.1, port 8000 is not exposed publicly,
+   proposal/action/verification safety semantics are unchanged, no live Shopify, Gmail or
+   ElevenLabs calls and no live external mutations, V2 is not begun, the UI is not redesigned, the
+   Mac deployment and rollback path are preserved, /root/.claude stays writable, and no secret
+   value is ever printed or committed.
+
+6. WRITING THE HANDOFF — read this carefully, it changed.
+
+   Completely replace the file $BRIDGE_DIR/$OUTBOX_PATH with this round's handoff.
+
+   Then STOP. Do NOT run git add, git commit or git push for that file, and do not touch any other
+   file in $BRIDGE_DIR. The watcher publishes the outbox itself once you exit: it stages exactly
+   $OUTBOX_PATH, commits it, pushes only $BRANCH, and verifies the remote blob changed. If you
+   modify anything else in the bridge worktree, the watcher REFUSES to publish and the round is
+   recorded as failed — so write the one file and leave the rest alone.
+
+   The handoff must contain: timestamp, what was asked, what you found, what you changed, the
+   production branch HEAD, git status, files changed, test results, service and server state,
+   errors, decisions or questions needing review, the inbox SHA you processed, and the exact
+   proposed next step — in enough detail that a senior engineer who never saw this terminal can
+   review it.
+
 7. NEVER put an API key, password, OAuth token, cookie, private key or any secret value in the
    outbox. Name a secret if you must; never its value.
 8. If the inbox asks for anything that needs the owner's approval — installing or starting a
    service, provisioning secrets, activating a Tailscale route, any live verification, anything
-   irreversible or outward-facing — STOP at that point, write what you have done and what you
-   are waiting for into the outbox, push it, and end the run. Never fabricate, assume or infer
-   the owner's approval, and never record approval that was not given in the inbox itself.
+   irreversible or outward-facing — STOP at that point, write what you have done and what you are
+   waiting for into the outbox, and end the run. Never fabricate, assume or infer the owner's
+   approval, and never record approval that was not given in the inbox itself.
+9. If something you were asked to do is blocked by your own permission layer, say so plainly in
+   the outbox and stop. Do not widen your permissions, and do not look for a way around it.
 
 You are running non-interactively: there is nobody to answer a question mid-run. If you are
 blocked, the outbox is how you ask.
@@ -211,7 +238,25 @@ tree_is_dirty() {
 
 target_is_safe() {
     # Returns 0 when it is safe to start a run, 1 when it is not. Every refusal names what to do.
-    local others
+    local others resolved_target resolved_production
+
+    # The headless path must never be aimed at the live checkout, whatever the environment says.
+    resolved_target="$(readlink -f "$WORK_DIR" 2>/dev/null || printf '%s' "$WORK_DIR")"
+    resolved_production="$(readlink -f "$PRODUCTION_DIR" 2>/dev/null || printf '%s' "$PRODUCTION_DIR")"
+    if [ "$resolved_target" = "$resolved_production" ]; then
+        warn "bridge: REFUSING to start — the target tree IS the production checkout ($PRODUCTION_DIR)."
+        warn "bridge: headless work belongs in the builder worktree. Point CROOKS_BRIDGE_WORKDIR"
+        warn "bridge: at $WORK_DIR (branch $BUILDER_BRANCH) and try again."
+        return 1
+    fi
+
+    if [ ! -d "$WORK_DIR" ]; then
+        warn "bridge: REFUSING to start — the builder worktree $WORK_DIR does not exist."
+        warn "bridge: create it once with:"
+        warn "bridge:   git -C /opt/crooks-os worktree add -b $BUILDER_BRANCH $WORK_DIR <production HEAD>"
+        return 1
+    fi
+
     others="$(foreign_claude_pids)"
     if [ -n "$others" ]; then
         warn "bridge: REFUSING to start — another Claude is already working in $WORK_DIR (pid(s): ${others% })."
@@ -236,11 +281,77 @@ target_is_safe() {
 
 # --------------------------------------------------------------------------- one run
 
+publish_outbox() {
+    # The watcher publishes the handoff, not Claude.
+    #
+    # Claude writes bridge/claude-outbox.md and stops there. Committing and pushing is done here,
+    # by the watcher, for one practical reason: Claude Code's permission layer can refuse a push
+    # to a shared repository, and when it does the owner has to step in by hand — which is the
+    # whole thing the watcher exists to abolish. It is also narrower. The watcher can only ever
+    # publish one file to one branch, so a run that went wrong cannot push application code, or
+    # anything else, down the communication channel.
+    local sha="$1" before="$2" changed unexpected staged after
+
+    changed="$("$GIT_BIN" -C "$BRIDGE_DIR" status --porcelain=v1 --untracked-files=all 2>/dev/null)"
+    if [ -z "$changed" ]; then
+        warn "bridge: Claude wrote no outbox — nothing to publish, so inbox $sha is NOT processed"
+        return 1
+    fi
+
+    # Exactly one path may have changed. Anything else in the bridge worktree is a surprise, and
+    # a surprise in the communication channel is not something to commit and find out about later.
+    unexpected="$(printf '%s\n' "$changed" | awk -v want="$OUTBOX_PATH" 'NF && $NF != want {print $NF}')"
+    if [ -n "$unexpected" ]; then
+        warn "bridge: REFUSING to publish — unexpected changes in the bridge worktree:"
+        printf '%s\n' "$unexpected" | while IFS= read -r path; do warn "bridge:   $path"; done
+        warn "bridge: only $OUTBOX_PATH may change here. Nothing was committed or pushed, and"
+        warn "bridge: inbox $sha is NOT marked processed. Look at $BRIDGE_DIR by hand."
+        return 1
+    fi
+
+    "$GIT_BIN" -C "$BRIDGE_DIR" add -- "$OUTBOX_PATH" || {
+        warn "bridge: could not stage $OUTBOX_PATH"; return 1; }
+
+    # Belt and braces: whatever `add` did, only the outbox may be staged.
+    staged="$("$GIT_BIN" -C "$BRIDGE_DIR" diff --cached --name-only 2>/dev/null)"
+    if [ "$staged" != "$OUTBOX_PATH" ]; then
+        warn "bridge: REFUSING to commit — staged set is not exactly $OUTBOX_PATH (got: ${staged:-nothing})"
+        return 1
+    fi
+
+    "$GIT_BIN" -C "$BRIDGE_DIR" \
+        -c "user.name=$COMMIT_NAME" -c "user.email=$COMMIT_EMAIL" \
+        commit -q -m "bridge: claude outbox update (inbox $sha)" || {
+        warn "bridge: commit refused; inbox $sha is NOT marked processed"; return 1; }
+
+    # One branch, named explicitly. Never --all, never the builder branch, never a tag.
+    if ! "$GIT_BIN" -C "$BRIDGE_DIR" push origin "$BRANCH"; then
+        warn "bridge: push of $BRANCH FAILED — the outbox is committed locally but not published."
+        warn "bridge: inbox $sha is NOT marked processed; it will be retried with backoff."
+        return 1
+    fi
+
+    # Pushed is not the same as published. Ask GitHub what the blob is now.
+    after="$(blob_sha "$OUTBOX_PATH" || true)"
+    if [ -z "$after" ]; then
+        warn "bridge: could not read the outbox SHA back from GitHub — NOT marking inbox $sha processed"
+        return 1
+    fi
+    if [ "$after" = "$before" ]; then
+        warn "bridge: the remote outbox blob did not change ($after) — NOT marking inbox $sha processed"
+        return 1
+    fi
+
+    log "bridge: outbox published ($before -> $after)"
+    return 0
+}
+
+
 run_claude() {
     # The whole point of the lock: one Claude at a time, whatever else is polling. A second
     # watcher, a hand-run --once, and a systemd restart all contend for the same file, and the
     # loser skips this cycle rather than starting a rival run in the same working tree.
-    local sha="$1" outbox_before outbox_after rc=0
+    local sha="$1" outbox_before rc=0
 
     if ! target_is_safe; then
         warn "bridge: inbox $sha left UNPROCESSED — it will be retried once the tree is safe"
@@ -265,21 +376,11 @@ run_claude() {
         return 1
     fi
 
-    # Exit 0 is not the same as "it reported". The outbox blob on the remote must have moved,
-    # or nobody has been told anything and the inbox is not answered.
-    outbox_after="$(blob_sha "$OUTBOX_PATH" || true)"
-    if [ -z "$outbox_after" ]; then
-        warn "bridge: could not read the outbox SHA after the run — NOT marking inbox $sha processed"
-        return 1
-    fi
-    if [ "$outbox_after" = "$outbox_before" ]; then
-        warn "bridge: Claude finished but the outbox was never pushed (still $outbox_after) — NOT marking inbox $sha processed"
-        return 1
-    fi
-
-    log "bridge: run complete, outbox pushed ($outbox_before -> $outbox_after)"
+    publish_outbox "$sha" "$outbox_before" || return 1
+    log "bridge: run complete"
     return 0
 }
+
 
 poll_once() {
     ensure_state_dir

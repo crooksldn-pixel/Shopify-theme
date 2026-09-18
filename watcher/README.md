@@ -7,11 +7,15 @@ Runs Claude Code automatically when ChatGPT writes to the bridge inbox, so nobod
                                         │
                         watcher notices the BLOB SHA changed (polls every 30s)
                                         │
-                                   flock ── one Claude at a time
+                     flock ── one Claude at a time, fail-closed guards
                                         │
-                     claude --print, run in /opt/crooks-os/crooks-assistant
+             claude --print, run in the BUILDER worktree /opt/crooks-builder
+                        (the live checkout is never touched)
                                         │
-                        Claude pushes bridge/claude-outbox.md  ──> ChatGPT / owner
+                     Claude WRITES bridge/claude-outbox.md and stops
+                                        │
+            the WATCHER stages that one file, commits, pushes crooks-ai-bridge,
+                       and verifies the remote blob actually changed
                                         │
                   only now is the inbox SHA recorded as processed
 
@@ -21,6 +25,26 @@ Claude pushes the outbox at the end of every run, which moves HEAD. A watcher th
 HEAD would trigger itself, forever. It watches the inbox file's blob SHA, so only someone
 writing to the inbox starts any work. There is a test for exactly this
 (`the outbox moving does not retrigger`).
+
+## Why the watcher publishes, and not Claude
+
+Claude Code's permission layer can refuse a push to a shared repository — it did, twice, during
+this project, and each time a person had to run the push by hand. That is the exact manual step
+the watcher exists to remove, so publication is the watcher's job, not Claude's.
+
+It is also narrower. Claude writes one file and stops. The watcher stages exactly
+`bridge/claude-outbox.md`, refuses if anything else in the bridge worktree changed, commits,
+pushes only `crooks-ai-bridge`, and then asks GitHub whether the blob really moved. Application
+code cannot travel down the communication channel even if a run goes wrong, and a push that
+silently changed nothing is treated as a failure rather than a success.
+
+## The builder worktree
+
+Headless Claude works in `/opt/crooks-builder` on `claude/bridge-builder`, never in
+`/opt/crooks-os/crooks-assistant`. A headless agent and a person cannot share a working tree:
+whoever writes second wins and neither knows. The watcher refuses to start if its target resolves
+to the production checkout, if the builder is missing, or if the builder is dirty — and it never
+resets or discards what it finds there.
 
 ## What counts as "processed"
 
