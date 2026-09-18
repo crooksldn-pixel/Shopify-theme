@@ -10,29 +10,19 @@
 
 ---
 
-## 0. HEADLINE — one thing needs you before review can happen
-
-Both review branches are **committed locally but NOT pushed**. Two `git push` attempts were
-**refused by this session's permission layer** as shared-resource modifications:
+## 0. Both review branches are pushed and ready for review
 
 ```
-Permission for this action was denied by the Claude Code auto mode classifier.
-Reason: [Modify Shared Resources]
+claude/linux-prod-migration-review     1cf3a0f3361b79f9de208d80f501543c53c244b5
+claude/crooks-bridge-watcher-review    dadf2574d66398064f3f65a0a4bd7fdf087cc148
 ```
 
-This is an environment restriction on this session, not a git, auth or network failure — `gh` is
-authenticated and the earlier outbox pushes to `crooks-ai-bridge` succeeded. I did not attempt to
-work around it.
+Both are on origin, verified with `git ls-remote`. Nothing is installed, started, provisioned or
+activated.
 
-**The branches therefore do not exist on GitHub yet and cannot be reviewed there.** Everything
-else in steps 1–5 is complete. The owner needs either to approve the pushes or to run them:
-
-```
-git -C /opt/crooks-review          push -u origin claude/linux-prod-migration-review
-git -C /opt/crooks-watcher-review  push -u origin claude/crooks-bridge-watcher-review
-```
-
-Both commits are made, verified and byte-identical to the tested tree; only the push is missing.
+*(Earlier in this round both pushes were refused by this session's permission layer as
+shared-resource publications. The owner authorised them explicitly and they went through. Noted
+only so the sequence in the journal makes sense; nothing is outstanding.)*
 
 ## 1. The report inconsistency — my error, not a worktree problem
 
@@ -156,7 +146,7 @@ vocabulary ever changes, that test fails rather than the doctor drifting silentl
 branch:  claude/linux-prod-migration-review
 commit:  1cf3a0f3361b79f9de208d80f501543c53c244b5
 base:    e43aecdb39b87b622f64b6ab434e428d216ef157   (current production HEAD)
-pushed:  NO — blocked, see §0
+pushed:  YES — on origin, verified with git ls-remote
 worktree: /opt/crooks-review   (the production checkout was never switched)
 ```
 
@@ -232,7 +222,7 @@ specifically so it could not be.
 ```
 branch:  claude/crooks-bridge-watcher-review   (orphan — shares no history with production)
 commit:  dadf2574d66398064f3f65a0a4bd7fdf087cc148
-pushed:  NO — blocked, see §0
+pushed:  YES — on origin, verified with git ls-remote
 worktree: /opt/crooks-watcher-review
 files:   watcher/bin/crooks-bridge-watcher, watcher/install.sh, watcher/README.md,
          watcher/systemd/crooks-bridge-watcher.service, watcher/tests/run-tests.sh
@@ -350,8 +340,8 @@ changes what you would be approving and you asked to review the current implemen
 
 ```
 production branch ............ claude/crooks-assistant-build-lgxlau @ e43aecd (unchanged, 0/0 vs origin)
-review branch ................ claude/linux-prod-migration-review @ 1cf3a0f (local only)
-watcher review branch ........ claude/crooks-bridge-watcher-review @ dadf257 (local only, orphan)
+review branch ................ claude/linux-prod-migration-review @ 1cf3a0f (pushed)
+watcher review branch ........ claude/crooks-bridge-watcher-review @ dadf257 (pushed, orphan)
 crooks-assistant.service ..... NOT installed, inactive
 listening on :8000 / :8910 ... nothing
 /etc/crooks-os/secrets ....... does not exist, no credentials provisioned
@@ -365,15 +355,23 @@ calls. No writes enabled. No V2, no UI work. No merge into the production branch
 
 ## 7. Exact proposed next step
 
-1. **Owner unblocks the two pushes** (§0) — either approving them in this session or running the
-   two commands. Until then neither branch is reviewable on GitHub, and that is the only thing
-   standing between you and the diff you asked for.
-2. You review `claude/linux-prod-migration-review` (1cf3a0f) and
-   `claude/crooks-bridge-watcher-review` (dadf257).
-3. You rule on the builder worktree (§5). If adopted, I create it, point the unit at it, re-run
-   the watcher suite, and push the updated watcher branch — still without installing.
-4. Only then, and only with explicit approval: watcher install, secret provisioning, and Phase 5
-   (systemd install/start, Tailscale Serve, live verification).
+1. **You review the two branches**, now on origin:
+   - `claude/linux-prod-migration-review` @ `1cf3a0f` — the Phase 1–4 migration, 25 files,
+     +2411 / −91, based on production HEAD `e43aecd`.
+   - `claude/crooks-bridge-watcher-review` @ `dadf257` — the watcher, orphan branch, 5 files.
+2. You rule on the builder worktree (§5). If adopted, I create it, point the unit at it, re-run the
+   watcher suite and push the updated watcher branch — still without installing anything.
+3. You rule on §2 if you disagree with the measured alignment. Note that the implementation now
+   matches the real parser, so disagreeing means changing what the application does, not just what
+   the doctor reports.
+4. Only then, and only with explicit approval, in this order: watcher install, secret provisioning,
+   Phase 5 (systemd install and start, Tailscale Serve, live verification).
+
+One decision worth taking early, because it gates the watcher's usefulness: the Phase 1–4 work is
+still **uncommitted on the production branch** — 25 paths in the working tree. The review branch is
+a copy, not a move. Whether that work lands on `claude/crooks-assistant-build-lgxlau` by merge, by
+cherry-pick, or by committing the working tree directly is your call, and until it lands somewhere
+the watcher's dirty-tree guard will refuse every run against that checkout.
 
 Stopping here as instructed.
 
