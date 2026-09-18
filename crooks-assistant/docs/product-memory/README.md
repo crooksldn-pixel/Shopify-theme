@@ -16,6 +16,9 @@ ChatGPT, Claude, future model workers, and human contributors should treat these
 - [FEATURES.md](./FEATURES.md) — feature register with state and ownership.
 - [DECISIONS.md](./DECISIONS.md) — important decisions and the reasoning behind them.
 - [SELF_IMPROVEMENT.md](./SELF_IMPROVEMENT.md) — controlled self-improvement, multi-agent development hierarchy, reviewers, replay, and deployment gates.
+- [CURRENT_TRUTH.md](./CURRENT_TRUTH.md) — compact active state; the first context file future directors/workers should read.
+- [EVOLUTION_POLICY.md](./EVOLUTION_POLICY.md) — release doctrine: preserve value and lessons without fossilising obsolete implementation or design.
+- [DIRECTOR_PROTOCOL.md](./DIRECTOR_PROTOCOL.md) — named memory/continuity procedures for bootstrap, release context, supersession, pruning, handoff, and audits.
 
 ## Status model
 
@@ -29,6 +32,8 @@ Use these states consistently:
 - **SHIPPED** — in the production system and verified.
 - **DEFERRED** — intentionally not being worked on now.
 - **REJECTED** — considered and intentionally not proceeding.
+- **SUPERSEDED** — replaced by a newer active decision/direction; retained only as historical rationale.
+- **RETIRED** — previously active capability/component intentionally removed after its responsibility became unnecessary or moved elsewhere.
 
 ## Capture rule
 
@@ -44,12 +49,19 @@ When the owner raises a potentially meaningful CROOKS idea:
 
 Before making meaningful CROOKS changes, an engineering agent should read:
 
-1. `PRODUCT_BRAIN.md`
-2. relevant entries in `DECISIONS.md`
-3. the assigned feature/issue
-4. `SELF_IMPROVEMENT.md` when the task touches agent autonomy, deployment, testing, or self-modification
+1. `CURRENT_TRUTH.md`
+2. `PRODUCT_BRAIN.md`
+3. `EVOLUTION_POLICY.md`
+4. relevant **active** entries in `DECISIONS.md`
+5. the assigned feature/issue
+6. `SELF_IMPROVEMENT.md` when the task touches agent autonomy, deployment, testing, or self-modification
+7. `DIRECTOR_PROTOCOL.md` when assembling release context, superseding prior work, or handing off to another agent
 
-An agent must not reverse a recorded product or safety decision silently. It must escalate the disagreement.
+Do not inject the entire project history into every task. Historical context should be pulled only when it explains an active constraint, migration obligation, regression, or previously failed approach.
+
+An agent must not reverse a recorded **active** product or safety decision silently. It must escalate the disagreement.
+
+Equally, an agent must not treat a superseded implementation, UI direction, temporary workaround, or old test as a permanent requirement merely because it exists in history.
 
 ## Maintenance
 
@@ -62,3 +74,5 @@ This product memory should be reviewed periodically to:
 - remove stale implementation detail while retaining decisions.
 
 The goal is durable product intent, not an ever-growing transcript dump.
+
+Git is the historical archive. `CURRENT_TRUTH.md` is the compact working memory. Old context should accelerate future work by preventing repeated mistakes, never constrain a better release solely because “that is how the previous version worked.”
