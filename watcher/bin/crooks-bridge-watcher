@@ -387,11 +387,11 @@ run_claude() {
 
     log "bridge: inbox $sha is new — starting Claude in $WORK_DIR"
     set +e
-    ( cd "$WORK_DIR" && timeout --signal=TERM --kill-after=60 "$CLAUDE_TIMEOUT_S" \
+    ( cd "$WORK_DIR" && claude_prompt "$sha" | \
+        timeout --signal=TERM --kill-after=60 "$CLAUDE_TIMEOUT_S" \
         "$CLAUDE_BIN" --print \
         --permission-mode "$CLAUDE_PERMISSION_MODE" \
-        --allowed-tools "$CLAUDE_ALLOWED_TOOLS" \
-        "$(claude_prompt "$sha")" )
+        --allowed-tools "$CLAUDE_ALLOWED_TOOLS" )
     rc=$?
     set -e
 
