@@ -1,0 +1,417 @@
+#!/usr/bin/env bash
+#
+# CROOKS AI bridge watcher.
+#
+# Polls the blob SHA of bridge/chatgpt-inbox.md on the crooks-ai-bridge branch and, when it
+# changes, runs Claude Code once, non-interactively, against the CROOKS checkout.
+#
+# The blob SHA is the trigger, deliberately, and not the branch HEAD: Claude pushes
+# bridge/claude-outbox.md at the end of every run, which moves HEAD. Watching HEAD would make
+# each run trigger the next one, forever. Watching the inbox blob means only ChatGPT (or the
+# owner) writing to the inbox starts any work.
+#
+# An inbox SHA is recorded as processed only after Claude exits 0 AND the outbox blob on the
+# remote has actually changed. A run that dies, or one that finishes without reporting, is
+# left unprocessed and retried with backoff — the alternative is silently swallowing an
+# instruction nobody ever answered.
+#
+#   crooks-bridge-watcher            poll forever (what systemd runs)
+#   crooks-bridge-watcher --once     one poll cycle, then exit  (tests, and by hand)
+#   crooks-bridge-watcher status     what it has processed, what is waiting, is it running
+#   crooks-bridge-watcher seed       record the current inbox SHA WITHOUT running Claude
+#
+# `seed` is what install runs: on a fresh machine the inbox already exists and has usually
+# already been dealt with, and a watcher whose first act is to re-execute old instructions is
+# a worse starting state than one that begins listening from now.
+
+set -euo pipefail
+
+# --------------------------------------------------------------------------- configuration
+# Every one of these is overridable from the unit file or the environment, which is also how
+# the test suite points the whole thing at a temporary directory.
+
+REPO_SLUG="${CROOKS_BRIDGE_REPO:-crooksldn-pixel/Shopify-theme}"
+BRANCH="${CROOKS_BRIDGE_BRANCH:-crooks-ai-bridge}"
+INBOX_PATH="${CROOKS_BRIDGE_INBOX:-bridge/chatgpt-inbox.md}"
+OUTBOX_PATH="${CROOKS_BRIDGE_OUTBOX:-bridge/claude-outbox.md}"
+
+# The bridge worktree (communication only) and the CROOKS checkout Claude actually works in.
+BRIDGE_DIR="${CROOKS_BRIDGE_WORKTREE:-/opt/crooks-ai-bridge}"
+WORK_DIR="${CROOKS_BRIDGE_WORKDIR:-/opt/crooks-os/crooks-assistant}"
+
+STATE_DIR="${CROOKS_BRIDGE_STATE_DIR:-/var/lib/crooks-bridge}"
+LOCK_FILE="${CROOKS_BRIDGE_LOCK:-/run/crooks-bridge/watcher.lock}"
+
+POLL_INTERVAL="${CROOKS_BRIDGE_POLL_S:-30}"
+# Backoff after a failed run: 60s, 120s, 240s … capped. Not a tight retry loop — a failing
+# run usually needs a person, and hammering it just fills the journal and burns tokens.
+BACKOFF_BASE_S="${CROOKS_BRIDGE_BACKOFF_BASE_S:-60}"
+BACKOFF_MAX_S="${CROOKS_BRIDGE_BACKOFF_MAX_S:-900}"
+
+CLAUDE_BIN="${CROOKS_BRIDGE_CLAUDE_BIN:-claude}"
+GH_BIN="${CROOKS_BRIDGE_GH_BIN:-gh}"
+GIT_BIN="${CROOKS_BRIDGE_GIT_BIN:-git}"
+# A run that hangs would hold the lock and block every later inbox, so it is bounded.
+CLAUDE_TIMEOUT_S="${CROOKS_BRIDGE_CLAUDE_TIMEOUT_S:-7200}"
+CLAUDE_PERMISSION_MODE="${CROOKS_BRIDGE_PERMISSION_MODE:-acceptEdits}"
+CLAUDE_ALLOWED_TOOLS="${CROOKS_BRIDGE_ALLOWED_TOOLS:-Read,Edit,Write,Glob,Grep,Bash}"
+
+# How the watcher finds other Claude processes for the "is someone else in this tree" guard.
+# Configurable so the test suite can point it at a known process instead of the real host.
+CLAUDE_LISTER="${CROOKS_BRIDGE_CLAUDE_LISTER:-pgrep -x claude}"
+# A deliberate escape hatch, OFF by default: run even though the target tree has uncommitted
+# changes. Set only when a person has looked at those changes and decided the run is safe.
+ALLOW_DIRTY="${CROOKS_BRIDGE_ALLOW_DIRTY:-0}"
+
+INBOX_STATE="$STATE_DIR/last-inbox-sha"
+FAILURES_STATE="$STATE_DIR/failures"
+LAST_RUN_STATE="$STATE_DIR/last-run"
+
+# --------------------------------------------------------------------------- logging
+# Plain lines on stdout/stderr. systemd's journal adds the timestamp and the unit name, and
+# `journalctl -u crooks-bridge-watcher` is the whole of the log story. Never logs a token: the
+# only things interpolated here are SHAs, paths and exit codes.
+
+log()  { printf '%s\n' "$*"; }
+warn() { printf '%s\n' "$*" >&2; }
+
+# --------------------------------------------------------------------------- state
+
+ensure_state_dir() {
+    mkdir -p "$STATE_DIR"
+    chmod 700 "$STATE_DIR" 2>/dev/null || true
+}
+
+read_state() { [ -f "$1" ] && cat "$1" || printf ''; }
+
+write_state() {
+    # Written through a temporary file in the same directory so a machine that loses power
+    # mid-write comes back with the old SHA rather than half of one.
+    local path="$1" value="$2" tmp
+    tmp="$(mktemp "${path}.XXXXXX")"
+    printf '%s\n' "$value" > "$tmp"
+    mv -f "$tmp" "$path"
+}
+
+failure_count() {
+    local raw; raw="$(read_state "$FAILURES_STATE")"
+    case "$raw" in (''|*[!0-9]*) printf '0' ;; (*) printf '%s' "$raw" ;; esac
+}
+
+backoff_for() {
+    # 60 · 2^(n-1), capped. n is the number of consecutive failures.
+    local n="$1" delay="$BACKOFF_BASE_S" i=1
+    [ "$n" -le 0 ] && { printf '%s' "$POLL_INTERVAL"; return; }
+    while [ "$i" -lt "$n" ]; do
+        delay=$((delay * 2))
+        [ "$delay" -ge "$BACKOFF_MAX_S" ] && { delay="$BACKOFF_MAX_S"; break; }
+        i=$((i + 1))
+    done
+    [ "$delay" -gt "$BACKOFF_MAX_S" ] && delay="$BACKOFF_MAX_S"
+    printf '%s' "$delay"
+}
+
+# --------------------------------------------------------------------------- github
+
+blob_sha() {
+    # The blob SHA GitHub holds for one path on the branch. Uses the gh CLI's existing
+    # authentication — no token is read, printed or stored by this script.
+    local path="$1"
+    "$GH_BIN" api "repos/$REPO_SLUG/contents/$path?ref=$BRANCH" --jq '.sha' 2>/dev/null
+}
+
+sync_bridge_worktree() {
+    # Best effort, and deliberately never a reset: the bridge worktree may hold a commit Claude
+    # has not pushed yet, and throwing that away to make a poll tidy would lose the report.
+    "$GIT_BIN" -C "$BRIDGE_DIR" fetch --quiet origin "$BRANCH" 2>/dev/null || {
+        warn "bridge: could not fetch $BRANCH into $BRIDGE_DIR (continuing; Claude re-reads it itself)"
+        return 0
+    }
+    "$GIT_BIN" -C "$BRIDGE_DIR" merge --ff-only "origin/$BRANCH" --quiet 2>/dev/null || {
+        warn "bridge: $BRIDGE_DIR could not fast-forward — it has diverged from origin/$BRANCH; left untouched"
+        return 0
+    }
+}
+
+# --------------------------------------------------------------------------- the prompt
+
+claude_prompt() {
+    local sha="$1"
+    cat <<PROMPT
+You have been started automatically by the CROOKS AI bridge watcher because
+bridge/chatgpt-inbox.md on the $BRANCH branch has changed. Its blob SHA is now $sha.
+
+Do this:
+
+1. Read the current ChatGPT inbox: bridge/chatgpt-inbox.md on the $BRANCH branch
+   (worktree: $BRIDGE_DIR). Treat it as the instructions for this round. State explicitly that
+   you have consumed it, and record the inbox blob SHA $sha in the outbox so the same
+   instructions are never executed twice.
+2. Before acting, inspect the current state of the CROOKS repository: branch, HEAD, git status,
+   what is modified or untracked, and what the last run left behind. Do not assume the tree is
+   where a previous session left it.
+3. Carry out the inbox instructions, and only those.
+4. Preserve every existing safety constraint. Specifically: writes_enabled stays false,
+   CROOKS_WRITES_LOCAL_OWNER stays false, FastAPI stays bound to 127.0.0.1, port 8000 is not
+   exposed publicly, proposal/action/verification safety semantics are unchanged, no live
+   Shopify, Gmail or ElevenLabs calls and no live external mutations, V2 is not begun, the UI is
+   not redesigned, the Mac deployment and rollback path are preserved, /root/.claude stays
+   writable, and no secret value is ever printed or committed.
+5. Do not switch the CROOKS working tree off its current branch, and never merge
+   $BRANCH into it. The bridge branch carries communication only, never application code.
+6. When finished, completely replace bridge/claude-outbox.md with this round's handoff and push
+   it to origin/$BRANCH. It must contain: timestamp, what was asked, what you found, what you
+   changed, the production branch HEAD, git status, files changed, test results, service and
+   server state, errors, decisions or questions needing review, the inbox SHA you processed,
+   and the exact proposed next step — in enough detail that a senior engineer who never saw
+   this terminal can review it.
+7. NEVER put an API key, password, OAuth token, cookie, private key or any secret value in the
+   outbox. Name a secret if you must; never its value.
+8. If the inbox asks for anything that needs the owner's approval — installing or starting a
+   service, provisioning secrets, activating a Tailscale route, any live verification, anything
+   irreversible or outward-facing — STOP at that point, write what you have done and what you
+   are waiting for into the outbox, push it, and end the run. Never fabricate, assume or infer
+   the owner's approval, and never record approval that was not given in the inbox itself.
+
+You are running non-interactively: there is nobody to answer a question mid-run. If you are
+blocked, the outbox is how you ask.
+PROMPT
+}
+
+# --------------------------------------------------------------------------- fail closed
+
+# Three things make it unsafe to start an agent in a working tree, and none of them is visible
+# from the inbox. Each is checked before the run and each REFUSES rather than proceeding: a
+# headless agent editing a tree someone else is holding is how two days of work become one
+# commit neither of them authored.
+
+foreign_claude_pids() {
+    # Claude processes whose working directory is inside the target tree. At this point our own
+    # child does not exist yet, so anything found here belongs to somebody else.
+    local pid cwd target
+    # Both sides resolved, or a symlinked path compares unequal to itself and the guard passes
+    # a process it should have caught.
+    target="$(readlink -f "$WORK_DIR" 2>/dev/null || printf '%s' "$WORK_DIR")"
+    for pid in $($CLAUDE_LISTER 2>/dev/null); do
+        [ "$pid" = "$$" ] && continue
+        cwd="$(readlink -f "/proc/$pid/cwd" 2>/dev/null)" || continue
+        case "$cwd" in
+            "$target"|"$target"/*) printf '%s ' "$pid" ;;
+        esac
+    done
+}
+
+tree_is_dirty() {
+    # Any uncommitted change at all, tracked or not. Deliberately strict: the watcher cannot
+    # tell an approved migration in progress from a half-finished edit someone walked away from.
+    local out
+    out="$("$GIT_BIN" -C "$WORK_DIR" status --porcelain=v1 --untracked-files=all 2>/dev/null)" || return 1
+    [ -n "$out" ]
+}
+
+target_is_safe() {
+    # Returns 0 when it is safe to start a run, 1 when it is not. Every refusal names what to do.
+    local others
+    others="$(foreign_claude_pids)"
+    if [ -n "$others" ]; then
+        warn "bridge: REFUSING to start — another Claude is already working in $WORK_DIR (pid(s): ${others% })."
+        warn "bridge: two agents in one working tree overwrite each other. Stop it, or point"
+        warn "bridge: CROOKS_BRIDGE_WORKDIR at a builder worktree of its own."
+        return 1
+    fi
+
+    if tree_is_dirty; then
+        if [ "$ALLOW_DIRTY" = "1" ]; then
+            warn "bridge: $WORK_DIR has uncommitted changes; running anyway because CROOKS_BRIDGE_ALLOW_DIRTY=1."
+        else
+            warn "bridge: REFUSING to start — $WORK_DIR has uncommitted changes."
+            warn "bridge: a headless agent editing a tree someone else is mid-way through is how"
+            warn "bridge: work is lost. Commit or stash it, give the watcher a builder worktree of"
+            warn "bridge: its own, or set CROOKS_BRIDGE_ALLOW_DIRTY=1 once you have looked at it."
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# --------------------------------------------------------------------------- one run
+
+run_claude() {
+    # The whole point of the lock: one Claude at a time, whatever else is polling. A second
+    # watcher, a hand-run --once, and a systemd restart all contend for the same file, and the
+    # loser skips this cycle rather than starting a rival run in the same working tree.
+    local sha="$1" outbox_before outbox_after rc=0
+
+    if ! target_is_safe; then
+        warn "bridge: inbox $sha left UNPROCESSED — it will be retried once the tree is safe"
+        return 1
+    fi
+
+    outbox_before="$(blob_sha "$OUTBOX_PATH" || true)"
+    sync_bridge_worktree
+
+    log "bridge: inbox $sha is new — starting Claude in $WORK_DIR"
+    set +e
+    ( cd "$WORK_DIR" && timeout --signal=TERM --kill-after=60 "$CLAUDE_TIMEOUT_S" \
+        "$CLAUDE_BIN" --print \
+        --permission-mode "$CLAUDE_PERMISSION_MODE" \
+        --allowed-tools "$CLAUDE_ALLOWED_TOOLS" \
+        "$(claude_prompt "$sha")" )
+    rc=$?
+    set -e
+
+    if [ "$rc" -ne 0 ]; then
+        warn "bridge: Claude exited $rc for inbox $sha — NOT marking it processed"
+        return 1
+    fi
+
+    # Exit 0 is not the same as "it reported". The outbox blob on the remote must have moved,
+    # or nobody has been told anything and the inbox is not answered.
+    outbox_after="$(blob_sha "$OUTBOX_PATH" || true)"
+    if [ -z "$outbox_after" ]; then
+        warn "bridge: could not read the outbox SHA after the run — NOT marking inbox $sha processed"
+        return 1
+    fi
+    if [ "$outbox_after" = "$outbox_before" ]; then
+        warn "bridge: Claude finished but the outbox was never pushed (still $outbox_after) — NOT marking inbox $sha processed"
+        return 1
+    fi
+
+    log "bridge: run complete, outbox pushed ($outbox_before -> $outbox_after)"
+    return 0
+}
+
+poll_once() {
+    ensure_state_dir
+    local remote last failures delay
+
+    remote="$(blob_sha "$INBOX_PATH" || true)"
+    if [ -z "$remote" ]; then
+        failures="$(( $(failure_count) + 1 ))"
+        write_state "$FAILURES_STATE" "$failures"
+        delay="$(backoff_for "$failures")"
+        warn "bridge: could not read the inbox SHA from GitHub (failure $failures) — retrying in ${delay}s"
+        printf '%s' "$delay" > "$STATE_DIR/.next-delay"
+        return 1
+    fi
+
+    last="$(read_state "$INBOX_STATE")"
+    if [ "$remote" = "$last" ]; then
+        printf '%s' "$POLL_INTERVAL" > "$STATE_DIR/.next-delay"
+        return 0
+    fi
+
+    mkdir -p "$(dirname "$LOCK_FILE")" 2>/dev/null || true
+    exec 9>"$LOCK_FILE"
+    if ! flock -n 9; then
+        # Requirement: never a second Claude. The newer inbox is not lost — this returns
+        # without recording anything, so the next cycle sees it again once the lock frees.
+        log "bridge: inbox $remote is new but a run already holds the lock — leaving it for the next cycle"
+        printf '%s' "$POLL_INTERVAL" > "$STATE_DIR/.next-delay"
+        exec 9>&-
+        return 0
+    fi
+
+    # The SHA is captured HERE, before the run, and it is this one that gets recorded on
+    # success. If ChatGPT writes a newer inbox while Claude is working, recording the
+    # post-run remote SHA would mark that newer instruction as processed without ever having
+    # read it. Recording the one actually handed to Claude means the next cycle sees the newer
+    # inbox as unprocessed and picks it up.
+    local processing="$remote"
+    if run_claude "$processing"; then
+        write_state "$INBOX_STATE" "$processing"
+        write_state "$FAILURES_STATE" "0"
+        write_state "$LAST_RUN_STATE" "ok $(date -u '+%Y-%m-%dT%H:%M:%SZ') $processing"
+        log "bridge: inbox $processing recorded as processed"
+        printf '%s' "$POLL_INTERVAL" > "$STATE_DIR/.next-delay"
+        flock -u 9; exec 9>&-
+        return 0
+    fi
+
+    failures="$(( $(failure_count) + 1 ))"
+    write_state "$FAILURES_STATE" "$failures"
+    write_state "$LAST_RUN_STATE" "failed $(date -u '+%Y-%m-%dT%H:%M:%SZ') $processing"
+    delay="$(backoff_for "$failures")"
+    warn "bridge: run for inbox $processing failed (failure $failures) — retrying in ${delay}s"
+    printf '%s' "$delay" > "$STATE_DIR/.next-delay"
+    flock -u 9; exec 9>&-
+    return 1
+}
+
+next_delay() {
+    local raw; raw="$(read_state "$STATE_DIR/.next-delay")"
+    case "$raw" in (''|*[!0-9]*) printf '%s' "$POLL_INTERVAL" ;; (*) printf '%s' "$raw" ;; esac
+}
+
+# --------------------------------------------------------------------------- commands
+
+cmd_status() {
+    ensure_state_dir
+    local last remote failures
+    last="$(read_state "$INBOX_STATE")"; remote="$(blob_sha "$INBOX_PATH" || true)"
+    failures="$(failure_count)"
+    printf 'repo            %s\n' "$REPO_SLUG"
+    printf 'branch          %s\n' "$BRANCH"
+    printf 'inbox           %s\n' "$INBOX_PATH"
+    printf 'last processed  %s\n' "${last:-<none>}"
+    printf 'remote now      %s\n' "${remote:-<unreadable>}"
+    if [ -n "$remote" ] && [ "$remote" != "$last" ]; then
+        printf 'pending         YES — an unprocessed inbox is waiting\n'
+    else
+        printf 'pending         no\n'
+    fi
+    printf 'failures        %s (next retry in %ss)\n' "$failures" "$(backoff_for "$failures")"
+    printf 'last run        %s\n' "$(read_state "$LAST_RUN_STATE" | tr -d '\n')"
+    if [ -e "$LOCK_FILE" ] && ! flock -n "$LOCK_FILE" true 2>/dev/null; then
+        printf 'lock            HELD — a run is in progress\n'
+    else
+        printf 'lock            free\n'
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        # Each of these prints its own answer AND can fail, so take one line and nothing else:
+        # otherwise an uninstalled unit prints two answers on top of each other.
+        local active enabled
+        if [ ! -f /etc/systemd/system/crooks-bridge-watcher.service ]; then
+            printf 'service         not installed\n'
+        else
+            active="$(systemctl is-active crooks-bridge-watcher.service 2>/dev/null | head -1)"
+            enabled="$(systemctl is-enabled crooks-bridge-watcher.service 2>/dev/null | head -1)"
+            printf 'service         %s (%s at boot)\n' "${active:-inactive}" "${enabled:-not enabled}"
+        fi
+    fi
+}
+
+cmd_seed() {
+    ensure_state_dir
+    local remote; remote="$(blob_sha "$INBOX_PATH" || true)"
+    [ -z "$remote" ] && { warn "bridge: could not read the inbox SHA; nothing seeded"; return 1; }
+    write_state "$INBOX_STATE" "$remote"
+    write_state "$FAILURES_STATE" "0"
+    log "bridge: seeded at inbox $remote — the next CHANGE triggers a run"
+}
+
+cmd_loop() {
+    ensure_state_dir
+    log "bridge: watching $REPO_SLUG $BRANCH:$INBOX_PATH every ${POLL_INTERVAL}s"
+    trap 'log "bridge: stopping"; exit 0' TERM INT
+    while true; do
+        poll_once || true
+        sleep "$(next_delay)" &
+        wait $! || true
+    done
+}
+
+main() {
+    case "${1:-loop}" in
+        loop|--loop|'') cmd_loop ;;
+        once|--once)    poll_once ;;
+        status)         cmd_status ;;
+        seed)           cmd_seed ;;
+        -h|--help|help)
+            sed -n '3,25p' "$0" | sed 's/^# \{0,1\}//'
+            ;;
+        *) warn "unknown command: $1 (try: loop, --once, status, seed)"; exit 2 ;;
+    esac
+}
+
+main "$@"

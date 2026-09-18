@@ -1,0 +1,89 @@
+# The CROOKS AI bridge watcher.
+#
+# Entirely separate from crooks-assistant.service: different unit, different state directory,
+# different lifecycle. Stopping or removing this one does not touch the assistant, and the
+# assistant does not depend on it.
+#
+# It listens to one thing — the blob SHA of bridge/chatgpt-inbox.md on the crooks-ai-bridge
+# branch — and runs Claude Code once when it changes. No HTTP endpoint, no webhook, no
+# listening socket, no firewall change: it polls outbound over the GitHub API using the gh
+# CLI's existing login.
+#
+# It runs as root because Claude Code's own Max login lives in /root/.claude and it rewrites
+# that credential in place when the OAuth token refreshes. HOME is therefore set and writable;
+# a read-only home turns into an authentication failure days later with nothing in the log to
+# connect it to.
+
+[Unit]
+Description=CROOKS AI bridge watcher (ChatGPT inbox -> Claude Code)
+Documentation=file:///opt/crooks-bridge-watcher/README.md
+After=network-online.target
+Wants=network-online.target
+
+# On [Unit], where systemd actually reads them. In [Service] they are silently ignored and the
+# rate limit never applies — which is how a crash loop runs forever looking healthy.
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=exec
+ExecStart=/opt/crooks-bridge-watcher/bin/crooks-bridge-watcher loop
+WorkingDirectory=/opt/crooks-bridge-watcher
+
+Environment=HOME=/root
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/root/.local/bin
+Environment=PYTHONUNBUFFERED=1
+
+# How often to ask GitHub, and how hard to retry a failed run. Overridable here rather than in
+# the script, so tuning the watcher never means editing code.
+Environment=CROOKS_BRIDGE_POLL_S=30
+Environment=CROOKS_BRIDGE_BACKOFF_BASE_S=60
+Environment=CROOKS_BRIDGE_BACKOFF_MAX_S=900
+Environment=CROOKS_BRIDGE_CLAUDE_TIMEOUT_S=7200
+
+# What Claude may do when nobody is at the keyboard. acceptEdits plus an explicit tool list:
+# it can read, write and run commands in the checkout, which is what carrying out an inbox
+# takes. It is NOT bypassPermissions. Raising this is an owner decision, not a default.
+Environment=CROOKS_BRIDGE_PERMISSION_MODE=acceptEdits
+Environment=CROOKS_BRIDGE_ALLOWED_TOOLS=Read,Edit,Write,Glob,Grep,Bash
+
+# systemd makes and owns these: /var/lib/crooks-bridge for the processed-SHA state, and
+# /run/crooks-bridge for the lock. The lock living on tmpfs is deliberate — a reboot cannot
+# leave a stale lock behind that blocks every future run.
+StateDirectory=crooks-bridge
+StateDirectoryMode=0700
+RuntimeDirectory=crooks-bridge
+RuntimeDirectoryMode=0700
+
+Restart=always
+RestartSec=30
+TimeoutStopSec=120
+KillSignal=SIGTERM
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crooks-bridge
+
+# Hardening. Modest, because this runs as root and launches a general-purpose agent; these are
+# the ones that still bite at root.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+# ProtectSystem=strict makes the hierarchy read-only, so everything Claude and git must write
+# is named here and nothing else is writable:
+#   /opt/crooks-os          the CROOKS checkout Claude works in
+#   /opt/crooks-ai-bridge   the bridge worktree it pushes the outbox from
+#   /root                   /root/.claude (Max login, refreshed in place) and gh's config
+ProtectHome=no
+ReadWritePaths=/opt/crooks-os
+ReadWritePaths=/opt/crooks-ai-bridge
+ReadWritePaths=/root
+
+[Install]
+WantedBy=multi-user.target
