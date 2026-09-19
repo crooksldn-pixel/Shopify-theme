@@ -125,8 +125,17 @@ preflight() {
     ok "runtime target $RUNTIME_DIR"
     ok "source revision $(source_revision)"
 
-    if command -v claude >/dev/null 2>&1; then ok "claude CLI $(command -v claude)"
-    else bad "the claude CLI is not on PATH"; problems=$((problems+1)); fi
+    if command -v claude >/dev/null 2>&1; then
+        ok "claude CLI $(command -v claude)"
+        local claude_help
+        claude_help="$(claude --help 2>&1 || true)"
+        case "$claude_help" in *"--model"*) ok "claude CLI supports --model" ;;
+            *) bad "claude CLI does not expose --model; update Claude Code before installing"; problems=$((problems+1)) ;; esac
+        case "$claude_help" in *"--effort"*) ok "claude CLI supports --effort" ;;
+            *) bad "claude CLI does not expose --effort; update Claude Code before installing"; problems=$((problems+1)) ;; esac
+    else
+        bad "the claude CLI is not on PATH"; problems=$((problems+1))
+    fi
 
     if command -v gh >/dev/null 2>&1; then
         # Never prints the token: only whether the login works.
