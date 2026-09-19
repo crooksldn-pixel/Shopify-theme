@@ -457,16 +457,37 @@ t_staging_is_safe_to_repeat() {
 
 t_verify_detects_a_runtime_that_drifted_from_source() {
     # The whole point: "approve commit X" must never install something else.
-    local rt="$SANDBOX/runtime"
+    local rt="$SANDBOX/runtime" unit="$SANDBOX/installed-unit"
     CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
-    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" verify >/dev/null 2>&1
+    cp "$HERE/../systemd/crooks-bridge-watcher.service" "$unit"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" CROOKS_BRIDGE_UNIT_DST="$unit" bash "$HERE/../install.sh" verify >/dev/null 2>&1
     check "a freshly staged runtime verifies" "0" "$?"
 
     printf '\n# tampered\n' >> "$rt/bin/crooks-bridge-watcher"
-    local out; out="$(CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" verify 2>&1)"
+    local out; out="$(CROOKS_BRIDGE_RUNTIME_DIR="$rt" CROOKS_BRIDGE_UNIT_DST="$unit" bash "$HERE/../install.sh" verify 2>&1)"
     local rc=$?
     check "  a drifted runtime fails verification" "1" "$rc"
     contains "  and names the file that differs" "$out" "DIFFERS from source"
+}
+
+t_upgrade_can_verify_new_payload_before_replacing_old_unit() {
+    # A legitimate upgrade necessarily has an OLD installed unit while the NEW runtime is staged.
+    # That expected mismatch must not block the installer before it gets a chance to replace it.
+    local rt="$SANDBOX/runtime" unit="$SANDBOX/installed-unit" out rc
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" bash "$HERE/../install.sh" stage >/dev/null 2>&1
+    printf '# old installed unit\n' > "$unit"
+
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" CROOKS_BRIDGE_UNIT_DST="$unit"         bash "$HERE/../install.sh" verify --runtime-only >/dev/null 2>&1
+    check "a staged upgrade payload verifies before unit replacement" "0" "$?"
+
+    out="$(CROOKS_BRIDGE_RUNTIME_DIR="$rt" CROOKS_BRIDGE_UNIT_DST="$unit" bash "$HERE/../install.sh" verify 2>&1)"
+    rc=$?
+    check "  full verification still rejects the old installed unit" "1" "$rc"
+    contains "  and names the expected unit drift" "$out" "installed unit DIFFERS from runtime"
+
+    cp "$HERE/../systemd/crooks-bridge-watcher.service" "$unit"
+    CROOKS_BRIDGE_RUNTIME_DIR="$rt" CROOKS_BRIDGE_UNIT_DST="$unit"         bash "$HERE/../install.sh" verify >/dev/null 2>&1
+    check "  full verification passes after unit replacement" "0" "$?"
 }
 
 t_the_manifest_records_where_it_came_from() {
@@ -546,6 +567,7 @@ for t in \
     t_the_staged_runtime_is_byte_identical_to_source \
     t_staging_is_safe_to_repeat \
     t_verify_detects_a_runtime_that_drifted_from_source \
+    t_upgrade_can_verify_new_payload_before_replacing_old_unit \
     t_the_manifest_records_where_it_came_from \
     t_the_unit_does_not_grant_write_access_to_production \
     t_the_prompt_carries_the_safety_contract
