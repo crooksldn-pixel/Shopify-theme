@@ -22,6 +22,7 @@ ChatGPT, Claude, future model workers, and human contributors should treat these
 - [EVOLUTION_POLICY.md](./EVOLUTION_POLICY.md) — release doctrine: preserve value and lessons without fossilising obsolete implementation or design.
 - [DIRECTOR_PROTOCOL.md](./DIRECTOR_PROTOCOL.md) — named memory/continuity procedures for bootstrap, release context, supersession, pruning, handoff, and audits.
 - [MIGRATION_HANDOFF.md](./MIGRATION_HANDOFF.md) — current GPT-conversation migration entry point: exact active state, in-flight work, control-plane status, and continuation instructions.
+- [OPS_RUNBOOK.md](./OPS_RUNBOOK.md) — server/bridge recovery lessons, Builder browser environment, tmux/Termius shortcuts, and one-step operator procedures.
 
 - [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md) — proposed Dev Team V1 contract: authority, lifecycle, context, isolation, evidence, review, integration and recovery; planning only.
 
