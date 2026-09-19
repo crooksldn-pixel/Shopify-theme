@@ -1,69 +1,46 @@
 # CHATGPT INBOX
 
-## 2026-09-19 — Builder Environment acceptance repair + contract trial
+## 2026-09-19 — Owner approval: bounded package fetching + BE-04 completion
 
-CROOKS Mobile Experience V1 is complete and published for review at `claude/mobile-experience-v1-review` commit `564ef3430d58b34de582f5548d7fe201c4cfe04b`. Do not rebuild, modify, merge, or deploy it. Treat it as the single-worker control sample for the later Dev Team mobile benchmark.
+Owner decision: **APPROVED — bounded package fetching for Builder Environment reconstruction.**
 
-This is a bounded BUILDER ENVIRONMENT REPAIR and MANUAL/SIMULATED DEV TEAM CONTRACT TRIAL. Work only in isolated builder/review state. Do not touch production except read-only inspection if genuinely necessary. Do not deploy, install/start/stop production services, change Tailscale, provision/read/print secrets, enable CROOKS writes, widen permissions, perform destructive actions, or call live Shopify/Gmail/ElevenLabs.
+This is a continuation of ENV-REPRO-001 only. Do not rebuild or re-run already accepted evidence unnecessarily. Work from the published Builder repair candidate `claude/builder-environment-repair-review` @ `326c150b778afdc2b5881b2f7ac97e140e476eab` and preserve exact candidate/evidence identity. Do not merge or deploy.
 
-SOURCE OF TRUTH
+### Approved network boundary
 
-Read current canonical product memory and Dev Team planning/review material first, including CURRENT_TRUTH, DECISIONS, ROADMAP, MIGRATION_HANDOFF, the latest Dev Team planning/review state including commit `1a0741a` and any newer superseding Git truth, plus the existing Builder candidate/review evidence. Git current truth supersedes old chat assumptions.
+The Builder Environment may make read-only network downloads solely to reconstruct the declared, pinned development environment from a fresh/disposable checkout.
 
-OBJECTIVE
+Requirements:
+- only dependencies/tools explicitly declared by the committed Builder manifest/lockfiles;
+- fetch only from the normal authoritative upstream/package sources for those declared dependencies/tools;
+- pin release tags, asset URLs and versions rather than deriving ambiguous release URLs at runtime;
+- preserve and enforce integrity verification; fail closed on version, checksum, provenance, verification or fetch failure;
+- record install-time provenance needed to make the SkillSpector pin verifiable;
+- no secrets or credentials;
+- no production changes;
+- no deployment;
+- no CROOKS application writes;
+- no privilege expansion;
+- no unrelated/arbitrary network access;
+- no destructive actions;
+- use an isolated/disposable Builder reconstruction environment, not production.
 
-Repair the independently reproduced acceptance defects in the permanent Builder Environment candidate. The candidate must not be accepted until all four defects are fixed and independently reproducible regression evidence is present:
+### Objective
 
-1. Bootstrap crashes on the committed manifest.
-2. Doctor can return success despite incorrect versions or failed tools.
-3. Generated shell exports can interpret commands embedded in a checkout path.
-4. Fresh-checkout reconstruction is incomplete.
+Finish the remaining BE-04 acceptance work identified in the previous outbox:
+1. pin the required release tags and exact asset URLs in repository-controlled inputs;
+2. make the reconstruction plan fully executable with integrity checks;
+3. execute the complete reconstruction from a genuinely fresh/disposable checkout using only repository-controlled inputs plus the approved read-only fetches;
+4. run the reconstruction a second time and prove the intended idempotent/repeatable behaviour;
+5. close the SkillSpector provenance gap if it can be done within this bounded scope;
+6. add/adjust regression tests for the completed behaviour.
 
-REPAIR REQUIREMENTS
+Because the candidate changes, prior candidate-bound review evidence is invalid for the changed tree. Re-run the relevant independent gates against the exact final candidate and bind evidence to its final SHA. Verify BE-01 through BE-04 against that exact final candidate rather than trusting prior prose.
 
-- Work from the appropriate existing Builder candidate in `/opt/crooks-builder` on an isolated repair branch; do not alter production.
-- Diagnose each defect from actual code/reproduction before editing.
-- Implement the smallest coherent fixes; do not broaden scope or silently change product/safety doctrine.
-- Add a regression test for EACH of the four defects. Tests must fail against the rejected behaviour and pass against the repair.
-- Prove explicit fresh-checkout reconstruction from repository-controlled inputs/instructions, not hidden mutable machine state. Record exact commands and results.
-- Doctor must fail closed/non-zero when required tool/version checks are wrong or fail; prove both success and negative cases.
-- Generated environment/shell output must safely represent arbitrary valid checkout paths and must not execute/interpolate command substitutions embedded in paths; include an adversarial regression case.
-- Bootstrap must consume the committed manifest successfully from a fresh checkout; include the exact manifest/candidate identity used.
-- Run relevant unit/static/tooling gates and inspect their actual summaries, not merely shell exit codes.
-- Inspect the complete diff and run a secret scan before publication.
-- Require a clean working tree at completion.
-- Commit the exact finished candidate and publish that exact commit to dedicated remote review branch `claude/builder-environment-repair-review`. Do not merge it.
-- Outbox must bind every evidence claim to the exact candidate SHA and review branch. If publication fails after the candidate is already built/tested, retry publication without rebuilding or mutating the candidate.
+Also update the existing contract-trial record with what this continuation actually exercises. Do not claim publication-retry, obsolete-result fencing, or integration re-verification as exercised unless they genuinely occur. Preserve the previously identified CG-01 through CG-05 gaps rather than silently working around them.
 
-MANUAL/SIMULATED DEV TEAM CONTRACT TRIAL
+Publish the exact final candidate to `claude/builder-environment-repair-review`, read the remote identity back, replace `bridge/claude-outbox.md` with the SHA-bound evidence and STOP for independent Director review.
 
-Use this rejected-then-repaired Builder candidate as the first contract trial. Explicitly exercise/document, where applicable without inventing destructive scenarios:
+### Still prohibited
 
-- false-success handling: prior prose claiming success must not override independently reproduced failure;
-- exact candidate identity binding;
-- review invalidation if candidate code changes after review evidence was produced;
-- publication retry without rebuilding/mutating an already verified candidate;
-- obsolete/late/duplicate result handling, including the Mobile V1 duplicate-dispatch incident where a completed outbox was not published;
-- reviewer gating: no acceptance merely because Builder says green;
-- integration re-verification after a corrective change where applicable.
-
-Capture any contract gaps in the existing Dev Team planning/review docs in the repair candidate only when they are a direct record of this verified trial. Do not silently work around contract defects. Do not begin Engineering Orchestrator implementation in this round.
-
-DELIVERABLES
-
-Replace `bridge/claude-outbox.md` with a detailed handoff containing:
-
-- exact repaired candidate SHA and publication status for `claude/builder-environment-repair-review`;
-- root cause and exact fix for each of the four defects;
-- regression test names/results for each defect;
-- fresh-checkout reconstruction proof and commands;
-- doctor positive + negative proof;
-- adversarial shell/path safety proof;
-- relevant full gate summaries;
-- complete diff scope and secret-scan result;
-- clean-working-tree proof;
-- contract-trial results for each item above and any remaining contract gaps;
-- confirmation production was untouched and no secrets/live writes/permission widening occurred;
-- unresolved blockers, clearly distinguishing safe engineering follow-up from owner-only decisions.
-
-Do not claim acceptance yourself. Publish the candidate/evidence for independent review, write the outbox, and STOP. The watcher owns bridge publication.
+No production promotion/deployment, no service/Tailscale changes, no secrets, no enabling CROOKS writes, no permission widening, no destructive migration/action, no new external spend, and no Engineering Orchestrator implementation in this round.
