@@ -570,3 +570,22 @@ Consequences:
 ```
 
 Never silently rewrite old rationale. If a decision changes, add a new decision that explicitly supersedes the old one.
+
+
+## DEC-047 — Engineering Orchestrator V1 implementation is owner-authorised
+**Date:** 2026-09-19  
+**Status:** ACTIVE  
+**Source:** explicit owner approval in the GPT Director conversation
+
+**Decision:** The owner explicitly approved Engineering Orchestrator V1 moving from planning into implementation under the existing canonical Git specification and safety boundaries.
+
+This approval removes the separate planning → implementation authorisation gate. It does **not**:
+- waive the prerequisite ordering in DEC-046;
+- approve production deployment or promotion;
+- approve secrets/credential handling, privilege expansion, CROOKS business writes, destructive actions, or new external spend;
+- silently approve unresolved mechanism choices that the V1 specification marks for architecture/engineering review;
+- authorise bypassing independent review, evidence binding, workspace isolation, or release gates.
+
+Implementation may begin once the preceding DEC-046 deployment/current-product prerequisite gates are satisfied, unless the owner explicitly changes that ordering in canonical Git.
+
+**Reason:** preserve the owner's explicit implementation approval without allowing it to be misread as a blanket waiver of established safety and sequencing constraints.
