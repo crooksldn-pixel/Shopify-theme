@@ -1,491 +1,342 @@
 # CLAUDE OUTBOX — latest handoff only
 
-**Timestamp:** 2026-09-18 23:5x UTC (server clock; the inbox round is headed 2026-09-19)
-**Inbox blob SHA processed:** `607b607e54eb194b81d708dfbc7bd744c2e8cd18`
-**Inbox round:** "2026-09-19 — build the permanent CROOKS Builder development environment"
-**Bridge worktree HEAD at start:** `0c7474bdeea5e639ac5139aa68f4042bcdc9d2ff` (branch `crooks-ai-bridge`, clean)
+**Timestamp:** 2026-09-19 ~10:05 UTC
+**Inbox blob SHA processed:** `24b713cce3d0e8c9ede3185ebef78cc107ece507`
+**Inbox round:** "2026-09-19 — CROOKS Mobile Experience V1"
+**Bridge worktree at start:** branch `crooks-ai-bridge`, HEAD `165c366c3132ef2dc3b42f3cc1ffaa5296b4af07`
+**Builder worktree at start:** `/opt/crooks-builder`, branch `claude/mobile-experience-v1`,
+HEAD `564ef3430d58b34de582f5548d7fe201c4cfe04b`, **working tree clean**
 
 I have consumed `bridge/chatgpt-inbox.md` at the blob SHA above — verified with `git hash-object`
-in the bridge worktree before acting — and treated it as the sole instructions for this round.
-Recording the SHA here so these instructions are never executed twice.
+in the bridge worktree — and treated it as the sole instructions for this round. Recording the SHA
+here so these instructions are never executed twice.
 
 ---
 
-## 0. Result
+## 0. READ THIS FIRST — this was a DUPLICATE DISPATCH, not a fresh round
 
-| | |
-|---|---|
-| Builder commit | `9a27bc441adad1e98e8a9ca257d1883246ee7eec` — 8 files, all text |
-| Review branch `claude/builder-environment-review` | **PUSHED and verified at the same SHA. Not merged.** |
-| Working tree after commit | **clean** |
-| Production checkout | **untouched** — reflog contains only the original clone |
-| Browser gate | **revived from inert** → 593 checks, **1 deterministic failure** |
-| pytest `-n 4` | **2.2× faster, identical outcome** (2806 passed / 8 skipped) |
-| Skills installed | **none** — `.claude/` writes refused by my permission layer |
-| Secrets in the candidate | **zero** (gitleaks, candidate-only scan) |
-| Disk added | ~2.5 GB inside the worktree, all gitignored |
+**The work this inbox asks for was already completed and published by the previous run, and the
+previous run's handoff was written but never published.** Two facts established that before I
+changed anything:
 
-**Two things need you:** a reproducible browser-gate failure on the Split control (§6), and a
-permission block that stopped Phase 8 and every skill installation (§11).
+1. The outbox already present in the bridge worktree recorded **this exact inbox SHA**
+   (`24b713c…`) as processed, and was sitting **uncommitted** (` M bridge/claude-outbox.md`) —
+   i.e. the prior round finished its work and wrote its handoff, but the watcher never published
+   it.
+2. `git ls-remote` confirms `refs/heads/claude/mobile-experience-v1-review` is already at
+   `564ef3430d58b34de582f5548d7fe201c4cfe04b` — the candidate is published.
 
----
+**Therefore I did not re-execute the build.** Re-running a completed, published candidate would
+have risked a second divergent commit on the review branch for no gain. Instead I spent this round
+**independently verifying the prior run's claims** and **carrying its handoff forward** so its
+content is not lost when this file is replaced.
 
-## 1. What was asked
-
-Build a reproducible, audited CROOKS Builder development environment across ten phases: inventory,
-a third-party-skill security gate (NVIDIA SkillSpector), core design/UI skills, a CROOKS
-`DESIGN.md`, browser/visual tooling, general engineering tools, Python test quality,
-project-scoped Claude configuration, reproducibility/anti-forgetting, and research-only later
-candidates. Commit on `claude/bridge-builder`, publish to `claude/builder-environment-review`, do
-not merge, do not deploy, no live APIs, no secrets, preserve every safety constraint.
+**Everything in §3–§8 below is the prior round's substantive handoff, preserved. §1–§2 are mine.**
 
 ---
 
-## 2. State found before acting
+## 1. Result
 
-Builder `/opt/crooks-builder`, branch `claude/bridge-builder`, HEAD `e43aecd`, **working tree
-clean** — nothing modified or untracked. A full CROOKS checkout (Shopify theme at the root,
-`crooks-assistant/` inside).
+**Candidate commit SHA:** `564ef3430d58b34de582f5548d7fe201c4cfe04b` (`564ef34`)
+**Review branch:** `claude/mobile-experience-v1-review` — **PUBLISHED and verified this round** by
+`git ls-remote`: remote ref == local HEAD == `564ef34`.
+**Not merged. Not deployed.** Production untouched.
 
-### 2.1 Inventory BEFORE
+**Nothing in the repository was changed by me this round.** The builder worktree is clean at
+`564ef34`, identical to how the prior run left it. The only file I wrote is this outbox.
 
-**Present:** `claude` 2.1.276 · `node` v22.23.2 · `npm` 10.9.8 · `python3` 3.12.3 · ripgrep 14.1.1
-(bundled with Claude Code, exposed as an `rg` shell function) · `jq` · `curl` · `git`.
+**Both primary gates re-run and green under my own measurement:** `pytest` **0 failed**
+(2821 passed, 8 skipped, 2 deselected) and the full browser sweep **714 checks, 0 failed** — the
+latter an exact reproduction of the prior round's number. Detail and the reconciliation of the
+pytest counts are in §2.2.
 
-**Absent:** `fd`, `ast-grep`, `shellcheck`, `shfmt`, `uv`, `gitleaks`, `trivy`, `biome`, `pyright`,
-`hyperfine`, `ruff`, `pytest`, Shopify CLI, **Playwright**, **any Chromium**.
+## 2. What I independently verified this round
 
-> `sg` resolves to `/usr/bin/sg` → `newgrp`. That is **not** ast-grep. Recorded because it is an
-> easy false positive on an inventory.
+I did not take the prior run's numbers on trust. Verified directly:
 
-**Claude config:** `/root/.claude/settings.json` is `{"theme":"dark"}`. Skills under
-`skills/synced/…`: `xlsx, skill-creator, base44-first-build, docx, import-memory, morning, docs,
-pptx, llm-council, pdf`. Plugins synced: `design`, `marketing`, `base44`, `wix~g2`. One marketplace
-cloned: `anthropics/claude-plugins-official` (39 plugins, including `frontend-design`,
-`code-review`, `pyright-lsp`, `claude-security`) — not a git checkout, so no commit SHA available.
-**No project `.claude/` and no `CLAUDE.md` anywhere in the builder.**
-
-**CROOKS tooling already present:** `pyproject.toml` (ruff configured, `line-length=100`; `[dev]` =
-pytest/pytest-asyncio/ruff), a 40-target `Makefile`, `experience/` (scenarios, fixture world, tool
-matrix), **eleven browser scripts** in `scripts/browser/`, and `experience/browser.py`.
-
-**The critical finding.** CROOKS already uses Playwright — `scripts/browser/*.js` do
-`require('playwright')` / `require('playwright-core')`, and `experience/browser.py` expects a
-Chromium at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. **Neither existed on this server,
-and the builder had no `.venv` at all.** So `available()` returned false and every browser check
-reported itself *skipped* — honestly, but proving nothing. Reviving that harness became the centre
-of the round.
-
-**Sandbox:** `/usr` is **read-only** (confirmed by write probe). Network to npm, PyPI and GitHub
-works. Production venv at `/opt/crooks-os/crooks-assistant/.venv` — read only, never modified.
-
-**Product memory:** not present in this branch. Read read-only from
-`origin/claude/product-memory-foundation` (`b5c94fd`) via `git show`, without switching or merging
-anything: `PRODUCT_BRAIN.md`, `ROADMAP.md`, `DECISIONS.md` (DEC-001…036), `SELF_IMPROVEMENT.md`,
-plus `ENGINEERING_LOOP.md`, `PHASE_1_UX_BASELINE.md` and the Phase 2–5 reports.
-
----
-
-## 3. Inventory AFTER
-
-`python3 crooks-assistant/scripts/dev_env.py doctor` → **exit 0, 23 checks ok, nothing missing.**
-
-| Tool | Version | Where |
+| Check | Method | Result |
 |---|---|---|
-| shellcheck | 0.11.0 | `.tooling/bin` |
-| shfmt | 3.12.0 | `.tooling/bin` |
-| gitleaks | 8.30.1 | `.tooling/bin` |
-| fd | 10.3.0 | `.tooling/bin` |
-| ast-grep | 0.40.0 | `.tooling/bin` |
-| hyperfine | 1.20.0 | `.tooling/bin` |
-| trivy | 0.74.0 | `.tooling/bin` |
-| uv | 0.9.9 | `.tooling/bin` |
-| playwright | 1.56.1 | `.tooling/node` |
-| @axe-core/playwright · axe-core | 4.11.1 | `.tooling/node` |
-| @biomejs/biome | 2.5.14 | `.tooling/node` |
-| Chromium | **141.0.7390.37** (Playwright build 1194) | `.tooling/browsers` |
-| pytest-xdist / -timeout / -cov | 3.8.0 / 2.4.0 / 7.0.0 | `crooks-assistant/.venv` |
-| hypothesis | 6.145.1 | `crooks-assistant/.venv` |
-| pyright | 1.1.407 | `crooks-assistant/.venv` |
-| skillspector | 2.11.2 @ `d162d9b` | `.tooling/uv-tools` (isolated) |
+| Review branch published | `git ls-remote --heads origin` | `claude/mobile-experience-v1-review` == `564ef34` ✔ |
+| Builder tree clean | `git status --porcelain` | empty ✔ |
+| **Production untouched** | read-only inspect of `/opt/crooks-os/crooks-assistant` | branch `claude/linux-prod-migration-production` @ `1cf3a0f`, clean ✔ — never switched, edited or reset |
+| `writes_enabled` still false | `config/settings.py:105` | `writes_enabled: bool = False` ✔ |
+| FastAPI loopback binding | `config/settings.py:32` | `host: str = "127.0.0.1"` ✔ (port 8000 not exposed) |
+| `CROOKS_WRITES_LOCAL_OWNER` | grep across `app/` | unchanged; **no `app/` file is in the diff** ✔ |
+| Candidate diff scope | `git show --name-only 564ef34` | 9 text files + 40 screenshots — see below ✔ |
+| Secret scan of full diff | regex sweep (`api_key\|secret\|password\|bearer\|private key\|shpat_\|shpss_\|ghp_\|sk-…\|AKIA…`) | **clean** — single hit is the word "secret" in prose ✔ |
 
-`ruff` 0.16.8 and `pytest` 9.1.1 arrived via the project's own `[dev]` extra. **ripgrep was not
-reinstalled** — 14.1.1 is already bundled (Phase 6 rule: do not duplicate an adequate tool).
+**Candidate file list, confirmed by me** (this is the non-regression claim as a fact, not a
+promise): `DESIGN.md`, `docs/MOBILE_EXPERIENCE_V1.md`, `experience/browser.py`,
+`scripts/browser/mobile.js`, `tests/test_browser.py`, `tests/test_compose.py`,
+`tests/test_mobile.py`, `tests/test_touch.py`, `web/style.css` — plus 40 PNGs under
+`docs/screens/mobile-v1/`.
 
-Nothing self-updates. Nothing opens a listening socket. Nothing requires a secret.
+**No `app/` route, no backend, no product JS, no HTML, no config, no dependency change.** The only
+non-CSS/test/doc file is `experience/browser.py`, and I read its full diff: it is **purely
+additive** — it defines `MOBILE_SCRIPT` and adds it to two existing tuples so `mobile.js` joins the
+default sweep and the screenshot pass. No action, proposal, speech, arming, expiry or authorization
+semantics are touched anywhere in the candidate.
 
----
+### 2.1 A correction to my own first reading — the browser gate is NOT broken
 
-## 4. Security gate (Phase 2) — SkillSpector
+My first attempt at the sweep returned `skipped: playwright-core is not installed`. **That was my
+own missing environment, not a defect in the candidate and not a regression.** The Builder
+Environment supplies the toolchain outside the worktree (`.tooling/node/node_modules`,
+`.tooling/browsers/chromium-1194`, `.tooling/sysroot`), and `scripts/dev_env.py env` exports the
+four variables that make it resolvable (`NODE_PATH`, `PLAYWRIGHT_BROWSERS_PATH`, `CROOKS_CHROMIUM`,
+`LD_LIBRARY_PATH`). With that environment applied, `experience.browser.available()` returns
+**`(True, '')`** and the sweep runs.
 
-Installed **2.11.2 @ `d162d9b`** from `NVIDIA/skillspector` (Apache-2.0) into an isolated `uv` tool
-environment. Always run **`--no-llm`**: static-only, file contents stay local, **no API key
-provisioned**. (Its SC4 check still queries `api.osv.dev` with dependency *coordinates* only —
-never file contents — and falls back to a bundled list offline.)
+This is exactly the trap `docs/DEV_ENVIRONMENT.md` §3.2 warns about ("its absence looks like *not
+installed*"). **Recording it because it will catch the next reviewer too:** any gate run must be
+preceded by `eval "$(.venv/bin/python scripts/dev_env.py env)"`, or the gate will report itself
+skipped while appearing green-ish. I installed nothing and widened no permission to resolve it.
 
-**A scanner verdict was treated as evidence, not a decision.** Every flagged line was opened and
-read. Both outcomes occurred: a HIGH that was a false positive, and MEDIUMs that were real.
+### 2.2 Gate re-runs — **completed and measured by me this round**
 
-### 4.1 Results
+I re-ran both primary gates from scratch on this tree. **Both are green.**
 
-| Skill | Upstream | Pinned | Findings | Verdict |
-|---|---|---|---|---|
-| `frontend-design` | `anthropics/skills` | `34040c9` | 1 HIGH | **CLEARED** (false positive) |
-| `webapp-testing` | `anthropics/skills` | `34040c9` | 2 HIGH, 3 MED | **REJECTED** |
-| `web-interface-guidelines` | `vercel-labs/…` | `e3d624b` | 3 MED | **CLEARED — content only** |
-| `create-design-md` | `ibelick/ui-skills` | `d07392a` | 4 MED | **NOT INSTALLED** (methodology used) |
-| `redesign-skill` | `Leonxlnx/taste-skill` | `e79ca9e` | **0** | **CLEARED** |
-| `image-to-code-skill` | `Leonxlnx/taste-skill` | `e79ca9e` | **0** | **CLEARED** |
-| `taste-skill` | `Leonxlnx/taste-skill` | `e79ca9e` | 2 HIGH, 4 MED | **REJECTED** |
-| `impeccable` | `pbakaus/impeccable` | `f2c7051` | **39 HIGH, 34 MED** | **REJECTED for now** |
-
-### 4.2 The reasoning
-
-**`frontend-design` — false positive, cleared.** The HIGH is *Anti-Refusal* at `SKILL.md:69`,
-columns 163–178. Those columns are literally `" don't apologize"`, from *"Errors don't apologize,
-and they are never vague about what happened."* — UI copy guidance matched by a jailbreak pattern.
-`has_executable_scripts: false`.
-
-**`webapp-testing` — real finding, rejected.** 2 HIGH *Tool Misuse* plus a MED *Dangerous Code
-Execution*, all at `scripts/with_server.py:69`: `subprocess.Popen(server['cmd'], shell=True)` on a
-caller-supplied string. Also redundant — CROOKS's eleven-script harness is strictly more capable.
-Not installed around; recorded.
-
-**`web-interface-guidelines` — content vendorable, installer not.** `install.sh` (a) `curl`s from
-unpinned `refs/heads/main` at install time, defeating pinning entirely, and (b) writes into
-`$HOME/.claude/commands/` — **global** scope, not project — plus six other agent tools. The content
-(`command.md`, `AGENTS.md`) is MIT static markdown with no executable content.
-
-> **Naming correction:** the inbox asked for Vercel **`web-design-guidelines`**. No such repository
-> exists under `vercel/` or `vercel-labs/`; the search hits are unrelated ≤10-star lookalikes, and
-> they were **not** used. The real artifact is **`vercel-labs/web-interface-guidelines`** (MIT).
-
-**`create-design-md` — methodology used, skill not installed.** Its 4 MEDIUMs are
-`npx @google/design.md` invocations (lint/export/diff). Unpinned `npx` fetches and executes
-whatever version is current — a genuine rug-pull vector in a skill that would run routinely. The
-inbox asked me to *use the methodology*, which I did by hand, so nothing ever invokes the unpinned
-package.
-
-**`taste-skill` — rejected; the scan agrees with CROOKS precedence for independent reasons.** 2
-HIGH at `SKILL.md:272–329` instruct the agent to emit **remote image URLs** (`picsum.photos`,
-Unsplash, Pexels) into generated markup — into a product that loads **no** external resource, not
-even a web font, precisely because the tablet is often on poor connectivity. MED *Excessive Agency*
-at `SKILL.md:51`: *"Do not ask the user to edit this file — overrides happen conversationally."* A
-skill instructing the agent not to consult the owner contradicts DEC-017 and the authority order.
-
-**`impeccable` — not installed this round, and worth a dedicated review.** 73 issues. **The count
-overstates the risk and I want that on record:** sampling the HIGHs shows the same prose-matching
-as the `frontend-design` false positive (e.g. a HIGH whose finding text is *"Load the request's
-playbook…"*). What is **not** a false positive is the executable surface —
-`has_executable_scripts: true`, including `scripts/live-browser.js` at **547 KB** of bundled JS
-carrying all 12 SSRF findings, plus an `impeccable` executable. Half a megabyte of bundled JS is
-not reviewable in one round. Two further issues regardless of the scan: it ships its own
-**`PRODUCT.md`** (must not become a second source of truth — DEC-016), and four sub-agents
-including **`impeccable-manual-edit-applier`, which edits source**.
-
----
-
-## 5. DESIGN.md (Phase 4)
-
-`crooks-assistant/DESIGN.md`, ~19 KB, marked **PROPOSED — not ratified**. Written in repository
-mode following the `create-design-md` evidence pipeline
-(`role → value → source → scope → recurrence → confidence`). **Every value read from shipped
-source; no aesthetic invented.**
-
-It opens with the **authority order**: owner → PRODUCT_BRAIN/DECISIONS/UX invariants → DESIGN.md →
-functional/safety behaviour → specialist design skills. A third-party skill sits at rank 5: it may
-propose, never silently override.
-
-All requested sections are covered. The substance worth flagging:
-
-- **The five-step white ladder.** `--glass` .05 → `--glass-2` .075 → `--glass-3` .12 → `--glass-4`
-  .16 on a warm near-black `#07070a`. The steps are half the borrowed reference's because the
-  ground is warm near-black; the **ratio** was borrowed, not the values. Hierarchy is carried by
-  light level, not colour. Recorded rule: never write a raw `rgba(255,255,255,…)` in a component —
-  use the role aliases, so a change to the ladder moves every surface together.
-- **The layer table is documented as a safety invariant**, with the field defect that produced it:
-  `#branch-bar` inside a stacking context beneath a viewport-sized `#talk` at `z-index:3` sent
-  **63 taps in one evening, 26 of them in ten consecutive seconds**, to the speech recogniser.
-  `.orb-zone` deliberately has **no z-index** — giving it one is what created the cap.
-- **Loading states, stated honestly rather than papered over.** No section is drawn as `LOADING`:
-  `present(pending=…)` is honoured by every renderer but has **no live caller**. A section still
-  reading is not drawn as loading, it is simply not drawn yet. Recorded with the explicit warning
-  **not** to add the call at the named site as a cosmetic fix — it would be a no-op that *looks*
-  done.
-- Speech-vs-screen; maximum-capability/minimum-visible-UI; the disabled-with-reason action rail;
-  the one-sentence, one-half, two-minute expiring voice binding; Samsung constraints (no web fonts,
-  blur on exactly two surfaces); `prefers-reduced-motion` honoured in eight places; and the
-  four-viewport matrix (601×889@1.33, 800×1280@1, 390×844@3, 1280×800@1).
-- **Impeccable's `PRODUCT.md` problem is pre-answered:** do not create a competing source of truth.
-
----
-
-## 6. ⚠ Browser gate revived — and one deterministic failure
-
-**Proof the tooling works** (local fixture page, no live business API): Chromium 141 starts and
-executes JS · screenshot written at **601×889 DPR 1.33** (34 KB PNG) · console captured
-(`[console.log] probe: page script ran`) · ARIA snapshot captured · **axe-core executed** (13
-passes, 2 moderate on the fixture) · **browser closed cleanly, no lingering processes** ·
-`experience.browser.available()` → **AVAILABLE**.
-
-**Then the real CROOKS gate ran — twice:**
-
-| Run | Conditions | Checks | Failed |
-|---|---|---|---|
-| 1 | under CPU contention | 593 | 1 |
-| 2 | quiet machine | 593 | 1 |
-
-**Same failure both times. Not a flake, not contention.**
-
-```
-PATH 4-split-two-halves-independent · step 2 · a 95ms press on Split lands
-  "Split" had to be activated directly for the path to continue
-  — it is wired, the touch did not reach it
-```
-
-**Why this one matters:** it is the *same bug class, on the same control*, as the 63-lost-taps
-defect above. A check saying *a press on Split does not land* is exactly the alarm the layer table
-was installed to trip.
-
-**What I do NOT claim.** Not a regression from this round — no product source was touched; the diff
-is `.gitignore` + docs + one script, so this is in the tree as delivered. Not yet attributed
-between a live defect, a Chromium-141/synthetic-press artefact, and a pre-existing failure earlier
-baselines did not surface. Two runs prove it reproduces, not why. For reference, the `721a31c`
-baseline was *"592 checks, 4 failed, all four named-MISSING shots"*; my runs passed no output
-directory, so those four shot checks did not run, which accounts for 593 vs 592 and for their
-absence here.
-
-No fix attempted — UI changes were out of scope. Full write-up, including the
-`document.elementFromPoint(x,y)` attribution procedure, in
-`docs/dev-environment/BROWSER_GATE_FINDING.md`.
-
-### 6.1 How Chromium was made to run without touching `/usr`
-
-Chromium needed 12 absent shared libraries (`libnspr4`, `libnss3`, `libatk*`, `libcups2`,
-`libatspi`, `libXdamage`, `libcairo`, `libpango`, `libasound`, …). `apt-get install` writes to
-`/usr`, which is **read-only in the watcher sandbox by design**. I did **not** weaken the sandbox.
-Instead the `.deb` payloads (89 packages) were downloaded and extracted into
-`.tooling/sysroot/root` and reached via `LD_LIBRARY_PATH` — a project-local install, which is what
-the SYSTEM PACKAGE RULE asks for. `libc6`, `libgcc-s1`, `libstdc++6` and `gcc-14-base` were
-**deliberately excluded** so the system C runtime is never shadowed. Nothing outside
-`/opt/crooks-builder` was written.
-
-The owner-approved alternative (needs a writable `/usr`, **NOT run**) is recorded verbatim in
-`manifest.json → sysroot.owner_approved_alternative`.
-
-**Two pins worth knowing.** Playwright **1.56.1** was chosen because it is the release shipping
-Chromium build **1194** — the exact number `experience/browser.py` already expects; the pin follows
-CROOKS's own source rather than the newest release. And **`NODE_PATH` is the trap**:
-`require('playwright')` resolves from the *script's* directory, so without it the gate reports
-"playwright-core is not installed" when it is installed. `dev_env.py env` sets it.
-
----
-
-## 7. Test and benchmark results (Phase 7)
-
-Offline suite, 4 CPUs / 7 GB, quiet machine, `-p no:cacheprovider`, `-m "not live"`:
-
-| Run | Wall | Result |
+| Gate | My measurement this round | Prior round's claim |
 |---|---|---|
-| serial | 490.3 s | — |
-| serial | 495.7 s | — |
-| serial | **514.4 s** | **2806 passed, 8 skipped, 2 deselected** |
-| `-n 4` | **220.4 s** | **2806 passed, 8 skipped** |
-| `-n 4` | **224.4 s** | **2806 passed, 8 skipped** |
+| `pytest -q -m "not live"` (full offline suite) | **2821 passed, 8 skipped, 2 deselected, 0 failed** (512.92s) | 2827 passed, 4 skipped, 0 failed |
+| Full browser sweep (`run_checks()`, correct env) | **714 checks, 0 failed**, `skipped: False` | 714 checks, 0 failed |
 
-**2.2× faster — 8.2 min → 3.7 min — with the identical outcome.** Both parallel runs match each
-other *and* match serial. All three adoption criteria are met (deterministic, no shared-state/race
-failures, unchanged semantics).
+**The browser sweep reproduces the prior claim exactly: 714 checks, 0 failures.**
 
-**Left OFF by default anyway.** `make test` is unchanged; use `-n 4` explicitly. Two runs on one
-host is enough to recommend and not enough to change what everyone gets — and every prior result in
-this repo was measured under serial ordering. Flipping the default should be its own deliberate
-change.
+**The pytest counts differ, and the difference is fully explained — it is not a discrepancy.**
+The totals reconcile exactly: mine 2821 + 8 + 2 = **2831 collected**; the prior round's 2827 + 4 =
+**2831 collected**. The delta is:
 
-**No retry plugin installed.** Hypothesis is installed but applied nowhere; no existing test was
-rewritten to claim usage.
+- **2 deselected** — I used the `make test` target `-m "not live"`, which deselects the two
+  live-marked tests. The prior round ran the suite without that marker filter.
+- **4 additional skips** — my pytest run did **not** have the Builder Environment applied, so the
+  browser-gated tests skip. I confirmed the exact mechanism: `tests/test_browser.py:77` skips with
+  *"browser checks need a browser: playwright-core is not installed"*. Six test files are gated
+  this way (`test_browser`, `test_clickpath`, `test_collision_gate`, `test_density`,
+  `test_email_browser`, `test_live_replay`).
 
-**Other tools verified:** ruff `All checks passed!` over `app config scripts tests` and over the
-new script · shellcheck clean on CROOKS's single `.sh`, and proven live on a known-bad probe
-(SC2086) · pyright executes (0 errors on the new script) · trivy executes · **Biome: 20 errors, 272
-warnings, 18 infos across 14 files, `No fixes applied`, and `git status` confirms `web/` untouched**
-— which is precisely why it is advisory/check-only and not a gate. (Worth a future deliberate look:
-3 `useAriaPropsSupportedByRole`, 2 `useSemanticElements`, 1 `noDuplicateProperties`.)
+**No test failed in either run. Zero `FAILED` lines in my log.** I checked the summary line
+directly rather than trusting the exit code — the prior round recorded that an exit code once
+masked a real failure through a shell pipe, and my own run likewise exited 0 while printing an
+unrelated `RuntimeError: Event loop is closed` from asyncio teardown at exit. **That teardown noise
+is post-summary and not a test failure**, but it is worth a reviewer's eye as latent log noise.
 
----
+**Independent confirmations from my sweep, beyond the headline number:**
 
-## 8. Reproducibility / anti-forgetting (Phase 9)
+- **The Split-control finding did not reproduce — a third independent sweep.** All eleven
+  `PATH 4-split-two-halves-independent` checks pass, **including `step 2 · Split → 2 halves`**,
+  which is the exact check the original finding recorded as deterministically failing. This
+  materially strengthens the load-dependent attribution in §6.
+- **The new phone gate genuinely measures phones.** 122 check lines at `390x844@3` and
+  `375x667@2`, of which 26 are safe-area / keyboard / touch-target checks — e.g. *"every control a
+  finger finds is at least 44px"*, *"the voice layer touches no navigation control"*, *"the page is
+  not wider than the phone"*, and *"a 95ms press on orders lands, as a landing and not as a
+  sentence"*. **Zero interactive collisions at both phone viewports**, alongside the pre-existing
+  zero at 601×889 and 800×1280.
 
-- **`docs/dev-environment/manifest.json`** — for every tool: name, purpose, upstream, exact
-  version/commit, install scope, auto-trigger vs explicit, network requirements, policy, and a
-  verify command.
-- **`scripts/dev_env.py`** — `doctor` (read-only; exits non-zero if anything is missing), `env`
-  (prints the exports a browser run needs), `bootstrap` (explicit, idempotent steps). Entirely
-  manifest-driven, so the pins have exactly one home and cannot drift into a second copy.
-- **`docs/DEV_ENVIRONMENT.md`** — the prose: why each pin, the `/usr` constraint, the `NODE_PATH`
-  trap, the full skill gate with reasoning, the benchmark, and an explicit "not done, and why".
-- **`docs/dev-environment/LATER_CANDIDATES.md`** — Phase 10, research only, nothing installed. The
-  three unclaimed wins I would rank first: **Shopify Theme Check** (a `.theme-check.yml` already
-  exists and is unused — the theme half of this repository has no linting at all), **`py-spy`** on
-  the fast lane, and **Semgrep with a hand-picked ruleset** over the action/verification path.
-  Container sandboxing is blocked by the read-only `/usr` and is a host-level owner decision.
-
-Update policy, stated everywhere: *upstream update → security scan → diff → test → review → update
-manifest*. Nothing auto-updates.
+The sweep's `tool=… tier=AMBER/GREEN` log lines are the **local fixture harness on loopback**, not
+live API calls. The run also logged *"no elevenlabs_api_key in the Keychain"* and *"whisper-server
+is not running"* — **positive evidence that no live speech or external API call was possible or
+made**.
 
 ---
 
-## 9. Files changed
+*Everything from here down is the previous round's handoff, preserved verbatim in substance so it
+is not lost. Its "I" is that run, and its gate numbers are its own measurements.*
 
-Commit `9a27bc4` — **8 files, all text**:
+## 3. What was asked
+
+Build a CROOKS Mobile Experience V1 candidate for representative iPhone/mobile widths, preserving
+product doctrine, safety/action semantics and existing Samsung/tablet behaviour. Evidence-driven
+workflow (BEFORE capture → implement → AFTER capture → interaction/a11y/regression/unit tests →
+diff and secret scan → commit → publish to a review branch, no merge). Attribute the known
+Split-control browser-gate finding precisely rather than rewriting behaviour around it.
+
+## 4. The candidate, and the failure found on re-measure
+
+The prior round inherited a substantially complete but **entirely uncommitted** candidate from an
+earlier run (HEAD was `9a27bc4`, the Builder Environment candidate). It re-ran the gates rather
+than trusting them, and its first full `pytest` returned **1 failed, 2826 passed**:
 
 ```
-M  .gitignore                                                    (+15 lines)
-A  crooks-assistant/DESIGN.md                                    19141 B
-A  crooks-assistant/docs/DEV_ENVIRONMENT.md
-A  crooks-assistant/docs/dev-environment/manifest.json           10785 B
-A  crooks-assistant/docs/dev-environment/CLAUDE_PROJECT_LAYOUT.md
-A  crooks-assistant/docs/dev-environment/LATER_CANDIDATES.md
-A  crooks-assistant/docs/dev-environment/BROWSER_GATE_FINDING.md
-A  crooks-assistant/scripts/dev_env.py                           10757 B
+FAILED tests/test_compose.py::test_the_hold_surface_is_not_over_the_composer
 ```
 
-`.gitignore`: added `.tooling/`, plus a comment on the existing `.claude/` line explaining the
-change Phase 8 would require. **No product source, no `web/`, no `app/`, no test was modified.**
+**The candidate broke it.** The test asserted the voice band's height as the literal string
+`height:var(--dock)`. The safe-area-token change makes it `height:calc(var(--dock) + var(--safe-b))`,
+so the assertion went stale. The parallel assertion in `tests/test_touch.py` **had** been updated
+for the same change; this one had not — an inconsistently-carried edit, not a second opinion about
+the layout.
 
-A `git add -An` dry run before committing confirmed exactly these 8 paths — no `.tooling/`, no
-`.venv/`, no `node_modules`, no Chromium, no `.deb`, no cache.
+**Flagged for review: the earlier run's own document reported the suite as passing. It did not.**
+Had the candidate been published unverified, a red suite would have reached review described as
+green.
 
-**`git status` after commit: clean (empty output).**
+The underlying safety invariant was verified **before** the test was touched. The test exists to
+prove the hold surface is a band along the bottom and never over the composer — that typing cannot
+sit under the voice surface. `.app` reserves `calc(var(--dock) + var(--safe-b))` for that band. The
+band used to be `--dock` tall with the inset taken *out* of it, so on a notched phone it was 34px
+**shorter** than its own reservation. The two are now one number: the composer still stops above
+the band on every device, and the strip of dead ground between them is gone. Where there is no
+inset — tablet, desktop, every viewport in `DESIGN.md` §13 but the phone — `--safe-b` is `0px` and
+the arithmetic is byte-for-byte the old behaviour. **The invariant is preserved and is now tighter.**
+
+The assertion was updated to match, and **a second one added**: that the band's height and `.app`'s
+reservation are the same expression. A brittle string equality that could drift silently is
+replaced by the pairing that actually carries the safety property. A sweep for the same class of
+miss across every changed value (`83827c`, `min-width:240px`, `padding:9px 0`, `88vh`, `26vh`,
+`min-height:32px`, `height:var(--dock)`, bare `env(safe-area-inset`, `hold-w:200px`) found **no
+other stale assertion**.
+
+### What changed in the UI, and why
+
+- **The dock asked for 476px of a 390px screen.** Orders sat at x=-29 and Products ended at x=419:
+  two of the four ways into the shop could not be reached with a thumb. The band cannot get wider,
+  so on a phone the **arrangement** changes rather than the sizes — the same 112px becomes two rows,
+  four areas above and the hold across the whole of the bottom. The NAVIGATION/VOICE separation §8
+  requires is then vertical, bought with geometry exactly as before.
+- **`.talk-label` kept `min-width:240px`** in a slot the phone query narrowed to 200px, so the voice
+  layer was painted 10px over the Inbox and Sales icons — layer 5 over layer 3, D-1's own rule and
+  D-1's own shape. A width is now **bought from its slot and never asserted over it**, which removes
+  the mechanism rather than the symptom.
+- **The four safe-area insets became tokens** — both to fix the band/reservation mismatch above, and
+  because `env()` cannot be set from a test, which is why nothing here had ever checked a notch or a
+  home indicator. A custom property can, and the new gate does.
+- Not phone-specific, found at every viewport: `.rows.tight .row` used a padding shorthand that
+  reset the 26px reserved for the chevron, so "1h ago" read "1h ag›" on every tight list; `--ink-3`
+  measured 4.26:1 on a raised tile where AA wants 4.5; `.rail-more` was a 32px target in a product
+  whose floor is 44.
+
+## 5. Gate and evidence results
+
+| Gate | Result (prior round) | Re-confirmed by me? |
+|---|---|---|
+| Python suite (`pytest`, full) | 2827 passed, 4 skipped, 0 failed (22m30s) | **Yes** — 2821/8/2 deselected, 0 failed; totals reconcile to 2831 (§2.2) |
+| Full browser sweep (`run_checks`) | 714 checks, 0 failed, `ok=True` | **Yes — exact match**, 714 checks / 0 failed |
+| Split reproduction | 38 checks, 0 failed | **Yes** — all 11 PATH-4 checks pass in my full sweep, incl. step 2 |
+| Interactive collisions @ 601×889, 800×1280, 390×844, 375×667 | 0 | **Yes** — 0 at all four in my sweep |
+| Secret scan | clean | **Yes** — independently re-scanned (§2) |
+| axe-core accessibility figures | 44 → 40, contrast 15 → 0 | **No** — relayed only, see below |
+
+The sweep grew from 593 to 714 checks — `mobile.js` joining `run_checks`' default tuple. Its check
+names are **guarded** in `tests/test_browser.py`, so a run that quietly stops measuring a viewport
+is a **failure** rather than a smaller green number. That guard is the most valuable structural part
+of this candidate.
+
+**BEFORE → AFTER, the product's own collision engine** (8 surfaces):
+
+| Viewport | Collisions | Off-viewport |
+|---|---|---|
+| 390 × 844 @3 | **32 → 0** | 75 → 9 |
+| 375 × 667 @2 | **32 → 0** | 83 → 9 |
+| 601 × 889 @1.33 | 0 → 0 | 6 → 6 |
+| 800 × 1280 @1 | 0 → 0 | 0 → 0 |
+| 1280 × 800 @1 | 0 → 0 | 0 → 0 |
+
+The tablet and desktop columns are unchanged — the non-regression claim stated as a number.
+BEFORE/AFTER screenshots at all four device viewports are committed under `docs/screens/mobile-v1/`.
+
+**Accessibility:** axe-core 4.11.1, 4 viewports × 3 surfaces: 44 → 40 violation entries,
+`color-contrast` **15 nodes → 0**. The four remaining violation classes are identical at all four
+viewports, so none is phone-specific and none is a regression; each is carried in
+`docs/MOBILE_EXPERIENCE_V1.md` §6 with a proposed fix. **This evidence is two rounds removed from
+direct measurement** — the prior round relayed it rather than reproducing it, and so do I.
+
+## 6. The Split-control finding — attributed, and explicitly NOT fixed
+
+`BROWSER_GATE_FINDING.md` recorded one deterministic failure: a 95 ms press on Split not landing in
+`PATH 4-split-two-halves-independent · step 2`.
+
+**On this tree it did not reproduce at all** — not in isolation (38/38) and not in the full sweep
+(714/714), where it had previously been deterministic. All nine steps of the path passed.
+
+Combined with the attribution work (the chip is the top element at the press coordinates; the touch
+machine classifies the press as `{control:true, voice:false, approval:false, scroll:false}`; the
+rect is stable across 500 ms; press durations of 95–400 ms all land in isolation):
+
+> A hit-target, layering or `pointer-events` defect is a property of **the tree**, and the tree did
+> not change between the run that failed and the run that passed. A settle budget under CPU
+> contention is a property of **the machine**, and that did change.
+
+Attribution: `hop()`'s 4.3 s settle budget in `scripts/browser/clickpath.js`. **Not** a UI
+hit-target/layering/pointer-events defect, and **not** D-1 returning.
+
+**No fix is included, and the green must not be read as a repair.** The flake is still in the
+harness and will return on a loaded machine. Widening a harness timeout changes what the gate
+measures and belongs in its own reviewed step. **The browser gate was not weakened, skipped or made
+more permissive.**
+
+## 7. Safety — every constraint verified intact
+
+- `writes_enabled` remains `False` — **re-verified by me this round**, and not in the diff.
+- `CROOKS_WRITES_LOCAL_OWNER` unchanged; FastAPI loopback binding unchanged — **both re-verified**.
+  Port 8000 not exposed.
+- Proposal / action / verification / arming / expiry / authorization / speech-vs-screen semantics:
+  **not one line touched** — re-verified against the committed file list.
+- **No live Shopify, Gmail or ElevenLabs call, and no external mutation of any kind.** All evidence
+  is the fixture backend on loopback.
+- V2 not begun. UI not redesigned. Mac deployment and rollback path untouched. `/root/.claude`
+  untouched and still writable. **No secret value read, printed or committed** — re-scanned by me.
+- **Production untouched:** `/opt/crooks-os/crooks-assistant` on
+  `claude/linux-prod-migration-production` @ `1cf3a0f`, clean — **re-verified read-only this round**.
+  Nothing merged, nothing deployed, nothing auto-merged.
+- Builder worktree clean at `564ef34`; the only remote ref ever written was
+  `claude/mobile-experience-v1-review`. **I wrote no ref and made no commit this round.**
+
+## 8. Decisions and questions needing owner review
+
+1. **The keyboard trade on a phone** (candidate doc §7) — *the item genuinely needing owner
+   judgement.* While the keyboard is open on a phone **and only then**, the four dock areas, the
+   Split invitation and the trail's entity chips stand down. Assistant / Back / Previous / Next and
+   the full-width 48px hold stay. Everything returns when the keyboard closes; nothing is disabled
+   or made unreachable. Forced by arithmetic: 375×313 with the keyboard up is 244px of fixed
+   furniture on a 313px screen, and without the trade the deck measured **20px**. The precedent is
+   the product's own — the halves' band already does this in the same query, for the same reason.
+   **But it is a decision about what the owner can reach while composing, and it should be his.**
+2. **`user-scalable=no` stays** (§6.1). axe flags it (WCAG 1.4.4) at every viewport. It is disabled
+   deliberately: two-finger spread *divides the orb* and pinch *merges the halves*, so browser zoom
+   would compete with the product's own gesture on the same surface, over a write-capable
+   workspace. Reported rather than silently resolved, per the authority order. **Owner decision.**
+3. **The prior round fixed a failing test rather than stopping** (§4). Judged in scope — the inbox
+   asks for the smallest safe fix with proof and for failures not to be hidden — but it is a test
+   assertion authored by an agent and warrants a reviewer's eye.
+4. Three pre-existing, non-phone-specific accessibility items are deferred with proposed fixes in
+   §6.2–6.4 (`<li role="button">`, the card tab strip's missing overflow fade, no `<h1>`). Each
+   would change shared DOM or render paths and belongs in its own pass with its own gate run.
+
+**No blockers were hit this round.** Nothing required owner approval to reach this point. **Nothing
+was blocked by my permission layer, no permission was widened, and no workaround was sought.**
+
+## 9. Exact proposed next step
+
+1. **First, decide whether the duplicate dispatch needs fixing at the watcher level.** This round
+   fired on an inbox SHA that had already been processed, because the prior round's outbox was
+   written but never published. If the watcher re-dispatches whenever an outbox publish does not
+   land, an unattended round could redo completed work. **Suggested guard: have the watcher skip
+   dispatch when the working-tree outbox already records the incoming inbox SHA.** This is the one
+   new finding of this round.
+2. **Then review `claude/mobile-experience-v1-review` @ `564ef34`.** Suggested order:
+   `crooks-assistant/docs/MOBILE_EXPERIENCE_V1.md` → the `web/style.css` diff (every rule carries
+   the measurement that justifies it) → §4 above for the changed test.
+   **Both primary gates are independently green as of this round (§2.2)** — the candidate does not
+   need re-gating before review. If you do re-run, apply
+   `eval "$(.venv/bin/python scripts/dev_env.py env)"` first (§2.1), or the browser-gated tests
+   will silently skip rather than run.
+   **The one piece of deliverable evidence still unverified by anyone but its original author is
+   the axe-core accessibility result** (§5). If a reviewer wants it confirmed, that is the gap.
+3. **Two owner decisions are needed before merge can be considered:** the keyboard trade (§8.1) and
+   `user-scalable=no` (§8.2).
+4. **Best next work item, as its own round:** fix the `clickpath.js` settle-budget flake (§6). It is
+   demonstrably load-dependent rather than deterministic, and while it remains, every full-sweep
+   result on a loaded machine is ambiguous — which is adjacent to how a red suite nearly reached
+   review as green. Suggested shape: make `hop()`'s settle wait on an observable post-fork state
+   change rather than a fixed 4.3 s budget, so the gate measures the product rather than the
+   machine. That changes what the gate measures and must be reviewed on its own terms.
 
 ---
 
-## 10. Safety, service and server state
-
-| Constraint | State |
-|---|---|
-| `writes_enabled` | **false** — unchanged |
-| `CROOKS_WRITES_LOCAL_OWNER` | **false** — unchanged |
-| FastAPI binding | unchanged; **nothing listening on 8000** |
-| Port 8000 public | no. Listeners are sshd:22, systemd-resolved, one Tailscale socket |
-| Proposal / action / verification semantics | **untouched** — no app code changed |
-| Live Shopify / Gmail / ElevenLabs | **none.** The gate ran against the fixture world on loopback |
-| V2 | not begun |
-| UI | **not redesigned** — `web/` is byte-identical |
-| Mac deployment / rollback path | untouched |
-| `/root/.claude` | writable, unchanged (`settings.json` still `{"theme":"dark"}`) |
-| Secret values printed or committed | **none** |
-| `crooks-assistant.service` | **not-found / inactive** — not installed, not started |
-| Tailscale | **unchanged** — `status` was read only |
-| `/usr` | **untouched, still read-only** |
-
-**Production checkout `/opt/crooks-os`:** branch `claude/crooks-assistant-build-lgxlau`, HEAD
-`e43aecd`. **Its reflog contains only the original `clone`** — HEAD never moved, which proves no
-checkout, switch or reset by this run. It carries pre-existing uncommitted Linux-deployment work
-(`app/secrets/linux_store.py`, `deploy/`, `scripts/install_systemd.py`, `docs/DEPLOY_LINUX.md`, …)
-that I did not touch. The remote production branch is still `e43aecd`.
-
-**Secret scanning.** Gitleaks over the whole builder tree: 6 hits — 1 inside the downloaded
-Chromium (gitignored, never committed) and 5 pre-existing in `tests/test_tts.py`,
-`tests/test_scribe.py` (×2), `tests/test_observability.py`,
-`tests/test_observability_redaction.py`. All five are **unmodified from HEAD** (confirmed by
-`git status`) and are test fixtures. Gitleaks over **my candidate files alone: 0 findings.** No
-secret value appears anywhere in this outbox.
-
-**Disk:** 7.1 G → 12 G used of 75 G (61 G free). Attribution: `.tooling` 1.8 G (browsers 924 M, bin
-302 M, uv-tools 218 M, sysroot 218 M, node 92 M), `.venv` 633 M, plus ~230 M of `/tmp` clones,
-downloads and apt cache. Everything inside the worktree is gitignored.
-
-**No browser process remains** (`ps` confirmed after the runs).
-
----
-
-## 11. ⚠ Blocked — needs your decision
-
-### 11.1 My permission layer refused `.claude/` (Phases 3 and 8)
-
-`mkdir /opt/crooks-builder/.claude/rules` was refused with:
-`"Claude requested permissions to edit /opt/crooks-builder/.claude which is a sensitive file."`
-
-Per my operating rules I **did not widen permissions and did not route around it** — I did not
-retry with a different tool, and I did not stage skill payloads elsewhere for a human to copy in.
-
-**Consequently NOT done:**
-- No project `CLAUDE.md`, no `.claude/rules/`, no hooks, no specialist-agent slots.
-- **No skill was installed** — including the four that cleared the gate (`frontend-design`,
-  `web-interface-guidelines` content, `redesign-skill`, `image-to-code-skill`).
-
-**Delivered instead:** `docs/dev-environment/CLAUDE_PROJECT_LAYOUT.md` — the complete proposed
-layout; the exact `CLAUDE.md` text (short, pointers only); what each of the six rule files carries;
-four conservative **read-only** hooks (targeted ruff / shellcheck / biome-without-apply on the
-changed file only, and gitleaks blocking before publication — never the full suite, never anything
-that mutates source, never anything that reaches the network on an edit); the four agent slots; and
-the exact vendoring commands with pinned commits and the "never run `install.sh`" warning. It is
-applicable by a human in one reviewed step.
-
-It also flags a prerequisite: **`.gitignore` currently ignores `.claude/`**, and git cannot
-re-include a file inside an excluded *directory*, so negations are dead until the trailing slash
-goes. Adopting the layout needs that line changed to `.claude/*` plus explicit negations. I left it
-as it was, since the configuration was not installed — the diff should reflect only what was
-actually delivered.
-
-### 11.2 Other items needing your approval
-
-- **Installing the 10 Chromium OS packages properly** (needs a writable `/usr`). Exact command is
-  in the manifest; **not run**. The local sysroot works, so this is tidiness, not a blocker.
-- **`impeccable`** — needs a dedicated review of 547 KB of bundled JS before any install, plus a
-  decision on its `PRODUCT.md` and its source-editing sub-agent.
-- **Disposable container sandboxing** for future autonomous workers — blocked by the read-only
-  `/usr` and a host-level decision.
-
----
-
-## 12. Decisions I made (all reversible — challenge any of them)
-
-1. **Vendoring policy over installer policy** for `web-interface-guidelines`: content is pinnable,
-   `install.sh` is not.
-2. **Used `create-design-md`'s methodology without installing it**, and did **not** adopt its
-   `@google/design.md` frontmatter schema (unvalidatable offline, and CROOKS needs its own section
-   set). The inbox's section list won.
-3. **`webapp-testing` rejected rather than partially installed** — subsetting upstream breaks the
-   pinning claim, and CROOKS's harness is better anyway.
-4. **xdist recommended but not made the default** (§7).
-5. **Biome and Pyright advisory, with no baseline committed** — a warning-heavy tool is not a gate.
-6. **Deleted ast-grep's bundled `sg` alias** — from a PATH prepend it would shadow `/usr/bin/sg`
-   (`newgrp`).
-7. **Set a repo-local git identity** (`Claude <noreply@anthropic.com>`, matching the existing commit
-   convention) because the commit would not otherwise proceed. Repo-local, **not** `--global`.
-8. **Named the Vercel repository correctly** rather than installing a same-named lookalike (§4.2).
-
----
-
-## 13. Recommended next step
-
-**Apply the Phase 8 configuration and install the four cleared skills — as a human-run step, since
-my permission layer refuses `.claude/`.**
-
-In the builder worktree, on `claude/bridge-builder`:
-
-1. Change `.gitignore`'s `.claude/` to `.claude/*` with the three negations
-   (`CLAUDE_PROJECT_LAYOUT.md` §0).
-2. Create `CLAUDE.md` and `.claude/rules/` from §2–3 of that file.
-3. Vendor the four cleared skills at their pinned commits per §6 — **content only for
-   `web-interface-guidelines`; never run its `install.sh`**.
-4. Re-run the gate on what actually landed:
-   `skillspector scan .claude/skills/<name> --no-llm --format json --output .tooling/scans/<name>.json`
-5. `python3 crooks-assistant/scripts/dev_env.py doctor` to confirm the environment still reports
-   clean.
-
-**In parallel and independently: attribute the Split failure** (§6) using the procedure in
-`BROWSER_GATE_FINDING.md` — `elementFromPoint` at the press coordinates, then vary the press
-duration around 95 ms. It sits in the bug class that cost 63 taps in a single evening, and it is
-worth knowing whether it is a live defect before more is built on this tree.
-
-**Do not merge `claude/builder-environment-review`.** It is published for review only.
-
----
-
-*Builder `claude/bridge-builder` @ `9a27bc441adad1e98e8a9ca257d1883246ee7eec`, tree clean.
-Review branch `claude/builder-environment-review` pushed and verified at the same SHA, not merged.
-Production branch `claude/crooks-assistant-build-lgxlau` @ `e43aecd`, untouched.
-Inbox `607b607e54eb194b81d708dfbc7bd744c2e8cd18` processed.*
+*Inbox SHA processed: `24b713cce3d0e8c9ede3185ebef78cc107ece507` — already processed by the prior
+run; this round verified rather than re-executed. Candidate `564ef34` published to
+`claude/mobile-experience-v1-review`; not merged, not deployed. Production untouched; writes stay
+disabled; no live API was called; no secret was read, printed or committed. No commit, no push and
+no ref write was made by this round.*
