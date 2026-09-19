@@ -48,6 +48,11 @@ Environment=CROOKS_BRIDGE_BACKOFF_BASE_S=60
 Environment=CROOKS_BRIDGE_BACKOFF_MAX_S=900
 Environment=CROOKS_BRIDGE_CLAUDE_TIMEOUT_S=7200
 
+# Deterministic model selection for unattended runs. Do not inherit a mutable Claude Code/account
+# default. The future Engineering Orchestrator may route models per task; this watcher does not.
+Environment=CROOKS_BRIDGE_CLAUDE_MODEL=claude-fable-5-1
+Environment=CROOKS_BRIDGE_CLAUDE_EFFORT=high
+
 # What Claude may do when nobody is at the keyboard. acceptEdits plus an explicit tool list:
 # it can read, write and run commands in the checkout, which is what carrying out an inbox
 # takes. It is NOT bypassPermissions. Raising this is an owner decision, not a default.
