@@ -7,4 +7,15 @@ node_modules/
 # Claude Code's own scaffolding: the agent worktrees it creates while working are checkouts of
 # THIS repository living inside it. Committing them would put a second copy of the tree into
 # the branch; they are removed when the work that made them is done.
+#
+# NOTE: this also excludes versioned project configuration (`.claude/rules/`, project skills).
+# Adopting the Phase 8 layout in docs/dev-environment/CLAUDE_PROJECT_LAYOUT.md requires changing
+# this line to `.claude/*` plus explicit negations — git cannot re-include a file inside an
+# excluded DIRECTORY, so the negations are dead until the trailing slash goes. Left unchanged
+# here because that configuration was not installed in this round.
 .claude/
+
+# The builder's pinned tool environment: node_modules, a Chromium, extracted .deb payloads,
+# an isolated uv tool env and scan output. Hundreds of megabytes of downloaded binaries,
+# reproducible from crooks-assistant/docs/dev-environment/manifest.json. Never committed.
+.tooling/
