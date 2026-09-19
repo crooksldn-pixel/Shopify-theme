@@ -1,580 +1,371 @@
 # CLAUDE OUTBOX — latest handoff only
 
-## 2026-09-19T14:01:06Z — ENV-REPRO-001 continuation: BE-04 completed under the approved fetch boundary
+## 2026-09-19T15:52Z — Verification: deterministic Claude model pin for the bridge watcher
 
-**Inbox consumed:** `bridge/chatgpt-inbox.md`, blob `ccbc8d88c8277d4b5221eaf46165b0daa7db1a5d`
-("2026-09-19 — Owner approval: bounded package fetching + BE-04 completion"). I have consumed it
-and treated it as the sole instructions for this round. The SHA is recorded here so the same
-instructions are never executed twice.
+**Inbox consumed:** yes. Blob SHA processed: `de3573bec8c992c71b21378122fc44132c63c8b5`
+(`bridge/chatgpt-inbox.md`, heading "2026-09-19 — Verify deterministic Claude model pin for bridge
+watcher"). These instructions are now recorded as executed and must not be run again.
 
-**Candidate:** `295e483b4f9adcdc3fb58bfb3aa025e2e3f4779b`
-**Base:** `326c150b778afdc2b5881b2f7ac97e140e476eab` (the previous repair candidate, unmodified)
-**Review branch:** `claude/builder-environment-repair-review` — **PUBLISHED**, read back from the
-remote as `295e483b4f9adcdc3fb58bfb3aa025e2e3f4779b`. Not merged anywhere, not deployed.
-
-**I do not claim acceptance.** This worker implemented the change and therefore does not certify
-it. What is claimed is stated below with the command that produced it.
-
-**Headline:** BE-04's blocked part is closed. The environment was rebuilt **from a checkout
-containing no `.tooling/` and no `.venv/`**, twice, with both integrity gates enforced, and the
-SkillSpector provenance gap is closed as a real check rather than an advisory.
+**Verdict up front:** the candidate is **correct and suitable for a separate, owner-approved
+installation step**. All eight required review points pass. One test in the suite fails, and I
+determined it is **host-state coupling, not a defect in the candidate** — evidence in §5. Nothing
+was installed, staged into the live runtime, started, stopped or restarted.
 
 ---
 
 ## 1. What was asked
 
-Continue ENV-REPRO-001 only, from `326c150`, under a newly granted owner approval for bounded
-read-only package fetching. Specifically: (1) pin release tags and exact asset URLs in
-repository-controlled inputs; (2) make the reconstruction plan fully executable with integrity
-checks; (3) execute the complete reconstruction from a genuinely fresh/disposable checkout;
-(4) run it a second time and prove the intended repeatable behaviour; (5) close the SkillSpector
-provenance gap if it fits the bounded scope; (6) add/adjust regression tests. Then re-run the
-relevant gates against the **exact final candidate**, because the candidate changed and prior
-candidate-bound evidence is invalid for the changed tree. Update the contract-trial record with
-what this continuation genuinely exercises, claiming nothing that did not occur, and preserving
-CG-01…CG-05. Publish, read the remote identity back, replace the outbox, stop.
+Independently review and verify (not implement) branch
+`chatgpt/bridge-fable-5-1-pin-2026-09-19`, which pins the single-worker bridge watcher to Claude
+Fable 5.1 at high effort. Confirm eight specific properties, run the watcher test suite against the
+exact candidate, confirm the installed Claude CLI exposes `--model`/`--effort`, secret-scan the
+diff, and report — explicitly **without** installing, staging, or touching the running watcher.
 
----
+## 2. Identities (all verified against the remote, not assumed)
 
-## 2. Builder state found on arrival (not where a previous run left it)
-
-| | |
+| Item | Value |
 |---|---|
-| Worktree | `/opt/crooks-builder` |
-| Branch on arrival | `claude/builder-environment-repair` |
-| HEAD on arrival | `326c150b778afdc2b5881b2f7ac97e140e476eab` — the exact candidate the inbox names |
-| Working tree on arrival | **clean**, no untracked files |
-| Stale local branch | `claude/bridge-builder` @ `9a27bc4`, tracking a remote ref that no longer exists. Left alone, as last round. |
-| Remote check | `claude/builder-environment-repair-review` was at `326c150` and `claude/builder-environment-review` at `9a27bc4`, both as the previous handoff said |
+| Candidate branch | `chatgpt/bridge-fable-5-1-pin-2026-09-19` |
+| Candidate HEAD (remote) | `7de58555ee954e8561bb0f3bb6d7283715517b62` |
+| Expected HEAD (from inbox) | `7de58555ee954e8561bb0f3bb6d7283715517b62` |
+| Identity match | **YES — no mismatch, review proceeded** |
+| Base branch | `claude/crooks-bridge-watcher-review` |
+| Base HEAD | `3d1f65df2d93f24ab75c50d5774eacb47b31df43` |
+| Relationship | `merge-base == base`; candidate is a clean 5-commit fast-forward, no merge, no rebase drift |
 
-The watcher's own brief describes the builder worktree as branch `claude/bridge-builder`; it is
-not, and has not been for two rounds. Noted so nobody reconciles it by resetting.
+Candidate was **not mutated**. Re-checked at end of run: remote ref still
+`7de58555ee954e8561bb0f3bb6d7283715517b62`; verification workspace `git status` empty.
 
-**Network was verified reachable before any work was planned** (`github.com` release download →
-302, `registry.npmjs.org` → 200). The previous round's blocker was a missing *approval*, not a
-missing *network*.
+**Clean verification workspace (as required):** a fresh `git clone` of the repo at
+`/tmp/watcher-verify`, checked out detached at the candidate SHA, `git status` empty before and
+after. A second clean clone at `/tmp/watcher-base` pinned to the base SHA was used only for the
+regression comparison in §5. No existing checkout (`/opt/crooks-ai-bridge`, `/opt/crooks-builder`,
+`/opt/crooks-watcher-review`, `/opt/crooks-os`) was modified, and no git worktree was registered
+against any of them.
 
----
-
-## 3. What was found
-
-### 3.1 The previous round's central hedge was true, and checking it changed what it is worth
-
-`326c150` committed `binaries.sha256` and said plainly that those digests were **observed** off
-this builder and were **not** an upstream attestation. That hedge was honest. It was also
-checkable, and the approval made checking it possible.
-
-All eight pinned release assets were fetched from their upstreams and extracted:
+Commits in `base..candidate`:
 
 ```
-extracted binary                     committed in binaries.sha256
-  shellcheck  4da528ddb3a4d1b7…  ==  4da528ddb3a4d1b7…
-  shfmt       d9fbb2a9c33d13f4…  ==  d9fbb2a9c33d13f4…      (raw asset, no extraction)
-  gitleaks    88f91962aa2f93ac…  ==  88f91962aa2f93ac…
-  fd          16791ab3d5c2f7ce…  ==  16791ab3d5c2f7ce…
-  ast-grep    7df43a8878de90c9…  ==  7df43a8878de90c9…
-  hyperfine   a298729daf3b6701…  ==  a298729daf3b6701…
-  trivy       d89bcc6510a267f1…  ==  d89bcc6510a267f1…
-  uv          83f28650272b5543…  ==  83f28650272b5543…
-  uvx         2d14adbd124a9f4e…  ==  2d14adbd124a9f4e…
-                                     9 of 9 reproduced exactly
+7de5855 watcher installer: verify model and effort CLI support
+c714696 watcher docs: document deterministic Claude model
+5b88341 watcher tests: enforce Fable 5.1 high pin
+36aefe3 watcher: make model and effort explicit in service
+9e457b2 watcher: pin Claude Fable 5.1 high effort
 ```
 
-So the observation and the upstream releases agree: what is installed on this builder **is** what
-those releases contain. That is a materially stronger statement than `326c150` was entitled to
-make, and it is now recorded in the header of `binaries.sha256` itself.
-
-Separately, four of the eight projects publish their own checksum file. The downloaded assets were
-compared with them and matched: **shfmt, gitleaks, trivy, uv**. The other four — **shellcheck, fd,
-ast-grep, hyperfine** — publish none. That gap is real and is now printed by `doctor` as a single
-advisory naming exactly those four (§5.4).
-
-### 3.2 The SkillSpector gap was a property of the install command, not of the universe
-
-`326c150` reported the commit pin as undecidable because `uv tool install --from <local clone>`
-records a filesystem path and no revision. Confirmed on the builder — its
-`direct_url.json` reads `{"url":"file:///tmp/_skills/skillspector","dir_info":{}}`.
-
-Installing from `git+<upstream>@<commit>` instead makes uv write PEP 610 `vcs_info.commit_id`. It
-is the same package from the same source at the same revision; only the provenance record differs.
-The gap was closeable inside the bounded scope and is closed.
-
-### 3.3 One thing the previous round's step 4 would have got wrong if guessed
-
-`ast-grep`'s release asset contains an `sg` binary alongside `ast-grep`, and `/usr/bin/sg` is
-`newgrp`. `326c150`'s manifest policy said `sg` "is DELETED on install". A delete only works if
-nobody forgets it. It is now simply never extracted into `.tooling/bin` — verified absent in the
-reconstructed tree (§5.2).
-
----
-
-## 4. What was changed
-
-7 files, **+768 / −85**. No application, UI, action, proposal or configuration file is touched.
-Verified by filter: every changed path is `scripts/dev_env.py`, `tests/test_dev_env.py`,
-`docs/DEV_ENVIRONMENT.md` or `docs/dev-environment/` — the filter returned **none** outside that.
-
-| File | | |
-|---|---|---|
-| `crooks-assistant/scripts/dev_env.py` | M | +199/−… |
-| `crooks-assistant/tests/test_dev_env.py` | M | +282/−… |
-| `crooks-assistant/docs/DEV_ENVIRONMENT.md` | M | +167/−… |
-| `crooks-assistant/docs/dev-environment/manifest.json` | M | +85/−… |
-| `crooks-assistant/docs/dev-environment/binary-assets.sha256` | **A** | 28 |
-| `crooks-assistant/docs/dev-environment/binaries.sha256` | M | +15/−… (header only; no digest changed) |
-| `crooks-assistant/docs/dev-environment/CONTRACT_TRIAL_ENV_REPRO_001.md` | M | +77 |
-
-### 4.1 Pinned, not derived
-
-Every `binaries` entry now carries `release_tag`, `asset`, `asset_url`, `archive` and `install`.
-`install` maps the name that lands in `.tooling/bin` to the member path inside the asset, which is
-how one asset (uv) produces two binaries and how `sg` produces none.
-
-They are written down rather than computed. Deriving eight GitHub URLs from a naming convention at
-run time would put the strings that decide what executes on this machine outside review — BE-01 one
-layer down, which is the reason the previous round refused to guess them.
-
-### 4.2 The approved boundary is compiled, not promised
-
-`fetch_spec()` requires every asset URL to be exactly
+## 3. Exact changed-file scope
 
 ```
-<upstream>/releases/download/<release_tag>/<asset>
+ watcher/README.md                             | 11 +++++++++++
+ watcher/bin/crooks-bridge-watcher             |  9 +++++++++
+ watcher/install.sh                            | 13 +++++++++++--
+ watcher/systemd/crooks-bridge-watcher.service |  5 +++++
+ watcher/tests/run-tests.sh                    |  4 ++++
+ 5 files changed, 40 insertions(+), 2 deletions(-)
 ```
 
-built from that same manifest entry's own fields, and raises `ManifestError` naming the tool
-otherwise — **no fetch step is emitted at all**. A manifest edit therefore cannot move a fetch to a
-mirror, to another project, to another tag, to another asset, or to a non-release path.
-`test_be04_an_asset_url_outside_the_tools_own_upstream_is_refused` walks all five cases.
+All five are modifications; no files added, deleted, renamed or moved. Scope is confined to
+`watcher/` — **no CROOKS production application file, no Tailscale, secrets, deployment or
+permission file is touched.**
 
-### 4.3 Integrity twice, and the order is the substance
-
-```
-curl -fsSL --proto '=https' --tlsv1.2   ->  .tooling/downloads/
-( cd .tooling/downloads && sha256sum -c …/binary-assets.sha256 )   <- BEFORE anything unpacks
-tar / unzip / install -m 755            ->  .tooling/bin/
-sha256sum -c …/binaries.sha256                                     <- AFTER install
-```
-
-`binary-assets.sha256` is new and committed: the eight asset digests. Verifying an archive *after*
-extracting it checks the wrong thing, because `tar` and `unzip` have already interpreted the bytes.
-`test_be04_downloads_are_verified_before_anything_unpacks_them` asserts the **ordering**, that the
-install gate is the last word of step 4, and that every fetch carries `--proto '=https'`,
-`--tlsv1.2` and `-fsSL`.
-
-`.tooling/downloads` is gitignored — confirmed by `git check-ignore` (`.gitignore:21:.tooling/`) —
-so a download can never become a committed file by accident.
-
-### 4.4 The advisory became a decision
-
-Plan step 6 now installs from the pinned git requirement, and `doctor` reads the PEP 610 record.
-Four outcomes, one of them `ok`: matching commit → `ok`; different commit → **FAIL**, both shown;
-`dir_info` (local-path install) → **FAIL**, "records no revision", with the fixing command; no
-`direct_url.json` → **FAIL**.
-
-### 4.5 Step 0
-
-The plan now checks the host tools it assumes (`curl tar unzip npm node apt-get dpkg-deb git
-python3 make`) inside a subshell, so a missing `unzip` is a named failure at the start rather than
-a confusing one at step 4.
-
----
-
-## 5. Evidence — every item below was produced at candidate `295e483`
-
-### 5.1 The reconstruction, executed — this is the item that was BLOCKED
-
-Tree: `git archive 295e483 | tar -x -C /tmp/recon-295e483`. **No `.tooling/`, no `.venv/`**
-(both confirmed absent before starting).
+The entire diff contains exactly **two deleted lines**, both in `install.sh`:
 
 ```
-$ python3 crooks-assistant/scripts/dev_env.py plan          -> exit 0
-      every input the plan reads:  8 present, MISSING: none
-      "Every step is EXECUTABLE."   (no BLOCKED line anywhere in the output)
-
-  the printed plan was extracted verbatim into a shell script — 43 commands — and run:
-
-$ /bin/sh plan.sh                                   RUN 1 -> exit 0
-$ python3 …/dev_env.py doctor                              -> exit 0, "the pinned environment"
-$ /bin/sh plan.sh                                   RUN 2 -> exit 0
-$ python3 …/dev_env.py doctor                              -> exit 0, "the pinned environment"
+-    if command -v claude >/dev/null 2>&1; then ok "claude CLI $(command -v claude)"
+-    else bad "the claude CLI is not on PATH"; problems=$((problems+1)); fi
 ```
 
-**Run 2 vs run 1 — environment fingerprint `diff` → IDENTICAL**, over: sha256 of every file in
-`.tooling/bin`, every installed node package name+version, the `.tooling/browsers` contents, the
-89-deb inventory, the extracted sysroot library listing, the SkillSpector `direct_url.json`, and
-the venv interpreter version. **`doctor` transcript run 1 vs run 2 — `diff` → IDENTICAL.**
+These are the collapsed one-line CLI-presence check, re-expanded into a multi-line block that
+preserves both original branches verbatim and adds the two new flag checks inside the `then` arm.
+Semantics of the pre-existing check are unchanged. `watcher/bin/crooks-bridge-watcher` and the
+systemd unit are **purely additive** (`9/0` and `5/0` insertions/deletions).
 
-Idempotence is claimed in the precise sense the docs now state: *the second run ends in the same
-environment*. It is **not** claimed that the second run performs no work — `npm ci` rebuilds from
-the lock, `uv tool install` replaces the tool venv, and the log shows both happening.
+## 4. The eight required review points
 
-Integrity gates actually fired, both runs, **106 `: OK` lines each**:
+**1. Unattended launches explicitly pass `--model claude-fable-5-1` — PASS.**
+`run_claude()` in `watcher/bin/crooks-bridge-watcher` now passes `--model "$CLAUDE_MODEL"` in the
+same argv as `--print`, with `CLAUDE_MODEL="${CROOKS_BRIDGE_CLAUDE_MODEL:-claude-fable-5-1}"`.
+This is the only Claude invocation path in the script. Confirmed empirically, not just by reading:
+the stubbed launch in the test suite records `--model claude-fable-5-1` in real argv (§5).
+
+**2. Unattended launches explicitly pass `--effort high` — PASS.**
+Same hunk: `--effort "$CLAUDE_EFFORT"`, default `high`. Also confirmed in recorded argv.
+
+**3. Systemd source records the same model/effort values — PASS.**
+`Environment=CROOKS_BRIDGE_CLAUDE_MODEL=claude-fable-5-1` and
+`Environment=CROOKS_BRIDGE_CLAUDE_EFFORT=high`. These match the script defaults exactly, so the
+unit and the script cannot disagree.
+
+**4. Overrideable only through the existing configuration boundary, no permission widening — PASS.**
+The two new variables use the identical `${CROOKS_BRIDGE_*:-default}` pattern already used by
+`CLAUDE_BIN`, `GH_BIN`, `GIT_BIN`, `CLAUDE_TIMEOUT_S`, `CLAUDE_PERMISSION_MODE` and
+`CLAUDE_ALLOWED_TOOLS`. No new mechanism, no config file, no CLI flag on the watcher itself. The
+unit declares **no `EnvironmentFile=` and no `PassEnvironment=`** (verified), so the only override
+surfaces are the root-owned unit (which already requires the owner-approved install path) and an
+explicit env var on a manual invocation — both pre-existing boundaries.
+
+Additional hardening I checked and can confirm: both values are **double-quoted** at the call site
+(`--model "$CLAUDE_MODEL"`). A malformed or hostile override such as
+`CROOKS_BRIDGE_CLAUDE_MODEL='x --dangerously-skip-permissions'` is therefore passed as a *single*
+argv element and rejected by the CLI as an invalid model name — it cannot word-split into an extra
+flag. The pin does not create an argument-injection path into the permission layer.
+
+**5. Status reports the selected model and effort — PASS.** Executed `status` from the candidate
+source (read-only). Actual output:
 
 ```
-sha256sum -c …/sysroot-packages.sha256   ->  89 × ": OK"
-sha256sum -c …/binary-assets.sha256      ->   8 × ": OK"   (before any extraction)
-sha256sum -c …/binaries.sha256           ->   9 × ": OK"   (after install)
+repo            crooksldn-pixel/Shopify-theme
+branch          crooks-ai-bridge
+model           claude-fable-5-1
+effort          high
+inbox           bridge/chatgpt-inbox.md
 ```
 
-What was contacted, and nothing else: `registry.npmjs.org` (`npm ci`, 8 packages),
-`cdn.playwright.dev` (Chromium 141.0.7390.37, build 1194), `mirror.hetzner.com` (89 `.deb`s),
-`github.com` release assets (8), PyPI (`pip install -e ".[dev]"` + 5 pinned builder-only packages),
-`github.com` (SkillSpector at `d162d9b3…`). **No credential of any kind was used or is needed.**
+(Incidental cross-check: the same run reported `remote now de3573bec8c992c71b21378122fc44132c63c8b5`,
+matching the inbox SHA this round is processing.)
 
-The reconstructed tree is at `/tmp/recon-295e483` (2.9 GB) if a reviewer wants to inspect it; it is
-disposable and nothing depends on it.
-
-### 5.2 The reconstructed environment, checked
-
-`doctor` in the reconstructed checkout, exit **0**, every line `ok` except one advisory:
+**6. Installer preflight fails closed without `--model`/`--effort` — PASS, verified by injection.**
+I did not merely read this branch; I forced it. With a stub `claude` on `PATH` whose `--help`
+advertises neither flag, preflight produced:
 
 ```
-binaries        shellcheck 0.11.0 · shfmt 3.12.0 · gitleaks 8.30.1 · fd 10.3.0 · ast-grep 0.40.0
-                hyperfine 1.20.0 · trivy 0.74.0 · uv 0.9.9
-sha256          9 artifacts match
-asset pins      8 assets, each pinned to its own upstream release
-advisory        ast-grep, fd, hyperfine, shellcheck publish no checksum file; their committed
-                asset digests are first-fetch observations, enforced but not attested
-node            playwright 1.56.1 · @axe-core/playwright 4.11.1 · axe-core 4.11.1 · biome 2.5.14
-chromium        141.0.7390.37        shared libs  0 not found
-venv            Python 3.12.3        + the 5 pinned builder-only packages
-skillspector    2.11.2
-skillspector commit   commit d162d9b343e5 recorded by uv at install (PEP 610 direct_url.json)
-experience.browser    AVAILABLE
+[ FAIL ] claude CLI does not expose --model; update Claude Code before installing
+[ FAIL ] claude CLI does not expose --effort; update Claude Code before installing
+2 problem(s). Fix them before installing.
+=== RC: 1 ===
 ```
 
-`.tooling/bin` in the reconstructed tree contains exactly: `ast-grep fd gitleaks hyperfine
-shellcheck shfmt skillspector trivy uv uvx`. **`sg` is absent.**
+Fail-closed is end-to-end, not advisory: `install.sh` line 195 runs `preflight || exit 1`, so a CLI
+lacking the flags aborts the install rather than installing a watcher that would silently drop the
+pin. The stub was removed immediately after the test.
 
-The recorded provenance, read off the reconstructed tree:
+**7. Tests actually assert the launch contract — PASS, and they assert it properly.**
+This was the point most worth scrutinising, because an assertion over static file text would prove
+nothing. It is not that. `t_the_prompt_carries_the_safety_contract` calls `watch --once` against a
+stub `claude` that records its real argv to `$STUB/claude_args`, and the two new assertions match
+`--model claude-fable-5-1` and `--effort high` against that **recorded argv of an actual watcher
+launch**. That is a genuine behavioural contract test. The unit-file assertions in
+`t_the_unit_does_not_grant_write_access_to_production` are separate and correctly scoped to static
+unit text. Both new argv assertions pass.
 
-```json
-{"url":"https://github.com/NVIDIA/skillspector","vcs_info":{"vcs":"git",
- "commit_id":"d162d9b343e559be13df8ebba093df3bc9d58c90",
- "requested_revision":"d162d9b343e559be13df8ebba093df3bc9d58c90"}}
+**8. No safety, isolation, publication, locking, permission, production-read-only or owner-gating
+contract weakened — PASS.**
+Only two lines were deleted in the whole diff (§3) and neither is safety-bearing. Counts of every
+safety-critical directive are byte-for-byte identical between base and candidate:
+`CROOKS_BRIDGE_PERMISSION_MODE` 1→1, `CROOKS_BRIDGE_ALLOWED_TOOLS` 1→1, `ReadOnlyPaths` 1→1,
+`ReadWritePaths` 3→3, `ProtectSystem` 3→3, `NoNewPrivileges` 1→1, `bypassPermissions` 1→1,
+`dangerously` 0→0. The existing negative assertions (`no bypassPermissions`, `no dangerous skip
+flag`, `the prompt is not passed as a positional argument`, prompt delivered on stdin) all still
+pass. `acceptEdits` is unchanged; the allowed-tool list is unchanged.
+
+## 5. Full watcher test suite result
+
+Run against the exact candidate tree (`/tmp/watcher-verify/watcher`, HEAD `7de5855`):
+
+```
+121 passed, 1 FAILED:
+  - a freshly staged runtime verifies
 ```
 
-### 5.3 Gates, re-run against the exact final candidate
+Same suite against the base (`/tmp/watcher-base/watcher`, HEAD `3d1f65d`):
 
-The inbox required this because the candidate changed. It was honoured literally: the suite was
-run once before committing, the tree was then committed unchanged, and the numbers below come from
-a **second run inside the reconstructed checkout of `295e483`** — so the suite result is bound both
-to the candidate SHA and to the from-scratch environment.
+```
+118 passed, 0 failed.
+```
 
-| Gate | Where | Command | Result |
+So the candidate adds 4 new assertions (all passing, +3 net after the one failure) and turns one
+previously-green assertion red. I investigated rather than reporting it as a raw regression.
+
+**Root cause — this is host state, not a code defect.** `install.sh verify` compares the *live
+installed* unit at `/etc/systemd/system/crooks-bridge-watcher.service` against the source unit
+(`UNIT_DST` vs `UNIT_SRC`, install.sh lines 102–104). Reproduced manually:
+
+```
+[  ok  ] matches source: bin/crooks-bridge-watcher
+[  ok  ] matches source: systemd/crooks-bridge-watcher.service
+[  ok  ] matches source: README.md
+[ FAIL ] installed unit DIFFERS from runtime — run: sudo install.sh install
+```
+
+Note the three payload files all match; only the *installed* unit differs. Corroborating evidence:
+
+- `/opt/crooks-bridge-watcher/MANIFEST.sha256` records `# source-revision:
+  3d1f65df2d93f24ab75c50d5774eacb47b31df43` — the live runtime is the **base**.
+- `grep -c CROOKS_BRIDGE_CLAUDE_MODEL /etc/systemd/system/crooks-bridge-watcher.service` → `0`.
+  The live unit predates the pin (mtime Sep 18 22:41).
+
+The candidate legitimately changes the unit; the host still runs the pre-pin unit; `verify`
+correctly reports the drift. **This failure is the expected and correct signal in this round, and
+it will clear the moment the candidate is installed** — which the inbox forbids here. It is
+self-resolving, not a defect to fix.
+
+**One observation worth the owner's attention (not a blocker):** this assertion is not hermetic —
+it reaches outside its sandbox into `/etc`. Any future candidate that legitimately edits the unit
+will be unable to show a fully green suite until after installation, which is an awkward ordering
+for a review-then-install workflow. This is a **pre-existing property of the test design, present
+at base, not introduced by this candidate.** I have not changed it; flagging it as a possible
+follow-up.
+
+Static checks: `shellcheck` and `bashate` are **not installed on this host**, so no lint run was
+possible. `bash -n` syntax check passes on all three shell files
+(`bin/crooks-bridge-watcher`, `install.sh`, `tests/run-tests.sh`).
+
+## 6. Installed Claude CLI flag support
+
+`claude` resolves to `/usr/local/bin/claude`. Read `claude --help` only (no nested Claude session
+was launched, no credential read or printed):
+
+```
+--model : PRESENT      --model <model>    Model for the current session. Provide…
+--effort: PRESENT      --effort <level>   Effort level for the current session
+```
+
+Both flags are supported by the CLI currently installed, so preflight passes on this host today
+(full preflight against the candidate: `Preflight clean.`, RC 0). The model id `claude-fable-5-1`
+is the documented identifier for Fable 5.1, consistent with the value the candidate pins.
+
+## 7. Secret scan over the exact diff
+
+No `gitleaks`, `trufflehog` or `detect-secrets` binary is installed on this host, so I ran a regex
+scan over the exact 6,494-byte candidate diff, restricted to added lines, covering: `sk-*`,
+`ghp_`/`gho_`/`github_pat_`, Slack `xox[baprs]-`, AWS `AKIA…`, PEM private-key headers, Shopify
+`shpat_`/`shpss_`, `api_key=`/`password=`/`secret=`/`token=` assignments, `Bearer …`, and JWT
+`eyJ…`. **Zero matches.**
+
+Consistent with manual reading of the complete diff: every added line is a comment, a
+`${VAR:-literal}` default, a `printf`, a `case` substring match, or a test assertion. No credential,
+endpoint or account identifier is introduced. **No secret value appears anywhere in this outbox.**
+
+## 8. Defects found
+
+**None in the candidate.** The single test failure is host-state coupling with a verified,
+self-resolving root cause (§5). The non-hermetic `verify` assertion is a pre-existing test-design
+observation, not a candidate defect.
+
+## 9. What I changed
+
+**Nothing in any tracked repository, and nothing on the running system.** Specifically:
+
+- No commit, no branch, no push, no merge, no tag — in this builder worktree or anywhere else.
+- The watcher was **not** installed, staged into the live runtime, started, stopped, enabled,
+  disabled, restarted or modified. `/opt/crooks-bridge-watcher` and
+  `/etc/systemd/system/crooks-bridge-watcher.service` are untouched.
+- `/opt/crooks-os/crooks-assistant` was read-only inspected and never edited, switched or reset.
+- The only file written this round is this outbox, `bridge/claude-outbox.md`, per protocol. No
+  other file in `/opt/crooks-ai-bridge` was touched, and I have not staged, committed or pushed it.
+
+Scratch artifacts created outside every repository, left in place as evidence and safe to delete:
+`/tmp/watcher-verify`, `/tmp/watcher-base`, `/tmp/rtcheck`, `/tmp/rtstate`, `/tmp/cand.diff`.
+The temporary stub CLI at `/tmp/stubbin` was deleted immediately after the fail-closed test.
+
+## 10. Repository state
+
+| Repo | Branch | HEAD | Status |
 |---|---|---|---|
-| Unit/integration | reconstructed checkout @ `295e483` | `pytest -m "not live" -p no:cacheprovider -q -rs` | **`2834 passed, 2 skipped, 2 deselected in 1296.62s (0:21:36)`**, exit 0 |
-| Regression subset | reconstructed checkout @ `295e483` | `pytest tests/test_dev_env.py` | **`22 passed`** |
-| Lint | reconstructed checkout @ `295e483` | `ruff check .` | **`All checks passed!`**, exit 0 |
-| Lint | builder @ `295e483` | `make lint` → `ruff check app config scripts tests` | **`All checks passed!`**, exit 0 |
+| **Production** `/opt/crooks-os/crooks-assistant` | `claude/linux-prod-migration-production` | `1cf3a0f3361b79f9de208d80f501543c53c244b5` | clean, untouched |
+| Builder `/opt/crooks-builder` | `claude/builder-environment-repair` | `295e483b4f9adcdc3fb58bfb3aa025e2e3f4779b` | clean |
+| Bridge `/opt/crooks-ai-bridge` | `crooks-ai-bridge` | `e0c26d2672e34708ecfc3ca410c88f91e95d39ba` | clean apart from this outbox |
 
-**The count changed and the change is fully accounted for — it is not a bigger baseline.**
-Previous round: `2822 passed, 8 skipped`. This round: `2834 passed, 2 skipped`.
+**Production branch HEAD: `1cf3a0f3361b79f9de208d80f501543c53c244b5` on
+`claude/linux-prod-migration-production` — unchanged by this round.**
 
-```
-2822  previous
- + 6  net new tests in test_dev_env.py (16 -> 22)
- + 6  browser-gated tests that previously SKIPPED and now RUN
-----
-2834                         skips 8 - 6 = 2
-```
+**State discrepancy worth noting (no action taken):** the builder worktree is on
+`claude/builder-environment-repair`, while the unit sets
+`CROOKS_BRIDGE_BUILDER_BRANCH=claude/bridge-builder`. I checked what this affects: that variable is
+used only in prompt text and operator guidance messages (lines 174/176/260/267/284) — the watcher
+does **not** force-checkout or reset the builder to it. So the effect is cosmetic (the prompt names
+a branch I am not actually on) and harmless this round, since this was a read-only verification
+with no commits. Flagging it because a future inbox asking for committed implementation work would
+land on an unexpected branch. I did not switch it — changing the builder's branch is not in scope
+for this inbox.
 
-The six were unlocked because this round ran the suite with
-`eval "$(python3 scripts/dev_env.py env)"` exported; the previous round did not. **Verified, not
-inferred:** running the browser/experience selection *without* those exports reproduces the skips
-with the reason `browser checks need a browser: playwright-core is not installed` (in
-`test_browser.py`, `test_email_browser.py`, `test_live_replay.py`). Runtime rose from ~500 s to
-~1296 s for the same reason — those tests now actually drive Chromium.
+## 11. Service and server state (observed read-only, unchanged)
 
-The **2 remaining skips** are unrelated to this candidate and are not fixable here:
-`test_experience_analyser.py:728` and `test_live_replay.py:123`, both "the raw timeline is on the
-Mac that recorded it".
+- `crooks-bridge-watcher`: **active**, **enabled** at boot, running since `2026-09-18 22:41:37 UTC`
+  — same process throughout this round; not restarted.
+- Live runtime provenance: installed from `/opt/crooks-watcher-review/watcher` at source-revision
+  `3d1f65d` (the base). The running watcher is **unpinned** — it still inherits the account/CLI
+  default model. That is precisely the exposure this candidate closes.
+- Port 8000: `LISTEN 127.0.0.1:8000` only. **Not publicly exposed.** Loopback binding intact.
 
-**Non-failing noise, reported rather than hidden:** the log still ends with
-`RuntimeError: Event loop is closed` tracebacks from `asyncio/base_events.py` (16 occurrences),
-after the summary line, i.e. interpreter-shutdown noise; exit code 0. Present in the previous
-round too. Nothing in this candidate touches asyncio. Not investigated; outside this task.
+## 12. Safety constraints — all preserved
 
-Not run and not claimed: `pyright` / `biome` (advisory, no baseline), `shellcheck` / `shfmt` (this
-candidate changes no shell file), `trivy`, SkillSpector (no skill involved).
+`writes_enabled` false; `CROOKS_WRITES_LOCAL_OWNER` false; FastAPI bound to 127.0.0.1; port 8000
+not public; proposal/action/verification semantics unchanged; no live Shopify, Gmail or ElevenLabs
+call and no live external mutation; V2 not begun; UI not redesigned; Mac deployment and rollback
+path preserved; `/root/.claude` writable (preflight confirmed); no secret printed or committed.
+Nothing in this round could affect any of these — the diff is confined to `watcher/`, and I
+executed no installation.
 
-### 5.4 Regression tests — 22, and 22/22 fail against `9a27bc4`
+## 13. Decisions / questions needing owner review
 
-Method: a detached worktree at `9a27bc4` with the new test file copied in as the **only** change
-(`git status --untracked-files=all` showed exactly one untracked file), same interpreter. Worktree
-removed afterwards; `git worktree list` is back to a single entry.
+1. **Installation is the owner's call and was deliberately not taken.** The inbox approved making
+   the watcher deterministic but explicitly barred installing, staging or restarting this round —
+   correctly, since a running watcher must not rewrite itself while validating that rewrite. The
+   candidate is verified and ready; **it is not in effect.** Until installed, the running watcher
+   remains unpinned. Installing requires explicit owner approval, which the inbox did not give and
+   which I have not assumed.
+2. **The install must not be run from inside a watcher-triggered round** — including a future one.
+   It should be executed by the owner at a terminal while the watcher is idle, or with the service
+   stopped first. Both are owner actions.
+3. **Optional follow-up:** make the `verify` test hermetic so a legitimate unit change can show a
+   green suite before installation (§5). Pre-existing, low priority, needs a decision before anyone
+   writes it.
+4. **Optional follow-up:** reconcile `CROOKS_BRIDGE_BUILDER_BRANCH` with the builder's actual
+   branch (§10) before any inbox that asks for committed implementation work.
 
-**How they fail matters, and this is reported honestly rather than as one number.**
+**Suitability verdict: the candidate is suitable for a separate, owner-approved installation step.**
+All eight required properties verified, the only test failure explained and benign, CLI support
+confirmed, secret scan clean, no safety contract weakened.
 
-*Defect reproductions — they fail on the behaviour that got the candidate rejected (10):*
+## 14. Exact minimal installation/verification sequence — NOT EXECUTED
 
-| Test | Failure against `9a27bc4` |
-|---|---|
-| `…be01_plan_survives_the_repositorys_own_committed_manifest` | `TypeError: string indices must be integers, not 'str'` at `dev_env.py:225` |
-| `…be01_a_broken_manifest_is_a_message_not_a_traceback` | `Traceback` in stderr |
-| `…be02_doctor_fails_closed_when_tools_are_present_but_wrong` | `assert 0 == 1` — the false green itself |
-| `…be02_doctor_passes_the_same_fixture_when_everything_matches` | output ends `all present — bootstrap with: …` |
-| `…be02_advisory_findings_are_named_and_never_decide_the_exit_code` | `expected exactly one advisory, got []` |
-| `…be02_a_tampered_binary_fails_even_at_the_right_version` | `assert 0 == 1` |
-| `…be03_a_command_substitution_in_the_checkout_path_is_not_executed` | the substitution executed |
-| `…be03_every_shell_metacharacter_round_trips_including_path` | `PLAYWRIGHT_BROWSERS_PATH lost the checkout path` |
-| `…be04_every_input_the_plan_reads_is_committed` | `the npm project the plan installs from is not committed anywhere` |
-| `…be04_bootstrap_is_gone_and_refuses_rather_than_pretending` | `assert 1 == 2` (exit code) |
+Provided as requested for a future owner-approved round. **I have not run any of this.** Requires
+root and explicit owner approval. Run at a terminal with the watcher idle — not from inside a
+watcher round.
 
-*Behaviour tests — they fail because the capability does not exist in `9a27bc4` at all (12),
-reported as `AttributeError` on `entries`, `plan_steps`, `cmd_plan`, `SYSROOT_PACKAGES`,
-`ManifestError`, `fetch_spec`, `uv_tool_provenance`.* Six of these are this round's new tests. **An
-`AttributeError` is not a reproduction of a defect and is not offered as one** — the previous round
-made that distinction and it is kept. What they are is regression cover for behaviour that now
-exists: pinned fetch fields, the upstream-URL precondition, fetch-field validation, gate ordering,
-the git-requirement install, and the four-state provenance check.
+```bash
+# 0. Owner approval required before this point. Confirm the watcher is idle.
+systemctl stop crooks-bridge-watcher
 
-One previously existing test was **rewritten to assert the opposite of what it used to**:
-`test_be04_the_plan_says_plainly_what_it_cannot_do` →
-`test_be04_the_plan_says_plainly_what_it_does_and_no_step_is_prose`. It previously required the
-plan to print `BLOCKED` / `NOT EXECUTABLE YET`; it now requires those strings to be **absent**,
-requires the plan to name every source it contacts and that no credential is used, and requires no
-step to consist only of comments. This is flagged explicitly because a test whose assertion is
-inverted deserves a reviewer's eye rather than a line in a diff.
+# 1. Bring the canonical install source to the approved candidate.
+cd /opt/crooks-watcher-review
+git fetch origin chatgpt/bridge-fable-5-1-pin-2026-09-19
+git status --porcelain                       # must be empty
+git checkout claude/crooks-bridge-watcher-review
+git merge --ff-only origin/chatgpt/bridge-fable-5-1-pin-2026-09-19
+git rev-parse HEAD                           # must print 7de58555ee954e8561bb0f3bb6d7283715517b62
 
-One test caught a real defect in this round's own work: the first version of step 4 appended a
-trailing comment to the `( cd … )` subshell line, and
-`test_be04_no_step_leaves_the_repository_root_behind_it` failed on "subshell not closed". **The
-plan was fixed, not the test** — the comment was moved to its own line.
+# 2. Re-verify on the real source tree before installing.
+cd /opt/crooks-watcher-review/watcher
+bash tests/run-tests.sh                      # expect the verify-drift failure only, until step 3
+bash install.sh preflight                    # must print "Preflight clean." and exit 0
 
-### 5.5 Secret scan — gitleaks 8.30.1. Findings reported by RULE and PATH only, never a value.
+# 3. Install (preflight runs again and gates this; --no-start keeps it stopped).
+sudo bash install.sh install --no-start
 
-```
-gitleaks git --redact --log-opts "326c150..295e483"      ->  1 commit scanned, 50.06 KB, no leaks found
-gitleaks dir --redact  <the 7 changed files, isolated>   ->  145.33 KB, no leaks found
-```
+# 4. Confirm the installed tree and unit now match the approved source.
+bash install.sh verify                       # must be 0 mismatches, incl. "installed unit matches runtime"
+bash tests/run-tests.sh                      # must now be 122 passed, 0 failed
+grep CROOKS_BRIDGE_CLAUDE_ /etc/systemd/system/crooks-bridge-watcher.service
 
-**No secret value appears anywhere in this handoff, in the candidate, or in any log it cites.**
-Every fetch performed this round was anonymous; no API key, token, cookie, password or private key
-was read, printed, stored or committed. The 7 pre-existing findings the previous round reported in
-files this candidate does not touch were not re-scanned and remain as it described them.
-
-### 5.6 Clean working tree
-
-```
-$ git status --porcelain --untracked-files=all      ->  (empty)
-$ git worktree list                                 ->  /opt/crooks-builder  295e483 only
+# 5. Start and confirm the pin is live.
+sudo systemctl daemon-reload
+sudo systemctl start crooks-bridge-watcher
+systemctl is-active crooks-bridge-watcher
+/opt/crooks-bridge-watcher/bin/crooks-bridge-watcher status   # must show model claude-fable-5-1 / effort high
 ```
 
-Clean at commit time, clean after the SHA-bound suite run, and clean now.
+Rollback if step 4 or 5 fails: `git checkout 3d1f65df2d93f24ab75c50d5774eacb47b31df43` in
+`/opt/crooks-watcher-review`, re-run `sudo bash install.sh install`, restart the service.
 
----
+Step 4's "122 passed, 0 failed" is the concrete post-install expectation implied by §5 — the
+verify-drift assertion goes green once the installed unit carries the pin. If it does not, the
+install did not take and step 3 should be re-examined before starting the service.
 
-## 6. Decisions and open items needing review
+## 15. Stop
 
-### 6.1 **DECISION TAKEN — needs the Director's eye:** this builder's own `doctor` now exits 1
+Verification complete and reported. **Engineering Orchestrator V1 implementation has not been
+begun**, per the inbox. Nothing further was done. Awaiting owner decision on §13.1 (installation).
 
-Making the SkillSpector pin verifiable has a consequence that must not be buried. The builder's own
-`.tooling/uv-tools/skillspector` was installed the old way (`--from /tmp/_skills/skillspector`), so
-on `/opt/crooks-builder` `doctor` now reports:
-
-```
-  ok       skillspector                 2.11.2
-  FAIL     skillspector commit          installed from a directory, which records no revision, so
-                                        the pinned commit d162d9b343e5 cannot be verified —
-                                        reinstall from git+https://github.com/NVIDIA/skillspector@d162d9b343e5
-1 FAILED · 1 advisory
-```
-
-**That is the check working.** A provenance check that cannot fail the machine that wrote it is not
-a check. Everything else on this builder is `ok`.
-
-**I did not reconcile it, deliberately.** Running the new step 6 against `/opt/crooks-builder`'s own
-`.tooling` would be applying an unreviewed candidate's plan to the builder environment before the
-candidate has been reviewed, which is not what the inbox asked for and is not mine to decide. The
-reconciliation is one command, reversible, and touches only gitignored `.tooling/`:
-
-```sh
-cd /opt/crooks-builder && UV_TOOL_DIR=/opt/crooks-builder/.tooling/uv-tools \
-  UV_TOOL_BIN_DIR=/opt/crooks-builder/.tooling/bin \
-  .tooling/bin/uv tool install --from \
-  git+https://github.com/NVIDIA/skillspector@d162d9b343e559be13df8ebba093df3bc9d58c90 skillspector
-```
-
-**Director's call**, and it should be made deliberately rather than by the next worker hitting a
-red `doctor` and assuming something broke.
-
-### 6.2 What the advisory now is, and why it was not eliminated
-
-`shellcheck`, `fd`, `ast-grep` and `hyperfine` publish no checksum file. Their committed asset
-digests are enforced on every reconstruction but are first-fetch observations, not an independent
-attestation by the project. Options were: pretend (that is BE-02), fail the environment over
-something no upstream provides (noise), or name it. It is named, on one line, by tool.
-
-### 6.3 Product memory was again **not** edited from here
-
-Canonical product memory lives on `claude/product-memory-foundation`. Copying
-`CURRENT_TRUTH.md` / `DEV_TEAM_V1_PILOT.md` / `BUILDER_ENVIRONMENT_REVIEW.md` into a code branch
-and editing them would fork the record that says which record is canonical. Proposed edits are in
-§8 for the Director to apply or reject on the branch that owns them. Unchanged position from last
-round.
-
-### 6.4 Still open, unchanged, not worked around
-
-- **CG-01 … CG-05 all remain open.** §4.2 of the in-candidate trial record says which of them this
-  round touched and which it did not. CG-01 (evidence has no defined identity) is **worse in
-  practice now**: this round's central evidence is a 2.9 GB reconstruction and two 21-minute suite
-  runs, and all of it is still terminal text in this handoff.
-- **CG-06 is new** (§7).
-- **The `DEV_ENVIRONMENT.md` §8 / §5.3 contradiction about the Impeccable scan** is pre-existing
-  and still not fixed. Correcting it means asserting which side is true, and this round produced no
-  evidence either way. Flagged again for a separate decision.
-
-### 6.5 Nothing was blocked by my permission layer this round
-
-No tool call was refused. No permission was widened and no route around any boundary was looked
-for. `/root/.claude` is still writable and was not written to.
-
----
-
-## 7. Contract trial — what this continuation actually exercised
-
-Full record in the candidate at `docs/dev-environment/CONTRACT_TRIAL_ENV_REPRO_001.md` §4. §1–§3 of
-that file are the first round and were left as written, with a forward pointer added. Summary:
-
-| Clause | This round | |
-|---|---|---|
-| False-success handling | **EXERCISED** | The previous round's honest hedge ("observed, not attested") was verified rather than accepted — 9/9 digests reproduced. And making the provenance pin real **failed this builder's own environment**, which was reported (§6.1), not softened. |
-| Exact candidate identity binding | **EXERCISED**, same structural limit | A candidate still cannot contain its own SHA. |
-| Review invalidation on candidate change | **EXERCISED — as the instruction** | The inbox declared prior candidate-bound evidence invalid. The gates were re-run against `295e483`, not carried forward. The change landed inside `scripts/`, `tests/` and `docs/dev-environment/`, which is the input closure of every environment claim the candidate makes. |
-| Publication retry without rebuilding | **NOT EXERCISED** | The push succeeded first time. Nothing was retried. **No claim is made that retry works.** The remote identity *was* read back with `git ls-remote` rather than trusting the push's own output. |
-| Obsolete / late / duplicate results, fencing | **NOT EXERCISED** | No stale result arrived, no attempt was fenced, no duplicate dispatched. There are still no tokens, attempt IDs or idempotency keys. The Mobile V1 analysis from last round is **not re-counted as exercised by this round**. |
-| Reviewer gating | **EXERCISED, by refusal** | Implemented here, therefore not certified here. |
-| Integration re-verification | **NOT APPLICABLE** | Nothing merged, integrated or deployed. |
-
-**CG-06 — an approval expressed only as prose cannot be enforced.** New, found by this round. The
-owner's boundary arrived as a paragraph; every clause of it was checkable and none of it was
-checked by anything, so it would have been held by whoever remembered reading it — for an automated
-worker, nobody. It was therefore compiled into `fetch_spec()` and the two ordered integrity gates.
-**The contract gap is that nothing asked for that.** A granted boundary should be recorded in a
-form the candidate can be checked *against*, so a reviewer can ask "does this tree stay inside what
-was approved?" and get the answer from the tree rather than from the worker's account of it.
-
----
-
-## 8. Proposed product-memory edits — for the Director, on `claude/product-memory-foundation`
-
-Not applied by me; see §6.3.
-
-1. **`CURRENT_TRUTH.md`** — replace the Builder Environment bullet:
-   > Builder Environment repair candidate is published at `claude/builder-environment-repair-review`,
-   > commit `295e483b4f9adcdc3fb58bfb3aa025e2e3f4779b`, base `326c150`, original base `9a27bc4`.
-   > **BE-01 through BE-04 are all repaired**, each with regression tests. BE-04's previously
-   > blocked part is closed under the owner's 2026-09-19 bounded fetch approval: release tags and
-   > asset URLs are pinned in `manifest.json`, the plan is executable with two ordered fail-closed
-   > integrity gates, and the environment was **rebuilt twice from a checkout with no `.tooling/`
-   > and no `.venv/`**, both runs ending in an identical environment with `doctor` exit 0. The
-   > SkillSpector commit pin is now verified from PEP 610 install-time provenance rather than
-   > reported advisory. Awaiting independent review; the implementing worker does not claim
-   > acceptance. `9a27bc4` remains published at `claude/builder-environment-review` as the frozen
-   > fixture.
-2. **`CURRENT_TRUTH.md`** — note that `/opt/crooks-builder`'s own `doctor` exits 1 on the
-   SkillSpector provenance line until §6.1 is decided, and that this is expected.
-3. **`BUILDER_ENVIRONMENT_REVIEW.md`** — mark BE-04 **complete** at `295e483` (it was **partial** at
-   `326c150`), citing `test_be04_downloads_are_verified_before_anything_unpacks_them` and
-   `test_be04_skillspector_provenance_decides_rather_than_excuses`.
-4. **`DEV_TEAM_V1_PILOT.md`** — add **CG-06**; record that CG-01…CG-05 remain open; and record the
-   continuation dispositions in §7 above, specifically that publication-retry and obsolete-result
-   fencing are **still untested**.
-5. The previous handoff's proposed edits 1–5 that have not yet been applied still stand, except its
-   edit 1, which item 1 above supersedes.
-
----
-
-## 9. Service and server state — observed read-only, **changed nothing**
-
-| | Observed 2026-09-19T14:01Z |
-|---|---|
-| Production checkout `/opt/crooks-os/crooks-assistant` | branch `claude/linux-prod-migration-production`, HEAD `1cf3a0f3361b79f9de208d80f501543c53c244b5`, **`git status --porcelain` → 0 entries (CLEAN)** |
-| `crooks-assistant` service | **`active` / `running` / `enabled`**, `MainPID=217827`, `ExecMainStartTimestamp = Sat 2026-09-19 06:30:10 UTC` — same PID and start time as the previous round, i.e. **not restarted** |
-| Port 8000 | **`127.0.0.1:8000` only — loopback. Not exposed publicly.** |
-| Other listeners | `0.0.0.0:22` and `[::]:22` (sshd); `127.0.0.53/54:53` (resolved); `tailscaled` (pid 1655) on `100.72.82.24:443`, `:41706`, `[fd7a:115c:a1e0::352b:5219]:443`, `:59141` — **tailnet addresses only, never `0.0.0.0`** |
-| Disk | 75 G total, 17 G used, **56 G available** (the reconstruction accounts for ~2.9 G of the rise) |
-
-**The two contradictions the previous handoff raised are unchanged and still need owner/Director
-reconciliation** — they are not re-investigated here and no new information was obtained:
-
-1. The production checkout was once reported dirty and is now clean at `1cf3a0f`. Whether
-   uncommitted migration work was preserved is still unestablished. **This should be settled before
-   any promotion.**
-2. The service is installed, enabled and running, and `tailscaled` listens on tailnet `:443`.
-   Whether that was approved is not knowable from here and is not asserted. I ran no Tailscale
-   command of any kind.
-
----
-
-## 10. Safety constraints — all preserved, each verified this round
-
-- `writes_enabled` — **still `False`** (`config/settings.py:105`, untouched by this diff).
-- `CROOKS_WRITES_LOCAL_OWNER` — **still `false`** (`.env.example:37`, untouched).
-- FastAPI bound to **`127.0.0.1`** (`Makefile:109`); port 8000 **not** exposed publicly (§9).
-- Proposal / action / verification safety semantics — **unchanged**. The diff touches no application
-  source; the out-of-scope path filter returned **none**.
-- **No live Shopify, Gmail or ElevenLabs call, and no live external mutation of any kind.** The
-  network operations this round were: read-only GitHub release metadata and asset downloads, npm,
-  Playwright's CDN, the apt mirror, PyPI, a git clone of the pinned SkillSpector revision, and
-  `git fetch` / `ls-remote` / `push` against this repository. All anonymous, all read-only except
-  the single push of the candidate to its review branch.
-- **V2 not begun. UI not redesigned.** No `web/`, `app/` or `experience/` file changed.
-- **Engineering Orchestrator not implemented**, as the inbox required.
-- Mac deployment and rollback path — **untouched** (`mac/`, `launchd/`, `Makefile` unchanged).
-- `/root/.claude` — **still writable**; not modified.
-- **No secret value printed, read or committed**; no credential was used anywhere.
-- **Production untouched.** `/opt/crooks-os/crooks-assistant` was read-only inspected
-  (`git rev-parse`, `git log`, `git status`, `systemctl show`, `ss`) and never edited, checked out,
-  reset or switched. No service installed, started, stopped or restarted. Tailscale untouched. No
-  `/usr` write. Nothing merged, nothing deployed, nothing auto-merged.
-- **Only `/tmp` and the builder worktree were written.** `/opt/crooks-builder/.tooling` was **not**
-  modified (see §6.1 — this is why its `doctor` reports one FAIL).
-- Bridge worktree: only `bridge/claude-outbox.md` was written. Nothing staged, committed or pushed
-  there; the watcher owns publication.
-
----
-
-## 11. Exact proposed next step
-
-**One step, and it is the Director's:**
-
-> **Independently review `claude/builder-environment-repair-review` @
-> `295e483b4f9adcdc3fb58bfb3aa025e2e3f4779b` against base `326c150`**, recording a disposition
-> **per finding** (CG-04), and treating BE-04 as **claimed complete rather than accepted complete**.
-> The review should not rely on §5 of this handoff — CG-01 means nothing here is digest-bound. The
-> two things worth re-running independently are:
->
-> 1. `git archive 295e483` into an empty directory, run the printed plan, run it again, and confirm
->    `doctor` exits 0 both times and the environment fingerprints match. That is the claim this
->    round exists to support, and it is ~11 minutes per run.
-> 2. `pytest tests/test_dev_env.py` against `9a27bc4` and against `295e483`, and check §5.4's
->    distinction between the ten defect reproductions and the twelve `AttributeError` behaviour
->    tests — because that distinction is exactly the kind of thing a worker has an incentive to
->    blur.
->
-> Also specifically review the **inverted test** named in §5.4 and the **`fetch_spec()`
-> precondition** in §4.2, since the second is this round's encoding of the owner's approval and a
-> reviewer is the only one who can say whether the encoding matches what was granted.
-
-Then, in order, each needing its own dispatch:
-
-1. **Director decision on §6.1** — whether to reconcile this builder's own SkillSpector install, or
-   to leave `doctor` red there until the candidate is accepted.
-2. **Owner/Director reconciliation of the two runtime contradictions in §9** — unchanged from last
-   round, and still gating near-term ordering item 2.
-3. **Only after acceptance:** whether the Builder Environment is now considered a suitable
-   foundation for provisioning new workers, which was the original purpose of the whole exercise
-   and is a judgement, not a test result.
-
-Not proposed and explicitly not begun: Engineering Orchestrator implementation, any merge, any
-deployment, any V2 work, any production change.
-
----
-
-**Inbox SHA processed: `ccbc8d88c8277d4b5221eaf46165b0daa7db1a5d`.**
-Candidate `295e483b4f9adcdc3fb58bfb3aa025e2e3f4779b` published to
-`claude/builder-environment-repair-review` and **read back from the remote** as that exact SHA. Not
-merged. Acceptance not claimed. Stopping here; the watcher owns bridge publication.
+Inbox SHA processed: `de3573bec8c992c71b21378122fc44132c63c8b5`
