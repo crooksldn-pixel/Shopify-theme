@@ -263,6 +263,6 @@ case "${1:-status}" in
     status)    do_status ;;
     preflight) preflight ;;
     stage)     stage ;;
-    verify)    verify ;;
+    verify)    shift; verify "${1:-}" ;;
     *) printf 'usage: %s {install [--no-start]|uninstall [--purge]|status|preflight|stage|verify}\n' "$0" >&2; exit 2 ;;
 esac
