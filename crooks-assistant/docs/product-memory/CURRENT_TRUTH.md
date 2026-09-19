@@ -2,7 +2,7 @@
 
 **Purpose:** compact active context for GPT/Claude/Fable/engineering workers  
 **Status:** ACTIVE — update whenever a material product/architecture state changes  
-**As of:** 2026-09-19T10:33Z — reconciled against direct runtime observation; see Engineering control plane for method.
+**As of:** 2026-09-19T12:11Z — reconciled against direct runtime observation, then against owner confirmation on Tailscale and Gmail; see Engineering control plane for method.
 
 This file is intentionally not a historical transcript. It answers: **what is true and important now?**
 
@@ -28,8 +28,9 @@ Core product principles remain:
 - Canonical product memory currently lives on `chatgpt/ops-memory-2026-09-19`, which contains all of `claude/product-memory-foundation` plus the operator runbook; read it by explicit ref. The default theme branch is not the CROOKS product-memory source.
 - **The Linux migration candidate is what actually runs.** `/opt/crooks-os/crooks-assistant` is checked out on `claude/linux-prod-migration-production` at `1cf3a0f3361b79f9de208d80f501543c53c244b5`, working tree **clean**, and `crooks-assistant.service` serves it. `claude/crooks-assistant-build-lgxlau` at `e43aecdb39b87b622f64b6ab434e428d216ef157` remains the Phase 5 Git baseline and the Mac rollback reference, but it is no longer the running code. Earlier memory asserting production had "not been silently moved to the Linux migration candidate" described Git branch bookkeeping, not the runtime, and is superseded by direct observation.
 - Runtime verified 2026-09-19T10:25Z by read-only inspection on the server (`systemctl show`, `ss -ltnp`, `curl /health`, `git --no-optional-locks status`): service **active (running)** since 06:30:10Z, `NRestarts=0`, uvicorn bound to `127.0.0.1:8000`; `tailscale serve` proxies `https://crooks-os-prod-1.taildfb357.ts.net` to `127.0.0.1:8000`, **tailnet only, no funnel**. Writes remain **disabled** (`CROOKS_WRITES_ENABLED=false`) and every write capability reports disabled. DEC-027 intact.
-- Health is **`degraded`, and Gmail is the only failing check**: "No Gmail token stored." `/etc/crooks-os/secrets/` exists at 0700 and holds `media_signing_key` (DEC-026), but has no `gmail_token` (DEC-025) and there is no fallback `token.json`. Shopify read path, Scribe v2 (4/4), ElevenLabs Derek (7/7, 463ms), knowledge base and terminology all report OK. Whisper is correctly reported disabled-by-design without degrading top-level health (DEC-022/023).
-- **UNKNOWN / VERIFY — was private Tailscale HTTPS approved?** Near-term step 5 gates it on owner approval. It is live. No approving entry exists in DECISIONS.md. Confirm with the owner and record a decision, or treat it as a gate crossed without a record.
+- Health is **`degraded`, and Gmail is the only failing check**: "No Gmail token stored." `/etc/crooks-os/secrets/` exists at 0700 and holds `media_signing_key` (DEC-026); there is no `gmail_token` (DEC-025) and no fallback `token.json`. **This is deliberate.** The owner left Gmail unprovisioned on purpose (owner confirmation, 2026-09-19). It is not an accidental omission, not an open defect, and must not be auto-provisioned or "fixed" by a worker. Provisioning it is an **optional, owner-gated next action**. Shopify read path, Scribe v2 (4/4), ElevenLabs Derek (7/7, 463ms), knowledge base and terminology all report OK. Whisper is correctly reported disabled-by-design without degrading top-level health (DEC-022/023).
+- Open question for the owner, recorded rather than acted on: Gmail is deliberately unprovisioned yet still degrades top-level health, whereas Whisper is deliberately disabled and correctly does not (DEC-023). Whether Gmail should likewise be representable as intentionally-disabled is an owner call. Nothing has been changed.
+- Private Tailscale HTTPS was **explicitly approved by the owner and deliberately enabled** as part of the Linux production migration (owner confirmation, 2026-09-19). Near-term step 5 is **satisfied**, not a gate crossed without a record. Tailnet only, no funnel, upholding DEC-020's private-first networking direction. No approving entry exists in DECISIONS.md; recording one is optional tidying, not an open question.
 - The GitHub communication bridge uses orphan branch `crooks-ai-bridge`.
 - The CROOKS bridge watcher is installed, enabled, and its corrected stdin-based Claude launch path has passed an end-to-end smoke test.
 - Headless Claude runs in the standalone isolated builder clone at `/opt/crooks-builder`, not the production checkout.
@@ -101,9 +102,9 @@ Every substantial release should operate from a curated Active Context Pack rath
 
 1. finish and review the permanent Builder Environment — **open**; CHANGES REQUIRED, repair task ENV-REPRO-001 specified but not dispatched,
 2. complete controlled Linux production migration/promotion — **runtime achieved**; the service runs migration candidate `1cf3a0f`, but the promotion has never been recorded as a reviewed decision,
-3. provision runtime secrets through the approved process — **partial**; `media_signing_key` provisioned, `gmail_token` outstanding and the sole cause of degraded health,
+3. provision runtime secrets through the approved process — **satisfied as scoped**; `media_signing_key` provisioned, Gmail deliberately left unprovisioned by owner decision and available as an optional later action,
 4. establish the always-on server runtime — **done**; `crooks-assistant.service` active and enabled at boot, though reboot recovery has not actually been exercised,
-5. enable private Tailscale HTTPS when approved — **live**; approval not recorded, see UNKNOWN / VERIFY above,
+5. enable private Tailscale HTTPS when approved — **done**; explicitly approved by the owner and deliberately enabled during the migration,
 6. verify real Samsung/iPhone/runtime behaviour,
 7. perfect current UI,
 8. perfect response behaviour and latency,

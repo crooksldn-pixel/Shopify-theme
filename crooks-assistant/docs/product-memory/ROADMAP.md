@@ -12,18 +12,18 @@ The final Sequencing rule and DEC-046 are authoritative for execution order. Eng
 # NOW — make the current CROOKS product genuinely reliable
 
 ## N1. Complete the always-on Linux deployment
-**Status:** BUILDING — runtime is live; three items outstanding
+**Status:** BUILDING — runtime is live; migration-review record and reboot verification outstanding
 
 Verified on the server 2026-09-19T10:25Z by read-only inspection. See CURRENT_TRUTH.md for the observation method.
 
 - finish review of Linux migration code — **outstanding**: the candidate `1cf3a0f` is running, but its promotion was never recorded as a reviewed decision
-- provision secrets safely — **partial**: `media_signing_key` in `/etc/crooks-os/secrets/` at 0700; `gmail_token` missing
+- provision secrets safely — **done as scoped**: `media_signing_key` in `/etc/crooks-os/secrets/` at 0700; Gmail deliberately left unprovisioned by owner decision
 - install `crooks-assistant.service` — **done**: active (running) since 06:30:10Z, `NRestarts=0`, enabled at boot
-- enable private Tailscale HTTPS — **live**, tailnet only, no funnel; **owner approval not recorded — confirm**
+- enable private Tailscale HTTPS — **done**: explicitly approved by the owner and deliberately enabled during the migration; tailnet only, no funnel
 - verify reboot recovery — **outstanding**: unit is enabled at boot but a reboot has not been exercised
 - verify Claude Max auth under systemd — **done**: health reports the Agent SDK authorised on the Max subscription
 - verify Shopify read path — **done**: CROOKSLDN, 478 orders cached over 90 days
-- verify Gmail — **FAILING**: no token stored; the sole cause of `degraded` health
+- verify Gmail — **deliberately deferred by owner decision**: no token stored, which is why health reports `degraded`. An optional owner-gated next action, not an open defect
 - verify ElevenLabs Scribe — **done**: scribe_v2, 4/4 ok
 - verify Derek TTS — **done**: 7/7 ok, last 463ms
 - keep writes disabled until the read/runtime layer is proven — **holding**: `CROOKS_WRITES_ENABLED=false`, all write capabilities disabled
