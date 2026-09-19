@@ -202,9 +202,9 @@ Agents should escalate decisions that are fundamentally product/taste/strategy q
 The owner should not be used as a command courier.
 
 ## D7. Engineering Orchestrator V1
-**Status:** APPROVED DIRECTION — specification planning active; implementation gated
+**Status:** IMPLEMENTATION AUTHORISED — awaiting preceding DEC-046 prerequisite gates
 
-Detailed proposal: [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md). Record/review/recovery contracts and the proposed first trial are in [DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md). The organisation/direction is approved; new mechanism choices and trial dispatch remain PROPOSED.
+Detailed proposal: [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md). Record/review/recovery contracts and the proposed first trial are in [DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md). The owner has explicitly authorised V1 implementation under the existing canonical specification and safety boundaries. DEC-046's preceding deployment/current-product gates remain binding; unresolved mechanism choices still require the reviews described by the specification.
 
 Build the layer above the single-worker watcher:
 
@@ -712,7 +712,7 @@ The current sequence, reaffirmed by the owner in the 2026-09-19 migration contin
 11. bootstrap the privileged deployment/infrastructure control plane,
 12. expand World / Event Ledger / Attention / expectations / automation / integrations.
 
-Dev Team specification planning may proceed while the Builder round is in flight. Planning does not advance its implementation gate. DEC-046 records this ordering and resolves the older conflicting roadmap footer.
+Dev Team V1 implementation is owner-authorised, but execution remains sequenced after the preceding DEC-046 deployment/current-product gates. Planning and implementation preparation may proceed without treating that approval as a waiver of those gates.
 
 This replaces the older footer that placed World/automation ahead of the engineering organisation. No active safety gate is removed.
 
