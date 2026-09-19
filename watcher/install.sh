@@ -33,7 +33,7 @@ WATCHER="$RUNTIME_DIR/bin/crooks-bridge-watcher"
 UNIT_SRC="$RUNTIME_DIR/systemd/crooks-bridge-watcher.service"
 MANIFEST="$RUNTIME_DIR/MANIFEST.sha256"
 
-UNIT_DST="/etc/systemd/system/crooks-bridge-watcher.service"
+UNIT_DST="${CROOKS_BRIDGE_UNIT_DST:-/etc/systemd/system/crooks-bridge-watcher.service}"
 SERVICE="crooks-bridge-watcher.service"
 STATE_DIR="${CROOKS_BRIDGE_STATE_DIR:-/var/lib/crooks-bridge}"
 
@@ -75,13 +75,14 @@ stage() {
 }
 
 verify() {
-    # Three things must agree: the source you reviewed, the runtime that will execute, and the
-    # unit systemd has loaded. Any drift between them is the failure mode this whole subcommand
-    # exists for — "approve commit X" must never install something else.
-    local rel mode problems=0 src_sum run_sum
+    # The source, staged runtime and (normally) installed unit must agree. During an upgrade the
+    # installed unit is expected to be the OLD version until after staging has been verified, so
+    # --runtime-only verifies source <-> staged runtime without treating that expected drift as a
+    # failure. Full verify remains the post-install check.
+    local mode="${1:-}" rel file_mode problems=0 src_sum run_sum
     [ -f "$MANIFEST" ] || { bad "no manifest at $MANIFEST — runtime was not installed by this script"; return 1; }
 
-    while read -r rel mode; do
+    while read -r rel file_mode; do
         if [ ! -f "$RUNTIME_DIR/$rel" ]; then
             bad "missing from runtime: $rel"; problems=$((problems+1)); continue
         fi
@@ -95,20 +96,26 @@ verify() {
             problems=$((problems+1))
         fi
         local actual; actual="$(stat -c '%a' "$RUNTIME_DIR/$rel")"
-        [ "$actual" = "${mode#0}" ] || [ "0$actual" = "$mode" ] || {
-            bad "wrong mode on $rel: expected $mode, found 0$actual"; problems=$((problems+1)); }
+        [ "$actual" = "${file_mode#0}" ] || [ "0$actual" = "$file_mode" ] || {
+            bad "wrong mode on $rel: expected $file_mode, found 0$actual"; problems=$((problems+1)); }
     done < <(payload)
 
-    if [ -f "$UNIT_DST" ]; then
-        if cmp -s "$UNIT_DST" "$UNIT_SRC"; then ok "installed unit matches runtime"
-        else bad "installed unit DIFFERS from runtime — run: sudo $0 install"; problems=$((problems+1)); fi
-    else
-        warn "no unit installed at $UNIT_DST yet"
+    if [ "$mode" != "--runtime-only" ]; then
+        if [ -f "$UNIT_DST" ]; then
+            if cmp -s "$UNIT_DST" "$UNIT_SRC"; then ok "installed unit matches runtime"
+            else bad "installed unit DIFFERS from runtime — run: sudo $0 install"; problems=$((problems+1)); fi
+        else
+            warn "no unit installed at $UNIT_DST yet"
+        fi
     fi
 
     grep -q '^# source-revision: ' "$MANIFEST" && printf '        %s\n' "$(grep '^# source-revision: ' "$MANIFEST")"
 
-    [ "$problems" -eq 0 ] && { printf '\nRuntime matches source.\n'; return 0; }
+    [ "$problems" -eq 0 ] && {
+        if [ "$mode" = "--runtime-only" ]; then printf '\nRuntime payload matches source.\n'
+        else printf '\nRuntime matches source.\n'; fi
+        return 0
+    }
     printf '\n%s mismatch(es).\n' "$problems" >&2
     return 1
 }
@@ -195,13 +202,16 @@ do_install() {
     preflight || exit 1
 
     stage || exit 1
-    verify >/dev/null || { bad "runtime does not match source after staging — refusing to continue"; exit 1; }
-    ok "runtime verified against source"
+    verify --runtime-only >/dev/null || { bad "runtime does not match source after staging — refusing to continue"; exit 1; }
+    ok "runtime payload verified against source"
 
     install -m 0644 "$UNIT_SRC" "$UNIT_DST"
-    ok "installed $UNIT_DST (from runtime, which matches source)"
+    ok "installed $UNIT_DST (from verified runtime)"
     systemctl daemon-reload
     ok "systemd reloaded"
+
+    verify >/dev/null || { bad "installed runtime/unit verification failed — refusing to continue"; exit 1; }
+    ok "installed runtime and unit verified"
 
     # Seed BEFORE enabling, so the first thing the watcher does is not to re-execute an inbox
     # that has already been dealt with. From here on only a CHANGE starts a run.
