@@ -54,7 +54,7 @@ The approved direction is a quality-first engineering organisation:
 
 Cost and speed are subordinate to quality. Cheaper/faster models may handle genuinely mechanical work, but substantive product/code quality is not traded away to save usage.
 
-[ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md) now holds the proposed detailed specification. Planning is active; implementation has not started or been authorised by that document. Proposed mechanisms such as task-store choice, leases, retry limits and initial concurrency are not approved product decisions. Fable/GPT invocation and credential isolation require verification before automated operation.
+[ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md) holds the detailed V1 specification. **Owner implementation approval was explicitly granted on 2026-09-19** for Engineering Orchestrator V1 under the existing canonical specification and safety boundaries. This removes the planning→implementation approval gate but does **not** waive DEC-046's prerequisite ordering, owner-only gates, or unresolved mechanism reviews. Major implementation starts only when the existing deployment/current-product prerequisites are satisfied or canonical Git is explicitly changed by the owner.
 
 [DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md) defines proposed durable record/review/recovery contracts and the acceptance trial seeded by the reproduced Builder defects. The first manual/simulated trial has now run through the rejected-and-repaired Builder candidate; its observed contract gaps must be reconciled into the canonical planning docs rather than silently worked around. Foundation repair through the existing bridge and later Orchestrator acceptance remain separate activities.
 
@@ -102,7 +102,7 @@ Every substantial release should operate from a curated Active Context Pack rath
 7. perfect current UI,
 8. perfect response behaviour and latency,
 9. conduct real-world CROOKS sessions and collect evidence,
-10. implement Engineering Orchestrator / Dev Team V1 **only after explicit owner approval to move from planning into implementation**,
+10. implement Engineering Orchestrator / Dev Team V1 — **owner implementation approval is granted; execute when the preceding DEC-046 prerequisite gates are satisfied**,
 11. bootstrap the privileged deployment/infrastructure control plane,
 12. expand World / Event Ledger / Attention / expectations / automation / integrations.
 
