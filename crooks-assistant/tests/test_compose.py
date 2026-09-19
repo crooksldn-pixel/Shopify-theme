@@ -607,7 +607,21 @@ def test_the_hold_surface_is_not_over_the_composer():
     css = (WEB / "style.css").read_text(encoding="utf-8")
     band = css[css.index('body[data-mode="context"] .talk{'):]
     band = band[: band.index("}")]
-    assert "bottom:0" in band and "height:var(--dock)" in band, band
+    assert "bottom:0" in band, band
+    # The height reads `--dock + --safe-b` rather than a bare `--dock`: the same band, plus the
+    # inset a home indicator takes, ADDED and then paid back as padding instead of subtracted.
+    # What this test guards is unchanged and is in fact tighter than it was. `.app` reserves
+    # `--dock + --safe-b` for this band; the band used to be `--dock` tall with the inset taken
+    # OUT of it, so on a notched phone it was 34px SHORTER than its own reservation. Now the two
+    # are one number, so the composer still stops above the band on every device and no longer
+    # leaves a strip of dead ground between them. Where there is no inset — the tablet, the
+    # desktop, every viewport in DESIGN.md §13 but the phone — `--safe-b` is 0px and the
+    # arithmetic is identical to the old rule.
+    assert "height:calc(var(--dock) + var(--safe-b))" in band, band
+    assert 'body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + var(--safe-b))}' in css, (
+        "the band and the room the deck reserves for it must stay one number, or the hold "
+        "surface can grow over the composer"
+    )
 
 
 # --------------------------------------------------------------------------- the model's way in

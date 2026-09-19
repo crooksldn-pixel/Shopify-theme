@@ -90,6 +90,16 @@ SCREENS_OUT = ROOT / "docs" / "screens" / "phase5"
 # voice layer's own hold-start, and the touch machine's submit count. All four must be ZERO for
 # every ordinary control tap, at both viewports — and two genuine holds must still send.
 TOUCH_SCRIPT = ROOT / "scripts" / "browser" / "touch.js"
+# And the same instruments at the size DESIGN.md §13 names and no gate had ever used. Every
+# browser check in this package runs at 601 x 889 and 800 x 1280; 390 x 844 was in the matrix
+# and had never had a pixel rendered at it, so what the product did on a phone was an opinion.
+# It was wrong: the dock asked for 476px of a 390px screen and two of its four areas were 29px
+# off the side, and the hold pill — `min-width:240px` in a slot the phone query narrowed to
+# 200px — was painted over the two icons beside it, which is VOICE over NAVIGATION and D-1's
+# own rule. The page's collision engine said all of it the first time it was asked at 390.
+# Its own file rather than a third viewport inside collision.js, for collision.js's own reason:
+# a failure here has to name the phone.
+MOBILE_SCRIPT = ROOT / "scripts" / "browser" / "mobile.js"
 # Where Playwright's Chromium lives in this environment. Overridable, because on the Mac it
 # will be wherever `npx playwright install` put it.
 CHROMIUM = os.environ.get("CROOKS_CHROMIUM", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
@@ -207,7 +217,7 @@ async def capture_screens(_harness: Any, *, out: Path, only: str = "") -> list[P
         # so nothing here overwrites anything else.
         for extra in (TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
                       SPLIT_SCRIPT, EMAIL_SCRIPT, TOUCH_SCRIPT, DENSITY_SCRIPT,
-                      REPLAY_SCRIPT, CLICKPATH_SCRIPT):
+                      REPLAY_SCRIPT, CLICKPATH_SCRIPT, MOBILE_SCRIPT):
             if not extra.exists():
                 continue
             await asyncio.to_thread(
@@ -335,6 +345,12 @@ async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, An
     three are §30's live replay, §33's click paths and §32's matrix. The matrix runs here with
     NO output directory, so it writes no files and still asks of every one of the thirty-four
     surfaces whether it exists — which is the half of §32 that belongs in a gate.
+
+    `mobile.js` widened it by one more, and by two VIEWPORTS rather than by a new opinion.
+    Every other script here runs at 601 x 889 and 800 x 1280; DESIGN.md §13 also names
+    390 x 844, and no check in this repo had ever rendered a pixel at it. The first run found
+    two of the four dock areas hanging off the side of the screen and the hold pill painted
+    over the two beside them. A size that is in the matrix and in no gate proves nothing.
     """
     ok, why = available()
     if not ok:
@@ -353,7 +369,7 @@ async def run_checks(*, scripts: tuple[Path, ...] | None = None) -> dict[str, An
         for script in (scripts if scripts is not None else
                        (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
                         SPLIT_SCRIPT, EMAIL_SCRIPT, TOUCH_SCRIPT, DENSITY_SCRIPT,
-                        REPLAY_SCRIPT, CLICKPATH_SCRIPT, SCREENS_SCRIPT)):
+                        REPLAY_SCRIPT, CLICKPATH_SCRIPT, MOBILE_SCRIPT, SCREENS_SCRIPT)):
             if not script.exists():
                 continue
             results.append(await asyncio.to_thread(

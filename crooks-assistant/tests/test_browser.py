@@ -16,6 +16,7 @@ from experience.browser import (
     COLLISION_SCRIPT,
     DENSITY_SCRIPT,
     EMAIL_SCRIPT,
+    MOBILE_SCRIPT,
     REPLAY_SCRIPT,
     SCREENS_SCRIPT,
     SCRIPT,
@@ -49,7 +50,7 @@ def test_the_gate_runs_every_browser_script():
 
     every = (SCRIPT, TABLET_SCRIPT, ACTION_SCRIPT, ACCEPT_SCRIPT, COLLISION_SCRIPT,
              SPLIT_SCRIPT, EMAIL_SCRIPT, DENSITY_SCRIPT, REPLAY_SCRIPT, CLICKPATH_SCRIPT,
-             SCREENS_SCRIPT)
+             MOBILE_SCRIPT, SCREENS_SCRIPT)
     for script in every:
         assert script.exists(), f"{script.name} is missing"
     source = (browser.ROOT / "experience" / "browser.py").read_text(encoding="utf-8")
@@ -65,7 +66,7 @@ def test_the_gate_runs_every_browser_script():
             "collision.js": "COLLISION_SCRIPT", "split.js": "SPLIT_SCRIPT",
             "email.js": "EMAIL_SCRIPT", "density.js": "DENSITY_SCRIPT",
             "replay.js": "REPLAY_SCRIPT", "clickpath.js": "CLICKPATH_SCRIPT",
-            "screens.js": "SCREENS_SCRIPT",
+            "mobile.js": "MOBILE_SCRIPT", "screens.js": "SCREENS_SCRIPT",
         }[script.name]
         assert name in default, f"{script.name} is not in run_checks's default sweep"
 
@@ -97,3 +98,17 @@ async def test_the_page_works_in_a_real_browser():
                     "the layer ladder holds on the idle screen",
                     "ZERO recordings were too short across the whole run"):
         assert pressed in names, f"the touch gate did not run: {pressed}"
+    # And the phone, which is the newest of these and the one most likely to be quietly
+    # dropped: every other script here runs at the tablet's two sizes, and 390 x 844 was in
+    # DESIGN.md §13's matrix for a release and a half with no gate rendering a pixel at it.
+    for phone in ("390x844@3", "375x667@2"):
+        assert phone in names, f"nothing was measured at {phone}"
+    for measured in ("no interactive collision",
+                     "the voice layer touches no navigation control",
+                     "every fixed navigation control fits the screen",
+                     "the dock band and the room reserved for it are the same number",
+                     "nothing a finger presses sits in the home indicator's strip",
+                     "with the keyboard open the hold is still a whole control on the screen",
+                     "the chevron sits beside what a row says, never on it",
+                     "prefers-reduced-motion stops the motion"):
+        assert measured in names, f"the phone gate did not run: {measured}"

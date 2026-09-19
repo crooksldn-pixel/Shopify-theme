@@ -205,7 +205,11 @@ def test_the_dock_band_is_reserved_once_for_the_whole_column():
     """It was reserved inside `.context`, which is a row of the stage and could say nothing
     about the bands beneath it — so the halves' chips landed inside the dock's 112px, on top of
     four navigation icons, and the branch layer paints above the navigation layer."""
-    assert 'body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}' in STYLE
+    # `--safe-b` rather than a bare `env(safe-area-inset-bottom, 0px)`: the same inset, read
+    # through the token every band that has to clear the hardware now shares, so the dock's own
+    # height and the room reserved for it are ONE number and a gate can set both. Unchanged
+    # invariant, one indirection — see tests/test_mobile.py for why the indirection exists.
+    assert 'body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + var(--safe-b))}' in STYLE
     assert 'body[data-mode="context"] .context{padding-bottom:0}' in STYLE
 
 

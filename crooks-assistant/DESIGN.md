@@ -113,9 +113,17 @@ must be able to move every card, chip, tab, row and dock together.
 
 ### 3.3 Ink
 
-`--ink` `#ebe8e0` (warm off-white) → `--ink-2` `#b9b6ae` → `--ink-3` `#83827c` → `--ink-4`
+`--ink` `#ebe8e0` (warm off-white) → `--ink-2` `#b9b6ae` → `--ink-3` `#8a8983` → `--ink-4`
 `#7a7a74` (metadata grey). Secondary text uses `--opacity-secondary: .6`; disabled uses
 `--opacity-disabled: .32`.
+
+`--ink-3` was `#83827c` until axe-core measured it: **4.26:1 on a raised tile** (`#1f1f23` — the
+page ground plus the card's `.075` glass plus the tile's own `.05`) at 10px, where AA wants 4.5.
+`#8a8983` is **4.68:1** there and **5.74:1** on the page ground. It moved on the **token**, not
+on `.stat-k`, because every metadata label on every raised tile failed for the same reason —
+which is what §3.2's "a change to the ladder must move every card, chip, tab, row and dock
+together" is for. `--ink-4` on the same tile is **4.29:1** and is therefore **not safe for text
+on a raised surface**; it is metadata grey on the *ground*, and putting it on a tile is a defect.
 
 ### 3.4 Semantic colour is rare and never alone
 
@@ -265,6 +273,25 @@ a child can escape its parent's cap.
 Giving it a number is what created the cap. The same bug class had already been found one element
 away (`.bottom`). Treat this table as a safety invariant.
 
+**The table is kept by geometry, and on a phone the geometry has to change to keep it.** Layer 5
+(voice) and layer 3 (navigation) share the bottom band and are separated by *not overlapping*,
+never by out-ranking each other. On the tablet that separation is horizontal: the hold pill sits
+in its `--hold-w` slot with the dock's four icons either side. At 390 CSS px that arrangement
+does not fit — it asks for 476px — and it failed in both possible ways at once: two dock icons
+were 29px off the side of the screen, and the pill, whose `min-width` was 240px inside a slot the
+phone media query had narrowed to 200px, was painted 10px over the two icons beside it.
+
+So at `max-width:560px` the band's 112px becomes **two rows** — the four areas above, the hold
+across the whole of the bottom — and the separation is **vertical**. Same guarantee, same
+currency, different axis. Two rules follow from it and both are tested:
+
+- **A control's width is bought from its slot, never asserted over it.** No `.talk-label` rule
+  declares a `min-width`; it is `width:100%` with a `max-width` cap. A width taken from the slot
+  cannot exceed the slot, whatever the slot becomes.
+- **`--hold-w` remains the one token the hold region and the hole the dock leaves for it share.**
+  The hole is a row rather than a column on a phone; it is still `.dock-gap`, still measured in
+  the same token, and still cannot drift from the region that fills it.
+
 ### 9.3 The split orb
 
 Two halves, each with its own current record, set, workflow, cursor, navigation stack, tab,
@@ -329,7 +356,16 @@ from that.
   the right size and in the same place.
 
 Breakpoints in source: `max-width: 520px`, `max-width: 560px`, `max-height: 520px`,
-`max-height: 640px`, and `(orientation: landscape) and (max-height: 820px)`.
+`max-height: 640px`, `(max-width: 560px) and (max-height: 520px)`, and
+`(orientation: landscape) and (max-height: 820px)`.
+
+`max-width: 560px` is **the phone** — the tablet is 601 in portrait and 889 in landscape, and the
+Samsung gate is 800, so nothing in that block is ever reached by the device this product was
+built for. The combined phone-and-short query is the keyboard on a phone, where the two
+small-screen blocks meet and their arithmetic does not survive the meeting: 76px of band split
+into two rows is 34px over 42px, and nothing here has ever been allowed under 44px. There, and
+only there, the four area icons stand down for as long as the keyboard is up — the same trade the
+same query already makes with the halves, and for the same reason.
 
 ---
 
@@ -337,15 +373,30 @@ Breakpoints in source: `max-width: 520px`, `max-width: 560px`, `max-height: 520p
 
 Every UI change is verified at, at minimum:
 
-| Viewport | DPR | Why |
-|---|---|---|
-| 601 × 889 | 1.33 | the physical Galaxy Tab A 8.0 — the device that exists |
-| 800 × 1280 | 1 | the portrait gate |
-| 390 × 844 | 3 | representative iPhone / CROOKS Phone |
-| 1280 × 800 | 1 | desktop / CROOKS Control reference |
+| Viewport | DPR | Why | Gated by |
+|---|---|---|---|
+| 601 × 889 | 1.33 | the physical Galaxy Tab A 8.0 — the device that exists | every browser script |
+| 800 × 1280 | 1 | the portrait gate | every browser script |
+| 390 × 844 | 3 | representative iPhone / CROOKS Phone | `scripts/browser/mobile.js` |
+| 375 × 667 | 2 | the narrowest phone still in service | `scripts/browser/mobile.js` |
+| 1280 × 800 | 1 | desktop / CROOKS Control reference | by hand |
 
 A defect is a defect at the size the tablet actually is. The 800×1280 gate alone has already
 missed defects the 601×889 session found.
+
+**And a size that is in this table and in no gate proves nothing.** 390 × 844 was named here for
+a release and a half while no check in the repo rendered a pixel at it; what the product did on a
+phone was therefore an opinion, and it was wrong in three measurable ways (§9.2, and the dock's
+own arithmetic). `mobile.js` closed that by running the instruments that already existed —
+`CrooksCollide.scan()` above all — at the two phone sizes rather than by inventing a new opinion
+about phones. 375 is there as well as 390 because the failure class is **arithmetic**: a band
+that fits 390 by four pixels does not fit 375 at all.
+
+The safe areas are **set** by that gate, not assumed. `env(safe-area-inset-*)` cannot be written
+from a test, which is why nothing had ever checked a notch or a home indicator; the stylesheet
+reads all four through `--safe-t/--safe-r/--safe-b/--safe-l` so the gate can give the page an
+iPhone's real insets and measure the result. **Do not write a bare `env(safe-area-inset-*)` into
+a rule** — it makes that rule unmeasurable, and `tests/test_mobile.py` counts them.
 
 ---
 

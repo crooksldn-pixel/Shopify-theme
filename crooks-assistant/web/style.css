@@ -43,7 +43,15 @@
   --ease-standard:cubic-bezier(.4,0,.2,1);
   --opacity-secondary:.6; --opacity-disabled:.32;
   /* ink: warm off-white down to metadata grey */
-  --ink:#ebe8e0; --ink-2:#b9b6ae; --ink-3:#83827c; --ink-4:#7a7a74;
+  /* `--ink-3` was #83827c. axe-core measured it at 4.26:1 against a raised tile (#1f1f23 —
+     the page ground, plus the card's .075 glass, plus the tile's own .05) on `.stat-k`, which
+     is 10px: WCAG AA wants 4.5:1 and it missed by 0.24. #8a8983 is 4.68:1 on the same tile and
+     5.74:1 on the page ground, and it keeps the ladder's order and its warmth — seven steps of
+     255, which is invisible beside the old value and decisive for the ratio.
+     Moved on the TOKEN rather than on `.stat-k`, because every metadata label on every raised
+     tile fails the same way for the same reason, and §3.2's rule is that a change to the ladder
+     moves all of them together. DESIGN.md §11 names this exact class as the one to watch. */
+  --ink:#ebe8e0; --ink-2:#b9b6ae; --ink-3:#8a8983; --ink-4:#7a7a74;
   /* semantic — rare, and always with a word or a mark beside them */
   --ok:#79c996; --warn:#dcb266; --bad:#dc7f6c;
   --ok-dim:rgba(121,201,150,.16); --warn-dim:rgba(220,178,102,.16); --bad-dim:rgba(220,127,108,.16);
@@ -61,6 +69,20 @@
   --ease-inout:cubic-bezier(.65,0,.25,1);
   /* touch */
   --tap:48px; --tap-lg:64px; --dock:112px;
+  /* The insets a notch, a rounded corner and a home indicator take, as TOKENS rather than as
+     bare `env()` calls scattered through the sheet. Two reasons, and the second is the one
+     that matters.
+     1. Every band that has to keep clear of the hardware reads the same four names, so the
+        dock's own height and the room the app reserves for it cannot disagree — which they
+        did: `.app` reserved `--dock + inset` while `.dock` was `--dock` tall with the inset
+        taken OUT of it, so on a notched phone the band was 34px shorter than its reservation
+        and its contents were squeezed into what was left.
+     2. `env()` CANNOT BE SET FROM A TEST. A custom property can. `scripts/browser/mobile.js`
+        overrides these four with an iPhone's real insets and MEASURES what happens to the
+        layout; with `env()` written inline there was no way to check safe-area behaviour at
+        all, on any harness, and it was therefore asserted rather than known. */
+  --safe-t:env(safe-area-inset-top,0px);   --safe-r:env(safe-area-inset-right,0px);
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-l:env(safe-area-inset-left,0px);
   /* The voice pill's slot in the dock band, and therefore the width of the VOICE zone in
      context mode. One token, used by both `.dock-gap` and `.talk`, so the hold region and the
      hole the dock leaves for it can never drift apart. */
@@ -172,7 +194,7 @@ a:focus-visible,[role="button"]:focus-visible,[role="tab"]:focus-visible,[tabind
      rather than pushing a band off the screen. */
   grid-template-areas:"notes" "top" "stage" "message" "halves" "foot";
   grid-template-rows:auto auto minmax(0,1fr) auto auto auto;grid-template-columns:minmax(0,1fr);
-  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
   /* The atmosphere the glass sits on. Not black: a dark diagonal with two large, static,
      very faint glows — one warm at the top-left where the light in the cards comes from, one
      cool at the bottom-right — so that a translucent panel has something behind it to be
@@ -313,7 +335,7 @@ body[data-mode="context"] .context{padding-bottom:0}
    band all stop above it. It was reserved inside `.context` before, which is a row of the
    stage and could say nothing about the bands beneath it: the halves' chips ended up inside
    the dock's band, on top of its four icons, and the touch gate measures exactly that. */
-body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-inset-bottom, 0px))}
+body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + var(--safe-b))}
 /* The navigation is one glass object with lit spots, not a row of outlined words. The
    container carries the glass (this is one of the two places backdrop-filter is allowed);
    the chips inside are a faint step up from it at rest and a strong one when selected or
@@ -413,6 +435,20 @@ body[data-mode="context"] .app{padding-bottom:calc(var(--dock) + env(safe-area-i
 .cards{
   position:relative;height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   padding:2px 14px 18px;display:flex;flex-direction:column;gap:12px;
+  /* Where the browser puts a field it has just given focus to. Without it, the scroll the
+     keyboard triggers aligns the field to the nearest EDGE of the deck, and on a 375 x 313
+     phone — a 63px deck behind an open keyboard — that left 41px of a 48px field showing, with
+     the last 7px of the box the owner was typing into below the fold. A scroll-padding makes
+     the browser aim at the inside of the deck instead, so the field lands whole.
+     This is the deck's own property and needs no script: `scrollIntoView` and the focus scroll
+     read the same value, so a field reached by thumb, by Tab or by the keyboard opening all
+     arrive in the same place.
+     6px and not more, deliberately: the padding is taken off BOTH ends, so the region the
+     browser aims at is the deck less twice this. The shortest deck measured behind an open
+     keyboard is 63px and the tallest field is 48, which leaves 15px to spend; 12px spent it
+     all and overshot, landing the field 7px above the top of the deck instead of 7px below its
+     bottom. 6px leaves a 51px region, which a 48px field fits inside whole. */
+  scroll-padding-block:6px;
 }
 .timings{
   margin:0;padding:0 14px;font-family:var(--mono);font-size:11px;color:var(--ink-4);flex:none;
@@ -670,17 +706,28 @@ body[data-mode="orb"] .talk-label{opacity:.75}
 /* The pill's slot, and only the pill's slot. `--hold-w` is the same token `.dock-gap` uses,
    so the hole the dock leaves and the region that fills it cannot drift apart — and the four
    dock icons, which are navigation chrome, are outside it by construction. */
+/* `height` carries the bottom inset for the same reason `.dock` does: the band and the room
+   `.app` reserves for it are one number, and on a notched phone a band 34px shorter than its
+   own reservation puts the pill 34px above where the thumb expects it. */
 body[data-mode="context"] .talk{
-  position:fixed;left:50%;transform:translateX(-50%);width:var(--hold-w);bottom:0;height:var(--dock);align-items:center;
-  padding:0 0 env(safe-area-inset-bottom);
+  position:fixed;left:50%;transform:translateX(-50%);width:var(--hold-w);bottom:0;
+  height:calc(var(--dock) + var(--safe-b));align-items:center;
+  padding:0 0 var(--safe-b);
 }
 /* The scrim under the deck is the DOCK's, full width, and not the hold region's: a background
    that had to be full-width was the reason the hold region was full-width. */
 body[data-mode="context"] .dock{
   background:linear-gradient(180deg,rgba(7,7,10,0),rgba(7,7,10,.92) 40%);
 }
+/* The pill is BOUGHT FROM ITS SLOT, never asserted over it. It was `min-width:240px` inside a
+   slot the phone media query had narrowed to 200px, so at 390 CSS px it was painted 10px over
+   the Inbox icon at one end and the Sales icon at the other — `button_over_navigation` in the
+   collision gate, which is VOICE covering NAVIGATION and precisely what the §8 layer table
+   forbids. A width taken from the slot cannot exceed the slot, whatever the slot becomes.
+   At 601 and 800 the arithmetic is unchanged: `min(252px slot, 240px cap)` is 240px. */
 body[data-mode="context"] .talk-label{
-  display:inline-flex;align-items:center;justify-content:center;min-width:240px;height:56px;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:0;width:100%;max-width:240px;height:56px;
   border-radius:var(--r-pill);border:1px solid var(--border-rest);background:var(--glass-3);color:var(--ink-2);
   box-shadow:var(--inset-hi),var(--shadow-floating);
   -webkit-backdrop-filter:blur(var(--blur-surface));backdrop-filter:blur(var(--blur-surface));
@@ -713,7 +760,11 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
      it never overlaps: `--hold-w` is the hole it leaves for the hold pill. */
   position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--z-nav) + 1);
   display:flex;align-items:center;justify-content:center;gap:10px;
-  height:var(--dock);padding:0 14px env(safe-area-inset-bottom);pointer-events:none;
+  /* The inset is ADDED to the band and then paid back as padding, rather than taken out of
+     it. `.app` reserves `--dock + --safe-b`; a band of `--dock` with the inset subtracted was
+     34px shorter than its own reservation on a notched phone, so the four areas and the pill
+     were squeezed into 78px of a 112px band while 34px of empty ground sat above them. */
+  height:calc(var(--dock) + var(--safe-b));padding:0 14px var(--safe-b);pointer-events:none;
 }
 .dock-gap{flex:none;width:var(--hold-w)}  /* the hold pill's room: 240px + its border */
 .dock-btn{
@@ -738,13 +789,107 @@ body[data-mode="context"] .talk[data-recording="true"] .talk-label{border-color:
    it, so the boundary between the voice zone and the branch zone is visible and not merely
    true. It used to be 98px up, clearing a dock that is no longer the thing beneath it. */
 body[data-mode="orb"] .talk{padding-bottom:24px}
-body[data-mode="orb"] .bottom{padding-bottom:calc(var(--dock) - 8px)}
+body[data-mode="orb"] .bottom{padding-bottom:calc(var(--dock) + var(--safe-b) - 8px)}
 body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgba(7,7,10,.8) 45%)}
-@media (max-width:560px){:root{--hold-w:200px}.dock-btn{width:52px}.dock-label{display:none}}
+/* ---------------------------------------------------------------- the phone
+ *
+ * WHAT WAS MEASURED, at 390 x 844 and at 375 x 667, on the tree before this block:
+ *
+ *   the band asked for 476px  four 52px areas + a 200px hold slot + four 10px gaps + 28px of
+ *                             padding — on a screen 390px wide.
+ *   two areas off the side    Orders at x=-29 and Products ending at x=419. The collision
+ *                             gate's own words: "29px off the side — fixed furniture must fit
+ *                             the screen" (`control_clipped_by_container`, twice, on every
+ *                             surface). Two of the four ways into the shop were half a
+ *                             control.
+ *   voice over navigation     `--hold-w` narrowed to 200px and `.talk-label` did not: it kept
+ *                             `min-width:240px`, so the pill was painted 10px over the Inbox
+ *                             icon and 10px over the Sales icon. `button_over_navigation` —
+ *                             layer 5 covering layer 3, which is D-1's rule and D-1's shape.
+ *
+ * None of that is visible to any harness in this repo: the collision gate runs at 601 and 800,
+ * where the band fits with 25px to spare. `scripts/browser/mobile.js` runs it at 390 and 375,
+ * which is how these three numbers came to be written down.
+ *
+ * THE BAND DOES NOT GET WIDER, so the ARRANGEMENT changes rather than the sizes. The same
+ * 112px becomes two rows: the four areas along the top, the hold along the whole of the
+ * bottom. The separation §8 requires between NAVIGATION and VOICE is then VERTICAL instead of
+ * horizontal — bought with geometry exactly as before, and with more room on both sides of it
+ * than any side-by-side arrangement can give a 390px screen. `--hold-w` is still the one token
+ * the hold region and the hole the dock leaves for it share; the hole is now a row rather than
+ * a column, and `.dock-gap` is still the box that reserves it.
+ *
+ * The labels come back with the space. They were dropped to buy width that stacking now
+ * supplies, and a cube and a luggage tag are not self-evident: 370px of row names all four.
+ */
+@media (max-width:560px){
+  :root{
+    /* The whole of the lower row. Still read by BOTH `.dock-gap` and `.talk`. */
+    --hold-w:100%;
+    --dock-areas:52px;   /* the height of the row the four areas own, of the band's --dock */
+  }
+  /* Two rows, packed from the top, with a column gap only: a row gap would push the pair past
+     the 112px the band has.
+     IN CONTEXT MODE ONLY. On the idle screen there is no pill in this band at all — the whole
+     stage is the hold — so stacking there would reserve a row for nothing and lift the four
+     icons 28px into the hold label's own line. The gate measured exactly that: a 58 x 4px
+     `button_over_navigation` between `#talk-label` and two dock icons at both phone sizes. */
+  body[data-mode="context"] .dock{flex-wrap:wrap;align-content:flex-start;justify-content:center;gap:0 6px}
+  /* The hole, as a row. `order` puts it after the four areas without moving it in the
+     document, so the reading order stays Orders · Inbox · hold · Sales · Products. */
+  body[data-mode="context"] .dock-gap{order:1;flex:0 0 100%;width:var(--hold-w);height:calc(var(--dock) - var(--dock-areas))}
+  body[data-mode="context"] .dock-btn{height:var(--dock-areas)}
+  /* On the idle screen the band keeps its single centred row, and the hole goes: the 252px it
+     used to hold open was room for a pill that is not drawn in this mode. The four icons take
+     the width instead, which is the only change the idle screen sees on a phone. */
+  body[data-mode="orb"] .dock-gap{display:none}
+  .dock-btn{order:0;flex:1 1 0;width:auto;min-width:0}
+  .dock-label{display:block}
+  body[data-mode="context"] .talk{
+    left:0;right:0;transform:none;width:var(--hold-w);
+    height:calc(var(--dock) - var(--dock-areas) + var(--safe-b));
+  }
+  /* The full row, less the band's own padding, and no cap: on a phone the hold is the widest
+     thing the thumb has to find and there is no icon beside it to keep clear of. */
+  body[data-mode="context"] .talk-label{max-width:none;width:calc(100% - 28px);height:52px}
+}
+/* The navigation rail WRAPS on a phone instead of scrolling out of reach.
+ *
+ * At 390 the row wanted 468px of chips — Assistant, Back, Previous, Next, Split and the open
+ * set — in 354px of container, and the two at the end were simply off the screen. The rail
+ * scrolls, so nothing was clipped in the document's terms; but `control_clipped_by_container`
+ * counts a NAVIGATION chip as fixed furniture on purpose, because "nothing on the glass says
+ * a navigation strip continues past the edge of the screen", and the gate reported Split 72px
+ * off the side. It was right: on the 390px screen the invitation to divide was invisible.
+ *
+ * Wrapping is conditional by construction — a rail whose chips fit stays one row, so the idle
+ * order screen is unchanged and 601 and 800 never reach this block at all. What it costs is
+ * 52px on the screens that would otherwise have hidden a control, which is the trade §25 made
+ * for the branch band and the same one. `overflow-x:visible` because a wrapped row has nothing
+ * to scroll, and the fade that says "there is more this way" would then be a lie. */
+@media (max-width:560px){
+  .context-nav{flex-wrap:wrap;overflow-x:visible;row-gap:6px}
+  .context-nav[data-overflow="1"]{-webkit-mask-image:none;mask-image:none}
+  /* And the card's own header stacks, for the same reason the band does: at 390 the identity
+     column is about 250px of a 358px card, because the money and the state badges hold the
+     other 110px beside it. "Alexandra Featherstonehaugh-Wallingford" came out on FOUR lines,
+     broken mid-word twice. Given the width it wraps to two.
+     The order of the answer is unchanged — who and which record first, then how much and what
+     state — it is read down the card instead of across it, which is the direction a phone has
+     room in. The money keeps its own line with the badges beside it, because "how much" and
+     "is it paid" are one question (see `.head-side`). */
+  .card-head{flex-direction:column;align-items:stretch;gap:10px}
+  .head-side{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .card-head.profile{align-items:stretch}
+}
 
 /* ------------------------------------------------------------------ settings sheet */
 .sheet{
-  position:fixed;inset:auto 0 0 0;margin:0;width:100%;max-width:100vw;max-height:88vh;
+  /* `dvh`, not `vh`, and the same unit on `.sheet-scroll` below. In a browser tab `vh` is the
+     LARGE viewport — it ignores the collapsing address bar — so an 88vh sheet is taller than
+     the screen actually is and its Done button ends up under the browser's own chrome. In the
+     installed PWA the two units are identical, so this costs the tablet nothing. */
+  position:fixed;inset:auto 0 0 0;margin:0;width:100%;max-width:100vw;max-height:88dvh;
   border:1px solid var(--line-2);border-bottom:0;border-radius:var(--r-4) var(--r-4) 0 0;
   background:rgba(16,16,20,.86);color:var(--ink);padding:0;
   box-shadow:var(--shadow-2),var(--inset-hi);overflow:hidden;
@@ -754,7 +899,7 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
 .sheet::backdrop{background:rgba(0,0,0,.55)}
 @keyframes sheet-in{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
 .sheet-grip{width:40px;height:4px;border-radius:2px;background:var(--line-2);margin:10px auto 0}
-.sheet-scroll{max-height:calc(88vh - 14px);overflow-y:auto;overscroll-behavior:contain;padding:8px 20px calc(20px + env(safe-area-inset-bottom))}
+.sheet-scroll{max-height:calc(88dvh - 14px);overflow-y:auto;overscroll-behavior:contain;padding:8px 20px calc(20px + var(--safe-b))}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}
 .sheet h2{margin:0;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-2)}
 .sheet h3{margin:22px 0 8px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3)}
@@ -819,7 +964,10 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
    not overlay it). A quarter of a 418px screen cannot be furniture. */
 @media (max-height:520px){
   :root{--dock:76px}
-  body[data-mode="context"] .talk-label{height:48px;min-width:180px}
+  /* A cap, not a floor — see the base rule. A `min-width` here is a pill that can grow past
+     the slot the line below narrows to 192px, which is how the phone came to have voice
+     painted over navigation. */
+  body[data-mode="context"] .talk-label{height:48px;max-width:180px}
   .dock-btn{height:48px}
   .dock-label{display:none}
   :root{--hold-w:192px}
@@ -828,12 +976,24 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
   body[data-mode="context"] .orb-frame{transform:scale(.13);margin:calc(var(--orb) * -.435)}
   body[data-mode="context"] .answer{-webkit-line-clamp:1}
   body[data-mode="context"] .heard{display:none}
-  .notes{max-height:26vh}
+  /* `dvh`: this query's entire subject is the keyboard being open, and `vh` measures the
+     screen the phone would have had if it were not. */
+  .notes{max-height:26dvh}
   .notes-workspace{padding-bottom:4px}
   .notes-workspace .note{min-height:36px;padding:4px 6px 4px 10px}
   .notes-workspace .note-words{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
   .notes-workspace .note-dismiss{min-height:32px;min-width:32px;padding:0 10px}
   .context-nav{margin-bottom:6px}
+  /* The deck's 72px floor, which is right on a full screen — one card should not be squeezed
+     to nothing — and wrong here. With the keyboard up there can be less than 72px left, and a
+     floor the column cannot honour is not a short deck: it is a deck that OVERFLOWS, painted
+     out through the bottom of the layout and under the fixed band. Measured on a 375 x 313
+     phone: the compose card's subject field came out at y 232-278 with the hold band starting
+     at 237, so `#talk-label` was drawn 27px across the field the owner was typing into
+     (`text_over_control`). The same shape is in the pre-change tree with the dock's icons
+     instead of the pill, so this is not new — it is the floor, and it is here.
+     The deck scrolls. A short deck is an interaction; a card under the furniture is a defect. */
+  .deck{min-height:0}
   /* And the halves' band yields with everything else. The collision gate caught it lying
      across the composer's own input at 601 x 418: `#branch-zone` was 108px of a 418px screen,
      with a chip at [21,240 274x48] over the field at [33,284 535x46]. The owner is typing into
@@ -841,6 +1001,57 @@ body[data-mode="orb"] .dock{background:linear-gradient(180deg,rgba(7,7,10,0),rgb
      navigation rail while there is one half anyway. He can still divide with the gesture, and
      the band comes back the moment the keyboard does not need the screen. */
   body[data-mode="context"] .branch-zone{display:none}
+}
+/* The keyboard, ON A PHONE — where both blocks above apply and their arithmetic does not
+ * survive the meeting. 390 x 844 becomes 390 x ~508 when the keyboard comes up, so the band
+ * is 76px and it is also two rows: 34px of areas above 42px of hold, both under the 44px this
+ * product has never let a control be (§11).
+ *
+ * So on a phone, WHILE THE KEYBOARD IS OPEN, the four areas stand down and the hold has the
+ * band to itself at full width and 48px. That is the same trade the block above already makes
+ * with the halves, made for the same reason and stated the same way: the owner is typing into
+ * a field, and the dock is the way to somewhere ELSE — a tap on Orders mid-draft is far more
+ * likely to be a mistake than an intention. They come back, labels and all, the moment the
+ * keyboard stops needing the screen; nothing is disabled and nothing is made unreachable, the
+ * band is simply not holding them for those few seconds.
+ *
+ * It is a phone-only rule. At 601 x 418 the tablet keeps all four, as it does today. */
+@media (max-width:560px) and (max-height:520px){
+  :root{--hold-w:100%;--dock-areas:0px}
+  .dock-btn{display:none}
+  .dock-gap{flex:0 0 100%;height:var(--dock)}
+  body[data-mode="context"] .talk{height:calc(var(--dock) + var(--safe-b))}
+  body[data-mode="context"] .talk-label{max-width:none;width:calc(100% - 28px);height:48px}
+  /* And the rail stops wrapping, because two rows of it is 104px of a 313px screen and the
+     deck was measured at TWENTY pixels behind them — a field the owner is typing into, with
+     its centre under the hold band (`content_under_chrome`). It keeps the steps and sheds the
+     two chips that are not steps:
+       the Split INVITATION — the halves' own band is already `display:none` in this query for
+       exactly this reason, and the same sentence applies to the invitation: he can still
+       divide with the gesture, and it comes back with the keyboard.
+       the trail's entity chips — context rather than a way out. Back stays, and Back is the
+       step this screen needs.
+     What is left is Assistant · Back · Previous · Next, which measures 333px of the 347px this
+     row has at 375 and fits at every phone width above it. Nothing is disabled and nothing is
+     made unreachable; the row is holding four controls instead of six for as long as the
+     keyboard needs the screen. */
+  .context-nav{flex-wrap:nowrap;overflow-x:auto}
+  #branch-rail{display:none}
+  #stack{display:none}
+  /* And the orb's band gives 18 of its 52 pixels. It keeps the line that matters — the Mac's
+     last answer, already clamped to one line by this query — and loses the 44px dot beside it,
+     which on a phone with the keyboard up is the least useful thing on the screen and the only
+     one whose job is done by `#conn` in the header as well.
+     The 18px is not cosmetic. The deck behind an open keyboard at 375 x 313 measured 63px with
+     a 48px field in it, and the browser's own focus scroll aligns a target to the nearest EDGE
+     when it cannot fit it with room to spare — so 41px of the 48 showed, and the last 7px of
+     the box being typed into sat above the top of the deck. At 81px the field lands whole.
+     Tried first and rejected: `scroll-padding-block` on `.cards` (the browser was already
+     scrolling as far as it intended to, so it moved nothing) and a `focusin` handler in
+     web/app.js that re-centred the field (measured: scrollTop unchanged at 154, twice). Room
+     is what the problem was; room is what fixes it. */
+  body[data-mode="context"] .orb-zone{height:34px;padding-left:14px}
+  body[data-mode="context"] .orb-frame{display:none}
 }
 @media (orientation:landscape) and (max-height:820px){
   :root{--orb:260px}
@@ -1146,8 +1357,14 @@ html[data-lite] .rail-chip,html[data-lite] .variant-row,html[data-lite] .ws-opt,
 /* Behind the disclosure: the same chip, quieter, and never wider than what it says. */
 .rail-rest>.rail-chip{flex:0 1 auto;font-size:13px;font-weight:500;padding:7px 12px;background:transparent;border-color:var(--border-subtle);box-shadow:none}
 .rail-rest>.rail-chip.is-off{opacity:.7}
+/* 32px, and §6 says every control is at least 44. The collision gate enforces 44 with no
+   tolerance and had never seen this one: its fixtures are rendered payloads, and the
+   disclosure only exists on a rail with more chips than fit — which takes a real order from a
+   real backend to produce. `scripts/browser/mobile.js` opens one, and found it at both phone
+   sizes. It costs nothing in height: the control sits in a flex row beside rail chips that are
+   already 44, so the row was 44 and this was a small target inside it. */
 .rail-more{
-  min-height:32px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px;
+  min-height:44px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px;
   font:inherit;font-size:12px;font-weight:500;letter-spacing:.06em;color:var(--ink-3);cursor:pointer;
   background:transparent;border:1px solid var(--border-subtle);border-radius:var(--radius-control);
 }
@@ -1762,7 +1979,17 @@ body[data-mode="context"] .branch-chip .branch-bare{display:none}
 /* Tappable rows, tighter. `compact` is for figures and drops the tap target to nothing,
    which is right for a column of daily revenue and wrong for a list of orders: these keep
    the full 44 px and take their height out of the padding and the clamped sub-line. */
-.rows.tight .row{padding:9px 0}
+/* `padding:9px 0` is a SHORTHAND, and it reset the right-hand padding to zero — the 26px
+   `.row.tappable` reserves for the chevron that sits at `right:2px`. So on every tight list in
+   the product, at every viewport, the chevron was drawn 9px into the row's own right-hand
+   column: "1h ago" came out as "1h ag›" on the inbox, the work queue and every order list.
+   Measured at 390, 375, 601 and 800 — an identical 9 x 18px overlap at all four, so this is not
+   a phone defect and the fix is not a phone fix.
+   The collision gate cannot see it, and is right not to: the chevron is `aria-hidden="true"`,
+   which makes it `decorative` in web/collide.js, and a decorative mark beside text is exactly
+   what a chevron IS. What makes this one a defect is that it lands ON the text. Only the
+   vertical padding is set now; the horizontal reservation is left where it was. */
+.rows.tight .row{padding-top:9px;padding-bottom:9px}
 .rows.tight .row-main{font-size:15px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .rows.tight .row-sub{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .rows.tight .row.is-open .row-main,.rows.tight .row.is-open .row-sub{-webkit-line-clamp:unset}
