@@ -18,6 +18,22 @@
     "secrets": "none — no tool here requires an API key. SkillSpector runs --no-llm."
   },
 
+  "reconstruction_inputs": {
+    "$comment": [
+      "Everything `scripts/dev_env.py plan` reads, all of it COMMITTED beside this file. `.tooling/`",
+      "is gitignored, so an input that lives only there cannot be read on a fresh checkout — which",
+      "is exactly what the rejected candidate's step 1 did when it opened .tooling/node/package.json.",
+      "Paths are relative to crooks-assistant/docs/dev-environment/."
+    ],
+    "node_package": "node-package.json",
+    "node_lock": "node-package-lock.json",
+    "sysroot_packages": "sysroot-packages.txt",
+    "sysroot_checksums": "sysroot-packages.sha256",
+    "binary_checksums": "binaries.sha256",
+    "integrity_note": "sysroot-packages.sha256 and binaries.sha256 are OBSERVED digests, read off the artifacts installed on the builder at 9a27bc441adad1e98e8a9ca257d1883246ee7eec. They are not upstream-published attestations; what they pin is the exact bytes this environment was proved against.",
+    "not_yet_recorded": "The release tag and asset URL for each entry under `binaries`. Without them step 4 of the plan cannot be written as commands, so a full network reconstruction is BLOCKED on an approved package-fetch policy."
+  },
+
   "environment": {
     "$comment": "Exported by `eval \"$(python3 scripts/dev_env.py env)\"`. Required for Chromium and for CROOKS's own scripts/browser/*.js to resolve playwright.",
     "PLAYWRIGHT_BROWSERS_PATH": ".tooling/browsers",
@@ -198,6 +214,9 @@
       "license": "Apache-2.0",
       "scope": ".tooling/uv-tools/skillspector (isolated venv), shim at .tooling/bin/skillspector",
       "trigger": "explicit",
+      "verify": "skillspector --version",
+      "commit_verifiable": false,
+      "commit_note": "uv tool install --from <local clone> records a path, not a revision, so the installed artifact carries nothing to compare this commit against. doctor reports it ADVISORY with that reason rather than passing it silently.",
       "invocation": "skillspector scan <path> --no-llm --format json --output <report>",
       "network": "api.osv.dev for the SC4 supply-chain check; falls back to a bundled list offline. Sends dependency COORDINATES only, never file contents.",
       "policy": "--no-llm is MANDATORY here. It keeps file contents local and needs no API key. No API key is provisioned for this tool."

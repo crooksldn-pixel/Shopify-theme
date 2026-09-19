@@ -9,13 +9,25 @@ The machine-readable source of truth is **`docs/dev-environment/manifest.json`**
 prose around it: why each thing is here, what it may and may not do, and what is still missing.
 
 ```
-python3 scripts/dev_env.py doctor      # what is installed, what is missing   (read-only)
+python3 scripts/dev_env.py doctor      # is this the pinned environment       (read-only)
 python3 scripts/dev_env.py env         # the exports a browser run needs      (read-only)
-python3 scripts/dev_env.py bootstrap   # the exact, idempotent install steps
+python3 scripts/dev_env.py plan        # the steps that rebuild it            (read-only)
 eval "$(python3 crooks-assistant/scripts/dev_env.py env)"
 ```
 
-`doctor` exits non-zero when anything is missing, so it can be used as a precondition.
+All three are read-only. **`plan` prints a plan; it does not install anything** — see §9 for why
+the command that used to be called `bootstrap` is not called that any more.
+
+`doctor` **fails closed**. A tool that is missing, that will not run, or that reports a version
+other than the pinned one is a failure and exits non-zero, so it can be used as a precondition.
+A finding that genuinely cannot be decided here is printed as `advisory` **with the reason on the
+same line**, and advisory findings never change the exit code. There is currently exactly one
+(§9.3).
+
+> **This file describes candidate `claude/builder-environment-repair`.** Candidate `9a27bc4` was
+> independently reviewed and rejected with four blocking findings — BE-01 to BE-04 — recorded in
+> product memory as `BUILDER_ENVIRONMENT_REVIEW.md`. §9 is what was repaired, what was proved, and
+> what is still blocked. The regression tests are `crooks-assistant/tests/test_dev_env.py`.
 
 ---
 
@@ -46,10 +58,20 @@ Everything below is pinned, and nothing self-updates.
 | `.tooling/scans` | SkillSpector reports | no |
 | `crooks-assistant/.venv` | project venv + builder test tooling | no |
 | `crooks-assistant/docs/dev-environment/manifest.json` | the pins | **yes** |
-| `crooks-assistant/scripts/dev_env.py` | doctor / env / bootstrap | **yes** |
+| `crooks-assistant/docs/dev-environment/node-package.json` | the npm project `plan` installs | **yes** |
+| `crooks-assistant/docs/dev-environment/node-package-lock.json` | the resolved npm tree, with integrity hashes | **yes** |
+| `crooks-assistant/docs/dev-environment/sysroot-packages.txt` | the 89 `.deb`s, as `name=version` | **yes** |
+| `crooks-assistant/docs/dev-environment/sysroot-packages.sha256` | their digests | **yes** |
+| `crooks-assistant/docs/dev-environment/binaries.sha256` | digests of the nine pinned binaries | **yes** |
+| `crooks-assistant/scripts/dev_env.py` | doctor / env / plan | **yes** |
 
 `.tooling/` (~1.8 GB) and `.venv/` (~630 MB) are gitignored. Only manifests, scripts and docs are
 committed.
+
+**Nothing `plan` reads lives under `.tooling/`.** That is the point of the five inventory files
+above: an input that exists only in gitignored output can be read on the machine that already
+has the environment and nowhere else, which is BE-04. `doctor` checks them against the manifest
+so the three copies of the node pins cannot drift apart silently.
 
 ---
 
@@ -370,3 +392,108 @@ flagged lines rather than accepting the verdict.
 - **No service was installed, started or changed. Tailscale untouched. Writes still disabled.
   No live Shopify, Gmail or ElevenLabs call was made** — the browser gate runs against the
   fixture world on loopback.
+
+---
+
+## 9. The four rejected findings, and what each repair actually proves
+
+Candidate `9a27bc4` was published, independently reviewed and **rejected**. Its own outbox said
+the environment worked; three of the four findings were reproduced against the committed code
+anyway. That is the useful part: a worker's prose about its own result is not evidence, and the
+repairs below are each pinned to a test that fails against the rejected code.
+
+### 9.1 BE-01 — the plan generator crashed on the manifest committed beside it
+
+`binaries` carries a string-valued `$comment` so the pins stay readable. `doctor` skipped
+`$`-prefixed keys; `bootstrap` did not, so it reached `spec['version']` on a string and raised
+`TypeError: string indices must be integers, not 'str'` eighteen printed lines in. No install, no
+network and no missing tool were needed to reproduce it.
+
+Two callers deciding separately what counts as a tool is the actual defect, so there is now one:
+`entries()`. It filters prose and requires every surviving entry to be an object carrying the
+fields its section needs; anything else is a `ManifestError` naming the key, reported as a message
+and not a traceback.
+
+### 9.2 BE-02 — `doctor` returned success for wrong versions and failed tools
+
+It counted only `MISSING`. A binary that ran and printed anything at all was `ok` — the pin was
+*displayed beside* the output and never compared with it, which is why `shellcheck` reporting
+`0.0.0` passed. Version mismatches and failed probes were `warn`, and `warn` did not count. A
+fixture with every tool present and every tool wrong finished `all present`, exit 0.
+
+Now: each tool is run through **its own `verify` command from the manifest** (`shlex.split`, never
+a shell), all of its output is read rather than the first line, and the pinned version must appear
+in it. Missing, unrunnable and mismatched are all `FAIL`. Chromium is compared against
+`browsers.chromium.chromium_version`, the venv against `python.interpreter`, and the nine pinned
+binaries against `binaries.sha256` — a version number is a claim the artifact makes about itself,
+so the bytes are checked too.
+
+Both directions are proved:
+`test_be02_doctor_fails_closed_when_tools_are_present_but_wrong` and
+`test_be02_doctor_passes_the_same_fixture_when_everything_matches`. Fail-closed that always fails
+is not a check.
+
+**Advisory still means advisory, and is now narrow.** Biome and Pyright findings *over product
+source* remain advisory (§4.1) — `doctor` does not run them and never did. What `doctor` reports
+is required environment identity, and the only advisory line in it is §9.3.
+
+### 9.3 The one thing `doctor` cannot decide
+
+`uv tool install --from <local clone>` records a path, not a revision, so the installed
+SkillSpector carries nothing to compare `uv_tools.skillspector.commit` against. `doctor` prints it
+as `advisory` **with that reason on the line**. Passing it silently would be BE-02 again; failing
+the environment over a fact nothing on the machine can settle would be noise. Closing it properly
+means recording provenance at install time, which belongs with the package-fetch policy below.
+
+### 9.4 BE-03 — generated exports executed what was in the checkout path
+
+`cmd_env` built each line with Python's `repr` and then replaced the quotes, which produces a
+**double**-quoted shell word. Double quotes do not stop the shell. A checkout at
+`/tmp/crooks-$(printf CROOKS_ENV_PROBE)` exported
+`NODE_PATH=/tmp/crooks-CROOKS_ENV_PROBE/.tooling/node/node_modules` — the wrong directory, and a
+command the generator chose to run, in output whose documented use is `eval`.
+
+`shlex.quote` is the fix: single quotes, and an embedded single quote is escaped rather than
+ending the string. `plan` quotes its paths the same way. The regression cases are the original
+`$(printf …)` probe, and one directory name carrying spaces, an apostrophe, a double quote, `$`,
+a backtick, a semicolon and a newline at once — read back NUL-separated, `PATH` included.
+
+### 9.5 BE-04 — a fresh checkout could not reconstruct this
+
+Four separate things, and one of them is still open.
+
+**Fixed — the interface is honest.** `bootstrap` was documented as "install whatever doctor says is
+missing" and as idempotent. It printed instructions. Its exit code therefore meant only that text
+had been printed. It is now `plan`, which is what it always was; `bootstrap` exits 2 and says so
+rather than remaining a silent alias.
+
+**Fixed — the inputs are committed.** Step 1 was `cd .tooling/node && npm install`, and `.tooling/`
+is gitignored: on a fresh checkout that directory does not exist and the `package.json` it
+installed from had never been committed anywhere. The npm project and its lock are now committed
+under `docs/dev-environment/`, `plan` copies them into place before npm runs, and the step is
+`npm ci` — a lock that is committed and then not installed from is decoration.
+
+**Fixed — the steps are root-anchored.** Bare `cd`s that later commands inherited are gone; a `cd`
+appears only inside a subshell that closes on the same line.
+
+**Fixed — the artifacts are identified.** `sysroot-packages.txt` pins all 89 `.deb`s as
+`name=version`, replacing a recursive `apt-cache depends` resolution that returned whatever the
+distribution offered on the day it ran. `sysroot-packages.sha256` and `binaries.sha256` carry a
+digest each. **These digests are observed, not upstream-attested**: they were read off the
+artifacts installed on this builder. What they pin is the exact bytes this environment was proved
+against, which is worth having and is not the same claim as an upstream signature.
+
+**BLOCKED — the plan has never been executed end to end.** Steps 1–3 and 6 fetch from npm,
+Playwright's CDN, apt and GitHub, and step 4 cannot be written as commands at all: the manifest
+pins each tool's version and upstream repository but not its release tag or asset URL. Guessing
+eight release URLs and committing them untested would be BE-01 with a different traceback.
+
+Both need an **approved package-fetch policy**, which is an owner decision and has not been given.
+Until it is:
+
+- `plan` prints the blocker in its own output, where it is read;
+- **no claim that this environment has been rebuilt from scratch is supported by anything here.**
+
+What *is* proved offline is narrower and stated as such: every input `plan` reads is committed and
+present in a checkout with no `.tooling/` and no `.venv/` at all, the generator is read-only, and
+two runs produce byte-identical output.
