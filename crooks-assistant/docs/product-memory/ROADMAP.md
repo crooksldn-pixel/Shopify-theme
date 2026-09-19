@@ -12,21 +12,23 @@ The final Sequencing rule and DEC-046 are authoritative for execution order. Eng
 # NOW — make the current CROOKS product genuinely reliable
 
 ## N1. Complete the always-on Linux deployment
-**Status:** BUILDING
+**Status:** BUILDING — runtime is live; three items outstanding
 
-- finish review of Linux migration code
-- provision secrets safely
-- install `crooks-assistant.service`
-- enable private Tailscale HTTPS
-- verify reboot recovery
-- verify Claude Max auth under systemd
-- verify Shopify read path
-- verify Gmail
-- verify ElevenLabs Scribe
-- verify Derek TTS
-- keep writes disabled until the read/runtime layer is proven
-- keep Mac deployment as rollback
-- later move service from temporary root execution to a dedicated `crooks` user
+Verified on the server 2026-09-19T10:25Z by read-only inspection. See CURRENT_TRUTH.md for the observation method.
+
+- finish review of Linux migration code — **outstanding**: the candidate `1cf3a0f` is running, but its promotion was never recorded as a reviewed decision
+- provision secrets safely — **partial**: `media_signing_key` in `/etc/crooks-os/secrets/` at 0700; `gmail_token` missing
+- install `crooks-assistant.service` — **done**: active (running) since 06:30:10Z, `NRestarts=0`, enabled at boot
+- enable private Tailscale HTTPS — **live**, tailnet only, no funnel; **owner approval not recorded — confirm**
+- verify reboot recovery — **outstanding**: unit is enabled at boot but a reboot has not been exercised
+- verify Claude Max auth under systemd — **done**: health reports the Agent SDK authorised on the Max subscription
+- verify Shopify read path — **done**: CROOKSLDN, 478 orders cached over 90 days
+- verify Gmail — **FAILING**: no token stored; the sole cause of `degraded` health
+- verify ElevenLabs Scribe — **done**: scribe_v2, 4/4 ok
+- verify Derek TTS — **done**: 7/7 ok, last 463ms
+- keep writes disabled until the read/runtime layer is proven — **holding**: `CROOKS_WRITES_ENABLED=false`, all write capabilities disabled
+- keep Mac deployment as rollback — unchanged
+- later move service from temporary root execution to a dedicated `crooks` user — **outstanding** (DEC-021 is marked TEMPORARY and is still in force)
 
 ## N2. Install the Claude inbox watcher
 **Status:** SHIPPED
@@ -43,6 +45,8 @@ The final Sequencing rule and DEC-046 are authoritative for execution order. Eng
 - corrected watcher passed end-to-end automatic smoke test
 - no public webhook endpoint required
 - normal GPT → Claude → outbox loop no longer requires the owner to relay messages
+
+**Open defect (2026-09-19T10:33Z): duplicate dispatch on failed publication.** If a worker finishes its work but exits before publishing the outbox, the watcher re-dispatches the same inbox SHA. Confirmed in the service logs at 09:47:29Z. The duplicate run detected the condition and verified rather than rebuilding, but unattended this redoes completed work. Proposed guard: skip dispatch when the working-tree outbox already records the incoming inbox SHA. SHIPPED refers to the watcher loop, not to this defect being closed.
 
 ## N3. Perfect the current UI
 **Status:** PLANNED
@@ -122,7 +126,7 @@ Active context must remain curated: Git stores history; current truth and active
 
 Candidate `9a27bc441adad1e98e8a9ca257d1883246ee7eec` is published on `claude/builder-environment-review`. Independent review reproduced failures in bootstrap, environment validation and shell quoting; clean reconstruction remains incomplete. See [BUILDER_ENVIRONMENT_REVIEW.md](./BUILDER_ENVIRONMENT_REVIEW.md).
 
-No project skills/rules/hooks were installed because the worker's native permission layer refused them. Preserve that boundary. Current bridge intake has moved to Mobile Experience V1; reconcile that unacknowledged round before sending foundation repair work. Candidate delivery does not mean the permanent environment gate is passed.
+No project skills/rules/hooks were installed because the worker's native permission layer refused them. Preserve that boundary. **The Mobile Experience V1 round has since completed (candidate `564ef34`, published, not merged) and the bridge is idle, so the reconciliation this paragraph waited on is done** — foundation repair `ENV-REPRO-001` is now dispatchable in sequencing terms, subject to owner authorisation. Note that `564ef34` is a child of `9a27bc4`, so the mobile work sits on top of this unaccepted candidate. Candidate delivery does not mean the permanent environment gate is passed.
 
 Required foundation outcomes:
 

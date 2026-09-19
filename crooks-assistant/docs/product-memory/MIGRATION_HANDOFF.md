@@ -90,7 +90,7 @@ Branch:
 Known Phase 5 candidate baseline:
 `e43aecdb39b87b622f64b6ab434e428d216ef157`
 
-Production has not been silently moved to the Linux migration candidate.
+**Superseded 2026-09-19T10:33Z by direct runtime observation.** In runtime terms production *has* moved: `/opt/crooks-os/crooks-assistant` is checked out on `claude/linux-prod-migration-production` at `1cf3a0f`, clean, and `crooks-assistant.service` serves it. The branch above remains the Phase 5 Git baseline and the Mac rollback reference, not the running code. The original sentence was true of Git branch bookkeeping and was read as a statement about the runtime; see CURRENT_TRUTH.md for the verified state and its observation method.
 
 ### Linux migration review
 
@@ -154,16 +154,20 @@ Production must not be used as the autonomous worker checkout.
 
 ## 4. Current in-progress task — do not duplicate it
 
-At handoff time, the automated bridge inbox contains the task:
+**Status as of 2026-09-19T10:33Z: nothing is in flight.** The bridge is idle — `pending no`, `lock free`, `last run ok`, 0 failures — and no engineering worker is running. Two rounds have completed since this section was written. Read CURRENT_TRUTH.md for the live position; the rest of this section is retained as the record of the round this handoff was written during.
+
+The Builder Environment round (inbox `607b607e54eb194b81d708dfbc7bd744c2e8cd18`) completed and published candidate `9a27bc4` on `claude/builder-environment-review`; independent review returned **CHANGES REQUIRED**. The Mobile Experience V1 round (inbox `24b713cc`) then completed and published candidate `564ef34` on `claude/mobile-experience-v1-review`. Neither is merged or deployed.
+
+The standing instruction below still holds in general form: **a new Director inspects the latest bridge outbox and the watcher status before issuing any instruction**, and does not re-dispatch a round on Git silence alone.
+
+At handoff time, the automated bridge inbox contained the task:
 
 **build the permanent CROOKS Builder development environment**
 
 Inbox blob SHA:
 `607b607e54eb194b81d708dfbc7bd744c2e8cd18`
 
-The latest outbox still contains the preceding successful watcher smoke test, so the Builder Environment task should be treated as **in progress / awaiting a new outbox**, not re-submitted.
-
-A new GPT Director should first inspect the latest bridge outbox before issuing another builder-environment instruction.
+The latest outbox still contained the preceding successful watcher smoke test, so the Builder Environment task was to be treated as **in progress / awaiting a new outbox**, not re-submitted.
 
 The task includes:
 

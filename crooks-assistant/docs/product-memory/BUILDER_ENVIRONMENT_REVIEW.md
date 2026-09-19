@@ -92,7 +92,11 @@ At 2026-09-19T06:38:39Z:
 - current outbox: Builder Environment result, blob `67e3da115963a1f5ba8e0b57ede74a00f5be2fb2`, acknowledging the preceding Builder inbox;
 - no mobile review branch was listed.
 
-The mobile instruction is unacknowledged. More than four hours since publication does not prove its process is running or stopped. Before sending a new task, obtain current watcher/attempt status and reconcile it; do not overwrite the inbox or launch a duplicate based solely on Git silence.
+**Resolved 2026-09-19T10:33Z.** The mobile round completed: inbox `24b713cc` was recorded processed at 10:09:58Z, outbox blob is now `0af10d40` at bridge HEAD `2f1408b`, and candidate `564ef34` is published on `claude/mobile-experience-v1-review`. The watcher is idle and no worker is running. The caution stands as doctrine for the next round: obtain current watcher/attempt status and reconcile it before sending a new task; do not overwrite the inbox or launch a duplicate on Git silence alone.
+
+**The reconciliation the caution was written for did in fact fail.** The prior round finished its work but exited before publishing, and the watcher re-dispatched the same inbox SHA at 09:47:29Z. The duplicate run detected this and verified rather than rebuilding, but unattended it would have redone completed work. Proposed guard: skip dispatch when the working-tree outbox already records the incoming inbox SHA.
+
+**Relevant to this review's disposition: the mobile candidate `564ef34` is a direct child of `9a27bc4`**, the candidate this document returns CHANGES REQUIRED on. Any promotion of the mobile work would carry BE-01 through BE-04 with it unless the Builder repair lands first or the mobile candidate is rebased onto an accepted base.
 
 The watcher source's expected builder-branch guard and the mobile inbox's instruction to switch to a task branch also need reconciliation before the following round. A new isolated-worker design must not inherit incompatible branch assumptions.
 

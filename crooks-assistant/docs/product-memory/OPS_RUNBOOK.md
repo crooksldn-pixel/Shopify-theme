@@ -133,6 +133,8 @@ After the correct Builder environment was reconstructed, the full browser gate e
 
 This did not by itself establish product acceptance. The owner has separately decided the Split feature should be retired in the later mobile cleanup, so stale Split-specific tests must not become a permanent constraint on the redesigned product.
 
+**Updated 2026-09-19T10:33Z — do not carry the "1 failed" figure forward as current.** On the published candidate `564ef34` the sweep is 714 checks with 0 failures, and the Split check has now passed in three independent sweeps, including the exact step originally recorded as deterministic. The failure is attributed to `hop()`'s fixed 4.3s settle budget in `scripts/browser/clickpath.js` under CPU contention — a property of the machine, not of the tree — and is deliberately **not** fixed, because widening a harness timeout changes what the gate measures and belongs in its own reviewed step. While it remains, a full-sweep result from a loaded machine is ambiguous. The count also changed for a benign reason: `mobile.js` joined the default sweep tuple, so the total moved from 593 to 714.
+
 The incident is valuable mainly because it proved the environment/recovery path and exposed the publication failure mode.
 
 ## 8. tmux + Termius operating pattern
