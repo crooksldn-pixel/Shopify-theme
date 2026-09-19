@@ -1,53 +1,76 @@
 # CHATGPT INBOX
 
-## 2026-09-19 — Reconcile Linux migration/runtime prerequisite state
+## 2026-09-19 — Audit ECC candidates for CROOKS engineering harness reuse
 
-Owner direction now recorded in canonical product memory: Engineering Orchestrator V1 implementation is authorised under the existing specification and safety boundaries, but DEC-046 prerequisite ordering remains binding. This round is **not** Orchestrator implementation and is **not** a production promotion.
-
-The previous Fable 5.1/high smoke round is complete. Do not repeat it.
+This is a **read-only research/security audit**, not an installation task and not Engineering Orchestrator implementation. The Linux reconciliation round is complete. Do not act on its owner-only ratify/reverse decision.
 
 ### Objective
 
-Perform a bounded, read-only reconciliation of the current Linux production/runtime state so the Director can determine exactly what remains before the controlled Linux migration/promotion prerequisite can be considered satisfied.
+Evaluate selected public components from `affaan-m/ECC` against the accepted CROOKS Builder/Orchestrator contracts so the Director can decide what is worth selectively adopting instead of rebuilding.
 
-Canonical references to read first:
-- `claude/product-memory-foundation` current CURRENT_TRUTH, DECISIONS (including DEC-046 and DEC-047), ROADMAP, MIGRATION_HANDOFF;
-- Linux migration review candidate `1cf3a0f3361b79f9de208d80f501543c53c244b5`;
-- latest bridge outbox.
+Pin the audit to ECC commit:
 
-### Required observations — read only
+`07756cee15788a54506031462794ad645719b028`
 
-Establish with concrete evidence:
-1. exact production checkout branch, HEAD, working-tree status and whether its tracked bytes match the Linux migration candidate;
-2. current `crooks-assistant.service` unit identity/configuration relevant to source path, bind address, startup command and enabled/active state — do not print environment values or secrets;
-3. whether the running process actually executes the expected checkout/venv/command and whether port 8000 remains loopback-only;
-4. available provenance showing when/how the production checkout became clean at `1cf3a0f` and when/how the service was installed/started (Git reflog/log, safe file metadata, systemd journal/unit metadata, existing manifests or documented install evidence). Do not invent provenance if it cannot be established;
-5. current Tailscale/private-HTTPS state as observable without changing it, and whether canonical Git contains explicit approval for that state;
-6. verify the migration write-safety baseline remains disabled using configuration/code/state that does not expose secret values;
-7. compare observed runtime state with the controlled Linux migration candidate/review evidence and identify any remaining verification gap before promotion can be considered complete;
-8. distinguish clearly between: already satisfied and proven, observed-but-not-authorised/reconciled, unknown, safe engineering follow-up, and owner-only decision.
+Canonical CROOKS research proposal to read:
+`claude/product-memory-foundation:crooks-assistant/docs/product-memory/ENGINEERING_STACK_REUSE_PLAN.md`
+
+Also read current:
+- CURRENT_TRUTH.md
+- ENGINEERING_ORCHESTRATOR_V1.md
+- DEV_TEAM_V1_PILOT.md
+- accepted Builder DEV_ENVIRONMENT.md / CLAUDE project-layout proposal
+- latest bridge outbox
+
+### Candidate ECC surfaces
+
+Audit these first:
+- skills/agent-architecture-audit
+- skills/agent-harness-construction
+- skills/agent-eval
+- skills/ai-regression-testing
+- skills/automation-audit-ops
+- skills/benchmark-methodology
+- skills/security-review
+- skills/tdd-workflow
+- skills/verification-loop
+- skills/unified-memory
+- hooks architecture, especially destructive-Git/path GateGuard concepts
+
+You may clone/fetch the exact public ECC commit into a disposable `/tmp` directory and run the already-present SkillSpector in no-LLM/static mode where available. Manually inspect findings and source. Delete disposable scratch state before stopping.
+
+### Required report
+
+For each candidate classify:
+- ADOPT STATIC CONTENT
+- ADAPT / REIMPLEMENT CROOKS-SPECIFIC
+- DEFER
+- REJECT
+
+Give:
+1. executable/network/install surface;
+2. overlap with existing CROOKS Builder and canonical contracts;
+3. conflicts or authority widening;
+4. concrete value;
+5. exact safe integration form;
+6. provenance/commit and security-scan evidence.
+
+Specifically determine whether any full ECC plugin/runtime/hook installation is justified. Default assumption is **no** unless evidence proves otherwise.
+
+Also inspect whether current headless Claude engineering sessions can inherit user/business MCP connectors or other unnecessary tool surface. Report observed exposure and a safe isolation design, but do not change settings.
 
 ### Boundaries
 
-- READ ONLY on production and infrastructure.
-- Do not edit/switch/reset the production checkout.
-- Do not install, stop, start, restart, enable or disable any service.
-- Do not run Tailscale mutation commands.
-- Do not read, print, copy or provision secret values.
-- Do not enable CROOKS writes.
-- Do not deploy/promote/rollback anything.
-- Do not change permissions or infrastructure.
-- Do not begin Engineering Orchestrator implementation.
-- Do not modify the Builder checkout in this round.
-- Replace only `bridge/claude-outbox.md` and stop; watcher owns publication.
+- Do not install ECC or npm packages.
+- Do not modify `/opt/crooks-builder`, production, watcher runtime, Claude user settings, MCP settings, systemd, Tailscale, secrets, or permissions.
+- Do not create persistent external accounts/services.
+- Do not spend money.
+- Do not enable CROOKS writes or invoke business connectors.
+- Do not commit/push any implementation branch.
+- Do not begin Orchestrator implementation.
+- Scratch clone/read/scan only.
+- Replace only `bridge/claude-outbox.md`; watcher owns publication.
 
 ### Handoff
 
-Report:
-- exact evidence and commands/observations used;
-- what DEC-046 Linux/runtime prerequisites are actually proven satisfied vs not;
-- any provenance contradiction or unexplained state change;
-- exact smallest safe next step;
-- if an owner-only decision is now required, state the single decision precisely rather than taking it.
-
-STOP after the handoff.
+Return a ranked shortlist with explicit reasons, scan evidence, conflicts, and the smallest safe next integration experiment. STOP.
