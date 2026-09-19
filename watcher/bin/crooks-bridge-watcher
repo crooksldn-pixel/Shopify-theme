@@ -70,6 +70,11 @@ GH_BIN="${CROOKS_BRIDGE_GH_BIN:-gh}"
 GIT_BIN="${CROOKS_BRIDGE_GIT_BIN:-git}"
 # A run that hangs would hold the lock and block every later inbox, so it is bounded.
 CLAUDE_TIMEOUT_S="${CROOKS_BRIDGE_CLAUDE_TIMEOUT_S:-7200}"
+# Pin the single-worker bridge to an explicit model and effort so unattended runs never inherit
+# a mutable Claude Code/account default. The future Engineering Orchestrator may route by task;
+# this is only the deterministic default for this watcher.
+CLAUDE_MODEL="${CROOKS_BRIDGE_CLAUDE_MODEL:-claude-fable-5-1}"
+CLAUDE_EFFORT="${CROOKS_BRIDGE_CLAUDE_EFFORT:-high}"
 CLAUDE_PERMISSION_MODE="${CROOKS_BRIDGE_PERMISSION_MODE:-acceptEdits}"
 CLAUDE_ALLOWED_TOOLS="${CROOKS_BRIDGE_ALLOWED_TOOLS:-Read,Edit,Write,Glob,Grep,Bash}"
 
@@ -390,6 +395,8 @@ run_claude() {
     ( cd "$WORK_DIR" && claude_prompt "$sha" | \
         timeout --signal=TERM --kill-after=60 "$CLAUDE_TIMEOUT_S" \
         "$CLAUDE_BIN" --print \
+        --model "$CLAUDE_MODEL" \
+        --effort "$CLAUDE_EFFORT" \
         --permission-mode "$CLAUDE_PERMISSION_MODE" \
         --allowed-tools "$CLAUDE_ALLOWED_TOOLS" )
     rc=$?
@@ -477,6 +484,8 @@ cmd_status() {
     failures="$(failure_count)"
     printf 'repo            %s\n' "$REPO_SLUG"
     printf 'branch          %s\n' "$BRANCH"
+    printf 'model           %s\n' "$CLAUDE_MODEL"
+    printf 'effort          %s\n' "$CLAUDE_EFFORT"
     printf 'inbox           %s\n' "$INBOX_PATH"
     printf 'last processed  %s\n' "${last:-<none>}"
     printf 'remote now      %s\n' "${remote:-<unreadable>}"
