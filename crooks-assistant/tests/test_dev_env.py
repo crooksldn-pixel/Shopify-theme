@@ -29,6 +29,10 @@ import pytest
 SOURCE = Path(__file__).resolve().parent.parent / "scripts" / "dev_env.py"
 DEV_ENV_DIR = Path(__file__).resolve().parent.parent / "docs" / "dev-environment"
 
+# A full-length sha so the fixture exercises the same shape as the real pin; it is not a real
+# revision of anything and nothing fetches it.
+FIXTURE_COMMIT = "d162d9b343e559be13df8ebba093df3bc9d58c90"
+
 
 def _import_at(root: Path):
     """Import the real dev_env.py as though the checkout were `root`.
@@ -66,20 +70,53 @@ def _fixture_manifest(*, chromium: str) -> dict:
         },
         "binaries": {
             "$comment": "prose, not a tool — BE-01 is what happens when this is not filtered",
+            # shellcheck deliberately has NO upstream_checksums and gitleaks has one, so the
+            # fixture exercises both halves of the attestation advisory.
             "shellcheck": {"version": "0.11.0", "upstream": "https://example.invalid/shellcheck",
-                           "verify": "shellcheck --version"},
+                           "verify": "shellcheck --version", "release_tag": "v0.11.0",
+                           "asset": "shellcheck.tar.gz", "archive": "tar.gz",
+                           "asset_url": "https://example.invalid/shellcheck/releases/download/"
+                                        "v0.11.0/shellcheck.tar.gz",
+                           "install": {"shellcheck": "shellcheck-v0.11.0/shellcheck"}},
             "gitleaks": {"version": "8.30.1", "upstream": "https://example.invalid/gitleaks",
-                         "verify": "gitleaks version"},
+                         "verify": "gitleaks version", "release_tag": "v8.30.1",
+                         "asset": "gitleaks.tar.gz", "archive": "tar.gz",
+                         "asset_url": "https://example.invalid/gitleaks/releases/download/"
+                                      "v8.30.1/gitleaks.tar.gz",
+                         "install": {"gitleaks": "gitleaks"},
+                         "upstream_checksums": "https://example.invalid/gitleaks/releases/"
+                                               "download/v8.30.1/checksums.txt"},
         },
         "node": {"$comment": "prose", "playwright": {"version": "1.56.1"}},
         "browsers": {"chromium": {"chromium_version": chromium}},
         "sysroot": {"scope": ".tooling/sysroot/root"},
         "python": {"interpreter": "3.12.3",
                    "builder_only": {"pytest-xdist": {"version": "3.8.0"}}},
-        "uv_tools": {"skillspector": {"version": "2.11.2", "commit": "d162d9b343e559be1",
-                                      "upstream": "https://example.invalid/skillspector",
-                                      "verify": "skillspector --version"}},
+        "uv_tools": {"skillspector": {
+            "version": "2.11.2", "commit": FIXTURE_COMMIT,
+            "upstream": "https://example.invalid/skillspector",
+            "requirement": f"git+https://example.invalid/skillspector@{FIXTURE_COMMIT}",
+            "verify": "skillspector --version",
+            "provenance": "lib/python*/site-packages/skillspector-2.11.2.dist-info/"
+                          "direct_url.json"}},
     }
+
+
+def _provenance(root: Path, recorded: dict | None) -> Path:
+    """Write the PEP 610 file uv leaves behind, or remove it when `recorded` is None.
+
+    This is the artifact that turned the SkillSpector commit pin from a claim into a fact:
+    `uv tool install --from git+<upstream>@<commit>` records vcs_info.commit_id here, while
+    `--from <local clone>` records dir_info and a path.
+    """
+    path = (root / ".tooling" / "uv-tools" / "skillspector" / "lib" / "python3.12"
+            / "site-packages" / "skillspector-2.11.2.dist-info" / "direct_url.json")
+    if recorded is None:
+        path.unlink(missing_ok=True)
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(recorded), encoding="utf-8")
+    return path
 
 
 def _checkout(root: Path, *, tools: dict[str, str], node: str, pip: str, python: str,
@@ -103,11 +140,19 @@ def _checkout(root: Path, *, tools: dict[str, str], node: str, pip: str, python:
         encoding="utf-8")
     (dev_env / "sysroot-packages.txt").write_text("libnss3=2:3.98-1build1\n", encoding="utf-8")
     (dev_env / "sysroot-packages.sha256").write_text("# fixture\n", encoding="utf-8")
+    (dev_env / "binary-assets.sha256").write_text(
+        "# fixture\n"
+        f"{'0' * 64}  shellcheck.tar.gz\n{'1' * 64}  gitleaks.tar.gz\n", encoding="utf-8")
 
     for name, reported in tools.items():
         _script(root / ".tooling" / "bin" / name, f"#!/bin/sh\necho '{name} {reported}'\n")
     _script(root / ".tooling" / "bin" / "skillspector",
             f"#!/bin/sh\necho 'SkillSpector v2.11.2'\nexit {skillspector_exit}\n")
+    # A healthy checkout is one installed from the pinned git requirement, so uv recorded the
+    # revision. Tests that want the rejected shape overwrite this.
+    _provenance(root, {"url": "https://example.invalid/skillspector",
+                       "vcs_info": {"vcs": "git", "commit_id": FIXTURE_COMMIT,
+                                    "requested_revision": FIXTURE_COMMIT}})
     _script(root / ".tooling" / "browsers" / "chromium-1194" / "chrome",
             f"#!/bin/sh\necho 'Chromium {chromium}'\n")
 
@@ -256,12 +301,17 @@ def test_be02_doctor_passes_the_same_fixture_when_everything_matches(tmp_path, c
 
 
 def test_be02_advisory_findings_are_named_and_never_decide_the_exit_code(tmp_path, capsys):
-    """Required health and undecidable provenance are separated, and both are visible.
+    """Enforced facts and unattested ones are separated, and both are visible.
 
-    The pinned SkillSpector commit is the one thing here that genuinely cannot be checked:
-    `uv tool install --from <local clone>` records a path, not a revision. The honest answer is
-    to print it as advisory WITH the reason — not to pass it silently, which is BE-02, and not
-    to fail the environment for a fact nothing on the machine can settle.
+    The SkillSpector commit used to be the advisory here, because a local-clone install records
+    no revision. It is now a decided check (see the provenance tests below). What is left is a
+    genuinely smaller gap: four of the eight upstreams publish no checksum file of their own, so
+    their committed asset digests are enforced but are first-fetch observations rather than an
+    independent attestation. That is worth one line naming the tools — printing nothing would be
+    the quiet pass BE-02 was, and failing the environment over it would make `doctor` useless.
+
+    The fixture models both halves: gitleaks declares `upstream_checksums` and shellcheck does
+    not, so exactly one tool should be named.
     """
     root = tmp_path / "checkout"
     dev_env = _healthy(root)
@@ -269,8 +319,10 @@ def test_be02_advisory_findings_are_named_and_never_decide_the_exit_code(tmp_pat
 
     printed = capsys.readouterr().out
     advisory = [ln for ln in printed.splitlines() if ln.strip().startswith("advisory")]
-    assert len(advisory) == 1 and "commit" in advisory[0]
-    assert "not re-derivable" in advisory[0], "an advisory line must say why it is advisory"
+    assert len(advisory) == 1, f"expected exactly one advisory, got {advisory}"
+    assert "shellcheck" in advisory[0], "an advisory must name what it is about"
+    assert "gitleaks" not in advisory[0], "a tool that IS attested was named as unattested"
+    assert "not attested" in advisory[0], "an advisory line must say why it is advisory"
     assert "1 advisory" in printed
 
 
@@ -467,20 +519,30 @@ def test_be04_the_plan_is_read_only_and_repeats_identically(tmp_path, capsys):
     assert sorted(p.relative_to(root) for p in root.rglob("*")) == before
 
 
-def test_be04_the_plan_says_plainly_what_it_cannot_do(tmp_path, capsys):
-    """A plan that is not executable end to end must say so where it is read.
+def test_be04_the_plan_says_plainly_what_it_does_and_no_step_is_prose(tmp_path, capsys):
+    """Every step is now commands, and the plan states exactly what it contacts.
 
-    Step 4 cannot be written as commands: the manifest pins each tool's version and upstream
-    repository but not its release tag or asset URL, and pinning those needs an approved
-    package-fetch policy. Reporting that as BLOCKED is the requirement; guessing eight release
-    URLs and committing them untested is how BE-01 happened in the first place.
+    This test used to assert the opposite — that step 4 announced itself BLOCKED, because the
+    manifest pinned no release tag or asset URL and guessing eight of them untested would have
+    been BE-01 in a different file. The owner has since approved a bounded read-only fetch and
+    the tags and URLs are pinned, so the requirement inverts: a plan that is executable must not
+    still be claiming it is blocked, and no step may consist only of comments.
     """
     dev_env = _import_at_source()
     assert dev_env.cmd_plan(dev_env.load()) == 0
     printed = capsys.readouterr().out
-    assert "BLOCKED" in printed
-    assert "package-fetch policy" in printed
-    assert "NOT EXECUTABLE YET" in printed
+
+    assert "NOT EXECUTABLE YET" not in printed
+    assert "BLOCKED" not in printed
+    assert "EXECUTABLE" in printed
+    # What it contacts, said where the plan is read rather than only in a document.
+    for source in ("registry.npmjs.org", "Playwright's CDN", "apt mirror", "PyPI", "github.com"):
+        assert source in printed, f"the plan does not say it contacts {source}"
+    assert "no credential is used" in printed
+
+    for heading, commands in dev_env.plan_steps(dev_env.load()):
+        real = [c for c in commands if not c.lstrip().startswith("#")]
+        assert real, f"step {heading!r} is prose, not commands"
 
 
 def test_be04_bootstrap_is_gone_and_refuses_rather_than_pretending(tmp_path):
@@ -522,4 +584,182 @@ def test_be04_the_committed_reconstruction_inputs_are_the_real_ones():
     assert len(binaries) == 9
     assert all(len(d) == 64 for d in binaries.values())
 
+    # One digest per pinned asset, and the two inventories describe the same set of tools: nine
+    # installed files come out of eight assets because uv ships uv and uvx in one archive.
+    assets = dev_env.read_checksums(dev_env.BINARY_ASSETS)
+    declared = dev_env.entries(manifest["binaries"], required=dev_env.BINARY_FIELDS,
+                               where="binaries")
+    assert sorted(assets) == sorted(spec["asset"] for spec in declared.values())
+    assert all(len(d) == 64 for d in assets.values())
+    installed = {name for spec in declared.values() for name in spec["install"]}
+    assert installed == {Path(p).name for p in binaries}
+    assert "sg" not in installed, "the newgrp-shadowing alias must never reach .tooling/bin"
+
     assert dev_env.node_package_findings(manifest) == []
+
+
+# ------------------------------------------------------- BE-04, the part that was BLOCKED
+#
+# Everything below covers behaviour the previous candidate could not have: it reported
+# reconstruction as BLOCKED on an owner decision, and the owner has since approved a bounded,
+# read-only fetch of the declared dependencies from their own upstreams. These are tests of
+# completed behaviour rather than reproductions of the original defect.
+
+
+def test_be04_every_binary_pins_a_release_tag_and_an_exact_asset_url():
+    """Pinned, not derived — for the real committed manifest, every tool, no exceptions.
+
+    "Derive the GitHub release URL from the version" is the shape that put step 4 out of
+    review: the string that decides what gets executed on this machine would then be computed
+    at run time from a convention nobody checked. Each URL is written down, and each one is
+    checked here against the tool's own upstream and tag.
+    """
+    dev_env = _import_at_source()
+    binaries = dev_env.entries(dev_env.load()["binaries"], required=dev_env.BINARY_FIELDS,
+                               where="binaries")
+    assert len(binaries) == 8
+
+    for name, spec in binaries.items():
+        dev_env.fetch_spec(name, spec)          # raises if the URL is not this tool's own
+        assert spec["release_tag"], name
+        assert spec["asset_url"].startswith("https://"), name
+        assert spec["asset_url"].endswith("/" + spec["asset"]), name
+        assert spec["version"].lstrip("v") in spec["release_tag"].lstrip("v") or \
+            spec["version"] in spec["asset"], f"{name}: tag and version do not agree"
+        assert spec["archive"] in dev_env.ARCHIVES, name
+
+
+def test_be04_an_asset_url_outside_the_tools_own_upstream_is_refused(tmp_path):
+    """The approved boundary, enforced rather than promised.
+
+    "Fetch only from the normal authoritative upstream for the declared dependency" is a rule
+    about a string. Written as prose it is honoured by whoever remembers it; written as a
+    precondition it cannot be edited around, because the URL must be exactly
+    <upstream>/releases/download/<tag>/<asset> or no fetch step is emitted at all.
+    """
+    dev_env = _import_at(tmp_path)
+    good = {"version": "1.0.0", "upstream": "https://github.com/acme/tool",
+            "verify": "tool --version", "release_tag": "v1.0.0", "asset": "tool.tar.gz",
+            "archive": "tar.gz", "install": {"tool": "tool"},
+            "asset_url": "https://github.com/acme/tool/releases/download/v1.0.0/tool.tar.gz"}
+    assert dev_env.fetch_spec("tool", good) is good
+
+    for label, url in [
+        ("another host", "https://mirror.invalid/acme/tool/releases/download/v1.0.0/tool.tar.gz"),
+        ("another project", "https://github.com/evil/tool/releases/download/v1.0.0/tool.tar.gz"),
+        ("another tag", "https://github.com/acme/tool/releases/download/v9.9.9/tool.tar.gz"),
+        ("another asset", "https://github.com/acme/tool/releases/download/v1.0.0/other.tar.gz"),
+        ("not a release asset", "https://github.com/acme/tool/raw/main/tool.tar.gz"),
+    ]:
+        with pytest.raises(dev_env.ManifestError) as refused:
+            dev_env.fetch_spec("tool", {**good, "asset_url": url})
+        assert "tool" in str(refused.value), label
+        assert "upstream release asset" in str(refused.value), label
+
+
+def test_be04_a_binary_missing_its_fetch_pins_is_named_not_guessed(tmp_path):
+    """An unpinned tool stops the plan with its own name on it.
+
+    Not a guessed URL, and not a silently skipped tool: both of those end with .tooling/bin
+    holding something nobody chose. This is BE-01's lesson applied to the new fields.
+    """
+    dev_env = _import_at(tmp_path)
+    with pytest.raises(dev_env.ManifestError) as missing:
+        dev_env.fetch_spec("hyperfine", {"version": "1.20.0", "upstream": "https://x.invalid/h",
+                                         "verify": "hyperfine --version"})
+    message = str(missing.value)
+    assert "binaries.hyperfine" in message
+    for field in ("release_tag", "asset", "asset_url", "archive", "install"):
+        assert field in message, f"{field} was not named"
+
+    with pytest.raises(dev_env.ManifestError) as wrong:
+        dev_env.fetch_spec("hyperfine", {
+            "version": "1.20.0", "upstream": "https://x.invalid/h", "verify": "h --version",
+            "release_tag": "v1", "asset": "a", "archive": "rar", "install": {"h": "h"},
+            "asset_url": "https://x.invalid/h/releases/download/v1/a"})
+    assert "archive" in str(wrong.value) and "rar" in str(wrong.value)
+
+
+def test_be04_downloads_are_verified_before_anything_unpacks_them():
+    """Order is the whole point of this check, so the order is asserted.
+
+    Verifying an archive after extracting it checks the wrong thing: tar and unzip have already
+    interpreted the bytes. The asset digests are checked while the downloads are still inert
+    files, and .tooling/bin is checked again after install — two gates, both fail-closed.
+    """
+    dev_env = _import_at_source()
+    step = next(commands for heading, commands in dev_env.plan_steps(dev_env.load())
+                if heading.startswith("4."))
+    code = [c for c in step if not c.lstrip().startswith("#")]
+
+    last_fetch = max(i for i, c in enumerate(code) if c.startswith("curl "))
+    assets_checked = next(i for i, c in enumerate(code) if "binary-assets.sha256" in c)
+    first_unpack = min(i for i, c in enumerate(code)
+                       if c.startswith(("tar ", "unzip ", "install ")))
+    installed_checked = next(i for i, c in enumerate(code) if "binaries.sha256" in c)
+
+    assert last_fetch < assets_checked < first_unpack, \
+        "an archive is unpacked before its digest is verified"
+    assert first_unpack < installed_checked, "binaries.sha256 is checked before anything installs"
+    assert installed_checked == len(code) - 1, "the install gate is not the last word of step 4"
+
+    for command in code:
+        if command.startswith("curl "):
+            # Downgrade and redirect-to-plain-http are the two cheap ways a pinned https URL
+            # stops being one.
+            assert "--proto '=https'" in command and "--tlsv1.2" in command
+            assert " -fsSL " in command, "a failed fetch must not leave a 404 body on disk"
+
+
+def test_be04_the_skill_gate_is_installed_from_the_pinned_revision_not_a_local_clone():
+    """Step 6 is what makes the commit pin checkable at all.
+
+    `uv tool install --from <local clone>` records a filesystem path and no revision, so the
+    pin could only ever be reported advisory. The pinned git requirement makes uv record
+    vcs_info.commit_id, which is a fact about the installed artifact rather than a claim in a
+    document — and it is the same commit the manifest pins.
+    """
+    dev_env = _import_at_source()
+    manifest = dev_env.load()
+    pin = manifest["uv_tools"]["skillspector"]
+    step = next(commands for heading, commands in dev_env.plan_steps(manifest)
+                if heading.startswith("6."))
+    joined = "\n".join(step)
+
+    assert f"git+{pin['upstream']}@{pin['commit']}" in pin["requirement"]
+    assert pin["requirement"] in joined
+    assert "/tmp/skillspector" not in joined, "a local clone records no revision"
+    assert "git clone" not in joined
+    assert pin["commit_verifiable"] is True
+
+
+def test_be04_skillspector_provenance_decides_rather_than_excuses(tmp_path, capsys):
+    """The last advisory, turned into a check that discriminates.
+
+    Four states, and only one of them is ok. Reporting the wrong-commit or local-clone cases as
+    ok would be BE-02 exactly: a pin displayed beside an artifact that was never compared to it.
+    """
+    root = tmp_path / "checkout"
+    dev_env = _healthy(root)
+    spec = dev_env.load()["uv_tools"]["skillspector"]
+    venv = root / ".tooling" / "uv-tools" / "skillspector"
+
+    assert dev_env.cmd_doctor(dev_env.load()) == 0
+    assert dev_env.uv_tool_provenance(venv, "skillspector", spec)[0] == dev_env.OK
+    assert "commit d162d9b343e5" in capsys.readouterr().out
+
+    _provenance(root, {"url": "file:///tmp/_skills/skillspector", "dir_info": {}})
+    state, detail = dev_env.uv_tool_provenance(venv, "skillspector", spec)
+    assert state == dev_env.FAIL and "records no revision" in detail
+    assert dev_env.cmd_doctor(dev_env.load()) == 1
+    assert "FAILED" in capsys.readouterr().out
+
+    _provenance(root, {"url": "https://example.invalid/skillspector",
+                       "vcs_info": {"vcs": "git", "commit_id": "0" * 40}})
+    state, detail = dev_env.uv_tool_provenance(venv, "skillspector", spec)
+    assert state == dev_env.FAIL and "manifest pins d162d9b343e5" in detail
+
+    _provenance(root, None)
+    state, detail = dev_env.uv_tool_provenance(venv, "skillspector", spec)
+    assert state == dev_env.FAIL and "no install-time provenance" in detail
+    capsys.readouterr()

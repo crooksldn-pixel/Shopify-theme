@@ -50,6 +50,21 @@ NODE_LOCK = DEV_ENV / "node-package-lock.json"
 SYSROOT_PACKAGES = DEV_ENV / "sysroot-packages.txt"
 SYSROOT_CHECKSUMS = DEV_ENV / "sysroot-packages.sha256"
 BINARY_CHECKSUMS = DEV_ENV / "binaries.sha256"
+BINARY_ASSETS = DEV_ENV / "binary-assets.sha256"
+
+# Where `plan` tells the network to put what it fetches. Inside .tooling, which is gitignored,
+# so a download never becomes a committed file by accident.
+DOWNLOADS = TOOLING / "downloads"
+
+# What doctor needs from a `binaries` entry, and what `plan` additionally needs to be able to
+# fetch it. They are separate because doctor must still work on a machine whose manifest predates
+# the fetch pins, and because a missing fetch pin should name itself in the plan rather than
+# silently disappear from doctor.
+BINARY_FIELDS = ("version", "upstream", "verify")
+FETCH_FIELDS = ("release_tag", "asset", "asset_url", "archive", "install")
+
+# tar handles both; zip needs unzip; `raw` means the asset IS the binary and nothing is unpacked.
+ARCHIVES = ("tar.gz", "tar.xz", "zip", "raw")
 
 OK, FAIL, ADVISORY = "ok", "FAIL", "advisory"
 
@@ -96,6 +111,70 @@ def entries(section: dict, *, required: tuple[str, ...], where: str) -> dict[str
             raise ManifestError(f"{where}.{name} is missing {', '.join(absent)}")
         out[name] = spec
     return out
+
+
+def fetch_spec(name: str, spec: dict) -> dict:
+    """Validate one binary's fetch pins, and refuse a URL that is not its own upstream's.
+
+    The owner's approved boundary is "the normal authoritative upstream source for that declared
+    dependency". Written as prose that is a promise; written here it is a precondition. The URL
+    must be exactly
+
+        <upstream>/releases/download/<release_tag>/<asset>
+
+    so a manifest edit cannot move a fetch to a host the manifest has not already declared as
+    that tool's upstream, and cannot quietly repoint one tool's asset at another's release. A
+    violation is a ManifestError naming the tool, not a download.
+    """
+    absent = [f for f in FETCH_FIELDS if f not in spec]
+    if absent:
+        raise ManifestError(
+            f"binaries.{name} cannot be fetched: missing {', '.join(absent)}. "
+            "Pin the release tag and the exact asset URL; do not derive them at run time.")
+    if spec["archive"] not in ARCHIVES:
+        raise ManifestError(f"binaries.{name}.archive is {spec['archive']!r}, "
+                            f"expected one of {', '.join(ARCHIVES)}")
+    if not isinstance(spec["install"], dict) or not spec["install"]:
+        raise ManifestError(f"binaries.{name}.install must map an installed name to a member path")
+
+    expected = f"{spec['upstream'].rstrip('/')}/releases/download/{spec['release_tag']}/{spec['asset']}"
+    if spec["asset_url"] != expected:
+        raise ManifestError(
+            f"binaries.{name}.asset_url is not this tool's own upstream release asset.\n"
+            f"  pinned:   {spec['asset_url']}\n  required: {expected}")
+    return spec
+
+
+def uv_tool_provenance(root: Path, name: str, spec: dict) -> tuple[str, str]:
+    """Did uv record, at install time, which revision it installed? (state, detail)
+
+    `uv tool install --from <local clone>` writes a PEP 610 direct_url.json carrying `dir_info`
+    and a filesystem path: nothing on the machine can then be compared with the manifest's
+    commit pin, which is why this was the one advisory finding in the rejected repair. Installing
+    from `git+<upstream>@<commit>` makes uv record `vcs_info.commit_id` instead, and that is a
+    fact rather than a claim. Anything else FAILS: an unverifiable pin reported as ok is BE-02.
+    """
+    pattern = spec.get("provenance")
+    if not pattern:
+        return FAIL, "the manifest does not say where install-time provenance is recorded"
+    found = sorted(root.glob(pattern))
+    if not found:
+        return FAIL, (f"no install-time provenance at {pattern} — reinstall with the pinned git "
+                      "requirement (plan step 6)")
+    try:
+        recorded = json.loads(found[0].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return FAIL, f"{found[0].name} is unreadable: {exc}"
+
+    commit = (recorded.get("vcs_info") or {}).get("commit_id")
+    if not commit:
+        how = "a directory" if "dir_info" in recorded else "an archive"
+        return FAIL, (f"installed from {how}, which records no revision, so the pinned commit "
+                      f"{spec['commit'][:12]} cannot be verified — reinstall from "
+                      f"git+{spec['upstream']}@{spec['commit'][:12]}")
+    if commit != spec["commit"]:
+        return FAIL, f"records commit {commit[:12]}, manifest pins {spec['commit'][:12]}"
+    return OK, f"commit {commit[:12]} recorded by uv at install (PEP 610 direct_url.json)"
 
 
 def _abs(rel: str) -> Path:
@@ -294,6 +373,32 @@ def cmd_doctor(m: dict) -> int:
         else:
             say(OK, "sha256", f"{len(recorded)} artifacts match")
 
+    print("\nrelease-asset provenance (what the plan is allowed to fetch)")
+    if not BINARY_ASSETS.exists():
+        say(FAIL, "binary-assets.sha256", f"missing — expected {BINARY_ASSETS}")
+    else:
+        pinned = read_checksums(BINARY_ASSETS)
+        unattested = []
+        try:
+            for name, spec in entries(m["binaries"], required=BINARY_FIELDS,
+                                      where="binaries").items():
+                fetch_spec(name, spec)
+                if spec["asset"] not in pinned:
+                    say(FAIL, name, f"{spec['asset']} has no digest in binary-assets.sha256")
+                if "upstream_checksums" not in spec:
+                    unattested.append(name)
+        except ManifestError as exc:
+            say(FAIL, "binaries", str(exc).splitlines()[0])
+        else:
+            say(OK, "asset pins", f"{len(pinned)} assets, each pinned to its own upstream release")
+            if unattested:
+                # A real gap, named. The committed digest is still enforced for these — what is
+                # missing is a second, independent attestation from the project itself. Saying so
+                # costs one line; not saying so is how "verified" stops meaning anything.
+                say(ADVISORY, "upstream attestation",
+                    f"{', '.join(sorted(unattested))} publish no checksum file; their committed "
+                    "asset digests are first-fetch observations, enforced but not attested")
+
     print("\nnode packages (.tooling/node)")
     nm = TOOLING / "node" / "node_modules"
     for name, spec in entries(m["node"], required=("version",), where="node").items():
@@ -379,12 +484,11 @@ def cmd_doctor(m: dict) -> int:
             say(FAIL, name, f"missing — expected {exe}")
             continue
         version_of(exe, spec, name, spec["version"])
-        # The one genuinely undecidable check in this file, and it says so rather than passing
-        # quietly. `uv tool install --from <local clone>` records a path, not a revision, so the
-        # installed artifact carries no commit to compare the pin against. Advisory means "this
-        # was not verified", and the remedy is in docs/DEV_ENVIRONMENT.md §9.
-        say(ADVISORY, f"{name} commit", f"{spec['commit'][:12]} pinned at install; the installed "
-                                        "artifact records no revision, so it is not re-derivable")
+        # This was the one advisory in the rejected repair, and it is now decided rather than
+        # excused: the plan installs from a pinned git requirement, so uv records the revision
+        # and doctor can compare it. See uv_tool_provenance.
+        state, detail = uv_tool_provenance(Path(env["UV_TOOL_DIR"]) / name, name, spec)
+        say(state, f"{name} commit", detail)
 
     print("\nthe CROOKS browser gate, as the suite sees it")
     if py.exists():
@@ -413,7 +517,7 @@ def cmd_doctor(m: dict) -> int:
 def plan_inputs() -> tuple[Path, ...]:
     """The committed files the plan consumes. A fresh checkout must contain all of them."""
     return (MANIFEST, NODE_PACKAGE, NODE_LOCK, SYSROOT_PACKAGES, SYSROOT_CHECKSUMS,
-            BINARY_CHECKSUMS, Path(__file__).resolve())
+            BINARY_CHECKSUMS, BINARY_ASSETS, Path(__file__).resolve())
 
 
 def plan_steps(m: dict) -> list[tuple[str, list[str]]]:
@@ -429,6 +533,13 @@ def plan_steps(m: dict) -> list[tuple[str, list[str]]]:
     steps: list[tuple[str, list[str]]] = []
 
     rel = lambda p: q(str(Path(p).relative_to(REPO)))  # noqa: E731 - a name for one expression
+
+    # The host tools the plan itself needs. Checked first and inside a subshell, so a missing
+    # `unzip` is a named failure at the start rather than a confusing one at step 4.
+    steps.append(("0. the host tools every step below assumes", [
+        "( for t in curl tar unzip npm node apt-get dpkg-deb git python3 make; do "
+        'command -v "$t" >/dev/null || { echo "missing host tool: $t" >&2; exit 1; }; done )',
+    ]))
 
     steps.append(("1. node tooling, installed from the committed lock", [
         "mkdir -p .tooling/node",
@@ -454,17 +565,42 @@ def plan_steps(m: dict) -> list[tuple[str, list[str]]]:
             "for d in .tooling/sysroot/debs/*.deb; do dpkg-deb -x \"$d\" .tooling/sysroot/root; done",
         ]))
 
-    binaries = entries(m["binaries"], required=("version", "upstream", "verify"), where="binaries")
-    fetch = [f"#   {name:<12} {spec['version']:<8} {spec['upstream']}"
-             + (f"  asset: {spec['asset']}" if "asset" in spec else "")
-             for name, spec in binaries.items()]
-    steps.append(("4. single-binary tools -> .tooling/bin", [
-        "# NOT EXECUTABLE YET — see 'reconstruction status' below. The pins are exact and the",
-        "# integrity check is committed; the release asset URL and tag for each tool are not",
-        "# recorded in the manifest, and recording them needs an approved package-fetch policy.",
-        *fetch,
-        f"sha256sum -c {rel(BINARY_CHECKSUMS)}",
-    ]))
+    binaries = entries(m["binaries"], required=BINARY_FIELDS, where="binaries")
+    for name, spec in binaries.items():
+        fetch_spec(name, spec)
+
+    downloads = q(str(DOWNLOADS.relative_to(REPO)))
+    unpacked = q(str((DOWNLOADS / "unpacked").relative_to(REPO)))
+    commands = [
+        f"mkdir -p {downloads} .tooling/bin",
+        # Every fetch first, one integrity gate, and only then anything that unpacks. Verifying
+        # an archive after extracting it checks the wrong thing: by then the bytes have already
+        # been interpreted by tar or unzip.
+    ]
+    for name, spec in binaries.items():
+        commands.append(
+            f"curl -fsSL --proto '=https' --tlsv1.2 -o {downloads}/{q(spec['asset'])} "
+            f"{q(spec['asset_url'])}   # {name} {spec['version']} @ {spec['release_tag']}")
+    commands.append("# fail closed on the downloads, while they are still inert files")
+    commands.append(f"( cd {downloads} && sha256sum -c {q(str(BINARY_ASSETS))} )")
+    commands.append(f"rm -rf {unpacked} && mkdir -p {unpacked}")
+    for spec in binaries.values():
+        asset = f"{downloads}/{q(spec['asset'])}"
+        if spec["archive"] == "tar.gz":
+            commands.append(f"tar -xzf {asset} -C {unpacked}")
+        elif spec["archive"] == "tar.xz":
+            commands.append(f"tar -xJf {asset} -C {unpacked}")
+        elif spec["archive"] == "zip":
+            commands.append(f"unzip -qo {asset} -d {unpacked}")
+        for installed, member in spec["install"].items():
+            # A raw asset is its own member and is not unpacked, so it is installed from the
+            # download directory. Everything else comes out of the unpack directory.
+            source = asset if spec["archive"] == "raw" else f"{unpacked}/{q(member)}"
+            commands.append(f"install -m 755 {source} .tooling/bin/{q(installed)}")
+    commands.append("# fail closed again on what actually landed in .tooling/bin")
+    commands.append(f"sha256sum -c {rel(BINARY_CHECKSUMS)}")
+    steps.append(("4. single-binary tools -> .tooling/bin, from pinned upstream release assets",
+                  commands))
 
     builder_only = entries(m["python"]["builder_only"], required=("version",),
                            where="python.builder_only")
@@ -477,11 +613,13 @@ def plan_steps(m: dict) -> list[tuple[str, list[str]]]:
 
     ss = m["uv_tools"]["skillspector"]
     steps.append(("6. the skill security gate, in its own isolated environment", [
-        f"git clone {q(ss['upstream'])} /tmp/skillspector",
-        f"git -C /tmp/skillspector checkout {q(ss['commit'])}",
+        # From the pinned git requirement, NOT from a local clone. `--from <directory>` makes uv
+        # record a filesystem path and no revision, so the commit pin becomes unverifiable the
+        # moment the clone is gone — which is exactly the gap the previous round had to report
+        # as advisory. A git requirement makes uv write vcs_info.commit_id, and `doctor` reads it.
         f"UV_TOOL_DIR={q(str(_abs(e['UV_TOOL_DIR'])))} "
         f"UV_TOOL_BIN_DIR={q(str(_abs(e['PATH_PREPEND'])))} "
-        "uv tool install --from /tmp/skillspector skillspector",
+        f".tooling/bin/uv tool install --from {q(ss['requirement'])} skillspector",
     ]))
 
     steps.append(("7. the env every shell that runs a browser check needs, then the check", [
@@ -517,12 +655,15 @@ def cmd_plan(m: dict) -> int:
             print(f"#   {path}")
     else:
         print("# Every input the plan reads is committed and present in this checkout.")
-    print("# BLOCKED: steps 1-3 and 6 fetch from the network (npm, Playwright's CDN, apt and")
-    print("#   GitHub) and step 4 cannot be written as commands at all until each tool's release")
-    print("#   tag and asset URL are pinned in the manifest. Both need an approved package-fetch")
-    print("#   policy. Until one exists this plan has NOT been executed end to end, and no claim")
-    print("#   that this environment has been rebuilt from scratch should be made. See")
-    print("#   docs/DEV_ENVIRONMENT.md section 9.")
+    print("# Every step is EXECUTABLE. Steps 1-6 fetch, read-only and anonymously, from:")
+    print("#   npm (registry.npmjs.org), Playwright's CDN, the configured apt mirror, the pinned")
+    print("#   GitHub release assets above, PyPI, and github.com for the pinned SkillSpector")
+    print("#   revision. Nothing else is contacted and no credential is used.")
+    print("# Integrity is enforced twice and fails closed: the downloaded assets are checked")
+    print("#   against binary-assets.sha256 BEFORE anything unpacks them, and .tooling/bin is")
+    print("#   checked against binaries.sha256 after install. The .debs are checked against")
+    print("#   sysroot-packages.sha256 before extraction, and npm installs from the committed")
+    print("#   lock with `npm ci`. See docs/DEV_ENVIRONMENT.md section 10.")
     return 0
 
 
@@ -532,8 +673,8 @@ def cmd_bootstrap(_: dict) -> int:
           "as an idempotent installer, so its exit code meant only that text had been printed.\n"
           "It is now named for what it does:\n\n"
           "    python3 scripts/dev_env.py plan\n\n"
-          "Executing that plan needs an approved package-fetch policy; see\n"
-          "crooks-assistant/docs/DEV_ENVIRONMENT.md section 9.", file=sys.stderr)
+          "That plan is executable; what it fetches and how it is verified is in\n"
+          "crooks-assistant/docs/DEV_ENVIRONMENT.md section 10.", file=sys.stderr)
     return 2
 
 

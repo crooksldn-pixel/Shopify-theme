@@ -1,11 +1,16 @@
 # The pinned single-file binaries in .tooling/bin, in sha256sum(1) format, with paths
 # relative to the REPOSITORY ROOT. Check with:  sha256sum -c crooks-assistant/docs/dev-environment/binaries.sha256
 #
-# These are OBSERVED digests: they were read off the artifacts installed on the builder at
-# candidate 9a27bc441adad1e98e8a9ca257d1883246ee7eec. They are not an upstream-published attestation.
-# What they pin is the exact bytes this environment was proved against, so a reconstruction
-# that fetches something else fails loudly instead of running a different tool at the same
-# version number.
+# These began as OBSERVED digests, read off the artifacts installed on the builder at candidate
+# 9a27bc441adad1e98e8a9ca257d1883246ee7eec. On 2026-09-19, under the owner's approved bounded
+# fetch policy, every asset pinned in manifest.json was fetched from its upstream release and
+# extracted, and all NINE digests below were reproduced exactly. They are therefore no longer
+# observation alone: the bytes this environment was proved against are the bytes those releases
+# contain. A reconstruction that fetches something else fails loudly instead of running a
+# different tool at the same version number.
+#
+# The digests of the downloaded assets themselves are in binary-assets.sha256, which is checked
+# before extraction; this file is checked after install.
 #
 # .tooling/bin/skillspector is deliberately absent: it is a uv-generated shim with the
 # checkout's absolute path baked into its shebang, so its digest is path-dependent and

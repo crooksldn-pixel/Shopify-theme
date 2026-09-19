@@ -119,6 +119,11 @@ two candidates and has none.
 These are gaps in the *specification*, found by using it. They are not worked around in this
 candidate and none of them is fixed here.
 
+> **§1 and §2 record the first round, 2026-09-19, and are left as written.** The task was
+> continued later the same day under an owner approval that did not exist when they were written,
+> so their present-tense statements about what is blocked describe that round. §4 is the
+> continuation, and it says which of these gaps changed — CG-01 to CG-05 all remain open.
+
 ### 2.1 CG-01 — the evidence manifest has no defined identity
 
 `DEV_TEAM_V1_PILOT.md` §2 requires a Candidate to carry an "evidence manifest digest", and §3 says
@@ -186,3 +191,75 @@ memory and is deliberately not edited from here — a repair candidate forking c
 would create two versions of the record that says which version is canonical.
 
 The exact proposed edits are carried in this round's handoff for the Director to apply or reject.
+
+---
+
+## 4. Continuation, 2026-09-19 — what the second round of this same task exercised
+
+The owner approved bounded read-only package fetching, and the remaining BE-04 work was carried
+out under it: release tags and asset URLs pinned, step 4 made executable with integrity gates, the
+plan executed twice from a disposable checkout, and the SkillSpector provenance gap closed.
+
+This section exists because a continuation is not a new trial, and reporting it as one would
+double-count the same clauses. Below is only what *this* round actually put through the contract.
+
+### 4.1 Clause dispositions for the continuation
+
+| Clause | This round | What happened |
+|---|---|---|
+| **False-success handling** | **EXERCISED** | The previous round's own carefully hedged claim — "these digests are observed, not upstream-attested" — was checked rather than accepted. All eight assets were fetched from their pinned upstreams and all nine extracted digests compared with the committed file. Had one differed, the environment's identity record would have been wrong. The habit is the point: the hedge was honest *and* it was still verified. |
+| **False-success handling, second instance** | **EXERCISED** | Making the SkillSpector pin verifiable caused the **builder's own environment to fail its own `doctor`**, because the builder's SkillSpector was installed the old way. That result was reported, not softened, and not worked around by leaving the check advisory. A check that cannot fail the machine that wrote it is not a check. |
+| **Exact candidate identity binding** | **EXERCISED**, same structural limit | The candidate changed, so it has a new SHA and this file still cannot contain it. §1.2 is unchanged and the collector-builds-the-record consequence stands. |
+| **Review invalidation on candidate change** | **EXERCISED, and this time it was the instruction** | The dispatching inbox stated that prior candidate-bound review evidence is invalid for the changed tree and required the gates to be re-run against the exact final candidate. That is CG-02's question asked in the sharpest possible form — and it was answered by re-running rather than by arguing about closure, because the tree changed under `scripts/`, `tests/` and `docs/dev-environment/`, which is the input closure of every environment proof this candidate makes. |
+| **Publication retry without rebuilding** | **NOT EXERCISED** | Publication was not retried and no claim is made that retry works. §1.4 stands unchanged. |
+| **Obsolete / late / duplicate results, fencing** | **NOT EXERCISED** | No stale result arrived, no attempt was fenced, no duplicate was dispatched. There are still no tokens, attempt IDs or idempotency keys. §1.5's analysis of the Mobile V1 incident is not re-exercised by this round and is not re-counted. |
+| **Reviewer gating** | **EXERCISED, by refusal, again** | This worker implemented the continuation and does not certify it. |
+| **Integration re-verification** | **NOT APPLICABLE** | Nothing was integrated, merged or deployed. |
+
+### 4.2 What the continuation did to the contract gaps
+
+**CG-01 (evidence identity) — unchanged and now larger.** This round's central evidence is an
+end-to-end reconstruction: a ~2.9 GB tree, 89 `.deb`s, eight release assets, two `doctor`
+transcripts. All of it is still terminal text inside a handoff. Nothing is addressable, nothing is
+digested, and the reviewer is asked to trust a transcription of a run that takes ten minutes to
+repeat. The gap did not change; the cost of it did.
+
+**CG-02 (invalidation granularity) — unchanged, and see §4.1.** The literal rule was applied and
+was correct here. That is not evidence that the literal rule is right in general; it is evidence
+that it is right when the change lands inside the evidence's input closure, which is the
+distinction the contract still does not make.
+
+**CG-03 (a candidate without a result) — unchanged.** Untouched by this round.
+
+**CG-04 (BLOCKED granularity) — unchanged, and this round is the other half of the argument.**
+Last round BE-04 was partial: three parts repaired, one blocked. This round completed it. The
+contract has no state for "partially repaired, continued under a later approval", so the only way
+to describe the two rounds together is prose. Per-finding disposition with its own state is still
+the fix.
+
+**CG-05 ("prove a clean isolated reconstruction") — satisfied for this environment; the
+specification defect is unchanged.** The reconstruction was performed, twice, from a checkout with
+no `.tooling/` and no `.venv/`. That is an instance, not a repair of the clause: the acceptance
+case still reads as one checkbox while requiring an egress policy, a fetch allow-list, pinned
+release assets and a disposable host, and a later worker reading the checkbox alone will still be
+tempted to satisfy it with a rerun on a machine that already has the environment.
+
+### 4.3 CG-06 — an approval expressed only as prose cannot be enforced
+
+New, and found by this round.
+
+The owner's approval arrived as a paragraph: read-only, declared dependencies only, authoritative
+upstreams only, integrity enforced, fail closed. Every one of those is checkable, and as prose
+none of them was checked by anything — the boundary would have been held by whoever remembered
+reading it, which for an automated worker is nobody.
+
+So the boundary was compiled instead. `fetch_spec()` requires each asset URL to be exactly
+`<upstream>/releases/download/<release_tag>/<asset>` built from that tool's own manifest entry,
+and refuses to emit a fetch step otherwise; the download gate runs before extraction and the
+install gate after; `test_be04_an_asset_url_outside_the_tools_own_upstream_is_refused` covers a
+mirror, another project, another tag, another asset and a non-release path.
+
+**The contract gap is that nothing asked for this.** An approval is currently a fact about a
+conversation. It should be a fact about the candidate: the granted boundary should be recorded in
+a form the candidate can be checked against, so a reviewer can ask "does this tree stay inside
+what was approved?" and get an answer from the tree rather than from the worker's account of it.

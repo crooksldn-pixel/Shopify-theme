@@ -26,8 +26,10 @@ same line**, and advisory findings never change the exit code. There is currentl
 
 > **This file describes candidate `claude/builder-environment-repair`.** Candidate `9a27bc4` was
 > independently reviewed and rejected with four blocking findings — BE-01 to BE-04 — recorded in
-> product memory as `BUILDER_ENVIRONMENT_REVIEW.md`. §9 is what was repaired, what was proved, and
-> what is still blocked. The regression tests are `crooks-assistant/tests/test_dev_env.py`.
+> product memory as `BUILDER_ENVIRONMENT_REVIEW.md`. §9 is what was repaired and what was proved.
+> BE-04's last part needed an owner decision on package fetching; that decision was given on
+> 2026-09-19 and §10 is the boundary it drew and the reconstruction it made possible. The
+> regression tests are `crooks-assistant/tests/test_dev_env.py`.
 
 ---
 
@@ -63,15 +65,19 @@ Everything below is pinned, and nothing self-updates.
 | `crooks-assistant/docs/dev-environment/sysroot-packages.txt` | the 89 `.deb`s, as `name=version` | **yes** |
 | `crooks-assistant/docs/dev-environment/sysroot-packages.sha256` | their digests | **yes** |
 | `crooks-assistant/docs/dev-environment/binaries.sha256` | digests of the nine pinned binaries | **yes** |
+| `crooks-assistant/docs/dev-environment/binary-assets.sha256` | digests of the eight upstream release assets they come from | **yes** |
 | `crooks-assistant/scripts/dev_env.py` | doctor / env / plan | **yes** |
+| `.tooling/downloads` | what step 4 fetches, before and after unpacking | no — gitignored |
 
 `.tooling/` (~1.8 GB) and `.venv/` (~630 MB) are gitignored. Only manifests, scripts and docs are
 committed.
 
-**Nothing `plan` reads lives under `.tooling/`.** That is the point of the five inventory files
+**Nothing `plan` reads lives under `.tooling/`.** That is the point of the six inventory files
 above: an input that exists only in gitignored output can be read on the machine that already
 has the environment and nowhere else, which is BE-04. `doctor` checks them against the manifest
-so the three copies of the node pins cannot drift apart silently.
+so the three copies of the node pins cannot drift apart silently. `.tooling/downloads` is the one
+directory the plan *writes* into before verifying — it is gitignored on purpose, so a download
+can never become a committed file by accident.
 
 ---
 
@@ -437,13 +443,40 @@ is not a check.
 source* remain advisory (§4.1) — `doctor` does not run them and never did. What `doctor` reports
 is required environment identity, and the only advisory line in it is §9.3.
 
-### 9.3 The one thing `doctor` cannot decide
+### 9.3 The thing `doctor` could not decide — now decided
 
-`uv tool install --from <local clone>` records a path, not a revision, so the installed
-SkillSpector carries nothing to compare `uv_tools.skillspector.commit` against. `doctor` prints it
-as `advisory` **with that reason on the line**. Passing it silently would be BE-02 again; failing
-the environment over a fact nothing on the machine can settle would be noise. Closing it properly
-means recording provenance at install time, which belongs with the package-fetch policy below.
+`uv tool install --from <local clone>` records a filesystem path and no revision, so the installed
+SkillSpector carried nothing to compare `uv_tools.skillspector.commit` against, and `doctor` could
+only print it as `advisory` with that reason on the line.
+
+It is no longer undecidable, because the install changed. Step 6 now installs from the pinned git
+requirement
+
+```
+git+https://github.com/NVIDIA/skillspector@d162d9b343e559be13df8ebba093df3bc9d58c90
+```
+
+which makes uv write PEP 610 provenance into the tool venv's
+`skillspector-2.11.2.dist-info/direct_url.json`, including `vcs_info.commit_id`. `doctor` reads
+that file and compares it with the pin. Four outcomes, one of them `ok`:
+
+| What the artifact records | `doctor` |
+|---|---|
+| `vcs_info.commit_id` equal to the pin | `ok` |
+| `vcs_info.commit_id` different from the pin | **FAIL**, both shown |
+| `dir_info` — a local-path install | **FAIL**, "records no revision", with the command that fixes it |
+| no `direct_url.json` at all | **FAIL** |
+
+An environment installed the old way therefore fails this check, which is correct: the pin was
+never verified there and saying so is the whole point. `test_be04_skillspector_provenance_decides_rather_than_excuses`
+covers all four.
+
+**What is still advisory, and it is smaller.** Four of the eight pinned upstreams — shellcheck,
+fd, ast-grep and hyperfine — publish no checksum file of their own. Their committed asset digests
+in `binary-assets.sha256` are enforced on every reconstruction but are first-fetch observations
+rather than an independent attestation by the project. `doctor` prints one advisory line naming
+exactly those four. The other four (shfmt, gitleaks, trivy, uv) publish checksums, and the
+committed digests were compared with them and matched.
 
 ### 9.4 BE-03 — generated exports executed what was in the checkout path
 
@@ -479,21 +512,107 @@ appears only inside a subshell that closes on the same line.
 **Fixed — the artifacts are identified.** `sysroot-packages.txt` pins all 89 `.deb`s as
 `name=version`, replacing a recursive `apt-cache depends` resolution that returned whatever the
 distribution offered on the day it ran. `sysroot-packages.sha256` and `binaries.sha256` carry a
-digest each. **These digests are observed, not upstream-attested**: they were read off the
-artifacts installed on this builder. What they pin is the exact bytes this environment was proved
-against, which is worth having and is not the same claim as an upstream signature.
+digest each. They were recorded by observing the artifacts installed on this builder — see §10.2
+for what that observation is now worth, which is more than it was.
 
-**BLOCKED — the plan has never been executed end to end.** Steps 1–3 and 6 fetch from npm,
-Playwright's CDN, apt and GitHub, and step 4 cannot be written as commands at all: the manifest
-pins each tool's version and upstream repository but not its release tag or asset URL. Guessing
-eight release URLs and committing them untested would be BE-01 with a different traceback.
+**Fixed — the plan executes.** This was the open part. It needed an owner decision, the decision
+was given on 2026-09-19, and §10 is what came of it.
 
-Both need an **approved package-fetch policy**, which is an owner decision and has not been given.
-Until it is:
+---
 
-- `plan` prints the blocker in its own output, where it is read;
-- **no claim that this environment has been rebuilt from scratch is supported by anything here.**
+## 10. The approved fetch boundary, and the reconstruction it makes possible
 
-What *is* proved offline is narrower and stated as such: every input `plan` reads is committed and
-present in a checkout with no `.tooling/` and no `.venv/` at all, the generator is read-only, and
-two runs produce byte-identical output.
+On **2026-09-19** the owner approved bounded, read-only package fetching for the sole purpose of
+reconstructing this declared environment from a fresh checkout. This section is what that approval
+was spent on. It is deliberately specific: an approval recorded as "we may download things" is not
+a boundary anybody can check later.
+
+### 10.1 What may be fetched, and how that is enforced rather than promised
+
+| Step | Contacts | Installs from |
+|---|---|---|
+| 1 | `registry.npmjs.org` | the committed `node-package-lock.json`, via `npm ci` |
+| 2 | Playwright's CDN | the Chromium build the pinned Playwright asks for |
+| 3 | the configured apt mirror | the 89 `name=version` pins in `sysroot-packages.txt` |
+| 4 | `github.com` release assets | the eight `asset_url`s pinned in `manifest.json` |
+| 5 | PyPI | `pyproject.toml` `[dev]` plus the five pinned builder-only packages |
+| 6 | `github.com` | SkillSpector at the pinned commit, as a git requirement |
+
+Nothing else is contacted. Every fetch is anonymous: **no credential, token or key is used or
+needed anywhere in this plan**, and none is stored in this repository.
+
+The rule "only from the declared dependency's own authoritative upstream" is the kind of rule that
+decays into whoever last remembered it, so it is a precondition in code instead. `fetch_spec()`
+requires every binary's URL to be exactly
+
+```
+<upstream>/releases/download/<release_tag>/<asset>
+```
+
+built from that same entry's own fields. A URL pointing at a mirror, at another project, at a
+different tag, or at a non-release path is a `ManifestError` naming the tool, and **no fetch step
+is emitted at all**. `test_be04_an_asset_url_outside_the_tools_own_upstream_is_refused` walks all
+five of those cases.
+
+The release tags and asset URLs are **pinned, not derived**. Computing eight GitHub URLs from a
+naming convention at run time would put the strings that decide what executes on this machine
+outside review — the same defect as BE-01, one layer down. They are written into `manifest.json`
+where a reviewer can read them.
+
+### 10.2 Integrity, twice, failing closed
+
+```
+curl -fsSL --proto '=https' --tlsv1.2  ->  .tooling/downloads/
+( cd .tooling/downloads && sha256sum -c …/binary-assets.sha256 )   <- before anything unpacks
+tar / unzip / install -m 755           ->  .tooling/bin/
+sha256sum -c …/binaries.sha256                                     <- after install
+```
+
+The order carries the weight. Verifying an archive *after* extracting it checks the wrong thing:
+`tar` and `unzip` have already interpreted the bytes. `test_be04_downloads_are_verified_before_anything_unpacks_them`
+asserts the ordering, not just the presence, of both gates. The `.deb`s get the same treatment
+against `sysroot-packages.sha256` before `dpkg-deb -x`, and npm gets it from `npm ci` against the
+committed lock.
+
+**What the observed digests are now worth.** `binaries.sha256` was recorded by reading the bytes
+off this builder, and the previous round was careful to say that this was an observation and not
+an upstream attestation. Under the approved fetch, every one of the eight assets was downloaded
+from its pinned upstream release and extracted, and **all nine installed-binary digests were
+reproduced exactly**. The observation and the upstream release agree. Separately, the four
+projects that publish a checksum file — shfmt, gitleaks, trivy, uv — were compared with it and
+matched. The remaining four publish none, and `doctor` says so on an advisory line naming them
+rather than letting "verified" quietly cover a gap.
+
+`sysroot-packages.sha256` remains observed. It is enforced on every reconstruction, so a mirror
+that returns other bytes fails the check; what it is not is an attestation from Ubuntu.
+
+### 10.3 Provenance for the skill gate
+
+Step 6 installs SkillSpector from `git+<upstream>@<commit>` rather than from a local clone,
+because that is the difference between uv recording a revision and uv recording a path. See §9.3:
+the pin is now checked, and an install that cannot prove its revision fails.
+
+### 10.4 Running it, and what "idempotent" means here
+
+From the repository root of a fresh checkout:
+
+```sh
+python3 crooks-assistant/scripts/dev_env.py plan          # read it first; it installs nothing
+```
+
+then run the steps. `plan` is still a generator and still writes nothing — that separation is why
+it is not called `bootstrap` (§9.5). Each step is individually re-runnable: `npm ci` rebuilds
+`node_modules` from the lock, `playwright install` skips a browser it already has, `apt-get
+download` and `dpkg-deb -x` overwrite, `install -m 755` overwrites, and `uv tool install` replaces
+the tool venv. Running the whole plan a second time therefore ends in the same environment, which
+is the property worth having; it is **not** a claim that the second run performs no work.
+
+The end-to-end execution record — run 1, run 2, and `doctor` after each, from a disposable
+checkout containing no `.tooling/` and no `.venv/` — is bound to the candidate's commit SHA in
+that round's handoff, because a tree cannot contain a verified statement about itself.
+
+### 10.5 Still outside the boundary
+
+Nothing here installs a service, opens a listening socket, writes outside the builder worktree,
+touches `/usr`, needs a credential, or runs on or against production. The approval covered
+reconstruction fetches and nothing else.
