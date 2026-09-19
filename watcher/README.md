@@ -19,6 +19,17 @@ Runs Claude Code automatically when ChatGPT writes to the bridge inbox, so nobod
                                         │
                   only now is the inbox SHA recorded as processed
 
+## Deterministic Claude model
+
+The current single-worker watcher explicitly launches `claude-fable-5-1` at `high` effort.
+Both are passed on every unattended invocation via `--model` and `--effort`, with corresponding
+`CROOKS_BRIDGE_CLAUDE_MODEL` and `CROOKS_BRIDGE_CLAUDE_EFFORT` environment overrides.
+
+This pin prevents an account or Claude Code default change from silently changing the worker that
+produces a candidate. It is the deterministic default for this watcher only. Engineering
+Orchestrator V1 is expected to record and route model/effort per task rather than treating this
+single default as permanent routing policy.
+
 ## Why the blob SHA and not the branch HEAD
 
 Claude pushes the outbox at the end of every run, which moves HEAD. A watcher that triggered on
