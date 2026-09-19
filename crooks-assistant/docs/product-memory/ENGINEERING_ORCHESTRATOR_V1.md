@@ -1,6 +1,6 @@
 # Engineering Orchestrator / Dev Team V1
 
-**Status:** PROPOSED SPECIFICATION — planning only; no implementation or deployment authorised by this document  
+**Status:** IMPLEMENTATION AUTHORISED BY OWNER — execution remains subject to DEC-046 prerequisite ordering and all safety/review gates; deployment is not authorised  
 **Owner direction:** D7–D11 / DEC-040–045; clarified in the migration continuation of 2026-09-19  
 **Repository baseline:** product memory `aaf1ad6e1c18a377176461cc8d99c185e62eca38`  
 **Latest observation:** 2026-09-19T06:38:39Z
@@ -13,7 +13,7 @@ V1 turns an authorised engineering objective into one independently reviewed rel
 
 Build a small deterministic control service with on-demand specialists. Roles are responsibilities; they do not each require a permanent service, agent or management layer.
 
-Planning may proceed now. Implementation remains after: Builder Environment review; controlled Linux migration; approved secret provisioning; always-on runtime; private HTTPS when approved; real Samsung/iPhone/runtime verification; current UI and response/latency refinement; real-world CROOKS sessions with evidence. The future privileged deployment controller follows Dev Team V1. World, Attention and broader automation expansion follow this foundation.
+The owner explicitly authorised moving V1 from planning into implementation on 2026-09-19 under this canonical specification and its safety boundaries. That approval does not waive the existing entry sequence: Builder Environment review; controlled Linux migration; approved secret provisioning; always-on runtime; private HTTPS when approved; real Samsung/iPhone/runtime verification; current UI and response/latency refinement; real-world CROOKS sessions with evidence. Major V1 implementation begins when those preceding gates are satisfied or canonical owner direction explicitly changes the ordering. The future privileged deployment controller follows Dev Team V1. World, Attention and broader automation expansion follow this foundation.
 
 V1 includes task intake, context compilation, routing, isolated execution, evidence collection, review, integration and Director review. It excludes production installation, business writes, automatic infrastructure self-update, speculative overnight improvements and a subscriber-facing agent dashboard.
 
@@ -261,7 +261,7 @@ Engineering investigation, not immediate owner terminal work:
 - task risk taxonomy and exact policy-to-test mapping;
 - controlled publication credentials and bootstrap installation boundary.
 
-Owner decisions arise only for material product trade-offs, additional permissions, expenditure or approval-gated deployment. Detailed mechanisms in this specification remain proposals until reviewed. No new model worker, bridge instruction, infrastructure service or deployment was started by writing this document.
+Owner decisions arise only for material product trade-offs, additional permissions, expenditure or approval-gated deployment. Detailed mechanisms in this specification remain subject to the architecture/engineering reviews named here even though implementation is now owner-authorised. The approval does not authorise production deployment, new privileges, secrets, business writes, destructive actions or infrastructure promotion.
 
 ## Source record
 
