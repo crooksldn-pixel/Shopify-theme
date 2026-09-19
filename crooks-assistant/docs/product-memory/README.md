@@ -25,6 +25,9 @@ ChatGPT, Claude, future model workers, and human contributors should treat these
 
 - [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md) — proposed Dev Team V1 contract: authority, lifecycle, context, isolation, evidence, review, integration and recovery; planning only.
 
+- [DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md) — proposed task/review/recovery records and first end-to-end acceptance trial; no dispatch approval.
+- [BUILDER_ENVIRONMENT_REVIEW.md](./BUILDER_ENVIRONMENT_REVIEW.md) — independent review of candidate 9a27bc4 with reproduced defects and current bridge status.
+
 ## Status model
 
 Use these states consistently:

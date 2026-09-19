@@ -118,9 +118,13 @@ All future meaningful ideas and architecture decisions should become durable ent
 Active context must remain curated: Git stores history; current truth and active decisions drive new releases.
 
 ## N7. Permanent Builder Environment
-**Status:** BUILDING
+**Status:** TESTING — published candidate requires corrections
 
-Build the reproducible engineering environment currently running through the automated bridge:
+Candidate `9a27bc441adad1e98e8a9ca257d1883246ee7eec` is published on `claude/builder-environment-review`. Independent review reproduced failures in bootstrap, environment validation and shell quoting; clean reconstruction remains incomplete. See [BUILDER_ENVIRONMENT_REVIEW.md](./BUILDER_ENVIRONMENT_REVIEW.md).
+
+No project skills/rules/hooks were installed because the worker's native permission layer refused them. Preserve that boundary. Current bridge intake has moved to Mobile Experience V1; reconcile that unacknowledged round before sending foundation repair work. Candidate delivery does not mean the permanent environment gate is passed.
+
+Required foundation outcomes:
 
 - security-gated project skills,
 - current DESIGN.md derived from CROOKS evidence,
@@ -200,7 +204,7 @@ The owner should not be used as a command courier.
 ## D7. Engineering Orchestrator V1
 **Status:** APPROVED DIRECTION — specification planning active; implementation gated
 
-Detailed proposal: [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md). The organisation/direction is approved; new mechanism choices in the specification remain PROPOSED.
+Detailed proposal: [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md). Record/review/recovery contracts and the proposed first trial are in [DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md). The organisation/direction is approved; new mechanism choices and trial dispatch remain PROPOSED.
 
 Build the layer above the single-worker watcher:
 

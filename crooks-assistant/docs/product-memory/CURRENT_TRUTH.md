@@ -27,13 +27,16 @@ Core product principles remain:
 - Canonical repository: `crooksldn-pixel/Shopify-theme`.
 - Canonical product memory currently lives on `claude/product-memory-foundation`; read it by explicit ref. The default theme branch is not the CROOKS product-memory source.
 - Production application branch remains `claude/crooks-assistant-build-lgxlau` at the Phase 5 candidate baseline until an explicitly reviewed promotion changes it.
-- Linux migration work exists separately and has not been silently promoted to production.
+- Linux migration review ref remains separate at `1cf3a0f3361b79f9de208d80f501543c53c244b5`. Git branch state alone does not establish which files are currently installed or which service is running; fresh runtime evidence is required.
 - The GitHub communication bridge uses orphan branch `crooks-ai-bridge`.
 - The CROOKS bridge watcher is installed, enabled, and its corrected stdin-based Claude launch path has passed an end-to-end smoke test.
 - Headless Claude runs in the standalone isolated builder clone at `/opt/crooks-builder`, not the production checkout.
 - Watcher publication of the outbox is watcher-owned; the owner is no longer the normal message courier.
-- Permanent Builder Environment round: **awaiting result; preserve as in flight**. At the 2026-09-18T23:20:53Z Git inspection, inbox blob `607b607e54eb194b81d708dfbc7bd744c2e8cd18` still requests that work. Outbox blob `21e5f54610abc813e65b7d0e5674440761187604` acknowledges the earlier smoke-test inbox `dceefbb9f2e47b38ed8183b262a9e98e15d2cdc1`; no `claude/builder-environment-review` branch was listed. Process liveness and local progress are unverified. Do not restart/resubmit based on absence of a published result.
-- Last server observation, in the smoke-test outbox at 2026-09-18 22:42 UTC: `/opt/crooks-os` was already dirty (15 tracked modifications, 9 untracked paths), and port 8000 had no listener. These are historical observations, not a fresh runtime inspection. Preserve/reconcile that work against the Linux review candidate before any checkout/reset/promotion. A clean branch HEAD is not proof of a clean deployed tree.
+- Builder Environment result is published at `claude/builder-environment-review`, commit `9a27bc441adad1e98e8a9ca257d1883246ee7eec`. **Independent review: CHANGES REQUIRED** before acceptance as the reproducible Dev Team foundation. See [BUILDER_ENVIRONMENT_REVIEW.md](./BUILDER_ENVIRONMENT_REVIEW.md).
+- Independently reproduced: bootstrap crashes on the committed manifest; doctor can return success for wrong versions/failed tools; shell exports interpret substitution in a supplied path. Fresh-checkout reconstruction is also incomplete by source inspection. Existing builder tooling remains useful partial delivery.
+- No project skills, CLAUDE.md, rules or hooks were installed in that round; the worker reported native permission refusal. Do not bypass it. DESIGN.md remains PROPOSED.
+- Current bridge round is **Mobile Experience V1 — unacknowledged, liveness unknown**. At 2026-09-19T06:38:39Z, inbox blob `24b713cce3d0e8c9ede3185ebef78cc107ece507` contains the mobile task; outbox blob `67e3da115963a1f5ba8e0b57ede74a00f5be2fb2` still acknowledges the preceding Builder inbox `607b607e54eb194b81d708dfbc7bd744c2e8cd18`. No mobile review branch was listed. Do not duplicate or overwrite the task. Reconcile watcher/attempt status before dispatching a replacement.
+- Last published server observations describe an already dirty production checkout, no listener on 8000 and no installed assistant service at that time. These reports are historical, not proof of current runtime state. Preserve/reconcile uncommitted migration work before any checkout/reset/promotion. A Git HEAD or reflog is not proof that working-tree bytes were untouched.
 
 ## Dev-team direction
 
@@ -51,6 +54,8 @@ The approved direction is a quality-first engineering organisation:
 Cost and speed are subordinate to quality. Cheaper/faster models may handle genuinely mechanical work, but substantive product/code quality is not traded away to save usage.
 
 [ENGINEERING_ORCHESTRATOR_V1.md](./ENGINEERING_ORCHESTRATOR_V1.md) now holds the proposed detailed specification. Planning is active; implementation has not started or been authorised by that document. Proposed mechanisms such as task-store choice, leases, retry limits and initial concurrency are not approved product decisions. Fable/GPT invocation and credential isolation require verification before automated operation.
+
+[DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md) defines proposed durable record/review/recovery contracts and a first acceptance trial based on the reproduced Builder defects. Foundation repair through the existing bridge and later Orchestrator acceptance are separate activities. The current mobile task must not be duplicated or retrospectively described as a full Dev Team run.
 
 ## Infrastructure autonomy direction
 

@@ -2,8 +2,10 @@
 
 **Status:** PROPOSED SPECIFICATION — planning only; no implementation or deployment authorised by this document  
 **Owner direction:** D7–D11 / DEC-040–045; clarified in the migration continuation of 2026-09-19  
-**Repository baseline:** product memory `18d98984e2015bda04ffaf41c5d9da3054f85ca7`  
-**Observation time:** 2026-09-18T23:20:53Z (owner handoff dated 2026-09-19)
+**Repository baseline:** product memory `aaf1ad6e1c18a377176461cc8d99c185e62eca38`  
+**Latest observation:** 2026-09-19T06:38:39Z
+
+Detailed record contracts and proposed acceptance trial: [DEV_TEAM_V1_PILOT.md](./DEV_TEAM_V1_PILOT.md). Independent foundation review: [BUILDER_ENVIRONMENT_REVIEW.md](./BUILDER_ENVIRONMENT_REVIEW.md).
 
 ## 1. Purpose, scope and entry gate
 
@@ -23,8 +25,8 @@ V1 includes task intake, context compilation, routing, isolated execution, evide
 | SAFETY CONTRACT | Known deterministic business writes, exact immutable proposals, bound authorisation, precondition reread, authoritative verification, fail-closed unknown writes. Engineering permission never grants business-action permission. |
 | CURRENT PRODUCT CONTRACT | Production application branch is `claude/crooks-assistant-build-lgxlau`, observed HEAD `e43aecdb39b87b622f64b6ab434e428d216ef157`. A Git HEAD does not prove the deployed filesystem matches it. |
 | MIGRATION OBLIGATION | Linux candidate `1cf3a0f3361b79f9de208d80f501543c53c244b5` is separate and unpromoted in observed Git. The last server report describes a dirty production tree; reconcile and preserve it before promotion. |
-| EVIDENCE | Bridge inbox blob `607b607e54eb194b81d708dfbc7bd744c2e8cd18` requests Builder Environment work. Outbox blob `21e5f54610abc813e65b7d0e5674440761187604` acknowledges earlier inbox `dceefbb9f2e47b38ed8183b262a9e98e15d2cdc1`. |
-| UNKNOWN / VERIFY | Builder process liveness, local candidate progress and current service state cannot be inferred from these Git files. No `claude/builder-environment-review` branch was listed at observation. Preserve the in-flight round; do not resubmit it. |
+| EVIDENCE | Builder candidate `9a27bc441adad1e98e8a9ca257d1883246ee7eec` is published. Independent review found reproducible bootstrap, validation and shell-quoting defects; it needs changes before foundation acceptance. Current inbox blob `24b713cce3d0e8c9ede3185ebef78cc107ece507` requests Mobile Experience V1; outbox `67e3da115963a1f5ba8e0b57ede74a00f5be2fb2` acknowledges the preceding Builder task. |
+| UNKNOWN / VERIFY | Current mobile process liveness, local progress and current service state cannot be inferred from these Git files. No mobile review branch was listed. Preserve the unacknowledged round; reconcile actual attempt status before another dispatch. |
 | EVIDENCE | Watcher source reviewed at `3d1f65df2d93f24ab75c50d5774eacb47b31df43`: stdin launch, lock, standalone builder, outbox publication, remote blob readback and backoff. No claim that this turn inspected its installed bytes. |
 | HISTORICAL | Mac-only instructions in `docs/ENGINEERING_LOOP.md` describe the current baseline's manual loop; retain evidence/privacy/safety contracts without requiring future owner message relaying. |
 | UNKNOWN / VERIFY | Fable invocation/authentication/automation interface, future GPT Director invocation, concurrent Claude authentication behaviour and resource capacity require proof before automated routing. |
@@ -266,8 +268,9 @@ Owner decisions arise only for material product trade-offs, additional permissio
 Read at the pinned baselines above:
 
 - product memory: CURRENT_TRUTH, PRODUCT_BRAIN, EVOLUTION_POLICY, DIRECTOR_PROTOCOL, DECISIONS, ROADMAP, SELF_IMPROVEMENT and MIGRATION_HANDOFF;
-- bridge inbox/outbox at observed branch HEAD `0c7474bdeea5e639ac5139aa68f4042bcdc9d2ff`;
+- bridge inbox/outbox at latest observed branch HEAD `165c366c3132ef2dc3b42f3cc1ffaa5296b4af07`;
+- Builder Environment source/manifest at `9a27bc441adad1e98e8a9ca257d1883246ee7eec`; independent targeted offline reproductions are recorded in BUILDER_ENVIRONMENT_REVIEW.md;
 - watcher README, executable and systemd unit at `3d1f65df2d93f24ab75c50d5774eacb47b31df43`;
 - application ENGINEERING_LOOP and Makefile at `e43aecdb39b87b622f64b6ab434e428d216ef157`.
 
-No runtime, model, security, browser or application tests were executed in this planning round. This is a reviewed-for-consistency planning document, not independently certified implementation.
+The initial planning round executed no runtime/model/browser/application tests. The continuation performed targeted offline Builder-script reproductions, including a harmless shell-quoting probe; see the separate review for scope and results. No server state, model integration, complete bootstrap or application/browser suite was independently tested. This remains a planning document, not certified implementation.
